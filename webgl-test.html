@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head><title>WebGL Test</title></head>
+<body style="background:#111;color:#0f0;font:16px monospace;padding:20px">
+<h2>WebGL Diagnostic</h2>
+<canvas id="test1" width="200" height="200" style="border:1px solid #333"></canvas>
+<pre id="log"></pre>
+<script>
+const log = document.getElementById('log');
+function say(msg) { log.textContent += msg + '\n'; console.log(msg); }
+
+// Test 1: Basic WebGL on a fresh canvas
+const c1 = document.getElementById('test1');
+say('Canvas element: ' + (c1 ? 'OK' : 'MISSING'));
+say('Canvas size: ' + c1.width + 'x' + c1.height);
+
+const gl = c1.getContext('webgl');
+say('WebGL context: ' + (gl ? 'OK' : 'FAILED'));
+
+if (gl) {
+  say('Vendor: ' + gl.getParameter(gl.VENDOR));
+  say('Renderer: ' + gl.getParameter(gl.RENDERER));
+  say('Version: ' + gl.getParameter(gl.VERSION));
+  const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+  if (dbg) {
+    say('GPU: ' + gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL));
+  }
+  // Draw a green triangle to prove it works
+  gl.clearColor(0.1, 0.1, 0.1, 1);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  const vs = gl.createShader(gl.VERTEX_SHADER);
+  gl.shaderSource(vs, 'attribute vec2 p;void main(){gl_Position=vec4(p,0,1);}');
+  gl.compileShader(vs);
+  const fs = gl.createShader(gl.FRAGMENT_SHADER);
+  gl.shaderSource(fs, 'precision mediump float;void main(){gl_FragColor=vec4(0,1,0,1);}');
+  gl.compileShader(fs);
+  const prog = gl.createProgram();
+  gl.attachShader(prog, vs);
+  gl.attachShader(prog, fs);
+  gl.linkProgram(prog);
+  gl.useProgram(prog);
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-0.5,-0.5, 0.5,-0.5, 0,0.5]), gl.STATIC_DRAW);
+  const loc = gl.getAttribLocation(prog, 'p');
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+  say('Shader compile: OK');
+  say('Draw: OK — you should see a green triangle above');
+} else {
+  say('');
+  say('WebGL is DISABLED or UNAVAILABLE.');
+  say('Check: chrome://gpu');
+  say('Check: chrome://settings/system → Hardware acceleration');
+
+  // Try WebGL2
+  const gl2 = c1.getContext('webgl2');
+  say('WebGL2: ' + (gl2 ? 'OK' : 'ALSO FAILED'));
+}
+</script>
+</body>
+</html>

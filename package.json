@@ -1,0 +1,20 @@
+{
+  "name": "shaderclaw3",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "ISF shader creation tool with MCP server for Claude Code",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "grandi": "^1.3.0",
+    "ws": "^8.18.0",
+    "zod": "^3.24.2"
+  }
+}

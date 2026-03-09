@@ -1,0 +1,158 @@
+/* ============================================================
+   ShaderClaw 3 — Layout: Canvas-First Floating Panels
+   The canvas IS the app. Everything else floats on top.
+   ============================================================ */
+
+/* ===== APP CONTAINER — full viewport ===== */
+#app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #000;
+}
+
+/* ===== FLOATING PANEL BASE ===== */
+.sc3-panel,
+.sc3-detail-panel,
+.sc3-sources-panel,
+.sc3-code-panel {
+  position: absolute;
+  background: var(--sc-glass);
+  backdrop-filter: blur(var(--sc-glass-blur)) saturate(1.4);
+  -webkit-backdrop-filter: blur(var(--sc-glass-blur)) saturate(1.4);
+  border: 1px solid var(--sc-glass-border);
+  border-radius: var(--sc-panel-radius);
+  box-shadow: var(--sc-glass-shadow);
+  overflow: hidden;
+  z-index: 50;
+  transition: opacity var(--sc-duration-slow) var(--sc-ease),
+              transform var(--sc-duration-slow) var(--sc-ease-out);
+}
+
+/* ===== SOURCES PANEL (left — gallery, assets, hidden by default) ===== */
+.sc3-sources {
+  position: absolute;
+  left: calc(var(--sc-toolbar-w) + var(--sc-panel-gap) + var(--sc-panel-gap));
+  top: calc(var(--sc-topbar-h) + var(--sc-panel-gap));
+  bottom: var(--sc-panel-gap);
+  width: 260px;
+  background: linear-gradient(180deg, rgba(18, 18, 30, 0.78) 0%, rgba(10, 10, 16, 0.82) 100%);
+  backdrop-filter: blur(var(--sc-glass-blur)) saturate(1.6) brightness(1.05);
+  -webkit-backdrop-filter: blur(var(--sc-glass-blur)) saturate(1.6) brightness(1.05);
+  border: 1px solid var(--sc-glass-border);
+  border-top-color: rgba(255, 255, 255, 0.10);
+  border-radius: var(--sc-panel-radius);
+  box-shadow: var(--sc-glass-shadow);
+  z-index: 60;
+  overflow: hidden;
+  display: none; /* hidden by default — shown via JS */
+}
+.sc3-sources.visible {
+  display: flex;
+  flex-direction: column;
+  animation: sc3-panel-in 0.2s var(--sc-ease-out);
+}
+
+/* ===== PROPERTIES / DETAIL PANEL (right) ===== */
+.sc3-properties {
+  position: absolute;
+  right: var(--sc-panel-gap);
+  top: calc(var(--sc-topbar-h) + var(--sc-panel-gap));
+  bottom: var(--sc-panel-gap);
+  width: var(--sc-detail-w);
+  background: linear-gradient(180deg, rgba(18, 18, 30, 0.78) 0%, rgba(10, 10, 16, 0.82) 100%);
+  backdrop-filter: blur(var(--sc-glass-blur)) saturate(1.6) brightness(1.05);
+  -webkit-backdrop-filter: blur(var(--sc-glass-blur)) saturate(1.6) brightness(1.05);
+  border: 1px solid var(--sc-glass-border);
+  border-top-color: rgba(255, 255, 255, 0.10);
+  border-radius: var(--sc-panel-radius);
+  box-shadow: var(--sc-glass-shadow);
+  z-index: 50;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: none; /* hidden until an element is selected */
+}
+.sc3-properties.visible {
+  display: block;
+  animation: sc3-panel-in 0.2s var(--sc-ease-out);
+}
+.sc3-properties::-webkit-scrollbar { width: 4px; }
+.sc3-properties::-webkit-scrollbar-track { background: transparent; }
+.sc3-properties::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
+
+/* ===== SECTION HEADERS ===== */
+.sc3-section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sc-space-2);
+  padding: 8px 14px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--sc-text-dim);
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--sc-duration), background var(--sc-duration);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.sc3-section-header:hover { color: var(--sc-text); background: rgba(255,255,255,0.02); }
+.sc3-section-chevron {
+  font-size: 8px;
+  transition: transform 0.2s;
+  display: inline-block;
+}
+.sc3-section.collapsed .sc3-section-body { display: none; }
+.sc3-section.collapsed .sc3-section-chevron { transform: rotate(-90deg); }
+
+/* Hide Input Triggers and Layers section headers — content shows directly */
+.sc3-section-header[data-section="input-triggers"],
+.sc3-section-header[data-section="layers"] { display: none; }
+
+.section-body { display: block; }
+.section-header {
+  font-size: 9px; font-weight: 700; letter-spacing: 1.5px;
+  color: var(--sc-text-dim); text-transform: uppercase;
+  padding: 8px 14px 4px;
+  display: flex; align-items: center; gap: var(--sc-space-2);
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes sc3-panel-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes sc3-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 900px) {
+  .sc3-toolbar-strip { display: none; }
+  .sc3-sources, .sc3-properties {
+    left: var(--sc-panel-gap) !important;
+    right: var(--sc-panel-gap) !important;
+    bottom: 0 !important;
+    top: auto !important;
+    width: auto !important;
+    max-height: 50vh;
+    border-radius: var(--sc-panel-radius) var(--sc-panel-radius) 0 0;
+  }
+}
+
+/* Mobile drag handle */
+#mobile-drag-handle { display: none; }
+.drag-pill {
+  width: 36px; height: 4px; border-radius: 2px;
+  background: rgba(255,255,255,0.25);
+}
+
+/* Sidebar compat (hide old tab system) */
+#sidebar-resize { display: none; }
+.sidebar-tabs { display: none; }
+.sidebar-tab { display: none; }
+.sidebar-tab-content { display: block; }
+.sidebar-tab-content.active { display: block; }
+#sidebar-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0; }

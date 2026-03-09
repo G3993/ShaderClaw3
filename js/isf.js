@@ -1,0 +1,273 @@
+// ============================================================
+// ShaderClaw — ISF Parser + Shader Builder
+// ============================================================
+
+const BLANK_SHADER = `/*{
+  "DESCRIPTION": "Blank canvas — describe your vision in the chat",
+  "CATEGORIES": ["Generator"],
+  "INPUTS": [
+    { "NAME": "color", "TYPE": "color", "DEFAULT": [0.91, 0.25, 0.34, 1.0], "LABEL": "Color" },
+    { "NAME": "intensity", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Intensity" }
+  ]
+}*/
+
+void main() {
+    vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
+    float t = TIME * 0.5;
+
+    // Gentle breathing glow in the center
+    float d = length(uv - 0.5);
+    float glow = intensity * smoothstep(0.5, 0.0, d) * (0.5 + 0.5 * sin(t));
+
+    vec3 col = mix(vec3(0.02, 0.02, 0.04), color.rgb, glow * 0.3);
+    gl_FragColor = vec4(col, 1.0);
+}`;
+
+const DEFAULT_SHADER = `/*{
+  "DESCRIPTION": "Particle network — drifting points connected by proximity lines",
+  "CATEGORIES": ["Generator"],
+  "INPUTS": [
+    { "NAME": "particleCount", "TYPE": "float", "DEFAULT": 40.0, "MIN": 10.0, "MAX": 80.0 },
+    { "NAME": "speed", "TYPE": "float", "DEFAULT": 0.4, "MIN": 0.0, "MAX": 2.0 },
+    { "NAME": "connectDist", "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.05, "MAX": 0.5 },
+    { "NAME": "lineWidth", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.3, "MAX": 3.0 },
+    { "NAME": "dotSize", "TYPE": "float", "DEFAULT": 3.0, "MIN": 1.0, "MAX": 8.0 },
+    { "NAME": "color1", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
+    { "NAME": "bgColor", "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.05, 1.0] }
+  ]
+}*/
+
+// Stable hash for particle seeding
+vec2 particleHash(float id) {
+    return vec2(
+        fract(sin(id * 127.1 + 311.7) * 43758.5453),
+        fract(sin(id * 269.5 + 183.3) * 28001.8384)
+    );
+}
+
+// Particle position: drifts with unique velocity, wraps around [0,1]
+vec2 particlePos(float id, float t) {
+    vec2 seed = particleHash(id);
+    vec2 vel = (particleHash(id + 100.0) - 0.5) * 0.5;
+    return fract(seed + vel * t);
+}
+
+// Distance from point p to line segment a-b
+float segDist(vec2 p, vec2 a, vec2 b) {
+    vec2 ab = b - a;
+    float len2 = dot(ab, ab);
+    if (len2 < 0.000001) return length(p - a);
+    float t = clamp(dot(p - a, ab) / len2, 0.0, 1.0);
+    vec2 proj = a + ab * t;
+    return length(p - proj);
+}
+
+void main() {
+    vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    vec2 p = vec2(uv.x * aspect, uv.y);
+    float t = TIME * speed;
+    float px = 1.0 / RENDERSIZE.y; // pixel size in UV space
+
+    int N = int(particleCount);
+    vec3 col = bgColor.rgb;
+
+    // Precompute particle positions (store aspect-corrected)
+    // GLSL ES 1.0 doesn't support variable arrays, so we compute on the fly
+
+    // Draw connection lines (additive)
+    float lineAccum = 0.0;
+    for (int i = 0; i < 80; i++) {
+        if (i >= N) break;
+        vec2 pi = particlePos(float(i), t);
+        pi.x *= aspect;
+
+        for (int j = 0; j < 80; j++) {
+            if (j >= N || j <= i) break;
+            vec2 pj = particlePos(float(j), t);
+            pj.x *= aspect;
+
+            float d = length(pi - pj);
+            if (d > connectDist) continue;
+
+            // Quick AABB cull: skip if pixel is far from the segment
+            vec2 mn = min(pi, pj) - vec2(connectDist * 0.1);
+            vec2 mx = max(pi, pj) + vec2(connectDist * 0.1);
+            if (p.x < mn.x || p.x > mx.x || p.y < mn.y || p.y > mx.y) continue;
+
+            float sd = segDist(p, pi, pj);
+            float lw = lineWidth * px;
+            float alpha = (1.0 - d / connectDist);
+            alpha *= smoothstep(lw, lw * 0.3, sd);
+            lineAccum += alpha * 0.5;
+        }
+    }
+    col += color1.rgb * min(lineAccum, 1.0);
+
+    // Draw particles (additive glow)
+    float dotAccum = 0.0;
+    for (int i = 0; i < 80; i++) {
+        if (i >= N) break;
+        vec2 pi = particlePos(float(i), t);
+        pi.x *= aspect;
+
+        float d = length(p - pi);
+        float r = dotSize * px;
+        dotAccum += smoothstep(r, r * 0.15, d);
+    }
+    col += color1.rgb * min(dotAccum, 1.5);
+
+    gl_FragColor = vec4(col, 1.0);
+}`;
+
+// ============================================================
+// ISF Parser
+// ============================================================
+
+function parseISF(source) {
+  const match = source.match(/\/\*\s*(\{[\s\S]*?\})\s*\*\//);
+  if (!match) return { meta: null, glsl: source.trim(), inputs: [] };
+  try {
+    const meta = JSON.parse(match[1]);
+    const glsl = source.slice(source.indexOf(match[0]) + match[0].length).trim();
+    return { meta, glsl, inputs: meta.INPUTS || [] };
+  } catch (e) {
+    return { meta: null, glsl: source.trim(), inputs: [] };
+  }
+}
+
+function isfInputToUniform(input) {
+  const t = input.TYPE;
+  if (t === 'float') return `uniform float ${input.NAME};`;
+  if (t === 'color') {
+    if (input.NAME === 'bgColor') {
+      return [
+        'uniform vec4 _bgColorSolid;',
+        'uniform sampler2D _bgTex;',
+        'uniform float _bgTexActive;',
+        'vec4 _resolvedBgColor;',
+        '#define bgColor _resolvedBgColor',
+      ].join('\n');
+    }
+    return `uniform vec4 ${input.NAME};`;
+  }
+  if (t === 'bool') return `uniform bool ${input.NAME};`;
+  if (t === 'point2D') return `uniform vec2 ${input.NAME};`;
+  if (t === 'image') return `uniform sampler2D ${input.NAME};\nuniform vec2 IMG_SIZE_${input.NAME};`;
+  if (t === 'long') return `uniform float ${input.NAME};`;
+  if (t === 'text') {
+    const maxLen = input.MAX_LENGTH || 12;
+    const lines = [];
+    for (let i = 0; i < maxLen; i++) lines.push(`uniform float ${input.NAME}_${i};`);
+    lines.push(`uniform float ${input.NAME}_len;`);
+    return lines.join('\n');
+  }
+  return `// unknown type: ${t} ${input.NAME}`;
+}
+
+function buildFragmentShader(source) {
+  const parsed = parseISF(source);
+  const uniformLines = (parsed.inputs || []).map(isfInputToUniform);
+
+  const headerParts = [
+    'precision highp float;',
+    'uniform float TIME;',
+    'uniform vec2 RENDERSIZE;',
+    'uniform int PASSINDEX;',
+    'uniform int FRAMEINDEX;',
+    'varying vec2 isf_FragNormCoord;',
+    '#define IMG_NORM_PIXEL(img, coord) texture2D(img, coord)',
+    '#define IMG_PIXEL(img, coord) texture2D(img, coord / RENDERSIZE)',
+    '#define IMG_THIS_PIXEL(img) texture2D(img, isf_FragNormCoord)',
+    '#define IMG_THIS_NORM_PIXEL(img) texture2D(img, isf_FragNormCoord)',
+    // Mouse uniforms
+    'uniform vec2 mousePos;',
+    'uniform vec2 mouseDelta;',
+    'uniform float mouseDown;',
+    'uniform float pinchHold;',
+    'uniform float pinchHold2;',
+    'uniform float inputActivity;',
+    // Audio-reactive uniforms (always declared, zero when no audio)
+    'uniform sampler2D audioFFT;',
+    'uniform float audioLevel;',
+    'uniform float audioBass;',
+    'uniform float audioMid;',
+    'uniform float audioHigh;',
+    // Variable font texture (for Text shader effect 20)
+    'uniform sampler2D varFontTex;',
+    // Font atlas texture (for bitmap effects 0-19 with web fonts)
+    'uniform sampler2D fontAtlasTex;',
+    'uniform float useFontAtlas;',
+    // Voice decay glitch (0 = none, 1 = full glitch)
+    'uniform float _voiceGlitch;',
+    // MediaPipe uniforms
+    'uniform sampler2D mpHandLandmarks;',
+    'uniform sampler2D mpFaceLandmarks;',
+    'uniform sampler2D mpPoseLandmarks;',
+    'uniform sampler2D mpSegMask;',
+    'uniform float mpHandCount;',
+    'uniform vec3 mpHandPos;',
+    'uniform vec3 mpHandPos2;',
+    // Layer compositing
+    'uniform float _transparentBg;',
+    ...uniformLines,
+    ''
+  ];
+
+  // Inject TARGET sampler declarations from PASSES metadata
+  if (parsed.meta && Array.isArray(parsed.meta.PASSES)) {
+    for (const pass of parsed.meta.PASSES) {
+      if (pass.TARGET) {
+        headerParts.push(`uniform sampler2D ${pass.TARGET};`);
+      }
+    }
+    headerParts.push('');
+  }
+
+  const header = headerParts.join('\n');
+
+  // Strip #version and redundant #ifdef GL_ES precision blocks (header already provides precision)
+  const cleaned = parsed.glsl
+    .replace(/#version\s+\d+.*/g, '')
+    .replace(/#ifdef\s+GL_ES\s*\r?\nprecision\s+\w+\s+float\s*;\s*\r?\n#endif\s*\r?\n?/g, '');
+
+  // Wrap shader main() to inject bgColor resolution and/or transparent background support
+  const shaderHandlesTransparency = (parsed.inputs || []).some(inp => inp.NAME === 'transparentBg');
+  const hasBgColor = (parsed.inputs || []).some(inp => inp.NAME === 'bgColor');
+  let body = header + cleaned;
+  const mainRe = /void\s+main\s*\(\s*(void)?\s*\)/;
+  const needsWrap = mainRe.test(body) && (hasBgColor || !shaderHandlesTransparency);
+  if (needsWrap) {
+    body = body.replace(mainRe, 'void _shaderMain()');
+    let wrapper = '\nvoid main() {\n';
+    if (hasBgColor) {
+      wrapper += '    _resolvedBgColor = _bgTexActive > 0.5 ? texture2D(_bgTex, isf_FragNormCoord) : _bgColorSolid;\n';
+    }
+    wrapper += '    _shaderMain();\n';
+    if (!shaderHandlesTransparency) {
+      wrapper += '    // Global mouse spotlight\n';
+      wrapper += '    vec2 _muv = gl_FragCoord.xy / RENDERSIZE.xy;\n';
+      wrapper += '    vec2 _md = _muv - mousePos;\n';
+      wrapper += '    _md.x *= RENDERSIZE.x / RENDERSIZE.y;\n';
+      wrapper += '    float _mr = length(_md);\n';
+      wrapper += '    float _mspot = exp(-_mr * _mr * 6.0) * 0.25;\n';
+      wrapper += '    gl_FragColor.rgb += gl_FragColor.rgb * _mspot;\n';
+      wrapper += '    if (_transparentBg > 0.5) {\n';
+      wrapper += '        float _lum = dot(gl_FragColor.rgb, vec3(0.299, 0.587, 0.114));\n';
+      wrapper += '        gl_FragColor.a = smoothstep(0.02, 0.15, _lum);\n';
+      wrapper += '    }\n';
+    }
+    wrapper += '}\n';
+    body += wrapper;
+  }
+
+  return { frag: body, parsed, headerLineCount: headerParts.length };
+}
+
+const VERT_SHADER = `
+attribute vec2 position;
+varying vec2 isf_FragNormCoord;
+void main() {
+    isf_FragNormCoord = position * 0.5 + 0.5;
+    gl_Position = vec4(position, 0.0, 1.0);
+}`;

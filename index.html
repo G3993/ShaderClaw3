@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShaderClaw3</title>
+
+<!-- CodeMirror -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+
+<!-- ShaderClaw CSS -->
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/reset.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/toolbar.css">
+<link rel="stylesheet" href="css/viewport.css">
+<link rel="stylesheet" href="css/assets.css">
+<link rel="stylesheet" href="css/properties.css">
+<link rel="stylesheet" href="css/controls.css">
+<link rel="stylesheet" href="css/timeline.css">
+<link rel="stylesheet" href="css/modals.css">
+</head>
+
+<body>
+
+<div id="app">
+
+  <!-- ===== VERTICAL ELEMENT TOOLBAR (left edge) ===== -->
+  <nav class="sc3-toolbar-strip">
+    <button class="sc3-tool" data-panel="assets" data-tooltip="Assets">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span class="sc3-tool-label">Assets</span>
+    </button>
+    <button class="sc3-tool" data-panel="gallery" data-tooltip="Gallery (G)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span class="sc3-tool-label">Gallery</span>
+    </button>
+    <button class="sc3-tool" data-panel="code" data-tooltip="Code Editor (E)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      <span class="sc3-tool-label">Code</span>
+    </button>
+    <div class="sc3-tool-sep"></div>
+    <button class="sc3-tool" data-panel="properties" data-tooltip="Properties (P)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      <span class="sc3-tool-label">Props</span>
+    </button>
+  </nav>
+
+  <!-- ===== FLOATING TOP BAR ===== -->
+  <header class="sc3-header">
+    <div class="sc3-logo"><img src="logo.png" alt="ShaderClaw" class="sc3-logo-img">ShaderClaw</div>
+    <div class="sc3-header-actions">
+    </div>
+  </header>
+
+  <!-- ===== EXPORT HUB DROPDOWN ===== -->
+  <div id="export-hub">
+    <div class="export-hub-grid">
+      <button data-action="window" class="export-tile">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        <span>Window</span>
+      </button>
+      <button data-action="screenshot" class="export-tile">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="13" r="4"/><path d="M5 3L3 5"/></svg>
+        <span>Screenshot</span>
+      </button>
+      <button data-action="gif" class="export-tile">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="2"/><text x="12" y="15" text-anchor="middle" font-size="8" fill="currentColor" stroke="none">GIF</text></svg>
+        <span>GIF</span>
+      </button>
+      <button data-action="video" class="export-tile">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        <span>Video</span>
+      </button>
+      <button data-action="ndi" class="export-tile">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 12h4l3-9 3 18 3-9h4"/></svg>
+        <span>NDI</span>
+      </button>
+      <button data-action="copy" class="export-tile">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        <span>Copy .fs</span>
+      </button>
+      <button data-action="download" class="export-tile">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span>Download</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== LEFT: SOURCES PANEL (floating, hidden by default) ===== -->
+  <aside class="sc3-sources sc3-panel" id="sidebar">
+    <div id="sidebar-scroll">
+
+    <!-- Gallery Section -->
+    <div id="gallery-tab-content" class="sc3-section">
+      <div class="sc3-section-header" data-section="gallery">
+        <span class="sc3-section-chevron">&#x25BC;</span> Gallery
+      </div>
+      <div class="sc3-section-body" style="padding: 8px;">
+        <input type="text" class="gallery-search" id="gallery-search" placeholder="Search shaders...">
+        <div class="gallery-grid" id="gallery-grid"></div>
+      </div>
+    </div>
+
+    <!-- Code Editor -->
+    <div class="sc3-section" id="editor-section">
+      <div class="sc3-section-header" data-section="code">
+        <span class="sc3-section-chevron">&#x25BC;</span> Code
+      </div>
+      <div class="sc3-section-body sc3-editor-body">
+        <div id="editor-toolbar" class="sc3-editor-toolbar">
+          <button id="compile-btn">Compile</button>
+          <label id="auto-compile-label"><input type="checkbox" id="auto-compile" checked> Auto</label>
+          <div class="spacer"></div>
+          <button id="new-btn">New</button>
+          <button id="download-btn">Save .fs</button>
+        </div>
+        <div id="editor-area">
+          <div id="editor-wrap"><textarea id="code"></textarea></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Assets Section -->
+    <div id="inputs-section" class="open assets-panel sc3-section">
+      <div class="assets-header">
+        <span class="assets-title">Shader Assets</span>
+      </div>
+      <!-- Add Content button + dropdown -->
+      <div class="asset-add-wrap">
+        <button class="asset-add-btn" id="asset-add-btn">+ ADD CONTENT</button>
+        <div class="asset-add-menu" id="asset-add-menu">
+          <button class="asset-add-option" data-type="image">Image</button>
+          <button class="asset-add-option" data-type="video">Video</button>
+          <button class="asset-add-option" data-type="model">3D Model</button>
+          <button class="asset-add-option" data-type="sound">Sound</button>
+          <button class="asset-add-option" data-type="mic">Mic</button>
+          <button class="asset-add-option" data-type="webcam">Webcam</button>
+          <button class="asset-add-option" data-type="ndi">NDI</button>
+          <button class="asset-add-option" data-type="code">Code</button>
+        </div>
+      </div>
+
+      <!-- Overlay -->
+      <div class="sc3-layer-btn-row">
+        <div class="layer-card sc3-layer-btn" data-layer="overlay">
+          <div class="layer-header">
+            <span class="sc3-layer-btn-icon">+</span>
+            <span class="layer-name">Overlay</span>
+          </div>
+          <div class="layer-controls">
+            <div class="layer-control-row">
+              <button class="asset-add-btn" id="overlay-upload-btn" title="Upload image or GIF">+ ADD OVERLAY</button>
+            </div>
+            <div id="overlay-file-info" class="overlay-file-info" style="display:none">
+              <span class="overlay-file-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+              <span id="overlay-file-name" class="overlay-file-name"></span>
+              <button id="overlay-file-remove" class="overlay-file-remove" title="Remove image">&times;</button>
+            </div>
+            <div class="layer-control-row">
+              <label>X</label>
+              <input type="range" id="overlay-tx" min="-1" max="1" step="0.01" value="0">
+              <span class="val" id="overlay-tx-val">0.00</span>
+            </div>
+            <div class="layer-control-row">
+              <label>Y</label>
+              <input type="range" id="overlay-ty" min="-1" max="1" step="0.01" value="0">
+              <span class="val" id="overlay-ty-val">0.00</span>
+            </div>
+            <div class="layer-control-row">
+              <label>Scale</label>
+              <input type="range" id="overlay-scale" min="0.1" max="5" step="0.01" value="0.3">
+              <span class="val" id="overlay-scale-val">0.30</span>
+            </div>
+            <div class="layer-control-row">
+              <label>Rotate</label>
+              <input type="range" id="overlay-rotate" min="-180" max="180" step="1" value="0">
+              <span class="val" id="overlay-rotate-val">0&#176;</span>
+            </div>
+            <div class="layer-control-row">
+              <label>Opacity</label>
+              <input type="range" class="layer-opacity" data-layer="overlay" min="0" max="1" step="0.01" value="1">
+              <span class="val">1.00</span>
+            </div>
+            <div class="layer-control-row">
+              <label>Blend</label>
+              <select class="layer-blend" data-layer="overlay">
+                <option value="normal">Normal</option>
+                <option value="add">Add</option>
+                <option value="multiply">Multiply</option>
+                <option value="screen">Screen</option>
+                <option value="overlay">Overlay</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hidden select for handler compat -->
+      <select id="input-add-select" style="display:none">
+        <option value="" disabled selected>+ Add</option>
+        <option value="image">Image</option>
+        <option value="video">Video</option>
+        <option value="model">3D Model</option>
+        <option value="sound">Sound</option>
+        <option value="mic">Mic</option>
+        <option value="webcam">Webcam</option>
+        <option value="ndi">NDI</option>
+        <option value="code">Code</option>
+      </select>
+      <!-- Hidden tiles for handler compat -->
+      <div class="import-grid" style="display:none">
+        <button class="import-tile" id="tile-image"></button>
+        <button class="import-tile" id="tile-video"></button>
+        <button class="import-tile" id="tile-model"></button>
+        <button class="import-tile" id="tile-sound"></button>
+        <button class="import-tile" id="tile-mic"></button>
+        <button class="import-tile" id="tile-webcam"></button>
+        <button class="import-tile" id="tile-ndi"></button>
+        <button class="import-tile" id="tile-code"></button>
+      </div>
+      <div class="assets-list" id="media-list"></div>
+    </div>
+
+    <!-- Export Tab Content (hidden, kept for JS compat) -->
+    <div id="export-tab-content" style="display:none"></div>
+
+    </div><!-- /sidebar-scroll -->
+  </aside>
+
+  <!-- NDI Source Picker (modal — must be outside hidden panels) -->
+  <div id="ndi-source-picker">
+    <div class="picker-box">
+      <div class="picker-header">
+        <span class="title">NDI Sources</span>
+        <button class="picker-close" id="ndi-picker-close">&times;</button>
+      </div>
+      <div class="picker-body" id="ndi-picker-body"></div>
+      <button class="ndi-refresh-btn" id="ndi-refresh-btn">Refresh Sources</button>
+    </div>
+  </div>
+
+  <!-- ===== CENTER: CANVAS (fills viewport) ===== -->
+  <main class="sc3-canvas" id="main">
+    <div id="preview">
+      <canvas id="gl-canvas"></canvas>
+      <canvas id="three-canvas"></canvas>
+      <canvas id="overlay-gizmo"></canvas>
+      <div class="canvas-controls">
+        <div class="ndi-indicator" id="ndi-indicator"><span class="ndi-dot"></span><span class="ndi-label">NDI</span></div>
+        <button class="canvas-btn" id="play-btn" title="Play/Pause">&#9654;</button>
+        <button class="canvas-btn" id="export-hub-btn" title="Export">&#x2B06;</button>
+        <button class="canvas-btn" id="fs-btn" title="Fullscreen">&#x26F6;</button>
+        <div class="audio-level-indicator" id="audio-level-indicator">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
+          <div class="audio-level-track"><span class="audio-level-fill" id="audio-level-fill"></span></div>
+        </div>
+      </div>
+      <div id="error-bar"></div>
+      <div id="debug-overlay" style="display:none"></div>
+      <!-- Hidden file inputs (must exist for JS) -->
+      <input type="file" id="image-file-input" accept="image/jpeg,image/png,image/gif,image/webp" multiple style="display:none">
+      <input type="file" id="video-file-input" accept="video/mp4,video/webm" multiple style="display:none">
+      <input type="file" id="model-file-input" accept=".glb,.gltf,.stl,.fbx,.obj" multiple style="display:none">
+      <input type="file" id="sound-file-input" accept="audio/mpeg,audio/wav,audio/ogg,.mp3,.wav,.ogg" multiple style="display:none">
+      <input type="file" id="vector-file-input" accept=".svg,image/svg+xml" style="display:none">
+      <input type="file" id="code-file-input" accept=".fs,.glsl,.frag,.txt" style="display:none">
+      <input type="file" id="bg-image-input" accept="image/*" style="display:none">
+      <input type="file" id="bg-video-input" accept="video/*" style="display:none">
+    </div>
+
+    <!-- Claude Chat Bar -->
+    <div class="sc3-chat-bar">
+      <div class="sc3-chat-attachment" style="display:none">
+        <img class="sc3-chat-attachment-thumb" src="" alt="ref">
+        <button class="sc3-chat-attachment-remove" title="Remove image">&times;</button>
+      </div>
+      <input type="file" class="sc3-chat-ref-input" accept="image/*" style="display:none">
+      <button class="sc3-chat-ref-btn" title="Attach reference image"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></button>
+      <input type="text" class="sc3-chat-input" placeholder="Ask Claude to modify your shader...">
+      <button class="sc3-chat-send">&#x21B5;</button>
+    </div>
+    <div class="sc3-chat-history"></div>
+
+    <!-- Shader Browser Overlay -->
+    <div id="shader-browser-backdrop"></div>
+    <div id="shader-browser">
+      <div class="browser-header">
+        <input class="browser-search" type="text" placeholder="Search shaders...">
+        <button class="browser-close">&#x2715;</button>
+      </div>
+      <div class="browser-body"></div>
+    </div>
+
+    <!-- Mobile drag handle -->
+    <div id="mobile-drag-handle"><span class="drag-pill"></span></div>
+  </main>
+
+  <!-- ===== RIGHT: PROPERTIES PANEL (floating) ===== -->
+  <aside class="sc3-properties sc3-panel visible">
+    <div id="sidebar-resize" style="display:none"></div>
+
+    <!-- Canvas Settings -->
+    <div id="canvas-tab-content" class="sc3-section">
+      <div class="sc3-section-header" data-section="canvas">
+        <span class="sc3-section-chevron">&#x25BC;</span> Canvas
+      </div>
+      <div class="sc3-section-body">
+        <div id="canvas-panel" class="open">
+          <div class="section-header"><span style="flex:1"></span></div>
+          <div class="section-body">
+            <!-- BG compact row -->
+            <div class="sc3-bg-row" id="sc3-bg-row">
+              <div class="sc3-bg-swatch" id="sc3-bg-swatch"></div>
+              <input type="text" class="sc3-bg-hex" id="sc3-bg-hex" value="000000" maxlength="6" spellcheck="false">
+              <span class="sc3-bg-spacer"></span>
+              <input type="text" class="sc3-bg-opacity" id="sc3-bg-opacity" value="100" maxlength="3" spellcheck="false"><span class="sc3-bg-pct">%</span>
+              <button class="sc3-bg-eye" id="sc3-bg-eye" title="Toggle background visibility">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+              <input type="color" id="bg-color-picker" value="#000000" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;">
+            </div>
+            <!-- BG dropdown (hidden until row clicked) -->
+            <div class="sc3-bg-dropdown" id="sc3-bg-dropdown">
+              <div class="layer-control-row">
+                <label>Type</label>
+                <select id="canvas-bg-select">
+                  <option value="none" hidden>None</option>
+                  <option value="color" selected>Color</option>
+                  <option value="transparent">Transparent</option>
+                  <option value="image">Image</option>
+                  <option value="video">Video</option>
+                  <option value="shader">Shader</option>
+                  <option value="webcam">Webcam</option>
+                  <option value="ndi">NDI Input</option>
+                </select>
+              </div>
+              <div class="layer-control-row" id="bg-shader-row" style="display:none">
+                <label>Shader</label>
+                <select id="bg-shader-select" style="flex:1"></select>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Triggers -->
+    <div class="sc3-section">
+      <div class="sc3-section-header" data-section="input-triggers">
+        <span class="sc3-section-chevron">&#x25BC;</span> Input Triggers
+      </div>
+      <div class="sc3-section-body">
+        <div id="input-triggers-panel">
+
+          <!-- Circle toggle buttons -->
+          <div class="input-circle-row">
+            <div class="input-circle-item">
+              <button class="input-circle-btn" id="canvas-mic-btn" title="Toggle voice input">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+              </button>
+              <span class="input-circle-label">Voice</span>
+            </div>
+            <div class="input-circle-item">
+              <button class="input-circle-btn" id="cam-vis-btn" title="Toggle camera">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+              </button>
+              <span class="input-circle-label">Camera</span>
+            </div>
+            <div class="input-circle-item">
+              <button class="input-circle-btn" id="data-source-btn" title="Add data source">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+              </button>
+              <span class="input-circle-label">Data</span>
+            </div>
+          </div>
+
+          <!-- Voice detail (shown when mic active) -->
+          <div class="input-detail" id="voice-detail">
+            <div class="voice-transcript-bar">
+              <input type="text" id="voice-transcript" readonly value="" placeholder="Start Talking.." spellcheck="false">
+            </div>
+            <div class="audio-signal-bar" id="audio-signal">
+              <span class="audio-signal-dot"></span>
+              <span class="audio-signal-label" id="audio-signal-label">MIC</span>
+              <div class="audio-signal-meter"><span class="audio-signal-meter-fill" id="audio-signal-fill"></span></div>
+            </div>
+            <div class="layer-controls" style="display:block">
+              <div class="cam-toggle-row">
+                <label>Mic</label>
+                <button class="cam-switch" id="voice-mic-toggle" title="Toggle microphone on/off"></button>
+              </div>
+              <div class="layer-control-row">
+                <label>Audio Device</label>
+                <select id="audio-device-select" style="flex:1">
+                  <option value="">Default</option>
+                </select>
+              </div>
+              <div class="layer-control-row">
+                <label>Decay</label>
+                <input type="range" id="voice-decay-slider" min="0.1" max="6.0" step="0.1" value="3.0" title="Fade time after 2s hold" style="flex:1">
+                <span id="voice-decay-val" class="val" style="min-width:32px; text-align:right">3.0s</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Camera detail (shown when cam active) -->
+          <div class="input-detail" id="camera-detail">
+            <div class="layer-controls" style="display:block">
+              <div class="cam-toggle-row">
+                <label>Webcam</label>
+                <button class="cam-switch" id="cam-webcam-btn" title="Toggle webcam"></button>
+              </div>
+              <div class="cam-toggle-row">
+                <label>Body Tracking</label>
+                <button class="cam-switch" id="cam-mediapipe-btn" title="Toggle Body Tracking"></button>
+              </div>
+              <div class="layer-control-row">
+                <label>Opacity</label>
+                <input type="range" class="layer-opacity" data-layer="media" min="0" max="1" step="0.01" value="1">
+                <span class="val">1.00</span>
+              </div>
+              <div class="layer-control-row">
+                <label>Blend</label>
+                <select class="layer-blend" data-layer="media">
+                  <option value="normal">Normal</option>
+                  <option value="add">Add</option>
+                  <option value="multiply">Multiply</option>
+                  <option value="screen">Screen</option>
+                  <option value="overlay">Overlay</option>
+                </select>
+              </div>
+              <div class="layer-control-row mp-modes-row" id="mp-modes-row" style="display:none">
+                <button class="mp-mode-btn active" data-mp-mode="hand" title="Hand tracking"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22c-1-2-4-4-4-8V7a1 1 0 0 1 2 0v5"/><path d="M10 12V5a1 1 0 0 1 2 0v7"/><path d="M14 12V6a1 1 0 0 1 2 0v6"/><path d="M18 14v-3a1 1 0 0 0-2 0v3"/><path d="M18 14c0 4-2 6-4 8"/><path d="M8 14V7"/></svg><span>Hand</span></button>
+                <button class="mp-mode-btn" data-mp-mode="face" title="Face mesh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="12" cy="13" rx="7" ry="8.5"/><circle cx="9.5" cy="11" r="0.8" fill="currentColor"/><circle cx="14.5" cy="11" r="0.8" fill="currentColor"/><path d="M10 15.5q2 1.5 4 0"/></svg><span>Face</span></button>
+                <button class="mp-mode-btn" data-mp-mode="pose" title="Pose detection"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="4.5" r="2"/><path d="M12 7v5m0 0l-4 6m4-6l4 6"/><path d="M7 11h10"/></svg><span>Pose</span></button>
+                <button class="mp-mode-btn" data-mp-mode="segment" title="Segmentation mask"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2 1.5"><circle cx="12" cy="5" r="2.5"/><path d="M12 8c-3 0-5 2-5 4v2c0 1 0 3 1 5h8c1-2 1-4 1-5v-2c0-2-2-4-5-4z"/></svg><span>Seg</span></button>
+              </div>
+              <div class="cam-toggle-row" id="hand-as-mouse-row" style="display:none">
+                <label>Hand as Mouse</label>
+                <button class="cam-switch" id="hand-as-mouse-btn" title="Use hand position as mouse input"></button>
+              </div>
+              <div class="hand-pos-widget" id="hand-pos-widget">
+                <div class="hand-pos-pad" id="hand-pos-pad">
+                  <div class="hand-pos-dot" id="hand-pos-dot"></div>
+                </div>
+                <div class="hand-pos-sliders">
+                  <div class="hand-pos-axis">
+                    <label>x</label>
+                    <input type="range" id="hand-pos-x" min="0" max="1" step="0.001" value="0.5" disabled>
+                    <span class="val" id="hand-pos-x-val">0.5</span>
+                  </div>
+                  <div class="hand-pos-axis">
+                    <label>y</label>
+                    <input type="range" id="hand-pos-y" min="0" max="1" step="0.001" value="0.5" disabled>
+                    <span class="val" id="hand-pos-y-val">0.5</span>
+                  </div>
+                </div>
+              </div>
+              <div class="cam-toggle-row" id="bt-overlay-row" style="display:none">
+                <label>Skeleton Overlay</label>
+                <button class="cam-switch" id="bt-overlay-btn" title="Show skeleton overlay on canvas"></button>
+              </div>
+              <div id="bt-signals-section" style="display:none">
+                <div class="bt-section-header" id="bt-signals-header">
+                  <span class="bt-chevron">&#x25B6;</span> Live Signals
+                </div>
+                <div class="bt-section-body" id="bt-signals-body"></div>
+              </div>
+              <div id="bt-links-section" style="display:none">
+                <div class="bt-section-header" id="bt-links-header">
+                  <span class="bt-chevron">&#x25B6;</span> Live Links <span class="bt-link-count" id="bt-link-count" style="display:none">0</span>
+                </div>
+                <div class="bt-section-body" id="bt-links-body">
+                  <div id="bt-links-list"></div>
+                  <div class="bt-actions">
+                    <button class="bt-action-btn" id="bt-add-link-btn">+ Link</button>
+                    <button class="bt-action-btn" id="bt-map-btn">Map</button>
+                  </div>
+                </div>
+              </div>
+              <div id="bt-recording-section" style="display:none">
+                <div class="bt-section-header" id="bt-recording-header">
+                  <span class="bt-chevron">&#x25B6;</span> Recording
+                </div>
+                <div class="bt-section-body" id="bt-recording-body">
+                  <div class="bt-rec-row">
+                    <button class="bt-rec-btn" id="bt-rec-btn" title="Record">&#x23FA;</button>
+                    <button class="bt-rec-btn" id="bt-play-btn" title="Play" disabled>&#x25B6;</button>
+                    <button class="bt-rec-btn" id="bt-json-btn" title="Export JSON" disabled>{ }</button>
+                    <span class="bt-rec-timer" id="bt-rec-timer">0:00</span>
+                  </div>
+                </div>
+              </div>
+              <div class="layer-control-row" id="bt-preset-row" style="display:none">
+                <label>Preset</label>
+                <select id="bt-preset-select" class="layer-shader-select" style="flex:1"></select>
+              </div>
+            </div>
+          </div><!-- /camera-detail -->
+
+          <!-- Data source detail (shown when data button active) -->
+          <div class="input-detail" id="data-detail">
+            <div class="layer-controls" style="display:block">
+              <div class="layer-control-row">
+                <label>Add Source</label>
+                <select id="data-source-select" style="flex:1">
+                  <option value="" disabled selected>Choose...</option>
+                  <option value="clock">Clock</option>
+                  <option value="weather">Weather</option>
+                  <option value="expression">Expression</option>
+                  <option value="json_api">JSON API</option>
+                  <option value="websocket">WebSocket</option>
+                  <option value="csv">CSV File</option>
+                  <option value="csv_timeseries">CSV Time Series</option>
+                  <option value="image_feed">Image Feed</option>
+                  <option value="rss">RSS Feed</option>
+                </select>
+              </div>
+              <div id="data-sources-list" class="assets-list"></div>
+              <div id="data-config-area"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Layer Panel -->
+    <div class="sc3-section">
+      <div class="sc3-section-header" data-section="layers">
+        <span class="sc3-section-chevron">&#x25BC;</span> Layers
+      </div>
+      <div class="sc3-section-body">
+        <div id="layer-panel">
+
+          <!-- Shader Card with Text/3D toggle sections -->
+          <div class="layer-card focused open" data-layer="shader">
+            <div class="layer-header">
+              <button class="layer-vis" data-layer="shader" title="Toggle visibility"><svg class="eye-on" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-off" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 01-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
+              <span class="layer-name">Shader</span>
+            </div>
+
+            <!-- === Shader content (always visible when card open) === -->
+            <div class="layer-type-content active" data-type="shader">
+              <select class="layer-shader-select" data-layer="shader" style="display:none"></select>
+              <!-- Compact color/opacity row -->
+              <div class="sc3-layer-row" data-layer="shader">
+                <div class="sc3-layer-swatch" data-layer="shader"></div>
+                <input type="text" class="sc3-layer-hex" data-layer="shader" value="000000" maxlength="6" spellcheck="false">
+                <span class="sc3-bg-spacer"></span>
+                <input type="text" class="sc3-layer-opacity-val" data-layer="shader" value="100" maxlength="3" spellcheck="false"><span class="sc3-bg-pct">%</span>
+                <button class="sc3-layer-transp" data-layer="shader" id="shader-transparent-bg-btn" title="Transparent background">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+                <input type="color" class="sc3-layer-color-picker" data-layer="shader" id="shader-bg-color" value="#000000" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;">
+              </div>
+              <div class="sc3-layer-dropdown" data-layer="shader">
+                <div class="layer-control-row">
+                  <label>Opacity</label>
+                  <input type="range" class="layer-opacity" data-layer="shader" min="0" max="1" step="0.01" value="1">
+                  <span class="val">1.00</span>
+                </div>
+                <div class="layer-control-row">
+                  <label>Blend</label>
+                  <select class="layer-blend" data-layer="shader">
+                    <option value="normal">Normal</option>
+                    <option value="add">Add</option>
+                    <option value="multiply">Multiply</option>
+                    <option value="screen">Screen</option>
+                    <option value="overlay">Overlay</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="layer-colors" data-layer="shader"></div>
+              <div class="layer-params" data-layer="shader"></div>
+
+              <!-- Text toggle section -->
+              <div class="layer-toggle-section active" data-type="text">
+                <div class="layer-toggle-header" data-layer="text">
+                  <button class="layer-vis" data-layer="text" title="Toggle text visibility"><svg class="eye-on" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-off" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 01-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
+                  <span class="layer-toggle-label">Text</span>
+                  <span class="layer-toggle-chevron">&#9662;</span>
+                </div>
+                <div class="layer-toggle-body">
+                  <select class="layer-shader-select" data-layer="text" style="display:none"></select>
+                  <div class="text-msg-bar" style="display:flex">
+                    <input type="text" id="text-msg-input" maxlength="64" value="ETHEREA" spellcheck="false" placeholder="TYPE HERE">
+                  </div>
+                  <!-- Compact color/opacity row -->
+                  <div class="sc3-layer-row" data-layer="text">
+                    <div class="sc3-layer-swatch" data-layer="text" style="background:#fff"></div>
+                    <input type="text" class="sc3-layer-hex" data-layer="text" value="FFFFFF" maxlength="6" spellcheck="false">
+                    <span class="sc3-bg-spacer"></span>
+                    <input type="text" class="sc3-layer-opacity-val" data-layer="text" value="100" maxlength="3" spellcheck="false"><span class="sc3-bg-pct">%</span>
+                    <button class="sc3-layer-transp" data-layer="text" title="Transparent background">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                    <input type="color" class="sc3-layer-color-picker" data-layer="text" value="#ffffff" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;">
+                  </div>
+                  <div class="sc3-layer-dropdown" data-layer="text">
+                    <div class="layer-control-row">
+                      <label>Opacity</label>
+                      <input type="range" class="layer-opacity" data-layer="text" min="0" max="1" step="0.01" value="1">
+                      <span class="val">1.00</span>
+                    </div>
+                    <div class="layer-control-row">
+                      <label>Blend</label>
+                      <select class="layer-blend" data-layer="text">
+                        <option value="normal">Normal</option>
+                        <option value="add">Add</option>
+                        <option value="multiply">Multiply</option>
+                        <option value="screen">Screen</option>
+                        <option value="overlay">Overlay</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="layer-colors" data-layer="text"></div>
+                  <div class="layer-params" data-layer="text"></div>
+                </div><!-- /layer-toggle-body -->
+              </div><!-- /text toggle section -->
+
+              <!-- 3D toggle section -->
+              <div class="layer-toggle-section" data-type="scene">
+                <div class="layer-toggle-header" data-layer="scene">
+                  <button class="layer-vis" data-layer="scene" title="Toggle 3D visibility"><svg class="eye-on" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-off" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 01-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
+                  <span class="layer-toggle-label">3D</span>
+                  <span class="layer-toggle-chevron">&#9662;</span>
+                </div>
+                <div class="layer-toggle-body">
+                  <select class="layer-shader-select" data-layer="scene" style="display:none"></select>
+                  <!-- Compact color/opacity row -->
+                  <div class="sc3-layer-row" data-layer="scene">
+                    <div class="sc3-layer-swatch" data-layer="scene" style="background:#000"></div>
+                    <input type="text" class="sc3-layer-hex" data-layer="scene" value="000000" maxlength="6" spellcheck="false">
+                    <span class="sc3-bg-spacer"></span>
+                    <input type="text" class="sc3-layer-opacity-val" data-layer="scene" value="100" maxlength="3" spellcheck="false"><span class="sc3-bg-pct">%</span>
+                    <button class="sc3-layer-transp" data-layer="scene" title="Transparent background">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                    <input type="color" class="sc3-layer-color-picker" data-layer="scene" value="#000000" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;">
+                  </div>
+                  <div class="sc3-layer-dropdown" data-layer="scene">
+                    <div class="layer-control-row">
+                      <label>Opacity</label>
+                      <input type="range" class="layer-opacity" data-layer="scene" min="0" max="1" step="0.01" value="1">
+                      <span class="val">1.00</span>
+                    </div>
+                    <div class="layer-control-row">
+                      <label>Blend</label>
+                      <select class="layer-blend" data-layer="scene">
+                        <option value="normal">Normal</option>
+                        <option value="add">Add</option>
+                        <option value="multiply">Multiply</option>
+                        <option value="screen">Screen</option>
+                        <option value="overlay">Overlay</option>
+                      </select>
+                    </div>
+                    <div class="layer-control-row">
+                      <label>Flip</label>
+                      <button class="flip-toggle scene-flip-h" data-layer="scene" title="Flip Horizontal">H</button>
+                      <button class="flip-toggle scene-flip-v active" data-layer="scene" title="Flip Vertical">V</button>
+                    </div>
+                    <div class="layer-control-row">
+                      <button id="scene-model-btn" title="Import 3D model (.glb, .gltf, .stl, .fbx, .obj)">+ Add 3D Model</button>
+                    </div>
+                  </div>
+                  <div class="layer-colors" data-layer="scene"></div>
+                  <div class="layer-params" data-layer="scene"></div>
+                </div><!-- /layer-toggle-body -->
+              </div><!-- /3D toggle section -->
+            </div>
+
+          </div><!-- /shader-card -->
+
+        </div><!-- /layer-panel -->
+      </div><!-- /sc3-section-body -->
+    </div><!-- /sc3-section -->
+
+    <!-- NDI status (kept for JS compat, no visible section needed) -->
+    <div style="display:none">
+      <button id="ndi-send-btn"></button>
+      <span id="ndi-status"></span>
+    </div>
+
+  </aside>
+
+</div><!-- /app -->
+
+<!-- ===== LIBRARIES ===== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<!-- ===== SHADERCLAW JS MODULES (dependency order) ===== -->
+<script src="js/loaders.js"></script>
+<script src="js/isf.js"></script>
+<script src="js/media.js"></script>
+<script src="js/renderer.js"></script>
+<script src="js/scene-renderer.js"></script>
+<script src="js/gesture.js"></script>
+<script src="js/ui/params.js"></script>
+<script src="js/state.js"></script>
+<script src="js/data.js"></script>
+<script src="js/mcp-bridge.js"></script>
+<script src="js/ui/toolbar-strip.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>

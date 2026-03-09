@@ -1,0 +1,280 @@
+/*{
+  "DESCRIPTION": "Balls — metallic spheres with selective Unreal-style bloom",
+  "CREDIT": "ShaderClaw (inspired by three.js selective bloom example)",
+  "CATEGORIES": ["Generator", "3D"],
+  "INPUTS": [
+    { "NAME": "ballCount", "LABEL": "Count", "TYPE": "float", "DEFAULT": 25.0, "MIN": 5.0, "MAX": 50.0 },
+    { "NAME": "ballSize", "LABEL": "Size", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.05, "MAX": 1.0 },
+    { "NAME": "bloomStr", "LABEL": "Bloom", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
+    { "NAME": "bloomRadius", "LABEL": "Blur Size", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 3.0 },
+    { "NAME": "rotSpeed", "LABEL": "Orbit Speed", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 2.0 },
+    { "NAME": "bloomRatio", "LABEL": "Glow Ratio", "TYPE": "float", "DEFAULT": 0.4, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "metallic", "LABEL": "Metallic", "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "audioDrive", "LABEL": "Audio Drive", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 5.0 },
+    { "NAME": "accentColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.91, 0.25, 0.34, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.04, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
+  ],
+  "PASSES": [
+    { "TARGET": "scene", "PERSISTENT": true },
+    { "TARGET": "blurH", "PERSISTENT": true, "WIDTH": "$WIDTH/3", "HEIGHT": "$HEIGHT/3" },
+    { "TARGET": "blurV", "PERSISTENT": true, "WIDTH": "$WIDTH/3", "HEIGHT": "$HEIGHT/3" },
+    {}
+  ]
+}*/
+
+// ==========================================
+// Hash functions for deterministic sphere placement
+// ==========================================
+
+float hash1(float n) { return fract(sin(n) * 43758.5453); }
+vec3 hash3(float n) {
+    return vec3(hash1(n), hash1(n + 127.1), hash1(n + 269.5));
+}
+
+// ==========================================
+// Sphere SDF scene
+// ==========================================
+
+// Returns vec2(distance, sphereID) — ID encodes which sphere was hit
+vec2 mapScene(vec3 p, float count) {
+    vec2 res = vec2(1e10, -1.0);
+    for (float i = 0.0; i < 50.0; i++) {
+        if (i >= count) break;
+        // Deterministic position on a sphere shell, radius 2-6
+        vec3 h = hash3(i * 7.13) * 2.0 - 1.0;
+        float r = 2.0 + hash1(i * 3.91) * 4.0;
+        vec3 center = normalize(h) * r;
+
+        // Gentle orbit rotation
+        float orbitAngle = TIME * rotSpeed * (0.5 + hash1(i * 5.17) * 0.5);
+        float sa = sin(orbitAngle), ca = cos(orbitAngle);
+        center.xz = mat2(ca, -sa, sa, ca) * center.xz;
+
+        // Audio pulse: expand radius on beat
+        float pulse = 1.0 + audioBass * audioDrive * 0.3 * hash1(i * 11.3);
+
+        float sz = ballSize * (0.5 + hash1(i * 2.37) * 0.7) * pulse;
+        float d = length(p - center) - sz;
+        if (d < res.x) {
+            res = vec2(d, i);
+        }
+    }
+    return res;
+}
+
+// ==========================================
+// Raymarching
+// ==========================================
+
+vec2 raymarch(vec3 ro, vec3 rd, float count) {
+    float t = 0.0;
+    vec2 res = vec2(-1.0);
+    for (int i = 0; i < 80; i++) {
+        vec3 p = ro + rd * t;
+        vec2 h = mapScene(p, count);
+        if (h.x < 0.001) {
+            res = vec2(t, h.y);
+            break;
+        }
+        t += h.x;
+        if (t > 30.0) break;
+    }
+    return res;
+}
+
+vec3 calcNormal(vec3 p, float count) {
+    vec2 e = vec2(0.001, 0.0);
+    return normalize(vec3(
+        mapScene(p + e.xyy, count).x - mapScene(p - e.xyy, count).x,
+        mapScene(p + e.yxy, count).x - mapScene(p - e.yxy, count).x,
+        mapScene(p + e.yyx, count).x - mapScene(p - e.yyx, count).x
+    ));
+}
+
+// ==========================================
+// Shading — metallic PBR-ish
+// ==========================================
+
+vec3 shadeSphere(vec3 p, vec3 n, vec3 rd, float id) {
+    // Per-sphere color: accent color with per-ball hue/brightness variation
+    vec3 h = hash3(id * 7.13);
+    float hueShift = (h.x - 0.5) * 0.3; // subtle hue spread around accent
+    vec3 baseCol = accentColor.rgb;
+    // Rotate hue slightly per sphere via RGB approximation
+    float angle = hueShift * 6.2832;
+    float cs = cos(angle), sn = sin(angle);
+    baseCol = vec3(
+        baseCol.r * (0.667 + cs * 0.333) + baseCol.g * (0.333 - cs * 0.333 + sn * 0.577) + baseCol.b * (0.333 - cs * 0.333 - sn * 0.577),
+        baseCol.r * (0.333 - cs * 0.333 - sn * 0.577) + baseCol.g * (0.667 + cs * 0.333) + baseCol.b * (0.333 - cs * 0.333 + sn * 0.577),
+        baseCol.r * (0.333 - cs * 0.333 + sn * 0.577) + baseCol.g * (0.333 - cs * 0.333 - sn * 0.577) + baseCol.b * (0.667 + cs * 0.333)
+    );
+    baseCol *= 0.5 + 0.5 * h.y; // brightness variation
+
+    // Simple metallic shading
+    vec3 lightDir = normalize(vec3(1.0, 1.5, 0.8));
+    vec3 lightDir2 = normalize(vec3(-0.5, -0.3, 1.0));
+    vec3 halfVec = normalize(lightDir - rd);
+    vec3 halfVec2 = normalize(lightDir2 - rd);
+
+    float diff = max(dot(n, lightDir), 0.0) * 0.7 + max(dot(n, lightDir2), 0.0) * 0.3;
+    float spec = pow(max(dot(n, halfVec), 0.0), 32.0 + metallic * 64.0);
+    float spec2 = pow(max(dot(n, halfVec2), 0.0), 32.0 + metallic * 64.0);
+
+    // Fresnel
+    float fresnel = pow(1.0 - max(dot(n, -rd), 0.0), 3.0);
+
+    vec3 col = baseCol * diff * (1.0 - metallic * 0.5);
+    col += (baseCol * metallic + vec3(1.0) * (1.0 - metallic)) * (spec * 0.8 + spec2 * 0.3);
+    col += fresnel * 0.3 * (baseCol * metallic + vec3(0.5));
+
+    // Ambient
+    col += baseCol * 0.08;
+
+    return col;
+}
+
+// ==========================================
+// Bloom selection — which spheres glow
+// ==========================================
+
+bool shouldBloom(float id) {
+    // Deterministic: ~bloomRatio of spheres glow
+    return hash1(id * 13.37 + 0.5) < bloomRatio;
+}
+
+// ==========================================
+// Pass 0: Render spheres to scene buffer
+// ==========================================
+
+vec4 passScene(vec2 uv) {
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    vec2 p = (uv - 0.5) * vec2(aspect, 1.0);
+
+    // Camera: orbit via mouse
+    float camAngle = mousePos.x * 6.2832 * 0.5;
+    float camPitch = 0.3 + mousePos.y * 0.5;
+    float camDist = 12.0;
+    vec3 ro = vec3(
+        sin(camAngle) * cos(camPitch) * camDist,
+        sin(camPitch) * camDist,
+        cos(camAngle) * cos(camPitch) * camDist
+    );
+    vec3 target = vec3(0.0);
+    vec3 fwd = normalize(target - ro);
+    vec3 right = normalize(cross(fwd, vec3(0.0, 1.0, 0.0)));
+    vec3 up = cross(right, fwd);
+    vec3 rd = normalize(fwd + right * p.x + up * p.y);
+
+    float count = floor(ballCount);
+    vec2 hit = raymarch(ro, rd, count);
+
+    if (hit.x > 0.0) {
+        vec3 pos = ro + rd * hit.x;
+        vec3 n = calcNormal(pos, count);
+        vec3 col = shadeSphere(pos, n, rd, hit.y);
+
+        // Audio brightness boost for blooming spheres
+        if (shouldBloom(hit.y)) {
+            col *= 1.0 + audioLevel * audioDrive * 0.5;
+        }
+
+        // Encode bloom flag in alpha: 1.0 = bloom, 0.5 = no bloom
+        float alpha = shouldBloom(hit.y) ? 1.0 : 0.5;
+        return vec4(col, alpha);
+    }
+
+    // Background
+    return vec4(bgColor.rgb, 0.0);
+}
+
+// ==========================================
+// Pass 1 & 2: Separable Gaussian blur (bloom-only)
+// ==========================================
+
+vec4 passBlur(vec2 uv, bool horizontal) {
+    // 9-tap Gaussian weights
+    float w[5];
+    w[0] = 0.227027;
+    w[1] = 0.1945946;
+    w[2] = 0.1216216;
+    w[3] = 0.054054;
+    w[4] = 0.016216;
+
+    vec2 texelSize = bloomRadius / RENDERSIZE;
+    vec2 dir = horizontal ? vec2(texelSize.x, 0.0) : vec2(0.0, texelSize.y);
+
+    // Source: scene buffer for horizontal, blurH for vertical
+    vec4 center;
+    if (horizontal) {
+        center = texture2D(scene, uv);
+    } else {
+        center = texture2D(blurH, uv);
+    }
+
+    // For horizontal pass, only blur bloom-tagged pixels (alpha > 0.7)
+    if (horizontal) {
+        // Extract bloom-only: keep pixels with alpha == 1.0 (bloom flagged)
+        vec4 result = vec4(0.0);
+        for (int j = 0; j < 5; j++) {
+            float fj = float(j);
+            vec4 s1 = texture2D(scene, uv + dir * fj);
+            vec4 s2 = texture2D(scene, uv - dir * fj);
+            // Only include bloom-flagged pixels
+            float b1 = step(0.7, s1.a);
+            float b2 = step(0.7, s2.a);
+            result.rgb += s1.rgb * b1 * w[j];
+            result.rgb += s2.rgb * b2 * w[j];
+        }
+        // Subtract center double-counted
+        float bc = step(0.7, center.a);
+        result.rgb -= center.rgb * bc * w[0];
+        return vec4(result.rgb, 1.0);
+    } else {
+        // Vertical pass: blur everything in blurH
+        vec3 result = center.rgb * w[0];
+        for (int j = 1; j < 5; j++) {
+            float fj = float(j);
+            result += texture2D(blurH, uv + dir * fj).rgb * w[j];
+            result += texture2D(blurH, uv - dir * fj).rgb * w[j];
+        }
+        return vec4(result, 1.0);
+    }
+}
+
+// ==========================================
+// Pass 3: Final composite — scene + bloom
+// ==========================================
+
+vec4 passFinal(vec2 uv) {
+    vec4 sceneCol = texture2D(scene, uv);
+    vec3 bloomCol = texture2D(blurV, uv).rgb;
+
+    vec3 col = sceneCol.rgb + bloomCol * bloomStr;
+
+    // Background where nothing was hit (alpha == 0)
+    if (sceneCol.a < 0.01) {
+        col = bgColor.rgb + bloomCol * bloomStr;
+    }
+
+    float alpha = 1.0;
+    if (transparentBg) {
+        float lum = dot(col, vec3(0.299, 0.587, 0.114));
+        alpha = clamp(max(sceneCol.a, lum * 2.0), 0.0, 1.0);
+        if (sceneCol.a < 0.01 && length(bloomCol) < 0.01) alpha = 0.0;
+    }
+
+    return vec4(col, alpha);
+}
+
+// ==========================================
+// Dispatch
+// ==========================================
+
+void main() {
+    vec2 uv = gl_FragCoord.xy / RENDERSIZE;
+    if      (PASSINDEX == 0) gl_FragColor = passScene(uv);
+    else if (PASSINDEX == 1) gl_FragColor = passBlur(uv, true);
+    else if (PASSINDEX == 2) gl_FragColor = passBlur(uv, false);
+    else                     gl_FragColor = passFinal(uv);
+}

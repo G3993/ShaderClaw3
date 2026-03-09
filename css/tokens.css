@@ -1,0 +1,119 @@
+/* ============================================================
+   ShaderClaw 3 — Design Tokens
+   Canvas-first floating panel system
+   ============================================================ */
+:root {
+  /* Background */
+  --sc-bg:              #000000;
+  --sc-surface:         rgba(12, 12, 18, 0.88);
+  --sc-surface-solid:   #0c0c12;
+  --sc-surface-alt:     rgba(18, 18, 28, 0.92);
+  --sc-surface-raised:  #16162a;
+
+  /* Glass */
+  --sc-glass:           rgba(12, 12, 18, 0.72);
+  --sc-glass-blur:      32px;
+  --sc-glass-border:    rgba(255, 255, 255, 0.08);
+  --sc-glass-shadow:    0 12px 48px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.04) inset, 0 1px 0 rgba(255,255,255,0.06) inset;
+
+  /* Borders */
+  --sc-border:          rgba(255, 255, 255, 0.06);
+  --sc-border-hover:    rgba(255, 255, 255, 0.10);
+  --sc-border-focus:    rgba(255, 255, 255, 0.14);
+  --sc-border-active:   rgba(232, 64, 87, 0.4);
+
+  /* Text */
+  --sc-text:            rgba(255, 255, 255, 0.88);
+  --sc-text-dim:        rgba(255, 255, 255, 0.38);
+  --sc-text-bright:     rgba(255, 255, 255, 0.96);
+  --sc-text-muted:      rgba(255, 255, 255, 0.22);
+
+  /* Accent */
+  --sc-accent:          #E84057;
+  --sc-accent-dim:      rgba(232, 64, 87, 0.12);
+  --sc-accent-glow:     rgba(232, 64, 87, 0.5);
+  --sc-accent-hover:    #f04868;
+  --sc-accent-surface:  rgba(232, 64, 87, 0.08);
+
+  /* Status */
+  --sc-cyan:            #00d4ff;
+  --sc-green:           #00cc66;
+  --sc-yellow:          #ffaa22;
+  --sc-purple:          #a855f7;
+
+  /* Typography */
+  --sc-font:            'Inter', system-ui, -apple-system, sans-serif;
+  --sc-font-mono:       'JetBrains Mono', 'SF Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  --sc-font-size-xs:    9px;
+  --sc-font-size-sm:    10px;
+  --sc-font-size-base:  11px;
+  --sc-font-size-md:    12px;
+  --sc-font-size-lg:    13px;
+  --sc-font-size-xl:    14px;
+
+  /* Spacing (4px base) */
+  --sc-space-1:  4px;
+  --sc-space-2:  8px;
+  --sc-space-3:  12px;
+  --sc-space-4:  16px;
+  --sc-space-5:  20px;
+  --sc-space-6:  24px;
+  --sc-space-8:  32px;
+
+  /* Radii */
+  --sc-radius-sm: 4px;
+  --sc-radius:    8px;
+  --sc-radius-lg: 14px;
+  --sc-radius-xl: 20px;
+
+  /* Transitions */
+  --sc-ease:      cubic-bezier(0.4, 0, 0.2, 1);
+  --sc-ease-out:  cubic-bezier(0, 0, 0.2, 1);
+  --sc-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --sc-duration:  150ms;
+  --sc-duration-slow: 250ms;
+
+  /* Floating panel dimensions */
+  --sc-topbar-h:      44px;
+  --sc-toolbar-w:     52px;
+  --sc-detail-w:      300px;
+  --sc-panel-gap:     10px;
+  --sc-panel-radius:  14px;
+
+  /* Control sizing */
+  --sc-label-w:    64px;
+  --sc-val-w:      38px;
+  --sc-slider-h:   4px;
+  --sc-control-gap: 8px;
+
+  /* Legacy compat aliases */
+  --bg:           var(--sc-bg);
+  --panel:        var(--sc-surface);
+  --panel-solid:  var(--sc-surface-solid);
+  --panel-alt:    var(--sc-surface-alt);
+  --surface-alt:  var(--sc-surface-raised);
+  --border:       var(--sc-border);
+  --border-hover: var(--sc-border-hover);
+  --border-focus: var(--sc-border-focus);
+  --text:         var(--sc-text);
+  --text-dim:     var(--sc-text-dim);
+  --text-bright:  var(--sc-text-bright);
+  --accent:       var(--sc-accent);
+  --accent-dim:   var(--sc-accent-dim);
+  --accent-glow:  var(--sc-accent-glow);
+  --cyan:         var(--sc-cyan);
+  --status-ok:    var(--sc-green);
+  --font:         var(--sc-font);
+  --font-mono:    var(--sc-font-mono);
+  --radius:       var(--sc-radius);
+  --radius-lg:    var(--sc-radius-lg);
+  --label-w:      var(--sc-label-w);
+  --val-w:        var(--sc-val-w);
+  --control-gap:  var(--sc-control-gap);
+  --slider-h:     var(--sc-slider-h);
+  /* Compat for old grid layout references */
+  --sc-toolbar-h:     var(--sc-topbar-h);
+  --sc-assets-w:      var(--sc-toolbar-w);
+  --sc-properties-w:  var(--sc-detail-w);
+  --sc-timeline-h:    0px;
+}
