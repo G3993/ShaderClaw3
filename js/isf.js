@@ -124,6 +124,107 @@ void main() {
 // ISF Parser
 // ============================================================
 
+// --- Auto-detect and convert Shadertoy code to ISF ---
+function isShadertoyCode(source) {
+  // Detect Shadertoy patterns: mainImage signature or iTime/iResolution without ISF header
+  const hasISFHeader = /\/\*\s*\{[\s\S]*?\}\s*\*\//.test(source);
+  if (hasISFHeader) return false;
+  const hasMainImage = /void\s+mainImage\s*\(/.test(source);
+  const hasShadertoyUniforms = /\b(iTime|iResolution|iMouse|iFrame|iChannel\d)\b/.test(source);
+  return hasMainImage || hasShadertoyUniforms;
+}
+
+function convertShadertoy(source) {
+  if (!isShadertoyCode(source)) return source;
+
+  let s = source;
+
+  // Collect which Shadertoy uniforms are used so we know what INPUTS to declare
+  const usesIMouse = /\biMouse\b/.test(s);
+  const usesIFrame = /\biFrame\b/.test(s);
+  const usesIChannel = [];
+  for (let i = 0; i < 4; i++) {
+    if (new RegExp(`\\biChannel${i}\\b`).test(s)) usesIChannel.push(i);
+  }
+
+  // Replace Shadertoy uniforms with ISF equivalents
+  s = s.replace(/\biTime\b/g, 'TIME');
+  s = s.replace(/\biTimeDelta\b/g, '(1.0/60.0)');
+  s = s.replace(/\biResolution\b/g, 'RENDERSIZE3');  // temp placeholder (vec3 → vec2 bridge)
+  s = s.replace(/\biFrame\b/g, 'FRAMEINDEX');
+  s = s.replace(/\biDate\b/g, 'vec4(0.0)');
+
+  // iMouse: Shadertoy uses pixel coords, ShaderClaw mousePos is normalized 0-1
+  if (usesIMouse) {
+    s = s.replace(/\biMouse\b/g, '_iMouse');
+  }
+
+  // iChannelN → image inputs
+  for (const ch of usesIChannel) {
+    s = s.replace(new RegExp(`\\biChannel${ch}\\b`, 'g'), `inputImage${ch}`);
+    // Also handle iChannelResolution[N]
+    s = s.replace(new RegExp(`iChannelResolution\\s*\\[\\s*${ch}\\s*\\]`, 'g'), `vec3(IMG_SIZE_inputImage${ch}, 1.0)`);
+  }
+
+  // texture() → texture2D() for GLSL ES 1.0
+  s = s.replace(/\btexture\s*\(/g, 'texture2D(');
+  // textureLod → texture2D (no LOD in ES 1.0)
+  s = s.replace(/\btextureLod\s*\(/g, 'texture2D(');
+
+  // mainImage(out vec4 fragColor, in vec2 fragCoord) → void main()
+  const mainImageRe = /void\s+mainImage\s*\(\s*out\s+vec4\s+(\w+)\s*,\s*in\s+vec2\s+(\w+)\s*\)/;
+  const match = s.match(mainImageRe);
+  if (match) {
+    const fragColorName = match[1];
+    const fragCoordName = match[2];
+    s = s.replace(mainImageRe, 'void main()');
+    // Replace the output variable with gl_FragColor
+    if (fragColorName !== 'gl_FragColor') {
+      s = s.replace(new RegExp(`\\b${fragColorName}\\b`, 'g'), 'gl_FragColor');
+    }
+    // Replace fragCoord with gl_FragCoord.xy
+    if (fragCoordName !== 'gl_FragCoord') {
+      s = s.replace(new RegExp(`\\b${fragCoordName}\\b`, 'g'), 'gl_FragCoord.xy');
+    }
+  }
+
+  // RENDERSIZE3 bridge: Shadertoy iResolution is vec3, ISF RENDERSIZE is vec2
+  // Replace .xy usage first (most common), then bare usage
+  s = s.replace(/RENDERSIZE3\.xy\b/g, 'RENDERSIZE');
+  s = s.replace(/RENDERSIZE3\.x\b/g, 'RENDERSIZE.x');
+  s = s.replace(/RENDERSIZE3\.y\b/g, 'RENDERSIZE.y');
+  s = s.replace(/RENDERSIZE3\.z\b/g, '1.0');
+  s = s.replace(/\bRENDERSIZE3\b/g, 'vec3(RENDERSIZE, 1.0)');
+
+  // Build ISF header with INPUTS
+  const inputs = [];
+  if (usesIMouse) {
+    // We'll provide _iMouse as a vec4 derived from mousePos/mouseDown in a preamble
+  }
+  for (const ch of usesIChannel) {
+    inputs.push(`    { "NAME": "inputImage${ch}", "TYPE": "image", "LABEL": "Image ${ch}" }`);
+  }
+
+  let header = `/*{\n  "DESCRIPTION": "Converted from Shadertoy",\n  "CATEGORIES": ["Generator"]`;
+  if (inputs.length > 0) {
+    header += `,\n  "INPUTS": [\n${inputs.join(',\n')}\n  ]`;
+  }
+  header += `\n}*/\n\n`;
+
+  // Add iMouse bridge (convert normalized mousePos to pixel coords like Shadertoy expects)
+  // Must be injected inside main() since it references uniforms
+  if (usesIMouse) {
+    s = s.replace(/void\s+main\s*\(\s*(void)?\s*\)\s*\{/,
+      'void main() {\n  vec4 _iMouse = vec4(mousePos * RENDERSIZE, mouseDown > 0.5 ? mousePos * RENDERSIZE : vec2(0.0));');
+  }
+
+  // Remove any existing precision/version lines (buildFragmentShader adds them)
+  s = s.replace(/#version\s+\d+.*/g, '');
+  s = s.replace(/precision\s+(highp|mediump|lowp)\s+float\s*;/g, '');
+
+  return header + s;
+}
+
 function parseISF(source) {
   const match = source.match(/\/\*\s*(\{[\s\S]*?\})\s*\*\//);
   if (!match) return { meta: null, glsl: source.trim(), inputs: [] };

@@ -368,6 +368,23 @@
     const layer = getLayer(layerId);
     if (!layer || layer.type !== 'shader') return { ok: false, errors: 'Not a shader layer' };
 
+    // Auto-convert Shadertoy code to ISF format
+    const wasShadertoy = isShadertoyCode(source);
+    const converted = convertShadertoy(source);
+    if (converted !== source) {
+      source = converted;
+      // Update editor with converted source so user sees valid ISF
+      if (focusedLayerId === layerId) editor.setValue(source);
+    }
+    // Warn if Shadertoy code looks like a multi-buffer shader (missing functions)
+    if (wasShadertoy) {
+      const hasTextureSize = /\btextureSize\b/.test(source);
+      const hasCommonRef = /\b(Common|BufA|BufB|BufC|BufD)\b/i.test(source);
+      if (hasTextureSize || hasCommonRef) {
+        return { ok: false, errors: 'This looks like a multi-buffer Shadertoy (uses functions from Common/Buffer tabs). Only single-pass shaders can be auto-converted.' };
+      }
+    }
+
     // Store source for context-loss recovery
     layer._isfSource = source;
 
@@ -3380,16 +3397,50 @@
     } else if (action === 'ndi') {
       toggleNdiSend();
     } else if (action === 'copy') {
-      navigator.clipboard.writeText(editor.getValue()).then(() => {
-        console.log('Shader code copied');
+      const src = patchISFDefaults(editor.getValue(), getFocusedLayer());
+      navigator.clipboard.writeText(src).then(() => {
+        const btn = exportHub.querySelector('[data-action="copy"] span');
+        if (btn) { btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy .fs', 1500); }
       });
     } else if (action === 'download') {
-      const blob = new Blob([editor.getValue()], { type: 'text/plain' });
+      const src = patchISFDefaults(editor.getValue(), getFocusedLayer());
+      const blob = new Blob([src], { type: 'text/plain' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = 'shader-' + Date.now() + '.fs';
       a.click();
       URL.revokeObjectURL(a.href);
+    }
+  }
+
+  // Patch ISF header DEFAULTs with current parameter values
+  function patchISFDefaults(source, layer) {
+    if (!layer || !layer.inputValues || !layer.inputs || !layer.inputs.length) return source;
+    const headerMatch = source.match(/^\/\*(\{[\s\S]*?\})\*\//);
+    if (!headerMatch) return source;
+    try {
+      const header = JSON.parse(headerMatch[1]);
+      if (!header.INPUTS) return source;
+      const vals = layer.inputValues;
+      for (const inp of header.INPUTS) {
+        if (!(inp.NAME in vals)) continue;
+        const v = vals[inp.NAME];
+        if (inp.TYPE === 'float' || inp.TYPE === 'long') {
+          inp.DEFAULT = typeof v === 'number' ? parseFloat(v.toFixed(4)) : v;
+        } else if (inp.TYPE === 'bool') {
+          inp.DEFAULT = v ? true : false;
+        } else if (inp.TYPE === 'color') {
+          if (Array.isArray(v)) inp.DEFAULT = v.map(c => parseFloat(c.toFixed(4)));
+        } else if (inp.TYPE === 'point2D') {
+          if (Array.isArray(v)) inp.DEFAULT = v.map(c => parseFloat(c.toFixed(4)));
+        } else if (inp.TYPE === 'text') {
+          inp.DEFAULT = v;
+        }
+      }
+      const patched = '/*' + JSON.stringify(header, null, 2) + '*/';
+      return source.replace(/^\/\*\{[\s\S]*?\}\*\//, patched);
+    } catch (e) {
+      return source;
     }
   }
 
@@ -5142,7 +5193,7 @@
     const [textSrc, sceneSrc, skySrc] = await Promise.all([
       fetch('shaders/text_typewriter.fs').then(r => r.text()),
       fetch('scenes/tesseract.scene.js').then(r => r.text()),
-      fetch('shaders/laser.fs').then(r => r.text()).catch(() => null),
+      fetch('shaders/tee.fs').then(r => r.text()).catch(() => null),
     ]);
 
     // Yield frames between each heavy GPU operation to prevent context loss
@@ -5155,9 +5206,9 @@
       if (shaderResult && shaderResult.ok) {
         // compileToLayer already sets visible=true on success
         if (skySrc) {
-          getLayer('shader').manifestEntry = manifest.find(m => m.file === 'laser.fs');
+          getLayer('shader').manifestEntry = manifest.find(m => m.file === 'tee.fs');
           const sel = document.querySelector('.layer-shader-select[data-layer="shader"]');
-          if (sel) sel.value = 'laser.fs';
+          if (sel) sel.value = 'tee.fs';
         }
         if (focusedLayerId === 'shader') editor.setValue(shaderSrc);
       } else {
@@ -5193,7 +5244,7 @@
       }
       sceneRenderer.inputValues = sceneLayer.inputValues;
       autoBindTextures('scene');
-      sceneLayer.visible = true;
+      sceneLayer.visible = false;
       sceneLayer.manifestEntry = manifest.find(m => m.file === 'tesseract.scene.js');
       const sceneSelect = document.querySelector('.layer-shader-select[data-layer="scene"]');
       if (sceneSelect) sceneSelect.value = 'tesseract.scene.js';
@@ -5206,7 +5257,8 @@
     try {
       const textResult = compileToLayer('text', textSrc);
       if (textResult && textResult.ok) {
-        // compileToLayer already sets visible=true on success
+        // Hide text layer by default — user can toggle on
+        getLayer('text').visible = false;
         getLayer('text').manifestEntry = manifest.find(m => m.file === 'text_typewriter.fs');
         const textSel = document.querySelector('.layer-shader-select[data-layer="text"]');
         if (textSel) textSel.value = 'text_typewriter.fs';

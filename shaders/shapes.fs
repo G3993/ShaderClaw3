@@ -7,6 +7,7 @@
         { "NAME": "camDist", "LABEL": "Distance", "TYPE": "float", "DEFAULT": 5.5, "MIN": 2.0, "MAX": 10.0 },
         { "NAME": "refractAmt", "LABEL": "Refraction", "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.5, "MAX": 1.5 },
         { "NAME": "innerSize", "LABEL": "Inner Size", "TYPE": "float", "DEFAULT": 0.24, "MIN": 0.05, "MAX": 0.8 },
+        { "NAME": "sphereCount", "LABEL": "Spheres", "TYPE": "float", "DEFAULT": 1.0, "MIN": 1.0, "MAX": 8.0 },
         { "NAME": "lightCol1", "LABEL": "Light 1", "TYPE": "color", "DEFAULT": [0.05, 0.05, 0.15, 1.0] },
         { "NAME": "lightCol2", "LABEL": "Light 2", "TYPE": "color", "DEFAULT": [0.91, 0.25, 0.34, 1.0] },
         { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
@@ -182,14 +183,42 @@ vec2 mapRefract(vec3 p) {
     return vec2(icosahedral(p, 1.0), 0.0);
 }
 
+float smin(float a, float b, float k) {
+    float h = clamp(0.5 + 0.5*(b-a)/k, 0.0, 1.0);
+    return mix(b, a, h) - k*h*(1.0-h);
+}
+
 vec2 mapSolid(vec3 p) {
-    p.xz = rotate2D(p.xz, TIME * 1.25);
-    p.yx = rotate2D(p.yx, TIME * 1.85);
-    p.y += sin(TIME) * 0.25;
-    p.x += cos(TIME) * 0.25;
-    float d = length(p) - innerSize * (1.0 + audioBass * 1.5);
+    int count = int(sphereCount + 0.5);
+    float d = 1e6;
     float pulse = pow(sin(TIME * 2.0 + audioHigh * 10.0) * 0.5 + 0.5, 9.0) * 2.0;
-    d = mix(d, sdBox(p, vec3(innerSize * 0.7)), pulse);
+
+    for(int i = 0; i < 8; i++) {
+        if(i >= count) break;
+        float fi = float(i);
+        // Each sphere gets a unique orbit
+        float phase = fi * 2.094; // ~TAU/3 offset per sphere
+        float speed1 = 1.25 + fi * 0.3;
+        float speed2 = 1.85 - fi * 0.2;
+        float orbitR = fi * 0.15; // spread out from center
+
+        vec3 q = p;
+        q.xz = rotate2D(q.xz, TIME * speed1 + phase);
+        q.yx = rotate2D(q.yx, TIME * speed2 + phase * 0.7);
+        q.y += sin(TIME + phase) * 0.25;
+        q.x += cos(TIME + phase * 1.3) * 0.25;
+        // Offset from center for multiple spheres
+        q.x += sin(phase) * orbitR;
+        q.z += cos(phase) * orbitR;
+
+        float sz = innerSize * (1.0 + audioBass * 1.5);
+        // Smaller spheres for higher counts
+        if(count > 1) sz *= 0.7 / (1.0 + fi * 0.15);
+
+        float sd = length(q) - sz;
+        sd = mix(sd, sdBox(q, vec3(sz * 0.7)), pulse);
+        d = smin(d, sd, 0.15);
+    }
     return vec2(d, 1.0);
 }
 
@@ -254,10 +283,8 @@ void main() {
     }
 
     float vignette = 1.0 - max(0.0, dot(uv * 0.155, uv));
-    color.r = smoothstep(0.05, 0.995, color.r);
-    color.b = smoothstep(-0.05, 0.95, color.b);
-    color.g = smoothstep(-0.1, 0.95, color.g);
-    color.b *= vignette;
+    color = smoothstep(vec3(-0.02), vec3(0.98), color);
+    color *= vignette;
 
     gl_FragColor = vec4(color, 1.0);
 }

@@ -590,5 +590,37 @@
     "categories": ["Generator", "Interactive"],
     "file": "draw.fs",
     "hasVertex": true
+  },
+  {
+    "id": 119,
+    "title": "TEE",
+    "description": "Trusted Execution Environment — data star enters a wireframe enclave, disperses into orbiting particles, reconverges and exits",
+    "categories": ["Generator", "3D"],
+    "file": "tee.fs",
+    "hasVertex": true
+  },
+  {
+    "id": 120,
+    "title": "Noisy Texture",
+    "description": "Multi-color gradient with grainy noise-textured distortion — 7 shape modes including wave, dots, truchet, blob, sphere",
+    "categories": ["Generator"],
+    "file": "noisy_texture.fs",
+    "hasVertex": true
+  },
+  {
+    "id": 121,
+    "title": "Sphere Gradient",
+    "description": "Blinn-Phong shaded sphere with two orbiting light sources and customizable diffuse/specular colors",
+    "categories": ["Generator", "3D"],
+    "file": "sphere_gradient.fs",
+    "hasVertex": true
+  },
+  {
+    "id": 122,
+    "title": "Metaballs",
+    "description": "Mouse-controlled rotating metaballs with dynamic Blinn-Phong lighting — drag to orbit",
+    "categories": ["Generator", "3D"],
+    "file": "metaballs.fs",
+    "hasVertex": true
   }
 ]
