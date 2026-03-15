@@ -6,8 +6,10 @@ import { buildFragmentShader, VERT_SHADER, parseISF } from './isf.js';
 import { getAudioState, updateAudioUniforms } from './audio.js';
 import { getFontState } from './media.js';
 
-const FBO_WIDTH = 1920;
-const FBO_HEIGHT = 1080;
+// Scale FBOs to device — mobile GPUs can't handle 7× 1920x1080 FBOs
+const _isMobile = typeof window !== 'undefined' && (window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent));
+const FBO_WIDTH = _isMobile ? Math.min(960, window.innerWidth * (window.devicePixelRatio || 1)) : 1920;
+const FBO_HEIGHT = _isMobile ? Math.min(540, window.innerHeight * (window.devicePixelRatio || 1)) : 1080;
 
 /**
  * Initialize FBOs for all layers

@@ -5474,7 +5474,8 @@
       }
       sceneRenderer.inputValues = sceneLayer.inputValues;
       autoBindTextures('scene');
-      sceneLayer.visible = true;
+      const _isMobileDevice = window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
+      sceneLayer.visible = !_isMobileDevice; // hide 3D on mobile to save GPU
       sceneLayer.manifestEntry = manifest.find(m => m.file === 'oscar_trophy.scene.js');
       const sceneSelect = document.querySelector('.layer-shader-select[data-layer="scene"]');
       if (sceneSelect) sceneSelect.value = 'oscar_trophy.scene.js';

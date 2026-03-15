@@ -62,7 +62,9 @@ class Renderer {
   }
 
   resize() {
-    const dpr = window.devicePixelRatio || 1;
+    // Cap DPR at 2 on mobile to prevent oversized canvases that kill GPU
+    const isMobile = window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
+    const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 2 : 3);
     const parent = this.canvas.parentElement;
     const w = Math.round((parent ? parent.clientWidth : window.innerWidth) * dpr);
     const h = Math.round((parent ? parent.clientHeight : window.innerHeight) * dpr);
