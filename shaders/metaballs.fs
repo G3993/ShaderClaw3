@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Mouse-controlled rotating metaballs with dynamic Blinn-Phong lighting",
+  "DESCRIPTION": "Auto-rotating metaballs with dynamic Blinn-Phong lighting",
   "CREDIT": "shellderr '23, ISF adaptation",
   "CATEGORIES": ["Generator", "3D"],
   "INPUTS": [
@@ -93,9 +93,9 @@ vec3 trace_rays(vec3 origin, vec3 dir) {
 }
 
 void main() {
-    // Mouse rotation — mousePos is already normalized 0-1
-    vec2 mouse_uv = mousePos * 2.0 - 1.0;
-    mat3 rot = rotation_matrix(mouse_uv * 3.1416);
+    // Slow auto-rotation
+    vec2 auto_rot = vec2(sin(TIME * 0.3) * 0.4, cos(TIME * 0.2) * 0.3);
+    mat3 rot = rotation_matrix(auto_rot);
 
     vec2 uv = (2.0 * gl_FragCoord.xy - RENDERSIZE.xy) / RENDERSIZE.y;
 

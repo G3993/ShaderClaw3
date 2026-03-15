@@ -2,7 +2,7 @@
   "DESCRIPTION": "Body Tracking Cube — SDF raymarched box/octahedron blend, driven by gesture parameters",
   "CATEGORIES": ["Generator"],
   "INPUTS": [
-    { "NAME": "texture", "LABEL": "Texture", "TYPE": "image" },
+    { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" },
     { "NAME": "texMix", "LABEL": "Texture Mix", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.8 },
     { "NAME": "rotationX", "LABEL": "Rotation X", "TYPE": "float", "MIN": -3.14159, "MAX": 3.14159, "DEFAULT": 0.0 },
     { "NAME": "rotationY", "LABEL": "Rotation Y", "TYPE": "float", "MIN": -3.14159, "MAX": 3.14159, "DEFAULT": 0.0 },
@@ -82,9 +82,9 @@ vec3 triplanar(vec3 p, vec3 n) {
   vec2 uvX = p.yz * 0.5 + 0.5;
   vec2 uvY = p.xz * 0.5 + 0.5;
   vec2 uvZ = p.xy * 0.5 + 0.5;
-  vec3 cx = texture2D(texture, uvX).rgb;
-  vec3 cy = texture2D(texture, uvY).rgb;
-  vec3 cz = texture2D(texture, uvZ).rgb;
+  vec3 cx = texture2D(inputTex, uvX).rgb;
+  vec3 cy = texture2D(inputTex, uvY).rgb;
+  vec3 cz = texture2D(inputTex, uvZ).rgb;
   return cx * w.x + cy * w.y + cz * w.z;
 }
 

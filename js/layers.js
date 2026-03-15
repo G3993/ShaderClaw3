@@ -84,7 +84,7 @@ export function compileToLayer(renderer, layerId, source) {
       const def = (inp.DEFAULT || '').toUpperCase();
       for (let i = 0; i < maxLen; i++) {
         const ch = def[i];
-        layer.inputValues[name + '_' + i] = (!ch || ch === ' ') ? 26 : Math.max(0, Math.min(25, ch.charCodeAt(0) - 65));
+        layer.inputValues[name + '_' + i] = (!ch || ch === ' ') ? 26 : (function(c) { var code = c.charCodeAt(0); if (code >= 65 && code <= 90) return code - 65; if (code >= 48 && code <= 57) return code - 48 + 27; return 26; })(ch.toUpperCase());
       }
       layer.inputValues[name + '_len'] = def.replace(/\s+$/, '').length;
     }
@@ -251,6 +251,20 @@ export function renderComposition(renderer, sceneRenderer, mediaPipeMgr, tempCom
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, overlayLayer._gifElement);
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
     }
+  }
+
+  // Re-upload overlay video every frame
+  if (overlayLayer.visible && overlayLayer._videoElement && overlayLayer.fbo) {
+    const vid = overlayLayer._videoElement;
+    if (vid.readyState >= 2 && !vid.paused) {
+      const gl = renderer.gl;
+      gl.bindTexture(gl.TEXTURE_2D, overlayLayer.fbo.texture);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, vid);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    }
+    // Auto-resume if paused unexpectedly
+    if (vid.paused && vid.loop && !vid.ended) vid.play().catch(() => {});
   }
 
   // --- Phase 6: Final composite ---

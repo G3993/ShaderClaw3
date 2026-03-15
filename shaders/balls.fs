@@ -13,6 +13,8 @@
     { "NAME": "audioDrive", "LABEL": "Audio Drive", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 5.0 },
     { "NAME": "accentColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.91, 0.25, 0.34, 1.0] },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.04, 1.0] },
+    { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
+    { "NAME": "texMix", "LABEL": "Texture Mix", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
   ],
   "PASSES": [
@@ -173,6 +175,14 @@ vec4 passScene(vec2 uv) {
         vec3 pos = ro + rd * hit.x;
         vec3 n = calcNormal(pos, count);
         vec3 col = shadeSphere(pos, n, rd, hit.y);
+
+        // Texture mapping via spherical UVs from normal
+        if (texMix > 0.0) {
+            float tu = 0.5 + atan(n.x, n.z) / 6.2832;
+            float tv = 0.5 - asin(clamp(n.y, -1.0, 1.0)) / 3.14159;
+            vec3 texCol = texture2D(inputImage, vec2(tu, tv)).rgb;
+            col = mix(col, texCol, texMix);
+        }
 
         // Audio brightness boost for blooming spheres
         if (shouldBloom(hit.y)) {

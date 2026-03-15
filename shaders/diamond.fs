@@ -15,14 +15,15 @@
 }*/
 
 // performance and raymarching options
-#define WAVELENGTHS 12
+#define WAVELENGTHS 7
 #define INTERSECTION_PRECISION 0.001
 #define MIN_INCREMENT 0.01
-#define ITERATIONS 250
-#define MAX_BOUNCES 6
+#define ITERATIONS 80
+#define MAX_BOUNCES 5
 #define AA_SAMPLES 1
 #define BOUND 6.0
 #define DIST_SCALE 1.0
+#define DIAMOND_RADIUS 4.2
 
 // optical properties
 #define CRIT_ANGLE_SCALE 1.0
@@ -39,33 +40,42 @@ float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 }
 
-// Procedural HDR-like environment
+// Pre-normalized light directions (avoid per-pixel normalize)
+const vec3 KEY_DIR  = vec3(0.6963, 0.5571, 0.4178);
+const vec3 FILL_DIR = vec3(-0.8321, 0.5199, -0.3120);
+const vec3 RIM_DIR  = vec3(0.0, -0.5145, -0.8575);
+const vec3 SP1_DIR  = vec3(0.4264, 0.8528, 0.2559);
+const vec3 SP2_DIR  = vec3(-0.3352, 0.7821, 0.8938);
+const vec3 SP3_DIR  = vec3(0.8321, 0.2080, -0.5199);
+
+// Procedural HDR-like environment (optimized — fewer pow, precomputed dirs)
 vec3 envMap(vec3 rd) {
-    // Warm/cool gradient based on direction
     float sky = 0.5 + 0.5 * rd.y;
     vec3 col = mix(vec3(0.02, 0.02, 0.04), vec3(0.08, 0.06, 0.12), sky);
 
-    // Bright highlights — simulate studio lighting
-    // Key light (warm white, upper right)
-    float key = pow(max(0.0, dot(rd, normalize(vec3(1.0, 0.8, 0.6)))), 64.0);
-    col += vec3(1.0, 0.95, 0.85) * key * 3.0;
+    // Studio lights — use exp2 trick: pow(x, n) ≈ exp2(n * log2(x))
+    float kd = max(0.0, dot(rd, KEY_DIR));
+    float k = kd * kd; k *= k; k *= k; k *= k; k *= k; k *= k; // ^64 via squaring
+    col += vec3(1.0, 0.95, 0.85) * k * 3.0;
 
-    // Fill light (cool, upper left)
-    float fill = pow(max(0.0, dot(rd, normalize(vec3(-0.8, 0.5, -0.3)))), 32.0);
-    col += vec3(0.6, 0.7, 1.0) * fill * 1.5;
+    float fd = max(0.0, dot(rd, FILL_DIR));
+    float f = fd * fd; f *= f; f *= f; f *= f; f *= fd; // ^32 approx
+    col += vec3(0.6, 0.7, 1.0) * f * 1.5;
 
-    // Rim light (behind, below)
-    float rim = pow(max(0.0, dot(rd, normalize(vec3(0.0, -0.6, -1.0)))), 16.0);
-    col += vec3(0.91, 0.25, 0.34) * rim * 2.0;
+    float rd2 = max(0.0, dot(rd, RIM_DIR));
+    float r = rd2 * rd2; r *= r; r *= r; r *= r; // ^16
+    col += vec3(0.91, 0.25, 0.34) * r * 2.0;
 
-    // Subtle horizontal band (ground reflection)
-    float ground = exp(-8.0 * rd.y * rd.y) * step(rd.y, 0.0);
-    col += vec3(0.15, 0.12, 0.1) * ground;
+    // Ground band
+    col += vec3(0.15, 0.12, 0.1) * exp(-8.0 * rd.y * rd.y) * step(rd.y, 0.0);
 
-    // Bright point lights for sparkle
-    float s1 = pow(max(0.0, dot(rd, normalize(vec3(0.5, 1.0, 0.3)))), 256.0);
-    float s2 = pow(max(0.0, dot(rd, normalize(vec3(-0.3, 0.7, 0.8)))), 256.0);
-    float s3 = pow(max(0.0, dot(rd, normalize(vec3(0.8, 0.2, -0.5)))), 256.0);
+    // Sparkle points — high power via exp2
+    float s1d = max(0.0, dot(rd, SP1_DIR));
+    float s2d = max(0.0, dot(rd, SP2_DIR));
+    float s3d = max(0.0, dot(rd, SP3_DIR));
+    float s1 = exp2(256.0 * log2(s1d + 0.0001));
+    float s2 = exp2(256.0 * log2(s2d + 0.0001));
+    float s3 = exp2(256.0 * log2(s3d + 0.0001));
     col += vec3(1.0) * (s1 + s2 + s3) * 5.0;
 
     return col * envBrightness;
@@ -131,16 +141,22 @@ float doModel(vec3 p) {
 
 vec3 calcNormal(vec3 pos) {
     const float eps = INTERSECTION_PRECISION;
-    const vec3 v1 = vec3( 1.0, -1.0, -1.0);
-    const vec3 v2 = vec3(-1.0, -1.0,  1.0);
-    const vec3 v3 = vec3(-1.0,  1.0, -1.0);
-    const vec3 v4 = vec3( 1.0,  1.0,  1.0);
-    return normalize(
-        v1 * doModel(pos + v1 * eps) +
-        v2 * doModel(pos + v2 * eps) +
-        v3 * doModel(pos + v3 * eps) +
-        v4 * doModel(pos + v4 * eps)
-    );
+    float d = doModel(pos);
+    return normalize(vec3(
+        doModel(pos + vec3(eps, 0.0, 0.0)) - d,
+        doModel(pos + vec3(0.0, eps, 0.0)) - d,
+        doModel(pos + vec3(0.0, 0.0, eps)) - d
+    ));
+}
+
+// ---- Bounding sphere test (skip empty space) ----
+// Returns t of nearest intersection with sphere of radius r centered at origin, or -1.0
+float sphereIntersect(vec3 ro, vec3 rd, float r) {
+    float b = dot(ro, rd);
+    float c = dot(ro, ro) - r * r;
+    float h = b * b - c;
+    if (h < 0.0) return -1.0;
+    return -b - sqrt(h);
 }
 
 // ---- Bounce state ----
@@ -222,10 +238,12 @@ float iorCurve(float x) {
     return x - sin(0.5 * TIME) * sign(x - 0.5) * anomalyScale / pow(1.0 + abs(x - 0.5), anomalySharpness);
 }
 
-Bounce initBounce(vec3 ro, vec3 rd, float i) {
+Bounce initBounce(vec3 ro, vec3 rd, float i, float sphereT) {
     float idx = i / float(WAVELENGTHS - 1);
     float ior = iorBase + iorCurve(1.0 - idx) * sin(TIME * 0.67) * dispersion;
-    return Bounce(ro, rd, 1.0, 0.0, ior, 1.0, idx);
+    // Advance to bounding sphere to skip empty space
+    vec3 startPos = (sphereT > 0.0) ? ro + rd * (sphereT - 0.01) : ro;
+    return Bounce(startPos, rd, 1.0, 0.0, ior, 1.0, idx);
 }
 
 // ---- Green weight for spectral downsampling (4PL fit) ----
@@ -294,6 +312,7 @@ void main() {
     Bounce bounces[WAVELENGTHS];
 
     vec3 col = vec3(0.0);
+    float mask = 0.0;
 
     for (int samp = 0; samp < AA_SAMPLES; samp++) {
         float sampF = float(samp);
@@ -301,28 +320,31 @@ void main() {
                              sin(sampF * TWO_PI / float(AA_SAMPLES)));
         vec3 rd = normalize(camMat * vec3(p.xy + dxy, 1.5));
 
-        for (int i = 0; i < WAVELENGTHS; i++) {
-            bounces[i] = initBounce(ro, rd, float(i));
-        }
+        // Bounding sphere test — skip rays that miss the diamond entirely
+        float sphereT = sphereIntersect(ro, rd, DIAMOND_RADIUS);
+        bool hitSphere = sphereT > 0.0 || dot(ro, ro) < DIAMOND_RADIUS * DIAMOND_RADIUS;
 
-        for (int i = 0; i < WAVELENGTHS; i++) {
-            for (int j = 0; j < ITERATIONS; j++) {
-                if (doBounce(bounces[i]) == -1.0) break;
+        if (hitSphere) {
+            for (int i = 0; i < WAVELENGTHS; i++) {
+                bounces[i] = initBounce(ro, rd, float(i), sphereT);
             }
+            for (int i = 0; i < WAVELENGTHS; i++) {
+                for (int j = 0; j < ITERATIONS; j++) {
+                    if (doBounce(bounces[i]) == -1.0) break;
+                }
+            }
+            col += resampleColor(bounces);
+            // Compute diamond mask
+            float diamond = 0.0;
+            for (int i = 0; i < WAVELENGTHS; i++) {
+                diamond += bounces[i].bounces;
+            }
+            mask += step(2.0, diamond / float(WAVELENGTHS));
         }
-
-        col += resampleColor(bounces);
     }
 
     col /= float(AA_SAMPLES);
-
-    // Mix with background
-    float diamond = 0.0;
-    for (int i = 0; i < WAVELENGTHS; i++) {
-        diamond += bounces[i].bounces;
-    }
-    diamond = diamond / float(WAVELENGTHS);
-    float mask = step(2.0, diamond);
+    mask /= float(AA_SAMPLES);
 
     vec3 bg = bgColor.rgb;
     vec3 finalCol = mix(bg, col, mask);

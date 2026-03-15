@@ -6,9 +6,9 @@
     { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
     { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 0.5 },
     { "NAME": "depth", "LABEL": "Depth", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "hueSpread", "LABEL": "Hue Spread", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.4 },
+    { "NAME": "hueSpread", "LABEL": "Hue Spread", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "kerning", "LABEL": "Spacing", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 0.4 },
+    { "NAME": "kerning", "LABEL": "Spacing", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0 },
     { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.91, 0.25, 0.34, 1.0] },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.04, 0.04, 0.07, 1.0] },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
@@ -17,9 +17,9 @@
 
 // Atlas-only character sampling (no bitmap charData = no 27-branch dead code)
 float sampleAtlas(int ch, vec2 cellUV) {
-    if (ch < 0 || ch > 25) return 0.0;
+    if (ch < 0 || ch > 36) return 0.0;
     if (cellUV.x < 0.0 || cellUV.x > 1.0 || cellUV.y < 0.0 || cellUV.y > 1.0) return 0.0;
-    return smoothstep(0.1, 0.55, texture2D(fontAtlasTex, vec2((float(ch) + cellUV.x) / 27.0, cellUV.y)).r);
+    return smoothstep(0.1, 0.55, texture2D(fontAtlasTex, vec2((float(ch) + cellUV.x) / 37.0, cellUV.y)).r);
 }
 
 int getChar(int slot) {

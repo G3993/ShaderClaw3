@@ -81,7 +81,7 @@ int charCount() {
 float sampleChar(int ch, vec2 cellUV) {
     // Space character (26) or out-of-range renders nothing
     if (ch == 26) return 0.0;
-    if (ch < 0 || ch > 25) return 0.0;
+    if (ch < 0 || ch > 36) return 0.0;
 
     // Map cellUV to the 5x7 grid
     float col = cellUV.x * 5.0;

@@ -507,13 +507,6 @@
     "file": "lightning.fs"
   },
   {
-    "id": 108,
-    "title": "Cornell Box",
-    "description": "Raymarched Cornell box — bounce lighting, ambient occlusion, movable sphere, and top area light",
-    "categories": ["Generator", "3D"],
-    "file": "cornell_box.fs"
-  },
-  {
     "id": 109,
     "title": "Veroni 3",
     "description": "3D glass Voronoi sphere — morphing panels with neon gradient edges, refraction, image texture, and color control",
@@ -528,13 +521,6 @@
     "description": "Raymarched voxel tree with reflective checkerboard floor, animated glow pulses, and orbiting camera",
     "categories": ["Generator", "3D"],
     "file": "voxel_flower.fs"
-  },
-  {
-    "id": 111,
-    "title": "Image Mosaic 3D",
-    "description": "3D floating image cards from a live feed — connect an Image Feed data source to fill the mosaic with photos",
-    "categories": ["Generator", "Data"],
-    "file": "image_mosaic_3d.fs"
   },
   {
     "id": 112,
@@ -584,14 +570,6 @@
     "hasVertex": true
   },
   {
-    "id": 118,
-    "title": "Draw",
-    "description": "Interactive painting with emissive glow and 2D light bleeding — click and drag to draw",
-    "categories": ["Generator", "Interactive"],
-    "file": "draw.fs",
-    "hasVertex": true
-  },
-  {
     "id": 119,
     "title": "TEE",
     "description": "Trusted Execution Environment — data star enters a wireframe enclave, disperses into orbiting particles, reconverges and exits",
@@ -622,5 +600,83 @@
     "categories": ["Generator", "3D"],
     "file": "metaballs.fs",
     "hasVertex": true
+  },
+  {
+    "id": 123,
+    "title": "Match",
+    "description": "Live match visualization — two competing energy fields driven by real-time football data",
+    "categories": ["Generator", "Data"],
+    "file": "match.fs",
+    "hasVertex": true
+  },
+  {
+    "id": 200,
+    "title": "Oscar Lights",
+    "description": "Oscars ceremony — dramatic gold spotlight cone with volumetric god rays, floating dust particles, film grain, and audio reactivity",
+    "categories": ["Generator"],
+    "file": "oscar_lights.fs",
+    "hasVertex": true
+  },
+  {
+    "id": 202,
+    "title": "Movie Credits",
+    "description": "Classic Hollywood billing block — ultra-condensed movie poster credits with metallic shimmer",
+    "type": "text",
+    "categories": ["Generator", "Text"],
+    "file": "text_movie_credits.fs",
+    "hasVertex": true
+  },
+  {
+    "id": 201,
+    "title": "Oscar Trophy",
+    "description": "Rotating gold Oscar trophy with dramatic spotlight, rim lighting, and audio-reactive glow — import your GLB model",
+    "type": "scene",
+    "categories": ["3D"],
+    "file": "oscar_trophy.scene.js",
+    "folder": "scenes"
+  },
+  {
+    "id": 202,
+    "title": "Red Carpet",
+    "description": "Draped velvet cloth simulation — flowing folds with velvet sheen, specular highlights, wind, and audio-reactive ripples",
+    "categories": ["Generator"],
+    "file": "red_carpet.fs",
+    "hasVertex": true
+  },
+  {
+    "id": 203,
+    "title": "Carbon Fiber",
+    "description": "Woven carbon fiber fabric with silk sheen, mouse deformation, and audio-reactive shimmer",
+    "categories": ["Generator"],
+    "file": "carbon_fiber.fs",
+    "hasVertex": true
+  },
+  {
+    "id": 204,
+    "title": "Rainbow Flower",
+    "description": "Layered petal rings with simplex noise, hue cycling, spinning, depth, bloom, and audio reactivity",
+    "categories": ["Generator"],
+    "file": "rainbow_flower.fs",
+    "hasVertex": true
+  },
+  {
+    "id": 300,
+    "title": "ISF+3D (POC)",
+    "description": "Phase 1 proof of concept — ISF metaballs shader running inside Three.js via RawShaderMaterial alongside a 3D torus knot, composited in the same WebGL context",
+    "type": "scene",
+    "categories": ["3D", "Generator"],
+    "file": "isf_threejs_poc.scene.js",
+    "folder": "scenes",
+    "hidden": true
+  },
+  {
+    "id": 301,
+    "title": "Fluid+3D (Phase2)",
+    "description": "Phase 2 — 8-pass Navier-Stokes fluid simulation running in Three.js via ISFThreeRuntime with ping-pong WebGLRenderTargets",
+    "type": "scene",
+    "categories": ["3D", "Simulation"],
+    "file": "isf_multipass_poc.scene.js",
+    "folder": "scenes",
+    "hidden": true
   }
 ]

@@ -16,8 +16,8 @@
 
 // Atlas-only font sampling (row 0=top, 7=bottom → invert V for WebGL atlas)
 float charPixel(int ch, float col, float row) {
-    if (ch < 0 || ch > 26) return 0.0;
-    vec2 uv = vec2((float(ch) + col / 5.0) / 27.0, 1.0 - row / 7.0);
+    if (ch < 0 || ch > 36) return 0.0;
+    vec2 uv = vec2((float(ch) + col / 5.0) / 37.0, 1.0 - row / 7.0);
     if (uv.x < 0.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
     return smoothstep(0.1, 0.55, texture2D(fontAtlasTex, uv).r);
 }

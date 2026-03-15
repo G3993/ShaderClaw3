@@ -20,8 +20,8 @@ const float PI = 3.14159265;
 
 // Atlas-only character sampling — no charData branches for fast ANGLE compile
 float sampleAtlas(int ch, float col, float row) {
-    if (ch < 0 || ch > 25) return 0.0;
-    float u = (float(ch) + col / 5.0) / 27.0;
+    if (ch < 0 || ch > 36) return 0.0;
+    float u = (float(ch) + col / 5.0) / 37.0;
     float v = row / 7.0;
     return smoothstep(0.1, 0.55, texture2D(fontAtlasTex, vec2(u, v)).r);
 }
@@ -132,7 +132,7 @@ void main() {
         float gr = (y / charH) * 7.0;
         if (gc < 0.0 || gc >= 5.0 || gr < 0.0 || gr >= 7.0) continue;
         int ch = getChar(slot);
-        if (ch < 0 || ch > 25) continue;
+        if (ch < 0 || ch > 36) continue;
         float px = sampleAtlas(ch, gc, gr);
         if (px < 0.5) continue;
 

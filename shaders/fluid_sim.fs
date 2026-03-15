@@ -7,9 +7,11 @@
     { "NAME": "splatRadius", "LABEL": "Splat Radius", "TYPE": "float", "DEFAULT": 0.005, "MIN": 0.001, "MAX": 0.05 },
     { "NAME": "curlStrength", "TYPE": "float", "DEFAULT": 30.0, "MIN": 0.0, "MAX": 80.0 },
     { "NAME": "velDissipation", "LABEL": "Vel Dissipation", "TYPE": "float", "DEFAULT": 0.2, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "dyeDissipation", "LABEL": "Dye Dissipation", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 5.0 },
-    { "NAME": "pressureDecay", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "dyeDissipation", "LABEL": "Dye Dissipation", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 5.0 },
+    { "NAME": "pressureDecay", "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "bloomIntensity", "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 3.0 },
+    { "NAME": "sunrays", "TYPE": "bool", "DEFAULT": true },
+    { "NAME": "sunraysWeight", "LABEL": "Sunrays Weight", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
     { "NAME": "shading", "TYPE": "bool", "DEFAULT": true },
     { "NAME": "autoSplats", "TYPE": "bool", "DEFAULT": true }
   ],
@@ -138,25 +140,32 @@ vec4 passVelocity() {
         vel += audioForce * exp(-dot(ap, ap) / (splatRadius * 4.0));
     }
 
-    // Auto-splats for initial motion
+    // Auto-splats — burst of multiple simultaneous splats (like Pavel's)
     if (autoSplats) {
-        if (FRAMEINDEX < 20) {
-            float seed = float(FRAMEINDEX);
-            vec2 sp = vec2(hash(seed * 13.73), hash(seed * 7.31));
-            vec2 sv = (vec2(hash(seed * 23.17), hash(seed * 31.71)) - 0.5) * 600.0;
-            vec2 dp = uv - sp;
-            vel += sv * exp(-dot(dp, dp) / (splatRadius * 2.0));
-        }
-        if (FRAMEINDEX >= 20) {
-            float splatIdx = floor(TIME / 1.5);
-            float splatAge = TIME - splatIdx * 1.5;
-            if (splatAge < 0.1) {
-                float seed = splatIdx * 77.0 + 100.0;
+        // Initial burst: dense multi-splat seeding
+        if (FRAMEINDEX < 30) {
+            for (int s = 0; s < 5; s++) {
+                float seed = float(FRAMEINDEX) * 5.0 + float(s);
                 vec2 sp = vec2(hash(seed * 13.73), hash(seed * 7.31));
-                vec2 sv = (vec2(hash(seed * 23.17), hash(seed * 31.71)) - 0.5) * 400.0;
+                vec2 sv = (vec2(hash(seed * 23.17), hash(seed * 31.71)) - 0.5) * 1000.0;
                 vec2 dp = uv - sp;
-                float fade = smoothstep(0.0, 0.02, splatAge) * smoothstep(0.1, 0.05, splatAge);
-                vel += sv * fade * exp(-dot(dp, dp) / (splatRadius * 2.0));
+                vel += sv * exp(-dot(dp, dp) / (splatRadius * 3.0));
+            }
+        }
+        // Ongoing: periodic bursts of 3-5 splats
+        if (FRAMEINDEX >= 30) {
+            float burstInterval = 1.2;
+            float burstIdx = floor(TIME / burstInterval);
+            float burstAge = TIME - burstIdx * burstInterval;
+            if (burstAge < 0.08) {
+                float fade = smoothstep(0.0, 0.015, burstAge) * smoothstep(0.08, 0.04, burstAge);
+                for (int s = 0; s < 4; s++) {
+                    float seed = burstIdx * 77.0 + float(s) * 31.0 + 100.0;
+                    vec2 sp = vec2(hash(seed * 13.73), hash(seed * 7.31));
+                    vec2 sv = (vec2(hash(seed * 23.17), hash(seed * 31.71)) - 0.5) * 800.0;
+                    vec2 dp = uv - sp;
+                    vel += sv * fade * exp(-dot(dp, dp) / (splatRadius * 3.0));
+                }
             }
         }
     }
@@ -231,27 +240,35 @@ vec4 passDye() {
         dye += col * s;
     }
 
-    // Auto-splats dye
+    // Auto-splats dye — matching velocity bursts
     if (autoSplats) {
-        if (FRAMEINDEX < 20) {
-            float seed = float(FRAMEINDEX);
-            vec2 sp = vec2(hash(seed * 13.73), hash(seed * 7.31));
-            vec3 col = hsv2rgb(vec3(hash(seed * 3.17), 1.0, 1.0)) * 2.0;
-            vec2 dp = uv - sp;
-            dp.x *= aspect;
-            dye += col * exp(-dot(dp, dp) / rad);
-        }
-        if (FRAMEINDEX >= 20) {
-            float splatIdx = floor(TIME / 1.5);
-            float splatAge = TIME - splatIdx * 1.5;
-            if (splatAge < 0.1) {
-                float seed = splatIdx * 77.0 + 100.0;
+        // Initial burst
+        if (FRAMEINDEX < 30) {
+            for (int s = 0; s < 5; s++) {
+                float seed = float(FRAMEINDEX) * 5.0 + float(s);
                 vec2 sp = vec2(hash(seed * 13.73), hash(seed * 7.31));
-                vec3 col = hsv2rgb(vec3(hash(seed * 3.17), 1.0, 1.0)) * 1.5;
+                // Pavel-style: rich saturated colors, multiplied by 0.15
+                vec3 col = hsv2rgb(vec3(hash(seed * 3.17), 1.0, 1.0)) * 0.15 * 10.0;
                 vec2 dp = uv - sp;
                 dp.x *= aspect;
-                float fade = smoothstep(0.0, 0.02, splatAge) * smoothstep(0.1, 0.05, splatAge);
-                dye += col * fade * exp(-dot(dp, dp) / rad);
+                dye += col * exp(-dot(dp, dp) / rad);
+            }
+        }
+        // Ongoing bursts
+        if (FRAMEINDEX >= 30) {
+            float burstInterval = 1.2;
+            float burstIdx = floor(TIME / burstInterval);
+            float burstAge = TIME - burstIdx * burstInterval;
+            if (burstAge < 0.08) {
+                float fade = smoothstep(0.0, 0.015, burstAge) * smoothstep(0.08, 0.04, burstAge);
+                for (int s = 0; s < 4; s++) {
+                    float seed = burstIdx * 77.0 + float(s) * 31.0 + 100.0;
+                    vec2 sp = vec2(hash(seed * 13.73), hash(seed * 7.31));
+                    vec3 col = hsv2rgb(vec3(hash(seed * 3.17), 1.0, 1.0)) * 0.15 * 10.0;
+                    vec2 dp = uv - sp;
+                    dp.x *= aspect;
+                    dye += col * fade * exp(-dot(dp, dp) / rad);
+                }
             }
         }
     }
@@ -278,26 +295,74 @@ vec4 passDisplay() {
         c *= abs(1.0 / mag);
     }
 
-    // Bloom: multi-scale axis-aligned samples
+    // Bloom: multi-scale with Pavel's threshold (0.6) and soft knee (0.7)
     if (bloomIntensity > 0.01) {
         vec2 tx = 1.0 / RENDERSIZE;
         vec3 bloom = vec3(0.0);
-        bloom += decDye(dyeBuf, uv + vec2(tx.x * 4.0, 0.0));
-        bloom += decDye(dyeBuf, uv - vec2(tx.x * 4.0, 0.0));
-        bloom += decDye(dyeBuf, uv + vec2(0.0, tx.y * 4.0));
-        bloom += decDye(dyeBuf, uv - vec2(0.0, tx.y * 4.0));
-        bloom += decDye(dyeBuf, uv + vec2(tx.x * 12.0, 0.0)) * 0.7;
-        bloom += decDye(dyeBuf, uv - vec2(tx.x * 12.0, 0.0)) * 0.7;
-        bloom += decDye(dyeBuf, uv + vec2(0.0, tx.y * 12.0)) * 0.7;
-        bloom += decDye(dyeBuf, uv - vec2(0.0, tx.y * 12.0)) * 0.7;
-        bloom += decDye(dyeBuf, uv + vec2(tx.x * 28.0, 0.0)) * 0.4;
-        bloom += decDye(dyeBuf, uv - vec2(tx.x * 28.0, 0.0)) * 0.4;
-        bloom += decDye(dyeBuf, uv + vec2(0.0, tx.y * 28.0)) * 0.4;
-        bloom += decDye(dyeBuf, uv - vec2(0.0, tx.y * 28.0)) * 0.4;
-        bloom /= 12.0;
-        float br = max(bloom.r, max(bloom.g, bloom.b));
-        bloom *= smoothstep(0.3, 0.8, br);
+        float totalW = 0.0;
+
+        // Scale 1: 2px offset, weight 1.0
+        float o = 2.0; float w = 1.0;
+        bloom += (decDye(dyeBuf, uv + vec2(tx.x*o, 0.0)) + decDye(dyeBuf, uv - vec2(tx.x*o, 0.0))
+               + decDye(dyeBuf, uv + vec2(0.0, tx.y*o)) + decDye(dyeBuf, uv - vec2(0.0, tx.y*o))
+               + decDye(dyeBuf, uv + vec2(tx.x,tx.y)*o*0.707) + decDye(dyeBuf, uv - vec2(tx.x,tx.y)*o*0.707)
+               + decDye(dyeBuf, uv + vec2(tx.x,-tx.y)*o*0.707) + decDye(dyeBuf, uv + vec2(-tx.x,tx.y)*o*0.707)) * w;
+        totalW += 8.0 * w;
+
+        // Scale 2: 6px offset, weight 0.8
+        o = 6.0; w = 0.8;
+        bloom += (decDye(dyeBuf, uv + vec2(tx.x*o, 0.0)) + decDye(dyeBuf, uv - vec2(tx.x*o, 0.0))
+               + decDye(dyeBuf, uv + vec2(0.0, tx.y*o)) + decDye(dyeBuf, uv - vec2(0.0, tx.y*o))
+               + decDye(dyeBuf, uv + vec2(tx.x,tx.y)*o*0.707) + decDye(dyeBuf, uv - vec2(tx.x,tx.y)*o*0.707)
+               + decDye(dyeBuf, uv + vec2(tx.x,-tx.y)*o*0.707) + decDye(dyeBuf, uv + vec2(-tx.x,tx.y)*o*0.707)) * w;
+        totalW += 8.0 * w;
+
+        // Scale 3: 16px offset, weight 0.5
+        o = 16.0; w = 0.5;
+        bloom += (decDye(dyeBuf, uv + vec2(tx.x*o, 0.0)) + decDye(dyeBuf, uv - vec2(tx.x*o, 0.0))
+               + decDye(dyeBuf, uv + vec2(0.0, tx.y*o)) + decDye(dyeBuf, uv - vec2(0.0, tx.y*o))
+               + decDye(dyeBuf, uv + vec2(tx.x,tx.y)*o*0.707) + decDye(dyeBuf, uv - vec2(tx.x,tx.y)*o*0.707)
+               + decDye(dyeBuf, uv + vec2(tx.x,-tx.y)*o*0.707) + decDye(dyeBuf, uv + vec2(-tx.x,tx.y)*o*0.707)) * w;
+        totalW += 8.0 * w;
+
+        // Scale 4: 36px offset, weight 0.25
+        o = 36.0; w = 0.25;
+        bloom += (decDye(dyeBuf, uv + vec2(tx.x*o, 0.0)) + decDye(dyeBuf, uv - vec2(tx.x*o, 0.0))
+               + decDye(dyeBuf, uv + vec2(0.0, tx.y*o)) + decDye(dyeBuf, uv - vec2(0.0, tx.y*o))
+               + decDye(dyeBuf, uv + vec2(tx.x,tx.y)*o*0.707) + decDye(dyeBuf, uv - vec2(tx.x,tx.y)*o*0.707)
+               + decDye(dyeBuf, uv + vec2(tx.x,-tx.y)*o*0.707) + decDye(dyeBuf, uv + vec2(-tx.x,tx.y)*o*0.707)) * w;
+        totalW += 8.0 * w;
+
+        bloom /= totalW;
+        // Pavel's bloom threshold with soft knee
+        float br = dot(bloom, vec3(0.2126, 0.7152, 0.0722));
+        float knee = 0.6 * 0.7;
+        float bt = clamp(br - 0.6 + knee, 0.0, 2.0 * knee);
+        bt = bt * bt / (4.0 * knee + 0.0001);
+        bloom *= max(bt, br - 0.6) / (br + 0.0001);
         c += bloom * bloomIntensity;
+    }
+
+    // Sunrays — radial light scattering from bright areas
+    if (sunrays) {
+        vec2 center = vec2(0.5);
+        vec2 dir = center - uv;
+        float dist = length(dir);
+        dir /= dist;
+        float rayAccum = 0.0;
+        vec2 sampleUV = uv;
+        float stepSize = dist / 16.0;
+        float decay = 0.95;
+        float weight = 1.0;
+        for (int i = 0; i < 16; i++) {
+            sampleUV += dir * stepSize;
+            vec3 samp = decDye(dyeBuf, sampleUV);
+            float lum = dot(samp, vec3(0.2126, 0.7152, 0.0722));
+            rayAccum += lum * weight;
+            weight *= decay;
+        }
+        rayAccum /= 16.0;
+        c += vec3(rayAccum) * sunraysWeight * 0.4;
     }
 
     // Gamma only (no tone mapping — keeps colors vivid like Pavel's)

@@ -4,7 +4,7 @@
   "CATEGORIES": ["Effect"],
   "INPUTS": [
     { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "dispScale", "LABEL": "Dispersion", "TYPE": "float", "DEFAULT": 2.0, "MIN": 0.0, "MAX": 10.0 },
+    { "NAME": "dispScale", "LABEL": "Dispersion", "TYPE": "float", "DEFAULT": 0.08, "MIN": 0.0, "MAX": 0.3 },
     { "NAME": "noiseScale", "LABEL": "Noise Scale", "TYPE": "float", "DEFAULT": 3.0, "MIN": 0.5, "MAX": 12.0 },
     { "NAME": "flowSpeed", "LABEL": "Speed", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "contrastAmt", "LABEL": "Contrast", "TYPE": "float", "DEFAULT": 12.0, "MIN": 1.0, "MAX": 30.0 },

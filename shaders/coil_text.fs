@@ -72,7 +72,7 @@ int charCount() { int n = int(msg_len); return n > 0 ? n : 1; }
 
 float sampleChar(int ch, vec2 localUV) {
     if (ch == 26) return 0.0;
-    if (ch < 0 || ch > 25) return 0.0;
+    if (ch < 0 || ch > 36) return 0.0;
     float col = localUV.x * 5.0;
     float row = localUV.y * 7.0;
     if (col < 0.0 || col >= 5.0 || row < 0.0 || row >= 7.0) return 0.0;

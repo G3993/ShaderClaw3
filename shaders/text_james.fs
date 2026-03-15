@@ -8,7 +8,7 @@
     { "NAME": "intensity", "LABEL": "Bounce", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Cycle Speed", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "kerning", "LABEL": "Spacing", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 0.4 },
+    { "NAME": "kerning", "LABEL": "Spacing", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0 },
     { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
@@ -62,9 +62,9 @@ int charCount() {
 // ═══════════════════════════════════════════════════════════════════════
 
 float sampleAtlas(int ch, vec2 cellUV) {
-    if (ch < 0 || ch > 25) return 0.0;
+    if (ch < 0 || ch > 36) return 0.0;
     if (cellUV.x < 0.0 || cellUV.x > 1.0 || cellUV.y < 0.0 || cellUV.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + cellUV.x) / 27.0, cellUV.y)).r;
+    return texture2D(fontAtlasTex, vec2((float(ch) + cellUV.x) / 37.0, cellUV.y)).r;
 }
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }

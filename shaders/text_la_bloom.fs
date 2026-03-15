@@ -10,7 +10,7 @@
     { "NAME": "bloom", "LABEL": "Ink Bleed", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "wobble", "LABEL": "Wobble", "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "DEFAULT": 0.22, "MIN": 0.01, "MAX": 1.0 },
-    { "NAME": "kerning", "LABEL": "Spacing", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 3.0 },
+    { "NAME": "kerning", "LABEL": "Spacing", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
     { "NAME": "paperGrain", "LABEL": "Paper Grain", "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "edgeBurn", "LABEL": "Edge Burn", "TYPE": "float", "DEFAULT": 0.4, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "foxing", "LABEL": "Foxing", "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0, "MAX": 1.0 },
@@ -25,9 +25,9 @@
 // ==========================================
 
 float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 25) return 0.0;
+    if (ch < 0 || ch > 36) return 0.0;
     if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 27.0, uv.y)).r;
+    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
 }
 
 // ==========================================
@@ -258,7 +258,7 @@ void main() {
         if (i >= total) break;
 
         int ch = getChar(i);
-        if (ch < 0 || ch > 25) continue; // skip spaces
+        if (ch < 0 || ch > 36) continue; // skip spaces
 
         float fi = float(i);
         int row = i / charsPerRow;

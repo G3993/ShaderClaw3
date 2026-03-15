@@ -33,29 +33,74 @@ function ndiRequest(ws, action, params = {}) {
 function handleNdiVideoFrame(data, glRef) {
   if (!ndiReceiveEntry) return;
   const view = new DataView(data);
-  const width = view.getUint32(1, true);
-  const height = view.getUint32(5, true);
-  const pixels = new Uint8ClampedArray(data, 9);
+  const compressed = view.getUint8(1); // 0x01 = JPEG
+  const width = view.getUint32(2, true);
+  const height = view.getUint32(6, true);
 
+  if (compressed === 0x01) {
+    // JPEG compressed — decode via createImageBitmap
+    const jpegBlob = new Blob([new Uint8Array(data, 10)], { type: 'image/jpeg' });
+    createImageBitmap(jpegBlob, { premultiplyAlpha: 'none' }).then(bitmap => {
+      if (!ndiReceiveEntry) return;
+
+      // Resize canvas if needed
+      if (!ndiReceiveCanvas || ndiReceiveCanvas.width !== width || ndiReceiveCanvas.height !== height) {
+        ndiReceiveCanvas = document.createElement('canvas');
+        ndiReceiveCanvas.width = width;
+        ndiReceiveCanvas.height = height;
+        ndiReceiveCtx = ndiReceiveCanvas.getContext('2d');
+        if (ndiReceiveEntry) ndiReceiveEntry.element = ndiReceiveCanvas;
+      }
+
+      // Draw bitmap to canvas (needed for GL upload)
+      ndiReceiveCtx.drawImage(bitmap, 0, 0);
+      bitmap.close();
+
+      // Upload to GL texture
+      if (ndiReceiveEntry.glTexture && glRef) {
+        glRef.bindTexture(glRef.TEXTURE_2D, ndiReceiveEntry.glTexture);
+        if (ndiReceiveEntry._texW === width && ndiReceiveEntry._texH === height) {
+          glRef.texSubImage2D(glRef.TEXTURE_2D, 0, 0, 0, glRef.RGBA, glRef.UNSIGNED_BYTE, ndiReceiveCanvas);
+        } else {
+          glRef.texImage2D(glRef.TEXTURE_2D, 0, glRef.RGBA, glRef.RGBA, glRef.UNSIGNED_BYTE, ndiReceiveCanvas);
+          ndiReceiveEntry._texW = width;
+          ndiReceiveEntry._texH = height;
+        }
+      }
+
+      // Three.js texture
+      if (ndiReceiveEntry.threeTexture) {
+        ndiReceiveEntry.threeTexture.image = ndiReceiveCanvas;
+        ndiReceiveEntry.threeTexture.needsUpdate = true;
+      }
+    }).catch(() => {});
+    return;
+  }
+
+  // Fallback: raw RGBA (uncompressed — legacy path)
+  const pixels = new Uint8Array(data, 10);
   if (!ndiReceiveCanvas || ndiReceiveCanvas.width !== width || ndiReceiveCanvas.height !== height) {
     ndiReceiveCanvas = document.createElement('canvas');
     ndiReceiveCanvas.width = width;
     ndiReceiveCanvas.height = height;
     ndiReceiveCtx = ndiReceiveCanvas.getContext('2d');
+    if (ndiReceiveEntry) ndiReceiveEntry.element = ndiReceiveCanvas;
   }
 
-  const imageData = new ImageData(pixels, width, height);
-  ndiReceiveCtx.putImageData(imageData, 0, 0);
-
-  // Upload to GL texture — use UNPACK_FLIP_Y so NDI frames orient correctly
   if (ndiReceiveEntry.glTexture && glRef) {
-    glRef.pixelStorei(glRef.UNPACK_FLIP_Y_WEBGL, true);
     glRef.bindTexture(glRef.TEXTURE_2D, ndiReceiveEntry.glTexture);
-    glRef.texImage2D(glRef.TEXTURE_2D, 0, glRef.RGBA, glRef.RGBA, glRef.UNSIGNED_BYTE, ndiReceiveCanvas);
-    glRef.pixelStorei(glRef.UNPACK_FLIP_Y_WEBGL, false);
+    if (ndiReceiveEntry._texW === width && ndiReceiveEntry._texH === height) {
+      glRef.texSubImage2D(glRef.TEXTURE_2D, 0, 0, 0, width, height, glRef.RGBA, glRef.UNSIGNED_BYTE, pixels);
+    } else {
+      glRef.texImage2D(glRef.TEXTURE_2D, 0, glRef.RGBA, width, height, 0, glRef.RGBA, glRef.UNSIGNED_BYTE, pixels);
+      ndiReceiveEntry._texW = width;
+      ndiReceiveEntry._texH = height;
+    }
   }
 
   if (ndiReceiveEntry.threeTexture) {
+    const imageData = new ImageData(new Uint8ClampedArray(pixels.buffer, pixels.byteOffset, pixels.byteLength), width, height);
+    ndiReceiveCtx.putImageData(imageData, 0, 0);
     ndiReceiveEntry.threeTexture.image = ndiReceiveCanvas;
     ndiReceiveEntry.threeTexture.needsUpdate = true;
   }
@@ -72,8 +117,8 @@ function createNdiWorker() {
         ctx = offscreen.getContext('2d', { alpha: false, willReadFrequently: true });
       }
       ctx.drawImage(bitmap, 0, 0, width, height);
-      const imageData = ctx.getImageData(0, 0, width, height);
       bitmap.close();
+      const imageData = ctx.getImageData(0, 0, width, height);
       const msg = new Uint8Array(9 + imageData.data.length);
       const view = new DataView(msg.buffer, 0, 9);
       view.setUint8(0, 0x02);
@@ -97,46 +142,51 @@ function startNdiSend(ws, canvasEl) {
   if (sendBtn) sendBtn.textContent = 'Stop';
   if (statusDot) statusDot.classList.add('active');
   ndiSendFrameCount = 0;
-  const NDI_W = 960, NDI_H = 540;
-  const worker = createNdiWorker();
-  ndiSendWorker = worker;
-  worker.onmessage = (e) => {
-    if (!ndiSendingActive) return;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    if (ws.bufferedAmount > 4 * 1024 * 1024) return;
-    ws.send(e.data);
-    ndiSendFrameCount++;
-  };
+  const NDI_W = 832, NDI_H = 480;
+  const workers = [createNdiWorker(), createNdiWorker()]; // double-buffer
+  _ndiSendWorkerPair = workers;
+  ndiSendWorker = workers[0]; // ref for cleanup
+  let workerIdx = 0;
+  const inflight = [false, false];
+  workers.forEach((w, i) => {
+    w.onmessage = (e) => {
+      inflight[i] = false;
+      if (!ndiSendingActive) return;
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      if (ws.bufferedAmount > 4 * 1024 * 1024) return;
+      ws.send(e.data);
+      ndiSendFrameCount++;
+    };
+  });
   let lastCapture = 0;
-  let pending = false;
-  let pendingStart = 0;
   function captureLoop(timestamp) {
     if (!ndiSendingActive) return;
     ndiSendAnimId = requestAnimationFrame(captureLoop);
-    if (timestamp - lastCapture < 33) return;
+    if (timestamp - lastCapture < 33) return; // ~30fps
+    if (inflight[workerIdx]) return; // worker still busy
     lastCapture = timestamp;
-    // Safety: if pending stuck for >500ms (e.g. during shader compile), force reset
-    if (pending && (timestamp - pendingStart > 500)) {
-      pending = false;
-    }
-    if (pending) return;
-    pending = true;
-    pendingStart = timestamp;
+    inflight[workerIdx] = true;
+    const idx = workerIdx;
+    workerIdx ^= 1; // alternate workers
     createImageBitmap(canvasEl, { resizeWidth: NDI_W, resizeHeight: NDI_H })
       .then(bitmap => {
-        pending = false;
-        if (!ndiSendingActive) { bitmap.close(); return; }
-        worker.postMessage({ bitmap, width: NDI_W, height: NDI_H }, [bitmap]);
+        if (!ndiSendingActive) { bitmap.close(); inflight[idx] = false; return; }
+        workers[idx].postMessage({ bitmap, width: NDI_W, height: NDI_H }, [bitmap]);
       })
-      .catch(() => { pending = false; });
+      .catch(() => { inflight[idx] = false; });
   }
   ndiSendAnimId = requestAnimationFrame(captureLoop);
 }
 
 // Pause capture loop without changing UI (for WS disconnect/reconnect)
+let _ndiSendWorkerPair = null;
 function pauseNdiSend() {
   if (ndiSendAnimId) { cancelAnimationFrame(ndiSendAnimId); ndiSendAnimId = null; }
-  if (ndiSendWorker) { ndiSendWorker.terminate(); ndiSendWorker = null; }
+  if (_ndiSendWorkerPair) {
+    _ndiSendWorkerPair.forEach(w => { try { w.terminate(); } catch(e) {} });
+    _ndiSendWorkerPair = null;
+  }
+  if (ndiSendWorker) { try { ndiSendWorker.terminate(); } catch(e) {} ndiSendWorker = null; }
 }
 
 // Full stop — user-initiated, resets UI

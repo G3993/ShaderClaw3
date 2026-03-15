@@ -268,6 +268,17 @@ function isfInputToUniform(input) {
 
 function buildFragmentShader(source) {
   const parsed = parseISF(source);
+
+  // Inject universal video input for shaders that don't already have image inputs
+  const hasImageInput = (parsed.inputs || []).some(inp => inp.TYPE === 'image');
+  if (!hasImageInput) {
+    if (!parsed.inputs) parsed.inputs = [];
+    parsed.inputs.push(
+      { NAME: 'scVideoInput', TYPE: 'image', LABEL: 'Video Input', _synthetic: true },
+      { NAME: 'scVideoMix', TYPE: 'float', DEFAULT: 0.0, MIN: 0.0, MAX: 1.0, LABEL: 'Video Mix', _synthetic: true }
+    );
+  }
+
   const uniformLines = (parsed.inputs || []).map(isfInputToUniform);
 
   const headerParts = [
@@ -332,12 +343,13 @@ function buildFragmentShader(source) {
     .replace(/#version\s+\d+.*/g, '')
     .replace(/#ifdef\s+GL_ES\s*\r?\nprecision\s+\w+\s+float\s*;\s*\r?\n#endif\s*\r?\n?/g, '');
 
-  // Wrap shader main() to inject bgColor resolution and/or transparent background support
+  // Wrap shader main() to inject bgColor resolution, video blend, and/or transparent background support
   const shaderHandlesTransparency = (parsed.inputs || []).some(inp => inp.NAME === 'transparentBg');
   const hasBgColor = (parsed.inputs || []).some(inp => inp.NAME === 'bgColor');
+  const injectVideo = !hasImageInput;
   let body = header + cleaned;
   const mainRe = /void\s+main\s*\(\s*(void)?\s*\)/;
-  const needsWrap = mainRe.test(body) && (hasBgColor || !shaderHandlesTransparency);
+  const needsWrap = mainRe.test(body) && (hasBgColor || !shaderHandlesTransparency || injectVideo);
   if (needsWrap) {
     body = body.replace(mainRe, 'void _shaderMain()');
     let wrapper = '\nvoid main() {\n';
@@ -345,6 +357,13 @@ function buildFragmentShader(source) {
       wrapper += '    _resolvedBgColor = _bgTexActive > 0.5 ? texture2D(_bgTex, isf_FragNormCoord) : _bgColorSolid;\n';
     }
     wrapper += '    _shaderMain();\n';
+    // Universal video input blend (before spotlight/transparency so it participates in those)
+    if (injectVideo) {
+      wrapper += '    if (scVideoMix > 0.001) {\n';
+      wrapper += '        vec4 _vid = texture2D(scVideoInput, isf_FragNormCoord);\n';
+      wrapper += '        gl_FragColor = mix(gl_FragColor, _vid, scVideoMix);\n';
+      wrapper += '    }\n';
+    }
     if (!shaderHandlesTransparency) {
       wrapper += '    // Global mouse spotlight\n';
       wrapper += '    vec2 _muv = gl_FragCoord.xy / RENDERSIZE.xy;\n';

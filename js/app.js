@@ -502,7 +502,7 @@
             const maxLen = msgInp.MAX_LENGTH || 12;
             const bar = document.getElementById('text-msg-input');
             const def = (bar ? bar.value.trim() : (msgInp.DEFAULT || '').trim()).toUpperCase();
-            function _c2c(ch) { if (!ch || ch === ' ') return 26; const c = ch.toUpperCase().charCodeAt(0) - 65; return (c >= 0 && c <= 25) ? c : 26; }
+            function _c2c(ch) { if (!ch || ch === ' ') return 26; const code = ch.toUpperCase().charCodeAt(0); if (code >= 65 && code <= 90) return code - 65; if (code >= 48 && code <= 57) return code - 48 + 27; return 26; }
             for (let i = 0; i < maxLen; i++) layer.inputValues['msg_' + i] = _c2c(def[i]);
             layer.inputValues['msg_len'] = def.replace(/\s+$/, '').length;
             // Update bar maxLength to match shader
@@ -695,6 +695,7 @@
   window.shaderClaw = {
     loadSource,
     loadScene,
+    loadShaderFile: loadShaderToLayer,
     compile,
     compileToLayer,
     getSource: () => editor.getValue(),
@@ -970,6 +971,9 @@
       items = isfShaders.filter(item => !(item.categories || []).includes('Text'));
     }
 
+    // Sort alphabetically by title
+    items = items.slice().sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+
     // Add placeholder so first real selection triggers change event
     const layer = getLayer(layerId);
     if (!layer || !layer.manifestEntry) {
@@ -1200,6 +1204,8 @@
       picker.addEventListener('input', () => {
         const hex = picker.value;
         if (swatch) swatch.style.background = hex;
+        const toggleSwatch = document.querySelector(`.layer-toggle-swatch[data-layer="${layerId}"]`);
+        if (toggleSwatch) toggleSwatch.style.background = hex;
         if (hexInput) hexInput.value = hex.replace('#', '').toUpperCase();
         // Apply to layer bg color
         const layer = getLayer(layerId);
@@ -1289,7 +1295,7 @@
   // === Camera card: Overlay image/GIF upload with transforms ===
   const overlayFileInput = document.createElement('input');
   overlayFileInput.type = 'file';
-  overlayFileInput.accept = 'image/*,.gif';
+  overlayFileInput.accept = 'image/*,.gif,video/*,.mp4,.webm,.mov,.avi,.mkv';
   overlayFileInput.style.display = 'none';
   document.body.appendChild(overlayFileInput);
 
@@ -1321,41 +1327,89 @@
     const file = overlayFileInput.files[0];
     if (!file) return;
     const isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
+    const isVideo = file.type.startsWith('video/') || /\.(mp4|webm|mov|avi|mkv)$/i.test(file.name);
     const fileName = file.name;
-    const img = new Image();
     const url = URL.createObjectURL(file);
-    img.onload = () => {
-      const gl = isfRenderer.gl;
-      const oLayer = getLayer('overlay');
-      if (!oLayer) return;
-      if (!oLayer.fbo) oLayer.fbo = isfRenderer.createFBO(_rw(), _rh());
-      gl.bindTexture(gl.TEXTURE_2D, oLayer.fbo.texture);
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-      oLayer.visible = true;
-      oLayer._hasImage = true;
-      oLayer._imgAspect = img.naturalWidth / img.naturalHeight;
-      // True-size import: scale so image fills viewport at 1.0
-      oLayer._tx = 0;
-      oLayer._ty = 0;
-      oLayer._scale = Math.min(2, Math.max(0.1, Math.max(img.naturalWidth / _rw(), img.naturalHeight / _rh())));
-      oLayer._rotate = 0;
-      syncTransformSliders();
-      updateLayerCardUI('overlay');
-      gizmoSelected = true;
-      showOverlayFileInfo(fileName);
-      if (isGif) {
-        // Keep img alive for animated GIF re-upload each frame
-        oLayer._gifElement = img;
-        oLayer._gifUrl = url;
-      } else {
+
+    if (isVideo) {
+      // Handle video files for overlay
+      const video = document.createElement('video');
+      video.muted = true;
+      video.loop = true;
+      video.playsInline = true;
+      video.preload = 'auto';
+      video.style.cssText = 'position:fixed;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none';
+      document.body.appendChild(video);
+      video.addEventListener('stalled', () => { video.play().catch(() => {}); });
+      video.addEventListener('loadeddata', () => {
+        const gl = isfRenderer.gl;
+        const oLayer = getLayer('overlay');
+        if (!oLayer) return;
+        if (!oLayer.fbo) oLayer.fbo = isfRenderer.createFBO(_rw(), _rh());
+        // Upload first frame
+        gl.bindTexture(gl.TEXTURE_2D, oLayer.fbo.texture);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        oLayer.visible = true;
+        oLayer._hasImage = true;
+        oLayer._imgAspect = video.videoWidth / video.videoHeight;
+        oLayer._tx = 0;
+        oLayer._ty = 0;
+        oLayer._scale = Math.min(2, Math.max(0.1, Math.max(video.videoWidth / _rw(), video.videoHeight / _rh())));
+        oLayer._rotate = 0;
+        syncTransformSliders();
+        updateLayerCardUI('overlay');
+        gizmoSelected = true;
+        showOverlayFileInfo(fileName);
+        // Store video element for per-frame re-upload (like GIF but at full rate)
+        oLayer._videoElement = video;
+        oLayer._videoUrl = url;
         oLayer._gifElement = null;
         if (oLayer._gifUrl) { URL.revokeObjectURL(oLayer._gifUrl); oLayer._gifUrl = null; }
-        URL.revokeObjectURL(url);
-      }
-    };
-    img.src = url;
+        video.play().catch(() => {
+          // Retry on first user interaction if autoplay blocked
+          document.addEventListener('click', () => { video.play().catch(() => {}); }, { once: true });
+        });
+      });
+      video.src = url;
+    } else {
+      // Handle image/GIF files (original path)
+      const img = new Image();
+      img.onload = () => {
+        const gl = isfRenderer.gl;
+        const oLayer = getLayer('overlay');
+        if (!oLayer) return;
+        if (!oLayer.fbo) oLayer.fbo = isfRenderer.createFBO(_rw(), _rh());
+        gl.bindTexture(gl.TEXTURE_2D, oLayer.fbo.texture);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        oLayer.visible = true;
+        oLayer._hasImage = true;
+        oLayer._imgAspect = img.naturalWidth / img.naturalHeight;
+        oLayer._tx = 0;
+        oLayer._ty = 0;
+        oLayer._scale = Math.min(2, Math.max(0.1, Math.max(img.naturalWidth / _rw(), img.naturalHeight / _rh())));
+        oLayer._rotate = 0;
+        syncTransformSliders();
+        updateLayerCardUI('overlay');
+        gizmoSelected = true;
+        showOverlayFileInfo(fileName);
+        // Clean up video if switching from video to image
+        oLayer._videoElement = null;
+        if (oLayer._videoUrl) { URL.revokeObjectURL(oLayer._videoUrl); oLayer._videoUrl = null; }
+        if (isGif) {
+          oLayer._gifElement = img;
+          oLayer._gifUrl = url;
+        } else {
+          oLayer._gifElement = null;
+          if (oLayer._gifUrl) { URL.revokeObjectURL(oLayer._gifUrl); oLayer._gifUrl = null; }
+          URL.revokeObjectURL(url);
+        }
+      };
+      img.src = url;
+    }
     overlayFileInput.value = '';
   });
 
@@ -1416,6 +1470,8 @@
     oLayer._imgAspect = null;
     oLayer._gifElement = null;
     if (oLayer._gifUrl) { URL.revokeObjectURL(oLayer._gifUrl); oLayer._gifUrl = null; }
+    if (oLayer._videoElement) { oLayer._videoElement.pause(); oLayer._videoElement.remove(); oLayer._videoElement = null; }
+    if (oLayer._videoUrl) { URL.revokeObjectURL(oLayer._videoUrl); oLayer._videoUrl = null; }
     hideOverlayFileInfo();
     gizmoSelected = false;
     updateLayerCardUI('overlay');
@@ -2015,12 +2071,12 @@
         if (!layer.mpBindings) layer.mpBindings = [];
         // Remove existing binding for this param if any
         const idx = layer.mpBindings.findIndex(b => b.param === paramName);
-        if (idx >= 0) layer.mpBindings.splice(idx, 1);
+        const old = idx >= 0 ? layer.mpBindings.splice(idx, 1)[0] : null;
         // Find ISF input for min/max
         const isfInput = (layer.inputs || []).find(inp => inp.NAME === paramName);
         const pMin = isfInput && isfInput.MIN != null ? isfInput.MIN : 0;
         const pMax = isfInput && isfInput.MAX != null ? isfInput.MAX : 1;
-        layer.mpBindings.push({ source: 'derived', signalKey, param: paramName, min: pMin, max: pMax, smoothing: 0, easing: 'easeInOut', _pMin: pMin, _pMax: pMax });
+        layer.mpBindings.push({ source: 'derived', signalKey, param: paramName, min: old ? old.min : pMin, max: old ? old.max : pMax, smoothing: old ? (old.smoothing||0) : 0, easing: old ? (old.easing||'easeInOut') : 'easeInOut', _pMin: pMin, _pMax: pMax });
         renderLinksDashboard();
         refreshAllLinksUI();
         document.body.removeChild(picker);
@@ -2410,13 +2466,25 @@
       }
       html += '</optgroup>';
     }
-    // Data
+    // Data (built-in generators)
     html += '<optgroup label="Data">';
     for (const sig of DATA_SIGNALS) {
       const sel = binding.source === 'data' && binding.signalKey === sig.key ? ' selected' : '';
       html += `<option value="data:${sig.key}"${sel}>${sig.name}</option>`;
     }
     html += '</optgroup>';
+    // Live data sources (dynamic — football, weather, JSON API, etc.)
+    if (window._dataSources) {
+      const liveSigs = window._dataSources.getSignals();
+      if (liveSigs.length) {
+        html += '<optgroup label="Live Data">';
+        for (const sig of liveSigs) {
+          const sel = binding.source === 'data' && binding.signalKey === sig.key ? ' selected' : '';
+          html += `<option value="data:${sig.key}"${sel}>${sig.name}</option>`;
+        }
+        html += '</optgroup>';
+      }
+    }
     return html;
   }
 
@@ -2782,10 +2850,10 @@
               item.classList.add('selected');
             }
             item.onclick = () => {
-              // Remove old binding, create derived
+              // Remove old binding, create derived — preserve range if editing
               const idx = layer.mpBindings.findIndex(b => b.param === paramName);
-              if (idx >= 0) layer.mpBindings.splice(idx, 1);
-              existing = { source: 'derived', signalKey: sig.key, param: paramName, min: pMin, max: pMax, smoothing: 0, easing: 'easeInOut', _pMin: pMin, _pMax: pMax };
+              const old = idx >= 0 ? layer.mpBindings.splice(idx, 1)[0] : null;
+              existing = { source: 'derived', signalKey: sig.key, param: paramName, min: old ? old.min : pMin, max: old ? old.max : pMax, smoothing: old ? (old.smoothing||0) : 0, easing: old ? (old.easing||'easeInOut') : 'easeInOut', _pMin: pMin, _pMax: pMax };
               layer.mpBindings.push(existing);
               onSignalSelected();
             };
@@ -2802,8 +2870,8 @@
           }
           item.onclick = () => {
             const idx = layer.mpBindings.findIndex(b => b.param === paramName);
-            if (idx >= 0) layer.mpBindings.splice(idx, 1);
-            existing = { source: 'audio', signalKey: sig.key, param: paramName, min: pMin, max: pMax, smoothing: 0, easing: 'easeInOut', _pMin: pMin, _pMax: pMax };
+            const old = idx >= 0 ? layer.mpBindings.splice(idx, 1)[0] : null;
+            existing = { source: 'audio', signalKey: sig.key, param: paramName, min: old ? old.min : pMin, max: old ? old.max : pMax, smoothing: old ? (old.smoothing||0) : 0, easing: old ? (old.easing||'easeInOut') : 'easeInOut', _pMin: pMin, _pMax: pMax };
             layer.mpBindings.push(existing);
             if (window.ensureMicOn) window.ensureMicOn();
             onSignalSelected();
@@ -2820,8 +2888,8 @@
           }
           item.onclick = () => {
             const idx = layer.mpBindings.findIndex(b => b.param === paramName);
-            if (idx >= 0) layer.mpBindings.splice(idx, 1);
-            existing = { source: 'mouse', signalKey: sig.key, param: paramName, min: pMin, max: pMax, smoothing: 0, easing: 'easeInOut', _pMin: pMin, _pMax: pMax };
+            const old = idx >= 0 ? layer.mpBindings.splice(idx, 1)[0] : null;
+            existing = { source: 'mouse', signalKey: sig.key, param: paramName, min: old ? old.min : pMin, max: old ? old.max : pMax, smoothing: old ? (old.smoothing||0) : 0, easing: old ? (old.easing||'easeInOut') : 'easeInOut', _pMin: pMin, _pMax: pMax };
             layer.mpBindings.push(existing);
             onSignalSelected();
           };
@@ -2838,8 +2906,8 @@
           }
           item.onclick = () => {
             const idx = layer.mpBindings.findIndex(b => b.param === paramName);
-            if (idx >= 0) layer.mpBindings.splice(idx, 1);
-            existing = { source: 'data', signalKey: sig.key, param: paramName, min: pMin, max: pMax, smoothing: 0, easing: 'easeInOut', _pMin: pMin, _pMax: pMax };
+            const old = idx >= 0 ? layer.mpBindings.splice(idx, 1)[0] : null;
+            existing = { source: 'data', signalKey: sig.key, param: paramName, min: old ? old.min : pMin, max: old ? old.max : pMax, smoothing: old ? (old.smoothing||0) : 0, easing: old ? (old.easing||'easeInOut') : 'easeInOut', _pMin: pMin, _pMax: pMax };
             layer.mpBindings.push(existing);
             onSignalSelected();
             // Show BPM config if BPM Pulse selected
@@ -2866,8 +2934,8 @@
               if (existing && existing.source === 'data' && existing.signalKey === sig.key) item.classList.add('selected');
               item.onclick = () => {
                 const idx = layer.mpBindings.findIndex(b => b.param === paramName);
-                if (idx >= 0) layer.mpBindings.splice(idx, 1);
-                existing = { source: 'data', signalKey: sig.key, param: paramName, min: pMin, max: pMax, smoothing: 0, easing: 'easeInOut', _pMin: pMin, _pMax: pMax };
+                const old = idx >= 0 ? layer.mpBindings.splice(idx, 1)[0] : null;
+                existing = { source: 'data', signalKey: sig.key, param: paramName, min: old ? old.min : pMin, max: old ? old.max : pMax, smoothing: old ? (old.smoothing||0) : 0, easing: old ? (old.easing||'easeInOut') : 'easeInOut', _pMin: pMin, _pMax: pMax };
                 layer.mpBindings.push(existing);
                 onSignalSelected();
               };
@@ -3116,7 +3184,33 @@
     document.getElementById('inputs-section').classList.toggle('open');
   });
 
-  // Sidebar resize drag
+  // Properties panel resize drag (left edge handle)
+  const propsPanel = document.querySelector('.sc3-properties');
+  const propsResizeHandle = document.getElementById('properties-resize');
+  let propsResizing = false;
+  if (propsResizeHandle) {
+    propsResizeHandle.addEventListener('pointerdown', (e) => {
+      propsResizing = true;
+      propsResizeHandle.classList.add('active');
+      propsResizeHandle.setPointerCapture(e.pointerId);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    });
+    propsResizeHandle.addEventListener('pointermove', (e) => {
+      if (!propsResizing) return;
+      const gap = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sc-panel-gap')) || 8;
+      const w = Math.max(200, Math.min(600, window.innerWidth - e.clientX - gap));
+      propsPanel.style.width = w + 'px';
+    });
+    propsResizeHandle.addEventListener('pointerup', () => {
+      propsResizing = false;
+      propsResizeHandle.classList.remove('active');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    });
+  }
+
+  // Sidebar resize drag (legacy)
   const resizeHandle = document.getElementById('sidebar-resize');
   const appEl = document.getElementById('app');
   let resizing = false;
@@ -3202,7 +3296,7 @@
     }
   };
 
-  // Voice circle button — show/hide voice controls panel
+  // Voice circle button — show/hide voice controls panel + auto-start mic on first click
   document.getElementById('canvas-mic-btn').addEventListener('click', () => {
     const btn = document.getElementById('canvas-mic-btn');
     const vd = document.getElementById('voice-detail');
@@ -3216,6 +3310,9 @@
       if (cd) { cd.style.display = 'none'; document.getElementById('cam-vis-btn').classList.remove('active'); }
       const dd = document.getElementById('data-detail');
       if (dd) { dd.style.display = 'none'; const db = document.getElementById('data-source-btn'); if (db) db.classList.remove('active'); }
+      // Auto-start mic if not already running
+      if (!_micAudioEntry) toggleMic();
+      _hideContentPanel();
     }
   });
 
@@ -3236,6 +3333,7 @@
       if (vd) { vd.style.display = 'none'; document.getElementById('canvas-mic-btn').classList.remove('active'); }
       const dd = document.getElementById('data-detail');
       if (dd) { dd.style.display = 'none'; const db = document.getElementById('data-source-btn'); if (db) db.classList.remove('active'); }
+      _hideContentPanel();
     }
   });
 
@@ -3253,8 +3351,59 @@
       const cd = document.getElementById('camera-detail');
       if (vd && isHidden) { vd.style.display = 'none'; document.getElementById('canvas-mic-btn').classList.remove('active'); }
       if (cd && isHidden) { cd.style.display = 'none'; document.getElementById('cam-vis-btn').classList.remove('active'); }
+      if (isHidden) _hideContentPanel();
     });
   }
+
+  // Content source circle button — show/hide content panel
+  const _contentBtn = document.getElementById('content-source-btn');
+  if (_contentBtn) {
+    _contentBtn.addEventListener('click', () => {
+      const ctd = document.getElementById('content-detail');
+      if (!ctd) return;
+      const isHidden = ctd.style.display === 'none' || ctd.style.display === '';
+      ctd.style.display = isHidden ? 'block' : 'none';
+      _contentBtn.classList.toggle('active', isHidden);
+      // hide other panels
+      if (isHidden) {
+        const vd = document.getElementById('voice-detail');
+        const cd = document.getElementById('camera-detail');
+        const dd = document.getElementById('data-detail');
+        if (vd) { vd.style.display = 'none'; document.getElementById('canvas-mic-btn').classList.remove('active'); }
+        if (cd) { cd.style.display = 'none'; document.getElementById('cam-vis-btn').classList.remove('active'); }
+        if (dd) { dd.style.display = 'none'; const db = document.getElementById('data-source-btn'); if (db) db.classList.remove('active'); }
+      }
+    });
+    // Content tile handlers
+    document.getElementById('content-add-image').addEventListener('click', () => document.getElementById('image-file-input').click());
+    document.getElementById('content-add-video').addEventListener('click', () => document.getElementById('video-file-input').click());
+    document.getElementById('content-add-model').addEventListener('click', () => document.getElementById('model-file-input').click());
+    document.getElementById('content-add-sound').addEventListener('click', () => document.getElementById('sound-file-input').click());
+    document.getElementById('content-add-webcam').addEventListener('click', () => {
+      // Trigger webcam add
+      const camBtn = document.getElementById('cam-vis-btn');
+      if (camBtn) camBtn.click();
+    });
+    document.getElementById('content-add-ndi').addEventListener('click', () => {
+      if (!_ndiWs || _ndiWs.readyState !== WebSocket.OPEN) {
+        console.warn('NDI: WebSocket not connected');
+        return;
+      }
+      const picker = document.getElementById('ndi-source-picker');
+      if (picker) {
+        picker.classList.add('visible');
+        refreshNdiSources(_ndiWs);
+      }
+    });
+  }
+
+  // Also hide content panel when other circle buttons are clicked
+  // (patch existing voice/camera/data handlers to close content panel)
+  const _hideContentPanel = () => {
+    const ctd = document.getElementById('content-detail');
+    if (ctd) ctd.style.display = 'none';
+    if (_contentBtn) _contentBtn.classList.remove('active');
+  };
 
   // Data source add dropdown
   const _dataSelect = document.getElementById('data-source-select');
@@ -3269,6 +3418,24 @@
         const city = prompt('City name:', 'London');
         if (!city) return;
         config.city = city;
+      } else if (type === 'football') {
+        const mode = prompt('Enter "demo" for simulated match, or paste your football-data.org API token:', 'demo');
+        if (!mode) return;
+        if (mode.trim().toLowerCase() === 'demo') {
+          const home = prompt('Home team name:', 'Liverpool');
+          const away = prompt('Away team name:', 'Galatasaray');
+          if (!home || !away) return;
+          config = { demo: true, home, away, label: `${home} vs ${away}` };
+        } else {
+          const home = prompt('Home team name (used to find today\'s match):', 'Liverpool');
+          const away = prompt('Away team name:', 'Galatasaray');
+          const comp = prompt('Competition code (CL, PL, BL1, SA, FL1, PD, DED):', 'CL');
+          config = {
+            apiKey: mode.trim(), provider: 'football-data',
+            competition: comp || 'CL', home: home || 'Home', away: away || 'Away',
+            label: `${home} vs ${away}`
+          };
+        }
       } else if (type === 'json_api') {
         const url = prompt('JSON API URL:');
         if (!url) return;
@@ -3314,19 +3481,38 @@
       const typeDef = window._dataSources.SOURCE_TYPES[src.type];
       const row = document.createElement('div');
       row.className = 'asset-row';
+      row.style.flexWrap = 'wrap';
       const signals = typeDef ? typeDef.getSignals(src) : [];
       row.innerHTML = `
         <span class="asset-icon">${typeDef?.icon || '?'}</span>
-        <span class="asset-name">${src.label}</span>
+        <span class="asset-name" style="flex:1">${src.label}</span>
         <span class="asset-controls">
           <span style="font-size:9px;color:var(--sc-text-dim)">${signals.length} sig</span>
           <button class="asset-delete" data-id="${src.id}">&times;</button>
-        </span>`;
+        </span>
+        <div class="data-signals-preview" data-src-id="${src.id}" style="width:100%;margin-top:4px;display:flex;flex-wrap:wrap;gap:2px 6px;font-size:9px;color:var(--sc-text-dim)"></div>`;
       row.querySelector('.asset-delete').addEventListener('click', () => {
         window._dataSources.removeSource(src.id);
         _renderDataSources();
       });
       list.appendChild(row);
+    }
+    // Live update signal previews
+    if (sources.length && !list._liveInterval) {
+      list._liveInterval = setInterval(() => {
+        const vals = window._dataSources.values;
+        for (const src of window._dataSources.getSources()) {
+          const preview = list.querySelector(`.data-signals-preview[data-src-id="${src.id}"]`);
+          if (!preview) continue;
+          const typeDef = window._dataSources.SOURCE_TYPES[src.type];
+          const signals = typeDef ? typeDef.getSignals(src) : [];
+          preview.innerHTML = signals.map(sig => {
+            const v = vals[sig.key];
+            const display = v != null ? (v * 100).toFixed(0) + '%' : '--';
+            return `<span title="${sig.key}">${sig.name.replace(src.home || '', 'H').replace(src.away || '', 'A')}: <b style="color:var(--sc-accent)">${display}</b></span>`;
+          }).join('');
+        }
+      }, 1000);
     }
   }
 
@@ -3760,8 +3946,10 @@
     const str = textMsgInput.value.toUpperCase();
     function charToCode(ch) {
       if (!ch || ch === ' ') return 26;
-      const c = ch.toUpperCase().charCodeAt(0) - 65;
-      return (c >= 0 && c <= 25) ? c : 26;
+      const code = ch.toUpperCase().charCodeAt(0);
+      if (code >= 65 && code <= 90) return code - 65;
+      if (code >= 48 && code <= 57) return code - 48 + 27;
+      return 26;
     }
     for (let i = 0; i < maxLen; i++) {
       textLayer.inputValues[inp.NAME + '_' + i] = charToCode(str[i]);
@@ -3771,6 +3959,40 @@
     const paramsField = document.querySelector('.layer-params[data-layer="text"] input[type="text"]');
     if (paramsField) paramsField.value = str;
   });
+
+  // Text layer quick media buttons (Image / Video / NDI for dispersion effects)
+  const textImageInput = document.getElementById('text-image-input');
+  const textVideoInput = document.getElementById('text-video-input');
+  if (textImageInput) {
+    document.getElementById('text-add-image').addEventListener('click', () => textImageInput.click());
+    textImageInput.addEventListener('change', async (e) => {
+      for (const file of e.target.files) await addMediaFromFile(file);
+      textImageInput.value = '';
+      autoBindTextures('text');
+    });
+  }
+  if (textVideoInput) {
+    document.getElementById('text-add-video').addEventListener('click', () => textVideoInput.click());
+    textVideoInput.addEventListener('change', async (e) => {
+      for (const file of e.target.files) await addMediaFromFile(file);
+      textVideoInput.value = '';
+      autoBindTextures('text');
+    });
+  }
+  const textAddNdi = document.getElementById('text-add-ndi');
+  if (textAddNdi) {
+    textAddNdi.addEventListener('click', () => {
+      if (!_ndiWs || _ndiWs.readyState !== WebSocket.OPEN) {
+        console.warn('NDI: WebSocket not connected');
+        return;
+      }
+      const picker = document.getElementById('ndi-source-picker');
+      if (picker) {
+        picker.classList.add('visible');
+        refreshNdiSources(_ndiWs);
+      }
+    });
+  }
 
   bgImageInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -4347,6 +4569,12 @@
             flipH: !!media._webcamFlip,
             flipV: !!media._webcamFlipV,
             _isNdi: !!media._isNdi,
+          };
+        } else if (!layer.textures[inp.NAME]) {
+          // Bind default 1x1 black texture to prevent unbound sampler errors
+          layer.textures[inp.NAME] = {
+            glTexture: isfRenderer._defaultTex,
+            isVideo: false, element: null, flipH: false, flipV: false,
           };
         }
       });
@@ -4954,8 +5182,10 @@
 
     function charToCode(ch) {
       if (!ch || ch === ' ') return 26;
-      const c = ch.toUpperCase().charCodeAt(0) - 65;
-      return (c >= 0 && c <= 25) ? c : 26;
+      const code = ch.toUpperCase().charCodeAt(0);
+      if (code >= 65 && code <= 90) return code - 65;
+      if (code >= 48 && code <= 57) return code - 48 + 27;
+      return 26;
     }
 
     for (const inp of textInputs) {
@@ -5192,8 +5422,8 @@
     dbg('loadDefaults: fetching...');
     const [textSrc, sceneSrc, skySrc] = await Promise.all([
       fetch('shaders/text_typewriter.fs').then(r => r.text()),
-      fetch('scenes/tesseract.scene.js').then(r => r.text()),
-      fetch('shaders/tee.fs').then(r => r.text()).catch(() => null),
+      fetch('scenes/oscar_trophy.scene.js').then(r => r.text()),
+      fetch('shaders/oscar_lights.fs').then(r => r.text()).catch(() => null),
     ]);
 
     // Yield frames between each heavy GPU operation to prevent context loss
@@ -5206,9 +5436,9 @@
       if (shaderResult && shaderResult.ok) {
         // compileToLayer already sets visible=true on success
         if (skySrc) {
-          getLayer('shader').manifestEntry = manifest.find(m => m.file === 'tee.fs');
+          getLayer('shader').manifestEntry = manifest.find(m => m.file === 'oscar_lights.fs');
           const sel = document.querySelector('.layer-shader-select[data-layer="shader"]');
-          if (sel) sel.value = 'tee.fs';
+          if (sel) sel.value = 'oscar_lights.fs';
         }
         if (focusedLayerId === 'shader') editor.setValue(shaderSrc);
       } else {
@@ -5244,10 +5474,10 @@
       }
       sceneRenderer.inputValues = sceneLayer.inputValues;
       autoBindTextures('scene');
-      sceneLayer.visible = false;
-      sceneLayer.manifestEntry = manifest.find(m => m.file === 'tesseract.scene.js');
+      sceneLayer.visible = true;
+      sceneLayer.manifestEntry = manifest.find(m => m.file === 'oscar_trophy.scene.js');
       const sceneSelect = document.querySelector('.layer-shader-select[data-layer="scene"]');
-      if (sceneSelect) sceneSelect.value = 'tesseract.scene.js';
+      if (sceneSelect) sceneSelect.value = 'oscar_trophy.scene.js';
       sceneRenderer.resize();
       dbg('scene: OK');
     } catch (e) { dbg('scene EXCEPTION: ' + e.message); }
@@ -5257,8 +5487,8 @@
     try {
       const textResult = compileToLayer('text', textSrc);
       if (textResult && textResult.ok) {
-        // Hide text layer by default — user can toggle on
-        getLayer('text').visible = false;
+        // Show text layer — movie credits visible by default
+        getLayer('text').visible = true;
         getLayer('text').manifestEntry = manifest.find(m => m.file === 'text_typewriter.fs');
         const textSel = document.querySelector('.layer-shader-select[data-layer="text"]');
         if (textSel) textSel.value = 'text_typewriter.fs';
@@ -5865,6 +6095,29 @@
       }
     }
 
+    // Re-upload overlay video/GIF each frame
+    const _olay = getLayer('overlay');
+    if (_olay && _olay.visible && _olay.fbo) {
+      if (_olay._videoElement) {
+        const vid = _olay._videoElement;
+        if (vid.readyState >= 2 && !vid.paused) {
+          gl.bindTexture(gl.TEXTURE_2D, _olay.fbo.texture);
+          gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, vid);
+          gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        }
+        if (vid.paused && vid.loop && !vid.ended) vid.play().catch(() => {});
+      } else if (_olay._gifElement) {
+        _olay._gifFrameCount = (_olay._gifFrameCount || 0) + 1;
+        if (_olay._gifFrameCount % 2 === 0) {
+          gl.bindTexture(gl.TEXTURE_2D, _olay.fbo.texture);
+          gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, _olay._gifElement);
+          gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        }
+      }
+    }
+
     // Update background texture each frame
     if (canvasBg.mode === 'video' || canvasBg.mode === 'webcam') {
       if (canvasBg.videoEl && canvasBg.videoEl.readyState >= 2) {
@@ -6125,7 +6378,7 @@
         // Handle binary NDI video frames from server
         if (evt.data instanceof ArrayBuffer) {
           const arr = new Uint8Array(evt.data);
-          if (arr.length > 9 && arr[0] === FRAME_TYPE_NDI_VIDEO) {
+          if (arr.length > 10 && arr[0] === FRAME_TYPE_NDI_VIDEO) {
             handleNdiVideoFrame(evt.data, isfRenderer.gl);
           }
           return;
@@ -6164,6 +6417,17 @@
               result = {
                 ok: compResult.ok,
                 errors: compResult.errors || null,
+                layer: targetLayer,
+              };
+              break;
+            }
+
+            case 'load_shader_file': {
+              const targetLayer = params.layerId || 'shader';
+              await window.shaderClaw.loadShaderFile(targetLayer, params.folder || 'shaders', params.file);
+              result = {
+                ok: window.shaderClaw.getErrors() === null,
+                errors: window.shaderClaw.getErrors(),
                 layer: targetLayer,
               };
               break;

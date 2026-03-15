@@ -81,6 +81,21 @@
 .sc3-properties::-webkit-scrollbar-track { background: transparent; }
 .sc3-properties::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
 
+/* ===== PROPERTIES PANEL RESIZE HANDLE (left edge) ===== */
+.sc3-properties-resize {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 5px;
+  cursor: col-resize;
+  z-index: 10;
+  background: transparent;
+  transition: background 0.15s;
+}
+.sc3-properties-resize:hover,
+.sc3-properties-resize.active {
+  background: var(--sc-accent, rgba(120, 90, 255, 0.5));
+}
+
 /* ===== SECTION HEADERS ===== */
 .sc3-section-header {
   display: flex;
@@ -139,6 +154,10 @@
     width: auto !important;
     max-height: 50vh;
     border-radius: var(--sc-panel-radius) var(--sc-panel-radius) 0 0;
+  }
+  /* Shift canvas up so shader center isn't hidden behind bottom panel */
+  #gl-canvas, #three-canvas {
+    transform: translateY(-15%);
   }
 }
 

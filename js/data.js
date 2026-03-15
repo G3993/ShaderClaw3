@@ -358,6 +358,272 @@
       }
     },
 
+    football: {
+      label: 'Football Match',
+      icon: '\u26BD',
+      // stat keys we extract from API-Football response
+      _statKeys: ['Ball Possession', 'Total Shots', 'Shots on Goal', 'Shots off Goal',
+                   'Corner Kicks', 'Fouls', 'Yellow Cards', 'Red Cards', 'Passes %', 'expected_goals'],
+      // Normalization ranges for each stat (to map to 0-1)
+      _ranges: {
+        'Ball Possession': 100, 'Total Shots': 30, 'Shots on Goal': 15, 'Shots off Goal': 15,
+        'Corner Kicks': 15, 'Fouls': 25, 'Yellow Cards': 8, 'Red Cards': 3, 'Passes %': 100, 'expected_goals': 5
+      },
+      // Clean stat key for signal name
+      _cleanKey(stat) { return stat.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/_$/, ''); },
+
+      create(config) {
+        return {
+          type: 'football',
+          apiKey: config.apiKey || '',
+          fixtureId: config.fixtureId || '',
+          demo: config.demo || false,
+          home: config.home || 'Home',
+          away: config.away || 'Away',
+          interval: null,
+          _demoTime: 0,
+          _goalFlashHome: 0,
+          _goalFlashAway: 0,
+          _lastGoalsHome: 0,
+          _lastGoalsAway: 0,
+        };
+      },
+
+      async start(src) {
+        const ft = SOURCE_TYPES.football;
+        const prefix = `data_${src.id}_`;
+
+        if (src.demo) {
+          // --- DEMO MODE: simulated match data ---
+          let minute = 0;
+          let goalsH = 0, goalsA = 0;
+          let possH = 50;
+          const sim = () => {
+            minute = Math.min(90, minute + 0.5); // ~0.5 min per second
+            // Possession drifts randomly
+            possH += (Math.random() - 0.48) * 2;
+            possH = Math.max(25, Math.min(75, possH));
+            const possA = 100 - possH;
+            // Shots accumulate
+            const shotsH = Math.floor(minute * 0.15 + Math.random() * 2);
+            const shotsA = Math.floor(minute * 0.12 + Math.random() * 2);
+            const sogH = Math.floor(shotsH * 0.4);
+            const sogA = Math.floor(shotsA * 0.35);
+            const cornersH = Math.floor(minute * 0.06 + Math.random());
+            const cornersA = Math.floor(minute * 0.05 + Math.random());
+            const foulsH = Math.floor(minute * 0.12);
+            const foulsA = Math.floor(minute * 0.14);
+            // Random goals
+            if (minute > 10 && Math.random() < 0.003) goalsH++;
+            if (minute > 10 && Math.random() < 0.003) goalsA++;
+            // Goal flash detection
+            if (goalsH > src._lastGoalsHome) { src._goalFlashHome = 1.0; src._lastGoalsHome = goalsH; }
+            if (goalsA > src._lastGoalsAway) { src._goalFlashAway = 1.0; src._lastGoalsAway = goalsA; }
+            // Decay goal flash
+            src._goalFlashHome *= 0.95;
+            src._goalFlashAway *= 0.95;
+
+            values[prefix + 'match_minute'] = minute / 90;
+            values[prefix + 'home_possession'] = possH / 100;
+            values[prefix + 'away_possession'] = possA / 100;
+            values[prefix + 'home_shots'] = Math.min(1, shotsH / 30);
+            values[prefix + 'away_shots'] = Math.min(1, shotsA / 30);
+            values[prefix + 'home_shots_on'] = Math.min(1, sogH / 15);
+            values[prefix + 'away_shots_on'] = Math.min(1, sogA / 15);
+            values[prefix + 'home_corners'] = Math.min(1, cornersH / 15);
+            values[prefix + 'away_corners'] = Math.min(1, cornersA / 15);
+            values[prefix + 'home_fouls'] = Math.min(1, foulsH / 25);
+            values[prefix + 'away_fouls'] = Math.min(1, foulsA / 25);
+            values[prefix + 'home_goals'] = Math.min(1, goalsH / 8);
+            values[prefix + 'away_goals'] = Math.min(1, goalsA / 8);
+            values[prefix + 'goal_flash_home'] = src._goalFlashHome;
+            values[prefix + 'goal_flash_away'] = src._goalFlashAway;
+            values[prefix + 'momentum'] = possH / 100; // 0=away dominant, 1=home dominant
+
+            // Loop at 90min
+            if (minute >= 90) { minute = 0; goalsH = 0; goalsA = 0; src._lastGoalsHome = 0; src._lastGoalsAway = 0; }
+          };
+          sim();
+          src.interval = setInterval(sim, 1000);
+          console.log(`Football demo started: ${src.home} vs ${src.away}`);
+          return;
+        }
+
+        // --- LIVE API MODE ---
+        if (!src.apiKey) {
+          console.warn('Football source needs an API key');
+          return;
+        }
+
+        const fetchStats = async () => {
+          try {
+            // Determine which API to use based on key format or provider setting
+            const provider = src.provider || 'football-data'; // 'football-data' or 'api-football'
+
+            if (provider === 'football-data') {
+              // football-data.org v4 — free for CL, PL, etc.
+              // First: get today's matches for the competition
+              if (!src._matchId) {
+                const today = new Date().toISOString().slice(0, 10);
+                const comp = src.competition || 'CL';
+                const listResp = await fetch(
+                  `https://api.football-data.org/v4/competitions/${comp}/matches?dateFrom=${today}&dateTo=${today}`,
+                  { headers: { 'X-Auth-Token': src.apiKey } }
+                );
+                const listData = await listResp.json();
+                const matches = listData.matches || [];
+                if (matches.length) {
+                  // Find match by team name or pick first
+                  const found = matches.find(m =>
+                    m.homeTeam?.shortName?.toLowerCase().includes(src.home.toLowerCase()) ||
+                    m.homeTeam?.name?.toLowerCase().includes(src.home.toLowerCase()) ||
+                    m.awayTeam?.shortName?.toLowerCase().includes(src.away.toLowerCase()) ||
+                    m.awayTeam?.name?.toLowerCase().includes(src.away.toLowerCase())
+                  ) || matches[0];
+                  src._matchId = found.id;
+                  // Update team names from API
+                  src.home = found.homeTeam?.shortName || found.homeTeam?.name || src.home;
+                  src.away = found.awayTeam?.shortName || found.awayTeam?.name || src.away;
+                  console.log(`Football: matched ${src.home} vs ${src.away} (id: ${src._matchId})`);
+                }
+              }
+
+              if (!src._matchId) { console.warn('No match found'); return; }
+
+              // Fetch match detail
+              const resp = await fetch(
+                `https://api.football-data.org/v4/matches/${src._matchId}`,
+                { headers: { 'X-Auth-Token': src.apiKey } }
+              );
+              const match = await resp.json();
+
+              const goalsH = match.score?.fullTime?.home ?? match.score?.halfTime?.home ?? 0;
+              const goalsA = match.score?.fullTime?.away ?? match.score?.halfTime?.away ?? 0;
+              const elapsed = match.minute || 0;
+              const status = match.status; // SCHEDULED, IN_PLAY, PAUSED, FINISHED
+
+              values[prefix + 'match_minute'] = Math.min(1, elapsed / 90);
+              values[prefix + 'home_goals'] = Math.min(1, goalsH / 8);
+              values[prefix + 'away_goals'] = Math.min(1, goalsA / 8);
+
+              // Goal flash detection
+              if (goalsH > src._lastGoalsHome) { src._goalFlashHome = 1.0; src._lastGoalsHome = goalsH; }
+              if (goalsA > src._lastGoalsAway) { src._goalFlashAway = 1.0; src._lastGoalsAway = goalsA; }
+              src._goalFlashHome *= 0.92;
+              src._goalFlashAway *= 0.92;
+              values[prefix + 'goal_flash_home'] = src._goalFlashHome;
+              values[prefix + 'goal_flash_away'] = src._goalFlashAway;
+
+              // football-data.org v4 provides statistics in match detail
+              const stats = match.statistics || {};
+              // Possession (comes as percentage object or might be in homeTeam/awayTeam)
+              const possH = stats.ball_possession?.home || 50;
+              const possA = stats.ball_possession?.away || 50;
+              values[prefix + 'home_possession'] = possH / 100;
+              values[prefix + 'away_possession'] = possA / 100;
+              values[prefix + 'momentum'] = possH / 100;
+
+              // Map available stats
+              const statMap = {
+                'shots': ['total_shots', 30], 'shots_on_goal': ['shots_on_target', 15],
+                'corner_kicks': ['corners', 15], 'fouls': ['fouls', 25],
+              };
+              for (const [apiKey, [ourKey, range]] of Object.entries(statMap)) {
+                const h = stats[apiKey]?.home || 0;
+                const a = stats[apiKey]?.away || 0;
+                values[prefix + 'home_' + ourKey] = Math.min(1, h / range);
+                values[prefix + 'away_' + ourKey] = Math.min(1, a / range);
+              }
+
+              // Fallback: if no detailed stats, derive from goals/minute
+              if (!stats.ball_possession) {
+                const progress = Math.min(1, elapsed / 90);
+                const shotEstH = Math.min(1, (goalsH * 4 + progress * 8) / 30);
+                const shotEstA = Math.min(1, (goalsA * 4 + progress * 8) / 30);
+                values[prefix + 'home_shots'] = values[prefix + 'home_shots'] || shotEstH;
+                values[prefix + 'away_shots'] = values[prefix + 'away_shots'] || shotEstA;
+                values[prefix + 'home_possession'] = 0.5 + (goalsH - goalsA) * 0.05;
+                values[prefix + 'away_possession'] = 1.0 - values[prefix + 'home_possession'];
+                values[prefix + 'momentum'] = values[prefix + 'home_possession'];
+              }
+
+              console.log(`Football: ${src.home} ${goalsH}-${goalsA} ${src.away} (${elapsed}' ${status})`);
+
+            } else {
+              // api-football.com (v3) — original provider
+              if (!src.fixtureId) { console.warn('Need fixtureId for api-football'); return; }
+              const resp = await fetch(
+                `https://v3.football.api-sports.io/fixtures/statistics?fixture=${src.fixtureId}`,
+                { headers: { 'x-apisports-key': src.apiKey } }
+              );
+              const data = await resp.json();
+              const teams = data.response || [];
+              if (teams.length < 2) return;
+              for (let ti = 0; ti < 2; ti++) {
+                const side = ti === 0 ? 'home' : 'away';
+                const stats = teams[ti].statistics || [];
+                for (const stat of stats) {
+                  const key = ft._cleanKey(stat.type);
+                  let val = parseFloat(String(stat.value).replace('%', '')) || 0;
+                  const range = ft._ranges[stat.type] || 100;
+                  values[prefix + side + '_' + key] = Math.max(0, Math.min(1, val / range));
+                }
+              }
+              const evResp = await fetch(
+                `https://v3.football.api-sports.io/fixtures?id=${src.fixtureId}`,
+                { headers: { 'x-apisports-key': src.apiKey } }
+              );
+              const evData = await evResp.json();
+              const fixture = evData.response?.[0];
+              if (fixture) {
+                const goalsH = fixture.goals?.home || 0;
+                const goalsA = fixture.goals?.away || 0;
+                const elapsed = fixture.fixture?.status?.elapsed || 0;
+                values[prefix + 'match_minute'] = Math.min(1, elapsed / 90);
+                values[prefix + 'home_goals'] = Math.min(1, goalsH / 8);
+                values[prefix + 'away_goals'] = Math.min(1, goalsA / 8);
+                if (goalsH > src._lastGoalsHome) { src._goalFlashHome = 1.0; src._lastGoalsHome = goalsH; }
+                if (goalsA > src._lastGoalsAway) { src._goalFlashAway = 1.0; src._lastGoalsAway = goalsA; }
+                values[prefix + 'momentum'] = values[prefix + 'home_ball_possession'] || 0.5;
+              }
+            }
+          } catch (e) {
+            console.warn('Football API fetch failed:', e);
+          }
+        };
+
+        await fetchStats();
+        src.interval = setInterval(fetchStats, 30000); // Poll every 30s
+      },
+
+      stop(src) {
+        if (src.interval) clearInterval(src.interval);
+      },
+
+      getSignals(src) {
+        const prefix = `data_${src.id}_`;
+        const signals = [
+          { name: `${src.home} Possession`, key: prefix + 'home_possession' },
+          { name: `${src.away} Possession`, key: prefix + 'away_possession' },
+          { name: `${src.home} Shots`, key: prefix + 'home_shots' },
+          { name: `${src.away} Shots`, key: prefix + 'away_shots' },
+          { name: `${src.home} Shots On`, key: prefix + 'home_shots_on' },
+          { name: `${src.away} Shots On`, key: prefix + 'away_shots_on' },
+          { name: `${src.home} Corners`, key: prefix + 'home_corners' },
+          { name: `${src.away} Corners`, key: prefix + 'away_corners' },
+          { name: `${src.home} Fouls`, key: prefix + 'home_fouls' },
+          { name: `${src.away} Fouls`, key: prefix + 'away_fouls' },
+          { name: `${src.home} Goals`, key: prefix + 'home_goals' },
+          { name: `${src.away} Goals`, key: prefix + 'away_goals' },
+          { name: 'Goal Flash Home', key: prefix + 'goal_flash_home' },
+          { name: 'Goal Flash Away', key: prefix + 'goal_flash_away' },
+          { name: 'Match Minute', key: prefix + 'match_minute' },
+          { name: 'Momentum', key: prefix + 'momentum' },
+        ];
+        return signals;
+      }
+    },
+
     csv_timeseries: {
       label: 'CSV Time Series',
       icon: '\uD83D\uDCC8',

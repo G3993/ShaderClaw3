@@ -323,8 +323,10 @@ function generateControls(inputs, container, onChange) {
 
       function charToCode(ch) {
         if (!ch || ch === ' ') return 26;
-        const c = ch.toUpperCase().charCodeAt(0) - 65;
-        return (c >= 0 && c <= 25) ? c : 26;
+        const code = ch.toUpperCase().charCodeAt(0);
+        if (code >= 65 && code <= 90) return code - 65;
+        if (code >= 48 && code <= 57) return code - 48 + 27;
+        return 26;
       }
 
       for (let i = 0; i < maxLen; i++) {
@@ -439,6 +441,28 @@ function generateControls(inputs, container, onChange) {
           opt.textContent = mediaTypeIcon(m.type) + ' ' + m.name;
           select.appendChild(opt);
         });
+        // --- Add content sources ---
+        const addSep = document.createElement('option');
+        addSep.disabled = true;
+        addSep.textContent = '--- Add Source ---';
+        select.appendChild(addSep);
+        const addNdiOpt = document.createElement('option');
+        addNdiOpt.value = '__add_ndi__';
+        addNdiOpt.textContent = '\u{1f4e1} + NDI Input';
+        select.appendChild(addNdiOpt);
+        const addImageOpt = document.createElement('option');
+        addImageOpt.value = '__add_image__';
+        addImageOpt.textContent = '\u{1f5bc} + Image File';
+        select.appendChild(addImageOpt);
+        const addVideoOpt = document.createElement('option');
+        addVideoOpt.value = '__add_video__';
+        addVideoOpt.textContent = '\u{1f3ac} + Video File';
+        select.appendChild(addVideoOpt);
+        const addWebcamOpt = document.createElement('option');
+        addWebcamOpt.value = '__add_webcam__';
+        addWebcamOpt.textContent = '\u{1f4f7} + Webcam';
+        select.appendChild(addWebcamOpt);
+
         // --- Layer outputs as texture sources ---
         const layerNames = { text: '\u{1f532} Text Layer', shader: '\u{1f532} Shader Layer', scene: '\u{1f532} 3D Layer' };
         const ownerEl = select.closest('.layer-params[data-layer]');
@@ -481,7 +505,34 @@ function generateControls(inputs, container, onChange) {
       imageInputIdx++;
 
       select.addEventListener('change', () => {
-        values[inp.NAME] = select.value || null;
+        const val = select.value;
+        // Handle "add source" actions
+        if (val === '__add_ndi__') {
+          select.value = ''; // reset dropdown
+          const picker = document.getElementById('ndi-source-picker');
+          if (picker) { picker.classList.add('visible'); }
+          // Trigger NDI source refresh via the global tile-ndi handler
+          const tileNdi = document.getElementById('tile-ndi');
+          if (tileNdi) tileNdi.click();
+          return;
+        }
+        if (val === '__add_image__') {
+          select.value = ''; // reset
+          document.getElementById('image-file-input').click();
+          return;
+        }
+        if (val === '__add_video__') {
+          select.value = ''; // reset
+          document.getElementById('video-file-input').click();
+          return;
+        }
+        if (val === '__add_webcam__') {
+          select.value = ''; // reset
+          const camBtn = document.getElementById('cam-vis-btn');
+          if (camBtn) camBtn.click();
+          return;
+        }
+        values[inp.NAME] = val || null;
         onChange(values);
       });
 

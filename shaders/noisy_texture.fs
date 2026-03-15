@@ -12,7 +12,9 @@
     { "NAME": "noise", "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0, "MAX": 1.0, "LABEL": "Noise" },
     { "NAME": "shape", "TYPE": "long", "DEFAULT": 3, "VALUES": [0, 1, 2, 3, 4, 5, 6], "LABELS": ["Wave", "Dots", "Truchet", "Corners", "Ripple", "Blob", "Sphere"] },
     { "NAME": "speed", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 4.0, "LABEL": "Speed" },
-    { "NAME": "scale", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 4.0, "LABEL": "Scale" }
+    { "NAME": "scale", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 4.0, "LABEL": "Scale" },
+    { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
+    { "NAME": "texMix", "LABEL": "Texture Mix", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 }
   ],
   "CREDIT": "Adapted from paper-design/shaders grain-gradient"
 }*/
@@ -222,6 +224,13 @@ void main() {
 
     vec3 outColor = gradient.rgb * totalShape;
     float opacity = gradient.a * totalShape;
+
+    // Blend with input texture
+    if (texMix > 0.0) {
+        vec2 texUV = gl_FragCoord.xy / RENDERSIZE.xy;
+        vec3 texCol = texture2D(inputImage, texUV).rgb;
+        outColor = mix(outColor, texCol * totalShape, texMix);
+    }
 
     vec3 bgColor = colorBack.rgb * colorBack.a;
     outColor = outColor + bgColor * (1.0 - opacity);

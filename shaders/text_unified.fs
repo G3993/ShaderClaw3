@@ -28,10 +28,10 @@ const float TWO_PI = 6.28318530;
 
 // Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
 float charPixel(int ch, float col, float row) {
-    if (ch < 0 || ch > 25) return 0.0;
+    if (ch < 0 || ch > 36) return 0.0;
     vec2 uv = vec2(col / 5.0, row / 7.0);
     if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return smoothstep(0.1, 0.55, texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 27.0, uv.y)).r);
+    return smoothstep(0.1, 0.55, texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r);
 }
 
 int getChar(int slot) {
@@ -67,9 +67,9 @@ int charCount() {
 }
 
 float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 25) return 0.0;
+    if (ch < 0 || ch > 36) return 0.0;
     if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 27.0, uv.y)).r;
+    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
 }
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
@@ -131,7 +131,7 @@ vec4 effectJames(vec2 uv) {
             float grow = floor(grid.y);
             if (gcol >= 0.0 && gcol < 5.0 && grow >= 0.0 && grow < 7.0) {
                 // Fetch font data ONCE for this character
-                float filled = smoothstep(0.1, 0.55, texture2D(fontAtlasTex, vec2((float(ch) + cellUV.x) / 27.0, cellUV.y)).r);
+                float filled = smoothstep(0.1, 0.55, texture2D(fontAtlasTex, vec2((float(ch) + cellUV.x) / 37.0, cellUV.y)).r);
                 if (filled > 0.5) {
                     vec2 lp = fract(grid);
                     float inten = 1.0;

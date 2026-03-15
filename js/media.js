@@ -207,12 +207,13 @@ function updateFontAtlas(gl, inputValues) {
   // Always generate atlas (even for fontFamily=0) to avoid 26-branch charData() in shader
   const fontStack = _fontFamilies[fontFamilyIdx] || _fontFamilies[0];
   const weight = Math.round(inputValues['fontWeight'] || 400);
-  const key = fontStack + '|' + weight + '|192';
+  const key = fontStack + '|' + weight + '|512';
   if (key === _fontAtlasLastKey && _fontAtlasGLTexture) return;
   _fontAtlasLastKey = key;
 
-  const cellW = 192, cellH = 180;
-  const totalW = 27 * cellW;
+  const cellW = 384, cellH = 360;
+  const ATLAS_CHARS = 37; // A-Z (0-25), space (26), 0-9 (27-36)
+  const totalW = ATLAS_CHARS * cellW; // 37 * 384 = 14,208 (under 16,384 max)
 
   if (!_fontAtlasCanvas || _fontAtlasCanvas.width !== totalW) {
     _fontAtlasCanvas = document.createElement('canvas');
@@ -239,6 +240,10 @@ function updateFontAtlas(gl, inputValues) {
     ctx.fillText(String.fromCharCode(65 + i), (i + 0.5) * cellW, cellH / 2);
   }
   // Index 26 = space (leave blank)
+  // Index 27-36 = digits 0-9
+  for (let i = 0; i < 10; i++) {
+    ctx.fillText(String(i), (27 + i + 0.5) * cellW, cellH / 2);
+  }
 
   ctx.restore();
 
@@ -357,7 +362,9 @@ function mediaTypeIcon(type, name) {
 function createGLTexture(gl, source) {
   const tex = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);

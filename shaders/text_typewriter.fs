@@ -7,7 +7,7 @@
     { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.5, "MAX": 40.0, "DEFAULT": 12.0 },
     { "NAME": "cursorBlink", "LABEL": "Cursor Blink", "TYPE": "float", "MIN": 0.5, "MAX": 5.0, "DEFAULT": 2.0 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.01, "MAX": 1.0, "DEFAULT": 0.3 },
-    { "NAME": "kerning", "LABEL": "Spacing", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 0.4 },
+    { "NAME": "kerning", "LABEL": "Spacing", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0 },
     { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.04, 1.0] },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true },
@@ -16,9 +16,9 @@
 }*/
 
 float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 25) return 0.0;
+    if (ch < 0 || ch > 36) return 0.0;
     if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 27.0, uv.y)).r;
+    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
 }
 
 int getChar(int slot) {

@@ -286,8 +286,8 @@ class Renderer {
       if (tex.isVideo && tex.element && tex.element.paused && tex.element.loop && !tex.element.ended) {
         tex.element.play().catch(() => {});
       }
-      if (tex.isVideo && tex.element && (tex.element.readyState >= 2 || tex.element instanceof HTMLCanvasElement)) {
-        if (tex._isNdi) gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      if (tex.isVideo && tex.element && !tex._isNdi && (tex.element.readyState >= 2 || tex.element instanceof HTMLCanvasElement)) {
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         if (tex.flipH || tex.flipV) {
           // Mirror webcam: draw flipped to offscreen canvas
           if (!tex._flipCanvas) {
@@ -312,7 +312,7 @@ class Renderer {
         } else {
           gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex.element);
         }
-        if (tex._isNdi) gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
       }
       gl.uniform1i(this._getLoc(name), texUnit);
       // Set IMG_SIZE_<name> for ISF image inputs
@@ -679,8 +679,10 @@ class Renderer {
           for (let j = 0; j < maxLen; j++) {
             const ch = str[j];
             if (!ch) { layer._msgCodes[j] = 26; continue; }
-            const cc = ch.charCodeAt(0) - 65;
-            layer._msgCodes[j] = (cc >= 0 && cc <= 25) ? cc : 26;
+            const code = ch.charCodeAt(0);
+            if (code >= 65 && code <= 90) layer._msgCodes[j] = code - 65;       // A-Z → 0-25
+            else if (code >= 48 && code <= 57) layer._msgCodes[j] = code - 48 + 27; // 0-9 → 27-36
+            else layer._msgCodes[j] = 26; // space/other
           }
         }
         if (layer._msgCodes) {
@@ -703,8 +705,8 @@ class Renderer {
       if (tex.isVideo && tex.element && tex.element.paused && tex.element.loop && !tex.element.ended) {
         tex.element.play().catch(() => {});
       }
-      if (tex.isVideo && tex.element && (tex.element.readyState >= 2 || tex.element instanceof HTMLCanvasElement)) {
-        if (tex._isNdi) gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      if (tex.isVideo && tex.element && !tex._isNdi && (tex.element.readyState >= 2 || tex.element instanceof HTMLCanvasElement)) {
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         if (tex.flipH || tex.flipV) {
           if (!tex._flipCanvas) { tex._flipCanvas = document.createElement('canvas'); tex._flipCtx = tex._flipCanvas.getContext('2d'); }
           const v = tex.element, fc = tex._flipCanvas;
@@ -721,7 +723,7 @@ class Renderer {
         } else {
           gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex.element);
         }
-        if (tex._isNdi) gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
       }
       gl.uniform1i(this._getLayerLoc(layer, name), texUnit);
       texUnit++;
@@ -963,8 +965,8 @@ class Renderer {
       if (tex.isVideo && tex.element && tex.element.paused && tex.element.loop && !tex.element.ended) {
         tex.element.play().catch(() => {});
       }
-      if (tex.isVideo && tex.element && (tex.element.readyState >= 2 || tex.element instanceof HTMLCanvasElement)) {
-        if (tex._isNdi) gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      if (tex.isVideo && tex.element && !tex._isNdi && (tex.element.readyState >= 2 || tex.element instanceof HTMLCanvasElement)) {
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         if (tex.flipH || tex.flipV) {
           if (!tex._flipCanvas) { tex._flipCanvas = document.createElement('canvas'); tex._flipCtx = tex._flipCanvas.getContext('2d'); }
           const v = tex.element, fc = tex._flipCanvas;
@@ -981,7 +983,7 @@ class Renderer {
         } else {
           gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex.element);
         }
-        if (tex._isNdi) gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
       }
       gl.uniform1i(this._getLayerLoc(layer, name), texUnit);
       // Set IMG_SIZE_<name> for ISF image inputs

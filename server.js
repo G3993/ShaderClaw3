@@ -14,6 +14,7 @@ import { dirname } from "path";
 import { spawn } from "child_process";
 import { existsSync } from "fs";
 import grandi from "grandi";
+import sharp from "sharp";
 import Anthropic from "@anthropic-ai/sdk";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -394,33 +395,51 @@ async function ndiStartReceive(sourceName) {
   ndiReceiver = await grandi.receive({
     source: { name: source.name, urlAddress: source.urlAddress },
     colorFormat: grandi.COLOR_FORMAT_RGBX_RGBA,
+    bandwidth: grandi.BANDWIDTH_HIGHEST,
     allowVideoFields: false,
   });
 
   ndiReceiverPump = true;
   log(`NDI receiving from: ${sourceName}`);
 
-  // Start frame pump
+  // Start frame pump — throttle to ~30fps, skip if WS is backpressured
   const pumpReceiver = ndiReceiver; // capture ref to detect destroy
+  let lastFrameTime = 0;
+  let sending = false;
   (async function pump() {
     while (ndiReceiverPump && ndiReceiver === pumpReceiver) {
       try {
         const frame = await pumpReceiver.video(100); // 100ms timeout
         if (!ndiReceiverPump || ndiReceiver !== pumpReceiver) break;
-        if (frame && frame.data && bridge.connected && bridge.ws) {
-          const header = Buffer.alloc(9);
+        if (!frame || !frame.data || !bridge.connected || !bridge.ws) continue;
+
+        // Throttle to ~30fps
+        const now = Date.now();
+        if (now - lastFrameTime < 33) continue;
+
+        // Skip if previous send hasn't drained (backpressure)
+        if (sending || bridge.ws.bufferedAmount > 4 * 1024 * 1024) continue;
+
+        lastFrameTime = now;
+        sending = true;
+
+        try {
+          // Compress to JPEG before WebSocket send (~40-80x smaller)
+          const jpegBuf = await sharp(Buffer.from(frame.data), {
+            raw: { width: frame.xres, height: frame.yres, channels: 4 }
+          }).jpeg({ quality: 90, chromaSubsampling: '4:2:0' }).toBuffer();
+
+          const header = Buffer.alloc(10);
           header[0] = FRAME_TYPE_NDI_VIDEO;
-          header.writeUInt32LE(frame.xres, 1);
-          header.writeUInt32LE(frame.yres, 5);
-          const msg = Buffer.concat([header, Buffer.from(frame.data)]);
-          try {
-            bridge.ws.send(msg);
-          } catch (e) {
-            // WebSocket send error — browser might be gone
-          }
+          header[1] = 0x01; // flag: JPEG compressed
+          header.writeUInt32LE(frame.xres, 2);
+          header.writeUInt32LE(frame.yres, 6);
+          const msg = Buffer.concat([header, jpegBuf]);
+          bridge.ws.send(msg, () => { sending = false; });
+        } catch (e) {
+          sending = false;
         }
       } catch (e) {
-        // Timeout is normal — just means no frame this interval
         if (!ndiReceiverPump || ndiReceiver !== pumpReceiver) break;
       }
     }
@@ -468,10 +487,11 @@ let _ndiFrameCount = 0;
 function ndiHandleCanvasFrame(data) {
   if (!ndiSender || !ndiSendActive) return;
   if (++_ndiFrameCount % 30 === 1) log(`NDI send: frame ${_ndiFrameCount}, ${data.length} bytes`);
-  // data is raw buffer: [0x02][width LE 4][height LE 4][RGBA pixels]
+
+  // data is raw: [0x02][width LE 4][height LE 4][RGBA pixels]
   const width = data.readUInt32LE(1);
   const height = data.readUInt32LE(5);
-  const pixels = data.slice(9);
+  const pixels = data.subarray(9); // zero-copy view
 
   try {
     ndiSender.video({
@@ -515,9 +535,28 @@ process.on("exit", ndiCleanup);
 // HTTP Static Server
 // ============================================================
 
+let _lastDiag = null;
 const httpServer = createServer(async (req, res) => {
   let urlPath = req.url.split("?")[0];
   if (urlPath === "/") urlPath = "/index.html";
+
+  // Diagnostic report — POST /api/diag (browser sends errors)
+  if (urlPath === "/api/diag" && req.method === "POST") {
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", () => {
+      try { _lastDiag = JSON.parse(body); } catch { _lastDiag = { raw: body }; }
+      log("DIAG:", JSON.stringify(_lastDiag));
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end('{"ok":true}');
+    });
+    return;
+  }
+  if (urlPath === "/api/diag" && req.method === "GET") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify(_lastDiag || { status: "no report yet" }));
+    return;
+  }
 
   // NDI health check — GET /api/ndi/status
   if (urlPath === "/api/ndi/status" && req.method === "GET") {
