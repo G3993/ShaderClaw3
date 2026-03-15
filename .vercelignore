@@ -1,0 +1,6 @@
+node_modules
+server.js
+.mcp.json
+test_*.js
+*.png
+.git
