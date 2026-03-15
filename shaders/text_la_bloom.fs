@@ -3,7 +3,7 @@
   "CREDIT": "ShaderClaw",
   "CATEGORIES": ["Generator", "Text"],
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "MY DEAREST I HAVE LOVED YOU SINCE BEFORE I KNEW YOUR NAME", "MAX_LENGTH": 64 },
+    { "NAME": "msg", "TYPE": "text", "DEFAULT": "MY DEAREST I HAVE LOVED YOU SINCE", "MAX_LENGTH": 24 },
     { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "DEFAULT": 2, "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"] },
     { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "DEFAULT": 2.5, "MIN": 0.5, "MAX": 20.0 },
     { "NAME": "fadeTime", "LABEL": "Fade", "TYPE": "float", "DEFAULT": 5.0, "MIN": 1.0, "MAX": 10.0 },

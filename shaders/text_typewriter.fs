@@ -2,7 +2,7 @@
   "CATEGORIES": ["Generator", "Text"],
   "DESCRIPTION": "Typewriter — characters appear one by one with blinking cursor",
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "ETHEREA", "MAX_LENGTH": 64 },
+    { "NAME": "msg", "TYPE": "text", "DEFAULT": "ETHEREA", "MAX_LENGTH": 24 },
     { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
     { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.5, "MAX": 40.0, "DEFAULT": 12.0 },
     { "NAME": "cursorBlink", "LABEL": "Cursor Blink", "TYPE": "float", "MIN": 0.5, "MAX": 5.0, "DEFAULT": 2.0 },

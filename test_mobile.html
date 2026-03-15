@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ShaderClaw Mobile WebGL Test</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+#diag {
+  position: fixed; top: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.75);
+  color: #fff; font: 14px/1.5 monospace;
+  padding: 12px 16px;
+  z-index: 10;
+  max-height: 100vh; overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+#diag h2 { font-size: 16px; margin-bottom: 8px; color: #ffd700; }
+#diag .row { display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); padding: 2px 0; }
+#diag .label { color: #aaa; }
+#diag .value { color: #fff; text-align: right; max-width: 60%; word-break: break-all; }
+#diag .pass { color: #4f4; font-weight: bold; }
+#diag .fail { color: #f44; font-weight: bold; }
+#diag .error-msg { color: #f88; font-size: 12px; white-space: pre-wrap; margin: 4px 0 8px 0; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="diag"><h2>ShaderClaw WebGL Diagnostics</h2><div id="info">Initializing...</div></div>
+<script>
+(function() {
+  var info = document.getElementById('info');
+  var canvas = document.getElementById('c');
+  var dpr = window.devicePixelRatio || 1;
+
+  function resize() {
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  var gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  if (!gl) {
+    info.innerHTML = '<span class="fail">FAIL: WebGL not supported</span>';
+    return;
+  }
+
+  // Gather diagnostics
+  var diags = [
+    ['GL_VERSION', gl.getParameter(gl.VERSION)],
+    ['GL_RENDERER', gl.getParameter(gl.RENDERER)],
+    ['GL_SHADING_LANGUAGE_VERSION', gl.getParameter(gl.SHADING_LANGUAGE_VERSION)],
+    ['MAX_FRAGMENT_UNIFORM_VECTORS', gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS)],
+    ['MAX_TEXTURE_IMAGE_UNITS', gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS)],
+    ['MAX_TEXTURE_SIZE', gl.getParameter(gl.MAX_TEXTURE_SIZE)],
+    ['Canvas size', canvas.width + ' x ' + canvas.height],
+    ['Device pixel ratio', dpr]
+  ];
+
+  var html = '';
+  for (var i = 0; i < diags.length; i++) {
+    html += '<div class="row"><span class="label">' + diags[i][0] + '</span><span class="value">' + diags[i][1] + '</span></div>';
+  }
+
+  // --- Shader compilation tests ---
+
+  var vsSource = 'attribute vec2 a_pos;\nvarying vec2 v_uv;\nvoid main(){\n  v_uv = a_pos * 0.5 + 0.5;\n  gl_Position = vec4(a_pos, 0.0, 1.0);\n}';
+
+  // Test 1: Simple gradient (mediump)
+  var gradientFS =
+    'precision mediump float;\n' +
+    'varying vec2 v_uv;\n' +
+    'uniform float u_time;\n' +
+    'void main() {\n' +
+    '  vec3 col = mix(vec3(0.1, 0.0, 0.2), vec3(1.0, 0.85, 0.45), v_uv.y);\n' +
+    '  col += 0.05 * sin(u_time + v_uv.x * 6.28);\n' +
+    '  gl_FragColor = vec4(col, 1.0);\n' +
+    '}';
+
+  // Test 2: Oscar-lights-style header (simplified, mediump)
+  var oscarFS =
+    'precision mediump float;\n' +
+    'varying vec2 v_uv;\n' +
+    'uniform float u_time;\n' +
+    'const float PI = 3.14159265;\n' +
+    'const float MAX_DUST = 80.0;\n' +
+    '\n' +
+    'vec3 triColorBlend(vec3 c1, vec3 c2, vec3 c3, float t) {\n' +
+    '  t = fract(t);\n' +
+    '  if (t < 1.0/3.0) return mix(c1, c2, t * 3.0);\n' +
+    '  if (t < 2.0/3.0) return mix(c2, c3, (t - 1.0/3.0) * 3.0);\n' +
+    '  return mix(c3, c1, (t - 2.0/3.0) * 3.0);\n' +
+    '}\n' +
+    '\n' +
+    'float hash(vec2 p) {\n' +
+    '  vec3 p3 = fract(vec3(p.xyx) * 0.1031);\n' +
+    '  p3 += dot(p3, p3.yzx + 33.33);\n' +
+    '  return fract((p3.x + p3.y) * p3.z);\n' +
+    '}\n' +
+    '\n' +
+    'float noise(vec2 p) {\n' +
+    '  vec2 i = floor(p);\n' +
+    '  vec2 f = fract(p);\n' +
+    '  f = f * f * (3.0 - 2.0 * f);\n' +
+    '  float a = hash(i);\n' +
+    '  float b = hash(i + vec2(1.0, 0.0));\n' +
+    '  float c = hash(i + vec2(0.0, 1.0));\n' +
+    '  float d = hash(i + vec2(1.0, 1.0));\n' +
+    '  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);\n' +
+    '}\n' +
+    '\n' +
+    'void main() {\n' +
+    '  vec2 uv = v_uv;\n' +
+    '  float t = u_time * 0.4;\n' +
+    '  vec3 gold = vec3(1.0, 0.85, 0.45);\n' +
+    '  vec3 red = vec3(0.9, 0.3, 0.15);\n' +
+    '  vec3 purple = vec3(0.6, 0.2, 0.8);\n' +
+    '  vec3 lightCol = triColorBlend(gold, red, purple, t * 0.3);\n' +
+    '  // Spotlight cone\n' +
+    '  float cx = 0.5 + 0.2 * sin(t);\n' +
+    '  float cone = 1.0 - smoothstep(0.0, 0.55, abs(uv.x - cx));\n' +
+    '  cone *= smoothstep(0.0, 0.4, uv.y);\n' +
+    '  // God rays\n' +
+    '  float angle = atan(uv.x - cx, uv.y) * 8.0;\n' +
+    '  float rays = pow(0.5 + 0.5 * sin(angle + t * 2.0), 1.2);\n' +
+    '  // Dust\n' +
+    '  float dust = 0.0;\n' +
+    '  for (float i = 0.0; i < MAX_DUST; i++) {\n' +
+    '    vec2 dp = vec2(hash(vec2(i, 0.0)), hash(vec2(0.0, i)));\n' +
+    '    dp.y = fract(dp.y + t * (0.02 + 0.02 * hash(vec2(i, i))));\n' +
+    '    float d = length(uv - dp) * 200.0;\n' +
+    '    dust += 1.0 / (1.0 + d * d);\n' +
+    '  }\n' +
+    '  vec3 bg = vec3(0.02, 0.015, 0.005);\n' +
+    '  vec3 col = bg + lightCol * cone * (0.6 + 0.4 * rays) + dust * 0.15 * lightCol;\n' +
+    '  // Film grain\n' +
+    '  col += (hash(uv * 500.0 + t) - 0.5) * 0.04;\n' +
+    '  gl_FragColor = vec4(col, 1.0);\n' +
+    '}';
+
+  function compileShader(type, source) {
+    var s = gl.createShader(type);
+    gl.shaderSource(s, source);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+      return { ok: false, error: gl.getShaderInfoLog(s), shader: null };
+    }
+    return { ok: true, error: null, shader: s };
+  }
+
+  function tryProgram(label, fsSrc) {
+    var vs = compileShader(gl.VERTEX_SHADER, vsSource);
+    if (!vs.ok) {
+      return { ok: false, error: 'Vertex: ' + vs.error, program: null };
+    }
+    var fs = compileShader(gl.FRAGMENT_SHADER, fsSrc);
+    if (!fs.ok) {
+      gl.deleteShader(vs.shader);
+      return { ok: false, error: 'Fragment: ' + fs.error, program: null };
+    }
+    var prog = gl.createProgram();
+    gl.attachShader(prog, vs.shader);
+    gl.attachShader(prog, fs.shader);
+    gl.linkProgram(prog);
+    gl.deleteShader(vs.shader);
+    gl.deleteShader(fs.shader);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+      return { ok: false, error: 'Link: ' + gl.getProgramInfoLog(prog), program: null };
+    }
+    return { ok: true, error: null, program: prog };
+  }
+
+  // Test 1
+  var test1 = tryProgram('Gradient', gradientFS);
+  html += '<div class="row"><span class="label">Test 1: Gradient (mediump)</span><span class="value ' + (test1.ok ? 'pass' : 'fail') + '">' + (test1.ok ? 'PASS' : 'FAIL') + '</span></div>';
+  if (!test1.ok) html += '<div class="error-msg">' + test1.error + '</div>';
+
+  // Test 2
+  var test2 = tryProgram('Oscar Lights', oscarFS);
+  html += '<div class="row"><span class="label">Test 2: Oscar Lights header</span><span class="value ' + (test2.ok ? 'pass' : 'fail') + '">' + (test2.ok ? 'PASS' : 'FAIL') + '</span></div>';
+  if (!test2.ok) html += '<div class="error-msg">' + test2.error + '</div>';
+
+  info.innerHTML = html;
+
+  // Render the gradient if test1 passed
+  var renderProg = test1.ok ? test1.program : null;
+  if (!renderProg) return;
+
+  // Fullscreen quad
+  var buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+
+  var aPos = gl.getAttribLocation(renderProg, 'a_pos');
+  var uTime = gl.getUniformLocation(renderProg, 'u_time');
+
+  gl.useProgram(renderProg);
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+  function frame(t) {
+    resize();
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.uniform1f(uTime, t * 0.001);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
