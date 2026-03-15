@@ -159,7 +159,7 @@
     z-index: 200;
     border-radius: 8px;
   }
-  .sc3-toolbar-strip .sc3-tool { width: 32px; height: 32px; }
+  .sc3-toolbar-strip .sc3-tool { width: 44px; height: 44px; }
   .sc3-toolbar-strip .sc3-tool-label { display: none; }
   .sc3-toolbar-strip .sc3-tool-sep { display: none; }
   .sc3-sources, .sc3-properties {
@@ -170,7 +170,15 @@
     width: auto !important;
     max-height: 50vh;
     border-radius: var(--sc-panel-radius) var(--sc-panel-radius) 0 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
+  .sc3-properties-resize { display: none; }
+  .canvas-btn { width: 44px; height: 44px; font-size: 18px; }
+  .input-circle-btn { min-width: 44px; min-height: 44px; }
+  .layer-params { max-height: none !important; overflow-y: visible !important; }
+  #shader-browser { width: calc(100vw - 20px) !important; left: 10px !important; right: 10px !important; }
+  #shader-browser .browser-body { grid-template-columns: repeat(2, 1fr) !important; }
+  .sc3-header { display: none; }
   /* Shift canvas up so shader center isn't hidden behind bottom panel */
   #gl-canvas, #three-canvas {
     transform: translateY(-15%);

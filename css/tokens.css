@@ -111,6 +111,22 @@
   --val-w:        var(--sc-val-w);
   --control-gap:  var(--sc-control-gap);
   --slider-h:     var(--sc-slider-h);
+}
+
+/* Mobile: larger fonts, thicker sliders, bigger touch targets */
+@media (max-width: 900px) {
+  :root {
+    --sc-font-size-xs: 11px;
+    --sc-font-size-sm: 12px;
+    --sc-font-size-base: 13px;
+    --sc-font-size-md: 14px;
+    --sc-font-size-lg: 15px;
+    --sc-font-size-xl: 16px;
+    --sc-slider-h: 8px;
+  }
+}
+
+:root {
   /* Compat for old grid layout references */
   --sc-toolbar-h:     var(--sc-topbar-h);
   --sc-assets-w:      var(--sc-toolbar-w);
