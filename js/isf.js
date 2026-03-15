@@ -281,6 +281,12 @@ function buildFragmentShader(source) {
 
   const uniformLines = (parsed.inputs || []).map(isfInputToUniform);
 
+  // Only declare sampler2D uniforms that the shader body actually uses
+  // (mobile WebGL limits fragment shaders to ~8 samplers)
+  const glslBody = parsed.glsl;
+  const conditionalSampler = (name) => glslBody.includes(name) ? `uniform sampler2D ${name};` : '';
+  const conditionalUniform = (decl, name) => glslBody.includes(name) ? decl : '';
+
   const headerParts = [
     'precision highp float;',
     'uniform float TIME;',
@@ -299,32 +305,31 @@ function buildFragmentShader(source) {
     'uniform float pinchHold;',
     'uniform float pinchHold2;',
     'uniform float inputActivity;',
-    // Audio-reactive uniforms (always declared, zero when no audio)
-    'uniform sampler2D audioFFT;',
+    // Audio — only declare samplers if shader uses them
+    conditionalSampler('audioFFT'),
     'uniform float audioLevel;',
     'uniform float audioBass;',
     'uniform float audioMid;',
     'uniform float audioHigh;',
-    // Variable font texture (for Text shader effect 20)
-    'uniform sampler2D varFontTex;',
-    // Font atlas texture (for bitmap effects 0-19 with web fonts)
-    'uniform sampler2D fontAtlasTex;',
-    'uniform float useFontAtlas;',
-    // Voice decay glitch (0 = none, 1 = full glitch)
+    // Font textures — only if shader uses them
+    conditionalSampler('varFontTex'),
+    conditionalSampler('fontAtlasTex'),
+    conditionalUniform('uniform float useFontAtlas;', 'useFontAtlas'),
+    // Voice decay glitch
     'uniform float _voiceGlitch;',
-    // MediaPipe uniforms
-    'uniform sampler2D mpHandLandmarks;',
-    'uniform sampler2D mpFaceLandmarks;',
-    'uniform sampler2D mpPoseLandmarks;',
-    'uniform sampler2D mpSegMask;',
-    'uniform float mpHandCount;',
-    'uniform vec3 mpHandPos;',
-    'uniform vec3 mpHandPos2;',
+    // MediaPipe — only if shader uses them
+    conditionalSampler('mpHandLandmarks'),
+    conditionalSampler('mpFaceLandmarks'),
+    conditionalSampler('mpPoseLandmarks'),
+    conditionalSampler('mpSegMask'),
+    conditionalUniform('uniform float mpHandCount;', 'mpHandCount'),
+    conditionalUniform('uniform vec3 mpHandPos;', 'mpHandPos'),
+    conditionalUniform('uniform vec3 mpHandPos2;', 'mpHandPos2'),
     // Layer compositing
     'uniform float _transparentBg;',
     ...uniformLines,
     ''
-  ];
+  ].filter(Boolean);
 
   // Inject TARGET sampler declarations from PASSES metadata
   if (parsed.meta && Array.isArray(parsed.meta.PASSES)) {
