@@ -179,10 +179,18 @@
   #shader-browser { width: calc(100vw - 20px) !important; left: 10px !important; right: 10px !important; }
   #shader-browser .browser-body { grid-template-columns: repeat(2, 1fr) !important; }
   .sc3-header { display: none; }
-  /* Shift canvas up so shader center isn't hidden behind bottom panel */
-  #gl-canvas, #three-canvas {
-    transform: translateY(-15%);
+  /* Reduce backdrop blur on mobile (heavy GPU compositing) */
+  .sc3-panel, .sc3-sources, .sc3-properties {
+    backdrop-filter: blur(8px) saturate(1.2) !important;
+    -webkit-backdrop-filter: blur(8px) saturate(1.2) !important;
   }
+  /* Show mobile drag handle for panel dismissal */
+  #mobile-drag-handle {
+    display: flex !important;
+    justify-content: center;
+    padding: 8px 0 4px;
+  }
+  .drag-pill { width: 40px; height: 5px; }
 }
 
 /* Mobile drag handle */

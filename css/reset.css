@@ -10,6 +10,8 @@ body {
   height: 100vh;
   overflow: hidden;
   font-size: var(--sc-font-size-base);
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ===== SCROLLBAR GLOBAL ===== */

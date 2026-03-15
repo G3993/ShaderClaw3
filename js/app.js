@@ -5876,13 +5876,21 @@
   let _compFrameCount = 0;
   let _cachedTextOpSlider = null;
   let _cachedTextOpVal = null;
-  function compositionLoop() {
+  const _isMobileComp = window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
+  let _lastCompTime = 0;
+  function compositionLoop(timestamp) {
     if (!compositionPlaying || _contextLost || isfRenderer.gl.isContextLost()) {
       if (_compFrameCount < 3) dbg('compLoop SKIP: playing=' + compositionPlaying + ' ctxLost=' + _contextLost + ' glLost=' + isfRenderer.gl.isContextLost());
       _compFrameCount++;
       requestAnimationFrame(compositionLoop);
       return;
     }
+    // 30fps cap on mobile to reduce GPU/battery load
+    if (_isMobileComp && timestamp - _lastCompTime < 33) {
+      requestAnimationFrame(compositionLoop);
+      return;
+    }
+    _lastCompTime = timestamp;
     if (_compFrameCount < 3) dbg('compLoop frame ' + _compFrameCount + ' comp=' + !!isfRenderer.compositorProgram);
     _compFrameCount++;
 
@@ -6178,11 +6186,23 @@
     isfRenderer.mousePos[0] += (nx - isfRenderer.mousePos[0]) * 0.3;
     isfRenderer.mousePos[1] += (ny - isfRenderer.mousePos[1]) * 0.3;
   }, { passive: false });
-  glCanvas.addEventListener('touchstart', (e) => { isfRenderer.mouseDown = 1; }, { passive: true });
+  glCanvas.addEventListener('touchstart', (e) => {
+    isfRenderer.mouseDown = 1;
+    // Update mousePos on tap (not just move)
+    if (e.touches.length > 0) {
+      const touch = e.touches[0];
+      const rect = glCanvas.getBoundingClientRect();
+      isfRenderer.mousePos[0] = (touch.clientX - rect.left) / rect.width;
+      isfRenderer.mousePos[1] = 1.0 - (touch.clientY - rect.top) / rect.height;
+    }
+  }, { passive: true });
   glCanvas.addEventListener('touchend', () => { isfRenderer.mouseDown = 0; });
 
-  // Handle canvas resize on panel resize
+  // Handle canvas resize on panel resize (debounced to prevent GPU churn on mobile)
+  let _resizeTimer = null;
   const resizeObs = new ResizeObserver(() => {
+    if (_resizeTimer) clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(() => {
     isfRenderer.resize();
     sceneRenderer.resize();
     // Resize layer FBOs
@@ -6195,6 +6215,7 @@
         layer.fbo.height = _rh();
       }
     });
+    }, 150); // debounce 150ms
   });
   resizeObs.observe(document.getElementById('preview'));
 

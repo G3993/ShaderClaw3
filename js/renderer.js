@@ -3,7 +3,9 @@
 // ============================================================
 
 function _tryGetWebGL(canvas) {
-  return canvas.getContext('webgl', { antialias: false, preserveDrawingBuffer: true, powerPreference: 'high-performance', failIfMajorPerformanceCaveat: false })
+  const isMobile = window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
+  const power = isMobile ? 'default' : 'high-performance';
+  return canvas.getContext('webgl', { antialias: false, preserveDrawingBuffer: true, powerPreference: power, failIfMajorPerformanceCaveat: false })
       || canvas.getContext('webgl', { antialias: false, preserveDrawingBuffer: true, failIfMajorPerformanceCaveat: false })
       || canvas.getContext('experimental-webgl', { antialias: false, preserveDrawingBuffer: true });
 }
