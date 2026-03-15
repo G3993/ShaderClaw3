@@ -287,50 +287,49 @@ function buildFragmentShader(source) {
   const conditionalSampler = (name) => glslBody.includes(name) ? `uniform sampler2D ${name};` : '';
   const conditionalUniform = (decl, name) => glslBody.includes(name) ? decl : '';
 
+  // Conditionally declare ALL uniforms — only if the shader body references them
+  // This minimizes uniform count for mobile GPUs
+  const cond = (decl, name) => glslBody.includes(name) ? decl : '';
+
   const headerParts = [
-    '#ifdef GL_FRAGMENT_PRECISION_HIGH',
-    'precision highp float;',
-    'precision highp int;',
-    '#else',
     'precision mediump float;',
     'precision mediump int;',
-    '#endif',
     'uniform float TIME;',
     'uniform vec2 RENDERSIZE;',
-    'uniform int PASSINDEX;',
-    'uniform int FRAMEINDEX;',
+    cond('uniform int PASSINDEX;', 'PASSINDEX'),
+    cond('uniform int FRAMEINDEX;', 'FRAMEINDEX'),
     'varying vec2 isf_FragNormCoord;',
     '#define IMG_NORM_PIXEL(img, coord) texture2D(img, coord)',
     '#define IMG_PIXEL(img, coord) texture2D(img, coord / RENDERSIZE)',
     '#define IMG_THIS_PIXEL(img) texture2D(img, isf_FragNormCoord)',
     '#define IMG_THIS_NORM_PIXEL(img) texture2D(img, isf_FragNormCoord)',
-    // Mouse uniforms
-    'uniform vec2 mousePos;',
-    'uniform vec2 mouseDelta;',
-    'uniform float mouseDown;',
-    'uniform float pinchHold;',
-    'uniform float pinchHold2;',
-    'uniform float inputActivity;',
-    // Audio — only declare samplers if shader uses them
-    conditionalSampler('audioFFT'),
-    'uniform float audioLevel;',
-    'uniform float audioBass;',
-    'uniform float audioMid;',
-    'uniform float audioHigh;',
-    // Font textures — only if shader uses them
-    conditionalSampler('varFontTex'),
-    conditionalSampler('fontAtlasTex'),
-    conditionalUniform('uniform float useFontAtlas;', 'useFontAtlas'),
-    // Voice decay glitch
-    'uniform float _voiceGlitch;',
-    // MediaPipe — only if shader uses them
-    conditionalSampler('mpHandLandmarks'),
-    conditionalSampler('mpFaceLandmarks'),
-    conditionalSampler('mpPoseLandmarks'),
-    conditionalSampler('mpSegMask'),
-    conditionalUniform('uniform float mpHandCount;', 'mpHandCount'),
-    conditionalUniform('uniform vec3 mpHandPos;', 'mpHandPos'),
-    conditionalUniform('uniform vec3 mpHandPos2;', 'mpHandPos2'),
+    // Mouse — only if used
+    cond('uniform vec2 mousePos;', 'mousePos'),
+    cond('uniform vec2 mouseDelta;', 'mouseDelta'),
+    cond('uniform float mouseDown;', 'mouseDown'),
+    cond('uniform float pinchHold;', 'pinchHold'),
+    cond('uniform float pinchHold2;', 'pinchHold2'),
+    cond('uniform float inputActivity;', 'inputActivity'),
+    // Audio
+    cond('uniform sampler2D audioFFT;', 'audioFFT'),
+    cond('uniform float audioLevel;', 'audioLevel'),
+    cond('uniform float audioBass;', 'audioBass'),
+    cond('uniform float audioMid;', 'audioMid'),
+    cond('uniform float audioHigh;', 'audioHigh'),
+    // Font textures
+    cond('uniform sampler2D varFontTex;', 'varFontTex'),
+    cond('uniform sampler2D fontAtlasTex;', 'fontAtlasTex'),
+    cond('uniform float useFontAtlas;', 'useFontAtlas'),
+    // Voice decay
+    cond('uniform float _voiceGlitch;', '_voiceGlitch'),
+    // MediaPipe
+    cond('uniform sampler2D mpHandLandmarks;', 'mpHandLandmarks'),
+    cond('uniform sampler2D mpFaceLandmarks;', 'mpFaceLandmarks'),
+    cond('uniform sampler2D mpPoseLandmarks;', 'mpPoseLandmarks'),
+    cond('uniform sampler2D mpSegMask;', 'mpSegMask'),
+    cond('uniform float mpHandCount;', 'mpHandCount'),
+    cond('uniform vec3 mpHandPos;', 'mpHandPos'),
+    cond('uniform vec3 mpHandPos2;', 'mpHandPos2'),
     // Layer compositing
     'uniform float _transparentBg;',
     ...uniformLines,
