@@ -263,7 +263,7 @@
         </div>
       </div>
       <div id="error-bar"></div>
-      <div id="debug-overlay" style="display:none"></div>
+      <div id="debug-overlay" style="display:none;pointer-events:none"></div>
       <!-- Hidden file inputs (must exist for JS) -->
       <input type="file" id="image-file-input" accept="image/jpeg,image/png,image/gif,image/webp" multiple style="display:none">
       <input type="file" id="video-file-input" accept="video/mp4,video/webm" multiple style="display:none">
@@ -776,7 +776,7 @@
       errorBar: (document.getElementById('error-bar') || {}).textContent || '',
       title: document.title
     };
-    fetch('/api/diag', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(diag) });
+    fetch('/api/diag', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(diag) }).catch(function(){});
   }, 4000);
 })();
 </script>

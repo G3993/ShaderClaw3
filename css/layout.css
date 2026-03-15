@@ -145,7 +145,23 @@
 
 /* ===== MOBILE ===== */
 @media (max-width: 900px) {
-  .sc3-toolbar-strip { display: none; }
+  .sc3-toolbar-strip {
+    display: flex !important;
+    flex-direction: row !important;
+    position: fixed !important;
+    top: 8px !important; right: 8px !important;
+    left: auto !important;
+    transform: none !important;
+    width: auto !important;
+    height: auto !important;
+    gap: 2px;
+    padding: 4px 6px;
+    z-index: 200;
+    border-radius: 8px;
+  }
+  .sc3-toolbar-strip .sc3-tool { width: 32px; height: 32px; }
+  .sc3-toolbar-strip .sc3-tool-label { display: none; }
+  .sc3-toolbar-strip .sc3-tool-sep { display: none; }
   .sc3-sources, .sc3-properties {
     left: var(--sc-panel-gap) !important;
     right: var(--sc-panel-gap) !important;

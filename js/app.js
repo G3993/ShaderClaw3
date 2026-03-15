@@ -30,7 +30,7 @@
     _dbgLines.push(msg);
     if (_dbg) {
       _dbg.textContent = _dbgLines.slice(-20).join('\n');
-      if (window.innerWidth <= 768) _dbg.style.display = ''; // show debug on mobile
+      if (window.innerWidth <= 768 && location.hostname === 'localhost') _dbg.style.display = '';
     }
   }
   dbg('init: starting...');
@@ -5531,9 +5531,9 @@
     dbg('layers: ' + layers.map(l => l.id + '=' + (l.visible?'V':'-') + (l.program?'P':'-') + (l.fbo?'F':'-')).join(' '));
     // Start composition loop now that everything is ready
     compositionLoop();
-    // Auto-hide debug overlay after 10 seconds if all went well (longer on mobile for debugging)
-    const isMobile = window.innerWidth <= 768;
-    setTimeout(() => { if (_dbg) _dbg.style.display = 'none'; }, isMobile ? 15000 : 5000);
+    // Auto-hide debug overlay immediately on production, 5s on localhost
+    const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    setTimeout(() => { if (_dbg) _dbg.style.display = 'none'; }, isLocal ? 5000 : 0);
   })().catch(e => {
     dbg('FATAL: ' + e.message);
     errorBar.textContent = 'Default load failed: ' + e.message;
