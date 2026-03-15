@@ -288,7 +288,13 @@ function buildFragmentShader(source) {
   const conditionalUniform = (decl, name) => glslBody.includes(name) ? decl : '';
 
   const headerParts = [
+    '#ifdef GL_FRAGMENT_PRECISION_HIGH',
     'precision highp float;',
+    'precision highp int;',
+    '#else',
+    'precision mediump float;',
+    'precision mediump int;',
+    '#endif',
     'uniform float TIME;',
     'uniform vec2 RENDERSIZE;',
     'uniform int PASSINDEX;',
@@ -352,7 +358,7 @@ function buildFragmentShader(source) {
   const shaderHandlesTransparency = (parsed.inputs || []).some(inp => inp.NAME === 'transparentBg');
   const hasBgColor = (parsed.inputs || []).some(inp => inp.NAME === 'bgColor');
   const injectVideo = !hasImageInput;
-  let body = header + cleaned;
+  let body = header + '\n' + cleaned;
   const mainRe = /void\s+main\s*\(\s*(void)?\s*\)/;
   const needsWrap = mainRe.test(body) && (hasBgColor || !shaderHandlesTransparency || injectVideo);
   if (needsWrap) {
