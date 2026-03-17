@@ -269,16 +269,18 @@
   }
   .sc3-properties.collapsed .sc3-tab-content { pointer-events: none; }
 
-  /* Drag pill at top of properties panel */
+  /* Drag pill at top of properties panel — large touch target */
   .sc3-panel-pill {
     display: flex !important;
     justify-content: center;
-    padding: 8px 0 4px;
+    align-items: center;
+    padding: 12px 0 8px;
     cursor: grab;
+    min-height: 32px;
   }
   .sc3-panel-pill .drag-pill {
-    width: 36px; height: 4px; border-radius: 2px;
-    background: rgba(255,255,255,0.3);
+    width: 48px; height: 5px; border-radius: 3px;
+    background: rgba(255,255,255,0.35);
   }
 
   /* Floating toggle button (bottom-right) when panel is collapsed */
