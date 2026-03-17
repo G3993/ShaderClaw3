@@ -279,7 +279,7 @@
   .layer-params { max-height: none !important; overflow-y: visible !important; }
   #shader-browser { width: calc(100vw - 20px) !important; left: 10px !important; right: 10px !important; }
   #shader-browser .browser-body { grid-template-columns: repeat(2, 1fr) !important; }
-  .sc3-header { display: none; }
+  .sc3-header { display: none !important; }
   /* Reduce backdrop blur on mobile (heavy GPU compositing) */
   .sc3-panel, .sc3-sources, .sc3-properties {
     backdrop-filter: blur(8px) saturate(1.2) !important;

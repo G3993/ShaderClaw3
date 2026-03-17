@@ -80,8 +80,9 @@
     tab.addEventListener('click', () => activateTab(tab.dataset.tab));
   });
 
-  // Show properties panel by default
-  if (propertiesPanel) {
+  // Show properties panel by default — but NOT on mobile (canvas-first)
+  const _isMobileUI = window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
+  if (propertiesPanel && !_isMobileUI) {
     propertiesPanel.classList.add('visible');
   }
 
