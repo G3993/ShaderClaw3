@@ -20,6 +20,9 @@ async function _getWebGLWithRetry(canvas, maxRetries, dbg) {
   return null;
 }
 
+// Static blend mode map (avoid per-frame allocation in renderCompositor)
+const _BLEND_MODE_MAP = { normal: 0, add: 1, multiply: 2, screen: 3, overlay: 4 };
+
 class Renderer {
   constructor(canvas, gl) {
     this.canvas = canvas;
@@ -205,7 +208,10 @@ class Renderer {
 
     // Set bg shader's own input defaults (stored on renderer)
     if (this._bgInputValues) {
-      for (const [name, val] of Object.entries(this._bgInputValues)) {
+      const bgKeys = Object.keys(this._bgInputValues);
+      for (let bk = 0; bk < bgKeys.length; bk++) {
+        const name = bgKeys[bk];
+        const val = this._bgInputValues[name];
         const loc = this._getBgLoc(name);
         if (!loc) continue;
         if (typeof val === 'number') gl.uniform1f(loc, val);
@@ -270,7 +276,10 @@ class Renderer {
     const fiLoc = this._getLoc('FRAMEINDEX');
     if (fiLoc) gl.uniform1i(fiLoc, this.frameIndex);
 
-    for (const [name, val] of Object.entries(this.inputValues)) {
+    const inputKeys = Object.keys(this.inputValues);
+    for (let ik = 0; ik < inputKeys.length; ik++) {
+      const name = inputKeys[ik];
+      const val = this.inputValues[name];
       const loc = this._getLoc(name);
       if (!loc) continue;
       if (typeof val === 'number') gl.uniform1f(loc, val);
@@ -283,7 +292,10 @@ class Renderer {
 
     // Bind textures
     let texUnit = 0;
-    for (const [name, tex] of Object.entries(this.textures)) {
+    const texKeys = Object.keys(this.textures);
+    for (let tk = 0; tk < texKeys.length; tk++) {
+      const name = texKeys[tk];
+      const tex = this.textures[name];
       gl.activeTexture(gl.TEXTURE0 + texUnit);
       gl.bindTexture(gl.TEXTURE_2D, tex.glTexture);
       // Auto-resume paused videos
@@ -650,7 +662,10 @@ class Renderer {
     }
 
     // Set layer input values
-    for (const [name, val] of Object.entries(layer.inputValues || {})) {
+    const layerInputKeys = Object.keys(layer.inputValues || {});
+    for (let ik = 0; ik < layerInputKeys.length; ik++) {
+      const name = layerInputKeys[ik];
+      const val = layer.inputValues[name];
       // bgColor uses #define trick — set _bgColorSolid instead
       if (name === 'bgColor') {
         const solidLoc = this._getLayerLoc(layer, '_bgColorSolid');
@@ -672,7 +687,8 @@ class Renderer {
     if (layer.id === 'text') {
       if (!layer._msgBar) layer._msgBar = document.getElementById('text-msg-input');
       if (layer._msgBar) {
-        const msgInp = (layer.inputs || []).find(inp => inp.TYPE === 'text' && inp.NAME === 'msg');
+        if (!layer._msgInpCached) layer._msgInpCached = (layer.inputs || []).find(inp => inp.TYPE === 'text' && inp.NAME === 'msg');
+        const msgInp = layer._msgInpCached;
         const maxLen = msgInp ? (msgInp.MAX_LENGTH || 24) : 24;
         const raw = layer._msgBar.value;
         if (raw !== layer._msgCached || maxLen !== layer._msgMaxLen) {
@@ -702,7 +718,10 @@ class Renderer {
 
     // Bind layer textures
     let texUnit = 0;
-    for (const [name, tex] of Object.entries(layer.textures || {})) {
+    const layerTexKeys = Object.keys(layer.textures || {});
+    for (let tk = 0; tk < layerTexKeys.length; tk++) {
+      const name = layerTexKeys[tk];
+      const tex = layer.textures[name];
       gl.activeTexture(gl.TEXTURE0 + texUnit);
       gl.bindTexture(gl.TEXTURE_2D, tex.glTexture);
       // Auto-resume paused videos (Chrome can pause offscreen/background videos)
@@ -944,7 +963,10 @@ class Renderer {
     }
 
     // Set input values
-    for (const [name, val] of Object.entries(layer.inputValues || {})) {
+    const mpInputKeys = Object.keys(layer.inputValues || {});
+    for (let ik = 0; ik < mpInputKeys.length; ik++) {
+      const name = mpInputKeys[ik];
+      const val = layer.inputValues[name];
       if (name === 'bgColor') {
         const solidLoc = this._getLayerLoc(layer, '_bgColorSolid');
         if (solidLoc && Array.isArray(val)) gl.uniform4f(solidLoc, val[0], val[1], val[2], val[3]);
@@ -962,7 +984,10 @@ class Renderer {
 
     // Bind layer textures (media inputs)
     let texUnit = 0;
-    for (const [name, tex] of Object.entries(layer.textures || {})) {
+    const mpTexKeys = Object.keys(layer.textures || {});
+    for (let tk = 0; tk < mpTexKeys.length; tk++) {
+      const name = mpTexKeys[tk];
+      const tex = layer.textures[name];
       gl.activeTexture(gl.TEXTURE0 + texUnit);
       gl.bindTexture(gl.TEXTURE_2D, tex.glTexture);
       // Auto-resume paused videos
@@ -1025,12 +1050,15 @@ class Renderer {
     // Reserve texture units for TARGET buffers
     const targetBaseUnit = texUnit;
     const targetUnits = {};
-    layer.passes.forEach((p, i) => {
+    const targetPassMap = {}; // target name → pass object (avoid inner-loop .find())
+    for (let pi = 0; pi < layer.passes.length; pi++) {
+      const p = layer.passes[pi];
       if (p.target) {
-        targetUnits[p.target] = targetBaseUnit + i;
+        targetUnits[p.target] = targetBaseUnit + pi;
+        targetPassMap[p.target] = p;
         texUnit++;
       }
-    });
+    }
 
     // Prepare geometry
     gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuf);
@@ -1064,8 +1092,11 @@ class Renderer {
       if (rLoc) gl.uniform2f(rLoc, outFBO.width, outFBO.height);
 
       // Bind all TARGET textures (read sides)
-      for (const [tName, tUnit] of Object.entries(targetUnits)) {
-        const tPass = layer.passes.find(p => p.target === tName);
+      const targetNames = Object.keys(targetUnits);
+      for (let ti = 0; ti < targetNames.length; ti++) {
+        const tName = targetNames[ti];
+        const tUnit = targetUnits[tName];
+        const tPass = targetPassMap[tName];
         if (!tPass || !tPass.ppFBO) continue;
         const readFBO = tPass.ppFBO.current === 0 ? tPass.ppFBO.a : tPass.ppFBO.b;
         gl.activeTexture(gl.TEXTURE0 + tUnit);
@@ -1099,6 +1130,7 @@ uniform vec2 RENDERSIZE;
 uniform sampler2D bgTexture;
 uniform float bgMode;
 uniform vec3 bgColor;
+uniform float bgAspect; // video/image native width/height ratio
 uniform vec2 overlayTR;    // translate (x, y) in -1..1
 uniform float overlayScale; // scale
 uniform float overlayRot;   // rotation in radians
@@ -1121,6 +1153,21 @@ vec2 uvForOverlay(vec2 uv) {
   c /= max(overlayScale, 0.01);
   c.x /= imgAsp; // image aspect (preserves native proportions)
   return c + 0.5;
+}
+
+// Cover-fit UV: scales UVs so the bg image/video covers the canvas without distortion
+vec2 bgCoverUV(vec2 uv) {
+  float canvasAsp = RENDERSIZE.x / RENDERSIZE.y;
+  float srcAsp = max(bgAspect, 0.001);
+  vec2 st = uv - 0.5;
+  if (canvasAsp > srcAsp) {
+    // canvas is wider — fit width, crop top/bottom
+    st.y *= srcAsp / canvasAsp;
+  } else {
+    // canvas is taller — fit height, crop sides
+    st.x *= canvasAsp / srcAsp;
+  }
+  return st + 0.5;
 }
 
 vec3 blendNormal(vec3 base, vec3 top, float a) { return mix(base, top, a); }
@@ -1151,7 +1198,7 @@ void main() {
   vec4 result = vec4(0.0, 0.0, 0.0, 1.0);
   if (bgMode > 0.5 && bgMode < 1.5) result = vec4(0.0, 0.0, 0.0, 0.0);
   else if (bgMode > 1.5 && bgMode < 2.5) result = vec4(bgColor, 1.0);
-  else if (bgMode > 2.5) result = texture2D(bgTexture, uv);
+  else if (bgMode > 2.5) result = texture2D(bgTexture, bgCoverUV(uv));
 
   // Layer 0 (base)
   if (visible0 > 0.5) {
@@ -1225,8 +1272,6 @@ void main() {
     const rLoc = this._getCompLoc('RENDERSIZE');
     if (rLoc) gl.uniform2f(rLoc, this.canvas.width, this.canvas.height);
 
-    const blendModeMap = { normal: 0, add: 1, multiply: 2, screen: 3, overlay: 4 };
-
     // Bind layer textures (type-aware: scene layer uses sceneTexture, overlay/shader use FBO)
     const layerCount = Math.min(layers.length, 4);
     for (let i = 0; i < 4; i++) {
@@ -1242,7 +1287,7 @@ void main() {
       gl.uniform1f(this._getCompLoc('opacity' + i), (i < layerCount && layers[i]) ? layers[i].opacity : 0);
       const lVis = (i < layerCount && layers[i] && layers[i].visible && (layers[i].type !== 'overlay' || layers[i]._hasImage)) ? 1.0 : 0.0;
       gl.uniform1f(this._getCompLoc('visible' + i), lVis);
-      gl.uniform1f(this._getCompLoc('blendMode' + i), blendModeMap[(i < layerCount && layers[i]) ? layers[i].blendMode : 'normal'] || 0);
+      gl.uniform1f(this._getCompLoc('blendMode' + i), _BLEND_MODE_MAP[(i < layerCount && layers[i]) ? layers[i].blendMode : 'normal'] || 0);
 
       // Per-layer flip uniforms
       const isScene = i < layerCount && layers[i] && layers[i].type === 'scene';
@@ -1266,6 +1311,10 @@ void main() {
     if (bgState && bgState.color) {
       gl.uniform3f(this._getCompLoc('bgColor'), bgState.color[0], bgState.color[1], bgState.color[2]);
     }
+    // Background aspect ratio for cover-fit
+    const bgAsp = (bgState && bgState.aspect) ? bgState.aspect : (this.canvas.width / this.canvas.height);
+    gl.uniform1f(this._getCompLoc('bgAspect'), bgAsp);
+
     gl.activeTexture(gl.TEXTURE4);
     gl.bindTexture(gl.TEXTURE_2D, (bgState && bgState.texture) ? bgState.texture : this._defaultTex);
     gl.uniform1i(this._getCompLoc('bgTexture'), 4);

@@ -374,7 +374,8 @@ let ndiSendActive = false;
 
 // Binary frame protocol constants
 const FRAME_TYPE_NDI_VIDEO = 0x01; // server → browser
-const FRAME_TYPE_CANVAS    = 0x02; // browser → server
+const FRAME_TYPE_CANVAS    = 0x02; // browser → server (raw RGBA)
+const FRAME_TYPE_CANVAS_JPEG = 0x03; // browser → server (JPEG compressed)
 
 async function ndiGetSources() {
   if (!ndiFinder) {
@@ -394,8 +395,8 @@ async function ndiStartReceive(sourceName) {
 
   ndiReceiver = await grandi.receive({
     source: { name: source.name, urlAddress: source.urlAddress },
-    colorFormat: grandi.COLOR_FORMAT_RGBX_RGBA,
-    bandwidth: grandi.BANDWIDTH_HIGHEST,
+    colorFormat: grandi.ColorFormat.RGBX_RGBA,
+    bandwidth: grandi.Bandwidth.Highest,
     allowVideoFields: false,
   });
 
@@ -466,7 +467,19 @@ async function ndiStartSend(name = "ShaderClaw", width = 1920, height = 1080) {
     return;
   }
   ndiStopSend();
-  ndiSender = await grandi.send({ name });
+  // Retry sender creation — grandi can fail transiently if NDI runtime isn't ready
+  let lastErr;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      ndiSender = await grandi.send({ name });
+      break;
+    } catch (e) {
+      lastErr = e;
+      log(`NDI sender attempt ${attempt + 1} failed: ${e.message}`);
+      if (attempt < 2) await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+    }
+  }
+  if (!ndiSender) throw lastErr;
   ndiSendActive = true;
   ndiSender._ndiName = name;
   ndiSender._width = width;
@@ -484,26 +497,41 @@ function ndiStopSend() {
 }
 
 let _ndiFrameCount = 0;
+
 function ndiHandleCanvasFrame(data) {
   if (!ndiSender || !ndiSendActive) return;
-  if (++_ndiFrameCount % 30 === 1) log(`NDI send: frame ${_ndiFrameCount}, ${data.length} bytes`);
 
-  // data is raw: [0x02][width LE 4][height LE 4][RGBA pixels]
+  // Raw RGBA: [0x02][width LE 4][height LE 4][RGBA pixels]
+  if (++_ndiFrameCount % 60 === 1) log(`NDI send: frame ${_ndiFrameCount}, ${data.length} bytes`);
   const width = data.readUInt32LE(1);
   const height = data.readUInt32LE(5);
   const pixels = data.subarray(9); // zero-copy view
+  _ndiSendPixels(pixels, width, height);
+}
 
+// Reusable pixel buffer to reduce GC pressure
+let _ndiPixelBuf = null;
+let _ndiPixelBufSize = 0;
+
+function _ndiSendPixels(pixels, width, height) {
   try {
+    // Reuse buffer if same size to avoid allocation churn
+    const needed = width * height * 4;
+    if (!_ndiPixelBuf || _ndiPixelBufSize !== needed) {
+      _ndiPixelBuf = Buffer.allocUnsafe(needed);
+      _ndiPixelBufSize = needed;
+    }
+    pixels.copy(_ndiPixelBuf, 0, 0, Math.min(pixels.length, needed));
     ndiSender.video({
-      data: pixels,
-      fourCC: grandi.FOURCC_RGBA,
+      data: _ndiPixelBuf,
+      fourCC: grandi.FourCC.RGBA,
       xres: width,
       yres: height,
       frameRateN: 30000,
       frameRateD: 1001,
       lineStrideBytes: width * 4,
       pictureAspectRatio: width / height,
-      frameFormatType: grandi.FORMAT_TYPE_PROGRESSIVE,
+      frameFormatType: grandi.FrameType.Progressive,
     });
   } catch (e) {
     // send error
@@ -1808,10 +1836,18 @@ async function main() {
     throw err;
   });
 
-  // Start MCP server on stdio
+  // Start MCP server on stdio (survive stdin EOF so HTTP+WS keeps running)
   const transport = new StdioServerTransport();
-  await mcp.connect(transport);
-  log("MCP server connected on stdio");
+  try {
+    await mcp.connect(transport);
+    log("MCP server connected on stdio");
+  } catch (e) {
+    log("MCP stdio connect failed (running without MCP):", e.message);
+  }
+  // Keep process alive even if stdin closes
+  process.stdin.on("end", () => log("stdin closed — HTTP+WS server continues"));
+  process.stdin.on("error", () => {});
+  process.stdin.resume();
 }
 
 main().catch((err) => {

@@ -73,13 +73,9 @@
   overflow-x: hidden;
   display: none; /* hidden until an element is selected */
 }
-.sc3-properties.visible {
-  display: block;
-  animation: sc3-panel-in 0.2s var(--sc-ease-out);
-}
-.sc3-properties::-webkit-scrollbar { width: 4px; }
-.sc3-properties::-webkit-scrollbar-track { background: transparent; }
-.sc3-properties::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
+/* (properties visible is now flex — see tab bar section above) */
+/* Scrollbar on properties is now handled by tab-content containers */
+.sc3-properties { overflow: hidden; } /* tabs handle their own scroll */
 
 /* ===== PROPERTIES PANEL RESIZE HANDLE (left edge) ===== */
 .sc3-properties-resize {
@@ -94,6 +90,108 @@
 .sc3-properties-resize:hover,
 .sc3-properties-resize.active {
   background: var(--sc-accent, rgba(120, 90, 255, 0.5));
+}
+
+/* ===== TAB BAR (top of properties panel) ===== */
+.sc3-tab-bar {
+  display: flex;
+  gap: 0;
+  padding: 6px 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: rgba(28, 28, 30, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.sc3-tab {
+  flex: 1;
+  padding: 7px 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--sc-text-dim);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  font-family: var(--sc-font);
+}
+.sc3-tab:hover { color: var(--sc-text); }
+.sc3-tab.active {
+  color: var(--sc-accent, #E84057);
+  border-bottom-color: var(--sc-accent, #E84057);
+}
+
+/* Tab content panels */
+.sc3-tab-content {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
+.sc3-tab-content.active { display: block; }
+.sc3-tab-content::-webkit-scrollbar { width: 4px; }
+.sc3-tab-content::-webkit-scrollbar-track { background: transparent; }
+.sc3-tab-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
+
+/* Properties panel becomes flex column to hold tab bar + content */
+.sc3-properties.visible {
+  display: flex;
+  flex-direction: column;
+  animation: sc3-panel-in 0.2s var(--sc-ease-out);
+}
+
+/* Hide the old left toolbar strip */
+.sc3-toolbar-strip { display: none !important; }
+
+/* Sources panel no longer needed as standalone */
+.sc3-sources { display: none !important; }
+
+/* ===== CONTENT TILE GRID (Assets tab) ===== */
+.sc3-content-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 10px;
+}
+.sc3-content-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 12px 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: var(--sc-text-dim);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  font-family: var(--sc-font);
+}
+.sc3-content-tile:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: var(--sc-text);
+}
+.sc3-content-tile:active {
+  background: rgba(255, 255, 255, 0.12);
+}
+.sc3-content-tile svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 1.5;
+}
+.sc3-content-tile span {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
 }
 
 /* ===== SECTION HEADERS ===== */
@@ -124,6 +222,9 @@
 /* Hide Input Triggers and Layers section headers — content shows directly */
 .sc3-section-header[data-section="input-triggers"],
 .sc3-section-header[data-section="layers"] { display: none; }
+
+/* Hide old assets header (tab bar replaces it) */
+.assets-header { display: none; }
 
 .section-body { display: block; }
 .section-header {

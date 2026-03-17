@@ -11,6 +11,7 @@
         { NAME: "connectColor", TYPE: "color", DEFAULT: [0.91, 0.25, 0.34, 1.0] },
         { NAME: "edgeThickness", TYPE: "float", DEFAULT: 2.0, MIN: 0.5, MAX: 8.0 },
         { NAME: "movement", TYPE: "float", DEFAULT: 0.6, MIN: 0.0, MAX: 2.0 },
+        { NAME: "texture", TYPE: "image" },
         { NAME: "transparentBg", TYPE: "bool", DEFAULT: true },
         { NAME: "bgColor", TYPE: "color", DEFAULT: [0.035, 0.035, 0.059, 1.0] }
     ];
@@ -112,6 +113,15 @@
         var dotMat = new THREE.PointsMaterial({ color: 0xffffff, size: 4, sizeAttenuation: false, transparent: true, opacity: 0.8 });
         var dots = new THREE.Points(dotGeom, dotMat);
         scene.add(dots);
+
+        // Video/image texture background plane
+        var bgPlaneGeom = new THREE.PlaneGeometry(20, 20);
+        var bgPlaneMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1, side: THREE.DoubleSide });
+        var bgPlane = new THREE.Mesh(bgPlaneGeom, bgPlaneMat);
+        bgPlane.position.set(0, 0, -5);
+        bgPlane.visible = false;
+        scene.add(bgPlane);
+        var currentTexId = null;
 
         // Custom model support
         var customModel = null;
@@ -233,6 +243,27 @@
                     groups[g].material.linewidth = thick;
                 }
 
+                // Apply video/image texture to background plane
+                var texId = values.texture;
+                if (texId && mediaList) {
+                    var m = mediaList.find(function(e) { return String(e.id) === String(texId); });
+                    if (m && m.threeTexture && m.id !== currentTexId) {
+                        m.threeTexture.wrapS = THREE.ClampToEdgeWrapping;
+                        m.threeTexture.wrapT = THREE.ClampToEdgeWrapping;
+                        m.threeTexture.minFilter = THREE.LinearFilter;
+                        m.threeTexture.needsUpdate = true;
+                        bgPlaneMat.map = m.threeTexture;
+                        bgPlaneMat.needsUpdate = true;
+                        bgPlane.visible = true;
+                        currentTexId = m.id;
+                    }
+                } else if (!texId && bgPlane.visible) {
+                    bgPlaneMat.map = null;
+                    bgPlaneMat.needsUpdate = true;
+                    bgPlane.visible = false;
+                    currentTexId = null;
+                }
+
                 // Mouse-interactive camera orbit
                 var orbit = (values.movement != null) ? values.movement : 0.6;
                 var mp = values._mousePos || [0.5, 0.5];
@@ -260,6 +291,8 @@
                 }
                 dotGeom.dispose();
                 dotMat.dispose();
+                bgPlaneGeom.dispose();
+                bgPlaneMat.dispose();
             }
         };
     }

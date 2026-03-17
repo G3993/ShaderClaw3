@@ -261,15 +261,26 @@ function updateFontAtlas(gl, inputValues) {
 }
 
 // Audio-reactive per-frame update (global scope — called from Renderer.render)
+// Cached DOM elements for audio UI updates (avoid per-frame getElementById)
+let _cachedAudioSignalFill = null;
+let _cachedAudioLevelFill = null;
+let _cachedAudioBarFill = null;
+let _cachedAudioBarId = null;
+let _audioFrameCount = 0;
+
 function updateAudioUniforms(gl) {
   if (!audioAnalyser || !activeAudioEntry) {
     audioLevel = audioBass = audioMid = audioHigh = 0;
-    const sf = document.getElementById('audio-signal-fill');
-    if (sf) sf.style.width = '0%';
-    const lf = document.getElementById('audio-level-fill');
-    if (lf) lf.style.width = '0%';
+    // Only update DOM every 8th frame when idle
+    if ((_audioFrameCount++ & 7) === 0) {
+      if (!_cachedAudioSignalFill) _cachedAudioSignalFill = document.getElementById('audio-signal-fill');
+      if (_cachedAudioSignalFill) _cachedAudioSignalFill.style.width = '0%';
+      if (!_cachedAudioLevelFill) _cachedAudioLevelFill = document.getElementById('audio-level-fill');
+      if (_cachedAudioLevelFill) _cachedAudioLevelFill.style.width = '0%';
+    }
     return;
   }
+  _audioFrameCount++;
   audioAnalyser.getByteFrequencyData(audioDataArray);
   const len = audioDataArray.length; // 128 bins
 
@@ -327,17 +338,20 @@ function updateAudioUniforms(gl) {
     audioFFTThreeTexture.needsUpdate = true;
   }
 
-  // Update audio level bar in media list
-  if (activeAudioEntry) {
-    const bar = document.querySelector('.audio-bar-fill[data-audio-id="' + activeAudioEntry.id + '"]');
-    if (bar) bar.style.width = (audioLevel * 100) + '%';
+  // Update audio UI bars only every 4th frame (DOM writes are expensive)
+  if ((_audioFrameCount & 3) === 0) {
+    if (activeAudioEntry) {
+      if (_cachedAudioBarId !== activeAudioEntry.id) {
+        _cachedAudioBarFill = document.querySelector('.audio-bar-fill[data-audio-id="' + activeAudioEntry.id + '"]');
+        _cachedAudioBarId = activeAudioEntry.id;
+      }
+      if (_cachedAudioBarFill) _cachedAudioBarFill.style.width = (audioLevel * 100) + '%';
+    }
+    if (!_cachedAudioSignalFill) _cachedAudioSignalFill = document.getElementById('audio-signal-fill');
+    if (_cachedAudioSignalFill) _cachedAudioSignalFill.style.width = (audioLevel * 100) + '%';
+    if (!_cachedAudioLevelFill) _cachedAudioLevelFill = document.getElementById('audio-level-fill');
+    if (_cachedAudioLevelFill) _cachedAudioLevelFill.style.width = (audioLevel * 100) + '%';
   }
-
-  // Update live signal indicators
-  const sigFill = document.getElementById('audio-signal-fill');
-  if (sigFill) sigFill.style.width = (audioLevel * 100) + '%';
-  const lvlFill = document.getElementById('audio-level-fill');
-  if (lvlFill) lvlFill.style.width = (audioLevel * 100) + '%';
 }
 
 function detectMediaType(file) {

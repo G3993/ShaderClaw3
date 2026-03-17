@@ -245,6 +245,7 @@
     videoEl: null,      // <video> element if video/webcam
     shaderFBO: null,    // FBO for shader background
     shaderLayer: null,  // pseudo-layer object for ISF rendering
+    aspect: 16/9,       // native width/height ratio of video/image source
   };
 
   let focusedLayerId = 'shader'; // which layer the code editor targets
@@ -3859,6 +3860,7 @@
           await new Promise((res, rej) => { video.onloadeddata = res; video.onerror = rej; });
           await video.play();
           canvasBg.videoEl = video;
+          canvasBg.aspect = video.videoWidth / video.videoHeight;
           if (!canvasBg.texture) canvasBg.texture = createBgTexture();
           const gl = isfRenderer.gl;
           gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -4008,6 +4010,7 @@
     cleanupBgMedia();
     const img = new Image();
     img.onload = () => {
+      canvasBg.aspect = img.naturalWidth / img.naturalHeight;
       if (!canvasBg.texture) canvasBg.texture = createBgTexture();
       const gl = isfRenderer.gl;
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -4035,6 +4038,7 @@
     video.onloadeddata = async () => {
       await video.play();
       canvasBg.videoEl = video;
+      canvasBg.aspect = video.videoWidth / video.videoHeight;
       if (!canvasBg.texture) canvasBg.texture = createBgTexture();
       const gl = isfRenderer.gl;
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -5540,9 +5544,10 @@
     dbg('layers: ' + layers.map(l => l.id + '=' + (l.visible?'V':'-') + (l.program?'P':'-') + (l.fbo?'F':'-')).join(' '));
     // Start composition loop now that everything is ready
     compositionLoop();
-    // Auto-hide debug overlay immediately on production, 5s on localhost
+    // Auto-hide debug overlay — keep visible longer on localhost/mobile for debugging
     const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-    setTimeout(() => { if (_dbg) _dbg.style.display = 'none'; }, isLocal ? 5000 : 0);
+    const isMobileDev = window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
+    setTimeout(() => { if (_dbg) _dbg.style.display = 'none'; }, isLocal ? 5000 : (isMobileDev ? 8000 : 0));
   })().catch(e => {
     dbg('FATAL: ' + e.message);
     errorBar.textContent = 'Default load failed: ' + e.message;
@@ -5884,8 +5889,18 @@
   let _compFrameCount = 0;
   let _cachedTextOpSlider = null;
   let _cachedTextOpVal = null;
+  let _cachedCompactTextOp = null;
   const _isMobileComp = window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
   let _lastCompTime = 0;
+  // Layer index map (avoid per-frame getLayer linear scan for fixed layer ids)
+  const _layerMap = {};
+  for (let li = 0; li < layers.length; li++) _layerMap[layers[li].id] = layers[li];
+  // Cached webcam entry reference (avoid per-frame mediaInputs.find)
+  let _cachedWebcamEntry = null;
+  let _cachedWebcamLookup = 0; // frame count of last lookup
+  // Cached signal rows NodeList
+  let _cachedSignalRows = null;
+  let _cachedSignalRowsFrame = 0;
   function compositionLoop(timestamp) {
     if (!compositionPlaying || _contextLost || isfRenderer.gl.isContextLost()) {
       if (_compFrameCount < 3) dbg('compLoop SKIP: playing=' + compositionPlaying + ' ctxLost=' + _contextLost + ' glLost=' + isfRenderer.gl.isContextLost());
@@ -6358,7 +6373,9 @@
   // WebSocket Client — connects to MCP server bridge
   // ============================================================
 
-  if (location.protocol !== 'file:') {
+  // Only connect WS to localhost/LAN — skip on hosted deployments (Vercel, etc.)
+  const _isLocalServer = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || /^192\.168\.|^10\.|^172\.(1[6-9]|2\d|3[01])\./.test(location.hostname);
+  if (_isLocalServer && location.protocol !== 'file:') {
     let ws = null;
     let reconnectTimer = null;
 

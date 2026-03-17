@@ -6,7 +6,8 @@ let ndiReceiveEntry = null;
 let ndiReceiveCanvas = null;
 let ndiReceiveCtx = null;
 let ndiSendingActive = false;
-let _ndiAutoStartOnConnect = true; // auto-start NDI send on first WS connect
+// Auto-start NDI only on desktop — mobile has no server and wastes CPU/battery
+let _ndiAutoStartOnConnect = !(window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent));
 let ndiSendAnimId = null;
 let ndiSendFrameCount = 0;
 let ndiSendWorker = null;
@@ -110,22 +111,29 @@ function createNdiWorker() {
   const code = `
     let offscreen = null;
     let ctx = null;
+    let msgBuf = null;
     self.onmessage = (e) => {
       const { bitmap, width, height } = e.data;
       if (!offscreen || offscreen.width !== width || offscreen.height !== height) {
         offscreen = new OffscreenCanvas(width, height);
         ctx = offscreen.getContext('2d', { alpha: false, willReadFrequently: true });
+        msgBuf = null; // invalidate cached buffer on resize
       }
       ctx.drawImage(bitmap, 0, 0, width, height);
       bitmap.close();
       const imageData = ctx.getImageData(0, 0, width, height);
-      const msg = new Uint8Array(9 + imageData.data.length);
-      const view = new DataView(msg.buffer, 0, 9);
-      view.setUint8(0, 0x02);
-      view.setUint32(1, width, true);
-      view.setUint32(5, height, true);
-      msg.set(imageData.data, 9);
-      self.postMessage(msg.buffer, [msg.buffer]);
+      const pixelBytes = imageData.data.byteLength;
+      // Reuse message buffer if same size
+      if (!msgBuf || msgBuf.byteLength !== 9 + pixelBytes) {
+        msgBuf = new ArrayBuffer(9 + pixelBytes);
+      }
+      const header = new DataView(msgBuf, 0, 9);
+      header.setUint8(0, 0x02);
+      header.setUint32(1, width, true);
+      header.setUint32(5, height, true);
+      new Uint8Array(msgBuf, 9).set(imageData.data);
+      self.postMessage(msgBuf, [msgBuf]);
+      msgBuf = null; // transferred, will recreate next frame
     };
   `;
   const blob = new Blob([code], { type: 'application/javascript' });
@@ -142,7 +150,6 @@ function startNdiSend(ws, canvasEl) {
   if (sendBtn) sendBtn.textContent = 'Stop';
   if (statusDot) statusDot.classList.add('active');
   ndiSendFrameCount = 0;
-  const NDI_W = 832, NDI_H = 480;
   const workers = [createNdiWorker(), createNdiWorker()]; // double-buffer
   _ndiSendWorkerPair = workers;
   ndiSendWorker = workers[0]; // ref for cleanup
@@ -153,7 +160,7 @@ function startNdiSend(ws, canvasEl) {
       inflight[i] = false;
       if (!ndiSendingActive) return;
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
-      if (ws.bufferedAmount > 4 * 1024 * 1024) return;
+      if (ws.bufferedAmount > 8 * 1024 * 1024) return;
       ws.send(e.data);
       ndiSendFrameCount++;
     };
@@ -168,10 +175,16 @@ function startNdiSend(ws, canvasEl) {
     inflight[workerIdx] = true;
     const idx = workerIdx;
     workerIdx ^= 1; // alternate workers
-    createImageBitmap(canvasEl, { resizeWidth: NDI_W, resizeHeight: NDI_H })
+    // NDI at 1280×720 — raw RGBA, no encode/decode overhead
+    const maxW = 1280, maxH = 720;
+    const cw = canvasEl.width, ch = canvasEl.height;
+    const scale = Math.min(1, maxW / cw, maxH / ch);
+    const ndiW = Math.round(cw * scale);
+    const ndiH = Math.round(ch * scale);
+    createImageBitmap(canvasEl, { resizeWidth: ndiW, resizeHeight: ndiH })
       .then(bitmap => {
         if (!ndiSendingActive) { bitmap.close(); inflight[idx] = false; return; }
-        workers[idx].postMessage({ bitmap, width: NDI_W, height: NDI_H }, [bitmap]);
+        workers[idx].postMessage({ bitmap, width: ndiW, height: ndiH }, [bitmap]);
       })
       .catch(() => { inflight[idx] = false; });
   }
