@@ -67,6 +67,17 @@
   sceneRenderer._mainRenderer = isfRenderer;
   const errorBar = document.getElementById('error-bar');
   const _isMobileComp = window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
+  // Composition loop state (must be declared before compositionLoop is called)
+  let _compFrameCount = 0;
+  let _cachedTextOpSlider = null;
+  let _cachedTextOpVal = null;
+  let _cachedCompactTextOp = null;
+  let _lastCompTime = 0;
+  const _layerMap = {};
+  let _cachedWebcamEntry = null;
+  let _cachedWebcamLookup = 0;
+  let _cachedSignalRows = null;
+  let _cachedSignalRowsFrame = 0;
 
   // Three.js canvas always renders offscreen — gl-canvas is the compositor output
   threeCanvas.style.display = 'none';
@@ -5441,6 +5452,9 @@
   const _t0 = performance.now();
   const yieldFrame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
+  // Build layer index map (must happen before compositionLoop is called)
+  for (let li = 0; li < layers.length; li++) _layerMap[layers[li].id] = layers[li];
+
   (async function loadDefaults() {
     dbg('loadDefaults: fetching...');
     const [textSrc, sceneSrc, skySrc] = await Promise.all([
@@ -5905,20 +5919,6 @@
   });
 
   // ===== COMPOSITION LOOP =====
-  let _compFrameCount = 0;
-  let _cachedTextOpSlider = null;
-  let _cachedTextOpVal = null;
-  let _cachedCompactTextOp = null;
-  let _lastCompTime = 0;
-  // Layer index map (avoid per-frame getLayer linear scan for fixed layer ids)
-  const _layerMap = {};
-  for (let li = 0; li < layers.length; li++) _layerMap[layers[li].id] = layers[li];
-  // Cached webcam entry reference (avoid per-frame mediaInputs.find)
-  let _cachedWebcamEntry = null;
-  let _cachedWebcamLookup = 0; // frame count of last lookup
-  // Cached signal rows NodeList
-  let _cachedSignalRows = null;
-  let _cachedSignalRowsFrame = 0;
   function compositionLoop(timestamp) {
     if (!compositionPlaying || _contextLost || isfRenderer.gl.isContextLost()) {
       if (_compFrameCount < 3) dbg('compLoop SKIP: playing=' + compositionPlaying + ' ctxLost=' + _contextLost + ' glLost=' + isfRenderer.gl.isContextLost());
