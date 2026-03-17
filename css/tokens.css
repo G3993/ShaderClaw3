@@ -28,14 +28,14 @@
   --sc-text-bright:     #ffffff;
   --sc-text-muted:      rgba(255, 255, 255, 0.25);
 
-  /* Accent — blue-purple gradient tones */
-  --sc-accent:          #6e7ff5;
-  --sc-accent-dim:      rgba(110, 127, 245, 0.12);
-  --sc-accent-glow:     rgba(110, 127, 245, 0.4);
-  --sc-accent-hover:    #8090ff;
-  --sc-accent-surface:  rgba(110, 127, 245, 0.08);
-  --sc-accent-purple:   #a855f7;
-  --sc-accent-gradient: linear-gradient(135deg, #6e7ff5, #a855f7);
+  /* Accent — red */
+  --sc-accent:          #E84057;
+  --sc-accent-dim:      rgba(232, 64, 87, 0.12);
+  --sc-accent-glow:     rgba(232, 64, 87, 0.4);
+  --sc-accent-hover:    #f04868;
+  --sc-accent-surface:  rgba(232, 64, 87, 0.08);
+  --sc-accent-purple:   #E84057;
+  --sc-accent-gradient: linear-gradient(135deg, #E84057, #ff6b81);
 
   /* Status */
   --sc-cyan:            #64d2ff;

@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 66 40">
   <defs>
     <linearGradient id="bolt-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#6e7ff5"/>
-      <stop offset="100%" stop-color="#a855f7"/>
+      <stop offset="0%" stop-color="#E84057"/>
+      <stop offset="100%" stop-color="#ff6b81"/>
     </linearGradient>
   </defs>
   <g fill="url(#bolt-grad)" transform="translate(0,-2) scale(0.55)">
