@@ -19,6 +19,10 @@ class SceneRenderer {
   }
 
   load(sceneDef) {
+    // Skip Three.js entirely on mobile — avoids stealing the single WebGL context
+    const _isMob = window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
+    if (_isMob) return;
+
     // Dispose old scene but keep the renderer (avoid creating multiple WebGL contexts)
     this.stop();
     if (this.sceneDef && this.sceneDef.dispose) this.sceneDef.dispose();
