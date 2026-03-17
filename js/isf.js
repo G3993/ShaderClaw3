@@ -397,6 +397,7 @@ function buildFragmentShader(source) {
 }
 
 const VERT_SHADER = `
+precision mediump float;
 attribute vec2 position;
 varying vec2 isf_FragNormCoord;
 void main() {

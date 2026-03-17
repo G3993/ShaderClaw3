@@ -287,7 +287,7 @@ class ISFThreeRuntime {
   // Static: Build Three.js-compatible fragment shader from ISF
   // ============================================================
   static buildFragmentShader(parsed) {
-    const lines = ['precision highp float;', 'precision highp int;', ''];
+    const lines = ['precision mediump float;', 'precision mediump int;', ''];
 
     // Varying from vertex shader
     lines.push('varying vec2 vUv;');
@@ -359,7 +359,7 @@ class ISFThreeRuntime {
   // Static: Vertex shader (identical to ISF convention)
   // ============================================================
   static get VERT_SHADER() {
-    return `precision highp float;
+    return `precision mediump float;
 attribute vec2 position;
 varying vec2 vUv;
 void main() {

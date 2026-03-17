@@ -1086,7 +1086,7 @@ class Renderer {
 
   initCompositor() {
     const compFrag = `
-precision highp float;
+precision mediump float;
 uniform sampler2D layer0;
 uniform sampler2D layer1;
 uniform sampler2D layer2;
