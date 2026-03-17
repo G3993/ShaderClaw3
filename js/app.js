@@ -56,6 +56,8 @@
   sceneRenderer._isfGL = isfRenderer.gl;
   sceneRenderer._mainRenderer = isfRenderer;
   const errorBar = document.getElementById('error-bar');
+  errorBar.style.transition = 'none'; // prevent flash during init
+  errorBar.style.opacity = '0';
   const _isMobileComp = window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
   // Composition loop state (must be declared before compositionLoop is called)
   let _compFrameCount = 0;
@@ -5551,6 +5553,11 @@
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, element);
       });
     }
+
+    // Enable error bar now that init is done (prevents flash during startup)
+    errorBar.style.transition = '';
+    errorBar.style.opacity = '';
+    errorBar.classList.remove('show');
 
     // Start rendering now that all shaders are compiled
     compositionPlaying = true;
