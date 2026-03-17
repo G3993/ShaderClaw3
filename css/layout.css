@@ -284,9 +284,19 @@
     background: rgba(255,255,255,0.35);
   }
 
-  /* Floating toggle button (bottom-right) when panel is collapsed */
+  /* Floating toggle button */
   .sc3-mobile-toggle {
     display: flex !important;
+  }
+
+  /* Floating input buttons (top of canvas) */
+  .sc3-mobile-inputs {
+    display: flex !important;
+    position: fixed;
+    top: 12px; left: 50%;
+    transform: translateX(-50%);
+    gap: 10px;
+    z-index: 100;
   }
 
   .canvas-btn { width: 44px; height: 44px; font-size: 18px; }
@@ -311,6 +321,27 @@
 
 /* Panel pill — hidden on desktop */
 .sc3-panel-pill { display: none; }
+
+/* Mobile floating input buttons — hidden on desktop */
+.sc3-mobile-inputs { display: none; }
+.sc3-mobile-input-btn {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.sc3-mobile-input-btn:active { transform: scale(0.9); }
+.sc3-mobile-input-btn.active {
+  background: rgba(232, 64, 87, 0.25);
+  border-color: rgba(232, 64, 87, 0.5);
+  color: #E84057;
+}
 
 /* Mobile toggle button — hidden on desktop */
 .sc3-mobile-toggle {

@@ -108,6 +108,17 @@
     // Tap tab bar to expand if collapsed
     const tabBar = propertiesPanel.querySelector('.sc3-tab-bar');
     if (tabBar) tabBar.addEventListener('click', () => { if (collapsed) togglePanel(); });
+
+    // Mobile floating input buttons — proxy clicks to the real panel buttons
+    document.querySelectorAll('.sc3-mobile-input-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.dataset.target;
+        const real = document.getElementById(targetId);
+        if (real) real.click();
+        // Mirror active state
+        btn.classList.toggle('active');
+      });
+    });
   }
 
   // --- Keyboard shortcuts ---
