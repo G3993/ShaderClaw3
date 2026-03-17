@@ -5541,7 +5541,14 @@
     compositionPlaying = true;
     document.getElementById('play-btn').innerHTML = '&#9654;';
     dbg('ALL DONE ' + Math.round(performance.now() - _t0) + 'ms');
+    dbg('canvas: ' + glCanvas.width + 'x' + glCanvas.height);
     dbg('layers: ' + layers.map(l => l.id + '=' + (l.visible?'V':'-') + (l.program?'P':'-') + (l.fbo?'F':'-')).join(' '));
+    // Ensure canvas has real dimensions (mobile layout may not be settled yet)
+    isfRenderer.resize();
+    layers.forEach(layer => {
+      if (layer.fbo) { isfRenderer.destroyFBO(layer.fbo); layer.fbo = isfRenderer.createFBO(_rw(), _rh()); }
+    });
+    sceneRenderer.resize();
     // Start composition loop now that everything is ready
     compositionLoop();
     // Auto-hide debug overlay — keep visible longer on localhost/mobile for debugging

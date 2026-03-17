@@ -71,8 +71,12 @@ class Renderer {
     const isMobile = window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
     const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 2 : 3);
     const parent = this.canvas.parentElement;
-    const w = Math.round((parent ? parent.clientWidth : window.innerWidth) * dpr);
-    const h = Math.round((parent ? parent.clientHeight : window.innerHeight) * dpr);
+    const pw = parent ? parent.clientWidth : 0;
+    const ph = parent ? parent.clientHeight : 0;
+    // Fallback to window size if parent has no dimensions yet (mobile layout race)
+    const w = Math.round((pw || window.innerWidth) * dpr);
+    const h = Math.round((ph || window.innerHeight) * dpr);
+    if (w < 1 || h < 1) return; // skip if still no dimensions
     this.canvas.width = w;
     this.canvas.height = h;
     this.gl.viewport(0, 0, w, h);
