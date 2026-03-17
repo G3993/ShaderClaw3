@@ -5422,8 +5422,8 @@
     dbg('loadDefaults: fetching...');
     const [textSrc, sceneSrc, skySrc] = await Promise.all([
       fetch('shaders/text_typewriter.fs').then(r => r.text()),
-      fetch('scenes/oscar_trophy.scene.js').then(r => r.text()),
-      fetch('shaders/oscar_lights.fs').then(r => r.text()).catch(() => null),
+      fetch('scenes/tesseract.scene.js').then(r => r.text()),
+      fetch('shaders/trapped.fs').then(r => r.text()).catch(() => null),
     ]);
 
     // Yield frames between each heavy GPU operation to prevent context loss
@@ -5436,9 +5436,9 @@
       if (shaderResult && shaderResult.ok) {
         // compileToLayer already sets visible=true on success
         if (skySrc) {
-          getLayer('shader').manifestEntry = manifest.find(m => m.file === 'oscar_lights.fs');
+          getLayer('shader').manifestEntry = manifest.find(m => m.file === 'trapped.fs');
           const sel = document.querySelector('.layer-shader-select[data-layer="shader"]');
-          if (sel) sel.value = 'oscar_lights.fs';
+          if (sel) sel.value = 'trapped.fs';
         }
         if (focusedLayerId === 'shader') editor.setValue(shaderSrc);
       } else {
@@ -5476,9 +5476,9 @@
       autoBindTextures('scene');
       const _isMobileDevice = window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
       sceneLayer.visible = !_isMobileDevice; // hide 3D on mobile to save GPU
-      sceneLayer.manifestEntry = manifest.find(m => m.file === 'oscar_trophy.scene.js');
+      sceneLayer.manifestEntry = manifest.find(m => m.file === 'tesseract.scene.js');
       const sceneSelect = document.querySelector('.layer-shader-select[data-layer="scene"]');
-      if (sceneSelect) sceneSelect.value = 'oscar_trophy.scene.js';
+      if (sceneSelect) sceneSelect.value = 'tesseract.scene.js';
       sceneRenderer.resize();
       dbg('scene: OK');
     } catch (e) { dbg('scene EXCEPTION: ' + e.message); }
