@@ -80,10 +80,34 @@
     tab.addEventListener('click', () => activateTab(tab.dataset.tab));
   });
 
-  // Show properties panel by default — but NOT on mobile (canvas-first)
+  // Show properties panel by default — but collapsed on mobile (canvas-first)
   const _isMobileUI = window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
   if (propertiesPanel && !_isMobileUI) {
     propertiesPanel.classList.add('visible');
+  }
+
+  // Mobile: panel collapse/expand via pill drag or toggle button
+  if (_isMobileUI && propertiesPanel) {
+    propertiesPanel.classList.add('visible', 'collapsed');
+    const pill = document.getElementById('panel-pill');
+    const toggleBtn = document.getElementById('mobile-panel-toggle');
+    let collapsed = true;
+
+    function togglePanel() {
+      collapsed = !collapsed;
+      propertiesPanel.classList.toggle('collapsed', collapsed);
+      if (toggleBtn) {
+        toggleBtn.querySelector('svg').style.transform = collapsed ? '' : 'rotate(180deg)';
+      }
+    }
+
+    // Tap pill to toggle
+    if (pill) pill.addEventListener('click', togglePanel);
+    // Tap toggle button to expand
+    if (toggleBtn) toggleBtn.addEventListener('click', togglePanel);
+    // Tap tab bar to expand if collapsed
+    const tabBar = propertiesPanel.querySelector('.sc3-tab-bar');
+    if (tabBar) tabBar.addEventListener('click', () => { if (collapsed) togglePanel(); });
   }
 
   // --- Keyboard shortcuts ---

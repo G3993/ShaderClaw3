@@ -246,60 +246,90 @@
 
 /* ===== MOBILE ===== */
 @media (max-width: 900px) {
-  .sc3-toolbar-strip {
-    display: flex !important;
-    flex-direction: row !important;
-    position: fixed !important;
-    top: 8px !important; right: 8px !important;
-    left: auto !important;
-    transform: none !important;
-    width: auto !important;
-    height: auto !important;
-    gap: 2px;
-    padding: 4px 6px;
-    z-index: 200;
-    border-radius: 8px;
-  }
-  .sc3-toolbar-strip .sc3-tool { width: 44px; height: 44px; }
-  .sc3-toolbar-strip .sc3-tool-label { display: none; }
-  .sc3-toolbar-strip .sc3-tool-sep { display: none; }
+  /* Hide toolbar strip on mobile */
+  .sc3-toolbar-strip { display: none !important; }
+  .sc3-header { display: none !important; }
+  .sc3-properties-resize { display: none; }
+
+  /* Properties panel as bottom sheet */
   .sc3-sources, .sc3-properties {
-    left: var(--sc-panel-gap) !important;
-    right: var(--sc-panel-gap) !important;
+    left: 0 !important;
+    right: 0 !important;
     bottom: 0 !important;
     top: auto !important;
     width: auto !important;
-    max-height: 50vh;
-    border-radius: var(--sc-panel-radius) var(--sc-panel-radius) 0 0;
+    max-height: 55vh;
+    border-radius: 16px 16px 0 0;
     padding-bottom: env(safe-area-inset-bottom, 0px);
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .sc3-properties-resize { display: none; }
+  /* Collapsed state — only tab bar peeks */
+  .sc3-properties.collapsed {
+    transform: translateY(calc(100% - 44px));
+  }
+  .sc3-properties.collapsed .sc3-tab-content { pointer-events: none; }
+
+  /* Drag pill at top of properties panel */
+  .sc3-panel-pill {
+    display: flex !important;
+    justify-content: center;
+    padding: 8px 0 4px;
+    cursor: grab;
+  }
+  .sc3-panel-pill .drag-pill {
+    width: 36px; height: 4px; border-radius: 2px;
+    background: rgba(255,255,255,0.3);
+  }
+
+  /* Floating toggle button (bottom-right) when panel is collapsed */
+  .sc3-mobile-toggle {
+    display: flex !important;
+  }
+
   .canvas-btn { width: 44px; height: 44px; font-size: 18px; }
   .input-circle-btn { min-width: 44px; min-height: 44px; }
   .layer-params { max-height: none !important; overflow-y: visible !important; }
   #shader-browser { width: calc(100vw - 20px) !important; left: 10px !important; right: 10px !important; }
   #shader-browser .browser-body { grid-template-columns: repeat(2, 1fr) !important; }
-  .sc3-header { display: none !important; }
-  /* Reduce backdrop blur on mobile (heavy GPU compositing) */
+
+  /* Reduce backdrop blur on mobile */
   .sc3-panel, .sc3-sources, .sc3-properties {
     backdrop-filter: blur(8px) saturate(1.2) !important;
     -webkit-backdrop-filter: blur(8px) saturate(1.2) !important;
   }
-  /* Show mobile drag handle for panel dismissal */
-  #mobile-drag-handle {
-    display: flex !important;
-    justify-content: center;
-    padding: 8px 0 4px;
-  }
-  .drag-pill { width: 40px; height: 5px; }
 }
 
-/* Mobile drag handle */
+/* Mobile drag handle (legacy) */
 #mobile-drag-handle { display: none; }
 .drag-pill {
   width: 36px; height: 4px; border-radius: 2px;
   background: rgba(255,255,255,0.25);
 }
+
+/* Panel pill — hidden on desktop */
+.sc3-panel-pill { display: none; }
+
+/* Mobile toggle button — hidden on desktop */
+.sc3-mobile-toggle {
+  display: none;
+  position: fixed;
+  bottom: 12px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 20px;
+  color: rgba(255,255,255,0.7);
+  padding: 8px 20px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.sc3-mobile-toggle:active { transform: translateX(-50%) scale(0.95); }
+.sc3-mobile-toggle.hidden { display: none !important; }
 
 /* Sidebar compat (hide old tab system) */
 #sidebar-resize { display: none; }
