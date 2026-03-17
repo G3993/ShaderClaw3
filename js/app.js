@@ -66,6 +66,7 @@
   sceneRenderer._isfGL = isfRenderer.gl;
   sceneRenderer._mainRenderer = isfRenderer;
   const errorBar = document.getElementById('error-bar');
+  const _isMobileComp = window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
 
   // Three.js canvas always renders offscreen — gl-canvas is the compositor output
   threeCanvas.style.display = 'none';
@@ -5908,7 +5909,6 @@
   let _cachedTextOpSlider = null;
   let _cachedTextOpVal = null;
   let _cachedCompactTextOp = null;
-  const _isMobileComp = window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
   let _lastCompTime = 0;
   // Layer index map (avoid per-frame getLayer linear scan for fixed layer ids)
   const _layerMap = {};
