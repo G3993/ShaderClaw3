@@ -306,7 +306,7 @@ void main() {
 
     float alpha = 1.0;
     if (transparentBg) {
-        alpha = clamp(1.0 - dot(bg - col, vec3(0.333)), 0.0, 1.0);
+        alpha = clamp(1.0 - dot(bgColor.rgb - col, vec3(0.333)), 0.0, 1.0);
     }
 
     gl_FragColor = vec4(col, alpha);
