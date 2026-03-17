@@ -246,9 +246,10 @@
 
 /* ===== MOBILE ===== */
 @media (max-width: 900px) {
-  /* Hide toolbar strip on mobile */
+  /* Hide toolbar strip, header, and 3D layer on mobile */
   .sc3-toolbar-strip { display: none !important; }
   .sc3-header { display: none !important; }
+  .layer-toggle-section[data-type="scene"] { display: none !important; }
   .sc3-properties-resize { display: none; }
 
   /* Properties panel as bottom sheet */
