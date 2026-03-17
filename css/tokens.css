@@ -1,57 +1,60 @@
 /* ============================================================
    ShaderClaw 3 — Design Tokens
-   Canvas-first floating panel system
+   Apple-inspired: black/white with blue-purple accents
    ============================================================ */
 :root {
-  /* Background */
+  /* Background — pure black */
   --sc-bg:              #000000;
-  --sc-surface:         rgba(12, 12, 18, 0.88);
-  --sc-surface-solid:   #0c0c12;
-  --sc-surface-alt:     rgba(18, 18, 28, 0.92);
-  --sc-surface-raised:  #16162a;
+  --sc-surface:         rgba(28, 28, 30, 0.82);
+  --sc-surface-solid:   #1c1c1e;
+  --sc-surface-alt:     rgba(44, 44, 46, 0.88);
+  --sc-surface-raised:  #2c2c2e;
 
-  /* Glass */
-  --sc-glass:           rgba(12, 12, 18, 0.72);
-  --sc-glass-blur:      32px;
-  --sc-glass-border:    rgba(255, 255, 255, 0.08);
-  --sc-glass-shadow:    0 12px 48px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.04) inset, 0 1px 0 rgba(255,255,255,0.06) inset;
+  /* Glass — Apple-style frosted glass */
+  --sc-glass:           rgba(28, 28, 30, 0.65);
+  --sc-glass-blur:      40px;
+  --sc-glass-border:    rgba(255, 255, 255, 0.1);
+  --sc-glass-shadow:    0 8px 32px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(255,255,255,0.08) inset;
 
-  /* Borders */
-  --sc-border:          rgba(255, 255, 255, 0.06);
-  --sc-border-hover:    rgba(255, 255, 255, 0.10);
-  --sc-border-focus:    rgba(255, 255, 255, 0.14);
-  --sc-border-active:   rgba(232, 64, 87, 0.4);
+  /* Borders — subtle white */
+  --sc-border:          rgba(255, 255, 255, 0.08);
+  --sc-border-hover:    rgba(255, 255, 255, 0.14);
+  --sc-border-focus:    rgba(100, 120, 255, 0.5);
+  --sc-border-active:   rgba(100, 120, 255, 0.6);
 
-  /* Text */
-  --sc-text:            rgba(255, 255, 255, 0.88);
-  --sc-text-dim:        rgba(255, 255, 255, 0.38);
-  --sc-text-bright:     rgba(255, 255, 255, 0.96);
-  --sc-text-muted:      rgba(255, 255, 255, 0.22);
+  /* Text — clean white hierarchy */
+  --sc-text:            rgba(255, 255, 255, 0.92);
+  --sc-text-dim:        rgba(255, 255, 255, 0.45);
+  --sc-text-bright:     #ffffff;
+  --sc-text-muted:      rgba(255, 255, 255, 0.25);
 
-  /* Accent */
-  --sc-accent:          #E84057;
-  --sc-accent-dim:      rgba(232, 64, 87, 0.12);
-  --sc-accent-glow:     rgba(232, 64, 87, 0.5);
-  --sc-accent-hover:    #f04868;
-  --sc-accent-surface:  rgba(232, 64, 87, 0.08);
+  /* Accent — blue-purple gradient tones */
+  --sc-accent:          #6e7ff5;
+  --sc-accent-dim:      rgba(110, 127, 245, 0.12);
+  --sc-accent-glow:     rgba(110, 127, 245, 0.4);
+  --sc-accent-hover:    #8090ff;
+  --sc-accent-surface:  rgba(110, 127, 245, 0.08);
+  --sc-accent-purple:   #a855f7;
+  --sc-accent-gradient: linear-gradient(135deg, #6e7ff5, #a855f7);
 
   /* Status */
-  --sc-cyan:            #00d4ff;
-  --sc-green:           #00cc66;
-  --sc-yellow:          #ffaa22;
-  --sc-purple:          #a855f7;
+  --sc-cyan:            #64d2ff;
+  --sc-green:           #30d158;
+  --sc-yellow:          #ffd60a;
+  --sc-purple:          #bf5af2;
+  --sc-red:             #ff453a;
 
-  /* Typography */
-  --sc-font:            'Inter', system-ui, -apple-system, sans-serif;
-  --sc-font-mono:       'JetBrains Mono', 'SF Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
-  --sc-font-size-xs:    9px;
-  --sc-font-size-sm:    10px;
-  --sc-font-size-base:  11px;
-  --sc-font-size-md:    12px;
-  --sc-font-size-lg:    13px;
-  --sc-font-size-xl:    14px;
+  /* Typography — SF Pro style */
+  --sc-font:            -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif;
+  --sc-font-mono:       'SF Mono', 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+  --sc-font-size-xs:    10px;
+  --sc-font-size-sm:    11px;
+  --sc-font-size-base:  12px;
+  --sc-font-size-md:    13px;
+  --sc-font-size-lg:    14px;
+  --sc-font-size-xl:    15px;
 
-  /* Spacing (4px base) */
+  /* Spacing */
   --sc-space-1:  4px;
   --sc-space-2:  8px;
   --sc-space-3:  12px;
@@ -60,25 +63,25 @@
   --sc-space-6:  24px;
   --sc-space-8:  32px;
 
-  /* Radii */
-  --sc-radius-sm: 4px;
-  --sc-radius:    8px;
-  --sc-radius-lg: 14px;
-  --sc-radius-xl: 20px;
+  /* Radii — rounder, Apple-like */
+  --sc-radius-sm: 6px;
+  --sc-radius:    10px;
+  --sc-radius-lg: 16px;
+  --sc-radius-xl: 22px;
 
-  /* Transitions */
-  --sc-ease:      cubic-bezier(0.4, 0, 0.2, 1);
+  /* Transitions — smooth Apple springs */
+  --sc-ease:      cubic-bezier(0.25, 0.1, 0.25, 1);
   --sc-ease-out:  cubic-bezier(0, 0, 0.2, 1);
   --sc-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --sc-duration:  150ms;
-  --sc-duration-slow: 250ms;
+  --sc-duration:  200ms;
+  --sc-duration-slow: 350ms;
 
   /* Floating panel dimensions */
-  --sc-topbar-h:      44px;
-  --sc-toolbar-w:     52px;
+  --sc-topbar-h:      48px;
+  --sc-toolbar-w:     54px;
   --sc-detail-w:      300px;
-  --sc-panel-gap:     10px;
-  --sc-panel-radius:  14px;
+  --sc-panel-gap:     12px;
+  --sc-panel-radius:  16px;
 
   /* Control sizing */
   --sc-label-w:    64px;

@@ -34,8 +34,8 @@
   animation: logo-pulse 2s ease-in-out infinite;
 }
 @keyframes logo-pulse {
-  0%, 100% { filter: drop-shadow(0 0 4px rgba(232, 64, 87, 0.5)) drop-shadow(0 0 8px rgba(232, 64, 87, 0.2)); }
-  50% { filter: drop-shadow(0 0 10px rgba(232, 64, 87, 1.0)) drop-shadow(0 0 20px rgba(232, 64, 87, 0.6)); }
+  0%, 100% { filter: drop-shadow(0 0 4px rgba(110, 127, 245, 0.4)) drop-shadow(0 0 8px rgba(168, 85, 247, 0.2)); }
+  50% { filter: drop-shadow(0 0 8px rgba(110, 127, 245, 0.8)) drop-shadow(0 0 16px rgba(168, 85, 247, 0.5)); }
 }
 .sc3-version {
   color: var(--sc-accent);
@@ -89,18 +89,18 @@
   align-items: center;
   gap: 2px;
   padding: 6px 0;
-  background: var(--sc-glass);
-  backdrop-filter: blur(var(--sc-glass-blur)) saturate(1.4);
-  -webkit-backdrop-filter: blur(var(--sc-glass-blur)) saturate(1.4);
-  border: 1px solid var(--sc-glass-border);
+  background: rgba(28, 28, 30, 0.65);
+  backdrop-filter: blur(var(--sc-glass-blur)) saturate(1.8);
+  -webkit-backdrop-filter: blur(var(--sc-glass-blur)) saturate(1.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--sc-panel-radius);
   box-shadow: var(--sc-glass-shadow);
   z-index: 80;
 }
 
 .sc3-tool {
-  width: 40px;
-  height: 38px;
+  width: 42px;
+  height: 40px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -121,9 +121,9 @@
   border-color: rgba(255,255,255,0.06);
 }
 .sc3-tool.active {
-  color: var(--sc-accent);
-  background: var(--sc-accent-surface);
-  border-color: rgba(232,64,87,0.2);
+  color: #fff;
+  background: var(--sc-accent-gradient);
+  border-color: transparent;
 }
 .sc3-tool svg { width: 18px; height: 18px; flex-shrink: 0; }
 .sc3-tool-label {

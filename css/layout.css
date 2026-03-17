@@ -37,21 +37,21 @@
   top: calc(var(--sc-topbar-h) + var(--sc-panel-gap));
   bottom: var(--sc-panel-gap);
   width: 260px;
-  background: linear-gradient(180deg, rgba(18, 18, 30, 0.78) 0%, rgba(10, 10, 16, 0.82) 100%);
-  backdrop-filter: blur(var(--sc-glass-blur)) saturate(1.6) brightness(1.05);
-  -webkit-backdrop-filter: blur(var(--sc-glass-blur)) saturate(1.6) brightness(1.05);
-  border: 1px solid var(--sc-glass-border);
-  border-top-color: rgba(255, 255, 255, 0.10);
+  background: rgba(28, 28, 30, 0.72);
+  backdrop-filter: blur(var(--sc-glass-blur)) saturate(1.8);
+  -webkit-backdrop-filter: blur(var(--sc-glass-blur)) saturate(1.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-top-color: rgba(255, 255, 255, 0.15);
   border-radius: var(--sc-panel-radius);
   box-shadow: var(--sc-glass-shadow);
   z-index: 60;
   overflow: hidden;
-  display: none; /* hidden by default — shown via JS */
+  display: none;
 }
 .sc3-sources.visible {
   display: flex;
   flex-direction: column;
-  animation: sc3-panel-in 0.2s var(--sc-ease-out);
+  animation: sc3-panel-in 0.3s var(--sc-ease-out);
 }
 
 /* ===== PROPERTIES / DETAIL PANEL (right) ===== */
@@ -61,11 +61,11 @@
   top: calc(var(--sc-topbar-h) + var(--sc-panel-gap));
   bottom: var(--sc-panel-gap);
   width: var(--sc-detail-w);
-  background: linear-gradient(180deg, rgba(18, 18, 30, 0.78) 0%, rgba(10, 10, 16, 0.82) 100%);
-  backdrop-filter: blur(var(--sc-glass-blur)) saturate(1.6) brightness(1.05);
-  -webkit-backdrop-filter: blur(var(--sc-glass-blur)) saturate(1.6) brightness(1.05);
-  border: 1px solid var(--sc-glass-border);
-  border-top-color: rgba(255, 255, 255, 0.10);
+  background: rgba(28, 28, 30, 0.72);
+  backdrop-filter: blur(var(--sc-glass-blur)) saturate(1.8);
+  -webkit-backdrop-filter: blur(var(--sc-glass-blur)) saturate(1.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-top-color: rgba(255, 255, 255, 0.15);
   border-radius: var(--sc-panel-radius);
   box-shadow: var(--sc-glass-shadow);
   z-index: 50;

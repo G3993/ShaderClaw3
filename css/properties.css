@@ -254,9 +254,9 @@
 }
 .input-circle-btn:hover { border-color: var(--sc-text-dim); color: var(--sc-text); }
 .input-circle-btn.active {
-  border-color: var(--sc-accent); color: var(--sc-accent);
-  background: var(--sc-accent-dim);
-  box-shadow: 0 0 8px rgba(232, 64, 87, 0.3);
+  border-color: transparent; color: #fff;
+  background: var(--sc-accent-gradient);
+  box-shadow: 0 0 12px rgba(110, 127, 245, 0.4);
 }
 .input-circle-label {
   font-size: 8px; font-weight: 600; letter-spacing: 0.8px;

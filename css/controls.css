@@ -16,8 +16,20 @@
   font-size: var(--sc-font-size-sm); text-transform: uppercase; letter-spacing: 0.5px;
 }
 .control-row input[type="range"] {
-  flex: 1; accent-color: var(--sc-accent); height: var(--sc-slider-h);
+  flex: 1; height: var(--sc-slider-h);
   position: relative; z-index: 1;
+  -webkit-appearance: none; appearance: none;
+  background: rgba(255,255,255,0.1); border-radius: 3px; outline: none;
+}
+.control-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #fff; border: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  cursor: pointer;
+}
+.control-row input[type="range"]::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 0 3px rgba(110, 127, 245, 0.3), 0 1px 4px rgba(0,0,0,0.4);
 }
 .control-row input[type="color"] {
   width: 24px; height: 24px;
@@ -31,9 +43,9 @@
 #shader-bg-color::-webkit-color-swatch { border: none; border-radius: 50%; }
 .control-row select {
   flex: 1; min-width: 0;
-  background: rgba(0,0,0,0.3); color: var(--sc-text);
-  border: 1px solid var(--sc-border); border-radius: 4px;
-  padding: 4px 20px 4px 8px; min-height: 26px; box-sizing: border-box;
+  background: rgba(255,255,255,0.06); color: var(--sc-text);
+  border: 1px solid var(--sc-border); border-radius: var(--sc-radius-sm);
+  padding: 5px 22px 5px 10px; min-height: 28px; box-sizing: border-box;
   font-size: var(--sc-font-size-base); font-family: var(--sc-font); cursor: pointer;
   -webkit-appearance: none; appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 0l4 4 4-4' fill='none' stroke='%23ffffff40' stroke-width='1.2'/%3E%3C/svg%3E");
