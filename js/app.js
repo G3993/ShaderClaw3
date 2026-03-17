@@ -5449,10 +5449,18 @@
 
   (async function loadDefaults() {
     dbg('loadDefaults: fetching...');
-    const [textSrc, sceneSrc, skySrc] = await Promise.all([
+
+    // Pick a random shader from the manifest (non-text, non-hidden)
+    const _randomShader = otherShaders.length > 0
+      ? otherShaders[Math.floor(Math.random() * otherShaders.length)]
+      : null;
+    const _randomFile = _randomShader ? (_randomShader.folder || 'shaders') + '/' + _randomShader.file : 'shaders/trapped.fs';
+    dbg('random shader: ' + (_randomShader ? _randomShader.file : 'trapped.fs'));
+
+    const [textSrc, sceneSrc, shaderSrc] = await Promise.all([
       fetch('shaders/text_typewriter.fs').then(r => r.text()),
       fetch('scenes/tesseract.scene.js').then(r => r.text()),
-      fetch('shaders/trapped.fs').then(r => r.text()).catch(() => null),
+      fetch(_randomFile).then(r => r.text()).catch(() => null),
     ]);
 
     // Yield frames between each heavy GPU operation to prevent context loss
@@ -5460,16 +5468,16 @@
 
     // 1. Shader layer FIRST
     try {
-      const shaderSrc = skySrc || DEFAULT_SHADER;
-      const shaderResult = compileToLayer('shader', shaderSrc);
+      const src = shaderSrc || DEFAULT_SHADER;
+      const shaderResult = compileToLayer('shader', src);
       if (shaderResult && shaderResult.ok) {
         // compileToLayer already sets visible=true on success
-        if (skySrc) {
-          getLayer('shader').manifestEntry = manifest.find(m => m.file === 'trapped.fs');
+        if (shaderSrc && _randomShader) {
+          getLayer('shader').manifestEntry = _randomShader;
           const sel = document.querySelector('.layer-shader-select[data-layer="shader"]');
-          if (sel) sel.value = 'trapped.fs';
+          if (sel) sel.value = _randomShader.file;
         }
-        if (focusedLayerId === 'shader') editor.setValue(shaderSrc);
+        if (focusedLayerId === 'shader') editor.setValue(src);
       } else {
         const err = shaderResult && shaderResult.errors;
         console.error('Shader compile failed:', err);
