@@ -1112,6 +1112,14 @@
     if (!layer) return;
     // Find controls either in a dedicated card or by data-layer attribute anywhere
     const card = document.querySelector(`.layer-card[data-layer="${layerId}"]`);
+    // Update shader title name next to the eye icon
+    if (card) {
+      const nameSpan = card.querySelector('.layer-name');
+      if (nameSpan) nameSpan.textContent = layer.manifestEntry ? layer.manifestEntry.title : (layerId === 'shader' ? 'Shader' : layerId);
+    }
+    // Also update toggle section labels (text, scene)
+    const toggleLabel = document.querySelector(`.layer-toggle-header[data-layer="${layerId}"] .layer-toggle-label`);
+    if (toggleLabel && layer.manifestEntry) toggleLabel.textContent = layer.manifestEntry.title;
     // Vis buttons — find all with matching data-layer (supports type-content tabs)
     document.querySelectorAll(`.layer-vis[data-layer="${layerId}"]`).forEach(visBtn => {
       visBtn.classList.toggle('hidden', !layer.visible);
