@@ -24,23 +24,13 @@
   window._bus = bus; // temporary escape hatch until window.* hacks are retired
 
   const _dbg = document.getElementById('debug-overlay');
-  const _isMobileDbg = window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
   const _dbgLines = [];
   function dbg(msg) {
     console.log(msg);
     _dbgLines.push(msg);
     if (_dbg) {
       _dbg.textContent = _dbgLines.slice(-20).join('\n');
-      // Always show on mobile for debugging
-      if (_isMobileDbg || (window.innerWidth <= 768 && location.hostname === 'localhost')) {
-        _dbg.style.display = '';
-        _dbg.style.zIndex = '9999';
-        _dbg.style.fontSize = '11px';
-        _dbg.style.background = 'rgba(0,0,0,0.85)';
-        _dbg.style.color = '#E84057';
-        _dbg.style.maxHeight = '40vh';
-        _dbg.style.overflow = 'auto';
-      }
+      if (window.innerWidth <= 768 && location.hostname === 'localhost') _dbg.style.display = '';
     }
   }
   dbg('init: starting...');
@@ -5576,11 +5566,9 @@
     sceneRenderer.resize();
     // Start composition loop now that everything is ready
     compositionLoop();
-    // Auto-hide debug overlay (keep visible on mobile until we solve the black screen)
+    // Auto-hide debug overlay
     const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-    if (!_isMobileDbg) {
-      setTimeout(() => { if (_dbg) _dbg.style.display = 'none'; }, isLocal ? 5000 : 0);
-    }
+    setTimeout(() => { if (_dbg) _dbg.style.display = 'none'; }, isLocal ? 5000 : 0);
   })().catch(e => {
     dbg('FATAL: ' + e.message);
     errorBar.textContent = 'Default load failed: ' + e.message;

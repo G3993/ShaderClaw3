@@ -817,14 +817,6 @@
       ua: navigator.userAgent,
       screen: window.innerWidth + 'x' + window.innerHeight
     };
-    // On mobile, show diagnostic overlay if there are errors or canvas is black
-    if (isMob && (_errs.length > 0 || !gl || gl.width < 2 || gl.height < 2)) {
-      var d = document.createElement('div');
-      d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:rgba(0,0,0,0.9);color:#E84057;font:12px monospace;padding:12px;max-height:50vh;overflow:auto;white-space:pre-wrap';
-      d.textContent = 'MOBILE DEBUG\n' + JSON.stringify(diag, null, 1);
-      document.body.appendChild(d);
-      d.addEventListener('click', function() { d.remove(); });
-    }
     fetch('/api/diag', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(diag) }).catch(function(){});
   }, 5000);
 })();
