@@ -26,7 +26,7 @@
   color: rgba(255,255,255,0.65);
   text-transform: uppercase;
   user-select: none;
-  display: flex; align-items: center; gap: 6px;
+  display: flex; align-items: center; gap: 10px;
 }
 .sc3-logo-img {
   width: 28px; height: 28px;
