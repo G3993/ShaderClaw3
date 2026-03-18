@@ -2904,11 +2904,13 @@
       : 'hand';
     let selectedAxis = existing ? (existing.axis || 'x') : 'x';
 
+    // Shared DOM refs (declared early to avoid TDZ)
+    const listEl = picker.querySelector('.mp-picker-list');
+
     // Category buttons (replace old tabs)
     const catBtns = picker.querySelectorAll('.mp-cat-btn');
     const tabs = catBtns; // alias for compat
     const axisRow = picker.querySelector('.mp-picker-axis');
-    const listEl = picker.querySelector('.mp-picker-list');
     const catsEl = picker.querySelector('.mp-picker-categories');
     // Initially show categories, hide list
     catsEl.style.display = '';
@@ -3021,7 +3023,6 @@
     }
 
     // Landmark / Signals list
-    const listEl = picker.querySelector('.mp-picker-list');
     function renderList() {
       listEl.innerHTML = '';
       if (activeGroup === 'signals') {
