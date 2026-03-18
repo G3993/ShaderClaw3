@@ -498,6 +498,9 @@
 #scene-model-btn:hover { border-color: var(--sc-text-dim); color: var(--sc-text); }
 
 /* Flip toggles */
+.flip-toggle-group {
+  display: flex; gap: 4px;
+}
 .flip-toggle, .layer-control-row .flip-toggle {
   background: none; border: 1px solid var(--sc-border);
   color: var(--sc-text-dim); border-radius: 3px;

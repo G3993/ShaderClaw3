@@ -256,6 +256,8 @@ function generateControls(inputs, container, onChange) {
         });
         row.appendChild(toggle);
       } else {
+        row.className = 'cam-toggle-row';
+        row.dataset.name = inp.NAME;
         const toggle = document.createElement('button');
         toggle.className = 'cam-switch' + (def ? ' active' : '');
         toggle.addEventListener('click', () => {
