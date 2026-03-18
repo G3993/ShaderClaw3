@@ -158,6 +158,7 @@ function generateControls(inputs, container, onChange) {
 
     const label = document.createElement('label');
     label.textContent = inp.LABEL || inp.NAME;
+    label.title = inp.LABEL || inp.NAME; // tooltip shows full name on hover
     row.appendChild(label);
 
     if (inp.TYPE === 'float') {

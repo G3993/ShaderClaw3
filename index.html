@@ -635,10 +635,11 @@
 
     <!-- 4. Shader Layer -->
     <div class="sc3-section">
-      <div class="sc3-section-header" data-section="shader-layer">
+      <div class="sc3-section-header sc3-layer-header" data-section="shader-layer">
         <span class="sc3-section-chevron">&#x25BC;</span>
-        <button class="layer-vis" data-layer="shader" title="Toggle visibility" style="margin-right:4px"><svg class="eye-on" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-off" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 01-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
-        Shader
+        <button class="layer-vis" data-layer="shader" title="Toggle visibility"><svg class="eye-on" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-off" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 01-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
+        <span class="sc3-section-title">Shader</span>
+        <div class="sc3-section-swatch" data-layer="shader"></div>
       </div>
       <div class="sc3-section-body">
         <div id="layer-panel">
@@ -685,10 +686,11 @@
 
     <!-- 5. Text Layer -->
     <div class="sc3-section">
-      <div class="sc3-section-header" data-section="text-layer">
+      <div class="sc3-section-header sc3-layer-header" data-section="text-layer">
         <span class="sc3-section-chevron">&#x25BC;</span>
-        <button class="layer-vis" data-layer="text" title="Toggle text visibility" style="margin-right:4px"><svg class="eye-on" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-off" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 01-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
-        Text
+        <button class="layer-vis" data-layer="text" title="Toggle text visibility"><svg class="eye-on" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-off" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 01-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
+        <span class="sc3-section-title">Text</span>
+        <div class="sc3-section-swatch" data-layer="text" style="background:#fff"></div>
       </div>
       <div class="sc3-section-body">
         <!-- Keep toggle section wrapper for JS compat -->
@@ -738,10 +740,11 @@
 
     <!-- 6. 3D Layer -->
     <div class="sc3-section">
-      <div class="sc3-section-header" data-section="scene-layer">
+      <div class="sc3-section-header sc3-layer-header" data-section="scene-layer">
         <span class="sc3-section-chevron">&#x25BC;</span>
-        <button class="layer-vis" data-layer="scene" title="Toggle 3D visibility" style="margin-right:4px"><svg class="eye-on" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-off" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 01-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
-        3D
+        <button class="layer-vis" data-layer="scene" title="Toggle 3D visibility"><svg class="eye-on" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-off" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 01-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
+        <span class="sc3-section-title">3D</span>
+        <div class="sc3-section-swatch" data-layer="scene"></div>
       </div>
       <div class="sc3-section-body">
         <div class="layer-toggle-section" data-type="scene" style="border:none;margin:0;padding:0">

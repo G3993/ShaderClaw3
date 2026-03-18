@@ -219,6 +219,23 @@
 .sc3-section.collapsed .sc3-section-body { display: none; }
 .sc3-section.collapsed .sc3-section-chevron { transform: rotate(-90deg); }
 
+/* Layer section headers — condensed: eye + title + color swatch */
+.sc3-layer-header {
+  display: flex; align-items: center; gap: 6px;
+  border-bottom: none;
+}
+.sc3-layer-header .layer-vis {
+  background: none; border: none; color: var(--sc-text-dim);
+  cursor: pointer; padding: 0; display: flex; flex-shrink: 0;
+}
+.sc3-layer-header .layer-vis:hover { color: var(--sc-text); }
+.sc3-section-title { flex: 1; }
+.sc3-section-swatch {
+  width: 14px; height: 14px; border-radius: 3px;
+  border: 1px solid rgba(255,255,255,0.12);
+  flex-shrink: 0; background: #000;
+}
+
 /* Hide old Layers section header (replaced by individual layer sections) */
 .sc3-section-header[data-section="layers"] { display: none; }
 
