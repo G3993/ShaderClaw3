@@ -256,10 +256,10 @@
 .slider-wrap { flex: 1; position: relative; display: flex; align-items: center; }
 .bind-range-indicator {
   position: absolute; height: 3px; border-radius: 2px;
-  background: rgba(232,64,87,0.08); pointer-events: none; z-index: 0;
+  background: transparent; pointer-events: none; z-index: 0;
   top: 50%; transform: translateY(-50%);
 }
-.control-row:hover .bind-range-indicator { background: rgba(232,64,87,0.15); }
+.control-row:hover .bind-range-indicator { background: rgba(232,64,87,0.1); }
 .bind-signal-dot {
   position: absolute; width: 6px; height: 6px; border-radius: 50%;
   background: var(--sc-accent); top: 50%; transform: translate(-50%, -50%);
