@@ -25,7 +25,7 @@
 }
 .gallery-search:focus, #gallery-search:focus { border-color: var(--sc-accent); }
 .gallery-grid, #gallery-grid {
-  display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px;
 }
 .gallery-card {
   background: rgba(255,255,255,0.03);
@@ -53,7 +53,7 @@
 .gallery-category-title {
   font-size: 9px; font-weight: 700; letter-spacing: 1.5px;
   color: var(--sc-text-dim); text-transform: uppercase;
-  padding: var(--sc-space-2) 2px var(--sc-space-1);
+  padding: 6px 2px 2px;
   grid-column: 1 / -1;
 }
 
