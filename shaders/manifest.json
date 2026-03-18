@@ -383,15 +383,6 @@
     "hasVertex": true
   },
   {
-    "id": 53,
-    "title": "SoundTemple",
-    "description": "Bouncing ember particles on a reflective floor — orbiting camera, cycling colors",
-    "type": "generator",
-    "categories": ["Generator"],
-    "file": "sound_temple.fs",
-    "hasVertex": true
-  },
-  {
     "id": 54,
     "title": "Morphus",
     "description": "Smooth-blended raymarched shapes — spheres, cube, torus melting together on a reflective plane",
@@ -518,14 +509,6 @@
     "description": "Brilliant-cut diamond with anomalous spectral dispersion — 12-wavelength raymarched refraction and total internal reflection",
     "categories": ["Generator", "3D"],
     "file": "diamond.fs",
-    "hasVertex": true
-  },
-  {
-    "id": 115,
-    "title": "Dolphin",
-    "description": "Raymarched dolphin leaping through ocean waves with caustics, foam, splash effects, and procedural animation",
-    "categories": ["Generator", "3D"],
-    "file": "dolphin.fs",
     "hasVertex": true
   },
   {
