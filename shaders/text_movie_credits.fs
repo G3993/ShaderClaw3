@@ -3,6 +3,9 @@
   "DESCRIPTION": "Movie credits scroll — text scrolls upward like cinema end credits with live transcript support",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": "ETHEREA", "MAX_LENGTH": 24 },
+    { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
+    { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
+    { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
     { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.85, 0.78, 0.62, 1.0] },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 3.0, "DEFAULT": 1.0 },
@@ -122,9 +125,10 @@ void main() {
             if (ch < 0 || ch > 36) continue;
 
             float cx = startX + float(ci) * cellStep;
+            float oscY = oscAmount * sin(TIME * oscSpeed * 6.2832 + float(ci) * oscSpread * 3.14159);
             vec2 cellUV = vec2(
                 (p.x - cx) / cW,
-                (uv.y - charY) / cH
+                (uv.y - charY - oscY) / cH
             );
 
             if (cellUV.x < -0.05 || cellUV.x > 1.05 || cellUV.y < -0.05 || cellUV.y > 1.05) continue;

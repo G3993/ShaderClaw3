@@ -14,6 +14,9 @@
     { "NAME": "paperGrain", "LABEL": "Paper Grain", "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "edgeBurn", "LABEL": "Edge Burn", "TYPE": "float", "DEFAULT": 0.4, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "foxing", "LABEL": "Foxing", "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
+    { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
+    { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
     { "NAME": "textColor", "LABEL": "Ink", "TYPE": "color", "DEFAULT": [0.14, 0.07, 0.04, 1.0] },
     { "NAME": "bgColor", "LABEL": "Paper", "TYPE": "color", "DEFAULT": [0.93, 0.88, 0.78, 1.0] },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
@@ -258,10 +261,13 @@ void main() {
         float adjCharH = charH * finalScale;
         float adjCharW = charW * finalScale;
 
+        // Per-character oscillation
+        float oscY = oscAmount * sin(TIME * oscSpeed * 6.2832 + fi * oscSpread * 3.14159);
+
         // Cell UV for sharp sample
         vec2 cellUV;
         cellUV.x = (p.x - ox - hShift) / adjCharW;
-        cellUV.y = (p.y - oy - baseShift) / adjCharH;
+        cellUV.y = (p.y - oy - baseShift - oscY) / adjCharH;
 
         float s = sampleChar(ch, cellUV);
         s = smoothstep(0.1, 0.5, s);
@@ -272,7 +278,7 @@ void main() {
             float bleedScale = 1.25;
             vec2 bleedUV;
             bleedUV.x = (p.x - ox - hShift) / (adjCharW * bleedScale);
-            bleedUV.y = (p.y - oy - baseShift) / (adjCharH * bleedScale);
+            bleedUV.y = (p.y - oy - baseShift - oscY) / (adjCharH * bleedScale);
             bleedUV += (1.0 - 1.0 / bleedScale) * 0.5;
 
             float bs = sampleChar(ch, bleedUV);
