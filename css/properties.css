@@ -357,7 +357,6 @@
 
 /* Spacing for layer rows */
 .layer-type-content > .sc3-layer-row { margin-top: 4px; }
-.layer-toggle-body .sc3-layer-row { margin-top: 4px; }
 
 /* Layer dropdown (blend/opacity) — collapsed by default */
 .sc3-layer-dropdown {
@@ -562,7 +561,7 @@
 .sc3-section-body .text-msg-bar,
 .input-detail .voice-transcript-bar {
   display: flex; align-items: center;
-  margin: 8px 10px;
+  margin: 4px 10px;
 }
 .text-msg-bar input[type="text"] {
   flex: 1; min-width: 0; width: 100%; box-sizing: border-box;
