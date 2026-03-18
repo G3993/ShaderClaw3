@@ -6,7 +6,7 @@
 /* ===== CONTROL ROWS (params) ===== */
 .control-row {
   display: flex; align-items: center; gap: var(--sc-control-gap);
-  margin-bottom: 10px; min-height: 26px; font-size: var(--sc-font-size-base);
+  margin-bottom: 6px; min-height: 26px; font-size: var(--sc-font-size-base);
 }
 .control-row:last-child { margin-bottom: 0; }
 .control-row label {

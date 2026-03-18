@@ -2685,6 +2685,14 @@
       const paramName = row.dataset.name;
       const idx = layer.mpBindings.findIndex(b => b.param === paramName);
       if (idx >= 0) layer.mpBindings.splice(idx, 1);
+      // Reset parameter to ISF default
+      const isfInput = (layer.inputs || []).find(inp => inp.NAME === paramName);
+      if (isfInput && isfInput.DEFAULT != null) {
+        layer.inputValues[paramName] = isfInput.DEFAULT;
+        // Also reset the slider UI
+        const slider = row.querySelector('input[type="range"]');
+        if (slider) { slider.value = isfInput.DEFAULT; const val = row.querySelector('.val'); if (val) val.textContent = parseFloat(isfInput.DEFAULT).toFixed(2); }
+      }
       removeSignalRow(row);
       updateRangeIndicator(row, null);
       buildLinksUI(layerId);

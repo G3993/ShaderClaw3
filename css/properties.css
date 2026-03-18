@@ -179,10 +179,10 @@
 
 .layer-shader-select {
   background: rgba(0,0,0,0.3); color: var(--sc-text);
-  border: 1px solid var(--sc-border); border-radius: 4px;
-  padding: 5px 16px 5px 6px;
-  margin: 4px 10px 6px;
-  min-height: 26px; box-sizing: border-box;
+  border: 1px solid var(--sc-border); border-radius: 6px;
+  padding: 6px 20px 6px 8px;
+  margin: 4px 10px;
+  min-height: 32px; box-sizing: border-box;
   font-size: var(--sc-font-size-base); font-family: var(--sc-font);
   cursor: pointer; width: calc(100% - 20px); min-width: 0;
   -webkit-appearance: none; appearance: none;
@@ -316,10 +316,11 @@
 /* ===== LAYER COMPACT ROW (mirrors BG row pattern) ===== */
 .sc3-layer-row {
   display: flex; align-items: center; gap: var(--sc-space-2);
-  padding: 7px 10px;
-  margin: 0 var(--sc-space-3);
+  padding: 6px 10px;
+  margin: 4px 10px;
+  min-height: 32px; box-sizing: border-box;
   background: rgba(255,255,255,0.025);
-  border: 1px solid var(--sc-border); border-radius: var(--sc-radius);
+  border: 1px solid var(--sc-border); border-radius: 6px;
   cursor: pointer; transition: border-color 0.2s; user-select: none;
   position: relative;
 }
@@ -354,8 +355,8 @@
 .sc3-layer-transp.active { opacity: 1; color: var(--sc-accent); }
 
 /* Spacing for layer rows */
-.layer-type-content > .sc3-layer-row { margin-top: var(--sc-space-2); }
-.layer-toggle-body .sc3-layer-row { margin-top: var(--sc-space-2); }
+.layer-type-content > .sc3-layer-row { margin-top: 4px; }
+.layer-toggle-body .sc3-layer-row { margin-top: 4px; }
 
 /* Layer dropdown (blend/opacity) — collapsed by default */
 .sc3-layer-dropdown {
@@ -365,7 +366,7 @@
   padding: 8px 10px 4px;
   background: rgba(255,255,255,0.025);
   border: 1px solid var(--sc-border); border-top: none;
-  border-radius: 0 0 var(--sc-radius) var(--sc-radius);
+  border-radius: 0 0 6px 6px;
 }
 .sc3-layer-row.open + .sc3-layer-dropdown,
 .sc3-layer-dropdown.open { display: flex; }
@@ -455,7 +456,7 @@
   display: none;
   background: rgba(12, 12, 20, 0.95);
   border: 1px solid var(--sc-border); border-top: none;
-  border-radius: 0 0 var(--sc-radius) var(--sc-radius);
+  border-radius: 0 0 6px 6px;
   padding: var(--sc-space-2) var(--sc-space-3) var(--sc-space-1);
 }
 .sc3-bg-dropdown.open { display: flex; flex-direction: column; }
@@ -533,7 +534,7 @@
 /* Camera toggles */
 .cam-toggle-row {
   display: flex; align-items: center; justify-content: space-between;
-  min-height: 26px; margin-bottom: 10px;
+  min-height: 26px; margin-bottom: 6px;
 }
 .cam-toggle-row label {
   font-size: var(--sc-font-size-sm); color: var(--sc-text-dim);
@@ -559,13 +560,13 @@
 .layer-card.open .voice-transcript-bar,
 .sc3-section-body .text-msg-bar {
   display: flex; align-items: center;
-  margin: 4px 10px 6px;
+  margin: 4px 10px;
 }
 .text-msg-bar input[type="text"] {
   flex: 1; min-width: 0;
   background: rgba(0,0,0,0.3); color: var(--sc-text-bright);
-  border: 1px solid rgba(232, 64, 87, 0.3); border-radius: var(--sc-radius);
-  padding: 10px; font-size: var(--sc-font-size-lg); min-height: 38px;
+  border: 1px solid rgba(232, 64, 87, 0.3); border-radius: 6px;
+  padding: 6px 8px; font-size: var(--sc-font-size-lg); min-height: 32px;
   font-family: var(--sc-font-mono); font-weight: 600;
   letter-spacing: 2px; text-transform: uppercase; text-align: center;
 }
