@@ -78,7 +78,7 @@
 }
 .no-params {
   color: var(--sc-text-dim); font-size: var(--sc-font-size-base);
-  text-align: center; padding: var(--sc-space-3) 0;
+  text-align: center; padding: 10px 0;
 }
 
 /* ===== BG COLOR ROW (ISF-generated bgColor param) ===== */

@@ -41,9 +41,9 @@
 
 /* ===== LAYER PANEL ===== */
 #layer-panel {
-  padding: var(--sc-space-2) 10px;
+  padding: 4px 10px;
   display: flex; flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 /* ===== LAYER CARDS ===== */
@@ -71,7 +71,7 @@
 .sc3-section-body > .layer-toggle-section { display: block; }
 .layer-toggle-header {
   display: flex; align-items: center; gap: 6px;
-  padding: 6px var(--sc-space-3);
+  padding: 6px 10px;
   cursor: pointer; user-select: none;
   transition: background var(--sc-duration);
 }
@@ -111,7 +111,7 @@
 /* Layer header */
 .layer-header {
   display: flex; align-items: center; gap: var(--sc-space-2);
-  padding: var(--sc-space-2) var(--sc-space-3);
+  padding: 4px 10px;
   cursor: pointer; user-select: none;
   transition: background var(--sc-duration);
 }
@@ -140,7 +140,7 @@
 
 .layer-preset-row {
   display: none;
-  padding: 6px var(--sc-space-3);
+  padding: 6px 10px;
   align-items: center; gap: var(--sc-space-2);
 }
 .layer-preset-row label {
@@ -197,14 +197,14 @@
 }
 
 .layer-controls {
-  padding: var(--sc-space-2) var(--sc-space-3) 0;
+  padding: 4px 10px 0;
   display: none;
 }
 .layer-card.open .layer-controls { display: block; }
 
 .layer-control-row {
   display: flex; align-items: center; gap: var(--sc-space-2);
-  margin-bottom: 10px; min-height: 26px; font-size: var(--sc-font-size-base);
+  margin-bottom: 6px; min-height: 26px; font-size: var(--sc-font-size-base);
 }
 .layer-control-row label {
   width: 72px; flex-shrink: 0;
@@ -246,7 +246,7 @@
 /* ===== INPUT TRIGGERS ===== */
 .input-circle-row {
   display: flex; gap: var(--sc-space-4); justify-content: center;
-  padding: 10px var(--sc-space-3) 6px;
+  padding: 10px 10px 6px;
 }
 .input-circle-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .input-circle-btn {
@@ -266,7 +266,7 @@
   font-size: 8px; font-weight: 600; letter-spacing: 0.8px;
   text-transform: uppercase; color: var(--sc-text-dim);
 }
-.input-detail { display: none; padding: var(--sc-space-2) var(--sc-space-3) var(--sc-space-1); }
+.input-detail { display: none; padding: 4px 10px 4px; }
 .input-detail.visible { display: block; }
 
 /* Layer button row (overlay) */
@@ -274,7 +274,7 @@
 .sc3-layer-btn-row .sc3-layer-btn {
   flex: 1; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  cursor: pointer; padding: var(--sc-space-2) var(--sc-space-1);
+  cursor: pointer; padding: 4px 4px;
 }
 .sc3-layer-btn-row .sc3-layer-btn .layer-header {
   flex-direction: column; gap: 3px;
@@ -301,7 +301,7 @@
 .sc3-layer-btn-row .sc3-layer-btn.open .layer-header {
   flex-direction: row; gap: var(--sc-space-2);
   justify-content: flex-start; align-items: center;
-  padding: var(--sc-space-2) var(--sc-space-3);
+  padding: 4px 10px;
 }
 .sc3-layer-btn-row .sc3-layer-btn.open .layer-header .layer-vis { width: auto; height: auto; }
 .sc3-layer-btn-row .sc3-layer-btn.open .layer-header .layer-vis svg { width: 14px; height: 14px; }
@@ -373,9 +373,9 @@
 .sc3-layer-dropdown + .layer-colors,
 .sc3-layer-dropdown + .layer-colors + .layer-params,
 .sc3-layer-row + .sc3-layer-dropdown + .layer-colors,
-.sc3-layer-row + .sc3-layer-dropdown + .layer-colors + .layer-params { margin-top: var(--sc-space-1); }
+.sc3-layer-row + .sc3-layer-dropdown + .layer-colors + .layer-params { margin-top: 4px; }
 .sc3-layer-dropdown + .layer-params,
-.sc3-layer-row + .sc3-layer-dropdown + .layer-params { margin-top: var(--sc-space-1); }
+.sc3-layer-row + .sc3-layer-dropdown + .layer-params { margin-top: 4px; }
 
 /* Color swatches stacked under compact row */
 .layer-colors { padding: 0; margin: 0 10px; }
@@ -405,10 +405,10 @@
 #canvas-panel { padding: 0; }
 #canvas-panel .section-body {
   display: flex; flex-direction: column; gap: 6px;
-  padding: var(--sc-space-1) 10px var(--sc-space-2);
+  padding: 4px 10px;
 }
 #input-triggers-panel {
-  padding: var(--sc-space-2) 10px;
+  padding: 4px 10px;
   display: flex; flex-direction: column; gap: 6px;
 }
 
@@ -457,7 +457,7 @@
   background: rgba(12, 12, 20, 0.95);
   border: 1px solid var(--sc-border); border-top: none;
   border-radius: 0 0 6px 6px;
-  padding: var(--sc-space-2) var(--sc-space-3) var(--sc-space-1);
+  padding: 4px 10px 4px;
 }
 .sc3-bg-dropdown.open { display: flex; flex-direction: column; }
 
