@@ -5752,7 +5752,9 @@
 
   // Section collapse (sc3-section-header click)
   document.querySelectorAll('.sc3-section-header').forEach(hdr => {
-    hdr.addEventListener('click', () => {
+    hdr.addEventListener('click', (e) => {
+      // Don't collapse if clicking the eye button (it has its own handler)
+      if (e.target.closest('.layer-vis')) return;
       const section = hdr.closest('.sc3-section');
       if (section) section.classList.toggle('collapsed');
     });

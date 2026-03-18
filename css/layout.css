@@ -219,8 +219,7 @@
 .sc3-section.collapsed .sc3-section-body { display: none; }
 .sc3-section.collapsed .sc3-section-chevron { transform: rotate(-90deg); }
 
-/* Hide Input Triggers and Layers section headers — content shows directly */
-.sc3-section-header[data-section="input-triggers"],
+/* Hide old Layers section header (replaced by individual layer sections) */
 .sc3-section-header[data-section="layers"] { display: none; }
 
 /* Hide old assets header (tab bar replaces it) */
