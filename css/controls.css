@@ -155,7 +155,7 @@
   display: block; height: 100%; width: 0%;
   background: linear-gradient(90deg, var(--sc-accent), #ff6b81);
   border-radius: 3px;
-  box-shadow: 0 0 8px rgba(232,64,87,0.35);
+  box-shadow: none;
   transition: width 0.06s linear;
 }
 .signal-row-val {
