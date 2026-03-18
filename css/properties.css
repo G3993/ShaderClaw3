@@ -41,7 +41,7 @@
 
 /* ===== LAYER PANEL ===== */
 #layer-panel {
-  padding: 4px 10px;
+  padding: 4px 0;
   display: flex; flex-direction: column;
   gap: 4px;
 }
@@ -406,10 +406,10 @@
 #canvas-panel { padding: 0; }
 #canvas-panel .section-body {
   display: flex; flex-direction: column; gap: 6px;
-  padding: 4px 10px;
+  padding: 4px 0;
 }
 #input-triggers-panel {
-  padding: 4px 10px;
+  padding: 4px 0;
   display: flex; flex-direction: column; gap: 6px;
 }
 
@@ -559,7 +559,8 @@
 .text-msg-bar, .voice-transcript-bar { display: none; }
 .layer-card.open .text-msg-bar,
 .layer-card.open .voice-transcript-bar,
-.sc3-section-body .text-msg-bar {
+.sc3-section-body .text-msg-bar,
+.input-detail .voice-transcript-bar {
   display: flex; align-items: center;
   margin: 4px 10px;
 }
