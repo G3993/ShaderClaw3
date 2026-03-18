@@ -52,13 +52,6 @@
   dbg('init: Renderer OK');
   function _rw() { return isfRenderer.canvas.width || window.innerWidth; }
   function _rh() { return isfRenderer.canvas.height || window.innerHeight; }
-  // Text layer FBO: enforce minimum 16:9 aspect so text isn't cut off on portrait mobile
-  function _textFboSize() {
-    const w = _rw(), h = _rh();
-    if (w >= h) return { w, h }; // landscape or square — no change
-    // Portrait: use landscape dimensions (swap) so text renders wide
-    return { w: h, h: w };
-  }
   const sceneRenderer = new SceneRenderer(threeCanvas);
   sceneRenderer._isfGL = isfRenderer.gl;
   sceneRenderer._mainRenderer = isfRenderer;
@@ -97,7 +90,7 @@
       inputs: [], inputValues: {}, transparentBg: false, manifestEntry: null,
       sceneFlipH: false, sceneFlipV: true },
     { id: 'text', type: 'shader', visible: true, opacity: 1.0, blendMode: 'normal',
-      program: null, uniformLocs: {}, fbo: isfRenderer.createFBO(_textFboSize().w, _textFboSize().h), textures: {},
+      program: null, uniformLocs: {}, fbo: isfRenderer.createFBO(_rw(), _rh()), textures: {},
       inputs: [], inputValues: {}, transparentBg: true, manifestEntry: null },
     { id: 'overlay', type: 'overlay', visible: false, opacity: 1.0, blendMode: 'normal',
       program: null, uniformLocs: {}, fbo: null, textures: {},
@@ -1545,12 +1538,7 @@
     layers.forEach(layer => {
       if (!layer.fbo) return;
       isfRenderer.destroyFBO(layer.fbo);
-      if (layer.id === 'text') {
-        const ts = _textFboSize();
-        layer.fbo = isfRenderer.createFBO(ts.w, ts.h);
-      } else {
-        layer.fbo = isfRenderer.createFBO(w, h);
-      }
+      layer.fbo = isfRenderer.createFBO(w, h);
     });
     if (canvasBg.shaderFBO) {
       isfRenderer.destroyFBO(canvasBg.shaderFBO);
@@ -5594,12 +5582,7 @@
     layers.forEach(layer => {
       if (!layer.fbo) return;
       isfRenderer.destroyFBO(layer.fbo);
-      if (layer.id === 'text') {
-        const ts = _textFboSize();
-        layer.fbo = isfRenderer.createFBO(ts.w, ts.h);
-      } else {
-        layer.fbo = isfRenderer.createFBO(_rw(), _rh());
-      }
+      layer.fbo = isfRenderer.createFBO(_rw(), _rh());
     });
     sceneRenderer.resize();
     // Start composition loop now that everything is ready
