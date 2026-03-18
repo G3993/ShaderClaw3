@@ -58,7 +58,7 @@
 .sc3-properties {
   position: absolute;
   right: var(--sc-panel-gap);
-  top: calc(var(--sc-topbar-h) + var(--sc-panel-gap));
+  top: var(--sc-panel-gap);
   bottom: var(--sc-panel-gap);
   width: var(--sc-detail-w);
   background: rgba(28, 28, 30, 0.72);
