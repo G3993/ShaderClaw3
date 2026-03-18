@@ -489,13 +489,6 @@
     "folder": "scenes"
   },
   {
-    "id": 110,
-    "title": "Voxel Flower",
-    "description": "Raymarched voxel tree with reflective checkerboard floor, animated glow pulses, and orbiting camera",
-    "categories": ["Generator", "3D"],
-    "file": "voxel_flower.fs"
-  },
-  {
     "id": 113,
     "title": "Dispersion",
     "description": "Chromatic dispersion — refractive color separation driven by animated flow noise, with texture input",
