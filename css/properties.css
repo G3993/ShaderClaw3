@@ -106,7 +106,7 @@
 .layer-toggle-body .layer-preset-row { display: flex; }
 .layer-toggle-body .layer-controls { display: block; }
 .layer-toggle-body .layer-params { display: block; padding: 4px 0 6px; margin: 0 10px; }
-.layer-toggle-body .text-msg-bar { display: flex; }
+.layer-toggle-body .text-msg-bar { display: flex; align-items: center; margin: 4px 10px; }
 
 /* Layer header */
 .layer-header {
