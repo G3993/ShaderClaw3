@@ -37,6 +37,12 @@
   border-color: var(--sc-border-focus);
   transform: translateY(-1px);
 }
+.gallery-card.active {
+  border-color: #0f0;
+  background: rgba(0, 255, 0, 0.06);
+  box-shadow: 0 0 8px rgba(0, 255, 0, 0.15);
+}
+.gallery-card.active .gc-title { color: #0f0; }
 .gallery-card .gc-title {
   font-size: var(--sc-font-size-sm); font-weight: 600;
   color: var(--sc-text);

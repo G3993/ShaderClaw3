@@ -61,6 +61,12 @@
   border-color: rgba(255,255,255,0.15);
   color: var(--sc-text);
 }
+.canvas-btn.active {
+  border-color: #0f0;
+  color: #0f0;
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.25);
+}
+.canvas-btn.active svg { stroke: #0f0; }
 
 /* ===== EXPORT BUTTON — accent glow on hover ===== */
 .export-btn {

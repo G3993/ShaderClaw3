@@ -917,13 +917,47 @@
 
   document.getElementById('play-btn').addEventListener('click', () => {
     compositionPlaying = !compositionPlaying;
-    document.getElementById('play-btn').innerHTML = compositionPlaying ? '&#9654;' : '&#9646;&#9646;';
+    document.getElementById('play-btn').innerHTML = compositionPlaying
+      ? '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>'
+      : '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><rect x="5" y="3" width="4" height="18" rx="1"/><rect x="15" y="3" width="4" height="18" rx="1"/></svg>';
   });
 
   document.getElementById('fs-btn').addEventListener('click', () => {
     if (document.fullscreenElement) document.exitFullscreen();
     else document.getElementById('preview').requestFullscreen();
   });
+
+  // Picture-in-Picture
+  {
+    let pipVideo = null;
+    const pipBtn = document.getElementById('pip-btn');
+    pipBtn.addEventListener('click', async () => {
+      try {
+        if (document.pictureInPictureElement) {
+          await document.exitPictureInPicture();
+          return;
+        }
+        if (!pipVideo) {
+          pipVideo = document.createElement('video');
+          pipVideo.muted = true;
+          pipVideo.playsInline = true;
+          pipVideo.style.display = 'none';
+          document.body.appendChild(pipVideo);
+        }
+        const stream = glCanvas.captureStream(30);
+        pipVideo.srcObject = stream;
+        await pipVideo.play();
+        await pipVideo.requestPictureInPicture();
+        pipBtn.classList.add('active');
+        pipVideo.addEventListener('leavepictureinpicture', () => {
+          pipBtn.classList.remove('active');
+        }, { once: true });
+      } catch (e) {
+        console.warn('[PiP] Failed:', e.message);
+        pipBtn.classList.remove('active');
+      }
+    });
+  }
 
   // Fullscreen change — refresh cached rects, resize Three.js, update gizmo
   document.addEventListener('fullscreenchange', () => {
@@ -1167,6 +1201,7 @@
       layer.visible = !layer.visible;
       updateLayerCardUI(layerId);
       syncToggleSection(layerId, layer.visible);
+      if (typeof updateGalleryActiveStates === 'function') updateGalleryActiveStates();
     });
   });
 
@@ -3700,7 +3735,7 @@
   });
 
   // SC3: Auto-populate gallery since tabs are removed
-  setTimeout(() => { if (!galleryTabContent._populated) populateGallery(); }, 100);
+  setTimeout(() => { if (!galleryTabContent._populated) populateGallery(); updateGalleryActiveStates(); }, 100);
 
   // Populate gallery grid from manifest
   function populateGallery(filter) {
@@ -3732,6 +3767,8 @@
       items.forEach(item => {
         const card = document.createElement('div');
         card.className = 'gallery-card';
+        card.dataset.file = item.file;
+        card.dataset.layerType = item.type === 'scene' ? 'scene' : 'shader';
         const titleEl = document.createElement('div');
         titleEl.className = 'gc-title';
         titleEl.textContent = item.title;
@@ -3740,12 +3777,32 @@
         card.addEventListener('click', async () => {
           const layerId = item.type === 'scene' ? 'scene' : 'shader';
           const layer = getLayer(layerId);
+
+          // Toggle off if this shader is already active and visible
+          if (layer && layer.visible && layer.manifestEntry && layer.manifestEntry.file === item.file) {
+            layer.visible = false;
+            updateLayerCardUI(layerId);
+            syncToggleSection(layerId, false);
+            updateGalleryActiveStates();
+            return;
+          }
+
+          // Toggle back on if same shader is loaded but hidden
+          if (layer && !layer.visible && layer.manifestEntry && layer.manifestEntry.file === item.file) {
+            layer.visible = true;
+            updateLayerCardUI(layerId);
+            syncToggleSection(layerId, true);
+            updateGalleryActiveStates();
+            return;
+          }
+
           if (layer) layer.manifestEntry = item;
           if (item.type === 'scene') {
             await loadScene(folder, item.file);
           } else {
             await loadShaderToLayer(layerId, folder, item.file);
           }
+          updateGalleryActiveStates();
           // Switch back to Canvas tab
           sidebarTabs.forEach(t => t.classList.remove('active'));
           if (sidebarTabs[0]) sidebarTabs[0].classList.add('active');
@@ -3769,9 +3826,21 @@
     }
   }
 
+  // Mark gallery cards that match currently active layers
+  function updateGalleryActiveStates() {
+    const activeFiles = new Set();
+    for (const layer of layers) {
+      if (layer.visible && layer.manifestEntry) activeFiles.add(layer.manifestEntry.file);
+    }
+    document.querySelectorAll('.gallery-card[data-file]').forEach(card => {
+      card.classList.toggle('active', activeFiles.has(card.dataset.file));
+    });
+  }
+
   // Gallery search
   document.getElementById('gallery-search').addEventListener('input', (e) => {
     populateGallery(e.target.value);
+    updateGalleryActiveStates();
   });
 
   // Export tab tiles — reuse existing exportAction
