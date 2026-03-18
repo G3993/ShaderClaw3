@@ -3396,20 +3396,19 @@
   const _contentBtn = document.getElementById('content-source-btn');
   if (_contentBtn) {
     _contentBtn.addEventListener('click', () => {
+      // Switch to Assets/Code tab instead of showing duplicate content tiles
+      const assetsTab = document.querySelector('.sc3-tab[data-tab="assets"]');
+      if (assetsTab) assetsTab.click();
+      // Hide other input detail panels
+      const vd = document.getElementById('voice-detail');
+      const cd = document.getElementById('camera-detail');
+      const dd = document.getElementById('data-detail');
       const ctd = document.getElementById('content-detail');
-      if (!ctd) return;
-      const isHidden = ctd.style.display === 'none' || ctd.style.display === '';
-      ctd.style.display = isHidden ? 'block' : 'none';
-      _contentBtn.classList.toggle('active', isHidden);
-      // hide other panels
-      if (isHidden) {
-        const vd = document.getElementById('voice-detail');
-        const cd = document.getElementById('camera-detail');
-        const dd = document.getElementById('data-detail');
-        if (vd) { vd.style.display = 'none'; document.getElementById('canvas-mic-btn').classList.remove('active'); }
-        if (cd) { cd.style.display = 'none'; document.getElementById('cam-vis-btn').classList.remove('active'); }
-        if (dd) { dd.style.display = 'none'; const db = document.getElementById('data-source-btn'); if (db) db.classList.remove('active'); }
-      }
+      if (vd) { vd.style.display = 'none'; document.getElementById('canvas-mic-btn')?.classList.remove('active'); }
+      if (cd) { cd.style.display = 'none'; document.getElementById('cam-vis-btn')?.classList.remove('active'); }
+      if (dd) { dd.style.display = 'none'; document.getElementById('data-source-btn')?.classList.remove('active'); }
+      if (ctd) ctd.style.display = 'none';
+      _contentBtn.classList.remove('active');
     });
     // Content tile handlers
     document.getElementById('content-add-image').addEventListener('click', () => document.getElementById('image-file-input').click());

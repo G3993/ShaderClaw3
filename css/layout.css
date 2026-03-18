@@ -250,6 +250,7 @@
   .sc3-toolbar-strip { display: none !important; }
   .sc3-header { display: none !important; }
   .layer-toggle-section[data-type="scene"] { display: none !important; }
+  [data-section="scene-layer"] { display: none !important; }
   .sc3-properties-resize { display: none; }
 
   /* Properties panel as bottom sheet */

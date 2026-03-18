@@ -351,24 +351,23 @@
 
     <!-- Tab Bar -->
     <nav class="sc3-tab-bar">
-      <button class="sc3-tab active" data-tab="canvas">Canvas</button>
-      <button class="sc3-tab" data-tab="assets">Assets</button>
+      <button class="sc3-tab active" data-tab="canvas">Controls</button>
+      <button class="sc3-tab" data-tab="assets">Code</button>
       <button class="sc3-tab" data-tab="gallery">Gallery</button>
     </nav>
 
-    <!-- Tab Content: Canvas (properties) -->
+    <!-- Tab Content: Controls (properties) -->
     <div class="sc3-tab-content active" data-tab-content="canvas">
 
-    <!-- Canvas Settings -->
+    <!-- 1. Background -->
     <div id="canvas-tab-content" class="sc3-section">
       <div class="sc3-section-header" data-section="canvas">
-        <span class="sc3-section-chevron">&#x25BC;</span> Shader
+        <span class="sc3-section-chevron">&#x25BC;</span> Background
       </div>
       <div class="sc3-section-body">
         <div id="canvas-panel" class="open">
           <div class="section-header"><span style="flex:1"></span></div>
           <div class="section-body">
-            <!-- BG compact row -->
             <div class="sc3-bg-row" id="sc3-bg-row">
               <div class="sc3-bg-swatch" id="sc3-bg-swatch"></div>
               <input type="text" class="sc3-bg-hex" id="sc3-bg-hex" value="000000" maxlength="6" spellcheck="false">
@@ -379,7 +378,6 @@
               </button>
               <input type="color" id="bg-color-picker" value="#000000" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;">
             </div>
-            <!-- BG dropdown (hidden until row clicked) -->
             <div class="sc3-bg-dropdown" id="sc3-bg-dropdown">
               <div class="layer-control-row">
                 <label>Type</label>
@@ -399,7 +397,6 @@
                 <select id="bg-shader-select" style="flex:1"></select>
               </div>
             </div>
-
           </div>
         </div>
       </div>
@@ -626,25 +623,21 @@
       </div>
     </div>
 
-    <!-- Layer Panel -->
+    <!-- 4. Shader Layer -->
     <div class="sc3-section">
-      <div class="sc3-section-header" data-section="layers">
-        <span class="sc3-section-chevron">&#x25BC;</span> Layers
+      <div class="sc3-section-header" data-section="shader-layer">
+        <span class="sc3-section-chevron">&#x25BC;</span>
+        <button class="layer-vis" data-layer="shader" title="Toggle visibility" style="margin-right:4px"><svg class="eye-on" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-off" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 01-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
+        Shader
       </div>
       <div class="sc3-section-body">
         <div id="layer-panel">
-
-          <!-- Shader Card with Text/3D toggle sections -->
           <div class="layer-card focused open" data-layer="shader">
-            <div class="layer-header">
-              <button class="layer-vis" data-layer="shader" title="Toggle visibility"><svg class="eye-on" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-off" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 01-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
+            <div class="layer-header" style="display:none">
               <span class="layer-name"></span>
             </div>
-
-            <!-- === Shader content (always visible when card open) === -->
             <div class="layer-type-content active" data-type="shader">
               <select class="layer-shader-select" data-layer="shader"></select>
-              <!-- Compact color/opacity row -->
               <div class="sc3-layer-row" data-layer="shader">
                 <div class="sc3-layer-swatch" data-layer="shader"></div>
                 <input type="text" class="sc3-layer-hex" data-layer="shader" value="000000" maxlength="6" spellcheck="false">
@@ -672,109 +665,123 @@
                   </select>
                 </div>
               </div>
-
               <div class="layer-colors" data-layer="shader"></div>
               <div class="layer-params" data-layer="shader"></div>
-
-              <!-- Text toggle section -->
-              <div class="layer-toggle-section" data-type="text">
-                <div class="layer-toggle-header" data-layer="text">
-                  <button class="layer-vis" data-layer="text" title="Toggle text visibility"><svg class="eye-on" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-off" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 01-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
-                  <span class="layer-toggle-label">Text</span>
-                  <div class="layer-toggle-swatch" data-layer="text" style="background:#fff"></div>
-                  <span class="layer-toggle-chevron">&#9662;</span>
-                </div>
-                <div class="layer-toggle-body">
-                  <select class="layer-shader-select" data-layer="text"></select>
-                  <div class="text-msg-bar" style="display:flex">
-                    <input type="text" id="text-msg-input" maxlength="64" value="ETHEREA" spellcheck="false" placeholder="TYPE HERE">
-                  </div>
-                  <!-- Compact color/opacity row -->
-                  <div class="sc3-layer-row" data-layer="text">
-                    <div class="sc3-layer-swatch" data-layer="text" style="background:#fff"></div>
-                    <input type="text" class="sc3-layer-hex" data-layer="text" value="FFFFFF" maxlength="6" spellcheck="false">
-                    <span class="sc3-bg-spacer"></span>
-                    <input type="text" class="sc3-layer-opacity-val" data-layer="text" value="100" maxlength="3" spellcheck="false"><span class="sc3-bg-pct">%</span>
-                    <button class="sc3-layer-transp" data-layer="text" title="Transparent background">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                    </button>
-                    <input type="color" class="sc3-layer-color-picker" data-layer="text" value="#ffffff" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;">
-                  </div>
-                  <div class="sc3-layer-dropdown" data-layer="text">
-                    <div class="layer-control-row">
-                      <label>Opacity</label>
-                      <input type="range" class="layer-opacity" data-layer="text" min="0" max="1" step="0.01" value="1">
-                      <span class="val">1.00</span>
-                    </div>
-                    <div class="layer-control-row">
-                      <label>Blend</label>
-                      <select class="layer-blend" data-layer="text">
-                        <option value="normal">Normal</option>
-                        <option value="add">Add</option>
-                        <option value="multiply">Multiply</option>
-                        <option value="screen">Screen</option>
-                        <option value="overlay">Overlay</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div class="layer-colors" data-layer="text"></div>
-                  <div class="layer-params" data-layer="text"></div>
-                </div><!-- /layer-toggle-body -->
-              </div><!-- /text toggle section -->
-
-              <!-- 3D toggle section -->
-              <div class="layer-toggle-section" data-type="scene">
-                <div class="layer-toggle-header" data-layer="scene">
-                  <button class="layer-vis" data-layer="scene" title="Toggle 3D visibility"><svg class="eye-on" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-off" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 01-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
-                  <span class="layer-toggle-label">3D</span>
-                  <div class="layer-toggle-swatch" data-layer="scene" style="background:#000"></div>
-                  <span class="layer-toggle-chevron">&#9662;</span>
-                </div>
-                <div class="layer-toggle-body">
-                  <select class="layer-shader-select" data-layer="scene"></select>
-                  <!-- Compact color/opacity row -->
-                  <div class="sc3-layer-row" data-layer="scene">
-                    <div class="sc3-layer-swatch" data-layer="scene" style="background:#000"></div>
-                    <input type="text" class="sc3-layer-hex" data-layer="scene" value="000000" maxlength="6" spellcheck="false">
-                    <span class="sc3-bg-spacer"></span>
-                    <input type="text" class="sc3-layer-opacity-val" data-layer="scene" value="100" maxlength="3" spellcheck="false"><span class="sc3-bg-pct">%</span>
-                    <button class="sc3-layer-transp" data-layer="scene" title="Transparent background">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                    </button>
-                    <input type="color" class="sc3-layer-color-picker" data-layer="scene" value="#000000" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;">
-                  </div>
-                  <div class="sc3-layer-dropdown" data-layer="scene">
-                    <div class="layer-control-row">
-                      <label>Opacity</label>
-                      <input type="range" class="layer-opacity" data-layer="scene" min="0" max="1" step="0.01" value="1">
-                      <span class="val">1.00</span>
-                    </div>
-                    <div class="layer-control-row">
-                      <label>Blend</label>
-                      <select class="layer-blend" data-layer="scene">
-                        <option value="normal">Normal</option>
-                        <option value="add">Add</option>
-                        <option value="multiply">Multiply</option>
-                        <option value="screen">Screen</option>
-                        <option value="overlay">Overlay</option>
-                      </select>
-                    </div>
-                    <div class="layer-control-row">
-                      <label>Flip</label>
-                      <button class="flip-toggle scene-flip-h" data-layer="scene" title="Flip Horizontal">H</button>
-                      <button class="flip-toggle scene-flip-v active" data-layer="scene" title="Flip Vertical">V</button>
-                    </div>
-                    <div class="layer-control-row">
-                      <button id="scene-model-btn" title="Import 3D model (.glb, .gltf, .stl, .fbx, .obj)">+ Add 3D Model</button>
-                    </div>
-                  </div>
-                  <div class="layer-colors" data-layer="scene"></div>
-                  <div class="layer-params" data-layer="scene"></div>
-                </div><!-- /layer-toggle-body -->
-              </div><!-- /3D toggle section -->
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-          </div><!-- /shader-card -->
+    <!-- 5. Text Layer -->
+    <div class="sc3-section">
+      <div class="sc3-section-header" data-section="text-layer">
+        <span class="sc3-section-chevron">&#x25BC;</span>
+        <button class="layer-vis" data-layer="text" title="Toggle text visibility" style="margin-right:4px"><svg class="eye-on" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-off" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 01-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
+        Text
+      </div>
+      <div class="sc3-section-body">
+        <!-- Keep toggle section wrapper for JS compat -->
+        <div class="layer-toggle-section" data-type="text" style="border:none;margin:0;padding:0">
+          <div class="layer-toggle-header" data-layer="text" style="display:none">
+            <span class="layer-toggle-label">Text</span>
+            <div class="layer-toggle-swatch" data-layer="text" style="background:#fff"></div>
+          </div>
+          <div class="layer-toggle-body" style="display:block">
+            <select class="layer-shader-select" data-layer="text"></select>
+            <div class="text-msg-bar" style="display:flex">
+              <input type="text" id="text-msg-input" maxlength="64" value="ETHEREA" spellcheck="false" placeholder="TYPE HERE">
+            </div>
+            <div class="sc3-layer-row" data-layer="text">
+              <div class="sc3-layer-swatch" data-layer="text" style="background:#fff"></div>
+              <input type="text" class="sc3-layer-hex" data-layer="text" value="FFFFFF" maxlength="6" spellcheck="false">
+              <span class="sc3-bg-spacer"></span>
+              <input type="text" class="sc3-layer-opacity-val" data-layer="text" value="100" maxlength="3" spellcheck="false"><span class="sc3-bg-pct">%</span>
+              <button class="sc3-layer-transp" data-layer="text" title="Transparent background">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+              <input type="color" class="sc3-layer-color-picker" data-layer="text" value="#ffffff" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;">
+            </div>
+            <div class="sc3-layer-dropdown" data-layer="text">
+              <div class="layer-control-row">
+                <label>Opacity</label>
+                <input type="range" class="layer-opacity" data-layer="text" min="0" max="1" step="0.01" value="1">
+                <span class="val">1.00</span>
+              </div>
+              <div class="layer-control-row">
+                <label>Blend</label>
+                <select class="layer-blend" data-layer="text">
+                  <option value="normal">Normal</option>
+                  <option value="add">Add</option>
+                  <option value="multiply">Multiply</option>
+                  <option value="screen">Screen</option>
+                  <option value="overlay">Overlay</option>
+                </select>
+              </div>
+            </div>
+            <div class="layer-colors" data-layer="text"></div>
+            <div class="layer-params" data-layer="text"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. 3D Layer -->
+    <div class="sc3-section">
+      <div class="sc3-section-header" data-section="scene-layer">
+        <span class="sc3-section-chevron">&#x25BC;</span>
+        <button class="layer-vis" data-layer="scene" title="Toggle 3D visibility" style="margin-right:4px"><svg class="eye-on" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><svg class="eye-off" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 01-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
+        3D
+      </div>
+      <div class="sc3-section-body">
+        <div class="layer-toggle-section" data-type="scene" style="border:none;margin:0;padding:0">
+          <div class="layer-toggle-header" data-layer="scene" style="display:none">
+            <span class="layer-toggle-label">3D</span>
+            <div class="layer-toggle-swatch" data-layer="scene" style="background:#000"></div>
+          </div>
+          <div class="layer-toggle-body" style="display:block">
+            <select class="layer-shader-select" data-layer="scene"></select>
+            <div class="sc3-layer-row" data-layer="scene">
+              <div class="sc3-layer-swatch" data-layer="scene" style="background:#000"></div>
+              <input type="text" class="sc3-layer-hex" data-layer="scene" value="000000" maxlength="6" spellcheck="false">
+              <span class="sc3-bg-spacer"></span>
+              <input type="text" class="sc3-layer-opacity-val" data-layer="scene" value="100" maxlength="3" spellcheck="false"><span class="sc3-bg-pct">%</span>
+              <button class="sc3-layer-transp" data-layer="scene" title="Transparent background">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+              <input type="color" class="sc3-layer-color-picker" data-layer="scene" value="#000000" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;">
+            </div>
+            <div class="sc3-layer-dropdown" data-layer="scene">
+              <div class="layer-control-row">
+                <label>Opacity</label>
+                <input type="range" class="layer-opacity" data-layer="scene" min="0" max="1" step="0.01" value="1">
+                <span class="val">1.00</span>
+              </div>
+              <div class="layer-control-row">
+                <label>Blend</label>
+                <select class="layer-blend" data-layer="scene">
+                  <option value="normal">Normal</option>
+                  <option value="add">Add</option>
+                  <option value="multiply">Multiply</option>
+                  <option value="screen">Screen</option>
+                  <option value="overlay">Overlay</option>
+                </select>
+              </div>
+              <div class="layer-control-row">
+                <label>Flip</label>
+                <button class="flip-toggle scene-flip-h" data-layer="scene" title="Flip Horizontal">H</button>
+                <button class="flip-toggle scene-flip-v active" data-layer="scene" title="Flip Vertical">V</button>
+              </div>
+              <div class="layer-control-row">
+                <button id="scene-model-btn" title="Import 3D model (.glb, .gltf, .stl, .fbx, .obj)">+ Add 3D Model</button>
+              </div>
+            </div>
+            <div class="layer-colors" data-layer="scene"></div>
+            <div class="layer-params" data-layer="scene"></div>
+          </div>
+        </div>
+      </div>
+    </div>
 
         </div><!-- /layer-panel -->
       </div><!-- /sc3-section-body -->
