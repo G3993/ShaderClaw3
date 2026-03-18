@@ -257,16 +257,6 @@
     "hasVertex": true
   },
   {
-    "id": 40,
-    "title": "Wind",
-    "description": "Minimal gradient movements — soft drifting color fields like a gentle breeze",
-    "type": "generator",
-    "categories": [
-      "Generator"
-    ],
-    "file": "wind.fs"
-  },
-  {
     "id": 104,
     "title": "Dancing Cube",
     "description": "SDF raymarched box/octahedron blend — driven by body tracking parameters (rotation, scale, glow, morph, alive)",
