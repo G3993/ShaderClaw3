@@ -65,9 +65,10 @@
 .layer-type-content .layer-params { display: block; padding: var(--sc-space-1) var(--sc-space-3) var(--sc-space-2); }
 .layer-type-content .text-msg-bar { display: flex; }
 
-/* Toggle sections (Text, 3D inside shader card) */
+/* Toggle sections (Text, 3D) — visible in flattened sections or legacy card */
 .layer-toggle-section { display: none; }
 .layer-card.open .layer-toggle-section { display: block; }
+.sc3-section-body > .layer-toggle-section { display: block; }
 .layer-toggle-header {
   display: flex; align-items: center; gap: 6px;
   padding: 6px var(--sc-space-3);
@@ -101,6 +102,7 @@
 .layer-toggle-section.active .layer-toggle-chevron { transform: rotate(0deg); }
 .layer-toggle-body { display: none; }
 .layer-toggle-section.active .layer-toggle-body { display: block; }
+.sc3-section-body > .layer-toggle-section > .layer-toggle-body { display: block; }
 .layer-toggle-body .layer-preset-row { display: flex; }
 .layer-toggle-body .layer-controls { display: block; }
 .layer-toggle-body .layer-params { display: block; padding: 0 var(--sc-space-3) var(--sc-space-2); }
