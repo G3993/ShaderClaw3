@@ -6220,27 +6220,69 @@
   glCanvas.addEventListener('mousedown', () => { isfRenderer.mouseDown = 1; });
   glCanvas.addEventListener('mouseup', () => { isfRenderer.mouseDown = 0; });
 
-  // Touch support for mouse bindings (mobile)
-  glCanvas.addEventListener('touchmove', (e) => {
-    e.preventDefault();
-    const touch = e.touches[0];
-    const rect = glCanvas.getBoundingClientRect();
-    const nx = (touch.clientX - rect.left) / rect.width;
-    const ny = 1.0 - (touch.clientY - rect.top) / rect.height;
-    isfRenderer.mousePos[0] += (nx - isfRenderer.mousePos[0]) * 0.3;
-    isfRenderer.mousePos[1] += (ny - isfRenderer.mousePos[1]) * 0.3;
-  }, { passive: false });
+  // Touch support for shader interaction (mobile)
+  let _touchPinchDist = 0;
+  let _touchCount = 0;
+
   glCanvas.addEventListener('touchstart', (e) => {
+    e.preventDefault(); // prevent scroll/zoom on canvas
+    _touchCount = e.touches.length;
     isfRenderer.mouseDown = 1;
-    // Update mousePos on tap (not just move)
-    if (e.touches.length > 0) {
+    // Single finger — update mousePos immediately on tap
+    if (e.touches.length === 1) {
       const touch = e.touches[0];
       const rect = glCanvas.getBoundingClientRect();
       isfRenderer.mousePos[0] = (touch.clientX - rect.left) / rect.width;
       isfRenderer.mousePos[1] = 1.0 - (touch.clientY - rect.top) / rect.height;
     }
-  }, { passive: true });
-  glCanvas.addEventListener('touchend', () => { isfRenderer.mouseDown = 0; });
+    // Two fingers — start pinch tracking
+    if (e.touches.length >= 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      _touchPinchDist = Math.sqrt(dx * dx + dy * dy);
+      isfRenderer.pinchHold = Math.min(isfRenderer.pinchHold + 0.5, 10.0);
+    }
+  }, { passive: false });
+
+  glCanvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    _touchCount = e.touches.length;
+    if (e.touches.length === 1) {
+      // Single finger drag — update mousePos
+      const touch = e.touches[0];
+      const rect = glCanvas.getBoundingClientRect();
+      const nx = (touch.clientX - rect.left) / rect.width;
+      const ny = 1.0 - (touch.clientY - rect.top) / rect.height;
+      isfRenderer.mousePos[0] += (nx - isfRenderer.mousePos[0]) * 0.3;
+      isfRenderer.mousePos[1] += (ny - isfRenderer.mousePos[1]) * 0.3;
+    } else if (e.touches.length >= 2) {
+      // Two finger pinch — drive pinchHold and update mousePos to midpoint
+      const t0 = e.touches[0], t1 = e.touches[1];
+      const dx = t0.clientX - t1.clientX;
+      const dy = t0.clientY - t1.clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const rect = glCanvas.getBoundingClientRect();
+      const mx = ((t0.clientX + t1.clientX) / 2 - rect.left) / rect.width;
+      const my = 1.0 - ((t0.clientY + t1.clientY) / 2 - rect.top) / rect.height;
+      isfRenderer.mousePos[0] += (mx - isfRenderer.mousePos[0]) * 0.3;
+      isfRenderer.mousePos[1] += (my - isfRenderer.mousePos[1]) * 0.3;
+      // Ramp pinchHold while pinching
+      isfRenderer.pinchHold = Math.min(isfRenderer.pinchHold + 0.03, 10.0);
+      _touchPinchDist = dist;
+    }
+  }, { passive: false });
+
+  glCanvas.addEventListener('touchend', (e) => {
+    _touchCount = e.touches.length;
+    if (e.touches.length === 0) {
+      isfRenderer.mouseDown = 0;
+    }
+  });
+
+  glCanvas.addEventListener('touchcancel', () => {
+    _touchCount = 0;
+    isfRenderer.mouseDown = 0;
+  });
 
   // Handle canvas resize on panel resize (debounced to prevent GPU churn on mobile)
   let _resizeTimer = null;
