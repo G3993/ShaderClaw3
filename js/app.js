@@ -3754,21 +3754,25 @@
     galleryTabContent._populated = true;
     const q = (filter || '').toLowerCase();
 
-    // Combine all shaders + scenes
+    // Combine all shaders + scenes into 3 categories: 3D, VFX, Text
     const allItems = [...isfShaders, ...scenes];
-    const categories = {};
+    const categories = { '3D': [], 'VFX': [], 'Text': [] };
     allItems.forEach(item => {
       if (q && !item.title.toLowerCase().includes(q) && !(item.description || '').toLowerCase().includes(q)) return;
-      const cats = item.categories || ['Uncategorized'];
-      cats.forEach(cat => {
-        if (!categories[cat]) categories[cat] = [];
-        if (!categories[cat].find(x => x.id === item.id)) categories[cat].push(item);
-      });
+      const cats = item.categories || [];
+      if (cats.includes('Text')) {
+        if (!categories['Text'].find(x => x.id === item.id)) categories['Text'].push(item);
+      } else if (cats.includes('3D') || item.type === 'scene') {
+        if (!categories['3D'].find(x => x.id === item.id)) categories['3D'].push(item);
+      } else {
+        if (!categories['VFX'].find(x => x.id === item.id)) categories['VFX'].push(item);
+      }
     });
 
-    // Sort categories alphabetically, sort items within each category
-    const sortedCats = Object.keys(categories).sort();
+    // Fixed order: VFX, Text, 3D
+    const sortedCats = ['VFX', 'Text', '3D'];
     for (const cat of sortedCats) {
+      if (!categories[cat] || categories[cat].length === 0) continue;
       const items = categories[cat].sort((a, b) => a.title.localeCompare(b.title));
       const title = document.createElement('div');
       title.className = 'gallery-category-title';
