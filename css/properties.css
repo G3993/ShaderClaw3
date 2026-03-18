@@ -62,7 +62,7 @@
 .layer-type-content.active { display: block; }
 .layer-type-content .layer-preset-row { display: flex; }
 .layer-type-content .layer-controls { display: block; }
-.layer-type-content .layer-params { display: block; padding: 4px 10px 6px; }
+.layer-type-content .layer-params { display: block; padding: 4px 0 6px; margin: 0 10px; }
 .layer-type-content .text-msg-bar { display: flex; }
 
 /* Toggle sections (Text, 3D) — visible in flattened sections or legacy card */
@@ -105,7 +105,7 @@
 .sc3-section-body > .layer-toggle-section > .layer-toggle-body { display: block; }
 .layer-toggle-body .layer-preset-row { display: flex; }
 .layer-toggle-body .layer-controls { display: block; }
-.layer-toggle-body .layer-params { display: block; padding: 0 10px 6px; }
+.layer-toggle-body .layer-params { display: block; padding: 4px 0 6px; margin: 0 10px; }
 .layer-toggle-body .text-msg-bar { display: flex; }
 
 /* Layer header */
@@ -233,12 +233,12 @@
 .layer-params {
   max-height: 0; overflow: hidden;
   transition: max-height 0.2s ease-out;
-  padding: 0 10px;
+  padding: 0; margin: 0 10px;
 }
 .layer-card.open .layer-params,
 .sc3-section-body .layer-params {
   max-height: 400px; overflow-y: auto;
-  padding: 0 10px 6px;
+  padding: 4px 0 6px; margin: 0 10px;
 }
 .layer-params::-webkit-scrollbar { width: 4px; }
 .layer-params::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
@@ -378,7 +378,7 @@
 .sc3-layer-row + .sc3-layer-dropdown + .layer-params { margin-top: var(--sc-space-1); }
 
 /* Color swatches stacked under compact row */
-.layer-colors { padding: 0 var(--sc-space-3); }
+.layer-colors { padding: 0; margin: 0 10px; }
 .layer-colors:empty { display: none; }
 .layer-color-row {
   display: flex; align-items: center; gap: var(--sc-space-2);

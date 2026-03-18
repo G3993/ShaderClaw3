@@ -64,8 +64,8 @@
   --sc-space-8:  32px;
 
   /* Radii — rounder, Apple-like */
-  --sc-radius-sm: 6px;
-  --sc-radius:    10px;
+  --sc-radius-sm: 4px;
+  --sc-radius:    6px;
   --sc-radius-lg: 16px;
   --sc-radius-xl: 22px;
 
