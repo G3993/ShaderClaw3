@@ -1,6 +1,6 @@
 (function(THREE) {
     const INPUTS = [
-        { NAME: "shape", TYPE: "long", DEFAULT: 1, VALUES: [0,1,2,3,4,5,6], LABELS: ["Cube","Sphere","Torus","Cylinder","Cone","Dodecahedron","Custom"] },
+        { NAME: "shape", TYPE: "long", DEFAULT: 0, VALUES: [0,1,2,3,4,5,6], LABELS: ["Cube","Sphere","Torus","Cylinder","Cone","Dodecahedron","Custom"] },
         { NAME: "texture", TYPE: "image" },
         { NAME: "cubeColor", TYPE: "color", DEFAULT: [1.0, 1.0, 1.0, 1.0] },
         { NAME: "transparentBg", TYPE: "bool", DEFAULT: true },
