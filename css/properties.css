@@ -552,14 +552,15 @@
 /* Text/voice bars */
 .text-msg-bar, .voice-transcript-bar { display: none; }
 .layer-card.open .text-msg-bar,
-.layer-card.open .voice-transcript-bar {
-  display: flex; align-items: center; gap: var(--sc-space-2);
-  padding: var(--sc-space-2) var(--sc-space-3);
+.layer-card.open .voice-transcript-bar,
+.sc3-section-body .text-msg-bar {
+  display: flex; align-items: center;
+  margin: 4px 10px 6px;
 }
 .text-msg-bar input[type="text"] {
   flex: 1; min-width: 0;
   background: rgba(0,0,0,0.3); color: var(--sc-text-bright);
-  border: 1px solid var(--sc-border); border-radius: var(--sc-radius);
+  border: 1px solid rgba(232, 64, 87, 0.3); border-radius: var(--sc-radius);
   padding: 10px; font-size: var(--sc-font-size-lg); min-height: 38px;
   font-family: var(--sc-font-mono); font-weight: 600;
   letter-spacing: 2px; text-transform: uppercase; text-align: center;
