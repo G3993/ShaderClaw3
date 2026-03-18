@@ -6121,7 +6121,9 @@
           }
           sceneRenderer.render();
           gl.bindTexture(gl.TEXTURE_2D, sceneTexture);
+          gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
           gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, threeCanvas);
+          gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
         } else if (layer.program) {
           isfRenderer.renderLayerToFBO(layer, mediaPipeMgr);
         }
