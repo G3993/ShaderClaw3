@@ -127,18 +127,19 @@
 .control-row.has-binding { margin-bottom: 0; }
 .signal-row {
   display: flex; align-items: center; gap: var(--sc-space-2);
-  padding: 8px var(--sc-space-3) 8px 12px;
+  padding: 8px 10px;
   min-height: 32px;
-  border-left: 3px solid var(--sc-accent);
-  background: linear-gradient(90deg, rgba(232,64,87,0.1), rgba(232,64,87,0.03));
-  border-radius: 0 6px 6px 0;
-  cursor: pointer; margin: 2px 0 4px;
+  background: rgba(232,64,87,0.06);
+  border: 1px solid rgba(232,64,87,0.15);
+  border-radius: 8px;
+  cursor: pointer; margin: 4px 0;
   font-size: var(--sc-font-size-base);
-  transition: all var(--sc-duration);
+  transition: all 0.2s;
 }
 .signal-row:hover {
-  background: linear-gradient(90deg, rgba(232,64,87,0.18), rgba(232,64,87,0.06));
-  box-shadow: 0 0 12px rgba(232,64,87,0.1);
+  background: rgba(232,64,87,0.12);
+  border-color: rgba(232,64,87,0.3);
+  box-shadow: 0 0 16px rgba(232,64,87,0.08);
 }
 .signal-row-label {
   width: var(--sc-label-w); flex-shrink: 0;
@@ -147,16 +148,15 @@
   text-overflow: ellipsis; overflow: hidden; white-space: nowrap;
 }
 .signal-row-bar {
-  flex: 1; height: 8px;
+  flex: 1; height: 6px;
   background: rgba(255,255,255,0.06);
-  border-radius: 4px; overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 3px; overflow: hidden;
 }
 .signal-row-fill {
   display: block; height: 100%; width: 0%;
   background: linear-gradient(90deg, var(--sc-accent), #ff6b81);
-  border-radius: 4px;
-  box-shadow: 0 0 10px rgba(232,64,87,0.4), 0 0 3px rgba(232,64,87,0.2) inset;
+  border-radius: 3px;
+  box-shadow: 0 0 8px rgba(232,64,87,0.35);
   transition: width 0.06s linear;
 }
 .signal-row-val {
@@ -172,44 +172,63 @@
 }
 .signal-row:hover .signal-row-remove { opacity: 0.6; }
 .signal-row-remove:hover { color: #ff5050 !important; opacity: 1 !important; }
+
+/* Signal options panel — the widget */
 .signal-row-options {
   max-height: 0; overflow: hidden;
-  transition: max-height 0.25s ease;
-  padding: 0 var(--sc-space-3);
-  background: rgba(232,64,87,0.05);
-  border-left: 3px solid rgba(232,64,87,0.25);
-  border-radius: 0 6px 6px 0;
-  margin-bottom: 4px;
+  transition: max-height 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  background: rgba(20, 18, 24, 0.85);
+  border: 1px solid rgba(232,64,87,0.12);
+  border-radius: 10px;
+  margin: 2px 0 6px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
-.signal-row.expanded + .signal-row-options { max-height: 200px; padding-top: 4px; }
+.signal-row.expanded + .signal-row-options {
+  max-height: 320px;
+  padding: 10px;
+  border-color: rgba(232,64,87,0.25);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3), 0 0 1px rgba(232,64,87,0.2) inset;
+}
+
+/* Curve canvas */
+.sopt-curve {
+  width: 100%; height: 80px;
+  border-radius: 6px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.05);
+  margin-bottom: 8px;
+  display: block;
+}
 
 /* Signal opt rows */
 .signal-opt-row {
   display: flex; align-items: center; gap: 6px;
-  margin-bottom: 5px; padding: 2px 0;
+  margin-bottom: 6px; padding: 0;
 }
-.signal-opt-row:first-child { padding-top: 6px; }
-.signal-opt-row:last-child { padding-bottom: 6px; margin-bottom: 0; }
+.signal-opt-row:last-child { margin-bottom: 0; }
 .signal-opt-row label {
-  width: 52px; flex-shrink: 0; color: var(--sc-text-dim); font-size: var(--sc-font-size-sm);
+  width: 52px; flex-shrink: 0; color: rgba(255,255,255,0.4); font-size: var(--sc-font-size-sm);
   text-transform: uppercase; letter-spacing: 0.3px;
 }
 .signal-opt-row input[type="number"] {
-  width: 60px; background: rgba(0,0,0,0.3); border: 1px solid var(--sc-border);
-  border-radius: 4px; color: var(--sc-text); font-size: var(--sc-font-size-sm); padding: 3px 5px;
+  width: 60px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px; color: var(--sc-text); font-size: var(--sc-font-size-sm); padding: 4px 6px;
   font-family: var(--sc-font);
 }
-.signal-opt-row .range-arrow { color: var(--sc-text-dim); font-size: var(--sc-font-size-sm); }
-.signal-opt-row input[type="range"] { flex: 1; height: 3px; accent-color: var(--sc-accent); }
+.signal-opt-row input[type="number"]:focus { border-color: rgba(232,64,87,0.4); outline: none; }
+.signal-opt-row .range-arrow { color: rgba(255,255,255,0.25); font-size: var(--sc-font-size-sm); }
+.signal-opt-row input[type="range"] { flex: 1; height: 4px; accent-color: var(--sc-accent); }
 .signal-opt-row .sopt-val {
-  width: 34px; text-align: right; font-size: var(--sc-font-size-sm); color: var(--sc-text-dim);
+  width: 34px; text-align: right; font-size: var(--sc-font-size-sm); color: rgba(255,255,255,0.4);
 }
 .signal-opt-row select {
-  flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--sc-border);
-  border-radius: 4px; color: var(--sc-text); font-size: var(--sc-font-size-sm); padding: 3px 5px;
+  flex: 1; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px; color: var(--sc-text); font-size: var(--sc-font-size-sm); padding: 4px 6px;
   font-family: var(--sc-font); max-width: 100%;
   -webkit-appearance: none; appearance: none;
 }
+.signal-opt-row select:focus { border-color: rgba(232,64,87,0.4); outline: none; }
 
 /* ===== BIND BUTTON ===== */
 .bind-add-btn {

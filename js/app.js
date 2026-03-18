@@ -2601,13 +2601,69 @@
     const opts = document.createElement('div');
     opts.className = 'signal-row-options';
     opts.innerHTML = `
+      <canvas class="sopt-curve" width="200" height="80"></canvas>
       <div class="signal-opt-row"><label>Source</label><select class="sopt-signal">${buildSignalOptions(binding)}</select></div>
       <div class="signal-opt-row"><label>Range</label><input type="number" class="sopt-min" step="any" value="${binding.min}"><span class="range-arrow">\u2192</span><input type="number" class="sopt-max" step="any" value="${binding.max}"></div>
       <div class="signal-opt-row"><label>Smooth</label><input type="range" class="sopt-smooth" min="0" max="1" step="0.01" value="${binding.smoothing||0}"><span class="sopt-val sopt-smooth-val">${Math.round((binding.smoothing||0)*100)}%</span></div>
       <div class="signal-opt-row"><label>Easing</label><select class="sopt-easing">
-        <option value="linear">Linear</option><option value="easeIn">Ease In</option><option value="easeOut">Ease Out</option><option value="easeInOut">Ease In Out</option>
+        <option value="linear">Linear</option><option value="easeIn">Ease In</option><option value="easeOut">Ease Out</option><option value="easeInOut">Ease In Out</option><option value="spring">Spring</option>
       </select></div>
     `;
+
+    // Draw easing curve preview
+    function drawCurve() {
+      const canvas = opts.querySelector('.sopt-curve');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+      // Grid
+      ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+      ctx.lineWidth = 1;
+      for (let i = 1; i < 4; i++) {
+        ctx.beginPath(); ctx.moveTo(w * i / 4, 0); ctx.lineTo(w * i / 4, h); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, h * i / 4); ctx.lineTo(w, h * i / 4); ctx.stroke();
+      }
+      // Easing function
+      const easing = binding.easing || 'easeInOut';
+      const sm = binding.smoothing || 0;
+      function ease(t) {
+        if (easing === 'linear') return t;
+        if (easing === 'easeIn') return t * t;
+        if (easing === 'easeOut') return 1 - (1 - t) * (1 - t);
+        if (easing === 'easeInOut') return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        if (easing === 'spring') { const d = 0.7 - sm * 0.4; return 1 - Math.exp(-6 * t) * Math.cos(t * (8 + sm * 12) * Math.PI); }
+        return t;
+      }
+      // Main curve
+      ctx.beginPath();
+      ctx.strokeStyle = '#E84057';
+      ctx.lineWidth = 2;
+      ctx.shadowColor = 'rgba(232,64,87,0.5)';
+      ctx.shadowBlur = 6;
+      for (let px = 0; px <= w; px++) {
+        const t = px / w;
+        const v = Math.max(0, Math.min(1, ease(t)));
+        const y = h - v * (h - 8) - 4;
+        if (px === 0) ctx.moveTo(px, y); else ctx.lineTo(px, y);
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      // Smoothing overlay (thicker, dimmer)
+      if (sm > 0.01) {
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255,130,160,0.3)';
+        ctx.lineWidth = 4 + sm * 8;
+        for (let px = 0; px <= w; px++) {
+          const t = px / w;
+          const v = Math.max(0, Math.min(1, ease(t)));
+          const y = h - v * (h - 8) - 4;
+          if (px === 0) ctx.moveTo(px, y); else ctx.lineTo(px, y);
+        }
+        ctx.stroke();
+      }
+    }
+    drawCurve();
 
     row.after(sr);
     sr.after(opts);
@@ -2688,13 +2744,13 @@
       const layer = getLayer(layerId);
       if (!layer) return;
       const b = layer.mpBindings.find(b => b.param === row.dataset.name);
-      if (b) { b.smoothing = parseFloat(this.value); opts.querySelector('.sopt-smooth-val').textContent = Math.round(b.smoothing * 100) + '%'; }
+      if (b) { b.smoothing = parseFloat(this.value); opts.querySelector('.sopt-smooth-val').textContent = Math.round(b.smoothing * 100) + '%'; drawCurve(); }
     });
     opts.querySelector('.sopt-easing').addEventListener('change', function() {
       const layer = getLayer(layerId);
       if (!layer) return;
       const b = layer.mpBindings.find(b => b.param === row.dataset.name);
-      if (b) b.easing = this.value;
+      if (b) { b.easing = this.value; drawCurve(); }
     });
   }
 
@@ -2786,7 +2842,7 @@
         <div class="mp-picker-config-row"><label>Min</label><input type="number" class="cfg-min" step="any"></div>
         <div class="mp-picker-config-row"><label>Max</label><input type="number" class="cfg-max" step="any"></div>
         <div class="mp-picker-config-row"><label>Smooth</label><input type="range" class="cfg-smooth" min="0" max="1" step="0.01" value="0"><span class="cfg-val cfg-smooth-val">0%</span></div>
-        <div class="mp-picker-config-row"><label>Easing</label><select class="cfg-easing"><option value="linear">Linear</option><option value="easeIn">Ease In</option><option value="easeOut">Ease Out</option><option value="easeInOut">Ease In Out</option></select></div>
+        <div class="mp-picker-config-row"><label>Easing</label><select class="cfg-easing"><option value="linear">Linear</option><option value="easeIn">Ease In</option><option value="easeOut">Ease Out</option><option value="easeInOut">Ease In Out</option><option value="spring">Spring</option></select></div>
       </div>
       <div class="mp-picker-btns">
         <button class="mp-picker-save">Save</button>

@@ -183,6 +183,7 @@ function applyBindingValue(layer, b, rawSignal) {
   if (easing === 'easeIn') v = v * v;
   else if (easing === 'easeOut') v = 1 - (1 - v) * (1 - v);
   else if (easing === 'easeInOut') v = v < 0.5 ? 2 * v * v : 1 - 2 * (1 - v) * (1 - v);
+  else if (easing === 'spring') { const sm = b.smoothing || 0; v = Math.max(0, Math.min(1.2, 1 - Math.exp(-6 * v) * Math.cos(v * (8 + sm * 12) * Math.PI))); }
 
   // Range mapping
   let target = b.min + v * (b.max - b.min);
