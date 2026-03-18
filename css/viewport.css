@@ -123,6 +123,7 @@
   z-index: 30;
 }
 #error-bar.show { display: block; }
+#error-bar[data-init] { display: none !important; }
 
 /* ===== DEBUG OVERLAY (right of toolbar strip) ===== */
 #debug-overlay {

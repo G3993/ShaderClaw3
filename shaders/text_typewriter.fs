@@ -8,6 +8,9 @@
     { "NAME": "cursorBlink", "LABEL": "Cursor Blink", "TYPE": "float", "MIN": 0.5, "MAX": 5.0, "DEFAULT": 2.0 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.01, "MAX": 1.0, "DEFAULT": 0.3 },
     { "NAME": "kerning", "LABEL": "Spacing", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0 },
+    { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
+    { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
+    { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
     { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.04, 1.0] },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true },
@@ -114,9 +117,11 @@ void main() {
 
         int ch = getChar(charIdx);
         float cx = originX + float(i) * cellStep;
+        // Oscillator: per-character Y offset
+        float oscY = oscAmount * sin(TIME * oscSpeed * 6.2832 + float(i) * oscSpread * 3.14159);
 
         if (ch >= 0 && ch <= 25) {
-            vec2 cellUV = vec2((p.x - cx) / charW, (p.y - originY) / charH);
+            vec2 cellUV = vec2((p.x - cx) / charW, (p.y - (originY + oscY)) / charH);
             if (cellUV.x >= 0.0 && cellUV.x <= 1.0 && cellUV.y >= 0.0 && cellUV.y <= 1.0) {
                 float s = sampleChar(ch, cellUV);
                 if (s > 0.05) {

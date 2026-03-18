@@ -56,8 +56,7 @@
   sceneRenderer._isfGL = isfRenderer.gl;
   sceneRenderer._mainRenderer = isfRenderer;
   const errorBar = document.getElementById('error-bar');
-  errorBar.style.transition = 'none'; // prevent flash during init
-  errorBar.style.opacity = '0';
+  errorBar.dataset.init = '1'; // suppress during init
   const _isMobileComp = window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
   // Composition loop state (must be declared before compositionLoop is called)
   let _compFrameCount = 0;
@@ -5463,7 +5462,7 @@
 
     const [textSrc, sceneSrc, shaderSrc] = await Promise.all([
       fetch('shaders/text_typewriter.fs').then(r => r.text()),
-      fetch('scenes/tesseract.scene.js').then(r => r.text()),
+      fetch('scenes/spinning_cube.scene.js').then(r => r.text()),
       fetch(_randomFile).then(r => r.text()).catch(() => null),
     ]);
 
@@ -5517,9 +5516,9 @@
       autoBindTextures('scene');
       const _isMobileDevice = window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
       sceneLayer.visible = !_isMobileDevice; // hide 3D on mobile to save GPU
-      sceneLayer.manifestEntry = manifest.find(m => m.file === 'tesseract.scene.js');
+      sceneLayer.manifestEntry = manifest.find(m => m.file === 'spinning_cube.scene.js');
       const sceneSelect = document.querySelector('.layer-shader-select[data-layer="scene"]');
-      if (sceneSelect) sceneSelect.value = 'tesseract.scene.js';
+      if (sceneSelect) sceneSelect.value = 'spinning_cube.scene.js';
       sceneRenderer.resize();
       dbg('scene: OK');
     } catch (e) { dbg('scene EXCEPTION: ' + e.message); }
@@ -5566,9 +5565,8 @@
       });
     }
 
-    // Enable error bar now that init is done (prevents flash during startup)
-    errorBar.style.transition = '';
-    errorBar.style.opacity = '';
+    // Enable error bar now that init is done
+    delete errorBar.dataset.init;
     errorBar.classList.remove('show');
 
     // Start rendering now that all shaders are compiled
