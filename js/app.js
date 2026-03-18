@@ -3787,6 +3787,15 @@
             return;
           }
 
+          // Toggle back on if same shader is loaded but hidden
+          if (layer && !layer.visible && layer.manifestEntry && layer.manifestEntry.file === item.file) {
+            layer.visible = true;
+            updateLayerCardUI(layerId);
+            syncToggleSection(layerId, true);
+            updateGalleryActiveStates();
+            return;
+          }
+
           if (layer) layer.manifestEntry = item;
           if (item.type === 'scene') {
             await loadScene(folder, item.file);
