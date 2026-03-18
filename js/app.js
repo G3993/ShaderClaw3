@@ -1809,6 +1809,16 @@
         btn.classList.add('active');
         const cd = document.getElementById('camera-detail');
         if (cd) cd.classList.add('visible');
+        // Auto-enable body tracking + hand-as-mouse
+        const mpBtn = document.getElementById('cam-mediapipe-btn');
+        if (mpBtn && !mediaPipeMgr.active) mpBtn.click();
+        // Hand-as-mouse auto-enables after MediaPipe starts (async)
+        setTimeout(() => {
+          if (mediaPipeMgr.active && !handAsMouseEnabled) {
+            const hamBtn = document.getElementById('hand-as-mouse-btn') || handAsMouseBtn;
+            if (hamBtn) hamBtn.click();
+          }
+        }, 2000);
       } catch (e) { console.warn('Webcam access denied:', e.message); }
     }
   });
