@@ -2603,7 +2603,7 @@
     opts.innerHTML = `
       <canvas class="sopt-curve" width="200" height="80"></canvas>
       <div class="signal-opt-row"><label>Source</label><select class="sopt-signal">${buildSignalOptions(binding)}</select></div>
-      <div class="signal-opt-row"><label>Range</label><input type="number" class="sopt-min" step="any" value="${binding.min}"><span class="range-arrow">\u2192</span><input type="number" class="sopt-max" step="any" value="${binding.max}"></div>
+      <div class="signal-opt-row"><label>Range</label><input type="number" class="sopt-min" step="0.001" value="${binding.min}"><span class="range-arrow">\u2192</span><input type="number" class="sopt-max" step="0.001" value="${binding.max}"></div>
       <div class="signal-opt-row"><label>Smooth</label><input type="range" class="sopt-smooth" min="0" max="1" step="0.01" value="${binding.smoothing||0}"><span class="sopt-val sopt-smooth-val">${Math.round((binding.smoothing||0)*100)}%</span></div>
       <div class="signal-opt-row"><label>Easing</label><select class="sopt-easing">
         <option value="linear">Linear</option><option value="easeIn">Ease In</option><option value="easeOut">Ease Out</option><option value="easeInOut">Ease In Out</option><option value="spring">Spring</option>
@@ -2732,7 +2732,7 @@
     });
 
     // Config inputs
-    opts.querySelector('.sopt-min').addEventListener('change', function() {
+    opts.querySelector('.sopt-min').addEventListener('input', function() {
       const layer = getLayer(layerId);
       if (!layer) return;
       const v = parseFloat(this.value);
@@ -2740,7 +2740,7 @@
       const b = layer.mpBindings.find(b => b.param === row.dataset.name);
       if (b) { b.min = v; updateRangeIndicator(row, b); }
     });
-    opts.querySelector('.sopt-max').addEventListener('change', function() {
+    opts.querySelector('.sopt-max').addEventListener('input', function() {
       const layer = getLayer(layerId);
       if (!layer) return;
       const v = parseFloat(this.value);
@@ -2830,14 +2830,19 @@
     el.className = 'mp-picker';
     el.style.display = 'none';
     el.innerHTML = `
-      <div class="mp-picker-tabs">
-        <button class="mp-picker-tab active" data-group="hand">Hand</button>
-        <button class="mp-picker-tab" data-group="face">Face</button>
-        <button class="mp-picker-tab" data-group="pose">Pose</button>
-        <button class="mp-picker-tab" data-group="signals">Signals</button>
-        <button class="mp-picker-tab" data-group="audio">Audio</button>
-        <button class="mp-picker-tab" data-group="mouse">Mouse</button>
-        <button class="mp-picker-tab" data-group="data">Data</button>
+      <div class="mp-picker-header">
+        <span class="mp-picker-title">Make Interactive</span>
+        <button class="mp-picker-close">\u00D7</button>
+      </div>
+      <div class="mp-picker-categories">
+        <button class="mp-cat-btn" data-group="hand"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22c-1-2-4-4-4-8V7a1 1 0 012 0v5"/><path d="M10 12V5a1 1 0 012 0v7"/><path d="M14 12V6a1 1 0 012 0v6"/><path d="M18 14v-3a1 1 0 00-2 0v3"/><path d="M18 14c0 4-2 6-4 8"/><path d="M8 14V7"/></svg><span>Hand</span></button>
+        <button class="mp-cat-btn" data-group="face"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="12" cy="13" rx="7" ry="8.5"/><circle cx="9.5" cy="11" r="0.8" fill="currentColor"/><circle cx="14.5" cy="11" r="0.8" fill="currentColor"/><path d="M10 15.5q2 1.5 4 0"/></svg><span>Face</span></button>
+        <button class="mp-cat-btn" data-group="pose"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="4.5" r="2"/><path d="M12 7v5m0 0l-4 6m4-6l4 6"/><path d="M7 11h10"/></svg><span>Pose</span></button>
+        <button class="mp-cat-btn" data-group="signals"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 12h4l3-9 3 18 3-9h4"/></svg><span>Signals</span></button>
+        <button class="mp-cat-btn" data-group="audio"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg><span>Audio</span></button>
+        <button class="mp-cat-btn" data-group="mouse"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="2" width="12" height="20" rx="6"/><line x1="12" y1="6" x2="12" y2="10"/></svg><span>Mouse</span></button>
+        <button class="mp-cat-btn" data-group="touch"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="10" r="3"/><path d="M12 13v8"/><path d="M8 17l4 4 4-4"/></svg><span>Touch</span></button>
+        <button class="mp-cat-btn" data-group="data"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg><span>Data</span></button>
       </div>
       <div class="mp-picker-list"></div>
       <div class="mp-picker-axis">
@@ -2859,6 +2864,13 @@
     `;
     document.body.appendChild(el);
     _mpPickerEl = el;
+
+    // Close button
+    el.querySelector('.mp-picker-close').addEventListener('click', () => {
+      el.style.display = 'none';
+      if (_mpPickerCloseHandler) { document.removeEventListener('pointerdown', _mpPickerCloseHandler, true); _mpPickerCloseHandler = null; }
+    });
+
     return el;
   }
 
@@ -2892,20 +2904,56 @@
       : 'hand';
     let selectedAxis = existing ? (existing.axis || 'x') : 'x';
 
-    // Tabs
-    const tabs = picker.querySelectorAll('.mp-picker-tab');
+    // Category buttons (replace old tabs)
+    const catBtns = picker.querySelectorAll('.mp-cat-btn');
+    const tabs = catBtns; // alias for compat
     const axisRow = picker.querySelector('.mp-picker-axis');
-    tabs.forEach(t => {
-      t.classList.toggle('active', t.dataset.group === activeGroup);
+    const listEl = picker.querySelector('.mp-picker-list');
+    const catsEl = picker.querySelector('.mp-picker-categories');
+    // Initially show categories, hide list
+    catsEl.style.display = '';
+    listEl.style.display = 'none';
+    axisRow.style.display = 'none';
+
+    // Title
+    const titleEl = picker.querySelector('.mp-picker-title');
+    titleEl.textContent = 'Make Interactive';
+
+    catBtns.forEach(t => {
+      t.classList.remove('active');
       t.onclick = () => {
         activeGroup = t.dataset.group;
-        tabs.forEach(tt => tt.classList.toggle('active', tt === t));
-        // Hide axis row for signals/audio/data tabs
-        axisRow.style.display = (activeGroup === 'signals' || activeGroup === 'audio' || activeGroup === 'mouse' || activeGroup === 'data') ? 'none' : '';
+        catBtns.forEach(tt => tt.classList.remove('active'));
+        t.classList.add('active');
+        // Transition: hide categories, show list
+        catsEl.style.display = 'none';
+        listEl.style.display = '';
+        titleEl.textContent = t.querySelector('span').textContent;
+        // Show axis row only for body tracking
+        const needsAxis = (activeGroup === 'hand' || activeGroup === 'face' || activeGroup === 'pose');
+        axisRow.style.display = needsAxis ? '' : 'none';
+        // Touch maps to mouse signals
+        if (activeGroup === 'touch') activeGroup = 'mouse';
         renderList();
       };
     });
-    axisRow.style.display = (activeGroup === 'signals' || activeGroup === 'audio' || activeGroup === 'mouse' || activeGroup === 'data') ? 'none' : '';
+
+    // Back to categories
+    titleEl.style.cursor = 'pointer';
+    titleEl.onclick = () => {
+      catsEl.style.display = '';
+      listEl.style.display = 'none';
+      axisRow.style.display = 'none';
+      titleEl.textContent = 'Make Interactive';
+      catBtns.forEach(tt => tt.classList.remove('active'));
+      hideConfig();
+    };
+
+    // If existing binding, jump to its category
+    if (existing) {
+      const matchBtn = [...catBtns].find(b => b.dataset.group === activeGroup);
+      if (matchBtn) matchBtn.click();
+    }
 
     // Axis radios
     const axisRadios = picker.querySelectorAll('input[name="mp-axis"]');
