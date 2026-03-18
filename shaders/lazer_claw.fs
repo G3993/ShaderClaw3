@@ -1,14 +1,12 @@
 /*
 {
   "CATEGORIES": ["Generator"],
-  "DESCRIPTION": "Lazer Claw — three T-Rex claw slash marks that follow mouse movement with neon trails",
+  "DESCRIPTION": "Lazer Claw — three razor-sharp claw scar marks that tear across the screen as you drag",
   "INPUTS": [
-    { "NAME": "clawSize", "LABEL": "Size", "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.05, "MAX": 0.8 },
-    { "NAME": "spread", "LABEL": "Spread", "TYPE": "float", "DEFAULT": 0.06, "MIN": 0.01, "MAX": 0.2 },
-    { "NAME": "thickness", "LABEL": "Thickness", "TYPE": "float", "DEFAULT": 0.008, "MIN": 0.002, "MAX": 0.03 },
+    { "NAME": "clawWidth", "LABEL": "Width", "TYPE": "float", "DEFAULT": 0.006, "MIN": 0.002, "MAX": 0.025 },
+    { "NAME": "spread", "LABEL": "Spread", "TYPE": "float", "DEFAULT": 0.04, "MIN": 0.01, "MAX": 0.15 },
     { "NAME": "glowWidth", "LABEL": "Glow", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "curvature", "LABEL": "Curve", "TYPE": "float", "DEFAULT": 0.4, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "feedback", "LABEL": "Trail", "TYPE": "float", "DEFAULT": 0.93, "MIN": 0.5, "MAX": 0.99 },
+    { "NAME": "feedback", "LABEL": "Trail", "TYPE": "float", "DEFAULT": 0.96, "MIN": 0.5, "MAX": 0.995 },
     { "NAME": "color1", "LABEL": "Claw 1", "TYPE": "color", "DEFAULT": [0.91, 0.25, 0.34, 1.0] },
     { "NAME": "color2", "LABEL": "Claw 2", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
     { "NAME": "color3", "LABEL": "Claw 3", "TYPE": "color", "DEFAULT": [1.0, 0.0, 0.0, 1.0] },
@@ -21,99 +19,103 @@
 }
 */
 
-// T-Rex claw slash SDF — curved tapered scratch mark
-// Starts thick at top, curves and tapers to a sharp point at bottom
-float clawSlash(vec2 p, float len, float w, float curve) {
-    // Parameterize along the slash (t=0 top, t=1 tip)
-    float t = clamp((p.y + len) / (2.0 * len), 0.0, 1.0);
-
-    // Curved path — claw arcs outward
-    float xOff = curve * sin(t * 3.14159) * len;
-    float dx = p.x - xOff;
-
-    // Taper: thick at entry, razor-thin at tip (T-Rex claw shape)
-    float taper = w * (1.0 - t * t * t) * (0.3 + 0.7 * smoothstep(0.0, 0.15, t));
-
-    // Distance
-    float dy = abs(p.y) - len;
-    float distX = abs(dx) - taper;
-    if (dy < 0.0 && distX < 0.0) return max(distX, -0.001);
-    if (dy < 0.0) return distX;
-    return length(max(vec2(distX, dy), 0.0));
+// Distance from point to line segment (a→b), returns distance and t (0-1 along segment)
+float sdSegment(vec2 p, vec2 a, vec2 b) {
+    vec2 pa = p - a, ba = b - a;
+    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+    return length(pa - ba * h);
 }
 
-vec2 rot2d(vec2 p, float a) {
-    float c = cos(a), s = sin(a);
-    return vec2(p.x * c - p.y * s, p.x * s + p.y * c);
+// Claw scratch: line segment with taper (thick at start, razor tip at end)
+// and slight curve offset for organic feel
+float clawScratch(vec2 p, vec2 a, vec2 b, float w, float curveAmt) {
+    vec2 ba = b - a;
+    float segLen = length(ba);
+    if (segLen < 0.001) return 999.0;
+
+    vec2 dir = ba / segLen;
+    vec2 perp = vec2(-dir.y, dir.x);
+
+    // Project point onto segment
+    vec2 pa = p - a;
+    float along = dot(pa, dir);
+    float t = clamp(along / segLen, 0.0, 1.0);
+
+    // Curve: offset perpendicular based on position along scratch
+    float curveOff = curveAmt * sin(t * 3.14159) * segLen * 0.15;
+    vec2 closest = a + dir * (t * segLen) + perp * curveOff;
+
+    float dist = length(p - closest);
+
+    // Taper: thick at entry (t=0), thin at tip (t=1)
+    // Shape like a real claw: widest at 15%, tapers to nothing
+    float taper = w * smoothstep(0.0, 0.15, t) * (1.0 - t * t);
+
+    return dist - taper;
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// PASS 0: Feedback buffer — decay + paint claw slashes at mouse
+// PASS 0: Feedback — persistent scars + new scratch segments
 // ═══════════════════════════════════════════════════════════════════════
 
 vec4 passFeedback() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
 
-    // Decay previous frame
+    // Read + decay
     vec3 col = vec3(0.0);
     if (FRAMEINDEX > 0) {
         col = texture2D(fbBuf, uv).rgb * feedback;
-        // Ember fade — red persists longer
-        col.r *= 1.002;
-        col.gb *= 0.997;
+        // Scars cool from white → red → dark
+        col.r *= 1.001;
+        col.gb *= 0.998;
     }
 
-    vec2 mPos = mousePos;
-    vec2 delta = mouseDelta;
+    // Current mouse segment: from (mousePos - mouseDelta) to mousePos
+    vec2 mNow = mousePos;
+    vec2 mPrev = mNow - mouseDelta;
+    float moveLen = length(mouseDelta);
 
-    // Slash direction from mouse movement
-    float moveLen = length(delta);
-    float slashAngle = moveLen > 0.001 ? atan(delta.y, delta.x * aspect) : -0.7854; // default diagonal
+    // Only draw when mouse is moving (dragging creates scars)
+    if (moveLen > 0.001) {
+        // Aspect-correct coordinates
+        vec2 uvA = vec2(uv.x * aspect, uv.y);
+        vec2 a = vec2(mPrev.x * aspect, mPrev.y);
+        vec2 b = vec2(mNow.x * aspect, mNow.y);
 
-    vec2 toMouse = uv - mPos;
-    toMouse.x *= aspect;
-    float mouseDist = length(toMouse);
+        // Movement direction perpendicular = spread direction
+        vec2 moveDir = normalize(b - a);
+        vec2 spreadDir = vec2(-moveDir.y, moveDir.x);
 
-    float drawRadius = clawSize * 1.5;
-    if (mouseDist < drawRadius && (mouseDown > 0.5 || moveLen > 0.002)) {
-        // Rotate into slash-aligned space
-        // Claws slash perpendicular to movement — rotated 90 degrees
-        float ang = slashAngle + 1.5708;
-        vec2 local = rot2d(toMouse, -ang);
-
-        float len = clawSize * 0.5;
-        float w = thickness;
-        float crv = curvature * 0.3;
-
-        // Three parallel claw marks — center one longest, outer ones shorter and curved more
+        float w = clawWidth;
         float sp = spread;
-        float d1 = clawSlash(local + vec2(-sp, 0.0), len * 0.85, w * 0.7, crv * 1.4);
-        float d2 = clawSlash(local, len, w, crv);
-        float d3 = clawSlash(local + vec2(sp, 0.0), len * 0.85, w * 0.7, -crv * 1.4);
 
-        // Proximity fade — soft edge
-        float proxFade = smoothstep(drawRadius, drawRadius * 0.3, mouseDist);
+        // Three parallel claw scratches offset perpendicular to movement
+        float d1 = clawScratch(uvA, a - spreadDir * sp, b - spreadDir * sp, w * 0.7, 1.2);
+        float d2 = clawScratch(uvA, a, b, w, 0.0);
+        float d3 = clawScratch(uvA, a + spreadDir * sp, b + spreadDir * sp, w * 0.7, -1.2);
 
-        // Movement intensity — faster = brighter
-        float intensity = smoothstep(0.001, 0.02, moveLen) * 0.7 + 0.3;
+        // Intensity scales with speed
+        float intensity = smoothstep(0.001, 0.015, moveLen);
 
-        // Neon core + glow
-        float glowR = max(0.001, glowWidth * 0.015);
+        // Neon glow
+        float glowR = max(0.0005, glowWidth * 0.01);
 
-        float core1 = smoothstep(0.001, -0.002, d1);
-        float core2 = smoothstep(0.001, -0.002, d2);
-        float core3 = smoothstep(0.001, -0.002, d3);
+        // Hard bright core where inside the scratch
+        float core1 = smoothstep(0.001, -0.001, d1);
+        float core2 = smoothstep(0.001, -0.001, d2);
+        float core3 = smoothstep(0.001, -0.001, d3);
 
-        float glow1 = glowR / (d1 * d1 + glowR) * 0.25;
-        float glow2 = glowR / (d2 * d2 + glowR) * 0.25;
-        float glow3 = glowR / (d3 * d3 + glowR) * 0.25;
+        // Soft glow falloff outside
+        float glow1 = d1 > 0.0 ? glowR / (d1 * d1 + glowR) * 0.2 : 0.0;
+        float glow2 = d2 > 0.0 ? glowR / (d2 * d2 + glowR) * 0.2 : 0.0;
+        float glow3 = d3 > 0.0 ? glowR / (d3 * d3 + glowR) * 0.2 : 0.0;
 
-        col += color1.rgb * (core1 + glow1) * proxFade * intensity;
-        col += color2.rgb * (core2 + glow2) * proxFade * intensity;
-        col += color3.rgb * (core3 + glow3) * proxFade * intensity;
+        col += color1.rgb * (core1 + glow1) * intensity;
+        col += color2.rgb * (core2 + glow2) * intensity;
+        col += color3.rgb * (core3 + glow3) * intensity;
 
-        // Audio bass makes marks flare
+        // Audio bass flare
         col *= 1.0 + audioBass * 2.0;
     }
 
@@ -121,21 +123,21 @@ vec4 passFeedback() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// PASS 1: Final output — shimmer + spark effects
+// PASS 1: Final output — heat distortion + sparks
 // ═══════════════════════════════════════════════════════════════════════
 
 vec4 passRender() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     vec3 col = texture2D(fbBuf, uv).rgb;
 
-    // Heat shimmer along claw marks
-    float shimmer = 0.5 + 0.5 * sin(uv.x * 60.0 + TIME * 5.0) * sin(uv.y * 40.0 - TIME * 3.0);
-    col *= 0.97 + 0.03 * shimmer;
-
-    // Edge spark effect — bright pixels get extra sparkle
+    // Subtle heat shimmer on bright areas
     float bright = max(col.r, max(col.g, col.b));
-    float spark = sin(TIME * 15.0 + uv.x * 50.0) * sin(TIME * 12.0 + uv.y * 50.0);
-    col += vec3(1.0, 0.8, 0.6) * bright * bright * spark * 0.08;
+    float shimmer = sin(uv.x * 80.0 + TIME * 6.0) * sin(uv.y * 60.0 - TIME * 4.0);
+    col *= 1.0 + shimmer * bright * 0.04;
+
+    // Micro sparks along scar edges
+    float spark = sin(TIME * 20.0 + uv.x * 100.0) * sin(TIME * 17.0 + uv.y * 80.0);
+    col += vec3(1.0, 0.7, 0.5) * bright * bright * max(spark, 0.0) * 0.1;
 
     col = clamp(col, 0.0, 1.0);
 
