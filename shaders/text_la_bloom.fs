@@ -3,7 +3,7 @@
   "CREDIT": "ShaderClaw",
   "CATEGORIES": ["Generator", "Text"],
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "MY DEAREST I HAVE LOVED YOU SINCE", "MAX_LENGTH": 24 },
+    { "NAME": "msg", "TYPE": "text", "DEFAULT": "MY DEAREST I HAVE LOVED YOU SINCE", "MAX_LENGTH": 48 },
     { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "DEFAULT": 2, "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"] },
     { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "DEFAULT": 2.5, "MIN": 0.5, "MAX": 20.0 },
     { "NAME": "fadeTime", "LABEL": "Fade", "TYPE": "float", "DEFAULT": 5.0, "MIN": 1.0, "MAX": 10.0 },
@@ -34,7 +34,7 @@ float sampleChar(int ch, vec2 uv) {
 }
 
 // ==========================================
-// Character lookup (msg_0..msg_23)
+// Character lookup (msg_0..msg_47)
 // ==========================================
 
 int getChar(int slot) {
@@ -62,13 +62,37 @@ int getChar(int slot) {
     if (slot == 21) return int(msg_21);
     if (slot == 22) return int(msg_22);
     if (slot == 23) return int(msg_23);
+    if (slot == 24) return int(msg_24);
+    if (slot == 25) return int(msg_25);
+    if (slot == 26) return int(msg_26);
+    if (slot == 27) return int(msg_27);
+    if (slot == 28) return int(msg_28);
+    if (slot == 29) return int(msg_29);
+    if (slot == 30) return int(msg_30);
+    if (slot == 31) return int(msg_31);
+    if (slot == 32) return int(msg_32);
+    if (slot == 33) return int(msg_33);
+    if (slot == 34) return int(msg_34);
+    if (slot == 35) return int(msg_35);
+    if (slot == 36) return int(msg_36);
+    if (slot == 37) return int(msg_37);
+    if (slot == 38) return int(msg_38);
+    if (slot == 39) return int(msg_39);
+    if (slot == 40) return int(msg_40);
+    if (slot == 41) return int(msg_41);
+    if (slot == 42) return int(msg_42);
+    if (slot == 43) return int(msg_43);
+    if (slot == 44) return int(msg_44);
+    if (slot == 45) return int(msg_45);
+    if (slot == 46) return int(msg_46);
+    if (slot == 47) return int(msg_47);
     return 26;
 }
 
 int charCount() {
     int n = int(msg_len);
-    if (n <= 0) return 24;
-    if (n > 24) return 24;
+    if (n <= 0) return 48;
+    if (n > 48) return 48;
     return n;
 }
 

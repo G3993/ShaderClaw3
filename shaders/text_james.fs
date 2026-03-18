@@ -2,7 +2,7 @@
   "CATEGORIES": ["Generator", "Text"],
   "DESCRIPTION": "Etherea — cycling font styles per letter with bounce animation",
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "ETHEREA", "MAX_LENGTH": 24 },
+    { "NAME": "msg", "TYPE": "text", "DEFAULT": "ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
     { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
     { "NAME": "intensity", "LABEL": "Bounce", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
@@ -49,6 +49,30 @@ float getCharF(float idx) {
     c += msg_21 * max(0.0, 1.0 - abs(idx - 21.0));
     c += msg_22 * max(0.0, 1.0 - abs(idx - 22.0));
     c += msg_23 * max(0.0, 1.0 - abs(idx - 23.0));
+    c += msg_24 * max(0.0, 1.0 - abs(idx - 24.0));
+    c += msg_25 * max(0.0, 1.0 - abs(idx - 25.0));
+    c += msg_26 * max(0.0, 1.0 - abs(idx - 26.0));
+    c += msg_27 * max(0.0, 1.0 - abs(idx - 27.0));
+    c += msg_28 * max(0.0, 1.0 - abs(idx - 28.0));
+    c += msg_29 * max(0.0, 1.0 - abs(idx - 29.0));
+    c += msg_30 * max(0.0, 1.0 - abs(idx - 30.0));
+    c += msg_31 * max(0.0, 1.0 - abs(idx - 31.0));
+    c += msg_32 * max(0.0, 1.0 - abs(idx - 32.0));
+    c += msg_33 * max(0.0, 1.0 - abs(idx - 33.0));
+    c += msg_34 * max(0.0, 1.0 - abs(idx - 34.0));
+    c += msg_35 * max(0.0, 1.0 - abs(idx - 35.0));
+    c += msg_36 * max(0.0, 1.0 - abs(idx - 36.0));
+    c += msg_37 * max(0.0, 1.0 - abs(idx - 37.0));
+    c += msg_38 * max(0.0, 1.0 - abs(idx - 38.0));
+    c += msg_39 * max(0.0, 1.0 - abs(idx - 39.0));
+    c += msg_40 * max(0.0, 1.0 - abs(idx - 40.0));
+    c += msg_41 * max(0.0, 1.0 - abs(idx - 41.0));
+    c += msg_42 * max(0.0, 1.0 - abs(idx - 42.0));
+    c += msg_43 * max(0.0, 1.0 - abs(idx - 43.0));
+    c += msg_44 * max(0.0, 1.0 - abs(idx - 44.0));
+    c += msg_45 * max(0.0, 1.0 - abs(idx - 45.0));
+    c += msg_46 * max(0.0, 1.0 - abs(idx - 46.0));
+    c += msg_47 * max(0.0, 1.0 - abs(idx - 47.0));
     return c;
 }
 
@@ -56,7 +80,7 @@ int charCount() {
     // Also ANGLE-safe: msg_len is always read
     int n = int(msg_len + 0.5);
     if (n < 1) n = 1;
-    if (n > 24) n = 24;
+    if (n > 48) n = 48;
     return n;
 }
 
@@ -132,7 +156,7 @@ vec4 effectEtherea(vec2 uv) {
     float glowAccum = 0.0;
 
     // Iterate ALL 24 slots — single line, no wrapping
-    for (int i = 0; i < 24; i++) {
+    for (int i = 0; i < 48; i++) {
         // Compute active mask instead of break
         float active = step(float(i) + 0.5, float(numChars));
 

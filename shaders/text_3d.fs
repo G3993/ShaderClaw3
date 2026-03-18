@@ -2,7 +2,7 @@
   "CATEGORIES": ["Generator", "Text", "3D"],
   "DESCRIPTION": "3D extruded text — rotating block letters with Phong lighting and cycling fill patterns",
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 24 },
+    { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "fontFamily", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
     { "NAME": "effect", "TYPE": "long", "VALUES": [0, 1], "LABELS": ["3D Text", "James 3D"], "DEFAULT": 0 },
     { "NAME": "font", "TYPE": "long", "VALUES": [0,1,2], "LABELS": ["Block","Slim","Round"], "DEFAULT": 0 },
@@ -38,13 +38,25 @@ int getChar(int slot) {
     if (slot == 16) return int(msg_16); if (slot == 17) return int(msg_17);
     if (slot == 18) return int(msg_18); if (slot == 19) return int(msg_19);
     if (slot == 20) return int(msg_20); if (slot == 21) return int(msg_21);
-    if (slot == 22) return int(msg_22); return int(msg_23);
+    if (slot == 22) return int(msg_22); if (slot == 23) return int(msg_23);
+    if (slot == 24) return int(msg_24); if (slot == 25) return int(msg_25);
+    if (slot == 26) return int(msg_26); if (slot == 27) return int(msg_27);
+    if (slot == 28) return int(msg_28); if (slot == 29) return int(msg_29);
+    if (slot == 30) return int(msg_30); if (slot == 31) return int(msg_31);
+    if (slot == 32) return int(msg_32); if (slot == 33) return int(msg_33);
+    if (slot == 34) return int(msg_34); if (slot == 35) return int(msg_35);
+    if (slot == 36) return int(msg_36); if (slot == 37) return int(msg_37);
+    if (slot == 38) return int(msg_38); if (slot == 39) return int(msg_39);
+    if (slot == 40) return int(msg_40); if (slot == 41) return int(msg_41);
+    if (slot == 42) return int(msg_42); if (slot == 43) return int(msg_43);
+    if (slot == 44) return int(msg_44); if (slot == 45) return int(msg_45);
+    if (slot == 46) return int(msg_46); return int(msg_47);
 }
 
 int charCount() {
     int n = int(msg_len);
     if (n <= 0) return 7;
-    if (n > 24) return 24;
+    if (n > 48) return 48;
     return n;
 }
 

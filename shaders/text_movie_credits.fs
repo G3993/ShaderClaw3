@@ -2,7 +2,7 @@
   "CATEGORIES": ["Generator", "Text"],
   "DESCRIPTION": "Movie credits scroll — text scrolls upward like cinema end credits with live transcript support",
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "ETHEREA", "MAX_LENGTH": 24 },
+    { "NAME": "msg", "TYPE": "text", "DEFAULT": "ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
@@ -55,7 +55,31 @@ int getChar(int slot) {
     if (slot == 20) return int(msg_20);
     if (slot == 21) return int(msg_21);
     if (slot == 22) return int(msg_22);
-    return int(msg_23);
+    if (slot == 23) return int(msg_23);
+    if (slot == 24) return int(msg_24);
+    if (slot == 25) return int(msg_25);
+    if (slot == 26) return int(msg_26);
+    if (slot == 27) return int(msg_27);
+    if (slot == 28) return int(msg_28);
+    if (slot == 29) return int(msg_29);
+    if (slot == 30) return int(msg_30);
+    if (slot == 31) return int(msg_31);
+    if (slot == 32) return int(msg_32);
+    if (slot == 33) return int(msg_33);
+    if (slot == 34) return int(msg_34);
+    if (slot == 35) return int(msg_35);
+    if (slot == 36) return int(msg_36);
+    if (slot == 37) return int(msg_37);
+    if (slot == 38) return int(msg_38);
+    if (slot == 39) return int(msg_39);
+    if (slot == 40) return int(msg_40);
+    if (slot == 41) return int(msg_41);
+    if (slot == 42) return int(msg_42);
+    if (slot == 43) return int(msg_43);
+    if (slot == 44) return int(msg_44);
+    if (slot == 45) return int(msg_45);
+    if (slot == 46) return int(msg_46);
+    return int(msg_47);
 }
 
 int charCount() {
@@ -117,7 +141,7 @@ void main() {
         float charY = lineY + (lineH - cH) * 0.5;
 
         // Render each character
-        for (int ci = 0; ci < 24; ci++) {
+        for (int ci = 0; ci < 48; ci++) {
             if (ci >= numChars) break;
 
             int ch = getChar(ci);

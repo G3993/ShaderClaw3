@@ -257,9 +257,9 @@ function isfInputToUniform(input) {
   if (t === 'image') return `uniform sampler2D ${input.NAME};\nuniform vec2 IMG_SIZE_${input.NAME};`;
   if (t === 'long') return `uniform float ${input.NAME};`;
   if (t === 'text') {
-    // Cap at 24 chars for mobile GPU uniform limits (64 max uniforms on some GPUs)
+    // Cap at 48 chars for mobile GPU uniform limits
     const isMobile = typeof window !== 'undefined' && (window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent));
-    const maxLen = Math.min(input.MAX_LENGTH || 12, isMobile ? 24 : 64);
+    const maxLen = Math.min(input.MAX_LENGTH || 12, isMobile ? 48 : 64);
     const lines = [];
     for (let i = 0; i < maxLen; i++) lines.push(`uniform float ${input.NAME}_${i};`);
     lines.push(`uniform float ${input.NAME}_len;`);
