@@ -59,7 +59,7 @@
 
 /* Layer type tabs */
 .layer-type-content { display: none; }
-.layer-type-content.active { display: flex; flex-direction: column; }
+.layer-type-content.active { display: block; }
 .layer-type-content .layer-preset-row { display: flex; }
 .layer-type-content .layer-controls { display: block; }
 .layer-type-content .layer-params { display: block; padding: 4px 0 6px; margin: 0 10px; }
@@ -102,7 +102,7 @@
 .layer-toggle-section.active .layer-toggle-chevron { transform: rotate(0deg); }
 .layer-toggle-body { display: none; }
 .layer-toggle-section.active .layer-toggle-body { display: block; }
-.sc3-section-body > .layer-toggle-section > .layer-toggle-body { display: flex; flex-direction: column; }
+.sc3-section-body > .layer-toggle-section > .layer-toggle-body { display: block; }
 .layer-toggle-body .layer-preset-row { display: flex; }
 .layer-toggle-body .layer-controls { display: block; }
 .layer-toggle-body .layer-params { display: block; padding: 4px 0 6px; margin: 0 10px; }
