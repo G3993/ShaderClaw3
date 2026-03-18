@@ -13,7 +13,7 @@
   display: flex;
   align-items: center;
   gap: var(--sc-space-2);
-  padding: 10px 14px;
+  padding: 10px 10px;
   border-bottom: 1px solid rgba(255,255,255,0.04);
 }
 .sc3-detail-title {
