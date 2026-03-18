@@ -234,7 +234,8 @@
   transition: max-height 0.2s ease-out;
   padding: 0 var(--sc-space-3);
 }
-.layer-card.open .layer-params {
+.layer-card.open .layer-params,
+.sc3-section-body .layer-params {
   max-height: 400px; overflow-y: auto;
   padding: 0 var(--sc-space-3) var(--sc-space-2);
 }
