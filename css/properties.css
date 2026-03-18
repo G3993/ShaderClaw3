@@ -207,8 +207,9 @@
   margin-bottom: 10px; min-height: 26px; font-size: var(--sc-font-size-base);
 }
 .layer-control-row label {
-  width: 52px; flex-shrink: 0;
+  min-width: 52px; max-width: 40%; flex-shrink: 0;
   color: var(--sc-text-dim); font-size: var(--sc-font-size-sm);
+  text-overflow: ellipsis; overflow: hidden; white-space: nowrap;
   text-transform: uppercase; letter-spacing: 0.5px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
