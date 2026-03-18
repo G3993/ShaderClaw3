@@ -3726,7 +3726,10 @@
       });
     });
 
-    for (const [cat, items] of Object.entries(categories)) {
+    // Sort categories alphabetically, sort items within each category
+    const sortedCats = Object.keys(categories).sort();
+    for (const cat of sortedCats) {
+      const items = categories[cat].sort((a, b) => a.title.localeCompare(b.title));
       const title = document.createElement('div');
       title.className = 'gallery-category-title';
       title.textContent = cat;
