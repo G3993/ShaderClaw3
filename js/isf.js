@@ -305,13 +305,13 @@ function buildFragmentShader(source) {
     '#define IMG_PIXEL(img, coord) texture2D(img, coord / RENDERSIZE)',
     '#define IMG_THIS_PIXEL(img) texture2D(img, isf_FragNormCoord)',
     '#define IMG_THIS_NORM_PIXEL(img) texture2D(img, isf_FragNormCoord)',
-    // Mouse — only if used
-    cond('uniform vec2 mousePos;', 'mousePos'),
-    cond('uniform vec2 mouseDelta;', 'mouseDelta'),
-    cond('uniform float mouseDown;', 'mouseDown'),
-    cond('uniform float pinchHold;', 'pinchHold'),
-    cond('uniform float pinchHold2;', 'pinchHold2'),
-    cond('uniform float inputActivity;', 'inputActivity'),
+    // Mouse — always available (cheap uniforms, prevents undeclared errors)
+    'uniform vec2 mousePos;',
+    'uniform vec2 mouseDelta;',
+    'uniform float mouseDown;',
+    'uniform float pinchHold;',
+    'uniform float pinchHold2;',
+    'uniform float inputActivity;',
     // Audio
     cond('uniform sampler2D audioFFT;', 'audioFFT'),
     cond('uniform float audioLevel;', 'audioLevel'),

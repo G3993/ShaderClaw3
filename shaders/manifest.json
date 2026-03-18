@@ -251,15 +251,6 @@
     "folder": "scenes"
   },
   {
-    "id": 105,
-    "title": "Custom Material",
-    "description": "Custom Three.js ShaderMaterial — paste vertex/fragment GLSL with auto-injected time, mouse, and audio uniforms",
-    "type": "scene",
-    "categories": ["3D"],
-    "file": "custom_material.scene.js",
-    "folder": "scenes"
-  },
-  {
     "id": 27,
     "title": "Cube in Water",
     "description": "Chrome cube bobbing on a raymarched ocean — procedural sky, wave reflections, underwater darkening",
@@ -491,15 +482,6 @@
     "folder": "scenes"
   },
   {
-    "id": 106,
-    "title": "Crystals",
-    "description": "3D crystal gemstone with image refraction — diamond, prism, emerald, obelisk, or cluster shapes with CubeCamera refraction",
-    "type": "scene",
-    "categories": ["3D"],
-    "file": "crystals.scene.js",
-    "folder": "scenes"
-  },
-  {
     "id": 107,
     "title": "Lightning",
     "description": "Recursive black hole — fractal tiled glow rings with cosine palette, depth iterations, mouse warp, and audio reactivity",
@@ -521,13 +503,6 @@
     "description": "Raymarched voxel tree with reflective checkerboard floor, animated glow pulses, and orbiting camera",
     "categories": ["Generator", "3D"],
     "file": "voxel_flower.fs"
-  },
-  {
-    "id": 112,
-    "title": "Particle Flock",
-    "description": "Data-driven particle swarm — bind CSV time series or live signals to shape the flock's population, energy, spread, and color",
-    "categories": ["Generator", "Data"],
-    "file": "particle_flock.fs"
   },
   {
     "id": 113,
@@ -599,14 +574,6 @@
     "description": "Mouse-controlled rotating metaballs with dynamic Blinn-Phong lighting — drag to orbit",
     "categories": ["Generator", "3D"],
     "file": "metaballs.fs",
-    "hasVertex": true
-  },
-  {
-    "id": 123,
-    "title": "Match",
-    "description": "Live match visualization — two competing energy fields driven by real-time football data",
-    "categories": ["Generator", "Data"],
-    "file": "match.fs",
     "hasVertex": true
   },
   {
