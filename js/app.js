@@ -3486,7 +3486,7 @@
     }
   };
 
-  // Voice circle button — show/hide voice controls panel + auto-start mic on first click
+  // Live Signals: each button toggles its own panel independently (all can be open)
   document.getElementById('canvas-mic-btn').addEventListener('click', () => {
     const btn = document.getElementById('canvas-mic-btn');
     const vd = document.getElementById('voice-detail');
@@ -3494,22 +3494,13 @@
     const isHidden = vd.style.display === 'none' || vd.style.display === '';
     vd.style.display = isHidden ? 'block' : 'none';
     btn.classList.toggle('active', isHidden);
-    // hide other panels if opening
-    if (isHidden) {
-      const cd = document.getElementById('camera-detail');
-      if (cd) { cd.style.display = 'none'; document.getElementById('cam-vis-btn').classList.remove('active'); }
-      const dd = document.getElementById('data-detail');
-      if (dd) { dd.style.display = 'none'; const db = document.getElementById('data-source-btn'); if (db) db.classList.remove('active'); }
-      // Auto-start mic if not already running
-      if (!_micAudioEntry) toggleMic();
-      _hideContentPanel();
-    }
+    if (isHidden && !_micAudioEntry) toggleMic();
   });
 
   // Voice panel Mic toggle — mirrors header button
   document.getElementById('voice-mic-toggle').addEventListener('click', toggleMic);
 
-  // Camera circle button — show/hide camera controls panel
+  // Camera circle button — toggles camera panel
   document.getElementById('cam-vis-btn').addEventListener('click', () => {
     const btn = document.getElementById('cam-vis-btn');
     const cd = document.getElementById('camera-detail');
@@ -3517,17 +3508,9 @@
     const isHidden = cd.style.display === 'none' || cd.style.display === '';
     cd.style.display = isHidden ? 'block' : 'none';
     btn.classList.toggle('active', isHidden);
-    // hide other panels if opening
-    if (isHidden) {
-      const vd = document.getElementById('voice-detail');
-      if (vd) { vd.style.display = 'none'; document.getElementById('canvas-mic-btn').classList.remove('active'); }
-      const dd = document.getElementById('data-detail');
-      if (dd) { dd.style.display = 'none'; const db = document.getElementById('data-source-btn'); if (db) db.classList.remove('active'); }
-      _hideContentPanel();
-    }
   });
 
-  // Data source circle button — show/hide data controls panel
+  // Data source circle button — toggles data panel
   const _dataBtn = document.getElementById('data-source-btn');
   if (_dataBtn) {
     _dataBtn.addEventListener('click', () => {
@@ -3536,12 +3519,6 @@
       const isHidden = dd.style.display === 'none' || dd.style.display === '';
       dd.style.display = isHidden ? 'block' : 'none';
       _dataBtn.classList.toggle('active', isHidden);
-      // hide other panels
-      const vd = document.getElementById('voice-detail');
-      const cd = document.getElementById('camera-detail');
-      if (vd && isHidden) { vd.style.display = 'none'; document.getElementById('canvas-mic-btn').classList.remove('active'); }
-      if (cd && isHidden) { cd.style.display = 'none'; document.getElementById('cam-vis-btn').classList.remove('active'); }
-      if (isHidden) _hideContentPanel();
     });
   }
 

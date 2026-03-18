@@ -266,7 +266,8 @@
   font-size: 8px; font-weight: 600; letter-spacing: 0.8px;
   text-transform: uppercase; color: var(--sc-text-dim);
 }
-.input-detail { display: none; padding: 4px 10px 4px; }
+.input-detail { display: none; padding: 4px 0; }
+.input-detail .layer-controls { padding: 0 10px; }
 .input-detail.visible { display: block; }
 
 /* Layer button row (overlay) */

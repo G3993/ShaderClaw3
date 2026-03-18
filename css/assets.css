@@ -226,8 +226,7 @@
 /* Audio signal */
 .audio-signal-bar {
   display: none; align-items: center; gap: var(--sc-space-2);
-  padding: 6px var(--sc-space-3);
-  border-bottom: 1px solid var(--sc-border);
+  padding: 6px 10px;
 }
 .audio-signal-bar.active { display: flex; }
 .audio-signal-dot {
