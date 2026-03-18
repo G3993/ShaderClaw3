@@ -6,8 +6,8 @@ let ndiReceiveEntry = null;
 let ndiReceiveCanvas = null;
 let ndiReceiveCtx = null;
 let ndiSendingActive = false;
-// Auto-start NDI only on desktop — mobile has no server and wastes CPU/battery
-let _ndiAutoStartOnConnect = !(window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent));
+// Auto-start NDI on connect (always on by default)
+let _ndiAutoStartOnConnect = true;
 let ndiSendAnimId = null;
 let ndiSendFrameCount = 0;
 let ndiSendWorker = null;

@@ -10,7 +10,7 @@
 }
 .control-row:last-child { margin-bottom: 0; }
 .control-row label {
-  min-width: var(--sc-label-w); max-width: 40%; flex-shrink: 0;
+  width: var(--sc-label-w); flex-shrink: 0;
   color: var(--sc-text-dim);
   text-overflow: ellipsis; overflow: hidden; white-space: nowrap;
   font-size: var(--sc-font-size-sm); text-transform: uppercase; letter-spacing: 0.5px;
@@ -141,7 +141,7 @@
   box-shadow: 0 0 12px rgba(232,64,87,0.1);
 }
 .signal-row-label {
-  min-width: var(--sc-label-w); max-width: 40%; flex-shrink: 0;
+  width: var(--sc-label-w); flex-shrink: 0;
   color: var(--sc-accent); font-size: var(--sc-font-size-base);
   font-weight: 600; letter-spacing: 0.3px;
   text-overflow: ellipsis; overflow: hidden; white-space: nowrap;

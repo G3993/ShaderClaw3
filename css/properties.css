@@ -62,7 +62,7 @@
 .layer-type-content.active { display: block; }
 .layer-type-content .layer-preset-row { display: flex; }
 .layer-type-content .layer-controls { display: block; }
-.layer-type-content .layer-params { display: block; padding: var(--sc-space-1) var(--sc-space-3) var(--sc-space-2); }
+.layer-type-content .layer-params { display: block; padding: 4px 10px 6px; }
 .layer-type-content .text-msg-bar { display: flex; }
 
 /* Toggle sections (Text, 3D) — visible in flattened sections or legacy card */
@@ -105,7 +105,7 @@
 .sc3-section-body > .layer-toggle-section > .layer-toggle-body { display: block; }
 .layer-toggle-body .layer-preset-row { display: flex; }
 .layer-toggle-body .layer-controls { display: block; }
-.layer-toggle-body .layer-params { display: block; padding: 0 var(--sc-space-3) var(--sc-space-2); }
+.layer-toggle-body .layer-params { display: block; padding: 0 10px 6px; }
 .layer-toggle-body .text-msg-bar { display: flex; }
 
 /* Layer header */
@@ -207,7 +207,7 @@
   margin-bottom: 10px; min-height: 26px; font-size: var(--sc-font-size-base);
 }
 .layer-control-row label {
-  min-width: 52px; max-width: 40%; flex-shrink: 0;
+  width: 72px; flex-shrink: 0;
   color: var(--sc-text-dim); font-size: var(--sc-font-size-sm);
   text-overflow: ellipsis; overflow: hidden; white-space: nowrap;
   text-transform: uppercase; letter-spacing: 0.5px;
@@ -233,12 +233,12 @@
 .layer-params {
   max-height: 0; overflow: hidden;
   transition: max-height 0.2s ease-out;
-  padding: 0 var(--sc-space-3);
+  padding: 0 10px;
 }
 .layer-card.open .layer-params,
 .sc3-section-body .layer-params {
   max-height: 400px; overflow-y: auto;
-  padding: 0 var(--sc-space-3) var(--sc-space-2);
+  padding: 0 10px 6px;
 }
 .layer-params::-webkit-scrollbar { width: 4px; }
 .layer-params::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
@@ -361,8 +361,8 @@
 .sc3-layer-dropdown {
   display: none;
   flex-direction: column;
-  margin: 0 var(--sc-space-3);
-  padding: var(--sc-space-2) var(--sc-space-3) var(--sc-space-1);
+  margin: 0 10px;
+  padding: 8px 10px 4px;
   background: rgba(255,255,255,0.025);
   border: 1px solid var(--sc-border); border-top: none;
   border-radius: 0 0 var(--sc-radius) var(--sc-radius);

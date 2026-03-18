@@ -170,7 +170,16 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
           <span>Audio</span>
         </button>
+        <button class="sc3-content-tile" data-type="overlay">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="2"/><rect x="7" y="7" width="10" height="10" rx="1" stroke-dasharray="2 1.5"/></svg>
+          <span>Overlay</span>
+        </button>
+        <button class="sc3-content-tile" data-type="file">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <span>File</span>
+        </button>
       </div>
+      <input type="file" id="data-file-input" accept=".md,.txt,.json,.csv,.xml,.yml,.yaml" style="display:none">
       <!-- Hidden old elements kept for JS compat -->
       <div style="display:none">
         <div class="asset-add-wrap">
@@ -304,7 +313,7 @@
           <div class="audio-level-track"><span class="audio-level-fill" id="audio-level-fill"></span></div>
         </div>
       </div>
-      <div id="error-bar"></div>
+      <div id="error-bar" data-init="1"></div>
       <div id="debug-overlay" style="display:none;pointer-events:none"></div>
       <!-- Hidden file inputs (must exist for JS) -->
       <input type="file" id="image-file-input" accept="image/jpeg,image/png,image/gif,image/webp" multiple style="display:none">
@@ -353,7 +362,7 @@
     <!-- Tab Bar -->
     <nav class="sc3-tab-bar">
       <button class="sc3-tab active" data-tab="canvas">Controls</button>
-      <button class="sc3-tab" data-tab="assets">Code</button>
+      <button class="sc3-tab" data-tab="assets">Assets</button>
       <button class="sc3-tab" data-tab="gallery">Gallery</button>
     </nav>
 

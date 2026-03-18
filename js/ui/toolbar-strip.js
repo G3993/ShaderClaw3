@@ -56,8 +56,16 @@
         ndi: 'tile-ndi',
         code: 'tile-code'
       };
-      const hiddenTile = document.getElementById(tileMap[type]);
-      if (hiddenTile) hiddenTile.click();
+      if (type === 'overlay') {
+        const oi = document.getElementById('image-file-input');
+        if (oi) oi.click();
+      } else if (type === 'file') {
+        const fi = document.getElementById('data-file-input') || document.getElementById('code-file-input');
+        if (fi) fi.click();
+      } else {
+        const hiddenTile = document.getElementById(tileMap[type]);
+        if (hiddenTile) hiddenTile.click();
+      }
     });
   });
 

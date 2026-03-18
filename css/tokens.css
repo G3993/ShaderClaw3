@@ -79,12 +79,12 @@
   /* Floating panel dimensions */
   --sc-topbar-h:      48px;
   --sc-toolbar-w:     54px;
-  --sc-detail-w:      300px;
+  --sc-detail-w:      320px;
   --sc-panel-gap:     12px;
   --sc-panel-radius:  16px;
 
   /* Control sizing */
-  --sc-label-w:    64px;
+  --sc-label-w:    72px;
   --sc-val-w:      38px;
   --sc-slider-h:   4px;
   --sc-control-gap: 8px;
