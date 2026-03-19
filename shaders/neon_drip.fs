@@ -19,6 +19,17 @@
       "MIN": 0,
       "MAX": 1,
       "LABEL": "Blob Count"
+    },
+    {
+      "NAME": "baseColor",
+      "LABEL": "Color",
+      "TYPE": "color",
+      "DEFAULT": [0.91, 0.25, 0.34, 1.0]
+    },
+    {
+      "NAME": "texture",
+      "LABEL": "Texture",
+      "TYPE": "image"
     }
   ]
 }*/
@@ -74,6 +85,11 @@ void main() {
   col = max(col, vec3(0.0));
   col = col * (2.51 * col + 0.03) / (col * (2.43 * col + 0.59) + 0.14);
   col = pow(col, vec3(0.90));
+
+  col *= baseColor.rgb;
+  vec2 texUV = gl_FragCoord.xy / RENDERSIZE;
+  vec4 texSample = IMG_NORM_PIXEL(texture, texUV);
+  col = mix(col, col * texSample.rgb, texSample.a * 0.5);
 
   gl_FragColor = vec4(col, 1.0);
 }

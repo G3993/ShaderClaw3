@@ -19,6 +19,17 @@
       "MIN": 0,
       "MAX": 2,
       "LABEL": "Bass Intensity"
+    },
+    {
+      "NAME": "baseColor",
+      "LABEL": "Color",
+      "TYPE": "color",
+      "DEFAULT": [0.91, 0.25, 0.34, 1.0]
+    },
+    {
+      "NAME": "texture",
+      "LABEL": "Texture",
+      "TYPE": "image"
     }
   ]
 }*/
@@ -140,6 +151,11 @@ void main() {
   col += (hash(gl_FragCoord.xy + fract(t * 7.3) * 100.0) - 0.5) * 0.018;
   col = col / (col + vec3(1.5));
   col = pow(max(col, vec3(0.0)), vec3(0.88));
+
+  col *= baseColor.rgb;
+  vec2 texUV = gl_FragCoord.xy / RENDERSIZE;
+  vec4 texSample = IMG_NORM_PIXEL(texture, texUV);
+  col = mix(col, col * texSample.rgb, texSample.a * 0.5);
 
   gl_FragColor = vec4(col, 1.0);
 }

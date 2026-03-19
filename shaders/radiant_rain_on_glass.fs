@@ -40,6 +40,17 @@
         0.34,
         1
       ]
+    },
+    {
+      "NAME": "baseColor",
+      "LABEL": "Color",
+      "TYPE": "color",
+      "DEFAULT": [0.91, 0.25, 0.34, 1.0]
+    },
+    {
+      "NAME": "texture",
+      "LABEL": "Texture",
+      "TYPE": "image"
     }
   ]
 }*/
@@ -214,6 +225,11 @@ void main() {
 
     // Tone mapping
     col = col / (1.0 + col * 0.3);
+
+    col *= baseColor.rgb;
+    vec2 texUV = gl_FragCoord.xy / RENDERSIZE;
+    vec4 texSample = IMG_NORM_PIXEL(texture, texUV);
+    col = mix(col, col * texSample.rgb, texSample.a * 0.5);
 
     gl_FragColor = vec4(col, 1.0);
 }

@@ -21,6 +21,17 @@
       "MIN": 0.3,
       "MAX": 2,
       "DEFAULT": 1
+    },
+    {
+      "NAME": "baseColor",
+      "LABEL": "Color",
+      "TYPE": "color",
+      "DEFAULT": [0.91, 0.25, 0.34, 1.0]
+    },
+    {
+      "NAME": "texture",
+      "LABEL": "Texture",
+      "TYPE": "image"
     }
   ]
 }*/
@@ -243,6 +254,11 @@ void main() {
 
     float grain = hash12(gl_FragCoord.xy + fract(TIME * 7.13) * 100.0);
     col += (grain - 0.5) * 0.015;
+
+    col *= baseColor.rgb;
+    vec2 texUV = gl_FragCoord.xy / RENDERSIZE;
+    vec4 texSample = IMG_NORM_PIXEL(texture, texUV);
+    col = mix(col, col * texSample.rgb, texSample.a * 0.5);
 
     gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

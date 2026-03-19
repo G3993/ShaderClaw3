@@ -19,6 +19,17 @@
       "MIN": 0,
       "MAX": 2,
       "LABEL": "Sparkle Intensity"
+    },
+    {
+      "NAME": "baseColor",
+      "LABEL": "Color",
+      "TYPE": "color",
+      "DEFAULT": [0.91, 0.25, 0.34, 1.0]
+    },
+    {
+      "NAME": "texture",
+      "LABEL": "Texture",
+      "TYPE": "image"
     }
   ]
 }*/
@@ -114,6 +125,11 @@ void main() {
   float vig = 1.0 - smoothstep(0.4, 1.3, length(uv));
   col *= 0.6 + 0.4 * vig;
   col = pow(max(col, vec3(0.0)), vec3(0.93, 0.97, 1.04));
+
+  col *= baseColor.rgb;
+  vec2 texUV = gl_FragCoord.xy / RENDERSIZE;
+  vec4 texSample = IMG_NORM_PIXEL(texture, texUV);
+  col = mix(col, col * texSample.rgb, texSample.a * 0.5);
 
   gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
