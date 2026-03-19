@@ -57,8 +57,9 @@ function handleNdiVideoFrame(data, glRef) {
       ndiReceiveCtx.drawImage(bitmap, 0, 0);
       bitmap.close();
 
-      // Upload to GL texture
+      // Upload to GL texture (flip Y for correct orientation)
       if (ndiReceiveEntry.glTexture && glRef) {
+        glRef.pixelStorei(glRef.UNPACK_FLIP_Y_WEBGL, true);
         glRef.bindTexture(glRef.TEXTURE_2D, ndiReceiveEntry.glTexture);
         if (ndiReceiveEntry._texW === width && ndiReceiveEntry._texH === height) {
           glRef.texSubImage2D(glRef.TEXTURE_2D, 0, 0, 0, glRef.RGBA, glRef.UNSIGNED_BYTE, ndiReceiveCanvas);
@@ -67,6 +68,7 @@ function handleNdiVideoFrame(data, glRef) {
           ndiReceiveEntry._texW = width;
           ndiReceiveEntry._texH = height;
         }
+        glRef.pixelStorei(glRef.UNPACK_FLIP_Y_WEBGL, false);
       }
 
       // Three.js texture
