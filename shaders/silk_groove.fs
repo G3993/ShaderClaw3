@@ -19,6 +19,17 @@
       "MIN": 0,
       "MAX": 2,
       "LABEL": "Fold Depth"
+    },
+    {
+      "NAME": "baseColor",
+      "LABEL": "Color",
+      "TYPE": "color",
+      "DEFAULT": [0.91, 0.25, 0.34, 1.0]
+    },
+    {
+      "NAME": "inputTexture",
+      "LABEL": "Texture",
+      "TYPE": "image"
     }
   ]
 }*/
@@ -72,11 +83,11 @@ void main() {
   float fresnel = pow(1.0 - max(dot(N, V), 0.0), 3.0);
 
   float cm1 = smoothstep(-0.3, 0.4, h);
-  vec3 baseColor = mix(vec3(0.32, 0.07, 0.09), vec3(0.45, 0.22, 0.08), cm1);
-  baseColor = mix(baseColor, vec3(0.70, 0.50, 0.16), (snoise(sp * 0.25 + t * 0.02) * 0.5 + 0.5) * 0.5);
+  vec3 silkBase = mix(vec3(0.32, 0.07, 0.09), vec3(0.45, 0.22, 0.08), cm1);
+  silkBase = mix(silkBase, vec3(0.70, 0.50, 0.16), (snoise(sp * 0.25 + t * 0.02) * 0.5 + 0.5) * 0.5);
 
-  vec3 col = baseColor * 0.15 + baseColor * d1 * 0.5 * vec3(1.0, 0.87, 0.58);
-  col += baseColor * sheen * vec3(1.0, 0.87, 0.58);
+  vec3 col = silkBase * 0.15 + silkBase * d1 * 0.5 * vec3(1.0, 0.87, 0.58);
+  col += silkBase * sheen * vec3(1.0, 0.87, 0.58);
   col += vec3(1.0, 0.88, 0.55) * spec * 0.6 + vec3(1.0, 0.94, 0.75) * spark * 0.5;
   col += vec3(1.0, 0.94, 0.75) * fresnel * 0.1;
   col += vec3(0.1, 0.06, 0.02) * audioLevel;
@@ -88,6 +99,11 @@ void main() {
   col = col / (col + vec3(0.6));
   col = pow(col, vec3(0.9));
   col = max(col, vec3(0.018, 0.015, 0.013));
+
+  vec2 texUV = gl_FragCoord.xy / RENDERSIZE.xy;
+  vec4 texSample = texture2D(inputTexture, texUV);
+  col = mix(col, texSample.rgb, texSample.a * 0.3);
+  col = mix(col, col * baseColor.rgb, 0.5);
 
   gl_FragColor = vec4(col, 1.0);
 }

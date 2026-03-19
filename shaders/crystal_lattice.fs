@@ -19,6 +19,17 @@
       "MIN": 0,
       "MAX": 2,
       "LABEL": "Facet Count"
+    },
+    {
+      "NAME": "baseColor",
+      "LABEL": "Color",
+      "TYPE": "color",
+      "DEFAULT": [0.91, 0.25, 0.34, 1.0]
+    },
+    {
+      "NAME": "inputTexture",
+      "LABEL": "Texture",
+      "TYPE": "image"
     }
   ]
 }*/
@@ -46,5 +57,10 @@ void main() {
   float vig = 1.0 - smoothstep(0.4, 1.2, length(uv));
   col *= 0.6 + 0.4 * vig;
   col = pow(max(col, vec3(0.0)), vec3(0.95));
+  vec2 texUV = gl_FragCoord.xy / RENDERSIZE.xy;
+  vec4 texSample = texture2D(inputTexture, texUV);
+  col = mix(col, texSample.rgb, texSample.a * 0.3);
+  col = mix(col, col * baseColor.rgb, 0.5);
+
   gl_FragColor = vec4(col, 1.0);
 }

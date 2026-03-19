@@ -19,6 +19,17 @@
       "MIN": 0,
       "MAX": 2,
       "LABEL": "Flow Speed"
+    },
+    {
+      "NAME": "baseColor",
+      "LABEL": "Color",
+      "TYPE": "color",
+      "DEFAULT": [0.91, 0.25, 0.34, 1.0]
+    },
+    {
+      "NAME": "inputTexture",
+      "LABEL": "Texture",
+      "TYPE": "image"
     }
   ]
 }*/
@@ -83,6 +94,11 @@ void main() {
   col = clamp(col, 0.0, 1.0);
   col = pow(col, vec3(0.95));
   col = col * col * (3.0 - 2.0 * col);
+
+  vec2 texUV = gl_FragCoord.xy / RENDERSIZE.xy;
+  vec4 texSample = texture2D(inputTexture, texUV);
+  col = mix(col, texSample.rgb, texSample.a * 0.3);
+  col = mix(col, col * baseColor.rgb, 0.5);
 
   gl_FragColor = vec4(col, 1.0);
 }
