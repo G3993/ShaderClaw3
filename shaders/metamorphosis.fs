@@ -27,7 +27,7 @@
       "DEFAULT": [0.91, 0.25, 0.34, 1.0]
     },
     {
-      "NAME": "inputTexture",
+      "NAME": "inputTex",
       "LABEL": "Texture",
       "TYPE": "image"
     }
@@ -99,7 +99,7 @@ void main() {
   col *= 1.0 - dot(uv, uv) * 0.25;
 
   vec2 texUV = gl_FragCoord.xy / RENDERSIZE.xy;
-  vec4 texSample = texture2D(inputTexture, texUV);
+  vec4 texSample = texture2D(inputTex, texUV);
   col = mix(col, texSample.rgb, texSample.a * 0.3);
   col = mix(col, col * baseColor.rgb, 0.5);
 
