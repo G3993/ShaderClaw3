@@ -96,20 +96,6 @@ void main() {
     vec2 p = vec2((uv.x - 0.5) * aspect + 0.5, uv.y);
     float maxW = aspect * 0.9;
 
-    // Fixed character size — scale down on portrait so text fits width
-    float charH = 0.18 * sc;
-    if (aspect < 1.0) charH *= aspect;
-    float charW = charH * (5.0 / 7.0);
-    float gap = charW * 0.25 * kr;
-    float cellStep = charW + gap;
-
-    // How many chars fit on screen at this size
-    int maxVisible = int(floor((maxW + gap) / cellStep));
-    if (maxVisible < 1) maxVisible = 1;
-    if (maxVisible > 64) maxVisible = 64;
-
-    float originY = 0.5 - charH * 0.5;
-
     // Typewriter reveal
     float typeTime = float(numChars) / speed;
     float t = TIME;
@@ -119,13 +105,25 @@ void main() {
     }
     int revealed = int(floor(t * speed));
     if (revealed > numChars) revealed = numChars;
+    int showCount = revealed;
 
-    // Sliding window: when text exceeds screen, drop old chars off the left
-    int startIdx = 0;
-    if (revealed > maxVisible) startIdx = revealed - maxVisible;
-    int showCount = revealed - startIdx;
+    // Auto-scale: shrink text to fit all revealed characters on screen
+    float baseH = 0.18 * sc;
+    if (aspect < 1.0) baseH *= aspect;
+    float baseW = baseH * (5.0 / 7.0);
+    float baseGap = baseW * 0.25 * kr;
+    float baseStep = baseW + baseGap;
+    float neededW = float(max(showCount, 1)) * baseStep;
+    float fitScale = neededW > maxW ? maxW / neededW : 1.0;
 
-    // Center visible text
+    float charH = baseH * fitScale;
+    float charW = charH * (5.0 / 7.0);
+    float gap = charW * 0.25 * kr;
+    float cellStep = charW + gap;
+
+    float originY = 0.5 - charH * 0.5;
+
+    // Center visible text — all characters always visible
     float visibleW = float(showCount) * cellStep - gap;
     if (showCount <= 0) visibleW = 0.0;
     float originX = 0.5 - visibleW * 0.5;
@@ -137,10 +135,9 @@ void main() {
 
     for (int i = 0; i < 64; i++) {
         if (i >= showCount) break;
-        int charIdx = startIdx + i;
-        if (charIdx >= numChars) break;
+        if (i >= numChars) break;
 
-        int ch = getChar(charIdx);
+        int ch = getChar(i);
         float cx = originX + float(i) * cellStep;
         // Oscillator: per-character Y offset
         float oscY = oscAmount * sin(TIME * oscSpeed * 6.2832 + float(i) * oscSpread * 3.14159);
