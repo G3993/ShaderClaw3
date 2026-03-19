@@ -575,15 +575,6 @@
     "hidden": true
   },
   {
-    "id": 300,
-    "title": "Event Horizon",
-    "description": "Black hole with gravitational lensing and accretion disk",
-    "categories": [
-      "Generator"
-    ],
-    "file": "radiant_event_horizon.fs"
-  },
-  {
     "id": 301,
     "title": "Rain on Glass",
     "description": "Procedural rain drops on glass with bokeh background",
@@ -602,15 +593,6 @@
     "file": "radiant_eclipse_glow.fs"
   },
   {
-    "id": 303,
-    "title": "Liquid Gold",
-    "description": "Viscous liquid gold with FBM and metaballs",
-    "categories": [
-      "Generator"
-    ],
-    "file": "radiant_liquid_gold.fs"
-  },
-  {
     "id": 304,
     "title": "Sacred Strange",
     "description": "Sacred geometry with golden spirals and polar-fold SDFs",
@@ -627,15 +609,6 @@
       "Generator"
     ],
     "file": "radiant_gilt_mosaic.fs"
-  },
-  {
-    "id": 306,
-    "title": "Aurora Veil",
-    "description": "Northern lights with ribbon layers and ice crystal ground",
-    "categories": [
-      "Generator"
-    ],
-    "file": "radiant_aurora_veil.fs"
   },
   {
     "id": 307,
@@ -728,15 +701,6 @@
     "file": "bass_ripple.fs"
   },
   {
-    "id": 326,
-    "title": "Sleep Paralysis",
-    "description": "Layered shadow figures in fog",
-    "categories": [
-      "Generator"
-    ],
-    "file": "sleep_paralysis.fs"
-  },
-  {
     "id": 327,
     "title": "Ink Dissolve",
     "description": "Domain-warped ink dissolution effect",
@@ -771,15 +735,6 @@
       "Generator"
     ],
     "file": "golden_throne.fs"
-  },
-  {
-    "id": 331,
-    "title": "Tropical Heat",
-    "description": "Heat shimmer with chromatic aberration",
-    "categories": [
-      "Generator"
-    ],
-    "file": "tropical_heat.fs"
   },
   {
     "id": 332,
