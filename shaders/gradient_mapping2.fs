@@ -1,68 +1,67 @@
 
 /*{
-	"DESCRIPTION": "",
-	"CREDIT": "",
-	"ISFVSN": "2",
-	"CATEGORIES": [
-		"XXX"
-	],
-	"INPUTS": [
-		{
-			"NAME": "inputImage",
-			"TYPE": "image"
-		},
-		{
-			"NAME": "baseColor",
-			"TYPE": "color",
-			"DEFAULT": [
-				1.0,
-				1.0,
-				1.0,
-				1.0
-			]
-		},
-		{
-			"NAME": "targetColor",
-			"TYPE": "color",
-			"DEFAULT": [
-				0.91,
-				0.25,
-				0.34,
-				1.0
-			]
-		},
-		{
-			"NAME": "targetColorPoint",
-			"TYPE": "float",
-			"DEFAULT": 0.5
-		},
-		{
-			"NAME": "targetColorRange",
-			"TYPE": "float",
-			"DEFAULT": 0.3
-		},
-		{
-			"NAME": "showGradient",
-			"TYPE": "bool",
-			"DEFAULT": true
-		},
-		{
-			"NAME": "showSolarized",
-			"TYPE": "bool",
-			"DEFAULT": false
-		}
-	],
-	"PASSES": [
-		{
-			"TARGET":"bufferVariableNameA",
-			"WIDTH": "$WIDTH/16.0",
-			"HEIGHT": "$HEIGHT/16.0"
-		},
-		{
-			"DESCRIPTION": "this empty pass is rendered at the same rez as whatever you are running the ISF filter at- the previous step rendered an image at one-sixteenth the res, so this step ensures that the output is full-size"
-		}
-	]
-	
+  "DESCRIPTION": "",
+  "CREDIT": "",
+  "ISFVSN": "2",
+  "CATEGORIES": [
+    "XXX"
+  ],
+  "INPUTS": [
+    {
+      "NAME": "inputImage",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "baseColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.91,
+        0.25,
+        0.34,
+        1
+      ]
+    },
+    {
+      "NAME": "targetColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.91,
+        0.25,
+        0.34,
+        1
+      ]
+    },
+    {
+      "NAME": "targetColorPoint",
+      "TYPE": "float",
+      "DEFAULT": 0.5
+    },
+    {
+      "NAME": "targetColorRange",
+      "TYPE": "float",
+      "DEFAULT": 0.3
+    },
+    {
+      "NAME": "showGradient",
+      "TYPE": "bool",
+      "DEFAULT": true
+    },
+    {
+      "NAME": "showSolarized",
+      "TYPE": "bool",
+      "DEFAULT": false
+    }
+  ],
+  "PASSES": [
+    {
+      "TARGET": "bufferVariableNameA",
+      "WIDTH": "$WIDTH/16.0",
+      "HEIGHT": "$HEIGHT/16.0"
+    },
+    {
+      "DESCRIPTION": "this empty pass is rendered at the same rez as whatever you are running the ISF filter at- the previous step rendered an image at one-sixteenth the res, so this step ensures that the output is full-size"
+    }
+  ]
 }*/
 vec3 rgb2hsl( in vec3 c ){
   float h = 0.0;
