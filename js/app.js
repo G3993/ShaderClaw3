@@ -2603,8 +2603,8 @@
     opts.innerHTML = `
       <canvas class="sopt-curve" width="200" height="80"></canvas>
       <div class="signal-opt-row"><label>Source</label><select class="sopt-signal">${buildSignalOptions(binding)}</select></div>
-      <div class="signal-opt-row sopt-range-row"><label>Min</label><input type="range" class="sopt-min-slider" min="0" max="2" step="0.0001" value="${binding.min}"><span class="sopt-val sopt-min-val">${parseFloat(binding.min).toFixed(4)}</span></div>
-      <div class="signal-opt-row sopt-range-row"><label>Max</label><input type="range" class="sopt-max-slider" min="0" max="2" step="0.0001" value="${binding.max}"><span class="sopt-val sopt-max-val">${parseFloat(binding.max).toFixed(4)}</span></div>
+      <div class="signal-opt-row sopt-range-row"><label>Min</label><input type="range" class="sopt-min-slider" min="${binding._pMin || 0}" max="${binding._pMax || 1}" step="0.0001" value="${binding.min}"><span class="sopt-val sopt-min-val">${parseFloat(binding.min).toFixed(4)}</span></div>
+      <div class="signal-opt-row sopt-range-row"><label>Max</label><input type="range" class="sopt-max-slider" min="${binding._pMin || 0}" max="${binding._pMax || 1}" step="0.0001" value="${binding.max}"><span class="sopt-val sopt-max-val">${parseFloat(binding.max).toFixed(4)}</span></div>
       <div class="signal-opt-row"><label>Smooth</label><input type="range" class="sopt-smooth" min="0" max="1" step="0.01" value="${binding.smoothing||0}"><span class="sopt-val sopt-smooth-val">${Math.round((binding.smoothing||0)*100)}%</span></div>
       <div class="signal-opt-row"><label>Easing</label><select class="sopt-easing">
         <option value="linear">Linear</option><option value="easeIn">Ease In</option><option value="easeOut">Ease Out</option><option value="easeInOut">Ease In Out</option><option value="spring">Spring</option><option value="custom">Custom</option>
@@ -2828,23 +2828,84 @@
     });
 
     // Config inputs
-    opts.querySelector('.sopt-min-slider').addEventListener('input', function() {
+    // Min slider
+    const minSlider = opts.querySelector('.sopt-min-slider');
+    const minVal = opts.querySelector('.sopt-min-val');
+    minSlider.addEventListener('input', function() {
       const layer = getLayer(layerId);
       if (!layer) return;
       const v = parseFloat(this.value);
       if (isNaN(v)) return;
       const b = layer.mpBindings.find(b => b.param === row.dataset.name);
       if (b) { b.min = v; updateRangeIndicator(row, b); }
-      opts.querySelector('.sopt-min-val').textContent = v.toFixed(4);
+      minVal.textContent = v.toFixed(4);
     });
-    opts.querySelector('.sopt-max-slider').addEventListener('input', function() {
+    // Click value label to type precise number
+    minVal.style.cursor = 'pointer';
+    minVal.addEventListener('click', function() {
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.step = '0.0001';
+      input.value = minSlider.value;
+      input.style.cssText = 'width:50px;background:rgba(0,0,0,0.5);border:1px solid rgba(232,64,87,0.4);border-radius:4px;color:#fff;font-size:11px;padding:2px 4px;text-align:right;';
+      this.replaceWith(input);
+      input.focus();
+      input.select();
+      const finish = () => {
+        const v = parseFloat(input.value);
+        if (!isNaN(v)) {
+          minSlider.value = v;
+          minSlider.dispatchEvent(new Event('input'));
+        }
+        const span = document.createElement('span');
+        span.className = 'sopt-val sopt-min-val';
+        span.style.cursor = 'pointer';
+        span.textContent = parseFloat(minSlider.value).toFixed(4);
+        input.replaceWith(span);
+        // Re-bind click
+        span.addEventListener('click', arguments.callee);
+      };
+      input.addEventListener('blur', finish);
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
+    });
+
+    // Max slider
+    const maxSlider = opts.querySelector('.sopt-max-slider');
+    const maxVal = opts.querySelector('.sopt-max-val');
+    maxSlider.addEventListener('input', function() {
       const layer = getLayer(layerId);
       if (!layer) return;
       const v = parseFloat(this.value);
       if (isNaN(v)) return;
       const b = layer.mpBindings.find(b => b.param === row.dataset.name);
       if (b) { b.max = v; updateRangeIndicator(row, b); }
-      opts.querySelector('.sopt-max-val').textContent = v.toFixed(4);
+      maxVal.textContent = v.toFixed(4);
+    });
+    maxVal.style.cursor = 'pointer';
+    maxVal.addEventListener('click', function() {
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.step = '0.0001';
+      input.value = maxSlider.value;
+      input.style.cssText = 'width:50px;background:rgba(0,0,0,0.5);border:1px solid rgba(232,64,87,0.4);border-radius:4px;color:#fff;font-size:11px;padding:2px 4px;text-align:right;';
+      this.replaceWith(input);
+      input.focus();
+      input.select();
+      const finish = () => {
+        const v = parseFloat(input.value);
+        if (!isNaN(v)) {
+          maxSlider.value = v;
+          maxSlider.dispatchEvent(new Event('input'));
+        }
+        const span = document.createElement('span');
+        span.className = 'sopt-val sopt-max-val';
+        span.style.cursor = 'pointer';
+        span.textContent = parseFloat(maxSlider.value).toFixed(4);
+        input.replaceWith(span);
+        span.addEventListener('click', arguments.callee);
+      };
+      input.addEventListener('blur', finish);
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
     });
     opts.querySelector('.sopt-smooth').addEventListener('input', function() {
       const layer = getLayer(layerId);
