@@ -496,18 +496,6 @@
     "hasVertex": true
   },
   {
-    "id": 202,
-    "title": "Movie Credits",
-    "description": "Classic Hollywood billing block — ultra-condensed movie poster credits with metallic shimmer",
-    "type": "text",
-    "categories": [
-      "Generator",
-      "Text"
-    ],
-    "file": "text_movie_credits.fs",
-    "hasVertex": true
-  },
-  {
     "id": 201,
     "title": "Oscar Trophy",
     "description": "Rotating gold Oscar trophy with dramatic spotlight, rim lighting, and audio-reactive glow — import your GLB model",
