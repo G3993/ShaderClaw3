@@ -6626,9 +6626,9 @@
   // WebSocket Client — connects to MCP server bridge
   // ============================================================
 
-  // Connect WS to localhost, LAN, or Railway (skip static hosts like Vercel)
-  const _isWSServer = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || /^192\.168\.|^10\.|^172\.(1[6-9]|2\d|3[01])\./.test(location.hostname) || /\.railway\.app$/.test(location.hostname);
-  if (_isWSServer && location.protocol !== 'file:') {
+  // Only connect WS to localhost/LAN (NDI runs locally, Vercel is static)
+  const _isLocalServer = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || /^192\.168\.|^10\.|^172\.(1[6-9]|2\d|3[01])\./.test(location.hostname);
+  if (_isLocalServer && location.protocol !== 'file:') {
     let ws = null;
     let reconnectTimer = null;
 
