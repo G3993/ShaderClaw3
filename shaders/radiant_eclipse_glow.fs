@@ -1,12 +1,27 @@
 /*{
-  "CATEGORIES": ["Radiant", "Space", "Noise"],
+  "CATEGORIES": [
+    "Radiant",
+    "Space",
+    "Noise"
+  ],
   "DESCRIPTION": "Solar eclipse with animated corona rays, chromosphere, diamond ring effect, and solar wind particles. From Radiant by Paul Bakaus (MIT).",
   "INPUTS": [
-    { "NAME": "coronaSize", "LABEL": "Corona Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "rayIntensity", "LABEL": "Ray Intensity", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "mousePos", "LABEL": "Mouse Position", "TYPE": "point2D", "DEFAULT": [0.0, 0.0] },
-    { "NAME": "audioLevel", "LABEL": "Audio Level", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "audioBass", "LABEL": "Audio Bass", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 }
+    {
+      "NAME": "coronaSize",
+      "LABEL": "Corona Size",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "rayIntensity",
+      "LABEL": "Ray Intensity",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2,
+      "DEFAULT": 1
+    }
   ]
 }*/
 

@@ -1,12 +1,35 @@
 /*{
-  "CATEGORIES": ["Radiant", "Geometric", "Sacred"],
+  "CATEGORIES": [
+    "Radiant",
+    "Geometric",
+    "Sacred"
+  ],
   "DESCRIPTION": "Sacred geometry patterns with golden spirals, polar-folded SDF stars, hex/square tiling, and glowing line rendering. From Radiant by Paul Bakaus (MIT).",
   "INPUTS": [
-    { "NAME": "rotationSpeed", "LABEL": "Rotation Speed", "TYPE": "float", "MIN": 0.05, "MAX": 1.0, "DEFAULT": 0.3 },
-    { "NAME": "complexity", "LABEL": "Complexity", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "pattern", "LABEL": "Dimensional Shift", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.05 },
-    { "NAME": "mousePos", "LABEL": "Mouse Position", "TYPE": "point2D", "DEFAULT": [0.0, 0.0] },
-    { "NAME": "audioLevel", "LABEL": "Audio Level", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 }
+    {
+      "NAME": "rotationSpeed",
+      "LABEL": "Rotation Speed",
+      "TYPE": "float",
+      "MIN": 0.05,
+      "MAX": 1,
+      "DEFAULT": 0.3
+    },
+    {
+      "NAME": "complexity",
+      "LABEL": "Complexity",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "pattern",
+      "LABEL": "Dimensional Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.05
+    }
   ]
 }*/
 

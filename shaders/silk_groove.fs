@@ -1,11 +1,25 @@
 /*{
-  "CATEGORIES": ["Radiant"],
+  "CATEGORIES": [
+    "Radiant"
+  ],
   "DESCRIPTION": "Luxurious draped silk fabric with flowing folds, specular highlights and warm color",
   "INPUTS": [
-    {"NAME": "flowSpeed", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 2.0, "LABEL": "Flow Speed"},
-    {"NAME": "foldDepth", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0, "LABEL": "Fold Depth"},
-    {"NAME": "audioLevel", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Audio Level"},
-    {"NAME": "audioBass", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Audio Bass"}
+    {
+      "NAME": "flowSpeed",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 2,
+      "LABEL": "Flow Speed"
+    },
+    {
+      "NAME": "foldDepth",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "LABEL": "Fold Depth"
+    }
   ]
 }*/
 

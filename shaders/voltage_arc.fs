@@ -1,12 +1,25 @@
 /*{
-  "CATEGORIES": ["Radiant"],
+  "CATEGORIES": [
+    "Radiant"
+  ],
   "DESCRIPTION": "Electric arcs crackling between orbiting conductor points with volumetric glow",
   "INPUTS": [
-    {"NAME": "arcIntensity", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0, "LABEL": "Arc Intensity"},
-    {"NAME": "crackleSpeed", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0, "LABEL": "Crackle Speed"},
-    {"NAME": "mousePos", "TYPE": "point2D", "DEFAULT": [0, 0], "MIN": [0, 0], "MAX": [1, 1], "LABEL": "Mouse Position"},
-    {"NAME": "audioLevel", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Audio Level"},
-    {"NAME": "audioBass", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Audio Bass"}
+    {
+      "NAME": "arcIntensity",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "LABEL": "Arc Intensity"
+    },
+    {
+      "NAME": "crackleSpeed",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 3,
+      "LABEL": "Crackle Speed"
+    }
   ]
 }*/
 

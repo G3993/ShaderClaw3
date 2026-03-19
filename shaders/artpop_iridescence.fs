@@ -1,11 +1,25 @@
 /*{
-  "CATEGORIES": ["Radiant"],
+  "CATEGORIES": [
+    "Radiant"
+  ],
   "DESCRIPTION": "Thin-film iridescent bubble surfaces with flowing organic interference patterns",
   "INPUTS": [
-    {"NAME": "filmThickness", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0, "LABEL": "Film Thickness"},
-    {"NAME": "flowSpeed", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 2.0, "LABEL": "Flow Speed"},
-    {"NAME": "audioLevel", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Audio Level"},
-    {"NAME": "audioBass", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Audio Bass"}
+    {
+      "NAME": "filmThickness",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "LABEL": "Film Thickness"
+    },
+    {
+      "NAME": "flowSpeed",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 2,
+      "LABEL": "Flow Speed"
+    }
   ]
 }*/
 

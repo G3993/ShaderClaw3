@@ -1,11 +1,25 @@
 /*{
-  "CATEGORIES": ["Radiant"],
+  "CATEGORIES": [
+    "Radiant"
+  ],
   "DESCRIPTION": "Sacred geometry mandala with golden ratio spirals and fractal hexagonal detail",
   "INPUTS": [
-    {"NAME": "rotationSpeed", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 1.0, "LABEL": "Rotation Speed"},
-    {"NAME": "complexity", "TYPE": "float", "DEFAULT": 5.0, "MIN": 2.0, "MAX": 8.0, "LABEL": "Complexity"},
-    {"NAME": "audioLevel", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Audio Level"},
-    {"NAME": "audioBass", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Audio Bass"}
+    {
+      "NAME": "rotationSpeed",
+      "TYPE": "float",
+      "DEFAULT": 0.3,
+      "MIN": 0,
+      "MAX": 1,
+      "LABEL": "Rotation Speed"
+    },
+    {
+      "NAME": "complexity",
+      "TYPE": "float",
+      "DEFAULT": 5,
+      "MIN": 2,
+      "MAX": 8,
+      "LABEL": "Complexity"
+    }
   ]
 }*/
 

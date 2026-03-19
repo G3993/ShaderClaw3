@@ -1,11 +1,25 @@
 /*{
-  "CATEGORIES": ["Radiant"],
+  "CATEGORIES": [
+    "Radiant"
+  ],
   "DESCRIPTION": "Cosmic stardust particles drifting through a warm nebula veil",
   "INPUTS": [
-    {"NAME": "driftSpeed", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 1.0, "LABEL": "Drift Speed"},
-    {"NAME": "starDensity", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0, "LABEL": "Star Density"},
-    {"NAME": "audioLevel", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Audio Level"},
-    {"NAME": "audioBass", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Audio Bass"}
+    {
+      "NAME": "driftSpeed",
+      "TYPE": "float",
+      "DEFAULT": 0.3,
+      "MIN": 0,
+      "MAX": 1,
+      "LABEL": "Drift Speed"
+    },
+    {
+      "NAME": "starDensity",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "LABEL": "Star Density"
+    }
   ]
 }*/
 

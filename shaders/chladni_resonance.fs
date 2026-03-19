@@ -1,12 +1,25 @@
 /*{
-  "CATEGORIES": ["Radiant"],
+  "CATEGORIES": [
+    "Radiant"
+  ],
   "DESCRIPTION": "Chladni resonance patterns - sand on vibrating plate",
   "INPUTS": [
-    {"NAME": "modeSpeed", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 2.0, "LABEL": "Mode Speed"},
-    {"NAME": "complexity", "TYPE": "float", "DEFAULT": 5.0, "MIN": 1.0, "MAX": 10.0, "LABEL": "Complexity"},
-    {"NAME": "mousePos", "TYPE": "point2D", "DEFAULT": [0, 0], "MIN": [0, 0], "MAX": [1, 1], "LABEL": "Mouse Position"},
-    {"NAME": "audioLevel", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Audio Level"},
-    {"NAME": "audioBass", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Audio Bass"}
+    {
+      "NAME": "modeSpeed",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 2,
+      "LABEL": "Mode Speed"
+    },
+    {
+      "NAME": "complexity",
+      "TYPE": "float",
+      "DEFAULT": 5,
+      "MIN": 1,
+      "MAX": 10,
+      "LABEL": "Complexity"
+    }
   ]
 }*/
 

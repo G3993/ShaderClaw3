@@ -1,11 +1,25 @@
 /*{
-  "CATEGORIES": ["Radiant"],
+  "CATEGORIES": [
+    "Radiant"
+  ],
   "DESCRIPTION": "Sharp geometric shapes flash with glowing afterimage silhouettes that fade cyan to magenta to dark",
   "INPUTS": [
-    {"NAME": "flashRate", "TYPE": "float", "DEFAULT": 0.7, "MIN": 0.1, "MAX": 2.0, "LABEL": "Flash Rate"},
-    {"NAME": "glowIntensity", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0, "LABEL": "Glow Intensity"},
-    {"NAME": "audioLevel", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Audio Level"},
-    {"NAME": "audioBass", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Audio Bass"}
+    {
+      "NAME": "flashRate",
+      "TYPE": "float",
+      "DEFAULT": 0.7,
+      "MIN": 0.1,
+      "MAX": 2,
+      "LABEL": "Flash Rate"
+    },
+    {
+      "NAME": "glowIntensity",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "LABEL": "Glow Intensity"
+    }
   ]
 }*/
 

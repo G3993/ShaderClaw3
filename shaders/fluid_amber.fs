@@ -1,11 +1,25 @@
 /*{
-  "CATEGORIES": ["Radiant"],
+  "CATEGORIES": [
+    "Radiant"
+  ],
   "DESCRIPTION": "Domain-warped simplex noise with warm amber palette",
   "INPUTS": [
-    {"NAME": "timeScale", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0, "LABEL": "Time Scale"},
-    {"NAME": "ampDecay", "TYPE": "float", "DEFAULT": 0.48, "MIN": 0.1, "MAX": 0.8, "LABEL": "Amp Decay"},
-    {"NAME": "audioLevel", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Audio Level"},
-    {"NAME": "audioBass", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Audio Bass"}
+    {
+      "NAME": "timeScale",
+      "TYPE": "float",
+      "DEFAULT": 0.15,
+      "MIN": 0,
+      "MAX": 1,
+      "LABEL": "Time Scale"
+    },
+    {
+      "NAME": "ampDecay",
+      "TYPE": "float",
+      "DEFAULT": 0.48,
+      "MIN": 0.1,
+      "MAX": 0.8,
+      "LABEL": "Amp Decay"
+    }
   ]
 }*/
 

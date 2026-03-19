@@ -1,13 +1,46 @@
 /*{
-  "CATEGORIES": ["Radiant", "Weather", "Noise"],
+  "CATEGORIES": [
+    "Radiant",
+    "Weather",
+    "Noise"
+  ],
   "DESCRIPTION": "Procedural rain drops running down glass with refraction distortion. Inspired by Radiant by Paul Bakaus (MIT).",
   "INPUTS": [
-    { "NAME": "rainAmount", "LABEL": "Rain Amount", "TYPE": "float", "MIN": 0.1, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "refraction", "LABEL": "Refraction", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 1.0 },
-    { "NAME": "dropSpeed", "LABEL": "Drop Speed", "TYPE": "float", "MIN": 0.1, "MAX": 2.0, "DEFAULT": 0.7 },
-    { "NAME": "bgColor", "LABEL": "Background Color", "TYPE": "color", "DEFAULT": [0.91, 0.25, 0.34, 1.0] },
-    { "NAME": "mousePos", "LABEL": "Mouse Position", "TYPE": "point2D", "DEFAULT": [0.0, 0.0] },
-    { "NAME": "audioBass", "LABEL": "Audio Bass", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 }
+    {
+      "NAME": "rainAmount",
+      "LABEL": "Rain Amount",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 2,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "refraction",
+      "LABEL": "Refraction",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 3,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "dropSpeed",
+      "LABEL": "Drop Speed",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 2,
+      "DEFAULT": 0.7
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.91,
+        0.25,
+        0.34,
+        1
+      ]
+    }
   ]
 }*/
 

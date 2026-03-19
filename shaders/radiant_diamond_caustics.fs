@@ -1,12 +1,27 @@
 /*{
-  "CATEGORIES": ["Radiant", "Geometric", "Light"],
+  "CATEGORIES": [
+    "Radiant",
+    "Geometric",
+    "Light"
+  ],
   "DESCRIPTION": "Diamond light caustics with prismatic fire, brilliant-cut facets, chromatic dispersion, scintillation sparkles, and star bursts. From Radiant by Paul Bakaus (MIT).",
   "INPUTS": [
-    { "NAME": "rotationSpeed", "LABEL": "Rotation Speed", "TYPE": "float", "MIN": 0.1, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "brilliance", "LABEL": "Brilliance", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "mousePos", "LABEL": "Mouse Position", "TYPE": "point2D", "DEFAULT": [0.0, 0.0] },
-    { "NAME": "audioLevel", "LABEL": "Audio Level", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "audioHigh", "LABEL": "Audio High", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 }
+    {
+      "NAME": "rotationSpeed",
+      "LABEL": "Rotation Speed",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 2,
+      "DEFAULT": 0.5
+    },
+    {
+      "NAME": "brilliance",
+      "LABEL": "Brilliance",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2,
+      "DEFAULT": 1
+    }
   ]
 }*/
 

@@ -1,14 +1,51 @@
 /*{
-  "CATEGORIES": ["Radiant", "Geometric", "Gold"],
+  "CATEGORIES": [
+    "Radiant",
+    "Geometric",
+    "Gold"
+  ],
   "DESCRIPTION": "Golden mosaic tiles with moving light sources, wave-flip animation, specular highlights, and micro-facet sparkle. From Radiant by Paul Bakaus (MIT).",
   "INPUTS": [
-    { "NAME": "animMode", "LABEL": "Wave Flip", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0 },
-    { "NAME": "tileScale", "LABEL": "Tile Scale", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "waveSpeed", "LABEL": "Wave Speed", "TYPE": "float", "MIN": 0.5, "MAX": 6.0, "DEFAULT": 4.0 },
-    { "NAME": "waveDelay", "LABEL": "Wave Delay", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 1.5 },
-    { "NAME": "waveDir", "LABEL": "Wave Direction", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 0.0 },
-    { "NAME": "mousePos", "LABEL": "Mouse Position", "TYPE": "point2D", "DEFAULT": [0.0, 0.0] },
-    { "NAME": "audioLevel", "LABEL": "Audio Level", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 }
+    {
+      "NAME": "animMode",
+      "LABEL": "Wave Flip",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "tileScale",
+      "LABEL": "Tile Scale",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "waveSpeed",
+      "LABEL": "Wave Speed",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 6,
+      "DEFAULT": 4
+    },
+    {
+      "NAME": "waveDelay",
+      "LABEL": "Wave Delay",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 4,
+      "DEFAULT": 1.5
+    },
+    {
+      "NAME": "waveDir",
+      "LABEL": "Wave Direction",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 0
+    }
   ]
 }*/
 

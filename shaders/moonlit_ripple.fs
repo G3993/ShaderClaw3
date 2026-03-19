@@ -1,12 +1,25 @@
 /*{
-  "CATEGORIES": ["Radiant"],
+  "CATEGORIES": [
+    "Radiant"
+  ],
   "DESCRIPTION": "Moonlit water surface with interfering ripple waves and specular reflections",
   "INPUTS": [
-    {"NAME": "rippleSpeed", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0, "LABEL": "Ripple Speed"},
-    {"NAME": "moonGlow", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0, "LABEL": "Moon Glow"},
-    {"NAME": "mousePos", "TYPE": "point2D", "DEFAULT": [0, 0], "MIN": [0, 0], "MAX": [1, 1], "LABEL": "Mouse Position"},
-    {"NAME": "audioLevel", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Audio Level"},
-    {"NAME": "audioBass", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Audio Bass"}
+    {
+      "NAME": "rippleSpeed",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "LABEL": "Ripple Speed"
+    },
+    {
+      "NAME": "moonGlow",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "LABEL": "Moon Glow"
+    }
   ]
 }*/
 

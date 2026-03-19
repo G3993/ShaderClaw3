@@ -1,12 +1,27 @@
 /*{
-  "CATEGORIES": ["Radiant", "Organic", "Fabric"],
+  "CATEGORIES": [
+    "Radiant",
+    "Organic",
+    "Fabric"
+  ],
   "DESCRIPTION": "Multi-layered silk fabric with domain-warped folds, Kajiya-Kay anisotropic specular, translucent layers, and sparkle. From Radiant by Paul Bakaus (MIT).",
   "INPUTS": [
-    { "NAME": "flowSpeed", "LABEL": "Flow Speed", "TYPE": "float", "MIN": 0.1, "MAX": 1.5, "DEFAULT": 0.4 },
-    { "NAME": "sheenIntensity", "LABEL": "Sheen Intensity", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "mousePos", "LABEL": "Mouse Position", "TYPE": "point2D", "DEFAULT": [0.0, 0.0] },
-    { "NAME": "audioLevel", "LABEL": "Audio Level", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "audioBass", "LABEL": "Audio Bass", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 }
+    {
+      "NAME": "flowSpeed",
+      "LABEL": "Flow Speed",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 1.5,
+      "DEFAULT": 0.4
+    },
+    {
+      "NAME": "sheenIntensity",
+      "LABEL": "Sheen Intensity",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2,
+      "DEFAULT": 1
+    }
   ]
 }*/
 

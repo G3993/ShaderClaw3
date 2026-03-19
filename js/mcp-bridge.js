@@ -6,8 +6,8 @@ let ndiReceiveEntry = null;
 let ndiReceiveCanvas = null;
 let ndiReceiveCtx = null;
 let ndiSendingActive = false;
-// Auto-start NDI on connect (always on by default)
-let _ndiAutoStartOnConnect = true;
+// Auto-start NDI only on localhost (Vercel has no server)
+let _ndiAutoStartOnConnect = (typeof location !== 'undefined') && (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || /^192\.168\.|^10\./.test(location.hostname));
 let ndiSendAnimId = null;
 let ndiSendFrameCount = 0;
 let ndiSendWorker = null;

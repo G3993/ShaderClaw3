@@ -1,11 +1,25 @@
 /*{
-  "CATEGORIES": ["Radiant"],
+  "CATEGORIES": [
+    "Radiant"
+  ],
   "DESCRIPTION": "Ornate gothic filigree scrollwork patterns",
   "INPUTS": [
-    {"NAME": "scrollSpeed", "TYPE": "float", "DEFAULT": 0.2, "MIN": 0.0, "MAX": 2.0, "LABEL": "Scroll Speed"},
-    {"NAME": "detail", "TYPE": "float", "DEFAULT": 1, "MIN": 0.0, "MAX": 2.0, "LABEL": "Detail"},
-    {"NAME": "audioLevel", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Audio Level"},
-    {"NAME": "audioBass", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Audio Bass"}
+    {
+      "NAME": "scrollSpeed",
+      "TYPE": "float",
+      "DEFAULT": 0.2,
+      "MIN": 0,
+      "MAX": 2,
+      "LABEL": "Scroll Speed"
+    },
+    {
+      "NAME": "detail",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "LABEL": "Detail"
+    }
   ]
 }*/
 

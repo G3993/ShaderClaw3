@@ -1,12 +1,25 @@
 /*{
-  "CATEGORIES": ["Radiant"],
+  "CATEGORIES": [
+    "Radiant"
+  ],
   "DESCRIPTION": "Morphing metallic blobs via ray-marched metaballs with studio lighting",
   "INPUTS": [
-    {"NAME": "morphSpeed", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 1.0, "LABEL": "Morph Speed"},
-    {"NAME": "blobCount", "TYPE": "float", "DEFAULT": 4.0, "MIN": 2.0, "MAX": 6.0, "LABEL": "Blob Count"},
-    {"NAME": "mousePos", "TYPE": "point2D", "DEFAULT": [0, 0], "MIN": [0, 0], "MAX": [1, 1], "LABEL": "Mouse Position"},
-    {"NAME": "audioLevel", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Audio Level"},
-    {"NAME": "audioBass", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Audio Bass"}
+    {
+      "NAME": "morphSpeed",
+      "TYPE": "float",
+      "DEFAULT": 0.3,
+      "MIN": 0,
+      "MAX": 1,
+      "LABEL": "Morph Speed"
+    },
+    {
+      "NAME": "blobCount",
+      "TYPE": "float",
+      "DEFAULT": 4,
+      "MIN": 2,
+      "MAX": 6,
+      "LABEL": "Blob Count"
+    }
   ]
 }*/
 
