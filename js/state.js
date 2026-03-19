@@ -184,6 +184,19 @@ function applyBindingValue(layer, b, rawSignal) {
   else if (easing === 'easeOut') v = 1 - (1 - v) * (1 - v);
   else if (easing === 'easeInOut') v = v < 0.5 ? 2 * v * v : 1 - 2 * (1 - v) * (1 - v);
   else if (easing === 'spring') { const sm = b.smoothing || 0; v = Math.max(0, Math.min(1.2, 1 - Math.exp(-6 * v) * Math.cos(v * (8 + sm * 12) * Math.PI))); }
+  else if (easing === 'custom' && b._bz) {
+    // Cubic bezier easing with draggable control points
+    const bz = b._bz;
+    function _cbz(t, p0, p1, p2, p3) { const u=1-t; return u*u*u*p0+3*u*u*t*p1+3*u*t*t*p2+t*t*t*p3; }
+    let t = v;
+    for (let i = 0; i < 8; i++) {
+      const cx = _cbz(t, 0, bz.x1, bz.x2, 1) - v;
+      const dx = 3*(1-t)*(1-t)*bz.x1 + 6*(1-t)*t*(bz.x2-bz.x1) + 3*t*t*(1-bz.x2);
+      if (Math.abs(dx) < 1e-6) break;
+      t = Math.max(0, Math.min(1, t - cx / dx));
+    }
+    v = Math.max(0, Math.min(1.2, _cbz(t, 0, bz.y1, bz.y2, 1)));
+  }
 
   // Range mapping
   let target = b.min + v * (b.max - b.min);

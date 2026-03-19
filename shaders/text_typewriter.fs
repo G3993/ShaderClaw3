@@ -113,7 +113,7 @@ void main() {
     float baseW = baseH * (5.0 / 7.0);
     float baseGap = baseW * 0.25 * kr;
     float baseStep = baseW + baseGap;
-    float neededW = float(max(showCount, 1)) * baseStep;
+    float neededW = max(float(showCount), 1.0) * baseStep;
     float fitScale = neededW > maxW ? maxW / neededW : 1.0;
 
     float charH = baseH * fitScale;

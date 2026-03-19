@@ -567,7 +567,7 @@
   flex: 1; min-width: 0; width: 100%; box-sizing: border-box;
   background: rgba(0,0,0,0.3); color: var(--sc-text-bright);
   border: 1px solid rgba(232, 64, 87, 0.3); border-radius: 6px;
-  padding: 4px 8px; font-size: var(--sc-font-size-base); height: 32px;
+  padding: 12px 8px; font-size: var(--sc-font-size-lg); height: 48px;
   font-family: var(--sc-font-mono); font-weight: 600;
   letter-spacing: 1px; text-transform: uppercase; text-align: center;
   overflow: hidden; text-overflow: ellipsis;

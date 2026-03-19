@@ -2606,64 +2606,159 @@
       <div class="signal-opt-row"><label>Range</label><input type="number" class="sopt-min" step="0.001" value="${binding.min}"><span class="range-arrow">\u2192</span><input type="number" class="sopt-max" step="0.001" value="${binding.max}"></div>
       <div class="signal-opt-row"><label>Smooth</label><input type="range" class="sopt-smooth" min="0" max="1" step="0.01" value="${binding.smoothing||0}"><span class="sopt-val sopt-smooth-val">${Math.round((binding.smoothing||0)*100)}%</span></div>
       <div class="signal-opt-row"><label>Easing</label><select class="sopt-easing">
-        <option value="linear">Linear</option><option value="easeIn">Ease In</option><option value="easeOut">Ease Out</option><option value="easeInOut">Ease In Out</option><option value="spring">Spring</option>
+        <option value="linear">Linear</option><option value="easeIn">Ease In</option><option value="easeOut">Ease Out</option><option value="easeInOut">Ease In Out</option><option value="spring">Spring</option><option value="custom">Custom</option>
       </select></div>
     `;
 
-    // Draw easing curve preview
+    // Bezier control points (normalized 0-1)
+    if (!binding._bz) binding._bz = { x1: 0.25, y1: 0.1, x2: 0.75, y2: 0.9 };
+    const bz = binding._bz;
+
+    // Cubic bezier eval
+    function cubicBez(t, p0, p1, p2, p3) {
+      const u = 1 - t;
+      return u*u*u*p0 + 3*u*u*t*p1 + 3*u*t*t*p2 + t*t*t*p3;
+    }
+    // Solve bezier X→T (Newton's method)
+    function bezierSolve(x, x1, x2) {
+      let t = x;
+      for (let i = 0; i < 8; i++) {
+        const cx = cubicBez(t, 0, x1, x2, 1) - x;
+        const dx = 3*(1-t)*(1-t)*(x1) + 6*(1-t)*t*(x2-x1) + 3*t*t*(1-x2);
+        if (Math.abs(dx) < 1e-6) break;
+        t -= cx / dx;
+        t = Math.max(0, Math.min(1, t));
+      }
+      return t;
+    }
+
+    // Draw easing curve (interactive)
     function drawCurve() {
       const canvas = opts.querySelector('.sopt-curve');
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       const w = canvas.width, h = canvas.height;
+      const pad = 6;
+      const gw = w - pad * 2, gh = h - pad * 2;
       ctx.clearRect(0, 0, w, h);
+
       // Grid
       ctx.strokeStyle = 'rgba(255,255,255,0.04)';
       ctx.lineWidth = 1;
       for (let i = 1; i < 4; i++) {
-        ctx.beginPath(); ctx.moveTo(w * i / 4, 0); ctx.lineTo(w * i / 4, h); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(0, h * i / 4); ctx.lineTo(w, h * i / 4); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(pad + gw * i / 4, pad); ctx.lineTo(pad + gw * i / 4, pad + gh); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(pad, pad + gh * i / 4); ctx.lineTo(pad + gw, pad + gh * i / 4); ctx.stroke();
       }
-      // Easing function
+
       const easing = binding.easing || 'easeInOut';
       const sm = binding.smoothing || 0;
+      const isCustom = easing === 'custom';
+
       function ease(t) {
+        if (isCustom) {
+          const tt = bezierSolve(t, bz.x1, bz.x2);
+          return cubicBez(tt, 0, bz.y1, bz.y2, 1);
+        }
         if (easing === 'linear') return t;
         if (easing === 'easeIn') return t * t;
         if (easing === 'easeOut') return 1 - (1 - t) * (1 - t);
         if (easing === 'easeInOut') return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-        if (easing === 'spring') { const d = 0.7 - sm * 0.4; return 1 - Math.exp(-6 * t) * Math.cos(t * (8 + sm * 12) * Math.PI); }
+        if (easing === 'spring') return 1 - Math.exp(-6 * t) * Math.cos(t * (8 + sm * 12) * Math.PI);
         return t;
       }
+
+      // Smoothing band
+      if (sm > 0.01) {
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255,130,160,0.2)';
+        ctx.lineWidth = 3 + sm * 6;
+        for (let px = 0; px <= gw; px++) {
+          const v = Math.max(0, Math.min(1, ease(px / gw)));
+          const x = pad + px, y = pad + gh - v * gh;
+          if (px === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
       // Main curve
       ctx.beginPath();
       ctx.strokeStyle = '#E84057';
       ctx.lineWidth = 2;
-      ctx.shadowColor = 'rgba(232,64,87,0.5)';
-      ctx.shadowBlur = 6;
-      for (let px = 0; px <= w; px++) {
-        const t = px / w;
-        const v = Math.max(0, Math.min(1, ease(t)));
-        const y = h - v * (h - 8) - 4;
-        if (px === 0) ctx.moveTo(px, y); else ctx.lineTo(px, y);
+      for (let px = 0; px <= gw; px++) {
+        const v = Math.max(0, Math.min(1.2, ease(px / gw)));
+        const x = pad + px, y = pad + gh - v * gh;
+        if (px === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
       }
       ctx.stroke();
-      ctx.shadowBlur = 0;
-      // Smoothing overlay (thicker, dimmer)
-      if (sm > 0.01) {
-        ctx.beginPath();
-        ctx.strokeStyle = 'rgba(255,130,160,0.3)';
-        ctx.lineWidth = 4 + sm * 8;
-        for (let px = 0; px <= w; px++) {
-          const t = px / w;
-          const v = Math.max(0, Math.min(1, ease(t)));
-          const y = h - v * (h - 8) - 4;
-          if (px === 0) ctx.moveTo(px, y); else ctx.lineTo(px, y);
-        }
-        ctx.stroke();
+
+      // Control points (only for custom)
+      if (isCustom) {
+        const p0x = pad, p0y = pad + gh;
+        const p3x = pad + gw, p3y = pad;
+        const p1x = pad + bz.x1 * gw, p1y = pad + gh - bz.y1 * gh;
+        const p2x = pad + bz.x2 * gw, p2y = pad + gh - bz.y2 * gh;
+
+        // Control lines
+        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(p0x, p0y); ctx.lineTo(p1x, p1y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(p3x, p3y); ctx.lineTo(p2x, p2y); ctx.stroke();
+
+        // Control handles
+        [{ x: p1x, y: p1y }, { x: p2x, y: p2y }].forEach(pt => {
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, 5, 0, Math.PI * 2);
+          ctx.fillStyle = '#E84057';
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, 3, 0, Math.PI * 2);
+          ctx.fillStyle = '#fff';
+          ctx.fill();
+        });
       }
     }
     drawCurve();
+
+    // Interactive drag on curve canvas (custom easing)
+    const curveCanvas = opts.querySelector('.sopt-curve');
+    let _dragPt = null;
+    function canvasPos(e) {
+      const r = curveCanvas.getBoundingClientRect();
+      const scaleX = curveCanvas.width / r.width;
+      const scaleY = curveCanvas.height / r.height;
+      const cx = (e.clientX || e.touches[0].clientX);
+      const cy = (e.clientY || e.touches[0].clientY);
+      return { x: (cx - r.left) * scaleX, y: (cy - r.top) * scaleY };
+    }
+    function startDrag(e) {
+      if ((binding.easing || 'easeInOut') !== 'custom') return;
+      const p = canvasPos(e);
+      const pad = 6, gw = curveCanvas.width - 12, gh = curveCanvas.height - 12;
+      const p1x = pad + bz.x1 * gw, p1y = pad + gh - bz.y1 * gh;
+      const p2x = pad + bz.x2 * gw, p2y = pad + gh - bz.y2 * gh;
+      const d1 = Math.hypot(p.x - p1x, p.y - p1y);
+      const d2 = Math.hypot(p.x - p2x, p.y - p2y);
+      if (d1 < 15) _dragPt = 1;
+      else if (d2 < 15) _dragPt = 2;
+      else _dragPt = null;
+      if (_dragPt) e.preventDefault();
+    }
+    function moveDrag(e) {
+      if (!_dragPt) return;
+      e.preventDefault();
+      const p = canvasPos(e);
+      const pad = 6, gw = curveCanvas.width - 12, gh = curveCanvas.height - 12;
+      const nx = Math.max(0, Math.min(1, (p.x - pad) / gw));
+      const ny = Math.max(-0.2, Math.min(1.2, 1 - (p.y - pad) / gh));
+      if (_dragPt === 1) { bz.x1 = nx; bz.y1 = ny; }
+      else { bz.x2 = nx; bz.y2 = ny; }
+      drawCurve();
+    }
+    function endDrag() { _dragPt = null; }
+    curveCanvas.addEventListener('pointerdown', startDrag);
+    curveCanvas.addEventListener('pointermove', moveDrag);
+    curveCanvas.addEventListener('pointerup', endDrag);
+    curveCanvas.addEventListener('pointerleave', endDrag);
 
     row.after(sr);
     sr.after(opts);
