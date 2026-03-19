@@ -573,5 +573,104 @@
     "file": "isf_multipass_poc.scene.js",
     "folder": "scenes",
     "hidden": true
+  },
+  {
+    "id": 300,
+    "title": "Event Horizon",
+    "description": "Black hole with gravitational lensing and accretion disk",
+    "categories": [
+      "Generator"
+    ],
+    "file": "radiant_event_horizon.fs"
+  },
+  {
+    "id": 301,
+    "title": "Rain on Glass",
+    "description": "Procedural rain drops on glass with bokeh background",
+    "categories": [
+      "Generator"
+    ],
+    "file": "radiant_rain_on_glass.fs"
+  },
+  {
+    "id": 302,
+    "title": "Eclipse Glow",
+    "description": "Solar eclipse with corona and diamond ring effect",
+    "categories": [
+      "Generator"
+    ],
+    "file": "radiant_eclipse_glow.fs"
+  },
+  {
+    "id": 303,
+    "title": "Liquid Gold",
+    "description": "Viscous liquid gold with FBM and metaballs",
+    "categories": [
+      "Generator"
+    ],
+    "file": "radiant_liquid_gold.fs"
+  },
+  {
+    "id": 304,
+    "title": "Sacred Strange",
+    "description": "Sacred geometry with golden spirals and polar-fold SDFs",
+    "categories": [
+      "Generator"
+    ],
+    "file": "radiant_sacred_strange.fs"
+  },
+  {
+    "id": 305,
+    "title": "Gilt Mosaic",
+    "description": "Golden mosaic tiles with wave-flip animation",
+    "categories": [
+      "Generator"
+    ],
+    "file": "radiant_gilt_mosaic.fs"
+  },
+  {
+    "id": 306,
+    "title": "Aurora Veil",
+    "description": "Northern lights with ribbon layers and ice crystal ground",
+    "categories": [
+      "Generator"
+    ],
+    "file": "radiant_aurora_veil.fs"
+  },
+  {
+    "id": 307,
+    "title": "Silk Cascade",
+    "description": "Multi-layered silk with anisotropic specular shading",
+    "categories": [
+      "Generator"
+    ],
+    "file": "radiant_silk_cascade.fs"
+  },
+  {
+    "id": 308,
+    "title": "Neon Revival",
+    "description": "Flickering neon signs with shape selector",
+    "categories": [
+      "Generator"
+    ],
+    "file": "radiant_neon_revival.fs"
+  },
+  {
+    "id": 309,
+    "title": "Diamond Caustics",
+    "description": "Diamond caustics with prismatic fire and chromatic dispersion",
+    "categories": [
+      "Generator"
+    ],
+    "file": "radiant_diamond_caustics.fs"
+  },
+  {
+    "id": 310,
+    "title": "Radiant Geometry",
+    "description": "Rotating sacred geometry patterns",
+    "categories": [
+      "Generator"
+    ],
+    "file": "radiant_geometry.fs"
   }
 ]
