@@ -2603,8 +2603,8 @@
     opts.innerHTML = `
       <canvas class="sopt-curve" width="200" height="80"></canvas>
       <div class="signal-opt-row"><label>Source</label><select class="sopt-signal">${buildSignalOptions(binding)}</select></div>
-      <div class="signal-opt-row sopt-range-row"><label>Min</label><input type="range" class="sopt-min-slider" min="0" max="1" step="0.001" value="${binding.min}"><span class="sopt-val sopt-min-val">${parseFloat(binding.min).toFixed(3)}</span></div>
-      <div class="signal-opt-row sopt-range-row"><label>Max</label><input type="range" class="sopt-max-slider" min="0" max="1" step="0.001" value="${binding.max}"><span class="sopt-val sopt-max-val">${parseFloat(binding.max).toFixed(3)}</span></div>
+      <div class="signal-opt-row sopt-range-row"><label>Min</label><input type="range" class="sopt-min-slider" min="0" max="2" step="0.0001" value="${binding.min}"><span class="sopt-val sopt-min-val">${parseFloat(binding.min).toFixed(4)}</span></div>
+      <div class="signal-opt-row sopt-range-row"><label>Max</label><input type="range" class="sopt-max-slider" min="0" max="2" step="0.0001" value="${binding.max}"><span class="sopt-val sopt-max-val">${parseFloat(binding.max).toFixed(4)}</span></div>
       <div class="signal-opt-row"><label>Smooth</label><input type="range" class="sopt-smooth" min="0" max="1" step="0.01" value="${binding.smoothing||0}"><span class="sopt-val sopt-smooth-val">${Math.round((binding.smoothing||0)*100)}%</span></div>
       <div class="signal-opt-row"><label>Easing</label><select class="sopt-easing">
         <option value="linear">Linear</option><option value="easeIn">Ease In</option><option value="easeOut">Ease Out</option><option value="easeInOut">Ease In Out</option><option value="spring">Spring</option><option value="custom">Custom</option>
@@ -2835,7 +2835,7 @@
       if (isNaN(v)) return;
       const b = layer.mpBindings.find(b => b.param === row.dataset.name);
       if (b) { b.min = v; updateRangeIndicator(row, b); }
-      opts.querySelector('.sopt-min-val').textContent = v.toFixed(3);
+      opts.querySelector('.sopt-min-val').textContent = v.toFixed(4);
     });
     opts.querySelector('.sopt-max-slider').addEventListener('input', function() {
       const layer = getLayer(layerId);
@@ -2844,7 +2844,7 @@
       if (isNaN(v)) return;
       const b = layer.mpBindings.find(b => b.param === row.dataset.name);
       if (b) { b.max = v; updateRangeIndicator(row, b); }
-      opts.querySelector('.sopt-max-val').textContent = v.toFixed(3);
+      opts.querySelector('.sopt-max-val').textContent = v.toFixed(4);
     });
     opts.querySelector('.sopt-smooth').addEventListener('input', function() {
       const layer = getLayer(layerId);
