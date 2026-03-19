@@ -101,9 +101,10 @@ void main() {
     int numLines = int(lineCount + 0.5);
     int numChars = charCount();
 
-    // Character dimensions in aspect-corrected space
-    float cW = 0.045 * textScale * condensed;
-    float cH = 0.045 * textScale * 1.4;
+    // Character dimensions in aspect-corrected space — scale down on portrait
+    float portraitScale = aspect < 1.0 ? aspect : 1.0;
+    float cW = 0.045 * textScale * condensed * portraitScale;
+    float cH = 0.045 * textScale * 1.4 * portraitScale;
     float gap = cW * 0.18;
     float cellStep = cW + gap;
 

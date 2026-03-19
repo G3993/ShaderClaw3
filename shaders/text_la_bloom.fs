@@ -213,8 +213,9 @@ void main() {
     int total = charCount();
     float ftotal = float(total);
 
-    // Character cell sizing
+    // Character cell sizing — scale down on portrait so text fits width
     float charH = 0.18 * textScale;
+    if (aspect < 1.0) charH *= aspect;
     float charW = charH * (5.0 / 7.0);
     float gap = charW * 0.25 * kerning;
     float cellStep = charW + gap;

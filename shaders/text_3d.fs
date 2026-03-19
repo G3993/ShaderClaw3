@@ -111,7 +111,8 @@ void main() {
     vec3 lro = vec3(r1o.x * cy - r1o.z * sy, r1o.y, r1o.x * sy + r1o.z * cy);
     vec3 lrd = vec3(r1d.x * cy - r1d.z * sy, r1d.y, r1d.x * sy + r1d.z * cy);
 
-    float charW = 0.1 * textScale;
+    float portraitScale = aspect < 1.0 ? aspect : 1.0;
+    float charW = 0.1 * textScale * portraitScale;
     float charH = charW * 1.4;
     float gapW = charW * 0.2;
     float totalW = float(numChars) * (charW + gapW) - gapW;

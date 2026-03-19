@@ -77,6 +77,7 @@ float textHit(vec2 uv, float aspect) {
     float _ts = textScale > 0.01 ? textScale : 1.0;
     float _kn = kerning > 0.01 ? kerning : 1.0;
     float charH = 0.18 * _ts;
+    if (aspect < 1.0) charH *= aspect;
     float charW = charH * (5.0 / 7.0);
     float gap = charW * 0.25 * _kn;
     float cellStep = charW + gap;

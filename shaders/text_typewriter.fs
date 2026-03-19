@@ -96,8 +96,9 @@ void main() {
     vec2 p = vec2((uv.x - 0.5) * aspect + 0.5, uv.y);
     float maxW = aspect * 0.9;
 
-    // Fixed character size
+    // Fixed character size — scale down on portrait so text fits width
     float charH = 0.18 * sc;
+    if (aspect < 1.0) charH *= aspect;
     float charW = charH * (5.0 / 7.0);
     float gap = charW * 0.25 * kr;
     float cellStep = charW + gap;

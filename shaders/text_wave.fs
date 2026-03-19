@@ -106,8 +106,9 @@ vec4 effectWave(vec2 uv) {
 
     vec2 p = vec2((uv.x - 0.5) * aspect + 0.5, uv.y);
 
-    // Single-line layout
+    // Single-line layout — scale down on portrait so text fits width
     float cW = 0.09 * textScale;
+    if (aspect < 1.0) cW *= aspect;
     float cH = cW * 1.5;
     float gW = cW * 0.25 * kerning;
     float cellStep = cW + gW;

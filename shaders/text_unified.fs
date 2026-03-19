@@ -114,6 +114,7 @@ vec4 effectJames(vec2 uv) {
 
     // Single-line layout: all chars on one row, scale down if wider than screen
     float charW = 0.09 * textScale;
+    if (aspect < 1.0) charW *= aspect;
     float charH = charW * 1.5;
     float gap = charW * 0.25;
     float totalW = float(numChars) * charW + float(numChars - 1) * gap;
@@ -231,7 +232,9 @@ vec4 effectWave(vec2 uv) {
     float frequency = mix(0.5, 5.0, density);
 
     vec2 p = vec2((uv.x - 0.5) * aspect + 0.5, uv.y);
-    float cW = 0.09 * textScale, cH = cW * 1.5;
+    float cW = 0.09 * textScale;
+    if (aspect < 1.0) cW *= aspect;
+    float cH = cW * 1.5;
     float gW = cW * 0.25, cellStep = cW + gW;
     float totalW = float(numChars) * cellStep - gW;
     float startX = 0.5 - totalW * 0.5;
@@ -332,6 +335,7 @@ vec4 effectDigifade(vec2 uv, int sub) {
 
     // Single-line layout: all chars on one row, scale down if wider than screen
     float cH = 0.18 * textScale;
+    if (aspect < 1.0) cH *= aspect;
     float cW = cH * (5.0/7.0);
     float gW = cW * 0.2;
     float rowW = float(numChars) * cW + float(numChars - 1) * gW;

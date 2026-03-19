@@ -108,6 +108,7 @@ vec4 effectDigifade(vec2 uv, int sub) {
 
     // Single-line layout: all chars on one row, scale to fit width
     float cH = 0.18 * textScale;
+    if (aspect < 1.0) cH *= aspect;
     float cW = cH * (5.0/7.0);
     float gW = cW * 0.2;
 

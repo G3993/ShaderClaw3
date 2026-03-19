@@ -128,8 +128,9 @@ vec4 effectEtherea(vec2 uv) {
     vec2 p = vec2((uv.x - 0.5) * aspect + 0.5, uv.y);
     float maxW = aspect * 0.9;
 
-    // Character cell dimensions
+    // Character cell dimensions — scale down on portrait so text fits width
     float charH = 0.18 * _ts;
+    if (aspect < 1.0) charH *= aspect;
     float charW = charH * (5.0 / 7.0);
     float gap = charW * 0.25 * _kn;
     float cellStep = charW + gap;
