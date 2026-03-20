@@ -81,35 +81,42 @@ void main() {
     totalDist += d;
   }
 
-  vec3 col = vec3(0.012, 0.01, 0.008);
+  // Sample texture for masking
+  vec2 texUV = gl_FragCoord.xy / RENDERSIZE.xy;
+  vec4 texSample = texture2D(inputTex, texUV);
+  bool hasTexture = texSample.a > 0.01;
+
+  vec3 col = vec3(0.0);
+  float alpha = 0.0;
+
   if (hit) {
     vec3 n = calcNormal(p, t, cnt), v = normalize(ro - p);
-    vec3 albedo = mix(vec3(0.85, 0.65, 0.3), vec3(0.75, 0.45, 0.25), sin(p.x * 3.0 + p.z * 2.0 + t * morphSpeed * 0.4) * 0.5 + 0.5);
     vec3 L = normalize(vec3(2, 3, 1.5)), H = normalize(L + v);
     float diff = max(dot(n, L), 0.0);
     float spec = pow(max(dot(n, H), 0.0), 256.0);
     float fres = 0.8 + 0.2 * pow(1.0 - max(dot(n, v), 0.0), 5.0);
-    col = albedo * diff * vec3(1.0, 0.9, 0.75) * 0.4 + vec3(1.0, 0.9, 0.75) * spec * fres * 2.0;
-    col += vec3(0.9, 0.6, 0.35) * pow(1.0 - max(dot(n, v), 0.0), 4.0) * 0.8;
+
+    if (hasTexture) {
+      // Texture revealed through the metaball shape — shader is the mask
+      // Use surface normal to refract/distort the texture UV
+      vec2 refractUV = texUV + n.xy * 0.05;
+      vec3 texCol = texture2D(inputTex, refractUV).rgb;
+      // Lit texture: apply lighting from the metaball surface
+      col = texCol * diff * 0.6 + texCol * spec * fres * 0.8;
+      col += texCol * pow(1.0 - max(dot(n, v), 0.0), 4.0) * 0.3;
+    } else {
+      // No texture — original metallic look
+      vec3 albedo = mix(vec3(0.85, 0.65, 0.3), vec3(0.75, 0.45, 0.25), sin(p.x * 3.0 + p.z * 2.0 + t * morphSpeed * 0.4) * 0.5 + 0.5);
+      col = albedo * diff * vec3(1.0, 0.9, 0.75) * 0.4 + vec3(1.0, 0.9, 0.75) * spec * fres * 2.0;
+      col += vec3(0.9, 0.6, 0.35) * pow(1.0 - max(dot(n, v), 0.0), 4.0) * 0.8;
+    }
     col += audioLevel * vec3(0.1, 0.06, 0.03);
+    alpha = 1.0;
   }
 
+  col *= baseColor.rgb;
   col = col * (2.51 * col + 0.03) / (col * (2.43 * col + 0.59) + 0.14);
   col = pow(col, vec3(0.95, 0.98, 1.04));
-  col *= 1.0 - dot(uv, uv) * 0.25;
 
-  // Texture as source — shader VFX processes the input content
-    vec2 texUV = gl_FragCoord.xy / RENDERSIZE.xy;
-    vec4 texSample = texture2D(inputTex, texUV);
-    if (texSample.a > 0.01) {
-        // Blend: texture is the source, shader effect modulates it
-        float effectStrength = max(col.r, max(col.g, col.b));
-        col = mix(texSample.rgb, col, 0.5) * (0.5 + effectStrength * 0.5);
-        col *= baseColor.rgb;
-    } else {
-        col *= baseColor.rgb;
-    }
-  col = mix(col, col * baseColor.rgb, 0.5);
-
-  gl_FragColor = vec4(col, 1.0);
+  gl_FragColor = vec4(col, alpha);
 }
