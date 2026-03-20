@@ -569,7 +569,7 @@
   border: 1px solid rgba(232, 64, 87, 0.3); border-radius: 6px;
   padding: 12px 8px; font-size: var(--sc-font-size-lg); height: 48px;
   font-family: var(--sc-font-mono); font-weight: 600;
-  letter-spacing: 1px; text-transform: uppercase; text-align: center;
+  letter-spacing: 1px; text-transform: uppercase; text-align: left;
   overflow: hidden; text-overflow: ellipsis;
 }
 .text-msg-bar input[type="text"]:focus {
