@@ -12,18 +12,6 @@
     "hidden": true
   },
   {
-    "id": 2,
-    "title": "Stars",
-    "description": "Starfield with rotating layers, customizable colors and speed",
-    "type": "generator",
-    "categories": [
-      "Generator",
-      "Nature"
-    ],
-    "file": "sky.fs",
-    "hasVertex": true
-  },
-  {
     "id": 9,
     "title": "Geometric",
     "description": "Geometric planet with procedural surface patterns",
@@ -69,18 +57,6 @@
     "file": "black_hole_sun.fs",
     "hasVertex": true,
     "hidden": true
-  },
-  {
-    "id": 21,
-    "title": "Galaxy",
-    "description": "Milky Way galaxy — dense particle starfield with nebula clouds and galactic core",
-    "type": "generator",
-    "categories": [
-      "Generator",
-      "Nature"
-    ],
-    "file": "galaxy.fs",
-    "hasVertex": true
   },
   {
     "id": 28,
@@ -368,17 +344,6 @@
     "hasVertex": true
   },
   {
-    "id": 60,
-    "title": "Lazer Claw",
-    "description": "3 neon claw slashes with inverse-square glow, swipe flash, shimmer, and audio reactivity",
-    "type": "generator",
-    "categories": [
-      "Generator"
-    ],
-    "file": "lazer_claw.fs",
-    "hasVertex": true
-  },
-  {
     "id": 62,
     "title": "La Bloom",
     "description": "Never-ending love letter — multi-line text reveals char by char, blooms with warm glow, lingers, dissolves, loops infinitely",
@@ -563,24 +528,6 @@
     "hidden": true
   },
   {
-    "id": 301,
-    "title": "Rain on Glass",
-    "description": "Procedural rain drops on glass with bokeh background",
-    "categories": [
-      "Generator"
-    ],
-    "file": "radiant_rain_on_glass.fs"
-  },
-  {
-    "id": 302,
-    "title": "Eclipse Glow",
-    "description": "Solar eclipse with corona and diamond ring effect",
-    "categories": [
-      "Generator"
-    ],
-    "file": "radiant_eclipse_glow.fs"
-  },
-  {
     "id": 304,
     "title": "Sacred Strange",
     "description": "Sacred geometry with golden spirals and polar-fold SDFs",
@@ -606,51 +553,6 @@
       "Generator"
     ],
     "file": "radiant_silk_cascade.fs"
-  },
-  {
-    "id": 308,
-    "title": "Neon Revival",
-    "description": "Flickering neon signs with shape selector",
-    "categories": [
-      "Generator"
-    ],
-    "file": "radiant_neon_revival.fs"
-  },
-  {
-    "id": 309,
-    "title": "Diamond Caustics",
-    "description": "Diamond caustics with prismatic fire and chromatic dispersion",
-    "categories": [
-      "Generator"
-    ],
-    "file": "radiant_diamond_caustics.fs"
-  },
-  {
-    "id": 310,
-    "title": "Radiant Geometry",
-    "description": "Rotating sacred geometry patterns",
-    "categories": [
-      "Generator"
-    ],
-    "file": "radiant_geometry.fs"
-  },
-  {
-    "id": 320,
-    "title": "Fluid Amber",
-    "description": "Domain-warped simplex noise with warm amber palette",
-    "categories": [
-      "Generator"
-    ],
-    "file": "fluid_amber.fs"
-  },
-  {
-    "id": 321,
-    "title": "Sugar Glass",
-    "description": "Voronoi fracture patterns in caramelized glass",
-    "categories": [
-      "Generator"
-    ],
-    "file": "sugar_glass.fs"
   },
   {
     "id": 322,
@@ -680,24 +582,6 @@
     "file": "laser_labyrinth.fs"
   },
   {
-    "id": 325,
-    "title": "Bass Ripple",
-    "description": "Beat-synced hexagonal speaker grille",
-    "categories": [
-      "Generator"
-    ],
-    "file": "bass_ripple.fs"
-  },
-  {
-    "id": 327,
-    "title": "Ink Dissolve",
-    "description": "Domain-warped ink dissolution effect",
-    "categories": [
-      "Generator"
-    ],
-    "file": "ink_dissolve.fs"
-  },
-  {
     "id": 328,
     "title": "Sequin Wave",
     "description": "Reflective hexagonal disc field",
@@ -705,42 +589,6 @@
       "Generator"
     ],
     "file": "sequin_wave.fs"
-  },
-  {
-    "id": 329,
-    "title": "Gilded Fracture",
-    "description": "Kintsugi golden cracks on dark ceramic",
-    "categories": [
-      "Generator"
-    ],
-    "file": "gilded_fracture.fs"
-  },
-  {
-    "id": 330,
-    "title": "Golden Throne",
-    "description": "Sacred geometry mandala with golden ratio",
-    "categories": [
-      "Generator"
-    ],
-    "file": "golden_throne.fs"
-  },
-  {
-    "id": 332,
-    "title": "Neon Drip",
-    "description": "Neon metaball drips with tendrils",
-    "categories": [
-      "Generator"
-    ],
-    "file": "neon_drip.fs"
-  },
-  {
-    "id": 333,
-    "title": "Voltage Arc",
-    "description": "Electric arcs between orbiting conductors",
-    "categories": [
-      "Generator"
-    ],
-    "file": "voltage_arc.fs"
   },
   {
     "id": 334,
@@ -761,42 +609,6 @@
     "file": "metamorphosis.fs"
   },
   {
-    "id": 336,
-    "title": "Artpop Iridescence",
-    "description": "Thin-film iridescent bubble surfaces",
-    "categories": [
-      "Generator"
-    ],
-    "file": "artpop_iridescence.fs"
-  },
-  {
-    "id": 337,
-    "title": "Silk Groove",
-    "description": "Draped silk fabric with specular highlights",
-    "categories": [
-      "Generator"
-    ],
-    "file": "silk_groove.fs"
-  },
-  {
-    "id": 338,
-    "title": "Gilt Thread",
-    "description": "Woven golden thread patterns",
-    "categories": [
-      "Generator"
-    ],
-    "file": "gilt_thread.fs"
-  },
-  {
-    "id": 339,
-    "title": "Burning Film",
-    "description": "Burning celluloid film effect",
-    "categories": [
-      "Generator"
-    ],
-    "file": "burning_film.fs"
-  },
-  {
     "id": 340,
     "title": "Vertigo",
     "description": "Hitchcock-inspired hypnotic spirals",
@@ -804,78 +616,6 @@
       "Generator"
     ],
     "file": "vertigo.fs"
-  },
-  {
-    "id": 341,
-    "title": "Stardust Veil",
-    "description": "Cosmic stardust through nebula",
-    "categories": [
-      "Generator"
-    ],
-    "file": "stardust_veil.fs"
-  },
-  {
-    "id": 342,
-    "title": "Smolder",
-    "description": "Slow-burning embers with smoke",
-    "categories": [
-      "Generator"
-    ],
-    "file": "smolder.fs"
-  },
-  {
-    "id": 343,
-    "title": "Signal Decay",
-    "description": "Digital signal degradation and glitch",
-    "categories": [
-      "Generator"
-    ],
-    "file": "signal_decay.fs"
-  },
-  {
-    "id": 344,
-    "title": "Lipstick Smear",
-    "description": "Bold lipstick streaks",
-    "categories": [
-      "Generator"
-    ],
-    "file": "lipstick_smear.fs"
-  },
-  {
-    "id": 345,
-    "title": "Magma Core",
-    "description": "Deep magma with convection fissures",
-    "categories": [
-      "Generator"
-    ],
-    "file": "magma_core.fs"
-  },
-  {
-    "id": 346,
-    "title": "Edge of Chaos",
-    "description": "Reaction-diffusion patterns",
-    "categories": [
-      "Generator"
-    ],
-    "file": "edge_of_chaos.fs"
-  },
-  {
-    "id": 347,
-    "title": "Shifting Veils",
-    "description": "Translucent layered drifting veils",
-    "categories": [
-      "Generator"
-    ],
-    "file": "shifting_veils.fs"
-  },
-  {
-    "id": 348,
-    "title": "Crystal Lattice",
-    "description": "Crystalline lattice with refractive edges",
-    "categories": [
-      "Generator"
-    ],
-    "file": "crystal_lattice.fs"
   },
   {
     "id": 349,
@@ -887,15 +627,6 @@
     "file": "kaleidoscope_runway.fs"
   },
   {
-    "id": 350,
-    "title": "Neon Drive",
-    "description": "Retro synthwave neon grid",
-    "categories": [
-      "Generator"
-    ],
-    "file": "neon_drive.fs"
-  },
-  {
     "id": 351,
     "title": "Bioluminescence",
     "description": "Deep sea bioluminescent organisms",
@@ -905,48 +636,12 @@
     "file": "bioluminescence.fs"
   },
   {
-    "id": 352,
-    "title": "Gothic Filigree",
-    "description": "Ornate gothic scrollwork",
+    "id": 400,
+    "title": "Eclipse",
+    "description": "Glowing solar eclipse with corona, diamond ring, and audio-reactive flares",
     "categories": [
       "Generator"
     ],
-    "file": "gothic_filigree.fs"
-  },
-  {
-    "id": 353,
-    "title": "Thunder Sermon",
-    "description": "Storm clouds with lightning",
-    "categories": [
-      "Generator"
-    ],
-    "file": "thunder_sermon.fs"
-  },
-  {
-    "id": 354,
-    "title": "Vinyl Grooves",
-    "description": "Spinning vinyl record grooves",
-    "categories": [
-      "Generator"
-    ],
-    "file": "vinyl_grooves.fs"
-  },
-  {
-    "id": 355,
-    "title": "Torn Paper",
-    "description": "Torn paper revealing warm light",
-    "categories": [
-      "Generator"
-    ],
-    "file": "torn_paper.fs"
-  },
-  {
-    "id": 356,
-    "title": "Polaroid Burn",
-    "description": "Overexposed Polaroid with chemical burns",
-    "categories": [
-      "Generator"
-    ],
-    "file": "polaroid_burn.fs"
+    "file": "eclipse.fs"
   }
 ]

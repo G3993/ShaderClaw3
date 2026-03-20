@@ -74,7 +74,7 @@ vec3 sampleWeights(float i) {
     return vec3(i * i, 46.6666 * pow((1.0 - i) * i, 3.0), (1.0 - i) * (1.0 - i));
 }
 
-#define SAMPLES 64
+#define SAMPLES 16
 
 vec3 sampleDisp(vec2 uv, vec2 dispNorm, float disp) {
     vec3 col = vec3(0.0);
