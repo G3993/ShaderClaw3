@@ -98,9 +98,17 @@ void main() {
   col = pow(col, vec3(0.95, 0.98, 1.04));
   col *= 1.0 - dot(uv, uv) * 0.25;
 
-  vec2 texUV = gl_FragCoord.xy / RENDERSIZE.xy;
-  vec4 texSample = texture2D(inputTex, texUV);
-  col = mix(col, texSample.rgb, texSample.a * 0.3);
+  // Texture as source — shader VFX processes the input content
+    vec2 texUV = gl_FragCoord.xy / RENDERSIZE.xy;
+    vec4 texSample = texture2D(inputTex, texUV);
+    if (texSample.a > 0.01) {
+        // Blend: texture is the source, shader effect modulates it
+        float effectStrength = max(col.r, max(col.g, col.b));
+        col = mix(texSample.rgb, col, 0.5) * (0.5 + effectStrength * 0.5);
+        col *= baseColor.rgb;
+    } else {
+        col *= baseColor.rgb;
+    }
   col = mix(col, col * baseColor.rgb, 0.5);
 
   gl_FragColor = vec4(col, 1.0);

@@ -260,10 +260,17 @@ void main() {
     float grain = hash12(gl_FragCoord.xy + fract(TIME * 7.13) * 100.0);
     col += (grain - 0.5) * 0.015;
 
-    col *= baseColor.rgb;
-    vec2 texUV = gl_FragCoord.xy / RENDERSIZE;
+    // Texture as source — shader VFX processes the input content
+    vec2 texUV = gl_FragCoord.xy / RENDERSIZE.xy;
     vec4 texSample = texture2D(inputTex, texUV);
-    col = mix(col, col * texSample.rgb, texSample.a * 0.5);
+    if (texSample.a > 0.01) {
+        // Blend: texture is the source, shader effect modulates it
+        float effectStrength = max(col.r, max(col.g, col.b));
+        col = mix(texSample.rgb, col, 0.5) * (0.5 + effectStrength * 0.5);
+        col *= baseColor.rgb;
+    } else {
+        col *= baseColor.rgb;
+    }
 
     gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

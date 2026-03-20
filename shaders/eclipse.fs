@@ -107,9 +107,17 @@ void main() {
     col *= (1.0 - moonMask);
 
     // Texture blend
+    // Texture as source — shader VFX processes the input content
     vec2 texUV = gl_FragCoord.xy / RENDERSIZE.xy;
     vec4 texSample = texture2D(inputTex, texUV);
-    col = mix(col, col * texSample.rgb, texSample.a * 0.3);
+    if (texSample.a > 0.01) {
+        // Blend: texture is the source, shader effect modulates it
+        float effectStrength = max(col.r, max(col.g, col.b));
+        col = mix(texSample.rgb, col, 0.5) * (0.5 + effectStrength * 0.5);
+        col *= baseColor.rgb;
+    } else {
+        col *= baseColor.rgb;
+    }
 
     // Tint with base color
     col = mix(col, col * baseColor.rgb, 0.3);
