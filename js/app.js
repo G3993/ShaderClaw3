@@ -5799,12 +5799,10 @@
   (async function loadDefaults() {
     dbg('loadDefaults: fetching...');
 
-    // Pick a random shader from the manifest (non-text, non-hidden)
-    const _randomShader = otherShaders.length > 0
-      ? otherShaders[Math.floor(Math.random() * otherShaders.length)]
-      : null;
-    const _randomFile = _randomShader ? (_randomShader.folder || 'shaders') + '/' + _randomShader.file : 'shaders/trapped.fs';
-    dbg('random shader: ' + (_randomShader ? _randomShader.file : 'trapped.fs'));
+    // Default shader: metamorphosis
+    const _defaultShader = manifest.find(m => m.file === 'metamorphosis.fs') || otherShaders[0] || null;
+    const _randomFile = _defaultShader ? (_defaultShader.folder || 'shaders') + '/' + _defaultShader.file : 'shaders/metamorphosis.fs';
+    dbg('default shader: ' + (_defaultShader ? _defaultShader.file : 'metamorphosis.fs'));
 
     const [textSrc, sceneSrc, shaderSrc] = await Promise.all([
       fetch('shaders/text_typewriter.fs').then(r => r.text()),
@@ -5821,10 +5819,10 @@
       const shaderResult = compileToLayer('shader', src);
       if (shaderResult && shaderResult.ok) {
         // compileToLayer already sets visible=true on success
-        if (shaderSrc && _randomShader) {
-          getLayer('shader').manifestEntry = _randomShader;
+        if (shaderSrc && _defaultShader) {
+          getLayer('shader').manifestEntry = _defaultShader;
           const sel = document.querySelector('.layer-shader-select[data-layer="shader"]');
-          if (sel) sel.value = _randomShader.file;
+          if (sel) sel.value = _defaultShader.file;
         }
         if (focusedLayerId === 'shader') editor.setValue(src);
       } else {
@@ -5861,7 +5859,7 @@
       sceneRenderer.inputValues = sceneLayer.inputValues;
       autoBindTextures('scene');
       const _isMobileDevice = window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
-      sceneLayer.visible = !_isMobileDevice; // hide 3D on mobile to save GPU
+      sceneLayer.visible = false; // 3D hidden by default — user enables via eye toggle
       sceneLayer.manifestEntry = manifest.find(m => m.file === 'spinning_cube.scene.js');
       const sceneSelect = document.querySelector('.layer-shader-select[data-layer="scene"]');
       if (sceneSelect) sceneSelect.value = 'spinning_cube.scene.js';
