@@ -10,8 +10,8 @@
     { "NAME": "armScale", "LABEL": "Size", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.3, "MAX": 2.0 },
     { "NAME": "segWidth", "LABEL": "Thickness", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.3, "MAX": 2.5 },
     { "NAME": "laserSize", "LABEL": "Laser Size", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 3.0 },
-    { "NAME": "showGrid", "LABEL": "Grid", "TYPE": "bool", "DEFAULT": true },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "showGrid", "LABEL": "Grid", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.035, 0.035, 0.055, 1.0] }
   ]
 }*/
@@ -122,15 +122,8 @@ void drawArm(vec2 p, vec2 base, vec2 target, float grip, float sc, float sw,
     vec2 pA2 = elbow + ax2 * L2 * 0.2 + perp2 * w2 * 0.6;
     vec2 pB2 = wrist - ax2 * L2 * 0.15 + perp2 * w2 * 0.6;
 
-    // BG effects (reach circle + glow)
-    col = mix(col, accCol.rgb, smoothstep(px * 3.0, px, abs(length(p - base) - maxReach)) * 0.06);
-    col += accCol.rgb * (exp(-35.0 * length(p - elbow)) + exp(-45.0 * length(p - wrist)) + exp(-35.0 * length(p - base))) * 0.2;
-
-    // Target crosshair + ring
-    float ch = min(sdCapsule(p, target - vec2(0.02, 0.0), target + vec2(0.02, 0.0), 0.0008),
-                   sdCapsule(p, target - vec2(0.0, 0.02), target + vec2(0.0, 0.02), 0.0008));
-    col = mix(col, accCol.rgb, smoothstep(px * 2.0, 0.0, ch) * 0.4);
-    col = mix(col, accCol.rgb, smoothstep(px * 2.0, 0.0, abs(length(p - target) - 0.012) - 0.0008) * 0.3);
+    // Joint glow only (subtle)
+    col += accCol.rgb * (exp(-45.0 * length(p - wrist))) * 0.15;
 
     float mask;
     vec3 ec;
@@ -319,10 +312,6 @@ void main() {
     vec3 col = bgColor.rgb;
     float armMask = 0.0;
 
-    if (showGrid) {
-        vec2 gp = abs(mod(p + 0.03, 0.06) - 0.03);
-        col = mix(col, accentColor.rgb, smoothstep(px, 0.0, length(gp) - 0.0015) * 0.10);
-    }
 
     float grip = max(pinchHold, mouseDown);
     float shot = pinchHold2;
