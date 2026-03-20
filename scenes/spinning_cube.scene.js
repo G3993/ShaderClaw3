@@ -3,6 +3,11 @@
         { NAME: "shape", TYPE: "long", DEFAULT: 0, VALUES: [0,1,2,3,4,5,6], LABELS: ["Cube","Sphere","Torus","Cylinder","Cone","Dodecahedron","Custom"] },
         { NAME: "texture", TYPE: "image" },
         { NAME: "cubeColor", TYPE: "color", DEFAULT: [1.0, 1.0, 1.0, 1.0] },
+        { NAME: "reflectivity", LABEL: "Mirror", TYPE: "float", DEFAULT: 0.95, MIN: 0.0, MAX: 1.0 },
+        { NAME: "strobeSpeed", LABEL: "Strobe", TYPE: "float", DEFAULT: 2.0, MIN: 0.0, MAX: 10.0 },
+        { NAME: "strobeColor1", LABEL: "Strobe 1", TYPE: "color", DEFAULT: [0.91, 0.25, 0.34, 1.0] },
+        { NAME: "strobeColor2", LABEL: "Strobe 2", TYPE: "color", DEFAULT: [0.2, 0.5, 1.0, 1.0] },
+        { NAME: "strobeColor3", LABEL: "Strobe 3", TYPE: "color", DEFAULT: [0.1, 1.0, 0.5, 1.0] },
         { NAME: "transparentBg", TYPE: "bool", DEFAULT: true },
         { NAME: "bgColor", TYPE: "color", DEFAULT: [0.035, 0.035, 0.059, 1.0] },
         { NAME: "floor", TYPE: "bool", DEFAULT: false },
@@ -26,42 +31,59 @@
     }
 
     function create(renderer, canvas, media) {
-        const scene = new THREE.Scene();
-        const _bgColor = new THREE.Color(0x09090f);
-        scene.background = null; // transparent by default
+        var scene = new THREE.Scene();
+        var _bgColor = new THREE.Color(0x09090f);
+        scene.background = null;
 
-        const camera = new THREE.PerspectiveCamera(60, canvas.width / canvas.height, 0.1, 100);
+        var camera = new THREE.PerspectiveCamera(60, canvas.width / canvas.height, 0.1, 100);
         camera.position.set(0, 1.2, 3.5);
         camera.lookAt(0, 0, 0);
 
-        // Lights
-        const ambient = new THREE.AmbientLight(0x404060, 0.6);
+        // Ambient — dim so strobes dominate
+        var ambient = new THREE.AmbientLight(0x202030, 0.3);
         scene.add(ambient);
 
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
-        dirLight.position.set(3, 4, 2);
-        scene.add(dirLight);
+        // Key light — white
+        var keyLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        keyLight.position.set(3, 4, 2);
+        scene.add(keyLight);
 
-        const rimLight = new THREE.DirectionalLight(0x4ecdc4, 0.3);
-        rimLight.position.set(-2, 1, -3);
-        scene.add(rimLight);
+        // 3 colored strobe point lights orbiting the cube
+        var strobe1 = new THREE.PointLight(0xe84057, 2.0, 8);
+        var strobe2 = new THREE.PointLight(0x3388ff, 2.0, 8);
+        var strobe3 = new THREE.PointLight(0x1aff80, 2.0, 8);
+        scene.add(strobe1);
+        scene.add(strobe2);
+        scene.add(strobe3);
 
-        // Pivot group for rotation/scale
-        const pivot = new THREE.Group();
+        // Pivot group
+        var pivot = new THREE.Group();
         scene.add(pivot);
 
-        // Mesh
-        let currentShape = 1;
-        let geometry = makeGeometry(1);
-        const material = new THREE.MeshStandardMaterial({
+        // Mirror material — high metalness, low roughness
+        var currentShape = 0;
+        var geometry = makeGeometry(0);
+        var material = new THREE.MeshStandardMaterial({
             color: new THREE.Color(1.0, 1.0, 1.0),
-            roughness: 0.35,
-            metalness: 0.15
+            roughness: 0.05,
+            metalness: 0.95,
+            envMapIntensity: 1.5
         });
-        // Screen-space texture projection — texture fills viewport, tiles when scaled
-        const _resolution = new THREE.Vector2(1, 1);
-        const _texScale = { value: 1.0 };
-        const _screenSpaceChunk = [
+
+        // Generate a simple environment map for reflections
+        var envScene = new THREE.Scene();
+        var envCam = new THREE.CubeCamera(0.1, 100, new THREE.WebGLCubeRenderTarget(128));
+
+        // Fake environment — colored gradient sphere
+        var envGeo = new THREE.SphereGeometry(40, 16, 16);
+        var envMat = new THREE.MeshBasicMaterial({ side: THREE.BackSide });
+        var envMesh = new THREE.Mesh(envGeo, envMat);
+        envScene.add(envMesh);
+
+        // Screen-space texture projection
+        var _resolution = new THREE.Vector2(1, 1);
+        var _texScale = { value: 1.0 };
+        var _screenSpaceChunk = [
             '#ifdef USE_MAP',
             '  vec2 screenUV = gl_FragCoord.xy / screenRes;',
             '  screenUV.y = 1.0 - screenUV.y;',
@@ -77,22 +99,28 @@
             shader.fragmentShader = 'uniform vec2 screenRes;\nuniform float texScale;\n' + shader.fragmentShader;
             shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', _screenSpaceChunk);
         };
-        const mesh = new THREE.Mesh(geometry, material);
+
+        var mesh = new THREE.Mesh(geometry, material);
         pivot.add(mesh);
 
-        // Custom model state
-        let customModel = null;
+        var customModel = null;
 
-        // Ground grid
-        const gridHelper = new THREE.GridHelper(6, 12, 0x1e1e2e, 0x1e1e2e);
-        gridHelper.position.y = -1.2;
-        scene.add(gridHelper);
+        // Reflective floor
+        var floorGeo = new THREE.PlaneGeometry(8, 8);
+        var floorMat = new THREE.MeshStandardMaterial({
+            color: 0x111118,
+            roughness: 0.3,
+            metalness: 0.8
+        });
+        var floorMesh = new THREE.Mesh(floorGeo, floorMat);
+        floorMesh.rotation.x = -Math.PI / 2;
+        floorMesh.position.y = -1.2;
+        scene.add(floorMesh);
 
-        let currentTexId = null;
+        var currentTexId = null;
         var lastVideoTime = -1;
         var stallFrames = 0;
 
-        // Apply screen-space projection to any MeshStandardMaterial
         function patchMaterialForScreenSpace(mat) {
             if (mat._screenPatched) return;
             mat._screenPatched = true;
@@ -104,25 +132,65 @@
             };
         }
 
+        // Initial env map render
+        var _envRendered = false;
+
         return {
-            scene,
-            camera,
-            update(time, values, mediaList) {
-                // Update screen resolution for screen-space projection
+            scene: scene,
+            camera: camera,
+            update: function(time, values, mediaList) {
                 var _sz = renderer.getSize(new THREE.Vector2());
                 var _dpr = renderer.getPixelRatio();
                 _resolution.set(_sz.x * _dpr, _sz.y * _dpr);
 
-                const spd = (values.speed != null) ? values.speed : 1.0;
-                const sz = (values.size != null) ? values.size : 1.0;
-                const rx = (values.rotX != null) ? values.rotX : 0.7;
-                const ry = (values.rotY != null) ? values.rotY : 1.0;
-                const rz = (values.rotZ != null) ? values.rotZ : 0.0;
+                var spd = (values.speed != null) ? values.speed : 1.0;
+                var sz = (values.size != null) ? values.size : 1.0;
+                var rx = (values.rotX != null) ? values.rotX : 0.7;
+                var ry = (values.rotY != null) ? values.rotY : 1.0;
+                var rz = (values.rotZ != null) ? values.rotZ : 0.0;
+                var stSpd = (values.strobeSpeed != null) ? values.strobeSpeed : 2.0;
+                var refl = (values.reflectivity != null) ? values.reflectivity : 0.95;
 
-                // Texture scale (tiles when > 1)
                 _texScale.value = (values.texScale != null) ? values.texScale : 1.0;
 
-                // Transparent background toggle
+                // Mirror material properties
+                material.metalness = refl;
+                material.roughness = 0.05 + (1.0 - refl) * 0.5;
+
+                // Strobe lights — orbit and pulse
+                var st = time * stSpd;
+                var pulse1 = Math.max(0, Math.sin(st * 3.14));
+                var pulse2 = Math.max(0, Math.sin(st * 3.14 + 2.09));
+                var pulse3 = Math.max(0, Math.sin(st * 3.14 + 4.19));
+
+                // Audio reactivity — bass boosts strobe intensity
+                var bassBoost = 1.0 + (values._audioBass || 0) * 3.0;
+
+                strobe1.intensity = pulse1 * 3.0 * bassBoost;
+                strobe2.intensity = pulse2 * 3.0 * bassBoost;
+                strobe3.intensity = pulse3 * 3.0 * bassBoost;
+
+                // Orbit positions
+                var r = 2.5;
+                strobe1.position.set(Math.cos(st * 0.7) * r, 1.5 + Math.sin(st) * 0.5, Math.sin(st * 0.7) * r);
+                strobe2.position.set(Math.cos(st * 0.7 + 2.09) * r, 0.5 + Math.sin(st + 1) * 0.5, Math.sin(st * 0.7 + 2.09) * r);
+                strobe3.position.set(Math.cos(st * 0.7 + 4.19) * r, -0.3 + Math.sin(st + 2) * 0.5, Math.sin(st * 0.7 + 4.19) * r);
+
+                // Strobe colors from inputs
+                if (values.strobeColor1) {
+                    var c = values.strobeColor1;
+                    strobe1.color.setRGB(c[0], c[1], c[2]);
+                }
+                if (values.strobeColor2) {
+                    var c = values.strobeColor2;
+                    strobe2.color.setRGB(c[0], c[1], c[2]);
+                }
+                if (values.strobeColor3) {
+                    var c = values.strobeColor3;
+                    strobe3.color.setRGB(c[0], c[1], c[2]);
+                }
+
+                // Transparent background
                 var wantTransparent = values.transparentBg != null ? !!values.transparentBg : true;
                 if (wantTransparent) {
                     scene.background = null;
@@ -135,21 +203,25 @@
                     scene.background = _bgColor;
                 }
 
-                // Floor toggle
-                gridHelper.visible = values.floor != null ? !!values.floor : false;
+                // Floor
+                floorMesh.visible = values.floor != null ? !!values.floor : false;
+
+                // Cube color
+                if (values.cubeColor) {
+                    var cc = values.cubeColor;
+                    material.color.setRGB(cc[0], cc[1], cc[2]);
+                }
 
                 // Shape switching
-                const shapeId = (values.shape != null) ? values.shape : 1;
+                var shapeId = (values.shape != null) ? values.shape : 0;
                 if (shapeId !== currentShape) {
                     if (shapeId === 6) {
-                        // Custom model — hide default mesh, show model from media
                         mesh.visible = false;
                         var modelMedia = mediaList && mediaList.find(function(e) { return e.type === 'model' && e.threeModel; });
                         if (modelMedia && modelMedia.threeModel !== (customModel && customModel._sourceModel)) {
                             if (customModel) pivot.remove(customModel);
                             customModel = modelMedia.threeModel.clone();
                             customModel._sourceModel = modelMedia.threeModel;
-                            // Normalize: scale to fit, then center at origin
                             var box = new THREE.Box3().setFromObject(customModel);
                             var center = box.getCenter(new THREE.Vector3());
                             var extent = box.getSize(new THREE.Vector3()).length();
@@ -157,17 +229,9 @@
                             customModel.scale.multiplyScalar(s);
                             customModel.position.copy(center).multiplyScalar(-s);
                             pivot.add(customModel);
-                        } else if (!modelMedia && customModel) {
-                            pivot.remove(customModel);
-                            customModel = null;
-                            mesh.visible = true;
                         }
                     } else {
-                        // Built-in shape — hide custom model, show default mesh
-                        if (customModel) {
-                            pivot.remove(customModel);
-                            customModel = null;
-                        }
+                        if (customModel) { pivot.remove(customModel); customModel = null; }
                         mesh.visible = true;
                         geometry.dispose();
                         geometry = makeGeometry(shapeId);
@@ -176,7 +240,7 @@
                     currentShape = shapeId;
                 }
 
-                // If custom shape, check for new/changed model each frame
+                // Custom model check
                 if (shapeId === 6 && mediaList) {
                     var modelMedia = mediaList.find(function(e) { return e.type === 'model' && e.threeModel; });
                     if (modelMedia && modelMedia.threeModel !== (customModel && customModel._sourceModel)) {
@@ -198,118 +262,75 @@
                     }
                 }
 
+                // Rotation
                 pivot.rotation.x = time * spd * rx;
                 pivot.rotation.y = time * spd * ry;
                 pivot.rotation.z = time * spd * rz;
                 pivot.scale.setScalar(sz);
 
-                // Auto-orbit camera — mimics natural mouse exploration
+                // Camera orbit
                 var orbit = (values.movement != null) ? values.movement : 0.6;
                 if (orbit > 0.001) {
                     var ot = time * 0.25 * orbit;
-                    // Multi-frequency for organic feel
-                    var angle = ot + 0.4 * Math.sin(ot * 0.7) + 0.2 * Math.sin(ot * 1.3);
-                    var dist = 3.5 + 0.6 * Math.sin(ot * 0.5) * orbit;
-                    var camY = 1.2 + 0.8 * Math.sin(ot * 0.35) * orbit;
-                    camera.position.set(
-                        Math.sin(angle) * dist,
-                        camY,
-                        Math.cos(angle) * dist
-                    );
+                    camera.position.x = Math.sin(ot) * 3.5;
+                    camera.position.z = Math.cos(ot) * 3.5;
+                    camera.position.y = 1.0 + Math.sin(ot * 0.7) * 0.5;
                     camera.lookAt(0, 0, 0);
                 }
 
-                if (values.cubeColor && !material.map) {
-                    const c = values.cubeColor;
-                    material.color.setRGB(c[0], c[1], c[2]);
+                // Render env map once for reflections
+                if (!_envRendered) {
+                    // Color the env sphere with strobe-like gradient
+                    envMat.color.setRGB(0.05, 0.05, 0.1);
+                    mesh.visible = false;
+                    envCam.position.set(0, 0, 0);
+                    envCam.update(renderer, envScene);
+                    material.envMap = envCam.renderTarget.texture;
+                    mesh.visible = true;
+                    _envRendered = true;
                 }
 
-                // Apply texture from media input
-                const texId = values.texture;
-                if (texId && mediaList) {
-                    const m = mediaList.find(function(e) { return String(e.id) === String(texId); });
-                    if (m && m.threeTexture) {
-                        // Apply to default mesh material
-                        if (material.map !== m.threeTexture) {
-                            m.threeTexture.wrapS = THREE.ClampToEdgeWrapping;
-                            m.threeTexture.wrapT = THREE.ClampToEdgeWrapping;
-                            m.threeTexture.minFilter = THREE.LinearFilter;
-                            m.threeTexture.magFilter = THREE.LinearFilter;
-                            m.threeTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-                            m.threeTexture.needsUpdate = true;
-                            material.map = m.threeTexture;
-                            material.color.setRGB(1, 1, 1);
+                // Texture handling
+                var texId = values.texture;
+                if (texId && texId !== currentTexId) {
+                    var entry = mediaList && mediaList.find(function(e) { return String(e.id) === String(texId); });
+                    if (entry) {
+                        if (entry.threeTexture) {
+                            material.map = entry.threeTexture;
                             material.needsUpdate = true;
-                            material._vfcBound = false;
-                            material._hasNewFrame = true;
-                            currentTexId = texId;
                         }
-                        // Apply to all materials in custom model
-                        if (customModel) {
-                            customModel.traverse(function(child) {
-                                if (child.isMesh && child.material && child.material.map !== m.threeTexture) {
-                                    patchMaterialForScreenSpace(child.material);
-                                    child.material.map = m.threeTexture;
-                                    child.material.color.setRGB(1, 1, 1);
-                                    child.material.needsUpdate = true;
-                                }
-                            });
-                        }
-                        if (m.threeTexture.isVideoTexture) {
-                            m.threeTexture.needsUpdate = true;
-                            var vid = m.threeTexture.image;
-                            if (vid) {
-                                // Restart if paused or ended
-                                if (vid.paused || vid.ended) {
-                                    vid.play().catch(function() {});
-                                    stallFrames = 0;
-                                }
-                                // Detect stall: video reports playing but currentTime frozen
-                                if (!vid.paused && vid.readyState >= 2) {
-                                    if (vid.currentTime === lastVideoTime) {
-                                        stallFrames++;
-                                        if (stallFrames > 120) { // ~2 sec at 60fps
-                                            vid.currentTime += 0.01;
-                                            vid.play().catch(function() {});
-                                            stallFrames = 0;
-                                        }
-                                    } else {
-                                        stallFrames = 0;
-                                    }
-                                    lastVideoTime = vid.currentTime;
-                                }
-                            }
-                        }
+                        currentTexId = texId;
                     }
-                } else if (!texId && (material.map || customModel)) {
+                } else if (!texId && currentTexId) {
                     material.map = null;
-                    currentTexId = null;
-                    if (values.cubeColor) {
-                        const c = values.cubeColor;
-                        material.color.setRGB(c[0], c[1], c[2]);
-                    }
                     material.needsUpdate = true;
-                    // Remove texture from custom model materials
-                    if (customModel) {
-                        customModel.traverse(function(child) {
-                            if (child.isMesh && child.material && child.material.map) {
-                                child.material.map = null;
-                                child.material.needsUpdate = true;
-                            }
-                        });
+                    currentTexId = null;
+                }
+                // Video texture refresh
+                if (currentTexId && material.map && material.map.image) {
+                    var vid = material.map.image;
+                    if (vid.currentTime !== undefined) {
+                        if (vid.currentTime === lastVideoTime) {
+                            stallFrames++;
+                            if (stallFrames > 10 && vid.paused && vid.loop) vid.play().catch(function(){});
+                        } else {
+                            stallFrames = 0;
+                            material.map.needsUpdate = true;
+                        }
+                        lastVideoTime = vid.currentTime;
                     }
                 }
             },
-            resize(w, h) {
-                camera.aspect = w / h;
-                camera.updateProjectionMatrix();
-            },
-            dispose() {
+            dispose: function() {
                 geometry.dispose();
                 material.dispose();
+                floorGeo.dispose();
+                floorMat.dispose();
+                envGeo.dispose();
+                envMat.dispose();
             }
         };
     }
 
-    return { INPUTS, create };
+    return { INPUTS: INPUTS, create: create };
 })
