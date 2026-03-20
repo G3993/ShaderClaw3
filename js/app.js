@@ -2812,9 +2812,9 @@
         signalKey: parts[1],
         param: paramName,
         min: isAudioSwitch ? 0 : old.min,
-        max: isAudioSwitch ? 0.01 : old.max,
-        smoothing: isAudioSwitch ? 0.5 : (old.smoothing || 0),
-        easing: old.easing || 'easeInOut',
+        max: isAudioSwitch ? 0.05 : old.max,
+        smoothing: isAudioSwitch ? 0.7 : (old.smoothing || 0),
+        easing: isAudioSwitch ? 'easeOut' : (old.easing || 'easeInOut'),
         _pMin: old._pMin, _pMax: old._pMax
       };
       if (idx >= 0) layer.mpBindings[idx] = newBinding;
@@ -3217,11 +3217,11 @@
           item.onclick = () => {
             const idx = layer.mpBindings.findIndex(b => b.param === paramName);
             const old = idx >= 0 ? layer.mpBindings.splice(idx, 1)[0] : null;
-            // Audio defaults: tight range + smoothing for responsive mic reactivity
+            // Audio defaults: gentle range + high smoothing for natural feel
             const audioDefMin = old ? old.min : 0;
-            const audioDefMax = old ? old.max : 0.01;
-            const audioDefSmooth = old ? (old.smoothing||0) : 0.5;
-            existing = { source: 'audio', signalKey: sig.key, param: paramName, min: audioDefMin, max: audioDefMax, smoothing: audioDefSmooth, easing: old ? (old.easing||'easeInOut') : 'easeInOut', _pMin: pMin, _pMax: pMax };
+            const audioDefMax = old ? old.max : 0.05;
+            const audioDefSmooth = old ? (old.smoothing||0) : 0.7;
+            existing = { source: 'audio', signalKey: sig.key, param: paramName, min: audioDefMin, max: audioDefMax, smoothing: audioDefSmooth, easing: old ? (old.easing||'easeOut') : 'easeOut', _pMin: pMin, _pMax: pMax };
             layer.mpBindings.push(existing);
             if (window.ensureMicOn) window.ensureMicOn();
             onSignalSelected();

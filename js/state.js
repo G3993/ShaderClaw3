@@ -201,10 +201,14 @@ function applyBindingValue(layer, b, rawSignal) {
   // Range mapping
   let target = b.min + v * (b.max - b.min);
 
-  // Per-binding EMA smoothing
+  // Per-binding EMA smoothing (attack/release asymmetric for natural feel)
   const smoothing = b.smoothing || 0;
   if (smoothing > 0 && b._smoothedValue != null) {
-    const alpha = Math.pow(0.02, smoothing);
+    const rising = target > b._smoothedValue;
+    // Attack is faster than release for punchy but smooth response
+    const attackAlpha = Math.pow(0.05, smoothing); // faster rise
+    const releaseAlpha = Math.pow(0.01, smoothing); // slower decay
+    const alpha = rising ? attackAlpha : releaseAlpha;
     target = b._smoothedValue + (target - b._smoothedValue) * (1 - alpha);
   }
   b._smoothedValue = target;
