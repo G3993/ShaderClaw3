@@ -643,5 +643,55 @@
       "Generator"
     ],
     "file": "eclipse.fs"
+  },
+  {
+    "id": 410,
+    "title": "Crystal Cubes",
+    "description": "Floating rotating glass cubes — bass pulses size, texture revealed through faces",
+    "categories": [
+      "Generator",
+      "3D"
+    ],
+    "file": "crystal_cubes.fs"
+  },
+  {
+    "id": 411,
+    "title": "Particle Sphere",
+    "description": "Exploding particle cluster — bass expands particles outward, texture masked through each sphere",
+    "categories": [
+      "Generator",
+      "3D"
+    ],
+    "file": "particle_sphere.fs"
+  },
+  {
+    "id": 412,
+    "title": "Liquid Orb",
+    "description": "Morphing liquid sphere — noise displacement, spherical texture mapping wraps video around the orb",
+    "categories": [
+      "Generator",
+      "3D"
+    ],
+    "file": "liquid_orb.fs"
+  },
+  {
+    "id": 413,
+    "title": "Geometric Tunnel",
+    "description": "Fly-through polygon tunnel — video on walls, neon edges, bass pulses walls",
+    "categories": [
+      "Generator",
+      "3D"
+    ],
+    "file": "geometric_tunnel.fs"
+  },
+  {
+    "id": 414,
+    "title": "Shatter Grid",
+    "description": "Mirror-tile grid that explodes on bass — each tile reveals a piece of the texture",
+    "categories": [
+      "Generator",
+      "3D"
+    ],
+    "file": "shatter_grid.fs"
   }
 ]
