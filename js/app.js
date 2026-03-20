@@ -5615,26 +5615,31 @@
     _micRecognition.continuous = true;
     _micRecognition.interimResults = true;
 
+    let _fullTranscript = ''; // accumulated full speech
     _micRecognition.onresult = (event) => {
       let interim = '';
-      let final = '';
+      let finalNew = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
         if (event.results[i].isFinal) {
-          final += event.results[i][0].transcript;
+          finalNew += event.results[i][0].transcript;
         } else {
           interim += event.results[i][0].transcript;
         }
       }
-      _micCaptionText = (final || interim).trim() || '...';
+      // Accumulate final results, show interim as live preview
+      if (finalNew) _fullTranscript += finalNew + ' ';
+      const liveText = (_fullTranscript + interim).trim();
+      _micCaptionText = liveText || '...';
       _renderMicCaptionCanvas();
 
-      // Push transcription into any text-type ISF inputs (e.g. "msg" on the Text shader)
+      // Push last 48 chars to shader (sliding window of latest speech)
       _pushMicTextToShader(_micCaptionText);
-      // Sync prominent MSG bar + voice transcript
+      // Sync prominent MSG bar + voice transcript (show recent text)
+      const displayText = _micCaptionText.toUpperCase();
       const msgBar = document.getElementById('text-msg-input');
-      if (msgBar) msgBar.value = _micCaptionText.toUpperCase();
+      if (msgBar) msgBar.value = displayText.length > 48 ? displayText.slice(-48) : displayText;
       const voiceTranscript = document.getElementById('voice-transcript');
-      if (voiceTranscript) voiceTranscript.value = _micCaptionText.toUpperCase();
+      if (voiceTranscript) voiceTranscript.value = displayText;
       _voiceLastInputTime = performance.now();
     };
 
