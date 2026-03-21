@@ -451,27 +451,6 @@
     "hasVertex": true
   },
   {
-    "id": 200,
-    "title": "Oscar Lights",
-    "description": "Oscars ceremony — dramatic gold spotlight cone with volumetric god rays, floating dust particles, film grain, and audio reactivity",
-    "categories": [
-      "Generator"
-    ],
-    "file": "oscar_lights.fs",
-    "hasVertex": true
-  },
-  {
-    "id": 201,
-    "title": "Oscar Trophy",
-    "description": "Rotating gold Oscar trophy with dramatic spotlight, rim lighting, and audio-reactive glow — import your GLB model",
-    "type": "scene",
-    "categories": [
-      "3D"
-    ],
-    "file": "oscar_trophy.scene.js",
-    "folder": "scenes"
-  },
-  {
     "id": 202,
     "title": "Red Carpet",
     "description": "Draped velvet cloth simulation — flowing folds with velvet sheen, specular highlights, wind, and audio-reactive ripples",
@@ -702,5 +681,15 @@
       "Generator"
     ],
     "file": "nowruz.fs"
+  },
+  {
+    "id": 421,
+    "title": "Wet Paper",
+    "description": "Rotational fluid dynamics with specular lighting — ink-on-wet-paper effect",
+    "categories": [
+      "Generator",
+      "Filter"
+    ],
+    "file": "wet_paper.fs"
   }
 ]
