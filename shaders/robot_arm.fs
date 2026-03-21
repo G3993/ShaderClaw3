@@ -315,7 +315,7 @@ void main() {
 
     float grip = max(pinchHold, mouseDown);
     float shot = pinchHold2;
-    vec3 beamColor = laserColor.rgb * 1.5 + vec3(0.15);
+    vec3 beamColor = laserColor.rgb * 2.5;
 
     // Arm 1
     vec2 w1, fd1, f1a, f1b, f1c;

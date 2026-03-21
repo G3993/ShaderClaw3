@@ -13,6 +13,7 @@
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
     { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.04, 1.0] },
+    { "NAME": "voiceSync", "LABEL": "Voice Sync", "TYPE": "bool", "DEFAULT": false },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true },
     { "NAME": "loop", "LABEL": "Loop", "TYPE": "bool", "DEFAULT": false }
   ]
@@ -97,14 +98,21 @@ void main() {
     float maxW = aspect * 0.9;
 
     // Typewriter reveal
-    float typeTime = float(numChars) / speed;
-    float t = TIME;
-    if (loop) {
-        float cycle = typeTime + 2.0;
-        t = mod(t, cycle);
+    int revealed;
+    if (voiceSync) {
+        // Voice sync mode: show exactly as many chars as speech has produced
+        // msg_len is updated in real-time by the speech recognition system
+        revealed = numChars;
+    } else {
+        float typeTime = float(numChars) / speed;
+        float t = TIME;
+        if (loop) {
+            float cycle = typeTime + 2.0;
+            t = mod(t, cycle);
+        }
+        revealed = int(floor(t * speed));
+        if (revealed > numChars) revealed = numChars;
     }
-    int revealed = int(floor(t * speed));
-    if (revealed > numChars) revealed = numChars;
     int showCount = revealed;
 
     // Auto-scale: shrink text to fit all revealed characters on screen

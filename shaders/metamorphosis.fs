@@ -4,7 +4,12 @@
   "INPUTS": [
     { "NAME": "morphSpeed", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.0, "LABEL": "Morph Speed" },
     { "NAME": "blobCount", "TYPE": "float", "DEFAULT": 4.0, "MIN": 2.0, "MAX": 6.0, "LABEL": "Blob Count" },
-    { "NAME": "baseColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.91, 0.25, 0.34, 1.0] },
+    { "NAME": "metalColor", "LABEL": "Metal Color", "TYPE": "color", "DEFAULT": [0.85, 0.65, 0.3, 1.0] },
+    { "NAME": "accentColor", "LABEL": "Accent", "TYPE": "color", "DEFAULT": [0.91, 0.25, 0.34, 1.0] },
+    { "NAME": "metalness", "LABEL": "Metalness", "TYPE": "float", "DEFAULT": 0.9, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "roughness", "LABEL": "Roughness", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.01, "MAX": 1.0 },
+    { "NAME": "blobSize", "LABEL": "Size", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.3, "MAX": 2.0 },
+    { "NAME": "smoothness", "LABEL": "Melt", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.1, "MAX": 1.5 },
     { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
   ]
@@ -41,7 +46,7 @@ float scene(vec3 p) {
     vec3 q = p - g_pos[i];
     q = vec3(g_rotXY[i] * q.xy, q.z);
     q = vec3(q.x, g_rotYZ[i] * q.yz);
-    d = smin(d, sdEllipsoid(q, g_rad[i]), 0.6);
+    d = smin(d, sdEllipsoid(q, g_rad[i]), smoothness);
   }
   return d;
 }
@@ -119,7 +124,7 @@ void main() {
       cos(speed * 0.5 + phase * 1.4) * 0.6 + sin(speed * 0.8 + phase * 0.7) * 0.25,
       sin(speed * 0.6 + phase * 1.8) * 0.5 + cos(speed * 0.4 + phase * 2.1) * 0.2
     );
-    float base = 0.45 + fi * 0.03;
+    float base = (0.45 + fi * 0.03) * blobSize;
     float pulse = sin(speed * 1.2 + fi * 1.7) * 0.08 + sin(speed * 0.5 + fi * 3.1) * 0.05;
     float r = base + pulse + smoothstep(0.0, 0.3, audioBass) * 0.05;
     float sx = 1.0 + sin(speed * 0.9 + fi * 2.3) * 0.25;
@@ -198,7 +203,7 @@ void main() {
       // Apply full lighting to texture
       vec3 L1 = normalize(vec3(2.0, 3.0, 1.5));
       float diff = max(dot(n, L1), 0.0);
-      float spec = pow(max(dot(n, normalize(L1 + v)), 0.0), 256.0);
+      float spec = pow(max(dot(n, normalize(L1 + v)), 0.0), mix(256.0, 16.0, roughness));
       float NdotV = max(dot(n, v), 0.0);
       float fres = fresnel(NdotV, 0.04);
       float shadow = softShadow(p + n * 0.01, L1, 0.02, 5.0, 16.0);
@@ -208,22 +213,16 @@ void main() {
       col += texCol * spec * fres * 1.5;
       col += texCol * pow(1.0 - NdotV, 4.0) * 0.3;
       col *= ao;
-      col *= baseColor.rgb;
+      col *= accentColor.rgb;
 
     } else {
-      // No texture — full metallic liquid-metal look
-      float surfaceVar = sin(p.x * 5.0 + t * 0.3) * sin(p.y * 7.0 + t * 0.2) * sin(p.z * 6.0 + t * 0.4);
-      vec3 goldColor = vec3(0.85, 0.65, 0.3);
-      vec3 roseColor = vec3(0.8, 0.5, 0.45);
-      vec3 copperColor = vec3(0.75, 0.45, 0.25);
-
+      // No texture — metallic liquid-metal with user colors
       float cm1 = sin(p.x * 3.0 + p.z * 2.0 + speed * 0.4) * 0.5 + 0.5;
       float cm2 = sin(p.y * 4.0 - p.x * 2.5 + speed * 0.3) * 0.5 + 0.5;
-      vec3 albedo = mix(goldColor, roseColor, cm1 * 0.3);
-      albedo = mix(albedo, copperColor, cm2 * 0.25);
-      albedo *= baseColor.rgb;
+      vec3 albedo = mix(metalColor.rgb, accentColor.rgb, cm1 * 0.4);
+      albedo = mix(albedo, metalColor.rgb * 0.7, cm2 * 0.25);
 
-      float metallic = 0.9;
+      float metallic = metalness;
 
       vec3 L1 = normalize(vec3(2.0, 3.0, 1.5));
       vec3 L1col = vec3(1.0, 0.9, 0.75) * 1.6;
@@ -239,9 +238,9 @@ void main() {
       vec3 h1 = normalize(L1 + v);
       vec3 h2 = normalize(L2 + v);
       vec3 h3 = normalize(L3 + v);
-      float spec1 = pow(max(dot(n, h1), 0.0), 256.0);
-      float spec2 = pow(max(dot(n, h2), 0.0), 256.0);
-      float spec3 = pow(max(dot(n, h3), 0.0), 256.0);
+      float spec1 = pow(max(dot(n, h1), 0.0), mix(256.0, 16.0, roughness));
+      float spec2 = pow(max(dot(n, h2), 0.0), mix(256.0, 16.0, roughness));
+      float spec3 = pow(max(dot(n, h3), 0.0), mix(256.0, 16.0, roughness));
 
       float NdotV = max(dot(n, v), 0.0);
       float fres = fresnel(NdotV, 0.04 + metallic * 0.76);
