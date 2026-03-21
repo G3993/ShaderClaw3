@@ -72,11 +72,11 @@ void main() {
   vec3 fwd = normalize(target - ro), right = normalize(cross(fwd, vec3(0,1,0))), up = cross(right, fwd);
   vec3 rd = normalize(fwd * 1.5 + right * uv.x + up * uv.y);
 
-  float totalDist = 0.0; bool hit = false; vec3 p;
+  float totalDist = 0.0; float hit = 0.0; vec3 p = ro;
   for (int i = 0; i < MAX_STEPS; i++) {
     p = ro + rd * totalDist;
     float d = scene(p, t, cnt);
-    if (d < SURF_DIST) { hit = true; break; }
+    if (d < SURF_DIST) { hit = 1.0; break; }
     if (totalDist > 20.0) break;
     totalDist += d;
   }
@@ -84,19 +84,19 @@ void main() {
   // Sample texture for masking
   vec2 texUV = gl_FragCoord.xy / RENDERSIZE.xy;
   vec4 texSample = texture2D(inputTex, texUV);
-  bool hasTexture = texSample.a > 0.01;
+  float hasTexture = step(0.01, texSample.a);
 
   vec3 col = vec3(0.0);
   float alpha = 0.0;
 
-  if (hit) {
+  if (hit > 0.5) {
     vec3 n = calcNormal(p, t, cnt), v = normalize(ro - p);
     vec3 L = normalize(vec3(2, 3, 1.5)), H = normalize(L + v);
     float diff = max(dot(n, L), 0.0);
     float spec = pow(max(dot(n, H), 0.0), 256.0);
     float fres = 0.8 + 0.2 * pow(1.0 - max(dot(n, v), 0.0), 5.0);
 
-    if (hasTexture) {
+    if (hasTexture > 0.5) {
       // Texture revealed through the metaball shape — shader is the mask
       // Use surface normal to refract/distort the texture UV
       vec2 refractUV = texUV + n.xy * 0.05;

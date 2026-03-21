@@ -693,5 +693,14 @@
       "3D"
     ],
     "file": "shatter_grid.fs"
+  },
+  {
+    "id": 420,
+    "title": "Nowruz",
+    "description": "Persian new year — saffron & turquoise sacred geometry, fire & water, voice-reactive floral bloom, golden hour light rays",
+    "categories": [
+      "Generator"
+    ],
+    "file": "nowruz.fs"
   }
 ]
