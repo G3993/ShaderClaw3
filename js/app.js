@@ -55,6 +55,8 @@
   const sceneRenderer = new SceneRenderer(threeCanvas);
   sceneRenderer._isfGL = isfRenderer.gl;
   sceneRenderer._mainRenderer = isfRenderer;
+  // Fluid simulation renderer (shared GL context)
+  const fluidRenderer = new FluidRenderer(gl, isfRenderer);
   const errorBar = document.getElementById('error-bar');
   errorBar.dataset.init = '1'; // suppress during init
   const _isMobileComp = window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
@@ -1033,6 +1035,14 @@
       select.appendChild(ph);
     }
 
+    // Add Fluid Simulation option for shader layer
+    if (layerId === 'shader') {
+      const fluidOpt = document.createElement('option');
+      fluidOpt.value = '__fluid__';
+      fluidOpt.textContent = '\u2500 Fluid Simulation';
+      select.appendChild(fluidOpt);
+    }
+
     items.forEach(item => {
       const opt = document.createElement('option');
       opt.value = item.file;
@@ -1063,6 +1073,18 @@
       const item = manifest.find(m => m.file === file);
       const layer = getLayer(layerId);
       if (layer && item) layer.manifestEntry = item;
+
+      // Fluid simulation special case
+      if (file === '__fluid__') {
+        // Deactivate any ISF shader on this layer
+        if (layer) layer.program = null;
+        activateFluidOnLayer(layerId);
+        return;
+      }
+      // Switching away from fluid — deactivate if was active
+      if (layer && layer._fluidActive) {
+        deactivateFluid(layerId);
+      }
 
       if (layerId === 'scene') {
         await loadScene(folder, file);
@@ -1116,8 +1138,10 @@
         el.dataset.search = item.title.toLowerCase();
         el.addEventListener('click', async () => {
           closeBrowser();
-          // Store manifest entry before loading so populatePresetDropdown has title fallback
           const layer = getLayer(layerId);
+          // Deactivate fluid if switching to a regular shader
+          if (layer && layer._fluidActive) deactivateFluid(layerId);
+          // Store manifest entry before loading so populatePresetDropdown has title fallback
           if (layer) layer.manifestEntry = item;
           const folder = item.folder || (layerId === 'scene' ? 'scenes' : 'shaders');
           if (layerId === 'scene') {
@@ -1132,10 +1156,82 @@
       browserBody.appendChild(section);
     }
 
+    // Add Fluid Simulation as a special entry (only for shader layer, not scene)
+    if (layerId === 'shader') {
+      const fluidSection = document.createElement('div');
+      fluidSection.className = 'browser-category';
+      fluidSection.innerHTML = '<div class="browser-category-title">Simulation</div>';
+      const fluidGrid = document.createElement('div');
+      fluidGrid.className = 'browser-grid';
+      const fluidItem = document.createElement('div');
+      fluidItem.className = 'browser-item';
+      fluidItem.textContent = 'Fluid';
+      fluidItem.dataset.search = 'fluid simulation navier stokes water smoke';
+      fluidItem.addEventListener('click', () => {
+        closeBrowser();
+        activateFluidOnLayer('shader');
+      });
+      fluidGrid.appendChild(fluidItem);
+      fluidSection.appendChild(fluidGrid);
+      // Insert at the top
+      browserBody.insertBefore(fluidSection, browserBody.firstChild);
+    }
+
     browserOverlay.classList.add('visible');
     browserBackdrop.classList.add('visible');
     browserSearch.focus();
   }
+
+  // ── Fluid simulation activation ──────────────────────────
+  function activateFluidOnLayer(layerId) {
+    const layer = getLayer(layerId);
+    if (!layer) return;
+
+    // Deactivate fluid on any other layer
+    layers.forEach(l => { l._fluidActive = false; });
+
+    // Init fluid renderer if needed
+    if (!fluidRenderer.active) {
+      fluidRenderer.init();
+      // Fire initial random splats for visual impact
+      fluidRenderer.splatRandom(Math.floor(Math.random() * 10) + 5);
+    }
+
+    layer._fluidActive = true;
+    layer.visible = true;
+    layer.opacity = 1.0;
+    layer.manifestEntry = { title: 'Fluid', file: '__fluid__', type: 'fluid', categories: ['Simulation'] };
+
+    // Generate fluid controls in the params panel
+    const paramsContainer = document.querySelector('.layer-params[data-layer="' + layerId + '"]');
+    if (paramsContainer) {
+      const fluidInputs = fluidRenderer.getInputs();
+      layer.inputs = fluidInputs;
+      layer.inputValues = generateControls(fluidInputs, paramsContainer, (vals) => {
+        layer.inputValues = vals;
+        // Forward param changes to fluid renderer
+        for (const key in vals) {
+          fluidRenderer.setParam(key, vals[key]);
+        }
+      });
+    }
+
+    updateLayerCardUI(layerId);
+    syncToggleSection(layerId, true);
+    console.log('[ShaderClaw] Fluid simulation activated on layer:', layerId);
+  }
+
+  function deactivateFluid(layerId) {
+    const layer = getLayer(layerId);
+    if (layer) layer._fluidActive = false;
+    if (fluidRenderer.active) {
+      fluidRenderer.destroy();
+    }
+  }
+
+  // Expose for MCP / external
+  window._fluidRenderer = fluidRenderer;
+  window._activateFluid = activateFluidOnLayer;
 
   function closeBrowser() {
     if (browserOverlay) browserOverlay.classList.remove('visible');
@@ -5813,28 +5909,30 @@
     // Yield frames between each heavy GPU operation to prevent context loss
     await yieldFrame();
 
-    // 1. Shader layer FIRST
+    // 1. Shader layer FIRST — default to Fluid Simulation
     try {
-      const src = shaderSrc || DEFAULT_SHADER;
-      const shaderResult = compileToLayer('shader', src);
-      if (shaderResult && shaderResult.ok) {
-        // compileToLayer already sets visible=true on success
-        if (shaderSrc && _defaultShader) {
-          getLayer('shader').manifestEntry = _defaultShader;
-          const sel = document.querySelector('.layer-shader-select[data-layer="shader"]');
-          if (sel) sel.value = _defaultShader.file;
+      activateFluidOnLayer('shader');
+      const sel = document.querySelector('.layer-shader-select[data-layer="shader"]');
+      if (sel) sel.value = '__fluid__';
+      dbg('shader: Fluid Simulation activated');
+    } catch (e) {
+      console.error('fluid init exception, falling back to ISF shader:', e);
+      // Fallback to metamorphosis if fluid fails
+      try {
+        const src = shaderSrc || DEFAULT_SHADER;
+        const shaderResult = compileToLayer('shader', src);
+        if (shaderResult && shaderResult.ok) {
+          if (shaderSrc && _defaultShader) {
+            getLayer('shader').manifestEntry = _defaultShader;
+            const sel = document.querySelector('.layer-shader-select[data-layer="shader"]');
+            if (sel) sel.value = _defaultShader.file;
+          }
+          if (focusedLayerId === 'shader') editor.setValue(src);
         }
-        if (focusedLayerId === 'shader') editor.setValue(src);
-      } else {
-        const err = shaderResult && shaderResult.errors;
-        console.error('Shader compile failed:', err);
-        errorBar.textContent = 'Shader: ' + (err || 'unknown error');
+      } catch (e2) {
+        errorBar.textContent = 'Shader exception: ' + e2.message;
         errorBar.classList.add('show');
       }
-    } catch (e) {
-      console.error('shader compile exception:', e);
-      errorBar.textContent = 'Shader exception: ' + e.message;
-      errorBar.classList.add('show');
     }
 
     await yieldFrame();
@@ -5907,6 +6005,24 @@
         gl.bindTexture(gl.TEXTURE_2D, tex);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, element);
       });
+    }
+
+    // Load built-in assets from /assets folder
+    try {
+      const assetList = await fetch('/api/assets').then(r => r.json());
+      for (const asset of assetList) {
+        const resp = await fetch(asset.url);
+        const blob = await resp.blob();
+        const file = new File([blob], asset.name, { type: blob.type });
+        await addMediaFromFile(file);
+      }
+      if (assetList.length) {
+        renderAssetsList();
+        autoBindTextures();
+        dbg('built-in assets: loaded ' + assetList.length);
+      }
+    } catch (e) {
+      dbg('built-in assets: ' + e.message);
     }
 
     // Enable error bar now that init is done
@@ -6459,6 +6575,28 @@
           gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
           gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, threeCanvas);
           gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+        } else if (layer._fluidActive && fluidRenderer.active) {
+          // Fluid simulation: update + render to layer FBO
+          // Use hand-as-mouse override when enabled
+          let fMx = isfRenderer.mousePos, fMdx = isfRenderer.mouseDelta, fMdown = isfRenderer.mouseDown;
+          if (layer.handAsMouse && mediaPipeMgr && mediaPipeMgr.active && mediaPipeMgr.handCount > 0) {
+            const hx = 1.0 - mediaPipeMgr.handPos[0];
+            const hy = mediaPipeMgr.handPos[1];
+            const pdx = hx - (layer._prevFluidHandX ?? hx);
+            const pdy = hy - (layer._prevFluidHandY ?? hy);
+            layer._prevFluidHandX = hx;
+            layer._prevFluidHandY = hy;
+            fMx = [hx, hy];
+            fMdx = [pdx, pdy];
+            fMdown = mediaPipeMgr.isPinching ? 1 : 0;
+          }
+          const audioState = (typeof audioLevel !== 'undefined') ? { level: audioLevel, bass: audioBass, mid: audioMid, high: audioHigh } : null;
+          fluidRenderer.update(fMx, fMdx, fMdown, audioState, mediaPipeMgr);
+          fluidRenderer.renderToFBO(layer.fbo);
+          // Pinch-to-fade: apply fluid renderer's pinch opacity to layer
+          if (fluidRenderer.pinchFading || fluidRenderer.pinchOpacity < 1) {
+            layer.opacity = fluidRenderer.pinchOpacity;
+          }
         } else if (layer.program) {
           isfRenderer.renderLayerToFBO(layer, mediaPipeMgr);
         }
