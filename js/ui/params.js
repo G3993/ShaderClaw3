@@ -498,13 +498,7 @@ function generateControls(inputs, container, onChange) {
       }
       _populateImageSelect();
 
-      // Auto-select on first build
-      const compatibleMedia = mediaInputs.filter(m => m.type === 'image' || m.type === 'video' || m.type === 'svg');
-      const autoIdx = Math.min(imageInputIdx, compatibleMedia.length - 1);
-      if (compatibleMedia.length > 0) {
-        select.value = compatibleMedia[autoIdx].id;
-        values[inp.NAME] = compatibleMedia[autoIdx].id;
-      }
+      // No auto-select — user picks media explicitly via the dropdown
       imageInputIdx++;
 
       select.addEventListener('change', () => {
@@ -512,11 +506,28 @@ function generateControls(inputs, container, onChange) {
         // Handle "add source" actions
         if (val === '__add_ndi__') {
           select.value = ''; // reset dropdown
-          const picker = document.getElementById('ndi-source-picker');
-          if (picker) { picker.classList.add('visible'); }
-          // Trigger NDI source refresh via the global tile-ndi handler
+          // Open NDI picker and auto-assign to this param when source is added
           const tileNdi = document.getElementById('tile-ndi');
-          if (tileNdi) tileNdi.click();
+          if (tileNdi) {
+            // Stash callback so the NDI flow can assign back to this dropdown
+            const _origAutoBindTextures = window._autoBindTextures;
+            const _paramName = inp.NAME;
+            const _onMediaAdded = () => {
+              // After NDI source is added, find it and assign to this param
+              const ndiMedia = mediaInputs.filter(m => m._isNdi);
+              if (ndiMedia.length > 0) {
+                const latest = ndiMedia[ndiMedia.length - 1];
+                values[_paramName] = latest.id;
+                if (select._refreshOptions) select._refreshOptions();
+                select.value = latest.id;
+                onChange(values);
+              }
+              // Unhook
+              window.removeEventListener('ndi-source-added', _onMediaAdded);
+            };
+            window.addEventListener('ndi-source-added', _onMediaAdded);
+            tileNdi.click();
+          }
           return;
         }
         if (val === '__add_image__') {

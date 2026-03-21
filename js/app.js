@@ -4759,6 +4759,7 @@
     mediaInputs.push(entry);
     renderMediaList();
     autoBindTextures();
+    window.dispatchEvent(new Event('ndi-source-added'));
     return entry;
   }
 
@@ -5023,10 +5024,6 @@
 
         let media = null;
         if (selectedId) media = mediaInputs.find(m => String(m.id) === String(selectedId));
-        if (!media && i < compatibleMedia.length) {
-          media = compatibleMedia[i];
-          layer.inputValues[inp.NAME] = media.id;
-        }
         if (media && media.glTexture) {
           layer.textures[inp.NAME] = {
             glTexture: media.glTexture,

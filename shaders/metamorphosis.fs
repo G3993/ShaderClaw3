@@ -11,7 +11,7 @@
     { "NAME": "blobSize", "LABEL": "Size", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.3, "MAX": 2.0 },
     { "NAME": "smoothness", "LABEL": "Melt", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.1, "MAX": 1.5 },
     { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
@@ -270,20 +270,6 @@ void main() {
 
   } else if (!transparentBg) {
     col = vec3(0.012, 0.01, 0.008);
-
-    // Floor glow
-    if (rd.y < 0.0) {
-      float floorT = (-1.2 - ro.y) / rd.y;
-      if (floorT > 0.0 && floorT < MAX_DIST) {
-        vec3 floorP = ro + rd * floorT;
-        float floorDist = length(floorP.xz);
-        float glow = exp(-floorDist * floorDist * 1.5) * 0.15;
-        glow *= 0.8 + 0.2 * sin(speed * 0.5);
-        col += vec3(0.6, 0.4, 0.2) * glow;
-        float caustic = sin(floorP.x * 8.0 + t * 0.5) * sin(floorP.z * 8.0 + t * 0.7);
-        col += vec3(0.4, 0.25, 0.1) * caustic * caustic * glow * 2.0;
-      }
-    }
 
     // Atmospheric glow
     float closestT = max(-dot(ro, rd), 0.0);

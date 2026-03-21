@@ -12,16 +12,16 @@ class FluidRenderer {
 
     // Simulation config (exposed as UI controls)
     this.config = {
-      SIM_RESOLUTION: 128,
-      DYE_RESOLUTION: 1024,
-      LIFE: 5.0,               // 0 = instant fade, 10 = lives forever
+      SIM_RESOLUTION: 256,
+      DYE_RESOLUTION: 2048,
+      LIFE: 8.45,              // 0 = instant fade, 10 = lives forever
       DENSITY_DISSIPATION: 1.0, // derived from LIFE
-      VELOCITY_DISSIPATION: 0.2,
-      PRESSURE: 0.8,
+      VELOCITY_DISSIPATION: 4.0,
+      PRESSURE: 1.0,
       PRESSURE_ITERATIONS: 20,
-      CURL: 30,
-      SPLAT_RADIUS: 0.25,
-      SPLAT_FORCE: 6000,
+      CURL: 0,
+      SPLAT_RADIUS: 1.0,
+      SPLAT_FORCE: 20000,
       COLORFUL: true,
       COLOR_UPDATE_SPEED: 10,
       BACK_COLOR: [0, 0, 0],
@@ -714,20 +714,20 @@ class FluidRenderer {
       }
     }
 
-    // Audio-reactive splats
+    // Audio-reactive splats — throttled to avoid flooding from mic noise
     if (audioData) {
       const { level, bass, mid, high } = audioData;
-      // Big bass hits create center splats
-      if (bass > 0.6) {
-        const intensity = bass * 3;
-        const color = { r: 0.91 * intensity, g: 0.25 * intensity, b: 0.34 * intensity };
-        this.addSplat(0.5, 0.5, (Math.random() - 0.5) * 500 * bass, (Math.random() - 0.5) * 500 * bass, color);
-      }
-      // Mid-range creates scattered splats
-      if (mid > 0.5 && Math.random() < mid * 0.3) {
+      this._audioSplatCooldown = (this._audioSplatCooldown || 0) - dt;
+      // Only react to strong bass hits, max ~4 splats/sec
+      if (bass > 0.85 && this._audioSplatCooldown <= 0) {
+        this._audioSplatCooldown = 0.25;
         const color = this._randomColor();
-        color.r *= mid * 5; color.g *= mid * 5; color.b *= mid * 5;
-        this.addSplat(Math.random(), Math.random(), (Math.random() - 0.5) * 300 * mid, (Math.random() - 0.5) * 300 * mid, color);
+        color.r *= 2; color.g *= 2; color.b *= 2;
+        this.addSplat(
+          0.3 + Math.random() * 0.4, 0.3 + Math.random() * 0.4,
+          (Math.random() - 0.5) * 400 * bass, (Math.random() - 0.5) * 400 * bass,
+          color
+        );
       }
     }
 
@@ -780,29 +780,20 @@ class FluidRenderer {
       if (this.pinchOpacity >= 1) this.pinchFading = false;
     }
 
-    // Ambient movement — drifting splats that keep the sim alive
+    // Ambient movement — slow, visible blooms from center
     if (this.config.MOVEMENT) {
       this._movementTime += dt;
-      // Spawn a wandering splat every ~0.15s
-      if (this._movementTime > 0.15) {
-        this._movementTime -= 0.15;
+      if (this._movementTime > 0.2) {
+        this._movementTime -= 0.2;
         const t = performance.now() * 0.001;
-        // Two slow-moving emitters tracing smooth curves
-        const x1 = 0.5 + 0.3 * Math.sin(t * 0.7) * Math.cos(t * 0.3);
-        const y1 = 0.5 + 0.3 * Math.cos(t * 0.5) * Math.sin(t * 0.4);
-        const dx1 = Math.cos(t * 1.1) * 400;
-        const dy1 = Math.sin(t * 0.9) * 400;
-        const c1 = this._randomColor();
-        c1.r *= 3; c1.g *= 3; c1.b *= 3;
-        this.addSplat(x1, y1, dx1, dy1, c1);
-
-        const x2 = 0.5 + 0.25 * Math.cos(t * 0.4 + 2.0);
-        const y2 = 0.5 + 0.25 * Math.sin(t * 0.6 + 1.0);
-        const dx2 = Math.sin(t * 0.8 + 1.5) * 350;
-        const dy2 = Math.cos(t * 1.2 + 0.7) * 350;
-        const c2 = this._randomColor();
-        c2.r *= 3; c2.g *= 3; c2.b *= 3;
-        this.addSplat(x2, y2, dx2, dy2, c2);
+        // Slow bloom near center — low force so ink spreads gently
+        const x = 0.5 + (Math.random() - 0.5) * 0.12;
+        const y = 0.5 + (Math.random() - 0.5) * 0.12;
+        const angle = t * 0.3 + Math.random() * Math.PI * 2;
+        const force = 80 + Math.random() * 60;
+        const c = this._randomColor();
+        c.r *= 5; c.g *= 5; c.b *= 5;
+        this.addSplat(x, y, Math.cos(angle) * force, Math.sin(angle) * force, c);
       }
     }
 
