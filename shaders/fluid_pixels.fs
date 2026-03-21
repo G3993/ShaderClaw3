@@ -160,6 +160,19 @@
             "DEFAULT": [0.0, 0.0, 0.0, 1.0]
         },
         {
+            "NAME": "inputTex",
+            "TYPE": "image",
+            "LABEL": "Texture"
+        },
+        {
+            "NAME": "texMix",
+            "TYPE": "float",
+            "LABEL": "Texture Mix",
+            "MIN": 0.0,
+            "MAX": 1.0,
+            "DEFAULT": 0.0
+        },
+        {
             "NAME": "useBackgroundColor",
             "TYPE": "bool",
             "LABEL": "Use Background",
@@ -299,6 +312,17 @@ void main() {
 
         float intensity = (noiseValue + 1.0) * 0.5;
         vec4 color = getColorFromRamp(intensity);
+
+        // Texture sampling: each pixel cell samples from the texture at its center
+        vec4 texSample = texture2D(inputTex, cellUV);
+        if (texSample.a > 0.01 && texMix > 0.001) {
+            // Mix texture color with the noise-driven color ramp
+            vec3 texCol = texSample.rgb;
+            // Noise modulates the texture brightness
+            texCol *= (0.3 + intensity * 0.7);
+            color.rgb = mix(color.rgb, texCol, texMix);
+        }
+
         color.a *= maxOpacity;
         gl_FragColor = color;
     }
