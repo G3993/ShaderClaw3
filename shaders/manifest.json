@@ -189,17 +189,6 @@
     "folder": "scenes"
   },
   {
-    "id": 101,
-    "title": "Spinning Heads",
-    "description": "3D head gallery with 7 material presets — Standard, Wireframe, Flat, Chrome, Glass, X-Ray, Normal. Auto-loads LeePerrySmith bust or use your own model.",
-    "type": "scene",
-    "categories": [
-      "3D"
-    ],
-    "file": "spinning_heads.scene.js",
-    "folder": "scenes"
-  },
-  {
     "id": 38,
     "title": "ASCII Matrix",
     "description": "Falling columns of ASCII characters — matrix rain with density-mapped glyphs",
@@ -691,5 +680,32 @@
       "Filter"
     ],
     "file": "wet_paper.fs"
+  },
+  {
+    "id": 422,
+    "title": "Kaleidoscope",
+    "description": "Mirror-fold video into mesmerizing symmetry patterns with rotation and zoom",
+    "categories": [
+      "Effect"
+    ],
+    "file": "kaleidoscope.fs"
+  },
+  {
+    "id": 423,
+    "title": "Feedback Trails",
+    "description": "Ghostly echo trails with color drift, rotation, and zoom feedback",
+    "categories": [
+      "Effect"
+    ],
+    "file": "feedback_trails.fs"
+  },
+  {
+    "id": 424,
+    "title": "Pixel Sort",
+    "description": "Glitchy datamosh-style streaking with threshold control and directional sorting",
+    "categories": [
+      "Effect"
+    ],
+    "file": "pixel_sort.fs"
   }
 ]
