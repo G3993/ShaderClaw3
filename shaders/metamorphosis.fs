@@ -113,7 +113,7 @@ void main() {
   float speed = t * morphSpeed;
 
   // Precompute blob data
-  g_count = int(blobCount + smoothstep(0.0, 0.3, audioBass) * 2.0);
+  g_count = int(blobCount);
   if (g_count > BLOB_MAX) g_count = BLOB_MAX;
   for (int i = 0; i < BLOB_MAX; i++) {
     if (i >= g_count) break;
@@ -126,7 +126,7 @@ void main() {
     );
     float base = (0.45 + fi * 0.03) * blobSize;
     float pulse = sin(speed * 1.2 + fi * 1.7) * 0.08 + sin(speed * 0.5 + fi * 3.1) * 0.05;
-    float r = base + pulse + smoothstep(0.0, 0.3, audioBass) * 0.05;
+    float r = base + pulse + smoothstep(0.0, 0.5, audioBass) * 0.02;
     float sx = 1.0 + sin(speed * 0.9 + fi * 2.3) * 0.25;
     float sy = 1.0 + cos(speed * 0.7 + fi * 1.9) * 0.2;
     float sz = 1.0 + sin(speed * 1.1 + fi * 2.7) * 0.2;
@@ -213,7 +213,6 @@ void main() {
       col += texCol * spec * fres * 1.5;
       col += texCol * pow(1.0 - NdotV, 4.0) * 0.3;
       col *= ao;
-      col *= accentColor.rgb;
 
     } else {
       // No texture — metallic liquid-metal with user colors
