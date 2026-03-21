@@ -126,7 +126,7 @@ void main() {
     );
     float base = (0.45 + fi * 0.03) * blobSize;
     float pulse = sin(speed * 1.2 + fi * 1.7) * 0.08 + sin(speed * 0.5 + fi * 3.1) * 0.05;
-    float r = base + pulse + smoothstep(0.0, 0.5, audioBass) * 0.02;
+    float r = base + pulse;
     float sx = 1.0 + sin(speed * 0.9 + fi * 2.3) * 0.25;
     float sy = 1.0 + cos(speed * 0.7 + fi * 1.9) * 0.2;
     float sz = 1.0 + sin(speed * 1.1 + fi * 2.7) * 0.2;
@@ -266,7 +266,6 @@ void main() {
       col += vec3(1.0, 0.98, 0.92) * pow(max(dot(n, h1), 0.0), 512.0) * shadow * 2.0;
     }
 
-    col += audioLevel * vec3(0.06, 0.03, 0.01);
     alpha = 1.0;
 
   } else if (!transparentBg) {
