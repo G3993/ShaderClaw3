@@ -730,6 +730,83 @@
     "file": "cfd_paint.fs"
   },
   {
+    "id": 430,
+    "title": "Liquid Warp",
+    "description": "Underwater ripple displacement — multi-layer sine waves with chromatic aberration and mouse ripples",
+    "categories": ["VFX"],
+    "file": "liquid_warp.fs"
+  },
+  {
+    "id": 431,
+    "title": "Tunnel Zoom",
+    "description": "Infinite radial zoom tunnel with twist — log-polar mapping creates endless depth",
+    "categories": ["VFX"],
+    "file": "tunnel_zoom.fs"
+  },
+  {
+    "id": 432,
+    "title": "Pixel Melt",
+    "description": "Pixels drip downward based on brightness — audio-reactive meltdown with heat tint",
+    "categories": ["VFX"],
+    "file": "pixel_melt.fs"
+  },
+  {
+    "id": 433,
+    "title": "Sphere Warp",
+    "description": "Fisheye bulge lens — maps video onto a sphere with refraction and specular highlight",
+    "categories": ["VFX"],
+    "file": "sphere_warp.fs"
+  },
+  {
+    "id": 434,
+    "title": "Slice Shift",
+    "description": "Horizontal slice glitch — slices offset randomly on beat with RGB split",
+    "categories": ["VFX"],
+    "file": "slice_shift.fs"
+  },
+  {
+    "id": 435,
+    "title": "Twist Vortex",
+    "description": "Angular twist spiral from mouse center — optional kaleidoscope segments",
+    "categories": ["VFX"],
+    "file": "twist_vortex.fs"
+  },
+  {
+    "id": 436,
+    "title": "Edge Glow",
+    "description": "Neon edge detection — Sobel filter with customizable glow color and blur",
+    "categories": ["VFX"],
+    "file": "edge_glow.fs"
+  },
+  {
+    "id": 437,
+    "title": "Mirror Fractal",
+    "description": "Recursive mirror folds — iterative reflections that create fractal kaleidoscope patterns",
+    "categories": ["VFX"],
+    "file": "mirror_fractal.fs"
+  },
+  {
+    "id": 438,
+    "title": "Thermal Vision",
+    "description": "False-color heat map — 4 palettes (Heat, Night Vision, Cyberpunk, Ice) with scanlines",
+    "categories": ["VFX"],
+    "file": "thermal_vision.fs"
+  },
+  {
+    "id": 439,
+    "title": "Wave Distort",
+    "description": "Wave displacement with 4 modes (Sine, Square, Sawtooth, Radial) — RGB phase splitting",
+    "categories": ["VFX"],
+    "file": "wave_distort.fs"
+  },
+  {
+    "id": 440,
+    "title": "Hall of Mirrors",
+    "description": "Infinite recursive zoom with rotation — fractal tunnel from any input with color shift per layer",
+    "categories": ["VFX"],
+    "file": "hall_of_mirrors.fs"
+  },
+  {
     "id": 427,
     "title": "Data Sculpture",
     "description": "Raymarched grid of thousands of cubes flowing like fluid — input an image or video and it sculpts into a 3D data landscape",

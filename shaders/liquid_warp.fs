@@ -1,0 +1,58 @@
+/*{
+  "DESCRIPTION": "Liquid Warp — underwater ripple displacement on input video, audio-reactive",
+  "CATEGORIES": ["VFX"],
+  "INPUTS": [
+    { "NAME": "inputTex", "LABEL": "Input", "TYPE": "image" },
+    { "NAME": "amount", "LABEL": "Amount", "TYPE": "float", "DEFAULT": 0.03, "MIN": 0.0, "MAX": 0.15 },
+    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 5.0 },
+    { "NAME": "scale", "LABEL": "Scale", "TYPE": "float", "DEFAULT": 8.0, "MIN": 1.0, "MAX": 30.0 },
+    { "NAME": "chromatic", "LABEL": "Chromatic", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
+  ]
+}*/
+
+void main() {
+    vec2 uv = isf_FragNormCoord;
+    bool hasInput = IMG_SIZE_inputTex.x > 0.0;
+    float t = TIME * speed;
+    float bass = audioBass;
+    float amt = amount * (1.0 + bass * 3.0);
+
+    // Multi-layer sine displacement
+    vec2 d = vec2(0.0);
+    d.x += sin(uv.y * scale + t * 1.3) * amt;
+    d.x += sin(uv.y * scale * 2.1 - t * 0.7) * amt * 0.5;
+    d.y += cos(uv.x * scale * 1.4 + t) * amt;
+    d.y += cos(uv.x * scale * 2.7 - t * 1.1) * amt * 0.4;
+
+    // Mouse influence — ripple from mouse
+    vec2 mp = uv - mousePos;
+    float mr = length(mp);
+    d += mp * sin(mr * 40.0 - t * 4.0) * amt * 0.5 * exp(-mr * 5.0);
+
+    vec3 col;
+    if (hasInput) {
+        if (chromatic > 0.001) {
+            float ca = chromatic * amt * 0.5;
+            float r = texture2D(inputTex, uv + d + vec2(ca, 0.0)).r;
+            float g = texture2D(inputTex, uv + d).g;
+            float b = texture2D(inputTex, uv + d - vec2(ca, 0.0)).b;
+            col = vec3(r, g, b);
+        } else {
+            col = texture2D(inputTex, uv + d).rgb;
+        }
+    } else {
+        vec2 wuv = uv + d;
+        col = vec3(
+            0.5 + 0.5 * sin(wuv.x * 10.0 + t),
+            0.5 + 0.5 * sin(wuv.y * 12.0 + t * 1.3),
+            0.5 + 0.5 * sin((wuv.x + wuv.y) * 8.0 - t)
+        );
+    }
+
+    float alpha = 1.0;
+    if (transparentBg) {
+        alpha = smoothstep(0.02, 0.15, dot(col, vec3(0.299, 0.587, 0.114)));
+    }
+    gl_FragColor = vec4(col, alpha);
+}
