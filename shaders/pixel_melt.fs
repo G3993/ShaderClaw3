@@ -16,14 +16,18 @@ float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 void main() {
     vec2 uv = isf_FragNormCoord;
     bool hasInput = IMG_SIZE_inputTex.x > 0.0;
-    float bass = audioBass;
+    float bass = smoothstep(0.0, 0.3, audioBass);
+    float mid = smoothstep(0.0, 0.3, audioMid);
+    float high = smoothstep(0.0, 0.3, audioHigh);
+    float bassHit = audioBassHit;
     float t = TIME * meltSpeed;
-    float melt = meltAmount * (1.0 + bass * 3.0);
+    float melt = meltAmount * (1.0 + bass * 3.0 + bassHit * 4.0);
 
-    // Optional pixelation
+    // Optional pixelation — high drives extra pixelation
     vec2 sampleUV = uv;
-    if (pixelSize > 0.01) {
-        float ps = mix(RENDERSIZE.y, 20.0, pixelSize);
+    float effectivePixelSize = pixelSize + high * 0.3;
+    if (effectivePixelSize > 0.01) {
+        float ps = mix(RENDERSIZE.y, 20.0, clamp(effectivePixelSize, 0.0, 1.0));
         sampleUV = floor(uv * ps) / ps;
     }
 
@@ -43,8 +47,8 @@ void main() {
     }
     if (totalWeight > 0.0) drip /= totalWeight;
 
-    // Add horizontal wobble
-    drip.x = sin(sampleUV.y * 30.0 + t * 3.0) * melt * 0.2;
+    // Mid drives horizontal wobble
+    drip.x = sin(sampleUV.y * 30.0 + t * 3.0) * melt * (0.2 + mid * 0.6);
 
     vec2 finalUV = clamp(sampleUV + drip, 0.0, 1.0);
 

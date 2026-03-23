@@ -15,8 +15,11 @@ void main() {
     vec2 uv = isf_FragNormCoord;
     bool hasInput = IMG_SIZE_inputTex.x > 0.0;
     float t = TIME * speed;
-    float bass = audioBass;
-    float amt = amount * (1.0 + bass * 3.0);
+    float bass = smoothstep(0.0, 0.3, audioBass);
+    float mid = smoothstep(0.0, 0.3, audioMid);
+    float high = smoothstep(0.0, 0.3, audioHigh);
+    float bassHit = audioBassHit;
+    float amt = amount * (1.0 + bass * 3.0 + bassHit * 2.0);
 
     // Multi-layer sine displacement
     vec2 d = vec2(0.0);
@@ -25,15 +28,23 @@ void main() {
     d.y += cos(uv.x * scale * 1.4 + t) * amt;
     d.y += cos(uv.x * scale * 2.7 - t * 1.1) * amt * 0.4;
 
+    // High adds fine ripple detail
+    d += vec2(sin(uv.y * scale * 6.0 + t * 3.0), cos(uv.x * scale * 6.0 + t * 2.5)) * amt * high * 0.4;
+
     // Mouse influence — ripple from mouse
     vec2 mp = uv - mousePos;
     float mr = length(mp);
     d += mp * sin(mr * 40.0 - t * 4.0) * amt * 0.5 * exp(-mr * 5.0);
 
+    // Bass hit triggers a splash from center
+    vec2 sp = uv - 0.5;
+    float sr = length(sp);
+    d += sp * bassHit * 0.06 * sin(sr * 30.0) * exp(-sr * 4.0);
+
     vec3 col;
     if (hasInput) {
-        if (chromatic > 0.001) {
-            float ca = chromatic * amt * 0.5;
+        if (chromatic > 0.001 || mid > 0.01) {
+            float ca = chromatic * amt * 0.5 + mid * 0.008;
             float r = texture2D(inputTex, uv + d + vec2(ca, 0.0)).r;
             float g = texture2D(inputTex, uv + d).g;
             float b = texture2D(inputTex, uv + d - vec2(ca, 0.0)).b;

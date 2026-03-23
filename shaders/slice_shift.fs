@@ -17,17 +17,20 @@ float hash(float n) { return fract(sin(n) * 43758.5453); }
 void main() {
     vec2 uv = isf_FragNormCoord;
     bool hasInput = IMG_SIZE_inputTex.x > 0.0;
-    float bass = audioBass;
-    float t = floor(TIME * glitchRate * (1.0 + bass * 2.0));
+    float bass = smoothstep(0.0, 0.3, audioBass);
+    float mid = smoothstep(0.0, 0.3, audioMid);
+    float high = smoothstep(0.0, 0.3, audioHigh);
+    // Mid drives glitch rate
+    float t = floor(TIME * glitchRate * (1.0 + mid * 3.0));
 
     float primary = vertical ? uv.x : uv.y;
     float sliceIdx = floor(primary * sliceCount);
     float h = hash(sliceIdx + t * 7.13);
     float h2 = hash(sliceIdx + t * 13.37 + 100.0);
 
-    // Only shift some slices
+    // Only shift some slices — bass drives shift amount
     float active = step(0.5 - bass * 0.3, h2);
-    float shift = (h - 0.5) * 2.0 * shiftAmount * active * (1.0 + bass * 2.0);
+    float shift = (h - 0.5) * 2.0 * shiftAmount * active * (1.0 + bass * 3.0);
 
     vec2 shiftUV = uv;
     if (vertical) {
@@ -39,7 +42,7 @@ void main() {
     vec3 col;
     if (hasInput) {
         if (rgbSplit > 0.001 && active > 0.5) {
-            float rs = rgbSplit * 0.02 * (1.0 + bass * 2.0);
+            float rs = rgbSplit * 0.02 * (1.0 + high * 4.0);
             vec2 rOff = vertical ? vec2(0.0, rs) : vec2(rs, 0.0);
             float r = texture2D(inputTex, fract(shiftUV + rOff)).r;
             float g = texture2D(inputTex, shiftUV).g;

@@ -48,24 +48,31 @@ vec3 icePalette(float t) {
 void main() {
     vec2 uv = isf_FragNormCoord;
     bool hasInput = IMG_SIZE_inputTex.x > 0.0;
-    float bass = audioBass;
+    float bass = smoothstep(0.0, 0.3, audioBass);
+    float mid = smoothstep(0.0, 0.3, audioMid);
+    float high = smoothstep(0.0, 0.3, audioHigh);
+    float bassHit = audioBassHit;
 
     vec3 original = hasInput ? texture2D(inputTex, uv).rgb : vec3(0.5);
     float lum = dot(original, vec3(0.299, 0.587, 0.114));
 
-    // Contrast
-    lum = clamp(pow(lum, 1.0 / contrast) * contrast, 0.0, 1.0);
+    // Contrast — bassHit triggers contrast spike
+    float effectiveContrast = contrast + bassHit * 1.5;
+    lum = clamp(pow(lum, 1.0 / effectiveContrast) * effectiveContrast, 0.0, 1.0);
 
     // Audio boost
     lum = clamp(lum + bass * 0.2, 0.0, 1.0);
 
+    // Mid shifts palette — offset the lookup
+    float paletteLum = clamp(lum + mid * 0.25 - 0.1, 0.0, 1.0);
+
     // Apply palette
     int pal = int(palette);
     vec3 col;
-    if (pal == 0) col = heatPalette(lum);
-    else if (pal == 1) col = nightVision(lum);
-    else if (pal == 2) col = cyberPalette(lum);
-    else col = icePalette(lum);
+    if (pal == 0) col = heatPalette(paletteLum);
+    else if (pal == 1) col = nightVision(paletteLum);
+    else if (pal == 2) col = cyberPalette(paletteLum);
+    else col = icePalette(paletteLum);
 
     // Mix original
     col = mix(col, original, mixOriginal);
@@ -76,10 +83,11 @@ void main() {
         col *= 1.0 - scan * scanlines * 0.3;
     }
 
-    // Noise
-    if (noise > 0.001) {
+    // Noise — high adds extra noise
+    float effectiveNoise = noise + high * 0.2;
+    if (effectiveNoise > 0.001) {
         float n = hash(uv * RENDERSIZE + TIME * 100.0) - 0.5;
-        col += n * noise;
+        col += n * effectiveNoise;
     }
 
     float alpha = 1.0;

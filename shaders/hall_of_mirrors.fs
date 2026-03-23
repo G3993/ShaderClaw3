@@ -15,7 +15,10 @@
 void main() {
     vec2 uv = isf_FragNormCoord;
     bool hasInput = IMG_SIZE_inputTex.x > 0.0;
-    float bass = audioBass;
+    float bass = smoothstep(0.0, 0.3, audioBass);
+    float mid = smoothstep(0.0, 0.3, audioMid);
+    float high = smoothstep(0.0, 0.3, audioHigh);
+    float bassHit = audioBassHit;
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
 
     vec2 center = mousePos;
@@ -30,8 +33,9 @@ void main() {
         float depth = fi / layers;
 
         // Each layer is progressively zoomed and rotated
-        float sc = pow(zoomRate + 0.3, fi) * (1.0 + bass * 0.2 * fi);
-        float rot = fi * rotRate * (1.0 + bass * 0.5) + t * rotRate * 0.3;
+        // BassHit pulses zoom, mid drives rotation rate
+        float sc = pow(zoomRate + 0.3, fi) * (1.0 + bass * 0.2 * fi + bassHit * 0.3);
+        float rot = fi * rotRate * (1.0 + mid * 1.5) + t * rotRate * 0.3;
         float c = cos(rot), s = sin(rot);
 
         vec2 p = uv - center;
@@ -51,9 +55,10 @@ void main() {
             layerCol = mix(vec3(0.15), vec3(0.6), check);
         }
 
-        // Tint shift per layer
-        if (tintShift > 0.001) {
-            float hueRot = fi * tintShift * 0.5;
+        // Tint shift per layer — high drives extra tint
+        float effectiveTint = tintShift + high * 0.5;
+        if (effectiveTint > 0.001) {
+            float hueRot = fi * effectiveTint * 0.5;
             float ch = cos(hueRot), sh = sin(hueRot);
             layerCol.rg = mat2(ch, -sh, sh, ch) * layerCol.rg;
         }

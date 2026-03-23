@@ -14,19 +14,22 @@
 void main() {
     vec2 uv = isf_FragNormCoord;
     bool hasInput = IMG_SIZE_inputTex.x > 0.0;
-    float bass = audioBass;
-    float t = TIME * drift;
+    float bass = smoothstep(0.0, 0.3, audioBass);
+    float mid = smoothstep(0.0, 0.3, audioMid);
+    float high = smoothstep(0.0, 0.3, audioHigh);
+    float bassTime = audioBassTime;
+    float t = TIME * drift + high * 0.3;
 
     vec2 p = uv - 0.5;
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
     p.x *= aspect;
 
-    // Rotate
-    float rot = rotation + t * 0.3 + bass * 1.0;
+    // Rotate — bassTime syncs rotation to beat
+    float rot = rotation + bassTime * 0.6 + t * 0.1;
     float c = cos(rot), s = sin(rot);
     p = mat2(c, -s, s, c) * p;
 
-    // Iterative mirror folds
+    // Iterative mirror folds — bass drives fold count
     float maxFolds = folds + bass * 2.0;
     for (int i = 0; i < 8; i++) {
         float fi = float(i);
@@ -41,8 +44,9 @@ void main() {
         vec2 folded = p - 2.0 * d * axis;
         p = mix(p, folded, active * step(d, 0.0));
 
-        // Scale down + offset (only when active)
-        p = mix(p, p * foldScale, active);
+        // Scale down + offset — mid drives fold scale
+        float effectiveFoldScale = foldScale + mid * 0.8;
+        p = mix(p, p * effectiveFoldScale, active);
         vec2 off = vec2(0.5 + sin(t + fi) * 0.2, 0.3 + cos(t * 1.3 + fi) * 0.2);
         p = mix(p, p - off, active);
     }

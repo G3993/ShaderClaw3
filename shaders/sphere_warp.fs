@@ -15,15 +15,18 @@ void main() {
     vec2 uv = isf_FragNormCoord;
     bool hasInput = IMG_SIZE_inputTex.x > 0.0;
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
-    float bass = audioBass;
+    float bass = smoothstep(0.0, 0.3, audioBass);
+    float mid = smoothstep(0.0, 0.3, audioMid);
+    float high = smoothstep(0.0, 0.3, audioHigh);
+    float bassHit = audioBassHit;
 
     vec2 center = mousePos;
     vec2 p = uv - center;
     p.x *= aspect;
 
     float r = length(p);
-    float rad = radius * (1.0 + bass * 0.3);
-    float b = bulge * (1.0 + bass * 0.5);
+    float rad = radius * (1.0 + bass * 0.3 + bassHit * 0.2);
+    float b = bulge * (1.0 + bass * 0.5 + bassHit * 0.8);
 
     vec2 warpUV = uv;
     float sphereMask = 0.0;
@@ -40,10 +43,11 @@ void main() {
         offset.x /= aspect;
         warpUV = uv + offset * vec2(1.0, 1.0);
 
-        // Refraction shift
-        if (refract > 0.001) {
+        // Refraction shift — mid drives refraction
+        float effectiveRefract = refract + mid * 0.4;
+        if (effectiveRefract > 0.001) {
             vec2 normal2d = normalize(p);
-            warpUV += normal2d * refract * 0.05 * (1.0 - nr);
+            warpUV += normal2d * effectiveRefract * 0.05 * (1.0 - nr);
         }
 
         sphereMask = 1.0 - nr;
@@ -53,8 +57,9 @@ void main() {
 
     vec3 col;
     if (hasInput) {
-        if (chromatic > 0.001 && r < rad) {
-            float ca = chromatic * 0.01 * sphereMask;
+        float effectiveChromatic = chromatic + high * 0.5;
+        if (effectiveChromatic > 0.001 && r < rad) {
+            float ca = effectiveChromatic * 0.01 * sphereMask;
             vec2 dir = normalize(p + 0.001);
             float rv = texture2D(inputTex, warpUV + dir * ca).r;
             float gv = texture2D(inputTex, warpUV).g;

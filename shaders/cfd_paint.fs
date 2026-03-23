@@ -180,7 +180,7 @@ void main() {
         vec2 vel = (texture2D(velBuf, uv).xy - 0.5) * 2.0;
 
         // Advect: sample dye from where the fluid came from
-        vec2 advUV = fract(uv - vel * fluidSpeed / Res);
+        vec2 advUV = fract(uv - vel * fluidSpeed * 0.01);
         vec4 dye = texture2D(dyeBuf, advUV);
 
         // Slight dissipation

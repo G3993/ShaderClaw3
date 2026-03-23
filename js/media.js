@@ -23,6 +23,18 @@ let _audioNoiseFloor = 0;
 const _NOISE_FLOOR_RISE = 0.002;  // how fast floor creeps up to ambient
 const _NOISE_FLOOR_DROP = 0.1;    // how fast floor drops on loud sounds
 const _AUDIO_GAIN = 2.5;          // post-floor gain multiplier
+
+// --- Advanced audio signals (Synesthesia-style) ---
+// Hit detection: spectral flux per band, spikes on transients
+var audioBassHit = 0, audioMidHit = 0, audioHighHit = 0;
+// Previous frame band values for flux computation
+var _prevBass = 0, _prevMid = 0, _prevHigh = 0;
+// Audio-driven time accumulators: advance faster when band is louder
+var audioBassTime = 0, audioMidTime = 0, audioHighTime = 0;
+// Asymmetric envelope followers (fast attack, slow decay)
+var _envBass = 0, _envMid = 0, _envHigh = 0, _envLevel = 0;
+const _ATTACK = 0.6;   // fast rise (0 = instant, 1 = no change)
+const _DECAY = 0.92;   // slow fall
 let activeAudioEntry = null;
 let _micAudioStream = null;
 let _micAudioSourceNode = null;
@@ -318,15 +330,42 @@ function updateAudioUniforms(gl) {
   audioMid   += (adjMid   - audioMid)   * ease;
   audioHigh  += (adjHigh  - audioHigh)  * ease;
 
+  // Asymmetric envelope: fast attack, slow decay (punchier than EMA)
+  _envBass  = adjBass  > _envBass  ? adjBass  * (1 - _ATTACK) + _envBass  * _ATTACK : _envBass  * _DECAY;
+  _envMid   = adjMid   > _envMid   ? adjMid   * (1 - _ATTACK) + _envMid   * _ATTACK : _envMid   * _DECAY;
+  _envHigh  = adjHigh  > _envHigh  ? adjHigh  * (1 - _ATTACK) + _envHigh  * _ATTACK : _envHigh  * _DECAY;
+  _envLevel = adjLevel > _envLevel ? adjLevel * (1 - _ATTACK) + _envLevel * _ATTACK : _envLevel * _DECAY;
+
+  // Hit detection: positive flux (current - previous), decays fast
+  const bassFlux = Math.max(0, adjBass - _prevBass);
+  const midFlux  = Math.max(0, adjMid  - _prevMid);
+  const highFlux = Math.max(0, adjHigh - _prevHigh);
+  audioBassHit = Math.max(bassFlux * 4.0, audioBassHit * 0.85);
+  audioMidHit  = Math.max(midFlux  * 4.0, audioMidHit  * 0.85);
+  audioHighHit = Math.max(highFlux * 4.0, audioHighHit * 0.85);
+  audioBassHit = Math.min(audioBassHit, 1.0);
+  audioMidHit  = Math.min(audioMidHit,  1.0);
+  audioHighHit = Math.min(audioHighHit, 1.0);
+  _prevBass = adjBass; _prevMid = adjMid; _prevHigh = adjHigh;
+
+  // Audio-driven time accumulators: advance proportional to band energy
+  const dt = 1.0 / 60.0; // approximate frame time
+  audioBassTime += dt * (0.2 + audioBass * 3.0);
+  audioMidTime  += dt * (0.2 + audioMid  * 3.0);
+  audioHighTime += dt * (0.2 + audioHigh * 3.0);
+
   // Upload FFT data to GL texture (256x1 LUMINANCE)
+  // Use a dedicated texture unit to avoid overwriting the currently active unit
   if (!audioFFTGLTexture) {
     audioFFTGLTexture = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE15);
     gl.bindTexture(gl.TEXTURE_2D, audioFFTGLTexture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   }
+  gl.activeTexture(gl.TEXTURE15);
   gl.bindTexture(gl.TEXTURE_2D, audioFFTGLTexture);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, len, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, audioDataArray);
 

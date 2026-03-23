@@ -15,7 +15,10 @@ void main() {
     vec2 uv = isf_FragNormCoord;
     bool hasInput = IMG_SIZE_inputTex.x > 0.0;
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
-    float bass = audioBass;
+    float bass = smoothstep(0.0, 0.3, audioBass);
+    float mid = smoothstep(0.0, 0.3, audioMid);
+    float high = smoothstep(0.0, 0.3, audioHigh);
+    float bassTime = audioBassTime;
     float t = TIME * zoomSpeed;
 
     // Center on mouse
@@ -26,9 +29,10 @@ void main() {
     float r = length(p);
     float a = atan(p.y, p.x);
 
-    // Zoom: log-polar mapping creates infinite tunnel
-    float logR = log(max(r, 0.001)) - t * (1.0 + bass * 2.0);
-    a += logR * twist * (1.0 + bass);
+    // Zoom: log-polar mapping — bassTime syncs zoom to beat
+    float logR = log(max(r, 0.001)) - bassTime * 2.0 * zoomSpeed - t * 0.3;
+    // Mid drives twist intensity
+    a += logR * twist * (1.0 + mid * 2.0);
 
     // Map back to UV
     vec2 warpUV = vec2(
@@ -54,6 +58,9 @@ void main() {
             0.5 + 0.5 * sin((warpUV.x - warpUV.y) * 10.0 + 4.0)
         ) * (0.8 + 0.2 * sin(logR * 10.0));
     }
+
+    // High adds shimmer
+    col += col * high * 0.3 * sin(a * 20.0 + logR * 15.0);
 
     // Vignette
     col *= 1.0 - r * 0.3;

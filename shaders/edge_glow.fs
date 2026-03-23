@@ -18,7 +18,10 @@ void main() {
     vec2 uv = isf_FragNormCoord;
     bool hasInput = IMG_SIZE_inputTex.x > 0.0;
     vec2 px = 1.0 / RENDERSIZE;
-    float bass = audioBass;
+    float bass = smoothstep(0.0, 0.3, audioBass);
+    float mid = smoothstep(0.0, 0.3, audioMid);
+    float high = smoothstep(0.0, 0.3, audioHigh);
+    float bassHit = audioBassHit;
 
     // Sobel edge detection
     float tl = luma(texture2D(inputTex, uv + vec2(-px.x, px.y)).rgb);
@@ -38,10 +41,11 @@ void main() {
     vec3 original = texture2D(inputTex, uv).rgb;
     vec3 edgeCol = glowColor.rgb * edge;
 
-    // Glow: cheap 3x3 blur of edge intensity
-    if (glowStr > 0.001) {
+    // Glow: cheap 3x3 blur — mid drives glow blur spread
+    float effectiveGlow = glowStr + mid * 1.0;
+    if (effectiveGlow > 0.001) {
         float glow = 0.0;
-        vec2 gOff = px * 2.0 * glowStr;
+        vec2 gOff = px * 2.0 * effectiveGlow;
         glow += luma(texture2D(inputTex, uv + vec2(-gOff.x, gOff.y)).rgb);
         glow += luma(texture2D(inputTex, uv + vec2(0.0, gOff.y)).rgb);
         glow += luma(texture2D(inputTex, uv + vec2(gOff.x, gOff.y)).rgb);
@@ -53,7 +57,7 @@ void main() {
         float centerLum = luma(original);
         glow = abs(glow / 8.0 - centerLum) * edgeStr * 4.0;
         glow = clamp(glow, 0.0, 1.0);
-        edgeCol += glowColor.rgb * glow * glowStr;
+        edgeCol += glowColor.rgb * glow * effectiveGlow;
     }
 
     vec3 col;
@@ -62,6 +66,11 @@ void main() {
     } else {
         col = mix(original * mixOriginal, original + edgeCol, edge);
     }
+
+    // High drives brightness boost
+    col *= 1.0 + high * 0.6;
+    // Bass hit flashes
+    col += vec3(bassHit * 0.4);
 
     if (!hasInput) col = edgeCol;
 

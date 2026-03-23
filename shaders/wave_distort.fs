@@ -22,12 +22,17 @@ float wave(float x, int m) {
 void main() {
     vec2 uv = isf_FragNormCoord;
     bool hasInput = IMG_SIZE_inputTex.x > 0.0;
-    float bass = audioBass;
-    float t = TIME * speed;
+    float bass = smoothstep(0.0, 0.3, audioBass);
+    float mid = smoothstep(0.0, 0.3, audioMid);
+    float high = smoothstep(0.0, 0.3, audioHigh);
+    float bassTime = audioBassTime;
+    float t = bassTime * 2.0 * speed + TIME * speed * 0.2;
     int m = int(mode);
 
     float wx = waveX * (1.0 + bass * 3.0);
     float wy = waveY * (1.0 + bass * 3.0);
+    // Mid drives frequency
+    float effectiveFreq = freq + mid * 12.0;
 
     vec2 d = vec2(0.0);
     if (m == 3) {
@@ -35,18 +40,20 @@ void main() {
         vec2 center = mousePos;
         vec2 p = uv - center;
         float r = length(p);
-        float radWave = sin(r * freq * 10.0 - t * 5.0) * (wx + wy) * 0.5;
+        float radWave = sin(r * effectiveFreq * 10.0 - t * 5.0) * (wx + wy) * 0.5;
         radWave *= exp(-r * 3.0);
         d = normalize(p + 0.001) * radWave;
     } else {
-        d.x = wave(uv.y * freq + t, m) * wx;
-        d.y = wave(uv.x * freq * 1.3 + t * 0.7, m) * wy;
+        d.x = wave(uv.y * effectiveFreq + t, m) * wx;
+        d.y = wave(uv.x * effectiveFreq * 1.3 + t * 0.7, m) * wy;
     }
 
     vec3 col;
     if (hasInput) {
-        if (rgbPhase > 0.001) {
-            float phase = rgbPhase * 0.02;
+        // High drives RGB phase separation
+        float effectiveRgbPhase = rgbPhase + high * 0.5;
+        if (effectiveRgbPhase > 0.001) {
+            float phase = effectiveRgbPhase * 0.02;
             float r = texture2D(inputTex, clamp(uv + d * 1.2, 0.0, 1.0)).r;
             float g = texture2D(inputTex, clamp(uv + d, 0.0, 1.0)).g;
             float b = texture2D(inputTex, clamp(uv + d * 0.8, 0.0, 1.0)).b;
