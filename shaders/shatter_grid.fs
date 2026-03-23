@@ -8,7 +8,7 @@
       "NAME": "baseColor",
       "LABEL": "Color",
       "TYPE": "color",
-      "DEFAULT": [0.91, 0.25, 0.34, 1.0]
+      "DEFAULT": [1.0, 1.0, 1.0, 1.0]
     },
     {
       "NAME": "inputTex",
@@ -52,13 +52,27 @@
       "DEFAULT": 0.015,
       "MIN": 0.0,
       "MAX": 0.05
+    },
+    {
+      "NAME": "bobHeight",
+      "LABEL": "Bob Height",
+      "TYPE": "float",
+      "DEFAULT": 0.3,
+      "MIN": 0.0,
+      "MAX": 1.0
+    },
+    {
+      "NAME": "tileColor",
+      "LABEL": "Tile Color",
+      "TYPE": "color",
+      "DEFAULT": [0.15, 0.15, 0.15, 1.0]
     }
   ]
 }*/
 
-#define MAX_STEPS 48
-#define SURF_DIST 0.002
-#define MAX_DIST 15.0
+#define MAX_STEPS 32
+#define SURF_DIST 0.003
+#define MAX_DIST 10.0
 #define PI 3.14159265
 
 mat2 rot2(float a) { float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
@@ -103,8 +117,9 @@ float scene(vec3 p, vec2 shatterCenter) {
       // Tile center in world space
       vec2 tileCenter = (ci + 0.5) * tileSize - 0.5;
 
-      // Skip tiles outside visible range
-      if (abs(tileCenter.x) > 0.7 || abs(tileCenter.y) > 0.7) continue;
+      // Skip tiles outside visible range (account for aspect ratio)
+      float aspect = RENDERSIZE.x / RENDERSIZE.y;
+      if (abs(tileCenter.x) > 0.5 + aspect * 0.3 || abs(tileCenter.y) > 0.8) continue;
 
       float h = hash(ci);
 
@@ -112,9 +127,18 @@ float scene(vec3 p, vec2 shatterCenter) {
       float distFromCenter = length(tileCenter - (shatterCenter - 0.5));
       float shatterFactor = bassShatter * exp(-distFromCenter * 2.0);
 
+      // Vertical bob — scaled by bobHeight parameter (bind to audio for reactivity)
+      float bob = bobHeight * 0.5;
+      float wave = sin(TIME * 1.2 + ci.x * 1.8 + ci.y * 1.3) * bob * 0.3
+                 + sin(TIME * 0.7 + ci.y * 2.1) * bob * 0.2;
+      // Audio-reactive height: bass pushes tiles, per-tile variation
+      float audioHeight = audioBass * (h * 0.6 + 0.4) * bob
+                        + audioMid * hash(ci + 50.0) * bob * 0.4;
+
       // Tile displacement
       vec3 offset = vec3(0.0, 0.0, 0.0);
-      offset.z = shatterFactor * (h * 0.8 + 0.2) * -1.5; // Push toward camera
+      offset.z = wave + audioHeight; // Idle bob + audio push toward camera
+      offset.z += shatterFactor * (h * 0.8 + 0.2) * -1.5; // Shatter explosion
       offset.xy += (vec2(h, hash(ci + 100.0)) - 0.5) * shatterFactor * 0.3;
 
       // Tile rotation from audioMid
@@ -141,7 +165,7 @@ float scene(vec3 p, vec2 shatterCenter) {
 }
 
 vec3 calcNormal(vec3 p, vec2 sc) {
-  vec2 e = vec2(0.002, -0.002);
+  vec2 e = vec2(0.003, -0.003);
   return normalize(
     e.xyy * scene(p + e.xyy, sc) +
     e.yyx * scene(p + e.yyx, sc) +
@@ -151,7 +175,8 @@ vec3 calcNormal(vec3 p, vec2 sc) {
 }
 
 void main() {
-  vec2 uv = (gl_FragCoord.xy - RENDERSIZE.xy * 0.5) / min(RENDERSIZE.x, RENDERSIZE.y);
+  float aspect = RENDERSIZE.x / RENDERSIZE.y;
+  vec2 uv = (gl_FragCoord.xy - RENDERSIZE.xy * 0.5) / RENDERSIZE.y;
   vec2 screenUV = gl_FragCoord.xy / RENDERSIZE.xy;
 
   // Shatter center follows mouse, defaults to screen center
@@ -160,9 +185,9 @@ void main() {
     shatterCenter = mousePos;
   }
 
-  // Camera looks at the tile grid
-  vec3 ro = vec3(0.0, 0.0, 1.8);
-  vec3 rd = normalize(vec3(uv, -1.2));
+  // Camera looks at the tile grid — pull back to cover full viewport
+  vec3 ro = vec3(0.0, 0.0, 1.2);
+  vec3 rd = normalize(vec3(uv, -0.8));
 
   // Raymarch
   float totalDist = 0.0;
@@ -176,13 +201,7 @@ void main() {
     totalDist += d;
   }
 
-  // Get tile UV from final hit (rerun to get currentTileUV set)
-  if (hit) {
-    scene(p, shatterCenter);
-  }
-
-  vec4 texSample = texture2D(inputTex, screenUV);
-  bool hasTexture = texSample.a > 0.01;
+  bool hasTexture = IMG_SIZE_inputTex.x > 0.0;
 
   vec3 col = vec3(0.0);
   float alpha = 0.0;
@@ -210,10 +229,9 @@ void main() {
       col += texCol * spec * fresnel * 0.6;
       col += baseColor.rgb * edgeHighlight * 0.4;
     } else {
-      // Procedural tiles
-      vec3 albedo = mix(vec3(0.15), vec3(0.3, 0.25, 0.35),
-        hash(floor((p.xy + 0.5) * gridSize)));
-      col = albedo * (diff * 0.5 + 0.1);
+      // Tile color with per-tile brightness variation
+      vec3 albedo = tileColor.rgb * (0.7 + 0.6 * hash(floor((p.xy + 0.5) * gridSize)));
+      col = albedo * (diff * 0.5 + 0.2);
       col += vec3(1.0) * spec * fresnel * 1.0;
       col += baseColor.rgb * edgeHighlight * 0.6;
     }

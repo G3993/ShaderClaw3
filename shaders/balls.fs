@@ -11,7 +11,7 @@
     { "NAME": "bloomRatio", "LABEL": "Glow Ratio", "TYPE": "float", "DEFAULT": 0.4, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "metallic", "LABEL": "Metallic", "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "audioDrive", "LABEL": "Audio Drive", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 5.0 },
-    { "NAME": "accentColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.91, 0.25, 0.34, 1.0] },
+    { "NAME": "accentColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.04, 1.0] },
     { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
     { "NAME": "texMix", "LABEL": "Texture Mix", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
@@ -176,11 +176,14 @@ vec4 passScene(vec2 uv) {
         vec3 n = calcNormal(pos, count);
         vec3 col = shadeSphere(pos, n, rd, hit.y);
 
-        // Texture mapping via spherical UVs from normal
+        // Triplanar texture mapping — seamless, no wrap seam
         if (texMix > 0.0) {
-            float tu = 0.5 + atan(n.x, n.z) / 6.2832;
-            float tv = 0.5 - asin(clamp(n.y, -1.0, 1.0)) / 3.14159;
-            vec3 texCol = texture2D(inputImage, vec2(tu, tv)).rgb;
+            vec3 blend = abs(n);
+            blend = pow(blend, vec3(4.0));
+            blend /= blend.x + blend.y + blend.z;
+            vec3 texCol = texture2D(inputImage, pos.yz * 0.15 + 0.5).rgb * blend.x
+                        + texture2D(inputImage, pos.xz * 0.15 + 0.5).rgb * blend.y
+                        + texture2D(inputImage, pos.xy * 0.15 + 0.5).rgb * blend.z;
             col = mix(col, texCol, texMix);
         }
 

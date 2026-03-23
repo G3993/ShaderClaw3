@@ -10,13 +10,13 @@
 			"LABEL": "Color",
 			"NAME": "color1",
 			"TYPE": "color",
-			"DEFAULT": [0.91,0.25,0.34]
+			"DEFAULT": [1.0,1.0,1.0]
 		},
 		{
 			"LABEL": "Color",
 			"NAME": "color2",
 			"TYPE": "color",
-			"DEFAULT": [0.91,0.25,0.34]
+			"DEFAULT": [1.0,1.0,1.0]
 		},
 		{
 			"LABEL": "Color",
@@ -28,7 +28,7 @@
 			"LABEL": "Color",
 			"NAME": "color4",
 			"TYPE": "color",
-			"DEFAULT": [0.91,0.25,0.34]
+			"DEFAULT": [1.0,1.0,1.0]
 		},
 		{
 			"LABEL": "Color",
@@ -40,13 +40,13 @@
 			"LABEL": "Color",
 			"NAME": "color6",
 			"TYPE": "color",
-			"DEFAULT": [0.91,0.25,0.34]
+			"DEFAULT": [1.0,1.0,1.0]
 		},
 		{
 			"LABEL": "Color",
 			"NAME": "color7",
 			"TYPE": "color",
-			"DEFAULT": [0.91,0.25,0.34]
+			"DEFAULT": [1.0,1.0,1.0]
 		},
 		{
 			"LABEL": "Color",

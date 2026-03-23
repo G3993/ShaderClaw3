@@ -10,10 +10,14 @@ class FluidRenderer {
     this.renderer = renderer; // parent Renderer (for posBuf, defaultTex)
     this.active = false;
 
+    // Cap dye resolution on mobile to avoid OOM
+    const _isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+    const _defaultDyeRes = _isMobile ? 512 : 2048;
+
     // Simulation config (exposed as UI controls)
     this.config = {
-      SIM_RESOLUTION: 256,
-      DYE_RESOLUTION: 2048,
+      SIM_RESOLUTION: _isMobile ? 128 : 256,
+      DYE_RESOLUTION: _defaultDyeRes,
       LIFE: 8.45,              // 0 = instant fade, 10 = lives forever
       DENSITY_DISSIPATION: 1.0, // derived from LIFE
       VELOCITY_DISSIPATION: 4.0,

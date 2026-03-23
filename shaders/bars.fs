@@ -106,6 +106,11 @@
             "TYPE": "bool",
             "DEFAULT": 1,
             "LABEL": "Columns / Rows"
+        },
+        {
+            "NAME": "inputTex",
+            "TYPE": "image",
+            "LABEL": "Texture"
         }
     ]
 }*/
@@ -343,5 +348,12 @@ void main() {
     float col = 0.5 + 0.5 * sin(animated_coord * 6.28318530718);
     col = adjust_balance(col, balance);
 
-    gl_FragColor = vec4(vec3(1.0 - col), 1.0);
+    float mask = 1.0 - col;
+    bool hasTex = IMG_SIZE_inputTex.x > 0.0;
+    if (hasTex) {
+        vec4 tex = IMG_NORM_PIXEL(inputTex, uv);
+        gl_FragColor = vec4(tex.rgb * mask, tex.a * mask);
+    } else {
+        gl_FragColor = vec4(vec3(mask), 1.0);
+    }
 }

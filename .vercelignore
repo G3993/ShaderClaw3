@@ -3,4 +3,5 @@ server.js
 .mcp.json
 test_*.js
 *.png
+*.mov
 .git

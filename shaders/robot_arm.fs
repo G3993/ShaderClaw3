@@ -5,8 +5,8 @@
   "INPUTS": [
     { "NAME": "armMode", "LABEL": "Arms", "TYPE": "long", "DEFAULT": 1, "VALUES": [1, 2, 3, 4], "LABELS": ["1", "2", "3", "4"] },
     { "NAME": "armColor", "LABEL": "Arm", "TYPE": "color", "DEFAULT": [1.0, 0.239, 0.239, 1.0] },
-    { "NAME": "accentColor", "LABEL": "Accent", "TYPE": "color", "DEFAULT": [0.91, 0.25, 0.34, 1.0] },
-    { "NAME": "laserColor", "LABEL": "Laser", "TYPE": "color", "DEFAULT": [0.91, 0.25, 0.34, 1.0] },
+    { "NAME": "accentColor", "LABEL": "Accent", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
+    { "NAME": "laserColor", "LABEL": "Laser", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
     { "NAME": "armScale", "LABEL": "Size", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.3, "MAX": 2.0 },
     { "NAME": "segWidth", "LABEL": "Thickness", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.3, "MAX": 2.5 },
     { "NAME": "laserSize", "LABEL": "Laser Size", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 3.0 },

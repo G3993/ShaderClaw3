@@ -57,6 +57,8 @@
   sceneRenderer._mainRenderer = isfRenderer;
   // Fluid simulation renderer (shared GL context)
   const fluidRenderer = new FluidRenderer(gl, isfRenderer);
+  // Shadertoy renderer (native multi-buffer support)
+  const shadertoyRenderer = new ShadertoyRenderer(gl, isfRenderer);
   const errorBar = document.getElementById('error-bar');
   errorBar.dataset.init = '1'; // suppress during init
   const _isMobileComp = window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
@@ -85,14 +87,14 @@
   const layers = [
     { id: 'shader', type: 'shader', visible: false, opacity: 1.0, blendMode: 'normal',
       program: null, uniformLocs: {}, fbo: isfRenderer.createFBO(_rw(), _rh()), textures: {},
-      inputs: [], inputValues: {}, transparentBg: false, manifestEntry: null },
+      inputs: [], inputValues: {}, transparentBg: false, manifestEntry: null, passes: null },
     { id: 'scene', type: 'scene', visible: false, opacity: 1.0, blendMode: 'normal',
       program: null, uniformLocs: {}, fbo: null, textures: {},
       inputs: [], inputValues: {}, transparentBg: false, manifestEntry: null,
       sceneFlipH: false, sceneFlipV: true },
     { id: 'text', type: 'shader', visible: true, opacity: 1.0, blendMode: 'normal',
       program: null, uniformLocs: {}, fbo: isfRenderer.createFBO(_rw(), _rh()), textures: {},
-      inputs: [], inputValues: {}, transparentBg: true, manifestEntry: null },
+      inputs: [], inputValues: {}, transparentBg: true, manifestEntry: null, passes: null },
     { id: 'overlay', type: 'overlay', visible: false, opacity: 1.0, blendMode: 'normal',
       program: null, uniformLocs: {}, fbo: null, textures: {},
       inputs: [], inputValues: {}, transparentBg: true, manifestEntry: null },
@@ -215,6 +217,12 @@
         const { frag } = buildFragmentShader(canvasBg.shaderLayer._isfSource);
         isfRenderer.compileForLayer(canvasBg.shaderLayer, VERT_SHADER, frag);
       }
+    }
+
+    // 9. Rebuild fluid renderer if it was active
+    if (fluidRenderer.active) {
+      fluidRenderer.destroy();
+      fluidRenderer.init();
     }
 
     // Only resume rendering once everything is rebuilt
@@ -962,6 +970,7 @@
   }
 
   // Fullscreen change — refresh cached rects, resize Three.js, update gizmo
+  let _fsCursorTimer = null;
   document.addEventListener('fullscreenchange', () => {
     _glCanvasRect = _glCanvasEl.getBoundingClientRect();
     if (sceneRenderer) sceneRenderer.resize();
@@ -969,6 +978,20 @@
     requestAnimationFrame(() => {
       _glCanvasRect = _glCanvasEl.getBoundingClientRect();
     });
+    // Clear cursor timer when exiting fullscreen
+    if (!document.fullscreenElement) {
+      clearTimeout(_fsCursorTimer);
+      document.getElementById('preview').classList.remove('show-cursor');
+    }
+  });
+
+  // Show cursor briefly on mouse move in fullscreen, then auto-hide
+  document.getElementById('preview').addEventListener('mousemove', () => {
+    if (!document.fullscreenElement) return;
+    const preview = document.getElementById('preview');
+    preview.classList.add('show-cursor');
+    clearTimeout(_fsCursorTimer);
+    _fsCursorTimer = setTimeout(() => preview.classList.remove('show-cursor'), 2000);
   });
 
   document.getElementById('new-btn').addEventListener('click', () => {
@@ -1081,10 +1104,9 @@
         activateFluidOnLayer(layerId);
         return;
       }
-      // Switching away from fluid — deactivate if was active
-      if (layer && layer._fluidActive) {
-        deactivateFluid(layerId);
-      }
+      // Switching away from fluid/shadertoy — deactivate if was active
+      if (layer && layer._fluidActive) deactivateFluid(layerId);
+      if (layer && layer._shadertoyActive) deactivateShadertoy(layerId);
 
       if (layerId === 'scene') {
         await loadScene(folder, file);
@@ -1139,8 +1161,9 @@
         el.addEventListener('click', async () => {
           closeBrowser();
           const layer = getLayer(layerId);
-          // Deactivate fluid if switching to a regular shader
+          // Deactivate fluid/shadertoy if switching to a regular shader
           if (layer && layer._fluidActive) deactivateFluid(layerId);
+          if (layer && layer._shadertoyActive) deactivateShadertoy(layerId);
           // Store manifest entry before loading so populatePresetDropdown has title fallback
           if (layer) layer.manifestEntry = item;
           const folder = item.folder || (layerId === 'scene' ? 'scenes' : 'shaders');
@@ -1156,13 +1179,15 @@
       browserBody.appendChild(section);
     }
 
-    // Add Fluid Simulation as a special entry (only for shader layer, not scene)
+    // Add Fluid Simulation + Shadertoy Import as special entries (shader layer only)
     if (layerId === 'shader') {
-      const fluidSection = document.createElement('div');
-      fluidSection.className = 'browser-category';
-      fluidSection.innerHTML = '<div class="browser-category-title">Simulation</div>';
-      const fluidGrid = document.createElement('div');
-      fluidGrid.className = 'browser-grid';
+      const specialSection = document.createElement('div');
+      specialSection.className = 'browser-category';
+      specialSection.innerHTML = '<div class="browser-category-title">Simulation</div>';
+      const specialGrid = document.createElement('div');
+      specialGrid.className = 'browser-grid';
+
+      // Fluid sim
       const fluidItem = document.createElement('div');
       fluidItem.className = 'browser-item';
       fluidItem.textContent = 'Fluid';
@@ -1171,10 +1196,42 @@
         closeBrowser();
         activateFluidOnLayer('shader');
       });
-      fluidGrid.appendChild(fluidItem);
-      fluidSection.appendChild(fluidGrid);
-      // Insert at the top
-      browserBody.insertBefore(fluidSection, browserBody.firstChild);
+      specialGrid.appendChild(fluidItem);
+
+      // CFD Paint
+      const cfdItem = document.createElement('div');
+      cfdItem.className = 'browser-item';
+      cfdItem.textContent = 'CFD Paint';
+      cfdItem.dataset.search = 'cfd paint fluid ink water computational dynamics';
+      cfdItem.addEventListener('click', () => {
+        closeBrowser();
+        _activateCFDPaint('shader');
+      });
+      specialGrid.appendChild(cfdItem);
+
+      specialSection.appendChild(specialGrid);
+      browserBody.insertBefore(specialSection, browserBody.firstChild);
+
+      // Shadertoy import section
+      const stSection = document.createElement('div');
+      stSection.className = 'browser-category';
+      stSection.innerHTML = '<div class="browser-category-title">Import from Shadertoy</div>';
+      const stRow = document.createElement('div');
+      stRow.style.cssText = 'display:flex;gap:6px;padding:4px 0';
+      const stInput = document.createElement('input');
+      stInput.type = 'text';
+      stInput.placeholder = 'Paste Shadertoy URL or ID...';
+      stInput.style.cssText = 'flex:1;background:var(--bg-2,#1a1a1a);border:1px solid var(--border,#333);color:var(--fg,#ccc);padding:6px 8px;border-radius:4px;font-size:12px';
+      stInput.dataset.search = 'shadertoy import url paste buffer';
+      const stBtn = document.createElement('button');
+      stBtn.textContent = 'Import';
+      stBtn.style.cssText = 'background:var(--accent,#E84057);color:#fff;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap';
+      stBtn.addEventListener('click', () => _importShadertoy(stInput.value, layerId));
+      stInput.addEventListener('keydown', e => { if (e.key === 'Enter') _importShadertoy(stInput.value, layerId); });
+      stRow.appendChild(stInput);
+      stRow.appendChild(stBtn);
+      stSection.appendChild(stRow);
+      browserBody.insertBefore(stSection, browserBody.firstChild);
     }
 
     browserOverlay.classList.add('visible');
@@ -1229,9 +1286,242 @@
     }
   }
 
+  // ── Shadertoy import ──────────────────────────────────────
+  async function _importShadertoy(urlOrId, layerId) {
+    const imp = window._shadertoyImport;
+    if (!imp) { console.error('Shadertoy importer not loaded'); return; }
+
+    const shaderId = imp.parseShadertoyUrl(urlOrId);
+    if (!shaderId) {
+      errorBar.textContent = 'Invalid Shadertoy URL or ID';
+      errorBar.classList.add('show');
+      return;
+    }
+
+    errorBar.textContent = 'Importing from Shadertoy...';
+    errorBar.classList.add('show');
+
+    try {
+      const shader = await imp.fetchShadertoyShader(shaderId);
+      const renderPasses = shader.renderpass || [];
+
+      // Deactivate fluid/shadertoy if active
+      const layer = getLayer(layerId);
+      if (layer && layer._fluidActive) deactivateFluid(layerId);
+      if (layer && layer._shadertoyActive) {
+        shadertoyRenderer.destroy();
+        layer._shadertoyActive = false;
+      }
+      // Clear ISF program so it doesn't interfere
+      layer.program = null;
+
+      closeBrowser();
+
+      // Build passes + channel bindings for ShadertoyRenderer
+      const passes = {};
+      const channels = {};
+
+      // Map Shadertoy output IDs to buffer letters
+      const outputToLetter = {};
+      for (const rp of renderPasses) {
+        if (rp.type === 'buffer' && rp.outputs?.[0]?.id != null) {
+          const letter = String.fromCharCode(65 + (rp.outputs[0].id - 97));
+          outputToLetter[rp.outputs[0].id] = letter;
+        }
+      }
+
+      for (const rp of renderPasses) {
+        let passKey;
+        if (rp.type === 'image') {
+          passKey = 'image';
+        } else if (rp.type === 'buffer' && rp.outputs?.[0]?.id != null) {
+          passKey = 'buffer' + outputToLetter[rp.outputs[0].id];
+        } else if (rp.type === 'common') {
+          // Prepend common code to all other passes
+          for (const rp2 of renderPasses) {
+            if (rp2.type !== 'common') rp2.code = rp.code + '\n' + (rp2.code || '');
+          }
+          continue;
+        } else {
+          continue; // skip sound, cubemap, etc.
+        }
+
+        passes[passKey] = rp.code;
+        channels[passKey] = {};
+
+        // Map iChannel bindings
+        for (const inp of (rp.inputs || [])) {
+          const ch = inp.channel;
+          if (ch == null) continue;
+          if (inp.ctype === 'buffer' && outputToLetter[inp.id] != null) {
+            channels[passKey][ch] = outputToLetter[inp.id];
+          } else {
+            channels[passKey][ch] = 'noise'; // fallback to noise
+          }
+        }
+      }
+
+      if (!passes.image) {
+        errorBar.textContent = 'No image pass found in shader';
+        errorBar.classList.add('show');
+        return;
+      }
+
+      // Compile with ShadertoyRenderer (bypasses ISF entirely)
+      const ok = shadertoyRenderer.compile(passes, channels);
+      if (ok) {
+        layer._shadertoyActive = true;
+        layer.visible = true;
+        layer.opacity = 1.0;
+        layer.manifestEntry = { title: shader.info?.name || 'Shadertoy', file: '__shadertoy_' + shaderId + '__', type: 'imported' };
+        updateLayerCardUI(layerId);
+        syncToggleSection(layerId, true);
+        errorBar.textContent = '';
+        errorBar.classList.remove('show');
+        console.log('[ShaderClaw] Shadertoy import OK:', shader.info?.name, '(' + shaderId + ')');
+      } else {
+        const err = window._lastShadertoyError || 'Unknown compile error';
+        errorBar.textContent = 'Shader compile error: ' + err.split('\n')[0];
+        errorBar.classList.add('show');
+      }
+    } catch (e) {
+      errorBar.textContent = 'Shadertoy import failed: ' + e.message;
+      errorBar.classList.add('show');
+      console.error('[ShaderClaw] Shadertoy import error:', e);
+    }
+  }
+
+  function deactivateShadertoy(layerId) {
+    const layer = getLayer(layerId);
+    if (layer) layer._shadertoyActive = false;
+    if (shadertoyRenderer.active) shadertoyRenderer.destroy();
+  }
+
+  // CFD Paint — hardcoded Shadertoy-style shader
+  function _activateCFDPaint(layerId) {
+    const layer = getLayer(layerId);
+    if (!layer) return;
+    if (layer._fluidActive) deactivateFluid(layerId);
+    if (layer._shadertoyActive) deactivateShadertoy(layerId);
+    layer.program = null;
+
+    const bufferA = `
+#define RotNum 3
+#define PI2 6.28318530718
+
+float hash21(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 Res = iResolution.xy;
+    vec2 pos = fragCoord;
+    vec2 uv = pos / Res;
+
+    float ang = PI2 / 3.0;
+    float ca = cos(ang), sa = sin(ang);
+    float cah = cos(ang * 0.5), sah = sin(ang * 0.5);
+
+    float rnd = hash21(vec2(float(iFrame) * 0.1, 0.37));
+    vec2 b = vec2(cos(ang * rnd), sin(ang * rnd));
+    vec2 v = vec2(0.0);
+    float maxR2 = Res.y * Res.y * 0.49;
+
+    for (int level = 0; level < 8; level++) {
+        float bb = dot(b, b);
+        if (bb > maxR2) break;
+
+        vec2 d0 = b;
+        vec2 d1 = vec2(ca*b.x - sa*b.y, sa*b.x + ca*b.y);
+        vec2 d2 = vec2(ca*b.x + sa*b.y, -sa*b.x + ca*b.y);
+
+        vec2 h0 = vec2(cah*b.x - sah*b.y, sah*b.x + cah*b.y);
+        vec2 h1 = vec2(ca*h0.x - sa*h0.y, sa*h0.x + ca*h0.y);
+        vec2 h2 = vec2(ca*h0.x + sa*h0.y, -sa*h0.x + ca*h0.y);
+
+        vec2 s0a = texture2D(iChannel0, fract((pos+d0+d0)/Res)).xy-0.5;
+        vec2 s0b = texture2D(iChannel0, fract((pos+d0+d1)/Res)).xy-0.5;
+        vec2 s0c = texture2D(iChannel0, fract((pos+d0+d2)/Res)).xy-0.5;
+        v += d0.yx * (dot(s0a,h0)+dot(s0b,h1)+dot(s0c,h2)) / bb;
+
+        vec2 s1a = texture2D(iChannel0, fract((pos+d1+d0)/Res)).xy-0.5;
+        vec2 s1b = texture2D(iChannel0, fract((pos+d1+d1)/Res)).xy-0.5;
+        vec2 s1c = texture2D(iChannel0, fract((pos+d1+d2)/Res)).xy-0.5;
+        v += d1.yx * (dot(s1a,h0)+dot(s1b,h1)+dot(s1c,h2)) / bb;
+
+        vec2 s2a = texture2D(iChannel0, fract((pos+d2+d0)/Res)).xy-0.5;
+        vec2 s2b = texture2D(iChannel0, fract((pos+d2+d1)/Res)).xy-0.5;
+        vec2 s2c = texture2D(iChannel0, fract((pos+d2+d2)/Res)).xy-0.5;
+        v += d2.yx * (dot(s2a,h0)+dot(s2b,h1)+dot(s2c,h2)) / bb;
+
+        b *= 2.0;
+    }
+
+    vec2 advUV = fract((pos + v * vec2(-1.0, 1.0) * 2.0) / Res);
+    fragColor = texture2D(iChannel0, advUV);
+
+    if (iFrame < 3) {
+        float h1 = hash21(pos * 0.01 + 0.5);
+        float h2 = hash21(pos * 0.007 + 17.3);
+        float h3 = hash21(pos * 0.013 + 43.7);
+        float a = atan(uv.y - 0.5, uv.x - 0.5);
+        float dist = length(uv - 0.5);
+        float pat = sin(a*3.0 + dist*12.0)*0.5+0.5;
+        fragColor = vec4(
+            0.91*pat + (1.0-pat)*h2,
+            0.25*(1.0-pat) + pat*h3,
+            0.34*pat + (1.0-pat)*h1,
+            1.0
+        );
+    }
+}`;
+
+    const imagePass = `
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = fragCoord / iResolution.xy;
+    vec4 col = texture2D(iChannel0, uv);
+
+    // Surface normal from luminance gradient
+    float d = 1.0 / iResolution.y;
+    float lL = length(texture2D(iChannel0, uv + vec2(-d, 0.0)).rgb);
+    float lR = length(texture2D(iChannel0, uv + vec2( d, 0.0)).rgb);
+    float lU = length(texture2D(iChannel0, uv + vec2(0.0,  d)).rgb);
+    float lD = length(texture2D(iChannel0, uv + vec2(0.0, -d)).rgb);
+    vec3 n = normalize(vec3((lR - lL) * 150.0, (lU - lD) * 150.0, 1.0));
+
+    vec3 lightDir = normalize(vec3(1.0, 1.0, 2.0));
+    float diff = clamp(dot(n, lightDir), 0.5, 1.0);
+    float spec = pow(clamp(dot(reflect(-lightDir, n), vec3(0.0, 0.0, 1.0)), 0.0, 1.0), 36.0) * 2.5;
+
+    fragColor = col * diff + vec4(vec3(spec), 0.0);
+    fragColor.a = 1.0;
+}`;
+
+    const ok = shadertoyRenderer.compile(
+      { bufferA: bufferA, image: imagePass },
+      { bufferA: { 0: 'A' }, image: { 0: 'A' } }  // Buffer A reads itself, Image reads Buffer A
+    );
+
+    if (ok) {
+      layer._shadertoyActive = true;
+      layer.visible = true;
+      layer.opacity = 1.0;
+      layer.manifestEntry = { title: 'CFD Paint', file: '__cfd_paint__', type: 'simulation' };
+      updateLayerCardUI(layerId);
+      syncToggleSection(layerId, true);
+      console.log('[ShaderClaw] CFD Paint activated');
+    } else {
+      errorBar.textContent = 'CFD Paint compile failed: ' + (window._lastShadertoyError || '').split('\n')[0];
+      errorBar.classList.add('show');
+    }
+  }
+
   // Expose for MCP / external
   window._fluidRenderer = fluidRenderer;
   window._activateFluid = activateFluidOnLayer;
+  window._importShadertoy = _importShadertoy;
 
   function closeBrowser() {
     if (browserOverlay) browserOverlay.classList.remove('visible');
@@ -4155,6 +4445,8 @@
             return;
           }
 
+          // Deactivate fluid if switching to a regular shader
+          if (layer && layer._fluidActive) deactivateFluid(layerId);
           if (layer) layer.manifestEntry = item;
           if (item.type === 'scene') {
             await loadScene(folder, item.file);
@@ -4822,9 +5114,8 @@
       if (wsOk && status.browserConnected) {
         if (status.frameCount === _ndiLastFrameCount && ndiSendingActive) {
           _ndiStallChecks++;
-          if (_ndiStallChecks >= 2) {
-            // Frames stalled for 6s+ — restart the capture pipeline
-            console.warn('NDI health: frames stalled, restarting capture...');
+          if (_ndiStallChecks >= 4) {
+            // Frames stalled for 12s+ — restart the capture pipeline silently
             pauseNdiSend();
             ndiSendingActive = false;
             try {
@@ -5025,7 +5316,7 @@
         let media = null;
         if (selectedId) media = mediaInputs.find(m => String(m.id) === String(selectedId));
         if (media && media.glTexture) {
-          layer.textures[inp.NAME] = {
+          const texEntry = {
             glTexture: media.glTexture,
             isVideo: media.type === 'video',
             element: media.element,
@@ -5033,6 +5324,11 @@
             flipV: !!media._webcamFlipV,
             _isNdi: !!media._isNdi,
           };
+          layer.textures[inp.NAME] = texEntry;
+          // Start async video frame capture for smooth playback
+          if (texEntry.isVideo && texEntry.element && !texEntry._isNdi) {
+            isfRenderer.startVideoCapture(texEntry);
+          }
         } else if (!layer.textures[inp.NAME]) {
           // Bind default 1x1 black texture to prevent unbound sampler errors
           layer.textures[inp.NAME] = {
@@ -6398,6 +6694,8 @@
       return;
     }
     _lastCompTime = timestamp;
+    // Bump video frame stamp so each video texture is uploaded at most once per frame
+    isfRenderer._videoFrameStamp++;
     if (_compFrameCount < 3) dbg('compLoop frame ' + _compFrameCount + ' comp=' + !!isfRenderer.compositorProgram);
     _compFrameCount++;
 
@@ -6594,6 +6892,10 @@
           if (fluidRenderer.pinchFading || fluidRenderer.pinchOpacity < 1) {
             layer.opacity = fluidRenderer.pinchOpacity;
           }
+        } else if (layer._shadertoyActive && shadertoyRenderer.active) {
+          // Shadertoy: run buffer passes + render image to layer FBO
+          shadertoyRenderer.update(isfRenderer.mousePos, isfRenderer.mouseDelta, isfRenderer.mouseDown);
+          shadertoyRenderer.renderToFBO(layer.fbo);
         } else if (layer.program) {
           isfRenderer.renderLayerToFBO(layer, mediaPipeMgr);
         }

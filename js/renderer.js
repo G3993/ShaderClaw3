@@ -33,6 +33,7 @@ class Renderer {
     this.inputValues = {};
     this.startTime = performance.now();
     this.frameIndex = 0;
+    this._videoFrameStamp = 0; // incremented each frame to deduplicate video uploads
     this.playing = true;
     this.animId = null;
     this.textures = {}; // name → { glTexture, isVideo, element }
@@ -56,6 +57,74 @@ class Renderer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  }
+
+  // Start async video frame capture using requestVideoFrameCallback
+  // Pre-renders decoded frames to an offscreen canvas so texImage2D is instant
+  startVideoCapture(tex) {
+    if (tex._captureStarted) return;
+    const v = tex.element;
+    if (!v || !v.requestVideoFrameCallback) return; // fallback: direct upload
+    tex._captureStarted = true;
+    if (!tex._captureCanvas) {
+      tex._captureCanvas = document.createElement('canvas');
+      tex._captureCtx = tex._captureCanvas.getContext('2d', { willReadFrequently: false });
+    }
+    const loop = () => {
+      if (!tex.element) return; // disposed
+      const vw = v.videoWidth || 640, vh = v.videoHeight || 480;
+      const fc = tex._captureCanvas;
+      if (fc.width !== vw || fc.height !== vh) { fc.width = vw; fc.height = vh; }
+      const ctx = tex._captureCtx;
+      if (tex.flipH || tex.flipV) {
+        ctx.save();
+        ctx.translate(tex.flipH ? fc.width : 0, tex.flipV ? fc.height : 0);
+        ctx.scale(tex.flipH ? -1 : 1, tex.flipV ? -1 : 1);
+        ctx.drawImage(v, 0, 0);
+        ctx.restore();
+      } else {
+        ctx.drawImage(v, 0, 0);
+      }
+      tex._captureReady = true;
+      v.requestVideoFrameCallback(loop);
+    };
+    v.requestVideoFrameCallback(loop);
+  }
+
+  // Upload a video texture only once per frame (avoids redundant texImage2D calls)
+  _uploadVideoTex(tex) {
+    if (tex._lastUploadFrame === this._videoFrameStamp) return; // already uploaded this frame
+    const gl = this.gl;
+
+    // Fast path: use pre-captured canvas from requestVideoFrameCallback
+    if (tex._captureReady && tex._captureCanvas) {
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex._captureCanvas);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      tex._lastUploadFrame = this._videoFrameStamp;
+      return;
+    }
+
+    // Fallback: direct upload (browsers without requestVideoFrameCallback)
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    if (tex.flipH || tex.flipV) {
+      if (!tex._flipCanvas) { tex._flipCanvas = document.createElement('canvas'); tex._flipCtx = tex._flipCanvas.getContext('2d'); }
+      const v = tex.element, fc = tex._flipCanvas;
+      const vw = v.videoWidth || v.width || 640;
+      const vh = v.videoHeight || v.height || 480;
+      if (fc.width !== vw || fc.height !== vh) { fc.width = vw; fc.height = vh; }
+      const ctx = tex._flipCtx;
+      ctx.save();
+      ctx.translate(tex.flipH ? fc.width : 0, tex.flipV ? fc.height : 0);
+      ctx.scale(tex.flipH ? -1 : 1, tex.flipV ? -1 : 1);
+      ctx.drawImage(v, 0, 0);
+      ctx.restore();
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, fc);
+    } else {
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex.element);
+    }
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    tex._lastUploadFrame = this._videoFrameStamp;
   }
 
   _initGeometry() {
@@ -307,32 +376,7 @@ class Renderer {
         tex.element.play().catch(() => {});
       }
       if (tex.isVideo && tex.element && !tex._isNdi && (tex.element.readyState >= 2 || tex.element instanceof HTMLCanvasElement)) {
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-        if (tex.flipH || tex.flipV) {
-          // Mirror webcam: draw flipped to offscreen canvas
-          if (!tex._flipCanvas) {
-            tex._flipCanvas = document.createElement('canvas');
-            tex._flipCtx = tex._flipCanvas.getContext('2d');
-          }
-          const v = tex.element;
-          const fc = tex._flipCanvas;
-          const vw = v.videoWidth || v.width || 640;
-          const vh = v.videoHeight || v.height || 480;
-          if (fc.width !== vw || fc.height !== vh) {
-            fc.width = vw;
-            fc.height = vh;
-          }
-          const ctx = tex._flipCtx;
-          ctx.save();
-          ctx.translate(tex.flipH ? fc.width : 0, tex.flipV ? fc.height : 0);
-          ctx.scale(tex.flipH ? -1 : 1, tex.flipV ? -1 : 1);
-          ctx.drawImage(v, 0, 0);
-          ctx.restore();
-          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, fc);
-        } else {
-          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex.element);
-        }
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        this._uploadVideoTex(tex);
       }
       gl.uniform1i(this._getLoc(name), texUnit);
       // Set IMG_SIZE_<name> for ISF image inputs
@@ -348,10 +392,11 @@ class Renderer {
 
     // Audio-reactive uniforms
     updateAudioUniforms(gl);
-    if (audioFFTGLTexture) {
+    const fftLocComp = this._getLoc('audioFFT');
+    if (audioFFTGLTexture && fftLocComp) {
       gl.activeTexture(gl.TEXTURE0 + texUnit);
       gl.bindTexture(gl.TEXTURE_2D, audioFFTGLTexture);
-      gl.uniform1i(this._getLoc('audioFFT'), texUnit);
+      gl.uniform1i(fftLocComp, texUnit);
       texUnit++;
     }
     const alLoc = this._getLoc('audioLevel');
@@ -733,24 +778,7 @@ class Renderer {
         tex.element.play().catch(() => {});
       }
       if (tex.isVideo && tex.element && !tex._isNdi && (tex.element.readyState >= 2 || tex.element instanceof HTMLCanvasElement)) {
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-        if (tex.flipH || tex.flipV) {
-          if (!tex._flipCanvas) { tex._flipCanvas = document.createElement('canvas'); tex._flipCtx = tex._flipCanvas.getContext('2d'); }
-          const v = tex.element, fc = tex._flipCanvas;
-          const vw = v.videoWidth || v.width || 640;
-          const vh = v.videoHeight || v.height || 480;
-          if (fc.width !== vw || fc.height !== vh) { fc.width = vw; fc.height = vh; }
-          const ctx = tex._flipCtx;
-          ctx.save();
-          ctx.translate(tex.flipH ? fc.width : 0, tex.flipV ? fc.height : 0);
-          ctx.scale(tex.flipH ? -1 : 1, tex.flipV ? -1 : 1);
-          ctx.drawImage(v, 0, 0);
-          ctx.restore();
-          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, fc);
-        } else {
-          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex.element);
-        }
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        this._uploadVideoTex(tex);
       }
       gl.uniform1i(this._getLayerLoc(layer, name), texUnit);
       texUnit++;
@@ -837,10 +865,11 @@ class Renderer {
     const gl = this.gl;
     // Audio uniforms
     updateAudioUniforms(gl);
-    if (audioFFTGLTexture) {
+    const fftLoc = this._getLayerLoc(layer, 'audioFFT');
+    if (audioFFTGLTexture && fftLoc) {
       gl.activeTexture(gl.TEXTURE0 + texUnit);
       gl.bindTexture(gl.TEXTURE_2D, audioFFTGLTexture);
-      gl.uniform1i(this._getLayerLoc(layer, 'audioFFT'), texUnit);
+      gl.uniform1i(fftLoc, texUnit);
       texUnit++;
     }
     const alLoc = this._getLayerLoc(layer, 'audioLevel');
@@ -999,24 +1028,7 @@ class Renderer {
         tex.element.play().catch(() => {});
       }
       if (tex.isVideo && tex.element && !tex._isNdi && (tex.element.readyState >= 2 || tex.element instanceof HTMLCanvasElement)) {
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-        if (tex.flipH || tex.flipV) {
-          if (!tex._flipCanvas) { tex._flipCanvas = document.createElement('canvas'); tex._flipCtx = tex._flipCanvas.getContext('2d'); }
-          const v = tex.element, fc = tex._flipCanvas;
-          const vw = v.videoWidth || v.width || 640;
-          const vh = v.videoHeight || v.height || 480;
-          if (fc.width !== vw || fc.height !== vh) { fc.width = vw; fc.height = vh; }
-          const ctx = tex._flipCtx;
-          ctx.save();
-          ctx.translate(tex.flipH ? fc.width : 0, tex.flipV ? fc.height : 0);
-          ctx.scale(tex.flipH ? -1 : 1, tex.flipV ? -1 : 1);
-          ctx.drawImage(v, 0, 0);
-          ctx.restore();
-          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, fc);
-        } else {
-          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex.element);
-        }
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        this._uploadVideoTex(tex);
       }
       gl.uniform1i(this._getLayerLoc(layer, name), texUnit);
       // Set IMG_SIZE_<name> for ISF image inputs

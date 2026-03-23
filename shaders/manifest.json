@@ -388,6 +388,17 @@
     "folder": "scenes"
   },
   {
+    "id": 110,
+    "title": "Cube Explosion",
+    "description": "Audio-reactive exploding cube grid — 276 cubes with beat detection, bass pump, and scatter physics",
+    "type": "scene",
+    "categories": [
+      "3D"
+    ],
+    "file": "cube_explosion.scene.js",
+    "folder": "scenes"
+  },
+  {
     "id": 113,
     "title": "Dispersion",
     "description": "Chromatic dispersion — refractive color separation driven by animated flow noise, with texture input",
@@ -707,5 +718,25 @@
       "Effect"
     ],
     "file": "pixel_sort.fs"
+  },
+  {
+    "id": 426,
+    "title": "CFD Paint",
+    "description": "Computational fluid dynamics — ink-in-water swirling paint with specular lighting",
+    "categories": [
+      "Generator",
+      "Simulation"
+    ],
+    "file": "cfd_paint.fs"
+  },
+  {
+    "id": 427,
+    "title": "Data Sculpture",
+    "description": "Raymarched grid of thousands of cubes flowing like fluid — input an image or video and it sculpts into a 3D data landscape",
+    "categories": [
+      "Generator",
+      "3D"
+    ],
+    "file": "data_sculpture.fs"
   }
 ]
