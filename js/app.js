@@ -7037,13 +7037,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     e.preventDefault();
     _touchCount = e.touches.length;
     if (e.touches.length === 1) {
-      // Single finger drag — update mousePos
+      // Single finger drag — update mousePos directly (no smoothing)
+      // so mouseDelta is accurate for fluid/paint shaders
       const touch = e.touches[0];
       const rect = glCanvas.getBoundingClientRect();
       const nx = (touch.clientX - rect.left) / rect.width;
       const ny = 1.0 - (touch.clientY - rect.top) / rect.height;
-      isfRenderer.mousePos[0] += (nx - isfRenderer.mousePos[0]) * 0.3;
-      isfRenderer.mousePos[1] += (ny - isfRenderer.mousePos[1]) * 0.3;
+      isfRenderer.mousePos[0] = nx;
+      isfRenderer.mousePos[1] = ny;
     } else if (e.touches.length >= 2) {
       // Two finger pinch — drive pinchHold and update mousePos to midpoint
       const t0 = e.touches[0], t1 = e.touches[1];

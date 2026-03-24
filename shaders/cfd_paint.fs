@@ -11,6 +11,8 @@
     { "NAME": "fluidHeight", "LABEL": "Surface Height", "TYPE": "float", "DEFAULT": 150.0, "MIN": 1.0, "MAX": 500.0 },
     { "NAME": "diffMin", "LABEL": "Shadow", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "colorSat", "LABEL": "Saturation", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 },
+    { "NAME": "colorCycle", "LABEL": "Color Cycle", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "colorFloor", "LABEL": "Color Floor", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 0.5 },
     { "NAME": "movement", "LABEL": "Movement", "TYPE": "bool", "DEFAULT": true },
     { "NAME": "moveSpeed", "LABEL": "Move Speed", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.1, "MAX": 2.0 },
     { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" },
@@ -185,6 +187,21 @@ void main() {
 
         // Slight dissipation
         dye.rgb *= 0.999;
+
+        // Subtle color cycle — gently shifts hue across the fluid, audio speeds it up
+        if (colorCycle > 0.001) {
+            float cyc = colorCycle * 0.003 * (1.0 + audioBass * 1.5);
+            float hue = fract(TIME * colorCycle * 0.08 + uv.x * 0.15 + uv.y * 0.1);
+            vec3 tint = hsv2rgb(vec3(hue, 0.6, 1.0));
+            dye.rgb = mix(dye.rgb, dye.rgb * tint, cyc);
+        }
+
+        // Color floor — prevent going fully dark
+        if (colorFloor > 0.001) {
+            float lum = dot(dye.rgb, vec3(0.299, 0.587, 0.114));
+            float boost = smoothstep(0.0, colorFloor, colorFloor - lum);
+            dye.rgb += dye.rgb * boost * 0.5 + vec3(boost * colorFloor * 0.3);
+        }
 
         bool hasInput = IMG_SIZE_inputTex.x > 0.0;
 

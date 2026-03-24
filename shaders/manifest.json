@@ -807,6 +807,13 @@
     "file": "hall_of_mirrors.fs"
   },
   {
+    "id": 441,
+    "title": "Raining Spheres",
+    "description": "Bouncing colored light-emitting spheres on an infinite grid with shadows and reflections",
+    "categories": ["3D"],
+    "file": "raining_spheres.fs"
+  },
+  {
     "id": 427,
     "title": "Data Sculpture",
     "description": "Raymarched grid of thousands of cubes flowing like fluid — input an image or video and it sculpts into a 3D data landscape",

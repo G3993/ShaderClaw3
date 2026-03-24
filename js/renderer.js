@@ -795,6 +795,14 @@ class Renderer {
         this._uploadVideoTex(tex);
       }
       gl.uniform1i(this._getLayerLoc(layer, name), texUnit);
+      // Set IMG_SIZE_<name> for ISF image inputs
+      const imgSzLoc2 = this._getLayerLoc(layer, 'IMG_SIZE_' + name);
+      if (imgSzLoc2) {
+        const el = tex.element;
+        const w = el ? (el.videoWidth || el.naturalWidth || el.width || 1) : 1;
+        const h = el ? (el.videoHeight || el.naturalHeight || el.height || 1) : 1;
+        gl.uniform2f(imgSzLoc2, w, h);
+      }
       texUnit++;
     }
 
