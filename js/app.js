@@ -6696,6 +6696,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     _lastCompTime = timestamp;
     // Bump video frame stamp so each video texture is uploaded at most once per frame
     isfRenderer._videoFrameStamp++;
+
+    // Compute mouse delta BEFORE rendering so fluid/paint shaders see current-frame delta
+    const mdx = isfRenderer.mousePos[0] - isfRenderer._lastMousePos[0];
+    const mdy = isfRenderer.mousePos[1] - isfRenderer._lastMousePos[1];
+    isfRenderer.mouseDelta[0] = mdx;
+    isfRenderer.mouseDelta[1] = mdy;
     if (_compFrameCount < 3) dbg('compLoop frame ' + _compFrameCount + ' comp=' + !!isfRenderer.compositorProgram);
     _compFrameCount++;
 
@@ -6916,11 +6922,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
       }
     }
 
-    // Update mouse delta for this frame
-    const mdx = isfRenderer.mousePos[0] - isfRenderer._lastMousePos[0];
-    const mdy = isfRenderer.mousePos[1] - isfRenderer._lastMousePos[1];
-    isfRenderer.mouseDelta[0] = mdx;
-    isfRenderer.mouseDelta[1] = mdy;
+    // Update mouse delta for this frame (NOTE: moved after render in old code,
+    // but must run BEFORE render so fluid/paint shaders see current-frame delta)
     isfRenderer._lastMousePos[0] = isfRenderer.mousePos[0];
     isfRenderer._lastMousePos[1] = isfRenderer.mousePos[1];
 
