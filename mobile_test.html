@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WebGL Mobile Test</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #111; color: #eee; font-family: monospace; font-size: 14px; }
+  canvas { display: block; width: 100%; max-width: 400px; height: 300px; margin: 10px auto; border: 1px solid #444; }
+  #info { padding: 15px; max-width: 600px; margin: 0 auto; }
+  .ok { color: #4f4; } .warn { color: #ff4; } .err { color: #f44; }
+  h2 { margin: 10px 0 5px; color: #aaf; }
+  pre { white-space: pre-wrap; word-break: break-all; background: #1a1a1a; padding: 8px; margin: 4px 0; border-radius: 4px; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="info"><h2>Initializing...</h2></div>
+<script>
+const info = document.getElementById('info');
+function log(html) { info.innerHTML += html + '<br>'; }
+function section(t) { log('<h2>' + t + '</h2>'); }
+function ok(t) { log('<span class="ok">PASS</span> ' + t); }
+function warn(t) { log('<span class="warn">WARN</span> ' + t); }
+function err(t) { log('<span class="err">FAIL</span> ' + t); }
+
+try {
+  info.innerHTML = '';
+  const canvas = document.getElementById('c');
+  const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  if (!gl) { err('WebGL not supported'); throw new Error('no gl'); }
+
+  // --- Diagnostics ---
+  section('WebGL Diagnostics');
+  log('Version: ' + gl.getParameter(gl.VERSION));
+  log('GLSL: ' + gl.getParameter(gl.SHADING_LANGUAGE_VERSION));
+  log('Renderer: ' + gl.getParameter(gl.RENDERER));
+  log('Vendor: ' + gl.getParameter(gl.VENDOR));
+
+  const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+  if (dbg) {
+    log('Unmasked Renderer: ' + gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL));
+    log('Unmasked Vendor: ' + gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL));
+  }
+
+  section('Limits');
+  const limits = {
+    'MAX_TEXTURE_SIZE': gl.MAX_TEXTURE_SIZE,
+    'MAX_VERTEX_UNIFORM_VECTORS': gl.MAX_VERTEX_UNIFORM_VECTORS,
+    'MAX_FRAGMENT_UNIFORM_VECTORS': gl.MAX_FRAGMENT_UNIFORM_VECTORS,
+    'MAX_VERTEX_TEXTURE_IMAGE_UNITS': gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS,
+    'MAX_TEXTURE_IMAGE_UNITS': gl.MAX_TEXTURE_IMAGE_UNITS,
+    'MAX_COMBINED_TEXTURE_IMAGE_UNITS': gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS,
+    'MAX_VARYING_VECTORS': gl.MAX_VARYING_VECTORS,
+    'MAX_VERTEX_ATTRIBS': gl.MAX_VERTEX_ATTRIBS,
+    'MAX_RENDERBUFFER_SIZE': gl.MAX_RENDERBUFFER_SIZE,
+  };
+  for (const [k, v] of Object.entries(limits)) {
+    const val = gl.getParameter(v);
+    const s = k + ': ' + val;
+    if (k === 'MAX_TEXTURE_IMAGE_UNITS' && val < 8) warn(s + ' (low!)');
+    else if (k === 'MAX_FRAGMENT_UNIFORM_VECTORS' && val < 128) warn(s + ' (low!)');
+    else ok(s);
+  }
+
+  // Precision
+  section('Precision Support');
+  for (const prec of ['LOW_FLOAT', 'MEDIUM_FLOAT', 'HIGH_FLOAT']) {
+    const p = gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl[prec]);
+    const s = 'Fragment ' + prec + ': range=[' + p.rangeMin + ',' + p.rangeMax + '] precision=' + p.precision;
+    if (prec === 'HIGH_FLOAT' && p.precision === 0) warn(s + ' (no highp in fragment!)');
+    else ok(s);
+  }
+
+  // Extensions
+  section('Key Extensions');
+  const exts = ['OES_texture_float', 'OES_texture_half_float', 'OES_standard_derivatives',
+    'WEBGL_depth_texture', 'EXT_frag_depth', 'WEBGL_draw_buffers'];
+  for (const e of exts) {
+    gl.getExtension(e) ? ok(e) : warn(e + ' (not available)');
+  }
+
+  // --- Gradient Shader Test ---
+  section('Gradient Shader Compile');
+  const vs = `attribute vec2 position;
+varying vec2 vUV;
+void main() { vUV = position * 0.5 + 0.5; gl_Position = vec4(position, 0.0, 1.0); }`;
+
+  const fs = `precision mediump float;
+uniform vec2 resolution;
+varying vec2 vUV;
+void main() {
+  vec2 uv = gl_FragCoord.xy / resolution;
+  gl_FragColor = vec4(uv.x, uv.y, 0.5 + 0.5 * sin(uv.x * 6.28), 1.0);
+}`;
+
+  function compileShader(src, type) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+      return { shader: null, error: gl.getShaderInfoLog(s) };
+    }
+    return { shader: s, error: null };
+  }
+
+  const vr = compileShader(vs, gl.VERTEX_SHADER);
+  const fr = compileShader(fs, gl.FRAGMENT_SHADER);
+  if (vr.error) err('Vertex: ' + vr.error);
+  else ok('Vertex shader compiled');
+  if (fr.error) err('Fragment: ' + fr.error);
+  else ok('Fragment shader compiled');
+
+  if (vr.shader && fr.shader) {
+    const prog = gl.createProgram();
+    gl.attachShader(prog, vr.shader);
+    gl.attachShader(prog, fr.shader);
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+      err('Link: ' + gl.getProgramInfoLog(prog));
+    } else {
+      ok('Program linked');
+      // Render
+      gl.useProgram(prog);
+      const buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+      const loc = gl.getAttribLocation(prog, 'position');
+      gl.enableVertexAttribArray(loc);
+      gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+      const rLoc = gl.getUniformLocation(prog, 'resolution');
+      canvas.width = canvas.clientWidth; canvas.height = canvas.clientHeight;
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.uniform2f(rLoc, canvas.width, canvas.height);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      ok('Gradient rendered successfully');
+    }
+  }
+
+  // Check for any GL errors
+  section('GL Error Check');
+  const e = gl.getError();
+  if (e === gl.NO_ERROR) ok('No GL errors');
+  else err('GL error code: 0x' + e.toString(16));
+
+} catch(ex) {
+  err('Exception: ' + ex.message);
+}
+</script>
+</body>
+</html>

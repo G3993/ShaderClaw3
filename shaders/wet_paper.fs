@@ -11,7 +11,7 @@
             "NAME": "inputImageAmount",
             "LABEL": "Input image amount",
             "TYPE": "float",
-            "DEFAULT": 0.01,
+            "DEFAULT": 0.0,
             "MIN": 0,
             "MAX": 1
         },
@@ -27,17 +27,9 @@
             "NAME": "fluidHeight",
             "LABEL": "Fluid height",
             "TYPE": "float",
-            "DEFAULT": 650,
-            "MIN": 0,
-            "MAX": 1000
-        },
-        {
-            "NAME": "spread",
-            "LABEL": "Spread",
-            "TYPE": "float",
-            "DEFAULT": 1,
+            "DEFAULT": 150,
             "MIN": 1,
-            "MAX": 7
+            "MAX": 500
         },
         {
             "NAME": "specularReflectionAmount",
@@ -45,7 +37,7 @@
             "TYPE": "float",
             "DEFAULT": 1,
             "MIN": 0,
-            "MAX": 1
+            "MAX": 3
         },
         {
             "NAME": "motorLocation",
@@ -61,14 +53,14 @@
             "TYPE": "float",
             "DEFAULT": 0.01,
             "MIN": 0,
-            "MAX": 1
+            "MAX": 0.1
         },
         {
             "NAME": "motorAttenuation",
             "LABEL": "Motor attenuation",
             "TYPE": "float",
             "DEFAULT": 0.3,
-            "MIN": 0,
+            "MIN": 0.01,
             "MAX": 1
         },
         {
@@ -102,14 +94,6 @@
             "DEFAULT": 45,
             "MIN": 0,
             "MAX": 360
-        },
-        {
-            "NAME": "agitation",
-            "LABEL": "Agitation",
-            "TYPE": "float",
-            "DEFAULT": 2,
-            "MIN": 0,
-            "MAX": 10
         }
     ],
     "ISFVSN": "2",
@@ -126,6 +110,11 @@
 #define TWO_PI 6.2831853071795864769252867665590
 #define DEG2RAD (PI / 180.0)
 
+#define RotNum 5
+
+const float ang = TWO_PI / float(RotNum);
+mat2 m = mat2(cos(ang), sin(ang), -sin(ang), cos(ang));
+
 vec2 polar2cart(in vec2 polar) {
     return vec2(cos(polar.x), sin(polar.x)) * polar.y;
 }
@@ -137,17 +126,47 @@ vec3 polar2cart(in float r, in float phi, in float theta) {
     return vec3(x, y, z);
 }
 
-mat2 rotate2d(const in float r) {
-    float c = cos(r);
-    float s = sin(r);
-    return mat2(c, s, -s, c);
-}
-
 float hash11(float p) {
     p = fract(p * 0.1031);
     p *= p + 33.33;
     p *= p + p;
     return fract(p);
+}
+
+vec3 hash31(float p) {
+    vec3 p3 = fract(vec3(p) * vec3(0.1031, 0.1030, 0.0973));
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.xxy + p3.yzz) * p3.zyx);
+}
+
+float getRot(vec2 pos, vec2 b) {
+    vec2 p = b;
+    float rot = 0.0;
+    for (int i = 0; i < RotNum; i++) {
+        rot += dot(
+            IMG_NORM_PIXEL(mainPass, fract((pos + p) / RENDERSIZE)).xy - vec2(0.5),
+            p.yx * vec2(1, -1)
+        );
+        p = m * p;
+    }
+    return rot / float(RotNum) / dot(b, b);
+}
+
+// Generate a colorful initial image when no input is loaded
+vec4 generateInitialImage(vec2 uv) {
+    vec3 col = vec3(0.0);
+    // Swirling color bands
+    float t = 0.0;
+    for (int i = 0; i < 5; i++) {
+        float fi = float(i);
+        vec3 h = hash31(fi * 7.13 + 3.7);
+        vec2 center = h.xy;
+        float r = length(uv - center);
+        float wave = sin(r * 20.0 - fi * 1.5) * 0.5 + 0.5;
+        col += h * wave * 0.4;
+    }
+    col = clamp(col, 0.0, 1.0);
+    return vec4(col, 1.0);
 }
 
 void main() {
@@ -156,12 +175,10 @@ void main() {
     vec2 uv = pos * inverseSize;
 
     if (PASSINDEX == 0) {
-        int RotNum = 2 * int(agitation) + 1;
-        float ang = TWO_PI / float(RotNum);
-        mat2 m = rotate2d(ang);
-
+        // --- Fluid simulation pass (Buffer A equivalent) ---
         float rnd = hash11(TIME / RENDERSIZE.x);
-        vec2 b = polar2cart(vec2(ang * rnd, 1));
+
+        vec2 b = vec2(cos(ang * rnd), sin(ang * rnd));
         vec2 v = vec2(0);
 
         float bbMax = dripSize * RENDERSIZE.y;
@@ -172,46 +189,45 @@ void main() {
 
             vec2 p = b;
 
-            for (int i = 0; i < 5; i++) {
-                vec2 pos_plus_p = pos + p;
-                vec2 rotated_b = b;
-                float rotated_b_magnitude_squared = dot(rotated_b, rotated_b);
-
-                float rot = 0.0;
-                for (int j = 0; j < 5; j++) {
-                    rot += dot(
-                        IMG_NORM_PIXEL(mainPass, fract((pos_plus_p + rotated_b) / RENDERSIZE)).xy - vec2(0.5),
-                        rotated_b.yx * vec2(1, -1)
-                    );
-                    rotated_b = m * rotated_b;
-                }
-                float rotation = rot / float(RotNum) / rotated_b_magnitude_squared;
-
-                v += p.yx * rotation;
+            for (int i = 0; i < RotNum; i++) {
+                v += p.yx * getRot(pos + p, b);
                 p = m * p;
             }
 
             b *= 2.0;
         }
 
-        gl_FragColor = IMG_NORM_PIXEL(mainPass, fract((pos + fluidSpeed * vec2(-1, 1) * v) / RENDERSIZE));
+        // Self-advection
+        gl_FragColor = IMG_NORM_PIXEL(mainPass, fract((pos + v * vec2(-1, 1) * fluidSpeed) / RENDERSIZE));
 
-        // Motor
+        // Motor — injects rotation at a point
         vec2 scr = 2.0 * (uv - motorLocation);
-        gl_FragColor.xy += motorSize * (1.0 + audioBass * 5.0) * scr / (10.0 * dot(scr, scr) + motorAttenuation);
+        gl_FragColor.xy += motorSize * (1.0 + audioBass * 5.0) * scr.xy / (dot(scr, scr) / 0.1 + motorAttenuation);
 
-        gl_FragColor = (1.0 - inputImageAmount) * gl_FragColor + inputImageAmount * IMG_PIXEL(inputImage, pos);
+        // Continuous input image injection (only when amount > 0)
+        if (inputImageAmount > 0.001) {
+            gl_FragColor = (1.0 - inputImageAmount) * gl_FragColor + inputImageAmount * IMG_PIXEL(inputImage, pos);
+        }
 
+        // Initialize: load input image on first frames, or generate pattern if no image
         if (FRAMEINDEX < 5) {
-            gl_FragColor = IMG_PIXEL(inputImage, pos);
+            vec4 img = IMG_PIXEL(inputImage, pos);
+            // Check if input image has content (not all black)
+            float imgEnergy = dot(img.rgb, vec3(1.0));
+            if (imgEnergy > 0.01) {
+                gl_FragColor = img;
+            } else {
+                gl_FragColor = generateInitialImage(uv);
+            }
         }
     }
     else {
+        // --- Lighting pass (Image tab equivalent) ---
         vec2 d = vec2(inverseSize.y, 0);
         vec3 n = vec3(
-            (length(IMG_NORM_PIXEL(mainPass, uv + d.xy).xyz) - length(IMG_NORM_PIXEL(mainPass, uv - d.xy).xyz)) * RENDERSIZE.y,
-            (length(IMG_NORM_PIXEL(mainPass, uv + d.yx).xyz) - length(IMG_NORM_PIXEL(mainPass, uv - d.yx).xyz)) * RENDERSIZE.y,
-            1000.0 - fluidHeight
+            (length(IMG_NORM_PIXEL(mainPass, uv + d.xy).xyz) - length(IMG_NORM_PIXEL(mainPass, uv - d.xy).xyz)) / inverseSize.y,
+            (length(IMG_NORM_PIXEL(mainPass, uv + d.yx).xyz) - length(IMG_NORM_PIXEL(mainPass, uv - d.yx).xyz)) / inverseSize.y,
+            fluidHeight
         );
 
         n = normalize(n);

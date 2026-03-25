@@ -58,6 +58,14 @@ const MIME = {
   ".png": "image/png",
   ".jpg": "image/jpeg",
   ".svg": "image/svg+xml",
+  ".mp4": "video/mp4",
+  ".mov": "video/quicktime",
+  ".webm": "video/webm",
+  ".glb": "model/gltf-binary",
+  ".gltf": "model/gltf+json",
+  ".mp3": "audio/mpeg",
+  ".wav": "audio/wav",
+  ".ogg": "audio/ogg",
 };
 
 // ============================================================
@@ -568,6 +576,31 @@ const httpServer = createServer(async (req, res) => {
   let urlPath = req.url.split("?")[0];
   if (urlPath === "/") urlPath = "/index.html";
 
+  // Shadertoy proxy — GET /api/shadertoy/:id → fetch shader JSON
+  if (urlPath.startsWith("/api/shadertoy/") && req.method === "GET") {
+    const shaderId = urlPath.slice("/api/shadertoy/".length).replace(/[^a-zA-Z0-9]/g, "");
+    if (!shaderId) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Missing shader ID" }));
+      return;
+    }
+    try {
+      const apiKey = "BdHjRn"; // default Shadertoy API key
+      const apiUrl = `https://www.shadertoy.com/api/v1/shaders/${shaderId}?key=${apiKey}`;
+      const resp = await fetch(apiUrl);
+      const data = await resp.json();
+      res.writeHead(resp.ok ? 200 : resp.status, {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      });
+      res.end(JSON.stringify(data));
+    } catch (e) {
+      res.writeHead(502, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Shadertoy fetch failed: " + e.message }));
+    }
+    return;
+  }
+
   // Diagnostic report — POST /api/diag (browser sends errors)
   if (urlPath === "/api/diag" && req.method === "POST") {
     let body = "";
@@ -650,6 +683,22 @@ const httpServer = createServer(async (req, res) => {
     } catch {
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ feeds: [] }));
+    }
+    return;
+  }
+
+  // Built-in assets manifest — GET /api/assets
+  if (urlPath === "/api/assets" && req.method === "GET") {
+    try {
+      const files = await readdir(join(__dirname, "assets"));
+      const assets = files
+        .filter(f => /\.(mp4|mov|webm|png|jpg|jpeg|gif|webp|glb|gltf|mp3|wav|ogg|svg)$/i.test(f))
+        .map(f => ({ name: f, url: "assets/" + f }));
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(assets));
+    } catch {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end("[]");
     }
     return;
   }

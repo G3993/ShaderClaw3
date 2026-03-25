@@ -272,8 +272,10 @@ function buildFragmentShader(source) {
   const parsed = parseISF(source);
 
   // Inject universal video input for shaders that don't already have image inputs
+  // Skip for multi-pass shaders — video injection corrupts simulation buffers
   const hasImageInput = (parsed.inputs || []).some(inp => inp.TYPE === 'image');
-  if (!hasImageInput) {
+  const hasMultiPass = parsed.meta && Array.isArray(parsed.meta.PASSES) && parsed.meta.PASSES.length > 1;
+  if (!hasImageInput && !hasMultiPass) {
     if (!parsed.inputs) parsed.inputs = [];
     parsed.inputs.push(
       { NAME: 'scVideoInput', TYPE: 'image', LABEL: 'Video Input', _synthetic: true },
@@ -358,7 +360,7 @@ function buildFragmentShader(source) {
   // Wrap shader main() to inject bgColor resolution, video blend, and/or transparent background support
   const shaderHandlesTransparency = (parsed.inputs || []).some(inp => inp.NAME === 'transparentBg');
   const hasBgColor = (parsed.inputs || []).some(inp => inp.NAME === 'bgColor');
-  const injectVideo = !hasImageInput;
+  const injectVideo = !hasImageInput && !hasMultiPass;
   let body = header + '\n' + cleaned;
   const mainRe = /void\s+main\s*\(\s*(void)?\s*\)/;
   const needsWrap = mainRe.test(body) && (hasBgColor || !shaderHandlesTransparency || injectVideo);

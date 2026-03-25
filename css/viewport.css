@@ -188,3 +188,16 @@
 .audio-level-fill { display: block; height: 100%; width: 0%; background: var(--sc-accent); border-radius: 2px; transition: width 0.06s; }
 
 #canvas-logo { display: none; }
+
+/* ===== FULLSCREEN MODE — hide all UI, pure canvas ===== */
+#preview:fullscreen .canvas-controls,
+#preview:fullscreen #error-bar,
+#preview:fullscreen #debug-overlay {
+  display: none !important;
+}
+#preview:fullscreen {
+  cursor: none;
+}
+#preview:fullscreen.show-cursor {
+  cursor: default;
+}
