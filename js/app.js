@@ -569,7 +569,9 @@
             persistent,
             ppFBO: isfRenderer.createPingPongFBO(w, h),
             width: w,
-            height: h
+            height: h,
+            _widthExpr: p.WIDTH || null,
+            _heightExpr: p.HEIGHT || null
           };
         });
       }
@@ -959,7 +961,10 @@
         // Set video dimensions to match canvas resolution (custom canvas size)
         pipVideo.width = glCanvas.width;
         pipVideo.height = glCanvas.height;
-        const stream = glCanvas.captureStream(30);
+        // Adaptive PiP framerate: 24fps for large canvases (>4M pixels), 30fps otherwise
+        const pipPixels = glCanvas.width * glCanvas.height;
+        const pipFps = pipPixels > 4000000 ? 24 : 30;
+        const stream = glCanvas.captureStream(pipFps);
         pipVideo.srcObject = stream;
         await pipVideo.play();
         await pipVideo.requestPictureInPicture();
@@ -7006,11 +7011,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
   // compositionLoop() is now started inside loadDefaults after compositionPlaying = true
 
-  // Mouse tracking for interactive shaders
+  // Mouse tracking for interactive shaders (uses cached _glCanvasRect — updated by ResizeObserver)
   glCanvas.addEventListener('mousemove', (e) => {
-    const rect = glCanvas.getBoundingClientRect();
-    const nx = (e.clientX - rect.left) / rect.width;
-    const ny = 1.0 - (e.clientY - rect.top) / rect.height; // GL coords: Y up
+    const nx = (e.clientX - _glCanvasRect.left) / _glCanvasRect.width;
+    const ny = 1.0 - (e.clientY - _glCanvasRect.top) / _glCanvasRect.height; // GL coords: Y up
     isfRenderer.mousePos[0] += (nx - isfRenderer.mousePos[0]) * 0.3;
     isfRenderer.mousePos[1] += (ny - isfRenderer.mousePos[1]) * 0.3;
   });
@@ -7028,9 +7032,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Single finger — update mousePos immediately on tap
     if (e.touches.length === 1) {
       const touch = e.touches[0];
-      const rect = glCanvas.getBoundingClientRect();
-      isfRenderer.mousePos[0] = (touch.clientX - rect.left) / rect.width;
-      isfRenderer.mousePos[1] = 1.0 - (touch.clientY - rect.top) / rect.height;
+      isfRenderer.mousePos[0] = (touch.clientX - _glCanvasRect.left) / _glCanvasRect.width;
+      isfRenderer.mousePos[1] = 1.0 - (touch.clientY - _glCanvasRect.top) / _glCanvasRect.height;
     }
     // Two fingers — start pinch tracking
     if (e.touches.length >= 2) {
@@ -7048,9 +7051,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
       // Single finger drag — update mousePos directly (no smoothing)
       // so mouseDelta is accurate for fluid/paint shaders
       const touch = e.touches[0];
-      const rect = glCanvas.getBoundingClientRect();
-      const nx = (touch.clientX - rect.left) / rect.width;
-      const ny = 1.0 - (touch.clientY - rect.top) / rect.height;
+      const nx = (touch.clientX - _glCanvasRect.left) / _glCanvasRect.width;
+      const ny = 1.0 - (touch.clientY - _glCanvasRect.top) / _glCanvasRect.height;
       isfRenderer.mousePos[0] = nx;
       isfRenderer.mousePos[1] = ny;
     } else if (e.touches.length >= 2) {
@@ -7059,9 +7061,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
       const dx = t0.clientX - t1.clientX;
       const dy = t0.clientY - t1.clientY;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      const rect = glCanvas.getBoundingClientRect();
-      const mx = ((t0.clientX + t1.clientX) / 2 - rect.left) / rect.width;
-      const my = 1.0 - ((t0.clientY + t1.clientY) / 2 - rect.top) / rect.height;
+      const mx = ((t0.clientX + t1.clientX) / 2 - _glCanvasRect.left) / _glCanvasRect.width;
+      const my = 1.0 - ((t0.clientY + t1.clientY) / 2 - _glCanvasRect.top) / _glCanvasRect.height;
       isfRenderer.mousePos[0] += (mx - isfRenderer.mousePos[0]) * 0.3;
       isfRenderer.mousePos[1] += (my - isfRenderer.mousePos[1]) * 0.3;
       // Ramp pinchHold while pinching
@@ -7109,6 +7110,19 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     const customInput = document.getElementById('canvas-size-custom');
     if (!sel) return;
 
+    // Resolve pass dimension expression (e.g. "$WIDTH/2") against new canvas size
+    function _resolvePassDim(expr, canvasW, canvasH) {
+      if (!expr) return canvasW;
+      if (typeof expr === 'number') return expr;
+      const s = String(expr);
+      const m = s.match(/^\$(?:WIDTH|HEIGHT)\s*\/\s*(\d+)$/);
+      if (m) {
+        const base = s.includes('HEIGHT') ? canvasH : canvasW;
+        return Math.max(1, Math.round(base / parseInt(m[1])));
+      }
+      return parseInt(s) || canvasW;
+    }
+
     function applyCanvasSize(w, h) {
       // Resize the main canvas
       glCanvas.width = w;
@@ -7143,11 +7157,18 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
           isfRenderer.destroyFBO(layer.fbo);
           layer.fbo = isfRenderer.createFBO(w, h);
         }
-        // Recreate pass FBOs if present
-        if (layer._passFBOs) {
-          layer._passFBOs = layer._passFBOs.map(fbo => {
-            isfRenderer.destroyFBO(fbo);
-            return isfRenderer.createFBO(w, h);
+        // Recreate multi-pass ping-pong FBOs if present
+        if (layer.passes) {
+          layer.passes.forEach(p => {
+            if (p.ppFBO) {
+              isfRenderer.destroyPingPongFBO(p.ppFBO);
+              // Recalculate pass dimensions relative to new canvas size
+              const pw = p._widthExpr ? _resolvePassDim(p._widthExpr, w, h) : w;
+              const ph = p._heightExpr ? _resolvePassDim(p._heightExpr, w, h) : h;
+              p.width = pw;
+              p.height = ph;
+              p.ppFBO = isfRenderer.createPingPongFBO(pw, ph);
+            }
           });
         }
       });

@@ -162,7 +162,9 @@ function startNdiSend(ws, canvasEl) {
       inflight[i] = false;
       if (!ndiSendingActive) return;
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
-      if (ws.bufferedAmount > 8 * 1024 * 1024) return;
+      // Allow up to 2 frames in WS buffer (adapts to large canvases like 8000x1800)
+      const frameBytes = e.data.byteLength || e.data.length || 0;
+      if (ws.bufferedAmount > Math.max(frameBytes * 2, 8 * 1024 * 1024)) return;
       ws.send(e.data);
       ndiSendFrameCount++;
     };
@@ -171,7 +173,10 @@ function startNdiSend(ws, canvasEl) {
   function captureLoop(timestamp) {
     if (!ndiSendingActive) return;
     ndiSendAnimId = requestAnimationFrame(captureLoop);
-    if (timestamp - lastCapture < 33) return; // ~30fps
+    // Adaptive frame interval: 30fps for <=1080p, 24fps for large canvases (>4M pixels)
+    const pixelCount = canvasEl.width * canvasEl.height;
+    const minInterval = pixelCount > 4000000 ? 41 : 33; // 41ms = ~24fps, 33ms = ~30fps
+    if (timestamp - lastCapture < minInterval) return;
     if (inflight[workerIdx]) return; // worker still busy
     lastCapture = timestamp;
     inflight[workerIdx] = true;
@@ -180,7 +185,7 @@ function startNdiSend(ws, canvasEl) {
     // NDI at full canvas resolution — send whatever the user's canvas size is
     const ndiW = canvasEl.width;
     const ndiH = canvasEl.height;
-    createImageBitmap(canvasEl, { resizeWidth: ndiW, resizeHeight: ndiH })
+    createImageBitmap(canvasEl)
       .then(bitmap => {
         if (!ndiSendingActive) { bitmap.close(); inflight[idx] = false; return; }
         workers[idx].postMessage({ bitmap, width: ndiW, height: ndiH }, [bitmap]);

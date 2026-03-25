@@ -23,9 +23,16 @@ export function resizeLayerFBOs(renderer, w, h) {
   for (const id of LAYER_IDS) {
     const layer = getLayer(id);
     layer.fbo = renderer.createFBO(FBO_WIDTH, FBO_HEIGHT);
-    // Re-create pass FBOs if present
-    if (layer._passFBOs) {
-      layer._passFBOs = layer._passFBOs.map(() => renderer.createFBO(FBO_WIDTH, FBO_HEIGHT));
+    // Re-create multi-pass ping-pong FBOs if present
+    if (layer.passes) {
+      for (const p of layer.passes) {
+        if (p.ppFBO) {
+          renderer.destroyPingPongFBO(p.ppFBO);
+          p.width = FBO_WIDTH;
+          p.height = FBO_HEIGHT;
+          p.ppFBO = renderer.createPingPongFBO(FBO_WIDTH, FBO_HEIGHT);
+        }
+      }
     }
   }
 }

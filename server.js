@@ -745,7 +745,7 @@ const httpServer = createServer(async (req, res) => {
 // WebSocket Server — attach to HTTP server
 // ============================================================
 
-const wss = new WebSocketServer({ server: httpServer });
+const wss = new WebSocketServer({ server: httpServer, maxPayload: 256 * 1024 * 1024 }); // 256MB — supports 8K canvases
 
 wss.on("connection", (ws) => {
   bridge.attach(ws);
