@@ -366,6 +366,18 @@
       <button class="sc3-tab" data-tab="gallery">Gallery</button>
     </nav>
 
+    <!-- Canvas Size Selector -->
+    <div class="sc3-canvas-size-row">
+      <label class="sc3-canvas-size-label">Canvas</label>
+      <select id="canvas-size-select" class="sc3-canvas-size-select">
+        <option value="1920x1080" selected>1920x1080 (HD)</option>
+        <option value="2560x1440">2560x1440 (2K)</option>
+        <option value="3840x2160">3840x2160 (4K)</option>
+        <option value="custom">Custom...</option>
+      </select>
+      <input type="text" id="canvas-size-custom" class="sc3-canvas-size-custom" placeholder="WxH" style="display:none">
+    </div>
+
     <!-- Tab Content: Controls (properties) -->
     <div class="sc3-tab-content active" data-tab-content="canvas">
 

@@ -8,8 +8,29 @@ import { getFontState } from './media.js';
 
 // Scale FBOs to device — mobile GPUs can't handle 7× 1920x1080 FBOs
 const _isMobile = typeof window !== 'undefined' && (window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent));
-const FBO_WIDTH = _isMobile ? Math.min(960, window.innerWidth * (window.devicePixelRatio || 1)) : 1920;
-const FBO_HEIGHT = _isMobile ? Math.min(540, window.innerHeight * (window.devicePixelRatio || 1)) : 1080;
+let FBO_WIDTH = _isMobile ? Math.min(960, window.innerWidth * (window.devicePixelRatio || 1)) : 1920;
+let FBO_HEIGHT = _isMobile ? Math.min(540, window.innerHeight * (window.devicePixelRatio || 1)) : 1080;
+
+/**
+ * Resize all layer FBOs to new dimensions
+ * @param {Renderer} renderer
+ * @param {number} w - new width
+ * @param {number} h - new height
+ */
+export function resizeLayerFBOs(renderer, w, h) {
+  FBO_WIDTH = w;
+  FBO_HEIGHT = h;
+  for (const id of LAYER_IDS) {
+    const layer = getLayer(id);
+    layer.fbo = renderer.createFBO(FBO_WIDTH, FBO_HEIGHT);
+    // Re-create pass FBOs if present
+    if (layer._passFBOs) {
+      layer._passFBOs = layer._passFBOs.map(() => renderer.createFBO(FBO_WIDTH, FBO_HEIGHT));
+    }
+  }
+}
+
+export function getFBOSize() { return { width: FBO_WIDTH, height: FBO_HEIGHT }; }
 
 /**
  * Initialize FBOs for all layers

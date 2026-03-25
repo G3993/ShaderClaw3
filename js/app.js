@@ -7098,6 +7098,68 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   });
   resizeObs.observe(document.getElementById('preview'));
 
+  // ===== CANVAS SIZE SELECTOR =====
+  (function initCanvasSizeSelector() {
+    const sel = document.getElementById('canvas-size-select');
+    const customInput = document.getElementById('canvas-size-custom');
+    if (!sel) return;
+
+    function applyCanvasSize(w, h) {
+      // Resize the main canvas
+      glCanvas.width = w;
+      glCanvas.height = h;
+      isfRenderer.gl.viewport(0, 0, w, h);
+      // Recreate all layer FBOs at new resolution
+      layers.forEach(layer => {
+        if (layer.fbo) {
+          isfRenderer.destroyFBO(layer.fbo);
+          layer.fbo = isfRenderer.createFBO(w, h);
+        }
+        // Recreate pass FBOs if present
+        if (layer._passFBOs) {
+          layer._passFBOs = layer._passFBOs.map(fbo => {
+            isfRenderer.destroyFBO(fbo);
+            return isfRenderer.createFBO(w, h);
+          });
+        }
+      });
+      // Recreate background shader FBO
+      if (canvasBg.shaderFBO) {
+        isfRenderer.destroyFBO(canvasBg.shaderFBO);
+        canvasBg.shaderFBO = isfRenderer.createFBO(w, h);
+        canvasBg.texture = canvasBg.shaderFBO.texture;
+        if (canvasBg.shaderLayer) canvasBg.shaderLayer.fbo = canvasBg.shaderFBO;
+      }
+      sceneRenderer.resize();
+      dbg('canvas resized to ' + w + 'x' + h);
+    }
+
+    sel.addEventListener('change', () => {
+      if (sel.value === 'custom') {
+        customInput.style.display = '';
+        customInput.focus();
+        return;
+      }
+      customInput.style.display = 'none';
+      const parts = sel.value.split('x');
+      applyCanvasSize(parseInt(parts[0]), parseInt(parts[1]));
+    });
+
+    if (customInput) {
+      customInput.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        const val = customInput.value.trim();
+        const m = val.match(/^(\d+)\s*[xX×,]\s*(\d+)$/);
+        if (m) {
+          const w = Math.max(320, Math.min(7680, parseInt(m[1])));
+          const h = Math.max(180, Math.min(4320, parseInt(m[2])));
+          applyCanvasSize(w, h);
+          customInput.style.display = 'none';
+        }
+      });
+    }
+  })();
+
   // ===== DRAG-TO-REORDER LAYERS =====
   (function initLayerDrag() {
     const panel = document.getElementById('layer-panel');

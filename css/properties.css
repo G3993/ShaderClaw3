@@ -39,6 +39,50 @@
   background: rgba(255,255,255,0.06);
 }
 
+/* ===== CANVAS SIZE SELECTOR ===== */
+.sc3-canvas-size-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.sc3-canvas-size-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--sc-text-dim);
+  white-space: nowrap;
+}
+.sc3-canvas-size-select {
+  flex: 1;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 4px;
+  color: var(--sc-text);
+  font-size: 11px;
+  padding: 3px 6px;
+  cursor: pointer;
+  outline: none;
+}
+.sc3-canvas-size-select:hover {
+  background: rgba(255,255,255,0.1);
+}
+.sc3-canvas-size-custom {
+  width: 80px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 4px;
+  color: var(--sc-text);
+  font-size: 11px;
+  padding: 3px 6px;
+  outline: none;
+}
+.sc3-canvas-size-custom::placeholder {
+  color: var(--sc-text-dim);
+}
+
 /* ===== LAYER PANEL ===== */
 #layer-panel {
   padding: 4px 0;

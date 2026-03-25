@@ -9,6 +9,10 @@
     { "NAME": "specPow", "LABEL": "Spec Power", "TYPE": "float", "DEFAULT": 36.0, "MIN": 4.0, "MAX": 128.0 },
     { "NAME": "diffMin", "LABEL": "Shadow", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "motorStrength", "LABEL": "Motor", "TYPE": "float", "DEFAULT": 0.01, "MIN": 0.0, "MAX": 0.05 },
+    { "NAME": "texBlend", "LABEL": "Tex Blend", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "texWarp", "LABEL": "Tex Warp", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "texFeed", "LABEL": "Tex Feed", "TYPE": "float", "DEFAULT": 0.2, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "colorMix", "LABEL": "Color Mix", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Overlay","Multiply","Screen","Replace"], "DEFAULT": 0 },
     { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ],
@@ -95,14 +99,25 @@ void main() {
 
         // Init with texture or default
         if (FRAMEINDEX <= 4) {
-            vec4 tex = texture2D(inputTex, uv);
-            if (tex.a > 0.01) {
-                gl_FragColor = tex;
+            vec4 initTex = texture2D(inputTex, uv);
+            if (initTex.a > 0.01) {
+                gl_FragColor = initTex;
             } else {
                 // Default: subtle gradient seed
                 gl_FragColor = vec4(uv.x * 0.5, uv.y * 0.3, 0.2, 1.0);
             }
         }
+
+        // Continuous texture feeding — keeps video colors alive in the fluid
+        vec4 tex = texture2D(inputTex, uv);
+        if (tex.a > 0.01 && texFeed > 0.001) {
+            // Warp the texture UV by the fluid velocity for organic morphing
+            vec2 warpedUV = fract(uv + v * vec2(-1.0, 1.0) * texWarp * 0.01);
+            vec4 warpedTex = texture2D(inputTex, warpedUV);
+            // Feed warped texture color back into the simulation
+            gl_FragColor.rgb = mix(gl_FragColor.rgb, warpedTex.rgb, texFeed * 0.1);
+        }
+
         return;
     }
 
@@ -121,13 +136,29 @@ void main() {
 
     vec4 col = texture2D(simBuf, uv);
 
-    // Texture mix
-    vec4 texSample = texture2D(inputTex, uv);
-    if (texSample.a > 0.01) {
-        col.rgb = mix(col.rgb, texSample.rgb, 0.3);
-    }
+    // Warp texture UV by fluid velocity for organic morphing
+    vec2 simVel = col.xy - vec2(0.5);
+    vec2 warpedUV = fract(uv + simVel * vec2(-1.0, 1.0) * texWarp * 0.05);
 
     vec3 final = col.rgb * diff + vec3(spec);
+
+    // Texture color mix with blend modes
+    vec4 texSample = texture2D(inputTex, warpedUV);
+    if (texSample.a > 0.01 && texBlend > 0.001) {
+        vec3 texCol = texSample.rgb;
+        vec3 blended;
+        int cm = int(colorMix);
+        if (cm == 0) { // Overlay
+            blended = final * (1.0 - texBlend) + texCol * final * texBlend * 2.0;
+        } else if (cm == 1) { // Multiply
+            blended = mix(final, final * texCol, texBlend);
+        } else if (cm == 2) { // Screen
+            blended = mix(final, 1.0 - (1.0 - final) * (1.0 - texCol), texBlend);
+        } else { // Replace
+            blended = mix(final, texCol, texBlend);
+        }
+        final = blended;
+    }
 
     float alpha = 1.0;
     if (transparentBg) {

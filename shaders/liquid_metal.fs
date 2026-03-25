@@ -12,6 +12,10 @@
     { "NAME": "crunch", "LABEL": "Surface Grain", "TYPE": "float", "DEFAULT": 0.002, "MIN": 0.0, "MAX": 0.01 },
     { "NAME": "moveMode", "LABEL": "Movement", "TYPE": "long", "VALUES": [0, 1, 2, 3], "LABELS": ["None", "Slow Swirl", "Pulse", "Chaos"], "DEFAULT": 1 },
     { "NAME": "moveSpeed", "LABEL": "Move Speed", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.05, "MAX": 2.0 },
+    { "NAME": "texBlend", "LABEL": "Tex Blend", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "texWarp", "LABEL": "Tex Warp", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "texFeed", "LABEL": "Tex Feed", "TYPE": "float", "DEFAULT": 0.2, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "colorMix", "LABEL": "Color Mix", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Overlay","Multiply","Screen","Replace"], "DEFAULT": 0 },
     { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ],
@@ -144,10 +148,20 @@ void main() {
         if (FRAMEINDEX < 4) {
             col = vec4(0.0);
             // Seed with texture if available
-            vec4 tex = texture2D(inputTex, uv);
-            if (tex.a > 0.01) {
-                col = (tex - 0.5) * 0.7;
+            vec4 initTex = texture2D(inputTex, uv);
+            if (initTex.a > 0.01) {
+                col = (initTex - 0.5) * 0.7;
             }
+        }
+
+        // Continuous texture feeding — keeps video colors alive in the fluid
+        vec4 tex = texture2D(inputTex, uv);
+        if (tex.a > 0.01 && texFeed > 0.001) {
+            // Warp the texture UV by the fluid velocity for organic morphing
+            vec2 warpedUV = fract(uv + v * vec2(-1.0, 1.0) * texWarp * 0.01);
+            vec4 warpedTex = texture2D(inputTex, warpedUV);
+            // Feed warped texture color back into the simulation
+            col.rgb = mix(col.rgb, warpedTex.rgb, texFeed * 0.1);
         }
 
         gl_FragColor = col;
@@ -221,12 +235,24 @@ void main() {
     // Tint with metal color
     finalCol *= metalColor.rgb;
 
-    // Texture input mix — use texture as the "painting" medium
-    vec4 texSample = texture2D(inputTex, uv);
-    if (texSample.a > 0.01) {
-        // Mix texture color into the metallic surface
-        vec3 texRefl = texSample.rgb * refl * 0.7;
-        finalCol = mix(finalCol, texRefl, 0.5);
+    // Texture input — warp UV by fluid velocity for organic morphing
+    vec2 simVel = simCol.xy;
+    vec2 warpedUV = fract(uv + simVel * vec2(-1.0, 1.0) * texWarp * 0.05);
+    vec4 texSample = texture2D(inputTex, warpedUV);
+    if (texSample.a > 0.01 && texBlend > 0.001) {
+        vec3 texCol = texSample.rgb;
+        vec3 blended;
+        int cm = int(colorMix);
+        if (cm == 0) { // Overlay
+            blended = finalCol * (1.0 - texBlend) + texCol * finalCol * texBlend * 2.0;
+        } else if (cm == 1) { // Multiply
+            blended = mix(finalCol, finalCol * texCol, texBlend);
+        } else if (cm == 2) { // Screen
+            blended = mix(finalCol, 1.0 - (1.0 - finalCol) * (1.0 - texCol), texBlend);
+        } else { // Replace
+            blended = mix(finalCol, texCol, texBlend);
+        }
+        finalCol = blended;
     }
 
     // Add specular highlight
