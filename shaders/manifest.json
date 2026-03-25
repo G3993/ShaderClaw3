@@ -842,5 +842,12 @@
       "Simulation"
     ],
     "file": "liquid_chrome.fs"
+  },
+  {
+    "id": 442,
+    "title": "Fluid Image",
+    "description": "UV-advection fluid sim — warp any image/video with fluid dynamics, image stays crisp and returns when fluid settles",
+    "categories": ["VFX", "Simulation"],
+    "file": "fluid_image.fs"
   }
 ]
