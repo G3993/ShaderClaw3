@@ -28,9 +28,17 @@ export function resizeLayerFBOs(renderer, w, h) {
       for (const p of layer.passes) {
         if (p.ppFBO) {
           renderer.destroyPingPongFBO(p.ppFBO);
-          p.width = FBO_WIDTH;
-          p.height = FBO_HEIGHT;
-          p.ppFBO = renderer.createPingPongFBO(FBO_WIDTH, FBO_HEIGHT);
+          let pw = FBO_WIDTH, ph = FBO_HEIGHT;
+          // Perf: auto-downscale simulation (TARGET) passes on ultra-wide canvases
+          const isSimPass = !!p.target;
+          if (isSimPass && FBO_WIDTH > 4096) {
+            pw = Math.max(1, Math.round(pw / 2));
+            ph = Math.max(1, Math.round(ph / 2));
+          }
+          p._simDownscaled = isSimPass && FBO_WIDTH > 4096;
+          p.width = pw;
+          p.height = ph;
+          p.ppFBO = renderer.createPingPongFBO(pw, ph);
         }
       }
     }
@@ -141,11 +149,19 @@ export function compileToLayer(renderer, layerId, source) {
       };
       try { if (p.WIDTH)  { const v = _parseDim(p.WIDTH,  FBO_WIDTH, FBO_HEIGHT); if (v) pw = v; } } catch(e) {}
       try { if (p.HEIGHT) { const v = _parseDim(p.HEIGHT, FBO_WIDTH, FBO_HEIGHT); if (v) ph = v; } } catch(e) {}
+      // Perf: auto-downscale simulation (TARGET) passes on ultra-wide canvases
+      // Fluid sim doesn't need pixel-perfect resolution; halving saves ~75% fill cost
+      const isSimPass = !!p.TARGET;
+      if (isSimPass && FBO_WIDTH > 4096) {
+        pw = Math.max(1, Math.round(pw / 2));
+        ph = Math.max(1, Math.round(ph / 2));
+      }
       const pass = {
         target: p.TARGET || null,
         persistent: !!p.PERSISTENT,
         width: pw,
         height: ph,
+        _simDownscaled: isSimPass && FBO_WIDTH > 4096,
         ppFBO: null,
       };
       if (pass.target) {

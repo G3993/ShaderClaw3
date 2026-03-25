@@ -563,6 +563,12 @@
           };
           w = resolveExpr(p.WIDTH, _rw());
           h = resolveExpr(p.HEIGHT, _rh());
+          // Perf: auto-downscale simulation (TARGET) passes on ultra-wide canvases
+          const canvasW = _rw();
+          if (canvasW > 4096) {
+            w = Math.max(1, Math.round(w / 2));
+            h = Math.max(1, Math.round(h / 2));
+          }
           const persistent = !!(p.PERSISTENT || p.persistent);
           return {
             target: p.TARGET,
@@ -571,7 +577,8 @@
             width: w,
             height: h,
             _widthExpr: p.WIDTH || null,
-            _heightExpr: p.HEIGHT || null
+            _heightExpr: p.HEIGHT || null,
+            _simDownscaled: canvasW > 4096
           };
         });
       }
@@ -7163,8 +7170,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             if (p.ppFBO) {
               isfRenderer.destroyPingPongFBO(p.ppFBO);
               // Recalculate pass dimensions relative to new canvas size
-              const pw = p._widthExpr ? _resolvePassDim(p._widthExpr, w, h) : w;
-              const ph = p._heightExpr ? _resolvePassDim(p._heightExpr, w, h) : h;
+              let pw = p._widthExpr ? _resolvePassDim(p._widthExpr, w, h) : w;
+              let ph = p._heightExpr ? _resolvePassDim(p._heightExpr, w, h) : h;
+              // Perf: auto-downscale simulation (TARGET) passes on ultra-wide canvases
+              const isSimPass = !!p.target;
+              if (isSimPass && w > 4096) {
+                pw = Math.max(1, Math.round(pw / 2));
+                ph = Math.max(1, Math.round(ph / 2));
+              }
+              p._simDownscaled = isSimPass && w > 4096;
               p.width = pw;
               p.height = ph;
               p.ppFBO = isfRenderer.createPingPongFBO(pw, ph);

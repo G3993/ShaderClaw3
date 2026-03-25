@@ -1337,26 +1337,41 @@ void main() {
     if (rLoc) gl.uniform2f(rLoc, this.canvas.width, this.canvas.height);
 
     // Bind layer textures (type-aware: scene layer uses sceneTexture, overlay/shader use FBO)
+    // Perf: skip expensive texture bind + uniform calls for invisible layers
     const layerCount = Math.min(layers.length, 4);
     for (let i = 0; i < 4; i++) {
+      const layer = (i < layerCount) ? layers[i] : null;
+      const lVis = (layer && layer.visible && (layer.type !== 'overlay' || layer._hasImage)) ? 1.0 : 0.0;
+      gl.uniform1f(this._getCompLoc('visible' + i), lVis);
+
+      if (lVis < 0.5) {
+        // Layer invisible: bind default tex (required for sampler) but skip other uniforms
+        gl.activeTexture(gl.TEXTURE0 + i);
+        gl.bindTexture(gl.TEXTURE_2D, this._defaultTex);
+        gl.uniform1i(this._getCompLoc('layer' + i), i);
+        gl.uniform1f(this._getCompLoc('opacity' + i), 0);
+        gl.uniform1f(this._getCompLoc('blendMode' + i), 0);
+        gl.uniform1f(this._getCompLoc('flipH' + i), 0);
+        gl.uniform1f(this._getCompLoc('flipV' + i), 0);
+        continue;
+      }
+
       gl.activeTexture(gl.TEXTURE0 + i);
-      if (i < layerCount && layers[i] && layers[i].type === 'scene' && sceneTexture) {
+      if (layer.type === 'scene' && sceneTexture) {
         gl.bindTexture(gl.TEXTURE_2D, sceneTexture);
-      } else if (i < layerCount && layers[i] && layers[i].fbo) {
-        gl.bindTexture(gl.TEXTURE_2D, layers[i].fbo.texture);
+      } else if (layer.fbo) {
+        gl.bindTexture(gl.TEXTURE_2D, layer.fbo.texture);
       } else {
         gl.bindTexture(gl.TEXTURE_2D, this._defaultTex);
       }
       gl.uniform1i(this._getCompLoc('layer' + i), i);
-      gl.uniform1f(this._getCompLoc('opacity' + i), (i < layerCount && layers[i]) ? layers[i].opacity : 0);
-      const lVis = (i < layerCount && layers[i] && layers[i].visible && (layers[i].type !== 'overlay' || layers[i]._hasImage)) ? 1.0 : 0.0;
-      gl.uniform1f(this._getCompLoc('visible' + i), lVis);
-      gl.uniform1f(this._getCompLoc('blendMode' + i), _BLEND_MODE_MAP[(i < layerCount && layers[i]) ? layers[i].blendMode : 'normal'] || 0);
+      gl.uniform1f(this._getCompLoc('opacity' + i), layer.opacity);
+      gl.uniform1f(this._getCompLoc('blendMode' + i), _BLEND_MODE_MAP[layer.blendMode] || 0);
 
       // Per-layer flip uniforms
-      const isScene = i < layerCount && layers[i] && layers[i].type === 'scene';
-      gl.uniform1f(this._getCompLoc('flipH' + i), isScene && layers[i].sceneFlipH ? 1.0 : 0.0);
-      gl.uniform1f(this._getCompLoc('flipV' + i), isScene && layers[i].sceneFlipV ? 1.0 : 0.0);
+      const isScene = layer.type === 'scene';
+      gl.uniform1f(this._getCompLoc('flipH' + i), isScene && layer.sceneFlipH ? 1.0 : 0.0);
+      gl.uniform1f(this._getCompLoc('flipV' + i), isScene && layer.sceneFlipV ? 1.0 : 0.0);
     }
 
     // Overlay transform uniforms (layer 3)
