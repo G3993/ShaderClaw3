@@ -8,6 +8,7 @@
   position: relative;
   width: 100vw;
   height: 100vh;
+  height: 100dvh; /* fix mobile Safari address bar overlap */
   overflow: hidden;
   background: #000;
 }
@@ -306,11 +307,11 @@
     display: flex !important;
   }
 
-  /* Floating input buttons (top of canvas) */
+  /* Floating input buttons (top of canvas, safe area aware) */
   .sc3-mobile-inputs {
     display: flex !important;
     position: fixed;
-    top: 12px; left: 50%;
+    top: calc(12px + env(safe-area-inset-top, 0px)); left: 50%;
     transform: translateX(-50%);
     gap: 10px;
     z-index: 100;
@@ -364,7 +365,7 @@
 .sc3-mobile-toggle {
   display: none;
   position: fixed;
-  bottom: 12px; left: 50%;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px)); left: 50%;
   transform: translateX(-50%);
   z-index: 100;
   background: rgba(0,0,0,0.6);

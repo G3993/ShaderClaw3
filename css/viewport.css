@@ -38,7 +38,7 @@
 /* ===== CANVAS CONTROLS (bottom-center, above error bar) ===== */
 .canvas-controls {
   position: absolute;
-  bottom: var(--sc-space-4);
+  bottom: calc(var(--sc-space-4) + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   display: flex; gap: var(--sc-space-1);
@@ -200,4 +200,14 @@
 }
 #preview:fullscreen.show-cursor {
   cursor: default;
+}
+
+/* ===== MOBILE: canvas controls touch targets ===== */
+@media (max-width: 900px) {
+  .canvas-btn {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    font-size: 18px;
+  }
+  .canvas-controls { gap: var(--sc-space-2); }
 }

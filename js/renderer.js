@@ -515,6 +515,10 @@ class Renderer {
 
   createFBO(w, h) {
     const gl = this.gl;
+    // Clamp to GPU max texture size (mobile GPUs may be 2048 or 4096)
+    const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096;
+    if (w > maxTex) w = maxTex;
+    if (h > maxTex) h = maxTex;
     const fbo = gl.createFramebuffer();
     const tex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -559,6 +563,10 @@ class Renderer {
 
   _createHalfFloatFBO(w, h) {
     const gl = this.gl;
+    // Clamp to GPU max texture size
+    const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096;
+    if (w > maxTex) w = maxTex;
+    if (h > maxTex) h = maxTex;
     const fbo = gl.createFramebuffer();
     const tex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, tex);

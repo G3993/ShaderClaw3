@@ -8,6 +8,7 @@ body {
   background: var(--sc-bg);
   color: var(--sc-text);
   height: 100vh;
+  height: 100dvh; /* fix mobile Safari address bar overlap */
   overflow: hidden;
   font-size: var(--sc-font-size-base);
   overscroll-behavior: none;

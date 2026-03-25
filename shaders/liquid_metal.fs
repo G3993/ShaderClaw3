@@ -14,7 +14,7 @@
     { "NAME": "moveSpeed", "LABEL": "Move Speed", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.05, "MAX": 2.0 },
     { "NAME": "texBlend", "LABEL": "Tex Blend", "TYPE": "float", "DEFAULT": 0.78, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "texWarp", "LABEL": "Tex Warp", "TYPE": "float", "DEFAULT": 0.51, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "texFeed", "LABEL": "Tex Feed", "TYPE": "float", "DEFAULT": 0.2, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "texFeed", "LABEL": "Tex Feed", "TYPE": "float", "DEFAULT": 0.37, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "colorMix", "LABEL": "Color Mix", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Overlay","Multiply","Screen","Replace"], "DEFAULT": 0 },
     { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
