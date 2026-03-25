@@ -109,123 +109,95 @@ function handleNdiVideoFrame(data, glRef) {
   }
 }
 
-function createNdiWorker() {
-  const code = `
-    let offscreen = null;
-    let ctx = null;
-    let pixelBuf = null;
-    let headerBuf = new ArrayBuffer(9);
-    let headerView = new DataView(headerBuf);
-    headerView.setUint8(0, 0x02);
+// NDI capture — zero-worker direct readback pipeline
+// For 8000x1800: uses a dedicated downscale canvas to keep pixel throughput manageable
 
-    self.onmessage = (e) => {
-      const { bitmap, width, height, ndiWidth, ndiHeight } = e.data;
-      // NDI output resolution — downscale for performance if canvas is huge
-      const outW = ndiWidth || width;
-      const outH = ndiHeight || height;
+let _ndiCaptureCanvas = null;
+let _ndiCaptureCtx = null;
+let _ndiMsgBuf = null;
+let _ndiOutW = 0, _ndiOutH = 0;
 
-      if (!offscreen || offscreen.width !== outW || offscreen.height !== outH) {
-        offscreen = new OffscreenCanvas(outW, outH);
-        ctx = offscreen.getContext('2d', { alpha: false, willReadFrequently: true });
-        pixelBuf = null;
-      }
-      ctx.drawImage(bitmap, 0, 0, outW, outH);
-      bitmap.close();
-
-      const imgData = ctx.getImageData(0, 0, outW, outH);
-      const pixelBytes = imgData.data.byteLength;
-
-      // Build message: [header 9 bytes][pixels]
-      // Reuse pixel buffer to reduce allocation
-      if (!pixelBuf || pixelBuf.byteLength !== 9 + pixelBytes) {
-        pixelBuf = new ArrayBuffer(9 + pixelBytes);
-      }
-      const view = new DataView(pixelBuf, 0, 9);
-      view.setUint8(0, 0x02);
-      view.setUint32(1, outW, true);
-      view.setUint32(5, outH, true);
-      new Uint8Array(pixelBuf, 9).set(imgData.data);
-      self.postMessage(pixelBuf, [pixelBuf]);
-      pixelBuf = null; // transferred
-    };
-  `;
-  const blob = new Blob([code], { type: 'application/javascript' });
-  return new Worker(URL.createObjectURL(blob));
+function _ndiEnsureCaptureCanvas(cw, ch) {
+  // Target ~2M pixels for NDI output — preserves aspect ratio
+  const maxPixels = 1920 * 1080;
+  const pixels = cw * ch;
+  let outW = cw, outH = ch;
+  if (pixels > maxPixels) {
+    const scale = Math.sqrt(maxPixels / pixels);
+    outW = Math.round(cw * scale) & ~1; // even dims for NDI
+    outH = Math.round(ch * scale) & ~1;
+  }
+  if (_ndiOutW !== outW || _ndiOutH !== outH) {
+    _ndiCaptureCanvas = document.createElement('canvas');
+    _ndiCaptureCanvas.width = outW;
+    _ndiCaptureCanvas.height = outH;
+    _ndiCaptureCtx = _ndiCaptureCanvas.getContext('2d', { alpha: false, willReadFrequently: true });
+    _ndiOutW = outW;
+    _ndiOutH = outH;
+    _ndiMsgBuf = null;
+  }
 }
 
 function startNdiSend(ws, canvasEl) {
   if (ndiSendingActive) return;
   ndiSendingActive = true;
   document.getElementById('ndi-indicator')?.classList.add('active');
-  // Update sidebar button + status dot
   const sendBtn = document.getElementById('ndi-send-btn');
   const statusDot = document.getElementById('ndi-status');
   if (sendBtn) sendBtn.textContent = 'Stop';
   if (statusDot) statusDot.classList.add('active');
   ndiSendFrameCount = 0;
-  const workers = [createNdiWorker(), createNdiWorker()]; // double-buffer
-  _ndiSendWorkerPair = workers;
-  ndiSendWorker = workers[0]; // ref for cleanup
-  let workerIdx = 0;
-  const inflight = [false, false];
-  workers.forEach((w, i) => {
-    w.onmessage = (e) => {
-      inflight[i] = false;
-      if (!ndiSendingActive) return;
-      if (!ws || ws.readyState !== WebSocket.OPEN) return;
-      // Allow up to 2 frames in WS buffer (adapts to large canvases like 8000x1800)
-      const frameBytes = e.data.byteLength || e.data.length || 0;
-      if (ws.bufferedAmount > Math.max(frameBytes * 2, 8 * 1024 * 1024)) return;
-      ws.send(e.data);
-      ndiSendFrameCount++;
-    };
-  });
+
+  let busy = false;
   let lastCapture = 0;
+
   function captureLoop(timestamp) {
     if (!ndiSendingActive) return;
     ndiSendAnimId = requestAnimationFrame(captureLoop);
-    // Target 30fps — skip frame if worker is still busy (natural backpressure)
+
+    // 30fps target — but skip if still processing last frame (backpressure)
     if (timestamp - lastCapture < 33) return;
-    if (inflight[workerIdx]) return; // worker still busy — skip this frame
+    if (busy) return;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    // Drop frames if WS can't keep up
+    if (ws.bufferedAmount > 16 * 1024 * 1024) return;
+
     lastCapture = timestamp;
-    inflight[workerIdx] = true;
-    const idx = workerIdx;
-    workerIdx ^= 1; // alternate workers
+    busy = true;
 
-    // NDI output resolution: cap at 1920x1080 for throughput
-    // Canvas renders at full res (8000x1800), NDI sends scaled down
+    // Direct capture: canvas → downscale canvas → getImageData → WS
+    // No workers, no ImageBitmap, no postMessage overhead
     const cw = canvasEl.width, ch = canvasEl.height;
-    const maxNdiPixels = 1920 * 1080; // ~2M pixels max for smooth NDI
-    const pixelCount = cw * ch;
-    let ndiW = cw, ndiH = ch;
-    if (pixelCount > maxNdiPixels) {
-      const scale = Math.sqrt(maxNdiPixels / pixelCount);
-      ndiW = Math.round(cw * scale);
-      ndiH = Math.round(ch * scale);
-      // Keep even dimensions (required by some NDI receivers)
-      ndiW = ndiW & ~1;
-      ndiH = ndiH & ~1;
-    }
+    _ndiEnsureCaptureCanvas(cw, ch);
 
-    createImageBitmap(canvasEl)
-      .then(bitmap => {
-        if (!ndiSendingActive) { bitmap.close(); inflight[idx] = false; return; }
-        workers[idx].postMessage({ bitmap, width: cw, height: ch, ndiWidth: ndiW, ndiHeight: ndiH }, [bitmap]);
-      })
-      .catch(() => { inflight[idx] = false; });
+    // Blit + downscale in one drawImage call
+    _ndiCaptureCtx.drawImage(canvasEl, 0, 0, _ndiOutW, _ndiOutH);
+
+    // Read pixels directly
+    const imgData = _ndiCaptureCtx.getImageData(0, 0, _ndiOutW, _ndiOutH);
+    const pixelBytes = imgData.data.byteLength;
+
+    // Build binary frame: [0x02][width LE4][height LE4][RGBA pixels]
+    const totalBytes = 9 + pixelBytes;
+    if (!_ndiMsgBuf || _ndiMsgBuf.byteLength !== totalBytes) {
+      _ndiMsgBuf = new ArrayBuffer(totalBytes);
+    }
+    const header = new DataView(_ndiMsgBuf, 0, 9);
+    header.setUint8(0, 0x02);
+    header.setUint32(1, _ndiOutW, true);
+    header.setUint32(5, _ndiOutH, true);
+    new Uint8Array(_ndiMsgBuf, 9).set(imgData.data);
+
+    ws.send(_ndiMsgBuf);
+    ndiSendFrameCount++;
+    busy = false;
   }
   ndiSendAnimId = requestAnimationFrame(captureLoop);
 }
 
 // Pause capture loop without changing UI (for WS disconnect/reconnect)
-let _ndiSendWorkerPair = null;
 function pauseNdiSend() {
   if (ndiSendAnimId) { cancelAnimationFrame(ndiSendAnimId); ndiSendAnimId = null; }
-  if (_ndiSendWorkerPair) {
-    _ndiSendWorkerPair.forEach(w => { try { w.terminate(); } catch(e) {} });
-    _ndiSendWorkerPair = null;
-  }
-  if (ndiSendWorker) { try { ndiSendWorker.terminate(); } catch(e) {} ndiSendWorker = null; }
 }
 
 // Full stop — user-initiated, resets UI
