@@ -535,7 +535,7 @@ function _ndiSendPixels(pixels, width, height) {
       fourCC: grandi.FourCC.RGBA,
       xres: width,
       yres: height,
-      frameRateN: 30000,
+      frameRateN: 60000,
       frameRateD: 1001,
       lineStrideBytes: width * 4,
       pictureAspectRatio: width / height,

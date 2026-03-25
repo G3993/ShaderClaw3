@@ -113,29 +113,40 @@ function createNdiWorker() {
   const code = `
     let offscreen = null;
     let ctx = null;
-    let msgBuf = null;
+    let pixelBuf = null;
+    let headerBuf = new ArrayBuffer(9);
+    let headerView = new DataView(headerBuf);
+    headerView.setUint8(0, 0x02);
+
     self.onmessage = (e) => {
-      const { bitmap, width, height } = e.data;
-      if (!offscreen || offscreen.width !== width || offscreen.height !== height) {
-        offscreen = new OffscreenCanvas(width, height);
+      const { bitmap, width, height, ndiWidth, ndiHeight } = e.data;
+      // NDI output resolution — downscale for performance if canvas is huge
+      const outW = ndiWidth || width;
+      const outH = ndiHeight || height;
+
+      if (!offscreen || offscreen.width !== outW || offscreen.height !== outH) {
+        offscreen = new OffscreenCanvas(outW, outH);
         ctx = offscreen.getContext('2d', { alpha: false, willReadFrequently: true });
-        msgBuf = null; // invalidate cached buffer on resize
+        pixelBuf = null;
       }
-      ctx.drawImage(bitmap, 0, 0, width, height);
+      ctx.drawImage(bitmap, 0, 0, outW, outH);
       bitmap.close();
-      const imageData = ctx.getImageData(0, 0, width, height);
-      const pixelBytes = imageData.data.byteLength;
-      // Reuse message buffer if same size
-      if (!msgBuf || msgBuf.byteLength !== 9 + pixelBytes) {
-        msgBuf = new ArrayBuffer(9 + pixelBytes);
+
+      const imgData = ctx.getImageData(0, 0, outW, outH);
+      const pixelBytes = imgData.data.byteLength;
+
+      // Build message: [header 9 bytes][pixels]
+      // Reuse pixel buffer to reduce allocation
+      if (!pixelBuf || pixelBuf.byteLength !== 9 + pixelBytes) {
+        pixelBuf = new ArrayBuffer(9 + pixelBytes);
       }
-      const header = new DataView(msgBuf, 0, 9);
-      header.setUint8(0, 0x02);
-      header.setUint32(1, width, true);
-      header.setUint32(5, height, true);
-      new Uint8Array(msgBuf, 9).set(imageData.data);
-      self.postMessage(msgBuf, [msgBuf]);
-      msgBuf = null; // transferred, will recreate next frame
+      const view = new DataView(pixelBuf, 0, 9);
+      view.setUint8(0, 0x02);
+      view.setUint32(1, outW, true);
+      view.setUint32(5, outH, true);
+      new Uint8Array(pixelBuf, 9).set(imgData.data);
+      self.postMessage(pixelBuf, [pixelBuf]);
+      pixelBuf = null; // transferred
     };
   `;
   const blob = new Blob([code], { type: 'application/javascript' });
@@ -173,22 +184,33 @@ function startNdiSend(ws, canvasEl) {
   function captureLoop(timestamp) {
     if (!ndiSendingActive) return;
     ndiSendAnimId = requestAnimationFrame(captureLoop);
-    // Adaptive frame interval: 30fps for <=1080p, 24fps for large canvases (>4M pixels)
-    const pixelCount = canvasEl.width * canvasEl.height;
-    const minInterval = pixelCount > 4000000 ? 41 : 33; // 41ms = ~24fps, 33ms = ~30fps
-    if (timestamp - lastCapture < minInterval) return;
-    if (inflight[workerIdx]) return; // worker still busy
+    // Target 30fps — skip frame if worker is still busy (natural backpressure)
+    if (timestamp - lastCapture < 33) return;
+    if (inflight[workerIdx]) return; // worker still busy — skip this frame
     lastCapture = timestamp;
     inflight[workerIdx] = true;
     const idx = workerIdx;
     workerIdx ^= 1; // alternate workers
-    // NDI at full canvas resolution — send whatever the user's canvas size is
-    const ndiW = canvasEl.width;
-    const ndiH = canvasEl.height;
+
+    // NDI output resolution: cap at 1920x1080 for throughput
+    // Canvas renders at full res (8000x1800), NDI sends scaled down
+    const cw = canvasEl.width, ch = canvasEl.height;
+    const maxNdiPixels = 1920 * 1080; // ~2M pixels max for smooth NDI
+    const pixelCount = cw * ch;
+    let ndiW = cw, ndiH = ch;
+    if (pixelCount > maxNdiPixels) {
+      const scale = Math.sqrt(maxNdiPixels / pixelCount);
+      ndiW = Math.round(cw * scale);
+      ndiH = Math.round(ch * scale);
+      // Keep even dimensions (required by some NDI receivers)
+      ndiW = ndiW & ~1;
+      ndiH = ndiH & ~1;
+    }
+
     createImageBitmap(canvasEl)
       .then(bitmap => {
         if (!ndiSendingActive) { bitmap.close(); inflight[idx] = false; return; }
-        workers[idx].postMessage({ bitmap, width: ndiW, height: ndiH }, [bitmap]);
+        workers[idx].postMessage({ bitmap, width: cw, height: ch, ndiWidth: ndiW, ndiHeight: ndiH }, [bitmap]);
       })
       .catch(() => { inflight[idx] = false; });
   }

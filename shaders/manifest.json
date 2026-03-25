@@ -222,17 +222,6 @@
     "hasVertex": true
   },
   {
-    "id": 104,
-    "title": "Dancing Cube",
-    "description": "SDF raymarched box/octahedron blend — driven by body tracking parameters (rotation, scale, glow, morph, alive)",
-    "type": "generator",
-    "categories": [
-      "Generator",
-      "3D"
-    ],
-    "file": "mediapipeline_cube.fs"
-  },
-  {
     "id": 43,
     "title": "Laser",
     "description": "RGB laser globe — swirling neon light blobs with separate R/G/B interference patterns",
@@ -252,17 +241,6 @@
       "Generator"
     ],
     "file": "bars.fs",
-    "hasVertex": true
-  },
-  {
-    "id": 45,
-    "title": "Decagon Morph",
-    "description": "Morphable decagon with 10 vertices — audio-reactive, hand-tracking, or manual control",
-    "type": "generator",
-    "categories": [
-      "Generator"
-    ],
-    "file": "decagon_morph.fs",
     "hasVertex": true
   },
   {
@@ -430,27 +408,6 @@
     "hasVertex": true
   },
   {
-    "id": 120,
-    "title": "Noisy Texture",
-    "description": "Multi-color gradient with grainy noise-textured distortion — 7 shape modes including wave, dots, truchet, blob, sphere",
-    "categories": [
-      "Generator"
-    ],
-    "file": "noisy_texture.fs",
-    "hasVertex": true
-  },
-  {
-    "id": 121,
-    "title": "Sphere Gradient",
-    "description": "Blinn-Phong shaded sphere with two orbiting light sources and customizable diffuse/specular colors",
-    "categories": [
-      "Generator",
-      "3D"
-    ],
-    "file": "sphere_gradient.fs",
-    "hasVertex": true
-  },
-  {
     "id": 202,
     "title": "Red Carpet",
     "description": "Draped velvet cloth simulation — flowing folds with velvet sheen, specular highlights, wind, and audio-reactive ripples",
@@ -507,51 +464,6 @@
     "hidden": true
   },
   {
-    "id": 304,
-    "title": "Sacred Strange",
-    "description": "Sacred geometry with golden spirals and polar-fold SDFs",
-    "categories": [
-      "Generator"
-    ],
-    "file": "radiant_sacred_strange.fs"
-  },
-  {
-    "id": 305,
-    "title": "Gilt Mosaic",
-    "description": "Golden mosaic tiles with wave-flip animation",
-    "categories": [
-      "Generator"
-    ],
-    "file": "radiant_gilt_mosaic.fs"
-  },
-  {
-    "id": 307,
-    "title": "Silk Cascade",
-    "description": "Multi-layered silk with anisotropic specular shading",
-    "categories": [
-      "Generator"
-    ],
-    "file": "radiant_silk_cascade.fs"
-  },
-  {
-    "id": 322,
-    "title": "Chladni Resonance",
-    "description": "Vibrating plate sand patterns",
-    "categories": [
-      "Generator"
-    ],
-    "file": "chladni_resonance.fs"
-  },
-  {
-    "id": 323,
-    "title": "Strobe Geometry",
-    "description": "Flashing SDF shapes with afterimages",
-    "categories": [
-      "Generator"
-    ],
-    "file": "strobe_geometry.fs"
-  },
-  {
     "id": 324,
     "title": "Laser Labyrinth",
     "description": "Volumetric laser beams through fog",
@@ -559,24 +471,6 @@
       "Generator"
     ],
     "file": "laser_labyrinth.fs"
-  },
-  {
-    "id": 328,
-    "title": "Sequin Wave",
-    "description": "Reflective hexagonal disc field",
-    "categories": [
-      "Generator"
-    ],
-    "file": "sequin_wave.fs"
-  },
-  {
-    "id": 334,
-    "title": "Moonlit Ripple",
-    "description": "Moonlit water with wave interference",
-    "categories": [
-      "Generator"
-    ],
-    "file": "moonlit_ripple.fs"
   },
   {
     "id": 335,
@@ -588,42 +482,6 @@
     "file": "metamorphosis.fs"
   },
   {
-    "id": 340,
-    "title": "Vertigo",
-    "description": "Hitchcock-inspired hypnotic spirals",
-    "categories": [
-      "Generator"
-    ],
-    "file": "vertigo.fs"
-  },
-  {
-    "id": 349,
-    "title": "Kaleidoscope Runway",
-    "description": "Fashion kaleidoscope mirror symmetry",
-    "categories": [
-      "Generator"
-    ],
-    "file": "kaleidoscope_runway.fs"
-  },
-  {
-    "id": 351,
-    "title": "Bioluminescence",
-    "description": "Deep sea bioluminescent organisms",
-    "categories": [
-      "Generator"
-    ],
-    "file": "bioluminescence.fs"
-  },
-  {
-    "id": 400,
-    "title": "Eclipse",
-    "description": "Glowing solar eclipse with corona, diamond ring, and audio-reactive flares",
-    "categories": [
-      "Generator"
-    ],
-    "file": "eclipse.fs"
-  },
-  {
     "id": 410,
     "title": "Crystal Cubes",
     "description": "Floating rotating glass cubes — bass pulses size, texture revealed through faces",
@@ -632,26 +490,6 @@
       "3D"
     ],
     "file": "crystal_cubes.fs"
-  },
-  {
-    "id": 411,
-    "title": "Particle Sphere",
-    "description": "Exploding particle cluster — bass expands particles outward, texture masked through each sphere",
-    "categories": [
-      "Generator",
-      "3D"
-    ],
-    "file": "particle_sphere.fs"
-  },
-  {
-    "id": 412,
-    "title": "Liquid Orb",
-    "description": "Morphing liquid sphere — noise displacement, spherical texture mapping wraps video around the orb",
-    "categories": [
-      "Generator",
-      "3D"
-    ],
-    "file": "liquid_orb.fs"
   },
   {
     "id": 413,
@@ -674,52 +512,6 @@
     "file": "shatter_grid.fs"
   },
   {
-    "id": 420,
-    "title": "Nowruz",
-    "description": "Persian new year — saffron & turquoise sacred geometry, fire & water, voice-reactive floral bloom, golden hour light rays",
-    "categories": [
-      "Generator"
-    ],
-    "file": "nowruz.fs"
-  },
-  {
-    "id": 421,
-    "title": "Wet Paper",
-    "description": "Rotational fluid dynamics with specular lighting — ink-on-wet-paper effect",
-    "categories": [
-      "Generator",
-      "Filter"
-    ],
-    "file": "wet_paper.fs"
-  },
-  {
-    "id": 422,
-    "title": "Kaleidoscope",
-    "description": "Mirror-fold video into mesmerizing symmetry patterns with rotation and zoom",
-    "categories": [
-      "Effect"
-    ],
-    "file": "kaleidoscope.fs"
-  },
-  {
-    "id": 423,
-    "title": "Feedback Trails",
-    "description": "Ghostly echo trails with color drift, rotation, and zoom feedback",
-    "categories": [
-      "Effect"
-    ],
-    "file": "feedback_trails.fs"
-  },
-  {
-    "id": 424,
-    "title": "Pixel Sort",
-    "description": "Glitchy datamosh-style streaking with threshold control and directional sorting",
-    "categories": [
-      "Effect"
-    ],
-    "file": "pixel_sort.fs"
-  },
-  {
     "id": 426,
     "title": "CFD Paint",
     "description": "Computational fluid dynamics — ink-in-water swirling paint with specular lighting",
@@ -733,84 +525,27 @@
     "id": 430,
     "title": "Liquid Warp",
     "description": "Underwater ripple displacement — multi-layer sine waves with chromatic aberration and mouse ripples",
-    "categories": ["VFX"],
+    "categories": [
+      "VFX"
+    ],
     "file": "liquid_warp.fs"
-  },
-  {
-    "id": 431,
-    "title": "Tunnel Zoom",
-    "description": "Infinite radial zoom tunnel with twist — log-polar mapping creates endless depth",
-    "categories": ["VFX"],
-    "file": "tunnel_zoom.fs"
-  },
-  {
-    "id": 432,
-    "title": "Pixel Melt",
-    "description": "Pixels drip downward based on brightness — audio-reactive meltdown with heat tint",
-    "categories": ["VFX"],
-    "file": "pixel_melt.fs"
-  },
-  {
-    "id": 433,
-    "title": "Sphere Warp",
-    "description": "Fisheye bulge lens — maps video onto a sphere with refraction and specular highlight",
-    "categories": ["VFX"],
-    "file": "sphere_warp.fs"
-  },
-  {
-    "id": 434,
-    "title": "Slice Shift",
-    "description": "Horizontal slice glitch — slices offset randomly on beat with RGB split",
-    "categories": ["VFX"],
-    "file": "slice_shift.fs"
-  },
-  {
-    "id": 435,
-    "title": "Twist Vortex",
-    "description": "Angular twist spiral from mouse center — optional kaleidoscope segments",
-    "categories": ["VFX"],
-    "file": "twist_vortex.fs"
-  },
-  {
-    "id": 436,
-    "title": "Edge Glow",
-    "description": "Neon edge detection — Sobel filter with customizable glow color and blur",
-    "categories": ["VFX"],
-    "file": "edge_glow.fs"
   },
   {
     "id": 437,
     "title": "Mirror Fractal",
     "description": "Recursive mirror folds — iterative reflections that create fractal kaleidoscope patterns",
-    "categories": ["VFX"],
+    "categories": [
+      "VFX"
+    ],
     "file": "mirror_fractal.fs"
-  },
-  {
-    "id": 438,
-    "title": "Thermal Vision",
-    "description": "False-color heat map — 4 palettes (Heat, Night Vision, Cyberpunk, Ice) with scanlines",
-    "categories": ["VFX"],
-    "file": "thermal_vision.fs"
-  },
-  {
-    "id": 439,
-    "title": "Wave Distort",
-    "description": "Wave displacement with 4 modes (Sine, Square, Sawtooth, Radial) — RGB phase splitting",
-    "categories": ["VFX"],
-    "file": "wave_distort.fs"
-  },
-  {
-    "id": 440,
-    "title": "Hall of Mirrors",
-    "description": "Infinite recursive zoom with rotation — fractal tunnel from any input with color shift per layer",
-    "categories": ["VFX"],
-    "file": "hall_of_mirrors.fs"
   },
   {
     "id": 441,
     "title": "Raining Spheres",
     "description": "Bouncing colored light-emitting spheres on an infinite grid with shadows and reflections",
-    "categories": ["3D"],
+    "categories": [
+      "3D"
+    ],
     "file": "raining_spheres.fs"
   },
   {
@@ -834,20 +569,13 @@
     "file": "liquid_metal.fs"
   },
   {
-    "id": 444,
-    "title": "Liquid Chrome",
-    "description": "Flockaroo's original single-pass CFD with specular lighting — simpler, faster liquid simulation",
-    "categories": [
-      "Generator",
-      "Simulation"
-    ],
-    "file": "liquid_chrome.fs"
-  },
-  {
     "id": 442,
     "title": "Fluid Image",
     "description": "UV-advection fluid sim — warp any image/video with fluid dynamics, image stays crisp and returns when fluid settles",
-    "categories": ["VFX", "Simulation"],
+    "categories": [
+      "VFX",
+      "Simulation"
+    ],
     "file": "fluid_image.fs"
   }
 ]

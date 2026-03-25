@@ -29,13 +29,14 @@
   ]
 }*/
 
-// Rotational fluid simulation based on Wyatt's technique
+// Rotational fluid simulation — optimized for ultra-wide (8000x1800)
 // Pass 0: Velocity field (self-advecting rotational curl)
 // Pass 1: Dye/color field (advected by velocity)
 // Pass 2: Final output with specular lighting + source blending
 
-#define ROTNUM 3
 #define PI 3.14159265
+// Rotation angle for 3-way triangular stencil
+#define ANG 2.0943951 // 2*PI/3
 
 float hash21(vec2 p) {
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -54,56 +55,55 @@ void main() {
     vec2 pos = gl_FragCoord.xy;
     vec2 uv = isf_FragNormCoord;
     float aspect = Res.x / Res.y;
+    vec2 invRes = 1.0 / Res; // precompute — avoid per-sample division
 
     // ===== PASS 0: Velocity field =====
     if (PASSINDEX == 0) {
-        float ang = 2.0 * PI / float(ROTNUM);
-        float ca = cos(ang), sa = sin(ang);
-        float cah = cos(ang * 0.5), sah = sin(ang * 0.5);
+        // Precompute trig for the 3-way rotation (constant per frame)
+        float ca = cos(ANG), sa = sin(ANG);
+        float cah = cos(ANG * 0.5), sah = sin(ANG * 0.5);
 
         float rnd = hash21(vec2(float(FRAMEINDEX), 0.37));
-        vec2 b = vec2(cos(ang * rnd), sin(ang * rnd));
+        vec2 b = vec2(cos(ANG * rnd), sin(ANG * rnd));
 
         vec2 v = vec2(0.0);
-        // Cap octaves based on resolution — diminishing returns past level 6
-        // At 1800px height: level 6 samples at 64px offsets, plenty for fluid detail
-        float maxR2 = min(Res.y * Res.y * 0.25, 5000.0);
+        // At 8000x1800, cap octaves aggressively — fine detail is invisible
+        float maxR2 = min(Res.y * Res.y * 0.25, 4000.0);
 
-        for (int level = 0; level < 6; level++) {
+        // 5 octaves, 3 reads each (diagonal-only sampling)
+        // Instead of 3×3=9 reads per octave, sample only d0+d0, d1+d1, d2+d2
+        // This keeps the triangular curl pattern at 1/3 the texture cost
+        for (int level = 0; level < 5; level++) {
             float bb = dot(b, b);
             if (bb > maxR2) break;
 
+            float invBB = 1.0 / bb;
+
+            // 3 rotated directions
             vec2 d0 = b;
             vec2 d1 = vec2(ca * b.x - sa * b.y, sa * b.x + ca * b.y);
             vec2 d2 = vec2(ca * b.x + sa * b.y, -sa * b.x + ca * b.y);
 
+            // Half-step probes for curl estimation
             vec2 h0 = vec2(cah * b.x - sah * b.y, sah * b.x + cah * b.y);
             vec2 h1 = vec2(ca * h0.x - sa * h0.y, sa * h0.x + ca * h0.y);
             vec2 h2 = vec2(ca * h0.x + sa * h0.y, -sa * h0.x + ca * h0.y);
 
-            // Precompute reciprocal
-            float invBB = 1.0 / bb;
+            // Diagonal samples only: 3 reads instead of 9
+            vec2 s0 = texture2D(velBuf, fract((pos + d0 + d0) * invRes)).xy - 0.5;
+            vec2 s1 = texture2D(velBuf, fract((pos + d1 + d1) * invRes)).xy - 0.5;
+            vec2 s2 = texture2D(velBuf, fract((pos + d2 + d2) * invRes)).xy - 0.5;
 
-            vec2 s0a = texture2D(velBuf, fract((pos + d0 + d0) / Res)).xy - 0.5;
-            vec2 s0b = texture2D(velBuf, fract((pos + d0 + d1) / Res)).xy - 0.5;
-            vec2 s0c = texture2D(velBuf, fract((pos + d0 + d2) / Res)).xy - 0.5;
-            v += d0.yx * (dot(s0a, h0) + dot(s0b, h1) + dot(s0c, h2)) * invBB;
-
-            vec2 s1a = texture2D(velBuf, fract((pos + d1 + d0) / Res)).xy - 0.5;
-            vec2 s1b = texture2D(velBuf, fract((pos + d1 + d1) / Res)).xy - 0.5;
-            vec2 s1c = texture2D(velBuf, fract((pos + d1 + d2) / Res)).xy - 0.5;
-            v += d1.yx * (dot(s1a, h0) + dot(s1b, h1) + dot(s1c, h2)) * invBB;
-
-            vec2 s2a = texture2D(velBuf, fract((pos + d2 + d0) / Res)).xy - 0.5;
-            vec2 s2b = texture2D(velBuf, fract((pos + d2 + d1) / Res)).xy - 0.5;
-            vec2 s2c = texture2D(velBuf, fract((pos + d2 + d2) / Res)).xy - 0.5;
-            v += d2.yx * (dot(s2a, h0) + dot(s2b, h1) + dot(s2c, h2)) * invBB;
+            // Curl from diagonal terms — multiply by 3 to compensate for missing cross-terms
+            v += d0.yx * dot(s0, h0) * invBB * 3.0;
+            v += d1.yx * dot(s1, h1) * invBB * 3.0;
+            v += d2.yx * dot(s2, h2) * invBB * 3.0;
 
             b *= 2.0;
         }
 
         // Self-advect velocity
-        vec2 advUV = fract((pos + v * vec2(-1.0, 1.0) * fluidSpeed) / Res);
+        vec2 advUV = fract((pos + v * vec2(-1.0, 1.0) * fluidSpeed) * invRes);
         vec4 vel = texture2D(velBuf, advUV);
 
         // Viscosity damping
@@ -116,7 +116,6 @@ void main() {
             mDiff.x *= aspect;
             float dist2 = dot(mDiff, mDiff);
             float r2 = brushSize * brushSize;
-            // Early-out: skip exp if clearly out of range
             if (dist2 < r2 * 12.0) {
                 float falloff = exp(-dist2 / r2);
                 vec2 force = mouseDelta * brushForce * interacting;
@@ -130,19 +129,18 @@ void main() {
         }
 
         // ---- Movement patterns ----
-        // Pre-compute shared values once
         float t = TIME * moveSpeed;
         float spread = mix(0.05, 0.42, moveSpread);
         float intensity = moveIntensity * 0.2;
-        // Splat cutoff radius squared (skip splats beyond this)
         float splatR = brushSize * 2.5;
-        float cutoff2 = splatR * splatR * 12.0;
+        float splatR2 = splatR * splatR;
+        float cutoff2 = splatR2 * 12.0;
 
         if (movePattern < 0.5) {
-            // Freeform — 4 wandering splats (reduced from 5)
-            for (int s = 0; s < 4; s++) {
+            // Freeform — 3 wandering splats
+            for (int s = 0; s < 3; s++) {
                 float fs = float(s);
-                float phase = t * (0.5 + fs * 0.25) + fs * 1.257;
+                float phase = t * (0.5 + fs * 0.3) + fs * 1.257;
                 vec2 splatPos = vec2(
                     0.5 + spread * sin(phase) * cos(phase * 0.7 + fs),
                     0.5 + spread * cos(phase * 0.8) * sin(phase * 0.5 + fs * 1.5)
@@ -151,69 +149,62 @@ void main() {
                 mDiff.x *= aspect;
                 float dist2 = dot(mDiff, mDiff);
                 if (dist2 < cutoff2) {
-                    vec2 splatVel = vec2(
-                        cos(phase * 1.3 + fs) * intensity,
-                        sin(phase * 0.9 + fs * 2.0) * intensity
-                    );
-                    vel.xy += splatVel * exp(-dist2 / (splatR * splatR));
+                    vel.xy += vec2(
+                        cos(phase * 1.3 + fs),
+                        sin(phase * 0.9 + fs * 2.0)
+                    ) * intensity * exp(-dist2 / splatR2);
                 }
             }
         } else if (movePattern < 1.5) {
-            // Center — radial pulses
-            for (int s = 0; s < 4; s++) {
+            // Center — 3 radial pulses + vortex
+            for (int s = 0; s < 3; s++) {
                 float fs = float(s);
-                float phase = t * (0.8 + fs * 0.2) + fs * 1.257;
+                float phase = t * (0.8 + fs * 0.25) + fs * 1.257;
                 float r = spread * 0.5 * (0.3 + 0.7 * abs(sin(phase * 0.5)));
                 float a = phase * 0.7 + fs * 1.257;
                 vec2 splatPos = vec2(0.5 + cos(a) * r, 0.5 + sin(a) * r);
                 vec2 mDiff = uv - splatPos;
                 mDiff.x *= aspect;
                 float dist2 = dot(mDiff, mDiff);
-                float splatR2 = brushSize * 2.5;
-                if (dist2 < splatR2 * splatR2 * 12.0) {
+                if (dist2 < cutoff2) {
                     vec2 dir = normalize(splatPos - 0.5 + 0.001);
-                    float pushPull = sin(phase * 1.5);
-                    vec2 splatVel = dir * pushPull * intensity * 1.5;
-                    vel.xy += splatVel * exp(-dist2 / (splatR2 * splatR2));
+                    vel.xy += dir * sin(phase * 1.5) * intensity * 1.5 * exp(-dist2 / splatR2);
                 }
             }
-            // Central vortex — cheap, no early-out needed
             vec2 cDiff = uv - 0.5;
             cDiff.x *= aspect;
-            float cDist2 = dot(cDiff, cDiff);
-            float centralFalloff = exp(-cDist2 / (spread * spread * 0.3));
-            float spin = sin(t * 0.6) * intensity * 0.5;
-            vel.xy += vec2(-cDiff.y, cDiff.x) * spin * centralFalloff;
+            float centralFalloff = exp(-dot(cDiff, cDiff) / (spread * spread * 0.3));
+            vel.xy += vec2(-cDiff.y, cDiff.x) * sin(t * 0.6) * intensity * 0.5 * centralFalloff;
         } else if (movePattern < 2.5) {
-            // Wave — 4 sweeping splats (reduced from 6)
-            for (int s = 0; s < 4; s++) {
+            // Wave — 3 sweeping splats + global field
+            for (int s = 0; s < 3; s++) {
                 float fs = float(s);
-                float wavePhase = t * 0.8 + fs * 0.5;
-                float x = 0.5 + spread * sin(wavePhase * 0.6 + fs * 0.8);
-                float y = 0.5 + spread * 0.7 * sin(wavePhase * 1.1 + fs * 1.7);
-                vec2 splatPos = vec2(x, y);
+                float wavePhase = t * 0.8 + fs * 0.7;
+                vec2 splatPos = vec2(
+                    0.5 + spread * sin(wavePhase * 0.6 + fs * 0.8),
+                    0.5 + spread * 0.7 * sin(wavePhase * 1.1 + fs * 1.7)
+                );
                 vec2 mDiff = uv - splatPos;
                 mDiff.x *= aspect;
                 float dist2 = dot(mDiff, mDiff);
-                float splatR2 = brushSize * 2.2;
-                if (dist2 < splatR2 * splatR2 * 12.0) {
-                    float waveAngle = wavePhase * 0.6 + fs * 0.8;
-                    vec2 splatVel = vec2(
-                        cos(waveAngle) * intensity * 1.2,
+                float sr2 = brushSize * 2.2;
+                if (dist2 < sr2 * sr2 * 12.0) {
+                    vel.xy += vec2(
+                        cos(wavePhase * 0.6 + fs * 0.8) * intensity * 1.2,
                         sin(wavePhase * 2.2 + fs) * intensity * 0.6
-                    );
-                    vel.xy += splatVel * exp(-dist2 / (splatR2 * splatR2));
+                    ) * exp(-dist2 / (sr2 * sr2));
                 }
             }
-            // Global wave field
-            float waveField = sin(uv.x * 8.0 + t * 1.5) * sin(uv.y * 6.0 - t * 0.8);
-            vel.xy += vec2(waveField, cos(uv.x * 5.0 - t)) * intensity * 0.15;
+            vel.xy += vec2(
+                sin(uv.x * 8.0 + t * 1.5) * sin(uv.y * 6.0 - t * 0.8),
+                cos(uv.x * 5.0 - t)
+            ) * intensity * 0.15;
         } else if (movePattern < 3.5) {
-            // Vortex — 4 spinning splats
-            for (int s = 0; s < 4; s++) {
+            // Vortex — 3 spinning splats + global rotation
+            for (int s = 0; s < 3; s++) {
                 float fs = float(s);
-                float vortexPhase = t * (0.6 + fs * 0.15);
-                float r = spread * (0.15 + fs * 0.12);
+                float vortexPhase = t * (0.6 + fs * 0.2);
+                float r = spread * (0.15 + fs * 0.15);
                 vec2 center = vec2(
                     0.5 + spread * 0.3 * sin(t * 0.3 + fs),
                     0.5 + spread * 0.3 * cos(t * 0.25 + fs * 1.5)
@@ -222,44 +213,36 @@ void main() {
                 vec2 mDiff = uv - splatPos;
                 mDiff.x *= aspect;
                 float dist2 = dot(mDiff, mDiff);
-                float splatR2 = brushSize * 1.8;
-                if (dist2 < splatR2 * splatR2 * 12.0) {
+                float sr2 = brushSize * 1.8;
+                if (dist2 < sr2 * sr2 * 12.0) {
                     vec2 radial = splatPos - center;
-                    vec2 tangent = vec2(-radial.y, radial.x);
-                    vec2 splatVel = tangent * intensity * 2.0 / (r + 0.05);
-                    vel.xy += splatVel * exp(-dist2 / (splatR2 * splatR2));
+                    vel.xy += vec2(-radial.y, radial.x) * intensity * 2.0 / (r + 0.05) * exp(-dist2 / (sr2 * sr2));
                 }
             }
-            // Global rotation
             vec2 gDiff = uv - 0.5;
             gDiff.x *= aspect;
-            float gDist2 = dot(gDiff, gDiff);
-            float rotFalloff = exp(-gDist2 / (spread * spread));
-            float rotDir = sin(t * 0.4) > 0.0 ? 1.0 : -1.0;
-            vel.xy += vec2(-gDiff.y, gDiff.x) * rotDir * intensity * 0.3 * rotFalloff;
+            float rotFalloff = exp(-dot(gDiff, gDiff) / (spread * spread));
+            vel.xy += vec2(-gDiff.y, gDiff.x) * (sin(t * 0.4) > 0.0 ? 1.0 : -1.0) * intensity * 0.3 * rotFalloff;
         } else {
-            // Pulse — 3 centers × 4 ring splats (reduced from 6)
-            float pulseRate = 2.0 * moveSpeed;
-            for (int s = 0; s < 3; s++) {
+            // Pulse — 2 centers × 3 ring splats
+            for (int s = 0; s < 2; s++) {
                 float fs = float(s);
-                float pulse = fract(t * pulseRate * (0.3 + fs * 0.15) + fs * 0.333);
+                float pulse = fract(t * 2.0 * moveSpeed * (0.3 + fs * 0.2) + fs * 0.5);
                 float pulseR = pulse * spread * 1.5;
                 vec2 center = vec2(
                     0.5 + spread * 0.4 * sin(t * 0.2 + fs * 2.094),
                     0.5 + spread * 0.4 * cos(t * 0.15 + fs * 2.094)
                 );
                 float strength = (1.0 - pulse) * intensity * 1.5;
-                float splatR2 = brushSize * (1.5 + pulse * 2.0);
-                for (int a = 0; a < 4; a++) {
-                    float fa = float(a);
-                    float angle = fa * 1.571 + fs * 0.5;
+                float sr2 = brushSize * (1.5 + pulse * 2.0);
+                for (int a = 0; a < 3; a++) {
+                    float angle = float(a) * 2.094 + fs * 0.5;
                     vec2 splatPos = center + vec2(cos(angle), sin(angle)) * pulseR;
                     vec2 mDiff = uv - splatPos;
                     mDiff.x *= aspect;
                     float dist2 = dot(mDiff, mDiff);
-                    if (dist2 < splatR2 * splatR2 * 12.0) {
-                        vec2 dir = normalize(splatPos - center + 0.001);
-                        vel.xy += dir * strength * exp(-dist2 / (splatR2 * splatR2));
+                    if (dist2 < sr2 * sr2 * 12.0) {
+                        vel.xy += normalize(splatPos - center + 0.001) * strength * exp(-dist2 / (sr2 * sr2));
                     }
                 }
             }
@@ -274,11 +257,10 @@ void main() {
             vec2 mDiff = uv - splatPos;
             mDiff.x *= aspect;
             float dist2 = dot(mDiff, mDiff);
-            float splatR2 = brushSize * (1.0 + audioBass * 3.0);
-            if (dist2 < splatR2 * splatR2 * 12.0) {
-                float falloff = exp(-dist2 / (splatR2 * splatR2));
+            float sr = brushSize * (1.0 + audioBass * 3.0);
+            if (dist2 < sr * sr * 12.0) {
                 float splatAngle = hash21(vec2(at, 3.0)) * 6.283;
-                vel.xy += vec2(cos(splatAngle), sin(splatAngle)) * audioBass * 0.3 * falloff;
+                vel.xy += vec2(cos(splatAngle), sin(splatAngle)) * audioBass * 0.3 * exp(-dist2 / (sr * sr));
                 vel.xy = clamp(vel.xy, 0.0, 1.0);
             }
         }
@@ -301,15 +283,13 @@ void main() {
         vec4 dye = texture2D(dyeBuf, advUV);
 
         // Dissipation
-        float dissipation = mix(0.999, 0.98, sourceBlend * sourceBlend);
-        dye.rgb *= dissipation;
+        dye.rgb *= mix(0.999, 0.98, sourceBlend * sourceBlend);
 
         // Color cycle
         if (colorCycle > 0.001) {
             float cyc = colorCycle * 0.003 * (1.0 + audioBass * 1.5);
             float hue = fract(TIME * colorCycle * 0.08 + uv.x * 0.15 + uv.y * 0.1);
-            vec3 tint = hsv2rgb(vec3(hue, 0.6, 1.0));
-            dye.rgb = mix(dye.rgb, dye.rgb * tint, cyc);
+            dye.rgb = mix(dye.rgb, dye.rgb * hsv2rgb(vec3(hue, 0.6, 1.0)), cyc);
         }
 
         // Color floor
@@ -321,12 +301,10 @@ void main() {
 
         bool hasInput = IMG_SIZE_inputTex.x > 0.0;
 
-        // Source re-injection (when sourceBlend active)
+        // Source re-injection
         if (hasInput && sourceBlend > 0.001) {
-            float velMag = length(vel);
-            float reinjection = sourceBlend * 0.08 * (1.0 - smoothstep(0.0, 0.8, velMag));
-            vec3 srcCol = texture2D(inputTex, uv).rgb;
-            dye.rgb = mix(dye.rgb, srcCol, reinjection);
+            float reinjection = sourceBlend * 0.08 * (1.0 - smoothstep(0.0, 0.8, length(vel)));
+            dye.rgb = mix(dye.rgb, texture2D(inputTex, uv).rgb, reinjection);
         }
 
         // Mouse/touch painting
@@ -341,46 +319,41 @@ void main() {
                 if (hasInput) {
                     dye.rgb = mix(dye.rgb, texture2D(inputTex, mousePos).rgb, falloff * 0.8);
                 } else {
-                    float hue = fract(TIME * 0.1 + hash21(mousePos * 100.0));
-                    dye.rgb = mix(dye.rgb, hsv2rgb(vec3(hue, 0.8, 1.0)), falloff * 0.8);
+                    dye.rgb = mix(dye.rgb, hsv2rgb(vec3(fract(TIME * 0.1 + hash21(mousePos * 100.0)), 0.8, 1.0)), falloff * 0.8);
                 }
             }
         }
 
-        // Movement color injection — 3 splats (reduced from 5)
+        // Movement color injection — 2 splats
         float t = TIME * moveSpeed;
         float spread = mix(0.05, 0.42, moveSpread);
         float splatR = brushSize * 2.5;
         float cutoff2 = splatR * splatR * 12.0;
 
-        for (int s = 0; s < 3; s++) {
+        for (int s = 0; s < 2; s++) {
             float fs = float(s);
             vec2 splatPos;
 
             if (movePattern < 0.5) {
-                float phase = t * (0.5 + fs * 0.25) + fs * 1.257;
+                float phase = t * (0.5 + fs * 0.3) + fs * 1.257;
                 splatPos = vec2(
                     0.5 + spread * sin(phase) * cos(phase * 0.7 + fs),
                     0.5 + spread * cos(phase * 0.8) * sin(phase * 0.5 + fs * 1.5)
                 );
             } else if (movePattern < 1.5) {
-                float phase = t * (0.8 + fs * 0.2) + fs * 1.257;
+                float phase = t * (0.8 + fs * 0.25) + fs * 1.257;
                 float r = spread * 0.5 * (0.3 + 0.7 * abs(sin(phase * 0.5)));
-                float a = phase * 0.7 + fs * 1.257;
-                splatPos = vec2(0.5 + cos(a) * r, 0.5 + sin(a) * r);
+                splatPos = vec2(0.5 + cos(phase * 0.7 + fs * 1.257) * r, 0.5 + sin(phase * 0.7 + fs * 1.257) * r);
             } else if (movePattern < 2.5) {
-                float wavePhase = t * 0.8 + fs * 0.5;
+                float wavePhase = t * 0.8 + fs * 0.7;
                 splatPos = vec2(
                     0.5 + spread * sin(wavePhase * 0.6 + fs * 0.8),
                     0.5 + spread * 0.7 * sin(wavePhase * 1.1 + fs * 1.7)
                 );
             } else if (movePattern < 3.5) {
-                float vortexPhase = t * (0.6 + fs * 0.15);
-                float r = spread * (0.15 + fs * 0.12);
-                vec2 center = vec2(
-                    0.5 + spread * 0.3 * sin(t * 0.3 + fs),
-                    0.5 + spread * 0.3 * cos(t * 0.25 + fs * 1.5)
-                );
+                float vortexPhase = t * (0.6 + fs * 0.2);
+                float r = spread * (0.15 + fs * 0.15);
+                vec2 center = vec2(0.5 + spread * 0.3 * sin(t * 0.3 + fs), 0.5 + spread * 0.3 * cos(t * 0.25 + fs * 1.5));
                 splatPos = center + vec2(cos(vortexPhase), sin(vortexPhase)) * r;
             } else {
                 splatPos = vec2(
@@ -394,13 +367,9 @@ void main() {
             float dist2 = dot(mDiff, mDiff);
             if (dist2 < cutoff2) {
                 float falloff = exp(-dist2 / (splatR * splatR)) * 0.15 * moveIntensity;
-                vec3 splatCol;
-                if (hasInput) {
-                    splatCol = texture2D(inputTex, splatPos).rgb;
-                } else {
-                    float hue = fract(t * 0.08 + fs * 0.2);
-                    splatCol = hsv2rgb(vec3(hue, 0.85, 1.0));
-                }
+                vec3 splatCol = hasInput
+                    ? texture2D(inputTex, splatPos).rgb
+                    : hsv2rgb(vec3(fract(t * 0.08 + fs * 0.2), 0.85, 1.0));
                 dye.rgb = mix(dye.rgb, splatCol, falloff);
             }
         }
@@ -412,16 +381,12 @@ void main() {
             vec2 mDiff = uv - splatPos;
             mDiff.x *= aspect;
             float dist2 = dot(mDiff, mDiff);
-            float splatR2 = brushSize * (2.0 + audioBass * 5.0);
-            if (dist2 < splatR2 * splatR2 * 12.0) {
-                float falloff = exp(-dist2 / (splatR2 * splatR2));
-                vec3 splatCol;
-                if (hasInput) {
-                    splatCol = texture2D(inputTex, splatPos).rgb;
-                } else {
-                    float hue = fract(TIME * 0.15 + hash21(vec2(at, 4.0)));
-                    splatCol = hsv2rgb(vec3(hue, 0.9, 1.0));
-                }
+            float sr = brushSize * (2.0 + audioBass * 5.0);
+            if (dist2 < sr * sr * 12.0) {
+                float falloff = exp(-dist2 / (sr * sr));
+                vec3 splatCol = hasInput
+                    ? texture2D(inputTex, splatPos).rgb
+                    : hsv2rgb(vec3(fract(TIME * 0.15 + hash21(vec2(at, 4.0))), 0.9, 1.0));
                 dye.rgb = mix(dye.rgb, splatCol, falloff * audioBass * 0.6);
             }
         }
@@ -432,9 +397,7 @@ void main() {
                 dye = texture2D(inputTex, uv);
             } else {
                 float a = atan(uv.y - 0.5, uv.x - 0.5);
-                float d = length(uv - 0.5);
-                float hue = fract(a / 6.283 + d * 2.0);
-                dye = vec4(hsv2rgb(vec3(hue, 0.7, 0.9)), 1.0);
+                dye = vec4(hsv2rgb(vec3(fract(a / 6.283 + length(uv - 0.5) * 2.0), 0.7, 0.9)), 1.0);
             }
         }
 
@@ -443,16 +406,17 @@ void main() {
         return;
     }
 
-    // ===== PASS 2: Final output with specular lighting + source blending =====
+    // ===== PASS 2: Final output =====
     vec4 col = texture2D(dyeBuf, uv);
 
     // Saturation
     float gray = dot(col.rgb, vec3(0.299, 0.587, 0.114));
     col.rgb = mix(vec3(gray), col.rgb, colorSat);
 
-    // Surface normal from dye luminance gradient
-    // Use wider delta at high res — 1px at 8000px is negligible
-    float delta = max(1.0 / Res.y, 1.0 / Res.x);
+    // Surface normal — wider delta at high res for visible specular
+    // At 8000px, 1px = 0.000125 in UV space — too fine for surface detail
+    // Use 3px minimum so lighting reads as fluid surface, not noise
+    float delta = max(3.0 * invRes.x, 3.0 * invRes.y);
     float lL = dot(texture2D(dyeBuf, uv + vec2(-delta, 0.0)).rgb, vec3(0.3, 0.6, 0.1));
     float lR = dot(texture2D(dyeBuf, uv + vec2( delta, 0.0)).rgb, vec3(0.3, 0.6, 0.1));
     float lU = dot(texture2D(dyeBuf, uv + vec2(0.0,  delta)).rgb, vec3(0.3, 0.6, 0.1));
@@ -481,57 +445,46 @@ void main() {
 
         if (blendMode < 0.5) {
             // WARP
-            float motionMask = smoothstep(0.0, 0.6, velMag);
-            float blend = sourceBlend * (1.0 - motionMask * 0.7);
-            vec3 litSrc = src * mix(1.0, diff, 0.6) + vec3(spec * 0.3);
-            blended = mix(fluid, litSrc, blend);
+            float blend = sourceBlend * (1.0 - smoothstep(0.0, 0.6, velMag) * 0.7);
+            blended = mix(fluid, src * mix(1.0, diff, 0.6) + vec3(spec * 0.3), blend);
 
         } else if (blendMode < 1.5) {
             // DISSOLVE
             float noise = hash21(pos * 0.01 + vel * 5.0 + TIME * 0.1);
             float threshold = sourceBlend - velMag * 0.5;
             float dissolveMask = smoothstep(threshold - 0.1, threshold + 0.1, noise);
-            vec3 litSrc = src * mix(1.0, diff, 0.4) + vec3(spec * 0.2);
-            blended = mix(litSrc, fluid, dissolveMask);
-            float edgeGlow = smoothstep(0.0, 0.15, abs(noise - threshold));
-            blended += (1.0 - edgeGlow) * mix(src, fluid, 0.5) * 0.3;
+            blended = mix(src * mix(1.0, diff, 0.4) + vec3(spec * 0.2), fluid, dissolveMask);
+            blended += (1.0 - smoothstep(0.0, 0.15, abs(noise - threshold))) * mix(src, fluid, 0.5) * 0.3;
 
         } else if (blendMode < 2.5) {
             // LUMA MAP
-            float lumMask = smoothstep(0.1, 0.6, fluidLum);
-            float blend = sourceBlend * (1.0 - lumMask);
+            float blend = sourceBlend * (1.0 - smoothstep(0.1, 0.6, fluidLum));
             vec3 tintedSrc = mix(src, src * (col.rgb / (fluidLum + 0.1)), 0.3);
             blended = mix(fluid, tintedSrc * diff + vec3(spec * 0.2), blend);
 
         } else if (blendMode < 3.5) {
-            // EDGE REVEAL — only this mode needs velocity gradient
+            // EDGE REVEAL — velocity gradient reads only here
             vec2 velL = (texture2D(velBuf, uv + vec2(-delta, 0.0)).xy - 0.5) * 2.0;
             vec2 velR = (texture2D(velBuf, uv + vec2( delta, 0.0)).xy - 0.5) * 2.0;
             vec2 velU = (texture2D(velBuf, uv + vec2(0.0,  delta)).xy - 0.5) * 2.0;
             vec2 velD = (texture2D(velBuf, uv + vec2(0.0, -delta)).xy - 0.5) * 2.0;
             float velEdge = length(velR - velL) + length(velU - velD);
-
-            float edgeMask = smoothstep(0.1, 0.8, velEdge * 3.0);
-            float calmMask = 1.0 - smoothstep(0.0, 0.3, velMag);
-            float revealMask = max(edgeMask, calmMask * 0.5) * sourceBlend;
+            float revealMask = max(smoothstep(0.1, 0.8, velEdge * 3.0), (1.0 - smoothstep(0.0, 0.3, velMag)) * 0.5) * sourceBlend;
             vec3 litSrc = src * diff + vec3(spec * 0.15);
             blended = mix(fluid, litSrc, revealMask);
-            blended += edgeMask * mix(src, fluid, 0.5) * 0.15 * sourceBlend;
+            blended += smoothstep(0.1, 0.8, velEdge * 3.0) * mix(src, fluid, 0.5) * 0.15 * sourceBlend;
 
         } else {
             // CHROMATIC
             float chromaSpread = (1.0 - sourceBlend * 0.5) * fluidSpeed * 0.08;
-            vec2 uvR = fract(uv + vel * (warpAmt + chromaSpread));
-            vec2 uvB = fract(uv + vel * (warpAmt - chromaSpread));
             vec3 chromaSrc = vec3(
-                texture2D(inputTex, uvR).r,
-                src.g,  // reuse center sample for green
-                texture2D(inputTex, uvB).b
+                texture2D(inputTex, fract(uv + vel * (warpAmt + chromaSpread))).r,
+                src.g,
+                texture2D(inputTex, fract(uv + vel * (warpAmt - chromaSpread))).b
             );
-            float motionMask = smoothstep(0.0, 0.5, velMag);
             vec3 litSrc = chromaSrc * mix(1.0, diff, 0.5) + vec3(spec * 0.25);
             blended = mix(fluid, litSrc, sourceBlend);
-            blended += (chromaSrc - src) * motionMask * 0.3;
+            blended += (chromaSrc - src) * smoothstep(0.0, 0.5, velMag) * 0.3;
         }
 
         fluid = blended;
@@ -539,8 +492,7 @@ void main() {
 
     float alpha = 1.0;
     if (transparentBg) {
-        float lum = dot(fluid, vec3(0.299, 0.587, 0.114));
-        alpha = smoothstep(0.02, 0.15, lum);
+        alpha = smoothstep(0.02, 0.15, dot(fluid, vec3(0.299, 0.587, 0.114)));
     }
 
     gl_FragColor = vec4(fluid, alpha);
