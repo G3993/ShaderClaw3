@@ -832,5 +832,15 @@
       "Simulation"
     ],
     "file": "liquid_metal.fs"
+  },
+  {
+    "id": 436,
+    "title": "Liquid Chrome",
+    "description": "Flockaroo's original single-pass CFD with specular lighting — simpler, faster liquid simulation",
+    "categories": [
+      "Generator",
+      "Simulation"
+    ],
+    "file": "liquid_chrome.fs"
   }
 ]
