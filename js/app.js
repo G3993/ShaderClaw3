@@ -7114,6 +7114,29 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
       glCanvas.width = w;
       glCanvas.height = h;
       isfRenderer.gl.viewport(0, 0, w, h);
+
+      // Fit canvas display to viewport with correct aspect ratio (letterbox)
+      const container = glCanvas.parentElement;
+      const vpW = container.clientWidth || window.innerWidth;
+      const vpH = container.clientHeight || window.innerHeight;
+      const canvasAspect = w / h;
+      const vpAspect = vpW / vpH;
+
+      if (canvasAspect > vpAspect) {
+        // Canvas is wider than viewport — fit to width, letterbox top/bottom
+        glCanvas.style.width = '100%';
+        glCanvas.style.height = (vpW / canvasAspect) + 'px';
+      } else {
+        // Canvas is taller — fit to height, pillarbox left/right
+        glCanvas.style.height = '100%';
+        glCanvas.style.width = (vpH * canvasAspect) + 'px';
+      }
+      // Keep Three.js canvas in sync
+      const threeCanvas = document.getElementById('three-canvas');
+      if (threeCanvas) {
+        threeCanvas.style.width = glCanvas.style.width;
+        threeCanvas.style.height = glCanvas.style.height;
+      }
       // Recreate all layer FBOs at new resolution
       layers.forEach(layer => {
         if (layer.fbo) {
