@@ -7136,6 +7136,20 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         if (canvasBg.shaderLayer) canvasBg.shaderLayer.fbo = canvasBg.shaderFBO;
       }
       sceneRenderer.resize();
+      // Restart NDI at new resolution if currently sending
+      if (ndiSendingActive && _ndiWs && _ndiWs.readyState === WebSocket.OPEN) {
+        stopNdiSend();
+        ndiRequest(_ndiWs, 'ndi_send_stop').catch(() => {});
+        setTimeout(() => {
+          ndiRequest(_ndiWs, 'ndi_send_start', { name: 'ShaderClaw', width: w, height: h })
+            .then(() => { startNdiSend(_ndiWs, glCanvas); updateNdiUI(); })
+            .catch(() => {});
+        }, 300);
+      }
+      // Update PiP video dimensions if active
+      if (document.pictureInPictureElement) {
+        document.exitPictureInPicture().catch(() => {});
+      }
       dbg('canvas resized to ' + w + 'x' + h);
     }
 

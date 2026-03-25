@@ -177,12 +177,9 @@ function startNdiSend(ws, canvasEl) {
     inflight[workerIdx] = true;
     const idx = workerIdx;
     workerIdx ^= 1; // alternate workers
-    // NDI at 1280×720 — raw RGBA, no encode/decode overhead
-    const maxW = 1280, maxH = 720;
-    const cw = canvasEl.width, ch = canvasEl.height;
-    const scale = Math.min(1, maxW / cw, maxH / ch);
-    const ndiW = Math.round(cw * scale);
-    const ndiH = Math.round(ch * scale);
+    // NDI at full canvas resolution — send whatever the user's canvas size is
+    const ndiW = canvasEl.width;
+    const ndiH = canvasEl.height;
     createImageBitmap(canvasEl, { resizeWidth: ndiW, resizeHeight: ndiH })
       .then(bitmap => {
         if (!ndiSendingActive) { bitmap.close(); inflight[idx] = false; return; }
