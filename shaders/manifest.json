@@ -824,7 +824,7 @@
     "file": "data_sculpture.fs"
   },
   {
-    "id": 435,
+    "id": 443,
     "title": "Liquid Metal",
     "description": "Bismuth-like liquid metal — rotational CFD with environmental reflection, mouse-interactive, audio-reactive",
     "categories": [
@@ -834,7 +834,7 @@
     "file": "liquid_metal.fs"
   },
   {
-    "id": 436,
+    "id": 444,
     "title": "Liquid Chrome",
     "description": "Flockaroo's original single-pass CFD with specular lighting — simpler, faster liquid simulation",
     "categories": [
