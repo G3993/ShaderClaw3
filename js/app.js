@@ -7170,8 +7170,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         const val = customInput.value.trim();
         const m = val.match(/^(\d+)\s*[xX×,]\s*(\d+)$/);
         if (m) {
-          const w = Math.max(320, Math.min(7680, parseInt(m[1])));
-          const h = Math.max(180, Math.min(4320, parseInt(m[2])));
+          const w = Math.max(320, Math.min(16384, parseInt(m[1])));
+          const h = Math.max(180, Math.min(8192, parseInt(m[2])));
           applyCanvasSize(w, h);
           customInput.style.display = 'none';
         }
