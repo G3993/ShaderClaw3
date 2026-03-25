@@ -21,7 +21,6 @@ void main() {
     float bass = smoothstep(0.0, 0.3, audioBass);
     float mid = smoothstep(0.0, 0.3, audioMid);
     float high = smoothstep(0.0, 0.3, audioHigh);
-    float bassHit = audioBassHit;
 
     // Sobel edge detection
     float tl = luma(texture2D(inputTex, uv + vec2(-px.x, px.y)).rgb);
@@ -70,7 +69,7 @@ void main() {
     // High drives brightness boost
     col *= 1.0 + high * 0.6;
     // Bass hit flashes
-    col += vec3(bassHit * 0.4);
+    col += vec3(audioBass * 0.4);
 
     if (!hasInput) col = edgeCol;
 

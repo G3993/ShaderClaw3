@@ -18,8 +18,7 @@ void main() {
     float bass = smoothstep(0.0, 0.3, audioBass);
     float mid = smoothstep(0.0, 0.3, audioMid);
     float high = smoothstep(0.0, 0.3, audioHigh);
-    float bassHit = audioBassHit;
-    float amt = amount * (1.0 + bass * 3.0 + bassHit * 2.0);
+    float amt = amount * (1.0 + bass * 3.0 + audioBass * 2.0);
 
     // Multi-layer sine displacement
     vec2 d = vec2(0.0);
@@ -39,7 +38,7 @@ void main() {
     // Bass hit triggers a splash from center
     vec2 sp = uv - 0.5;
     float sr = length(sp);
-    d += sp * bassHit * 0.06 * sin(sr * 30.0) * exp(-sr * 4.0);
+    d += sp * audioBass * 0.06 * sin(sr * 30.0) * exp(-sr * 4.0);
 
     vec3 col;
     if (hasInput) {

@@ -51,13 +51,11 @@ void main() {
     float bass = smoothstep(0.0, 0.3, audioBass);
     float mid = smoothstep(0.0, 0.3, audioMid);
     float high = smoothstep(0.0, 0.3, audioHigh);
-    float bassHit = audioBassHit;
-
     vec3 original = hasInput ? texture2D(inputTex, uv).rgb : vec3(0.5);
     float lum = dot(original, vec3(0.299, 0.587, 0.114));
 
-    // Contrast — bassHit triggers contrast spike
-    float effectiveContrast = contrast + bassHit * 1.5;
+    // Contrast — bass triggers contrast spike
+    float effectiveContrast = contrast + bass * 1.5;
     lum = clamp(pow(lum, 1.0 / effectiveContrast) * effectiveContrast, 0.0, 1.0);
 
     // Audio boost

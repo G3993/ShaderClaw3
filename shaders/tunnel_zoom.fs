@@ -18,7 +18,7 @@ void main() {
     float bass = smoothstep(0.0, 0.3, audioBass);
     float mid = smoothstep(0.0, 0.3, audioMid);
     float high = smoothstep(0.0, 0.3, audioHigh);
-    float bassTime = audioBassTime;
+    float bassTime = TIME;
     float t = TIME * zoomSpeed;
 
     // Center on mouse

@@ -18,7 +18,6 @@ void main() {
     float bass = smoothstep(0.0, 0.3, audioBass);
     float mid = smoothstep(0.0, 0.3, audioMid);
     float high = smoothstep(0.0, 0.3, audioHigh);
-    float bassHit = audioBassHit;
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
 
     vec2 center = mousePos;
@@ -34,7 +33,7 @@ void main() {
 
         // Each layer is progressively zoomed and rotated
         // BassHit pulses zoom, mid drives rotation rate
-        float sc = pow(zoomRate + 0.3, fi) * (1.0 + bass * 0.2 * fi + bassHit * 0.3);
+        float sc = pow(zoomRate + 0.3, fi) * (1.0 + bass * 0.2 * fi + audioBass * 0.3);
         float rot = fi * rotRate * (1.0 + mid * 1.5) + t * rotRate * 0.3;
         float c = cos(rot), s = sin(rot);
 

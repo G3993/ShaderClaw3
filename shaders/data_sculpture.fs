@@ -6,19 +6,24 @@
     { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
     { "NAME": "gridDensity", "LABEL": "Density", "TYPE": "float", "DEFAULT": 14.0, "MIN": 4.0, "MAX": 28.0 },
-    { "NAME": "cubeScale", "LABEL": "Cube Size", "TYPE": "float", "DEFAULT": 0.65, "MIN": 0.15, "MAX": 0.95 },
+    { "NAME": "shapeType", "LABEL": "Shape", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1], "LABELS": ["Cube", "Sphere"] },
+    { "NAME": "cubeScale", "LABEL": "Size", "TYPE": "float", "DEFAULT": 0.65, "MIN": 0.15, "MAX": 0.95 },
     { "NAME": "waveHeight", "LABEL": "Wave Height", "TYPE": "float", "DEFAULT": 1.2, "MIN": 0.0, "MAX": 4.0 },
     { "NAME": "flowSpeed", "LABEL": "Flow Speed", "TYPE": "float", "DEFAULT": 0.4, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "camHeight", "LABEL": "Camera Height", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fogAmount", "LABEL": "Atmosphere", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 1.0 }
+    { "NAME": "fogAmount", "LABEL": "Atmosphere", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "baseGrid", "LABEL": "Base Grid", "TYPE": "bool", "DEFAULT": true },
+    { "NAME": "baseGap", "LABEL": "Base Gap", "TYPE": "float", "DEFAULT": 1.2, "MIN": 0.3, "MAX": 3.0 },
+    { "NAME": "baseGlow", "LABEL": "Base Glow", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "basePulse", "LABEL": "Base Pulse", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 1.0 }
   ]
 }*/
 
-#define STEPS 36
-#define HIT 0.002
-#define FAR 14.0
+#define STEPS 48
+#define HIT 0.003
+#define FAR 20.0
 #define PI 3.14159265
-#define EXT 5.0
+#define EXT 7.0
 
 // ---- Fast hash ----
 float hash(vec2 p) {
@@ -27,23 +32,16 @@ float hash(vec2 p) {
     return fract((p3.x + p3.y) * p3.z);
 }
 
-// ---- Smooth value noise 3D (much cheaper than simplex) ----
-float vnoise(vec3 p) {
-    vec3 i = floor(p);
-    vec3 f = fract(p);
-    f = f * f * (3.0 - 2.0 * f);
-    vec2 o = vec2(0.0, 1.0);
-    float a = hash(i.xy + i.z * 37.0);
-    float b = hash(i.xy + o.yx + i.z * 37.0);
-    float c = hash(i.xy + o.xy + i.z * 37.0);
-    float d = hash(i.xy + o.yy + i.z * 37.0);
-    float e = hash(i.xy + (i.z + 1.0) * 37.0);
-    float ff = hash(i.xy + o.yx + (i.z + 1.0) * 37.0);
-    float g = hash(i.xy + o.xy + (i.z + 1.0) * 37.0);
-    float h = hash(i.xy + o.yy + (i.z + 1.0) * 37.0);
-    float z0 = mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
-    float z1 = mix(mix(e, ff, f.x), mix(g, h, f.x), f.y);
-    return mix(z0, z1, f.z) * 2.0 - 1.0;
+// ---- Cheap animated height from 2D hashes (replaces expensive vnoise) ----
+float cheapHeight(vec2 id, vec2 disp, float t, float fs) {
+    // Animated height using hash + sin combinations (no 3D noise)
+    float h1 = hash(id);
+    float h2 = hash(id + 73.0);
+    float h3 = hash(id * 0.7 + 31.0);
+    float anim = sin(t * fs * 0.6 + h1 * 6.28) * 0.4
+               + sin(t * fs * 0.3 + h2 * 6.28 + disp.x * 2.0) * 0.35
+               + cos(t * fs * 0.45 + h3 * 6.28 + disp.y * 1.5) * 0.25;
+    return anim;
 }
 
 // ---- SDF ----
@@ -55,34 +53,18 @@ float sdBox(vec3 p, vec3 b) {
 // ---- Globals ----
 vec2 g_cell;
 float g_h;
+float g_isBase;
 
-// ---- Scene: single cell lookup (no neighbor loop) ----
-float scene(vec3 p) {
-    float sp = 1.0 / gridDensity;
-    float ch = sp * 0.5 * cubeScale;
-
-    // Bounds
-    if (abs(p.x) > EXT + sp || abs(p.z) > EXT + sp)
-        return max(abs(p.x) - EXT, abs(p.z) - EXT);
-    float maxH = waveHeight + 1.0;
-    if (p.y > maxH) return p.y - maxH + 0.1;
-    if (p.y < -maxH) return -p.y - maxH + 0.1;
-
-    // Current cell only — no neighbor loop (9x faster)
-    vec2 id = floor(p.xz / sp);
+// Compute cell data: returns height, writes disp to out param
+float cellHeight(vec2 id, float sp, out vec2 disp) {
     vec2 center = (id + 0.5) * sp;
-
-    // Flow displacement
     float h1 = hash(id);
     float h2 = hash(id + 73.0);
     float phase = TIME * flowSpeed * 0.4 + h1 * 6.28;
     vec2 flow = vec2(sin(phase + h2 * 3.0), cos(phase * 0.7 + h1 * 5.0));
-    vec2 disp = center + flow * sp * 0.25;
+    disp = center + flow * sp * 0.25;
 
-    // Height from cheap noise + texture
-    float t = TIME;
-    float fs = flowSpeed;
-    float n = vnoise(vec3((disp + vec2(t * fs * 0.3, t * fs * 0.15)) * 1.5, t * fs));
+    float n = cheapHeight(id, disp, TIME, flowSpeed);
 
     vec2 texUV = clamp((center + EXT) / (2.0 * EXT), 0.0, 1.0);
     vec4 tex = texture2D(inputTex, texUV);
@@ -95,30 +77,122 @@ float scene(vec3 p) {
         ht = n;
     }
 
-    // Edge fade
     float r = length(center) / EXT;
     ht *= smoothstep(1.0, 0.85, r);
     ht += audioBass * 0.12 * (1.0 - r);
     ht *= waveHeight;
-
-    // Cube
-    float vScale = 0.6 + h1 * 0.8;
-    vec3 cubePos = vec3(disp.x, ht, disp.y);
-    vec3 q = p - cubePos;
-
-    float rot = h2 * 0.2;
-    float cr = cos(rot), sr = sin(rot);
-    q.xz = vec2(cr * q.x - sr * q.z, sr * q.x + cr * q.z);
-
-    g_cell = center;
-    g_h = ht;
-
-    return sdBox(q, vec3(ch, ch * vScale, ch));
+    return ht;
 }
 
-// ---- Normal (tetrahedron method) ----
+// ---- Scene: 2x2 neighbor for raised, single cell for base ----
+float scene(vec3 p) {
+    float sp = 1.0 / gridDensity;
+    float ch = sp * 0.5 * cubeScale;
+
+    // Bounds
+    if (abs(p.x) > EXT + sp * 2.0 || abs(p.z) > EXT + sp * 2.0)
+        return max(abs(p.x) - EXT, abs(p.z) - EXT);
+    float maxH = waveHeight + 1.5;
+    if (p.y > maxH) return p.y - maxH + 0.1;
+    float minH = baseGrid ? baseGap + 1.5 : maxH;
+    if (p.y < -minH) return -p.y - minH + 0.1;
+
+    vec2 cellPos = p.xz / sp;
+    vec2 baseId = floor(cellPos);
+    // 2x2 quadrant: pick the neighbor direction based on fractional position
+    vec2 frac = fract(cellPos);
+    vec2 offset = step(0.5, frac) * 2.0 - 1.0; // -1 or +1
+
+    float best = 999.0;
+    vec2 bestCenter = vec2(0.0);
+    float bestH = 0.0;
+    float bestIsBase = 0.0;
+    bool isSphere = shapeType > 0.5;
+
+    // Check 2x2 raised cells
+    for (int i = 0; i < 4; i++) {
+        vec2 id = baseId;
+        if (i == 1) id.x += offset.x;
+        else if (i == 2) id.y += offset.y;
+        else if (i == 3) id += offset;
+
+        vec2 center = (id + 0.5) * sp;
+        // Quick reject: if xz distance to center is too far, skip
+        vec2 xzDiff = p.xz - center;
+        if (abs(xzDiff.x) > sp * 1.5 || abs(xzDiff.y) > sp * 1.5) continue;
+        if (length(center) > EXT + sp) continue;
+
+        float h1 = hash(id);
+        float h2 = hash(id + 73.0);
+
+        vec2 disp;
+        float ht = cellHeight(id, sp, disp);
+
+        float vScale = 0.6 + h1 * 0.8;
+        vec3 cubePos = vec3(disp.x, ht, disp.y);
+        vec3 q = p - cubePos;
+
+        float rot = h2 * 0.2;
+        float cr = cos(rot), sr = sin(rot);
+        q.xz = vec2(cr * q.x - sr * q.z, sr * q.x + cr * q.z);
+
+        float d;
+        if (isSphere) {
+            d = length(q) - ch * vScale;
+        } else {
+            d = sdBox(q, vec3(ch, ch * vScale, ch));
+        }
+
+        if (d < best) {
+            best = d;
+            bestCenter = center;
+            bestH = ht;
+            bestIsBase = 0.0;
+        }
+    }
+
+    // Base layer: single cell (no displacement = no neighbor issues)
+    if (baseGrid) {
+        vec2 id = baseId;
+        vec2 center = (id + 0.5) * sp;
+        if (length(center) <= EXT + sp) {
+            float h1 = hash(id);
+            float h2 = hash(id + 73.0);
+            float pulse = sin(TIME * 1.5 + h1 * 6.28 + h2 * 3.14) * basePulse * 0.15;
+            float baseY = -baseGap + pulse;
+            float baseScale = 0.35 + h1 * 0.15;
+
+            vec3 basePos = vec3(center.x, baseY, center.y);
+            vec3 qb = p - basePos;
+
+            float d;
+            if (isSphere) {
+                d = length(qb) - ch * baseScale;
+            } else {
+                d = sdBox(qb, vec3(ch, ch * baseScale, ch));
+            }
+
+            if (d < best) {
+                best = d;
+                bestCenter = center;
+                bestIsBase = 1.0;
+                // Store raised height at this cell for base glow effect
+                vec2 dummy;
+                bestH = cellHeight(id, sp, dummy);
+            }
+        }
+    }
+
+    g_cell = bestCenter;
+    g_h = bestH;
+    g_isBase = bestIsBase;
+
+    return best;
+}
+
+// ---- Normal (tetrahedron method, wider epsilon for speed) ----
 vec3 calcNormal(vec3 p) {
-    vec2 e = vec2(0.003, -0.003);
+    vec2 e = vec2(0.004, -0.004);
     return normalize(
         e.xyy * scene(p + e.xyy) +
         e.yyx * scene(p + e.yyx) +
@@ -130,10 +204,10 @@ vec3 calcNormal(vec3 p) {
 void main() {
     vec2 uv = (gl_FragCoord.xy - RENDERSIZE.xy * 0.5) / min(RENDERSIZE.x, RENDERSIZE.y);
 
-    // Camera — spherical orbit, camHeight 0=side, 1=top-down
+    // Camera
     float angle = TIME * 0.1;
     float elevAngle = camHeight * PI * 0.48;
-    float camDist = 4.5;
+    float camDist = 6.0;
     vec3 ro = vec3(
         sin(angle) * cos(elevAngle) * camDist,
         sin(elevAngle) * camDist + 0.5,
@@ -184,10 +258,36 @@ void main() {
             ? texS.rgb
             : mix(vec3(0.04, 0.03, 0.06), baseColor.rgb, hn * hn);
 
-        col = albedo * (diff + 0.08);
-        col += spec * mix(vec3(1.0), albedo, 0.3) * 0.5;
-        col += fres * baseColor.rgb * 0.12;
-        col += albedo * (hn * hn * 0.2 + audioBass * 0.08);
+        if (g_isBase > 0.5) {
+            // ---- Base layer effects ----
+            float h1 = hash(floor(g_cell * gridDensity));
+
+            vec3 baseAlbedo = albedo * 0.25;
+
+            // Ripple pulse
+            float ripple = sin(length(g_cell) * 4.0 - TIME * 2.0 + h1 * 6.28);
+            ripple = ripple * 0.5 + 0.5;
+            baseAlbedo = mix(baseAlbedo, baseColor.rgb * 0.3, ripple * basePulse);
+
+            // Height-reactive glow
+            float heightGlow = smoothstep(0.0, waveHeight * 0.8, abs(g_h)) * baseGlow;
+            baseAlbedo += baseColor.rgb * heightGlow * 0.4;
+
+            // Audio shimmer
+            baseAlbedo += baseColor.rgb * audioBass * 0.15;
+
+            col = baseAlbedo * (diff * 0.7 + 0.15);
+            col += spec * baseColor.rgb * 0.15;
+            col += fres * baseColor.rgb * 0.08;
+            col += baseColor.rgb * pow(fres, 2.0) * baseGlow * 0.5;
+
+        } else {
+            // ---- Raised layer ----
+            col = albedo * (diff + 0.08);
+            col += spec * mix(vec3(1.0), albedo, 0.3) * 0.5;
+            col += fres * baseColor.rgb * 0.12;
+            col += albedo * (hn * hn * 0.2 + audioBass * 0.08);
+        }
 
         // Fog
         float fog = 1.0 - exp(-t * fogAmount * 0.07);

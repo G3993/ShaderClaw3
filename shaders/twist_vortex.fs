@@ -18,7 +18,7 @@ void main() {
     float bass = smoothstep(0.0, 0.3, audioBass);
     float mid = smoothstep(0.0, 0.3, audioMid);
     float high = smoothstep(0.0, 0.3, audioHigh);
-    float midTime = audioMidTime;
+    float midTime = TIME;
 
     vec2 center = mousePos;
     vec2 p = uv - center;

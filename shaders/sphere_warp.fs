@@ -18,15 +18,14 @@ void main() {
     float bass = smoothstep(0.0, 0.3, audioBass);
     float mid = smoothstep(0.0, 0.3, audioMid);
     float high = smoothstep(0.0, 0.3, audioHigh);
-    float bassHit = audioBassHit;
 
     vec2 center = mousePos;
     vec2 p = uv - center;
     p.x *= aspect;
 
     float r = length(p);
-    float rad = radius * (1.0 + bass * 0.3 + bassHit * 0.2);
-    float b = bulge * (1.0 + bass * 0.5 + bassHit * 0.8);
+    float rad = radius * (1.0 + bass * 0.3 + audioBass * 0.2);
+    float b = bulge * (1.0 + bass * 0.5 + audioBass * 0.8);
 
     vec2 warpUV = uv;
     float sphereMask = 0.0;

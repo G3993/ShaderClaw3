@@ -19,9 +19,8 @@ void main() {
     float bass = smoothstep(0.0, 0.3, audioBass);
     float mid = smoothstep(0.0, 0.3, audioMid);
     float high = smoothstep(0.0, 0.3, audioHigh);
-    float bassHit = audioBassHit;
     float t = TIME * meltSpeed;
-    float melt = meltAmount * (1.0 + bass * 3.0 + bassHit * 4.0);
+    float melt = meltAmount * (1.0 + bass * 3.0);
 
     // Optional pixelation — high drives extra pixelation
     vec2 sampleUV = uv;
