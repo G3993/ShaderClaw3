@@ -41,36 +41,12 @@ vec3 shadeCapsule(vec2 p, vec2 a, vec2 b, float r, vec3 color, vec3 accent, vec3
     float spec = pow(max(0.0, dot(reflect(-L, N), vec3(0.0, 0.0, 1.0))), 80.0);
     float rim = pow(1.0 - nz, 2.5);
 
-    // Double parallel panel lines
-    float panelH = fract(h * 5.0 + 0.5) - 0.5;
-    float groove1 = smoothstep(0.015, 0.0, abs(panelH) - 0.475) * 0.25;
-    float groove2 = smoothstep(0.015, 0.0, abs(panelH) - 0.455) * 0.18;
-    float groove = groove1 + groove2;
-
-    // Armor plating facets
-    float facet = abs(fract(h * 8.0 + 0.25) - 0.5) * 0.15;
-
-    // Beveled edge highlights
-    float bevel = smoothstep(0.82, 0.96, t) * 0.25;
-
-    // LED status indicators (3 per segment, pulsing)
-    float ledPulse = 0.5 + 0.5 * sin(TIME * 3.0 + h * 12.0);
-    float led1 = exp(-800.0 * (pow(h - 0.25, 2.0) + pow(t - 0.15, 2.0)));
-    float led2 = exp(-800.0 * (pow(h - 0.55, 2.0) + pow(t - 0.15, 2.0)));
-    float led3 = exp(-800.0 * (pow(h - 0.80, 2.0) + pow(t - 0.15, 2.0)));
-    float leds = (led1 + led2 + led3) * ledPulse;
-
-    // Mechanical vent slits (3-4 thin horizontal lines, audio-reactive)
-    float ventZone = smoothstep(0.30, 0.35, h) * smoothstep(0.65, 0.60, h);
-    float ventLines = smoothstep(0.008, 0.0, abs(fract(h * 18.0) - 0.5) - 0.42);
-    float ventGlow = ventLines * ventZone * 0.3 * (0.7 + 0.3 * audioBass);
+    // Panel lines + armor facets (combined, cheap)
+    float groove = smoothstep(0.015, 0.0, abs(fract(h * 5.0 + 0.5) - 0.5) - 0.48) * 0.25;
+    float facet = abs(fract(h * 8.0 + 0.25) - 0.5) * 0.12;
 
     vec3 c = color * (1.0 - groove) * (1.0 + facet);
-    vec3 result = c * (0.12 + 0.58 * diff) + vec3(0.7) * spec + c * rim * 0.22;
-    result += c * bevel;
-    result += accent * leds * 0.6;
-    result += accent * ventGlow;
-    return result;
+    return c * (0.12 + 0.58 * diff) + vec3(0.7) * spec + c * rim * 0.22;
 }
 
 vec3 shadeSphere(vec2 p, vec2 c, float r, vec3 color, vec3 accent, vec3 L, float px, out float mask) {
@@ -85,23 +61,10 @@ vec3 shadeSphere(vec2 p, vec2 c, float r, vec3 color, vec3 accent, vec3 L, float
     float diff = max(0.0, dot(N, L));
     float spec = pow(max(0.0, dot(reflect(-L, N), vec3(0.0, 0.0, 1.0))), 100.0);
 
-    // Single servo ring groove
+    // Servo ring groove
     float ring = smoothstep(0.03, 0.0, abs(t - 0.55)) * 0.18;
-
-    // Hexagonal bolt pattern around the joint
-    vec2 dp = p - c;
-    float angle = atan(dp.y, dp.x);
-    float hexBolts = 0.0;
-    for (int i = 0; i < 6; i++) {
-        float boltAngle = float(i) * 1.0472; // 2*PI/6
-        vec2 boltPos = c + r * 0.6 * vec2(cos(boltAngle), sin(boltAngle));
-        hexBolts += exp(-1200.0 * dot(p - boltPos, p - boltPos));
-    }
-
     vec3 base = color * (1.0 - ring);
-    vec3 result = base * (0.10 + 0.55 * diff) + vec3(0.9) * spec + base * pow(1.0 - nz, 2.0) * 0.35;
-    result += (accent * 0.5 + vec3(0.5)) * hexBolts;
-    return result;
+    return base * (0.10 + 0.55 * diff) + vec3(0.9) * spec + base * pow(1.0 - nz, 2.0) * 0.35;
 }
 
 void drawArm(vec2 p, vec2 base, vec2 target, float grip, float sc, float sw,
@@ -152,19 +115,15 @@ void drawArm(vec2 p, vec2 base, vec2 target, float grip, float sc, float sw,
     outWrist = wrist; outFDir = fDir_;
     outF1 = f1End; outF2 = f2End; outF3 = f3End;
 
-    // Piston geometry -- dual pistons per segment (both sides)
+    // Piston geometry -- single piston per segment
     vec2 ax1 = normalize(elbow - base);
     vec2 perp1 = vec2(-ax1.y, ax1.x);
-    vec2 pA1 = base + ax1 * L1 * 0.18 + perp1 * w1 * 0.6;
-    vec2 pB1 = elbow - ax1 * L1 * 0.12 + perp1 * w1 * 0.6;
-    vec2 pA1b = base + ax1 * L1 * 0.18 - perp1 * w1 * 0.6;
-    vec2 pB1b = elbow - ax1 * L1 * 0.12 - perp1 * w1 * 0.6;
+    vec2 pA1 = base + ax1 * L1 * 0.18 + perp1 * w1 * 0.55;
+    vec2 pB1 = elbow - ax1 * L1 * 0.12 + perp1 * w1 * 0.55;
     vec2 ax2 = normalize(wrist - elbow);
     vec2 perp2 = vec2(-ax2.y, ax2.x);
-    vec2 pA2 = elbow + ax2 * L2 * 0.2 + perp2 * w2 * 0.65;
-    vec2 pB2 = wrist - ax2 * L2 * 0.15 + perp2 * w2 * 0.65;
-    vec2 pA2b = elbow + ax2 * L2 * 0.2 - perp2 * w2 * 0.65;
-    vec2 pB2b = wrist - ax2 * L2 * 0.15 - perp2 * w2 * 0.65;
+    vec2 pA2 = elbow + ax2 * L2 * 0.2 + perp2 * w2 * 0.6;
+    vec2 pB2 = wrist - ax2 * L2 * 0.15 + perp2 * w2 * 0.6;
 
     vec3 acc = accCol.rgb;
 
@@ -179,10 +138,8 @@ void drawArm(vec2 p, vec2 base, vec2 target, float grip, float sc, float sw,
     ec = shadeCapsule(p, base - vec2(0.045, 0.0), base + vec2(0.045, 0.0), 0.032, aCol.rgb * 0.45, acc, L, px, mask);
     col = mix(col, ec, mask); armMask = max(armMask, mask);
 
-    // Upper arm pistons (both sides, slightly wider)
-    ec = shadeCapsule(p, pA1, pB1, w1 * 0.22, pistonCol, acc, L, px, mask);
-    col = mix(col, ec, mask); armMask = max(armMask, mask);
-    ec = shadeCapsule(p, pA1b, pB1b, w1 * 0.22, pistonCol, acc, L, px, mask);
+    // Upper arm piston
+    ec = shadeCapsule(p, pA1, pB1, w1 * 0.18, pistonCol, acc, L, px, mask);
     col = mix(col, ec, mask); armMask = max(armMask, mask);
 
     // Upper arm
@@ -193,10 +150,8 @@ void drawArm(vec2 p, vec2 base, vec2 target, float grip, float sc, float sw,
     ec = shadeSphere(p, base, jR, mix(aCol.rgb, acc, 0.35), acc, L, px, mask);
     col = mix(col, ec, mask); armMask = max(armMask, mask);
 
-    // Forearm pistons (both sides, slightly wider)
-    ec = shadeCapsule(p, pA2, pB2, w2 * 0.24, pistonCol, acc, L, px, mask);
-    col = mix(col, ec, mask); armMask = max(armMask, mask);
-    ec = shadeCapsule(p, pA2b, pB2b, w2 * 0.24, pistonCol, acc, L, px, mask);
+    // Forearm piston
+    ec = shadeCapsule(p, pA2, pB2, w2 * 0.2, pistonCol, acc, L, px, mask);
     col = mix(col, ec, mask); armMask = max(armMask, mask);
 
     // Forearm
@@ -207,18 +162,8 @@ void drawArm(vec2 p, vec2 base, vec2 target, float grip, float sc, float sw,
     ec = shadeSphere(p, elbow, jR, mix(aCol.rgb, acc, 0.5), acc, L, px, mask);
     col = mix(col, ec, mask); armMask = max(armMask, mask);
 
-    // Wrist rotating rings (gear-like mechanism)
-    float wristDist = length(p - wrist);
-    float wristAngle = atan(p.y - wrist.y, p.x - wrist.x);
-    float ringR1 = jR * 0.95;
-    float ringR2 = jR * 1.1;
-    float ring1 = smoothstep(px * 2.0, 0.0, abs(wristDist - ringR1) - px) * 0.4;
-    float ring2 = smoothstep(px * 2.0, 0.0, abs(wristDist - ringR2) - px) * 0.3;
-    // Gear teeth around wrist
-    float gearTeeth = smoothstep(0.4, 0.5, fract((wristAngle + TIME * 1.5) * 4.0 / 6.283)) * 0.25;
-    float gearMask = smoothstep(ringR2 + px * 3.0, ringR2, wristDist) * smoothstep(ringR1 - px * 3.0, ringR1, wristDist);
-    col += acc * (ring1 + ring2) * 0.5;
-    col += acc * gearTeeth * gearMask;
+    // Wrist glow ring
+    col += acc * exp(-80.0 * abs(length(p - wrist) - jR * 1.0)) * 0.2;
 
     // Claw bases (thicker)
     vec3 clawCol = mix(aCol.rgb, acc, 0.45);
@@ -242,36 +187,10 @@ void drawArm(vec2 p, vec2 base, vec2 target, float grip, float sc, float sw,
     ec = shadeSphere(p, wrist, jR * 0.75, mix(aCol.rgb, acc, 0.6), acc, L, px, mask);
     col = mix(col, ec, mask); armMask = max(armMask, mask);
 
-    // Claw tip energy glow
-    float idleGlow = 0.12 * (0.6 + 0.4 * sin(TIME * 2.5)); // dim idle pulse
-    float gripGlow = grip * 1.2; // intense when gripping
-    float tipGlowStr = mix(idleGlow, gripGlow, smoothstep(0.05, 0.3, grip));
-    col += acc * tipGlowStr * (exp(-120.0 * length(p - f1End)) + exp(-120.0 * length(p - f2End)) + exp(-120.0 * length(p - f3End)));
-
-    // Energy arcs between claw tips when gripping
-    if (grip > 0.15) {
-        float arcIntensity = smoothstep(0.15, 0.6, grip);
-        // Arc between f1End and f2End
-        vec2 arcMid12 = (f1End + f2End) * 0.5;
-        vec2 arcBA12 = f2End - f1End;
-        float arcH12 = clamp(dot(p - f1End, arcBA12) / dot(arcBA12, arcBA12), 0.0, 1.0);
-        float arcD12 = length(p - (f1End + arcBA12 * arcH12));
-        float arcFlicker = 0.7 + 0.3 * sin(TIME * 25.0 + arcH12 * 15.0);
-        col += acc * exp(-300.0 * arcD12) * arcIntensity * arcFlicker * 0.8;
-        // Arc between f2End and f3End
-        vec2 arcBA23 = f3End - f2End;
-        float arcH23 = clamp(dot(p - f2End, arcBA23) / dot(arcBA23, arcBA23), 0.0, 1.0);
-        float arcD23 = length(p - (f2End + arcBA23 * arcH23));
-        col += acc * exp(-300.0 * arcD23) * arcIntensity * arcFlicker * 0.6;
-        // Arc between f3End and f1End
-        vec2 arcBA31 = f1End - f3End;
-        float arcH31 = clamp(dot(p - f3End, arcBA31) / dot(arcBA31, arcBA31), 0.0, 1.0);
-        float arcD31 = length(p - (f3End + arcBA31 * arcH31));
-        col += acc * exp(-300.0 * arcD31) * arcIntensity * arcFlicker * 0.6;
-    }
-
-    // Tip + joint highlights
-    col += acc * (exp(-160.0 * length(p - f1End)) + exp(-160.0 * length(p - f2End)) + exp(-160.0 * length(p - f3End))) * 0.4;
+    // Tip + joint glow (combined, efficient)
+    float tipGlow = (0.15 + grip * 0.8) * (0.8 + 0.2 * sin(TIME * 3.0));
+    col += acc * tipGlow * (exp(-120.0 * length(p - f1End)) + exp(-120.0 * length(p - f2End)) + exp(-120.0 * length(p - f3End)));
+    col += acc * (exp(-90.0 * length(p - elbow)) * 0.3 + exp(-100.0 * length(p - wrist)) * 0.25);
     col += acc * (exp(-90.0 * length(p - elbow)) * 0.4 + exp(-100.0 * length(p - wrist)) * 0.3);
 }
 
