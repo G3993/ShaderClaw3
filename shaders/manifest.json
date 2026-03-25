@@ -822,5 +822,15 @@
       "3D"
     ],
     "file": "data_sculpture.fs"
+  },
+  {
+    "id": 435,
+    "title": "Liquid Metal",
+    "description": "Bismuth-like liquid metal — rotational CFD with environmental reflection, mouse-interactive, audio-reactive",
+    "categories": [
+      "Generator",
+      "Simulation"
+    ],
+    "file": "liquid_metal.fs"
   }
 ]
