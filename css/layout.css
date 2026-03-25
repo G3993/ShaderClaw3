@@ -307,14 +307,9 @@
     display: flex !important;
   }
 
-  /* Floating input buttons (top of canvas, safe area aware) */
+  /* Floating input buttons — hidden on mobile (clean canvas) */
   .sc3-mobile-inputs {
-    display: flex !important;
-    position: fixed;
-    top: calc(12px + env(safe-area-inset-top, 0px)); left: 50%;
-    transform: translateX(-50%);
-    gap: 10px;
-    z-index: 100;
+    display: none !important;
   }
 
   .canvas-btn { width: 44px; height: 44px; font-size: 18px; }
