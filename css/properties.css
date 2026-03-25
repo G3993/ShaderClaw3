@@ -43,44 +43,59 @@
 .sc3-canvas-size-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 .sc3-canvas-size-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
   text-transform: uppercase;
-  color: var(--sc-text-dim);
+  color: rgba(255, 255, 255, 0.7);
   white-space: nowrap;
 }
 .sc3-canvas-size-select {
   flex: 1;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: 4px;
-  color: var(--sc-text);
-  font-size: 11px;
-  padding: 3px 6px;
+  color: #e0e0e0;
+  font-size: 12px;
+  font-family: inherit;
+  padding: 5px 8px;
   cursor: pointer;
   outline: none;
 }
+.sc3-canvas-size-select option {
+  background: #1a1a1a;
+  color: #e0e0e0;
+  font-size: 12px;
+  padding: 4px;
+}
 .sc3-canvas-size-select:hover {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.2);
+}
+.sc3-canvas-size-select:focus {
+  border-color: #E84057;
 }
 .sc3-canvas-size-custom {
-  width: 80px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.08);
+  width: 90px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: 4px;
-  color: var(--sc-text);
-  font-size: 11px;
-  padding: 3px 6px;
+  color: #e0e0e0;
+  font-size: 12px;
+  font-family: inherit;
+  padding: 5px 8px;
   outline: none;
 }
+.sc3-canvas-size-custom:focus {
+  border-color: #E84057;
+}
 .sc3-canvas-size-custom::placeholder {
-  color: var(--sc-text-dim);
+  color: rgba(255, 255, 255, 0.4);
 }
 
 /* ===== LAYER PANEL ===== */

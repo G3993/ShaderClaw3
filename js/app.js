@@ -951,9 +951,14 @@
           pipVideo = document.createElement('video');
           pipVideo.muted = true;
           pipVideo.playsInline = true;
-          pipVideo.style.display = 'none';
+          pipVideo.autoplay = true;
+          // Position offscreen (display:none blocks PiP in some browsers)
+          pipVideo.style.cssText = 'position:fixed;top:-9999px;left:-9999px;pointer-events:none;';
           document.body.appendChild(pipVideo);
         }
+        // Set video dimensions to match canvas resolution (custom canvas size)
+        pipVideo.width = glCanvas.width;
+        pipVideo.height = glCanvas.height;
         const stream = glCanvas.captureStream(30);
         pipVideo.srcObject = stream;
         await pipVideo.play();
