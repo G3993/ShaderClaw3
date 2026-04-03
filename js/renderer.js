@@ -343,9 +343,16 @@ class Renderer {
 
     gl.useProgram(this.program);
 
-    const elapsed = (performance.now() - this.startTime) / 1000;
+    const now = performance.now();
+    const elapsed = (now - this.startTime) / 1000;
     const timeLoc = this._getLoc('TIME');
     if (timeLoc) gl.uniform1f(timeLoc, elapsed);
+
+    // TIMEDELTA: actual seconds since last frame (clamped to avoid spikes)
+    const rawDelta = this._lastFrameTime ? (now - this._lastFrameTime) / 1000 : 1 / 60;
+    const tdLoc = this._getLoc('TIMEDELTA');
+    if (tdLoc) gl.uniform1f(tdLoc, Math.min(rawDelta, 0.1));
+    this._lastFrameTime = now;
 
     const resLoc = this._getLoc('RENDERSIZE');
     if (resLoc) gl.uniform2f(resLoc, this.canvas.width, this.canvas.height);
@@ -534,9 +541,25 @@ class Renderer {
   }
 
   createPingPongFBO(w, h) {
-    // Check half-float FBO support once (needed for simulations with negative values)
+    // Check float FBO support once — half-float is default (good balance of precision + memory)
+    // Float32 available via _createFloatFBO for shaders that explicitly need it
     if (this._ppFloatChecked === undefined) {
       this._ppFloatChecked = true;
+      // Probe float32 support (kept available but not used by default — 4x memory)
+      this._floatExt = this.gl.getExtension('OES_texture_float');
+      this._floatLinear = this.gl.getExtension('OES_texture_float_linear');
+      this.gl.getExtension('WEBGL_color_buffer_float');
+      this._floatAvailable = false;
+      if (this._floatExt) {
+        const test = this._createFloatFBO(4, 4);
+        if (test) {
+          this._floatAvailable = true;
+          this.gl.deleteTexture(test.texture);
+          this.gl.deleteFramebuffer(test.fbo);
+          console.log('[ShaderClaw] Float32 FBOs: available' + (this._floatLinear ? ' (LINEAR)' : ' (NEAREST)'));
+        }
+      }
+      // Half-float is the default for persistent buffers
       this._halfFloatExt = this.gl.getExtension('OES_texture_half_float');
       this._halfFloatLinear = this.gl.getExtension('OES_texture_half_float_linear');
       this.gl.getExtension('EXT_color_buffer_half_float');
@@ -559,6 +582,32 @@ class Renderer {
       return { a: this._createHalfFloatFBO(w, h), b: this._createHalfFloatFBO(w, h), current: 0 };
     }
     return { a: this.createFBO(w, h), b: this.createFBO(w, h), current: 0 };
+  }
+
+  _createFloatFBO(w, h) {
+    const gl = this.gl;
+    const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096;
+    if (w > maxTex) w = maxTex;
+    if (h > maxTex) h = maxTex;
+    const fbo = gl.createFramebuffer();
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.FLOAT, null);
+    const filter = this._floatLinear ? gl.LINEAR : gl.NEAREST;
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+    if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+      gl.deleteTexture(tex);
+      gl.deleteFramebuffer(fbo);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      return null;
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return { fbo, texture: tex, width: w, height: h };
   }
 
   _createHalfFloatFBO(w, h) {
@@ -709,9 +758,13 @@ class Renderer {
 
     gl.useProgram(layer.program);
 
-    const elapsed = (performance.now() - this.startTime) / 1000;
+    const now = performance.now();
+    const elapsed = (now - this.startTime) / 1000;
     const tLoc = this._getLayerLoc(layer, 'TIME');
     if (tLoc) gl.uniform1f(tLoc, elapsed);
+    const rawDelta = this._lastFrameTime ? (now - this._lastFrameTime) / 1000 : 1 / 60;
+    const tdLoc = this._getLayerLoc(layer, 'TIMEDELTA');
+    if (tdLoc) gl.uniform1f(tdLoc, Math.min(rawDelta, 0.1));
     const rLoc = this._getLayerLoc(layer, 'RENDERSIZE');
     if (rLoc) gl.uniform2f(rLoc, layer.fbo.width, layer.fbo.height);
     const piLoc = this._getLayerLoc(layer, 'PASSINDEX');
@@ -851,6 +904,14 @@ class Renderer {
       my = hy;
       mdown = mediaPipeMgr.isPinching ? 1.0 : 0.0;
     }
+    // Movement engine blend
+    if (layer._movementResult && typeof blendMovement === 'function') {
+      const mm = layer._movement ? layer._movement.manualMix : 1.0;
+      const blended = blendMovement(layer._movementResult, [mx, my], [mdx, mdy], mdown, mm);
+      mx = blended.pos[0]; my = blended.pos[1];
+      mdx = blended.delta[0]; mdy = blended.delta[1];
+      mdown = blended.down;
+    }
     const mousePLoc = this._getLayerLoc(layer, 'mousePos');
     if (mousePLoc) gl.uniform2f(mousePLoc, mx, my);
     const mouseDLoc = this._getLayerLoc(layer, 'mouseDelta');
@@ -989,9 +1050,13 @@ class Renderer {
     gl.useProgram(layer.program);
     gl.disable(gl.BLEND);
 
-    const elapsed = (performance.now() - this.startTime) / 1000;
+    const now2 = performance.now();
+    const elapsed = (now2 - this.startTime) / 1000;
     const tLoc = this._getLayerLoc(layer, 'TIME');
     if (tLoc) gl.uniform1f(tLoc, elapsed);
+    const rawDt = this._lastFrameTime ? (now2 - this._lastFrameTime) / 1000 : 1 / 60;
+    const tdLoc2 = this._getLayerLoc(layer, 'TIMEDELTA');
+    if (tdLoc2) gl.uniform1f(tdLoc2, Math.min(rawDt, 0.1));
     const fiLoc = this._getLayerLoc(layer, 'FRAMEINDEX');
     if (fiLoc) gl.uniform1i(fiLoc, this.frameIndex);
     const tbLoc = this._getLayerLoc(layer, '_transparentBg');
@@ -1013,6 +1078,14 @@ class Renderer {
       mpMx = hx;
       mpMy = hy;
       mpDown = mediaPipeMgr.isPinching ? 1.0 : 0.0;
+    }
+    // Movement engine blend
+    if (layer._movementResult && typeof blendMovement === 'function') {
+      const mm = layer._movement ? layer._movement.manualMix : 1.0;
+      const blended = blendMovement(layer._movementResult, [mpMx, mpMy], [mpDx, mpDy], mpDown, mm);
+      mpMx = blended.pos[0]; mpMy = blended.pos[1];
+      mpDx = blended.delta[0]; mpDy = blended.delta[1];
+      mpDown = blended.down;
     }
     const mousePLoc = this._getLayerLoc(layer, 'mousePos');
     if (mousePLoc) gl.uniform2f(mousePLoc, mpMx, mpMy);

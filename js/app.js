@@ -87,17 +87,21 @@
   const layers = [
     { id: 'shader', type: 'shader', visible: false, opacity: 1.0, blendMode: 'normal',
       program: null, uniformLocs: {}, fbo: isfRenderer.createFBO(_rw(), _rh()), textures: {},
-      inputs: [], inputValues: {}, transparentBg: false, manifestEntry: null, passes: null },
+      inputs: [], inputValues: {}, transparentBg: false, manifestEntry: null, passes: null,
+      _movement: createMovementState(), _movementResult: null },
     { id: 'scene', type: 'scene', visible: false, opacity: 1.0, blendMode: 'normal',
       program: null, uniformLocs: {}, fbo: null, textures: {},
       inputs: [], inputValues: {}, transparentBg: false, manifestEntry: null,
-      sceneFlipH: false, sceneFlipV: true },
+      sceneFlipH: false, sceneFlipV: true,
+      _movement: createMovementState(), _movementResult: null },
     { id: 'text', type: 'shader', visible: true, opacity: 1.0, blendMode: 'normal',
       program: null, uniformLocs: {}, fbo: isfRenderer.createFBO(_rw(), _rh()), textures: {},
-      inputs: [], inputValues: {}, transparentBg: true, manifestEntry: null, passes: null },
+      inputs: [], inputValues: {}, transparentBg: true, manifestEntry: null, passes: null,
+      _movement: createMovementState(), _movementResult: null },
     { id: 'overlay', type: 'overlay', visible: false, opacity: 1.0, blendMode: 'normal',
       program: null, uniformLocs: {}, fbo: null, textures: {},
-      inputs: [], inputValues: {}, transparentBg: true, manifestEntry: null },
+      inputs: [], inputValues: {}, transparentBg: true, manifestEntry: null,
+      _movement: createMovementState(), _movementResult: null },
   ];
 
   // Scene layer gets a plain texture (uploaded from Three.js canvas each frame)
@@ -2904,22 +2908,73 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     return (found ? found.name : b.group) + ' ' + (b.axis || 'x').toUpperCase();
   }
 
+  // Smart defaults for audio bindings based on signal type and parameter name
+  function audioSmartDefaults(sigKey, pName, pMinV, pMaxV) {
+    const range = pMaxV - pMinV;
+    const pn = pName.toLowerCase();
+    const isHit = sigKey.includes('Hit');
+    const isEnv = sigKey.startsWith('_env');
+    const isTime = sigKey.includes('Time');
+
+    let min = pMinV, max, smooth, ease;
+
+    if (isHit) {
+      max = pMinV + range * 0.5;
+      smooth = 0.2;
+      ease = 'easeOut';
+    } else if (isTime) {
+      max = pMaxV;
+      smooth = 0;
+      ease = 'linear';
+    } else if (isEnv) {
+      max = pMinV + range * 0.4;
+      smooth = 0.5;
+      ease = 'easeInOut';
+    } else {
+      max = pMinV + range * 0.35;
+      smooth = 0.6;
+      ease = 'easeOut';
+    }
+
+    // Refine by parameter name heuristics
+    if (pn.includes('speed') || pn.includes('rate') || pn.includes('freq')) {
+      min = pMinV + range * 0.1;
+      max = pMinV + range * 0.6;
+    } else if (pn.includes('size') || pn.includes('scale') || pn.includes('zoom')) {
+      min = pMinV + range * 0.15;
+      max = pMinV + range * 0.5;
+    } else if (pn.includes('color') || pn.includes('hue')) {
+      max = pMaxV;
+    } else if (pn.includes('glow') || pn.includes('bright') || pn.includes('intensity')) {
+      min = 0;
+      max = pMinV + range * 0.6;
+    }
+
+    return { min, max, smooth, ease };
+  }
+
   function buildSignalOptions(binding) {
     let html = '';
     // If landmark binding, add current as special option at top
     if (!binding.source) {
       html += `<option value="landmark" selected>${getBindingSourceLabel(binding)}</option><option disabled>\u2500\u2500\u2500\u2500\u2500\u2500\u2500</option>`;
     }
-    // Audio (deduplicated by key)
-    html += '<optgroup label="Audio">';
-    const seenAudio = new Set();
-    for (const sig of AUDIO_SIGNALS) {
-      if (seenAudio.has(sig.key)) continue;
-      seenAudio.add(sig.key);
-      const sel = binding.source === 'audio' && binding.signalKey === sig.key ? ' selected' : '';
-      html += `<option value="audio:${sig.key}"${sel}>${sig.name}</option>`;
+    // Audio (grouped by type)
+    const audioSubGroups = [
+      { label: 'Audio Levels', keys: ['audioLevel', 'audioBass', 'audioMid', 'audioHigh'] },
+      { label: 'Audio Hits', keys: ['audioBassHit', 'audioMidHit', 'audioHighHit'] },
+      { label: 'Audio Envelopes', keys: ['_envBass', '_envMid', '_envHigh', '_envLevel'] },
+      { label: 'Audio Time', keys: ['audioBassTime', 'audioMidTime', 'audioHighTime'] },
+    ];
+    for (const grp of audioSubGroups) {
+      html += `<optgroup label="${grp.label}">`;
+      for (const sig of AUDIO_SIGNALS) {
+        if (!grp.keys.includes(sig.key)) continue;
+        const sel = binding.source === 'audio' && binding.signalKey === sig.key ? ' selected' : '';
+        html += `<option value="audio:${sig.key}"${sel}>${sig.name}</option>`;
+      }
+      html += '</optgroup>';
     }
-    html += '</optgroup>';
     // Mouse
     html += '<optgroup label="Mouse">';
     for (const sig of MOUSE_SIGNALS) {
@@ -3004,7 +3059,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     const opts = document.createElement('div');
     opts.className = 'signal-row-options';
     opts.innerHTML = `
-      <canvas class="sopt-curve" width="200" height="80"></canvas>
+      <canvas class="sopt-curve" width="400" height="200"></canvas>
       <div class="signal-opt-row"><label>Source</label><select class="sopt-signal">${buildSignalOptions(binding)}</select></div>
       <div class="signal-opt-row sopt-range-row"><label>Min</label><input type="range" class="sopt-min-slider" min="${binding._pMin || 0}" max="${binding._pMax || 1}" step="0.0001" value="${binding.min}"><span class="sopt-val sopt-min-val">${parseFloat(binding.min).toFixed(4)}</span></div>
       <div class="signal-opt-row sopt-range-row"><label>Max</label><input type="range" class="sopt-max-slider" min="${binding._pMin || 0}" max="${binding._pMax || 1}" step="0.0001" value="${binding.max}"><span class="sopt-val sopt-max-val">${parseFloat(binding.max).toFixed(4)}</span></div>
@@ -3047,7 +3102,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
       ctx.clearRect(0, 0, w, h);
 
       // Grid
-      ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
       ctx.lineWidth = 1;
       for (let i = 1; i < 4; i++) {
         ctx.beginPath(); ctx.moveTo(pad + gw * i / 4, pad); ctx.lineTo(pad + gw * i / 4, pad + gh); ctx.stroke();
@@ -3108,14 +3163,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         ctx.beginPath(); ctx.moveTo(p0x, p0y); ctx.lineTo(p1x, p1y); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(p3x, p3y); ctx.lineTo(p2x, p2y); ctx.stroke();
 
-        // Control handles
+        // Control handles (larger for easier grabbing)
         [{ x: p1x, y: p1y }, { x: p2x, y: p2y }].forEach(pt => {
           ctx.beginPath();
-          ctx.arc(pt.x, pt.y, 5, 0, Math.PI * 2);
+          ctx.arc(pt.x, pt.y, 8, 0, Math.PI * 2);
           ctx.fillStyle = '#E84057';
           ctx.fill();
           ctx.beginPath();
-          ctx.arc(pt.x, pt.y, 3, 0, Math.PI * 2);
+          ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
           ctx.fillStyle = '#fff';
           ctx.fill();
         });
@@ -3142,14 +3197,21 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
       const p2x = pad + bz.x2 * gw, p2y = pad + gh - bz.y2 * gh;
       const d1 = Math.hypot(p.x - p1x, p.y - p1y);
       const d2 = Math.hypot(p.x - p2x, p.y - p2y);
-      if (d1 < 15) _dragPt = 1;
-      else if (d2 < 15) _dragPt = 2;
+      // Larger hit radius scaled for high-DPI canvas
+      const hitR = 25;
+      if (d1 < hitR) _dragPt = 1;
+      else if (d2 < hitR) _dragPt = 2;
       else _dragPt = null;
-      if (_dragPt) e.preventDefault();
+      if (_dragPt) {
+        e.preventDefault();
+        e.stopPropagation();
+        curveCanvas.setPointerCapture(e.pointerId);
+      }
     }
     function moveDrag(e) {
       if (!_dragPt) return;
       e.preventDefault();
+      e.stopPropagation();
       const p = canvasPos(e);
       const pad = 6, gw = curveCanvas.width - 12, gh = curveCanvas.height - 12;
       const nx = Math.max(0, Math.min(1, (p.x - pad) / gw));
@@ -3158,11 +3220,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
       else { bz.x2 = nx; bz.y2 = ny; }
       drawCurve();
     }
-    function endDrag() { _dragPt = null; }
+    function endDrag(e) {
+      if (_dragPt && e.pointerId != null) curveCanvas.releasePointerCapture(e.pointerId);
+      _dragPt = null;
+    }
     curveCanvas.addEventListener('pointerdown', startDrag);
     curveCanvas.addEventListener('pointermove', moveDrag);
     curveCanvas.addEventListener('pointerup', endDrag);
-    curveCanvas.addEventListener('pointerleave', endDrag);
+    curveCanvas.addEventListener('pointercancel', endDrag);
 
     row.after(sr);
     sr.after(opts);
@@ -3208,16 +3273,20 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
       const idx = layer.mpBindings.findIndex(b => b.param === paramName);
       const old = idx >= 0 ? layer.mpBindings[idx] : binding;
       const parts = val.split(':');
-      // When switching to audio source, apply audio-friendly defaults
+      // When switching to audio source, apply smart defaults
       const isAudioSwitch = parts[0] === 'audio' && old.source !== 'audio';
+      let newMin = old.min, newMax = old.max, newSmooth = old.smoothing || 0, newEase = old.easing || 'easeInOut';
+      if (isAudioSwitch && typeof audioSmartDefaults === 'function') {
+        const smart = audioSmartDefaults(parts[1], paramName, old._pMin || 0, old._pMax || 1);
+        newMin = smart.min; newMax = smart.max; newSmooth = smart.smooth; newEase = smart.ease;
+      }
       const newBinding = {
         source: parts[0],
         signalKey: parts[1],
         param: paramName,
-        min: isAudioSwitch ? 0 : old.min,
-        max: isAudioSwitch ? 0.05 : old.max,
-        smoothing: isAudioSwitch ? 0.7 : (old.smoothing || 0),
-        easing: isAudioSwitch ? 'easeOut' : (old.easing || 'easeInOut'),
+        min: newMin, max: newMax,
+        smoothing: newSmooth,
+        easing: newEase,
         _pMin: old._pMin, _pMax: old._pMax
       };
       if (idx >= 0) layer.mpBindings[idx] = newBinding;
@@ -3610,7 +3679,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
           }
         }
       } else if (activeGroup === 'audio') {
-        for (const sig of AUDIO_SIGNALS) {
+        function makeAudioItem(sig) {
           const item = document.createElement('div');
           item.className = 'mp-picker-list-item';
           item.textContent = sig.name;
@@ -3620,16 +3689,59 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
           item.onclick = () => {
             const idx = layer.mpBindings.findIndex(b => b.param === paramName);
             const old = idx >= 0 ? layer.mpBindings.splice(idx, 1)[0] : null;
-            // Audio defaults: gentle range + high smoothing for natural feel
-            const audioDefMin = old ? old.min : 0;
-            const audioDefMax = old ? old.max : 0.05;
-            const audioDefSmooth = old ? (old.smoothing||0) : 0.7;
-            existing = { source: 'audio', signalKey: sig.key, param: paramName, min: audioDefMin, max: audioDefMax, smoothing: audioDefSmooth, easing: old ? (old.easing||'easeOut') : 'easeOut', _pMin: pMin, _pMax: pMax };
+            const smart = audioSmartDefaults(sig.key, paramName, pMin, pMax);
+            existing = {
+              source: 'audio', signalKey: sig.key, param: paramName,
+              min: old ? old.min : smart.min,
+              max: old ? old.max : smart.max,
+              smoothing: old ? (old.smoothing||0) : smart.smooth,
+              easing: old ? (old.easing||smart.ease) : smart.ease,
+              _pMin: pMin, _pMax: pMax
+            };
             layer.mpBindings.push(existing);
             if (window.ensureMicOn) window.ensureMicOn();
             onSignalSelected();
           };
-          listEl.appendChild(item);
+          return item;
+        }
+
+        // Grouped audio signals with progressive disclosure
+        const audioGroups = [
+          { label: 'Levels', keys: ['audioLevel', 'audioBass', 'audioMid', 'audioHigh'] },
+          { label: 'Hits', keys: ['audioBassHit', 'audioMidHit', 'audioHighHit'] },
+          { label: 'Envelopes', keys: ['_envBass', '_envMid', '_envHigh', '_envLevel'] },
+          { label: 'Audio Time', keys: ['audioBassTime', 'audioMidTime', 'audioHighTime'] },
+        ];
+
+        // Show Levels expanded by default, others collapsed
+        for (const grp of audioGroups) {
+          const sigs = AUDIO_SIGNALS.filter(s => grp.keys.includes(s.key));
+          if (!sigs.length) continue;
+
+          const isLevels = grp.label === 'Levels';
+
+          // Group header
+          const header = document.createElement('div');
+          header.className = 'mp-picker-group-header' + (isLevels ? ' expanded' : '');
+          header.innerHTML = '<span class="mp-group-chevron">' + (isLevels ? '\u25BC' : '\u25B6') + '</span> ' + grp.label;
+          listEl.appendChild(header);
+
+          // Group items container
+          const container = document.createElement('div');
+          container.className = 'mp-picker-group-items';
+          container.style.display = isLevels ? 'block' : 'none';
+          for (const sig of sigs) {
+            container.appendChild(makeAudioItem(sig));
+          }
+          listEl.appendChild(container);
+
+          // Toggle expand/collapse
+          header.onclick = () => {
+            const isOpen = container.style.display !== 'none';
+            container.style.display = isOpen ? 'none' : 'block';
+            header.querySelector('.mp-group-chevron').textContent = isOpen ? '\u25B6' : '\u25BC';
+            header.classList.toggle('expanded', !isOpen);
+          };
         }
       } else if (activeGroup === 'mouse') {
         for (const sig of MOUSE_SIGNALS) {
@@ -4048,6 +4160,77 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
       await toggleMic();
     }
   };
+
+  // --- Movement Engine UI ---
+  (function wireMovementPanel() {
+    const patternSel = document.getElementById('move-pattern');
+    const speedSlider = document.getElementById('move-speed');
+    const intensitySlider = document.getElementById('move-intensity');
+    const audioMixSlider = document.getElementById('move-audio-mix');
+    const audioBandSel = document.getElementById('move-audio-band');
+    const audioBandRow = document.getElementById('move-audio-band-row');
+    const manualMixSlider = document.getElementById('move-manual-mix');
+    if (!patternSel) return;
+
+    // Get the focused layer's movement state
+    function getMovState() {
+      const layer = getFocusedLayer();
+      if (!layer._movement) layer._movement = createMovementState();
+      return layer._movement;
+    }
+
+    // Sync UI to current layer's movement state
+    function syncUI() {
+      const ms = getMovState();
+      patternSel.value = ms.pattern;
+      speedSlider.value = ms.speed;
+      document.getElementById('move-speed-val').textContent = ms.speed.toFixed(2);
+      intensitySlider.value = ms.intensity;
+      document.getElementById('move-intensity-val').textContent = ms.intensity.toFixed(2);
+      audioMixSlider.value = ms.audioMix;
+      document.getElementById('move-audio-val').textContent = Math.round(ms.audioMix * 100) + '%';
+      audioBandSel.value = ms.audioBand;
+      audioBandRow.style.display = ms.audioMix > 0 ? '' : 'none';
+      manualMixSlider.value = ms.manualMix;
+      document.getElementById('move-manual-val').textContent = Math.round(ms.manualMix * 100) + '%';
+    }
+
+    patternSel.addEventListener('change', () => {
+      const ms = getMovState();
+      ms.pattern = patternSel.value;
+      ms.enabled = ms.pattern !== 'none';
+    });
+    speedSlider.addEventListener('input', () => {
+      const ms = getMovState();
+      ms.speed = parseFloat(speedSlider.value);
+      document.getElementById('move-speed-val').textContent = ms.speed.toFixed(2);
+    });
+    intensitySlider.addEventListener('input', () => {
+      const ms = getMovState();
+      ms.intensity = parseFloat(intensitySlider.value);
+      document.getElementById('move-intensity-val').textContent = ms.intensity.toFixed(2);
+    });
+    audioMixSlider.addEventListener('input', () => {
+      const ms = getMovState();
+      ms.audioMix = parseFloat(audioMixSlider.value);
+      document.getElementById('move-audio-val').textContent = Math.round(ms.audioMix * 100) + '%';
+      audioBandRow.style.display = ms.audioMix > 0 ? '' : 'none';
+      // Auto-enable mic when audio mix is turned up
+      if (ms.audioMix > 0 && window.ensureMicOn) window.ensureMicOn();
+    });
+    audioBandSel.addEventListener('change', () => {
+      getMovState().audioBand = audioBandSel.value;
+    });
+    manualMixSlider.addEventListener('input', () => {
+      const ms = getMovState();
+      ms.manualMix = parseFloat(manualMixSlider.value);
+      document.getElementById('move-manual-val').textContent = Math.round(ms.manualMix * 100) + '%';
+    });
+
+    // Sync UI when layer focus changes
+    window._syncMovementUI = syncUI;
+    syncUI();
+  })();
 
   // Live Signals: each button toggles its own panel independently (all can be open)
   document.getElementById('canvas-mic-btn').addEventListener('click', () => {
@@ -6710,6 +6893,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
       requestAnimationFrame(compositionLoop);
       return;
     }
+    const _frameDt = _lastCompTime ? (timestamp - _lastCompTime) / 1000 : 0.016;
     _lastCompTime = timestamp;
     // Bump video frame stamp so each video texture is uploaded at most once per frame
     isfRenderer._videoFrameStamp++;
@@ -6719,6 +6903,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     const mdy = isfRenderer.mousePos[1] - isfRenderer._lastMousePos[1];
     isfRenderer.mouseDelta[0] = mdx;
     isfRenderer.mouseDelta[1] = mdy;
+
+    // Update movement engine for all layers
+    const _moveAudio = { level: audioLevel, bass: audioBass, mid: audioMid, high: audioHigh };
+    for (const layer of layers) {
+      if (layer._movement && layer._movement.enabled) {
+        layer._movementResult = updateMovement(layer._movement, Math.min(_frameDt, 0.05), _moveAudio);
+      } else {
+        layer._movementResult = null;
+      }
+    }
     if (_compFrameCount < 3) dbg('compLoop frame ' + _compFrameCount + ' comp=' + !!isfRenderer.compositorProgram);
     _compFrameCount++;
 
@@ -7186,6 +7380,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
           });
         }
       });
+      // Reset frame index so persistent-buffer shaders re-seed
+      isfRenderer.frameIndex = 0;
+
       // Recreate background shader FBO
       if (canvasBg.shaderFBO) {
         isfRenderer.destroyFBO(canvasBg.shaderFBO);
@@ -7331,6 +7528,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         document.querySelectorAll('.layer-card').forEach(c => c.classList.remove('focused'));
         card.classList.add('focused');
         focusedLayerId = layerId;
+        if (window._syncMovementUI) window._syncMovementUI();
       }
       dragPending = null;
     });

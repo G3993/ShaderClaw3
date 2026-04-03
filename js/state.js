@@ -62,11 +62,24 @@ const DERIVED_SIGNALS = {
 };
 
 const AUDIO_SIGNALS = [
-  { name: 'Mic Level',   key: 'audioLevel' },
-  { name: 'Level (RMS)', key: 'audioLevel' },
-  { name: 'Bass',        key: 'audioBass' },
-  { name: 'Mid',         key: 'audioMid' },
-  { name: 'High',        key: 'audioHigh' },
+  // --- Levels (smoothed amplitude per band) ---
+  { name: 'Level (RMS)',   key: 'audioLevel' },
+  { name: 'Bass',          key: 'audioBass' },
+  { name: 'Mid',           key: 'audioMid' },
+  { name: 'High',          key: 'audioHigh' },
+  // --- Hits (transient/onset spikes, fast decay) ---
+  { name: 'Bass Hit',      key: 'audioBassHit' },
+  { name: 'Mid Hit',       key: 'audioMidHit' },
+  { name: 'High Hit',      key: 'audioHighHit' },
+  // --- Envelope followers (asymmetric attack/release) ---
+  { name: 'Bass Env',      key: '_envBass' },
+  { name: 'Mid Env',       key: '_envMid' },
+  { name: 'High Env',      key: '_envHigh' },
+  { name: 'Level Env',     key: '_envLevel' },
+  // --- Audio-driven time (accumulates faster with louder signal) ---
+  { name: 'Bass Time',     key: 'audioBassTime' },
+  { name: 'Mid Time',      key: 'audioMidTime' },
+  { name: 'High Time',     key: 'audioHighTime' },
 ];
 
 const MOUSE_SIGNALS = [
@@ -226,7 +239,15 @@ function resolveBindings(layer, mediaPipeMgr, renderer) {
   for (const b of layer.mpBindings) {
     // Audio signal binding
     if (b.source === 'audio') {
-      const sigs = { audioLevel, audioBass, audioMid, audioHigh };
+      const sigs = {
+        audioLevel, audioBass, audioMid, audioHigh,
+        audioBassHit, audioMidHit, audioHighHit,
+        _envBass, _envMid, _envHigh, _envLevel,
+        // Time accumulators: use fractional part so they cycle 0-1
+        audioBassTime: audioBassTime % 1,
+        audioMidTime: audioMidTime % 1,
+        audioHighTime: audioHighTime % 1,
+      };
       const v = sigs[b.signalKey];
       if (v != null) applyBindingValue(layer, b, v);
       continue;

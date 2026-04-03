@@ -299,6 +299,7 @@ function buildFragmentShader(source) {
     'precision mediump float;',
     'precision mediump int;',
     'uniform float TIME;',
+    'uniform float TIMEDELTA;',
     'uniform vec2 RENDERSIZE;',
     cond('uniform int PASSINDEX;', 'PASSINDEX'),
     cond('uniform int FRAMEINDEX;', 'FRAMEINDEX'),

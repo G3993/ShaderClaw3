@@ -16,6 +16,7 @@
     { "NAME": "texWarp", "LABEL": "Tex Warp", "TYPE": "float", "DEFAULT": 0.51, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "texFeed", "LABEL": "Tex Feed", "TYPE": "float", "DEFAULT": 0.37, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "colorMix", "LABEL": "Color Mix", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Overlay","Multiply","Screen","Replace"], "DEFAULT": 0 },
+    { "NAME": "texScale", "LABEL": "Tex Scale", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 5.0 },
     { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ],
@@ -47,6 +48,23 @@ float _ang = PI2 / float(RotNum);
 vec2 rot2(vec2 v, float a) {
     float c = cos(a), s = sin(a);
     return vec2(c * v.x - s * v.y, s * v.x + c * v.y);
+}
+
+// Aspect-correct texture UV -- "contain" mode (native aspect, no squeeze)
+vec2 texUV(vec2 coord, float canvasAspect) {
+    vec2 st = coord - 0.5;
+    float texAspect = IMG_SIZE_inputTex.x / max(IMG_SIZE_inputTex.y, 1.0);
+    float ratio = canvasAspect / max(texAspect, 0.001);
+    if (ratio > 1.0) st.x *= ratio;
+    else             st.y /= ratio;
+    st /= texScale;
+    st += 0.5;
+    if (_flip_inputTex) st.y = 1.0 - st.y;
+    return fract(st);
+}
+
+vec4 sampleTex(vec2 coord, float canvasAspect) {
+    return texture2D(inputTex, texUV(coord, canvasAspect));
 }
 
 // ---- Multi-scale rotational curl measurement ----
@@ -148,18 +166,20 @@ void main() {
         if (FRAMEINDEX < 4) {
             col = vec4(0.0);
             // Seed with texture if available
-            vec4 initTex = texture2D(inputTex, uv);
+            float aspect = Res.x / Res.y;
+            vec4 initTex = sampleTex(uv, aspect);
             if (initTex.a > 0.01) {
                 col = (initTex - 0.5) * 0.7;
             }
         }
 
         // Continuous texture feeding — keeps video colors alive in the fluid
-        vec4 tex = texture2D(inputTex, uv);
+        float aspect = Res.x / Res.y;
+        vec4 tex = sampleTex(uv, aspect);
         if (tex.a > 0.01 && texFeed > 0.001) {
             // Warp the texture UV by the fluid velocity for organic morphing
             vec2 warpedUV = fract(uv + v * vec2(-1.0, 1.0) * texWarp * 0.01);
-            vec4 warpedTex = texture2D(inputTex, warpedUV);
+            vec4 warpedTex = sampleTex(warpedUV, aspect);
             // Feed warped texture color back into the simulation
             col.rgb = mix(col.rgb, warpedTex.rgb, texFeed * 0.1);
         }
@@ -236,9 +256,10 @@ void main() {
     finalCol *= metalColor.rgb;
 
     // Texture input — warp UV by fluid velocity for organic morphing
+    float aspect = Res.x / Res.y;
     vec2 simVel = simCol.xy;
     vec2 warpedUV = fract(uv + simVel * vec2(-1.0, 1.0) * texWarp * 0.05);
-    vec4 texSample = texture2D(inputTex, warpedUV);
+    vec4 texSample = sampleTex(warpedUV, aspect);
     if (texSample.a > 0.01 && texBlend > 0.001) {
         vec3 texCol = texSample.rgb;
         vec3 blended;

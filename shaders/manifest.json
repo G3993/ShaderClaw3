@@ -257,7 +257,7 @@
   {
     "id": 48,
     "title": "Stained Glass",
-    "description": "Morphing stained glass — Voronoi cells with drifting centers, dark lead borders, and luminous colors",
+    "description": "Stained glass — adaptive Voronoi subdivision with glass refraction, 3D lead cames, and backlit luminance",
     "type": "generator",
     "categories": [
       "Generator"
@@ -577,5 +577,54 @@
       "Simulation"
     ],
     "file": "fluid_image.fs"
+  },
+  {
+    "id": 444,
+    "title": "Oil Paint",
+    "description": "Oil paint brush effect — multi-layer brush strokes with relief lighting and vignette",
+    "categories": [
+      "Effect"
+    ],
+    "file": "oil_paint.fs"
+  },
+  {
+    "id": 445,
+    "title": "ASCII Filter",
+    "description": "ASCII art filter — converts any image/video to colored ASCII characters with ANSI palette matching",
+    "categories": [
+      "Effect",
+      "Text"
+    ],
+    "file": "ascii_filter.fs"
+  },
+  {
+    "id": 446,
+    "title": "Polka Dotz",
+    "description": "Polka dot pixel tiles — flipping mosaic that reveals image through animated circular pixels with specular highlights",
+    "categories": [
+      "Effect"
+    ],
+    "file": "polka_dotz.fs"
+  },
+  {
+    "id": 447,
+    "title": "Pretext",
+    "description": "Variable typographic ASCII — particle-driven brightness field rendered with variable font weight characters via @chenglou/pretext",
+    "type": "scene",
+    "categories": [
+      "Text"
+    ],
+    "file": "pretext_ascii.scene.js",
+    "folder": "scenes"
+  },
+  {
+    "id": 448,
+    "title": "Flow",
+    "description": "Gravity streams — particle gravity simulation with glowing trails, deferred lighting, and texture-mapped streams",
+    "categories": [
+      "Generator",
+      "Simulation"
+    ],
+    "file": "flow.fs"
   }
 ]

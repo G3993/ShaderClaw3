@@ -2,6 +2,7 @@
   "DESCRIPTION": "Computational Fluid Dynamics — multi-buffer rotational self-advection with mouse/touch painting",
   "CATEGORIES": ["Generator", "Simulation"],
   "INPUTS": [
+    { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" },
     { "NAME": "fluidSpeed", "LABEL": "Fluid Speed", "TYPE": "float", "DEFAULT": 1.5, "MIN": 0.1, "MAX": 8.0 },
     { "NAME": "viscosity", "LABEL": "Viscosity", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "brushSize", "LABEL": "Brush Size", "TYPE": "float", "DEFAULT": 0.06, "MIN": 0.01, "MAX": 0.2 },
@@ -19,7 +20,7 @@
     { "NAME": "moveIntensity", "LABEL": "Move Intensity", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "sourceBlend", "LABEL": "Source Blend", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "blendMode", "LABEL": "Blend Mode", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Warp", "Dissolve", "Luma Map", "Edge Reveal", "Chromatic"] },
-    { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" },
+    { "NAME": "texScale", "LABEL": "Tex Scale", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 5.0 },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ],
   "PASSES": [
@@ -48,6 +49,24 @@ vec3 hsv2rgb(vec3 c) {
     vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
     vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
     return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+// Aspect-correct texture UV -- "contain" mode (native aspect, no squeeze)
+vec2 texUV(vec2 coord, float canvasAspect) {
+    vec2 st = coord - 0.5;
+    float texAspect = IMG_SIZE_inputTex.x / max(IMG_SIZE_inputTex.y, 1.0);
+    float ratio = canvasAspect / max(texAspect, 0.001);
+    // Contain: texture fits inside canvas at native aspect
+    if (ratio > 1.0) st.x *= ratio;   // canvas wider than tex -- expand X
+    else             st.y /= ratio;   // canvas taller than tex -- expand Y
+    // Scale: 1.0 = fit, >1 = zoom in, <1 = zoom out (tiles)
+    st /= texScale;
+    st += 0.5;
+    return fract(st);
+}
+
+vec4 sampleTex(vec2 coord, float canvasAspect) {
+    return texture2D(inputTex, texUV(coord, canvasAspect));
 }
 
 void main() {
@@ -250,21 +269,6 @@ void main() {
 
         vel.xy = clamp(vel.xy, 0.0, 1.0);
 
-        // Audio injection
-        if (audioBass > 0.3) {
-            float at = float(FRAMEINDEX) * 0.1;
-            vec2 splatPos = vec2(hash21(vec2(at, 1.0)), hash21(vec2(at, 2.0)));
-            vec2 mDiff = uv - splatPos;
-            mDiff.x *= aspect;
-            float dist2 = dot(mDiff, mDiff);
-            float sr = brushSize * (1.0 + audioBass * 3.0);
-            if (dist2 < sr * sr * 12.0) {
-                float splatAngle = hash21(vec2(at, 3.0)) * 6.283;
-                vel.xy += vec2(cos(splatAngle), sin(splatAngle)) * audioBass * 0.3 * exp(-dist2 / (sr * sr));
-                vel.xy = clamp(vel.xy, 0.0, 1.0);
-            }
-        }
-
         // Seed
         if (FRAMEINDEX < 3) {
             vel = vec4(0.5, 0.5, 0.0, 1.0);
@@ -287,7 +291,7 @@ void main() {
 
         // Color cycle
         if (colorCycle > 0.001) {
-            float cyc = colorCycle * 0.003 * (1.0 + audioBass * 1.5);
+            float cyc = colorCycle * 0.003;
             float hue = fract(TIME * colorCycle * 0.08 + uv.x * 0.15 + uv.y * 0.1);
             dye.rgb = mix(dye.rgb, dye.rgb * hsv2rgb(vec3(hue, 0.6, 1.0)), cyc);
         }
@@ -304,7 +308,7 @@ void main() {
         // Source re-injection
         if (hasInput && sourceBlend > 0.001) {
             float reinjection = sourceBlend * 0.08 * (1.0 - smoothstep(0.0, 0.8, length(vel)));
-            dye.rgb = mix(dye.rgb, texture2D(inputTex, uv).rgb, reinjection);
+            dye.rgb = mix(dye.rgb, sampleTex(uv, aspect).rgb, reinjection);
         }
 
         // Mouse/touch painting
@@ -317,7 +321,7 @@ void main() {
             if (dist2 < r2 * 12.0) {
                 float falloff = exp(-dist2 / r2) * dyeInteracting;
                 if (hasInput) {
-                    dye.rgb = mix(dye.rgb, texture2D(inputTex, mousePos).rgb, falloff * 0.8);
+                    dye.rgb = mix(dye.rgb, sampleTex(mousePos, aspect).rgb, falloff * 0.8);
                 } else {
                     dye.rgb = mix(dye.rgb, hsv2rgb(vec3(fract(TIME * 0.1 + hash21(mousePos * 100.0)), 0.8, 1.0)), falloff * 0.8);
                 }
@@ -368,33 +372,16 @@ void main() {
             if (dist2 < cutoff2) {
                 float falloff = exp(-dist2 / (splatR * splatR)) * 0.15 * moveIntensity;
                 vec3 splatCol = hasInput
-                    ? texture2D(inputTex, splatPos).rgb
+                    ? sampleTex(splatPos, aspect).rgb
                     : hsv2rgb(vec3(fract(t * 0.08 + fs * 0.2), 0.85, 1.0));
                 dye.rgb = mix(dye.rgb, splatCol, falloff);
-            }
-        }
-
-        // Audio color injection
-        if (audioBass > 0.3) {
-            float at = float(FRAMEINDEX) * 0.1;
-            vec2 splatPos = vec2(hash21(vec2(at, 1.0)), hash21(vec2(at, 2.0)));
-            vec2 mDiff = uv - splatPos;
-            mDiff.x *= aspect;
-            float dist2 = dot(mDiff, mDiff);
-            float sr = brushSize * (2.0 + audioBass * 5.0);
-            if (dist2 < sr * sr * 12.0) {
-                float falloff = exp(-dist2 / (sr * sr));
-                vec3 splatCol = hasInput
-                    ? texture2D(inputTex, splatPos).rgb
-                    : hsv2rgb(vec3(fract(TIME * 0.15 + hash21(vec2(at, 4.0))), 0.9, 1.0));
-                dye.rgb = mix(dye.rgb, splatCol, falloff * audioBass * 0.6);
             }
         }
 
         // Seed
         if (FRAMEINDEX < 3) {
             if (hasInput) {
-                dye = texture2D(inputTex, uv);
+                dye = sampleTex(uv, aspect);
             } else {
                 float a = atan(uv.y - 0.5, uv.x - 0.5);
                 dye = vec4(hsv2rgb(vec3(fract(a / 6.283 + length(uv - 0.5) * 2.0), 0.7, 0.9)), 1.0);
@@ -438,7 +425,7 @@ void main() {
         float warpAmt = (1.0 - sourceBlend * 0.7) * fluidSpeed * 0.12;
         vec2 warpedUV = fract(uv + vel * warpAmt);
 
-        vec3 src = texture2D(inputTex, warpedUV).rgb;
+        vec3 src = sampleTex(warpedUV, aspect).rgb;
         float fluidLum = dot(fluid, vec3(0.299, 0.587, 0.114));
 
         vec3 blended;
@@ -478,9 +465,9 @@ void main() {
             // CHROMATIC
             float chromaSpread = (1.0 - sourceBlend * 0.5) * fluidSpeed * 0.08;
             vec3 chromaSrc = vec3(
-                texture2D(inputTex, fract(uv + vel * (warpAmt + chromaSpread))).r,
+                sampleTex(fract(uv + vel * (warpAmt + chromaSpread)), aspect).r,
                 src.g,
-                texture2D(inputTex, fract(uv + vel * (warpAmt - chromaSpread))).b
+                sampleTex(fract(uv + vel * (warpAmt - chromaSpread)), aspect).b
             );
             vec3 litSrc = chromaSrc * mix(1.0, diff, 0.5) + vec3(spec * 0.25);
             blended = mix(fluid, litSrc, sourceBlend);

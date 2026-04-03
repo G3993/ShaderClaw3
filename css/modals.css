@@ -102,6 +102,15 @@
 }
 .mp-picker-list-item:hover { background: rgba(255,255,255,0.04); color: var(--sc-text); }
 .mp-picker-list-item.selected { color: var(--sc-accent); background: var(--sc-accent-dim); }
+.mp-picker-group-header {
+  padding: 6px 12px; cursor: pointer; color: rgba(255,255,255,0.5);
+  font-size: var(--sc-font-size-sm); text-transform: uppercase; letter-spacing: 0.5px;
+  user-select: none; margin: 4px 6px 0;
+}
+.mp-picker-group-header:hover { color: var(--sc-text); }
+.mp-picker-group-header.expanded { color: rgba(255,255,255,0.7); }
+.mp-group-chevron { font-size: 8px; display: inline-block; width: 12px; }
+.mp-picker-group-items { padding-left: 4px; }
 .mp-picker-axis {
   display: flex; gap: 3px; padding: 6px 10px; border-top: 1px solid var(--sc-border);
 }
