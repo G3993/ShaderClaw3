@@ -392,6 +392,89 @@
   }
 
   // --- Compile ISF shader into a specific layer ---
+  // Shader complexity precheck — estimate GPU cost before compilation
+  // Returns { ok, warning } where warning is a string if shader is risky
+  function checkShaderComplexity(source) {
+    // Strip comments to avoid false matches
+    const stripped = source.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+
+    // Extract all for-loop iteration bounds
+    // Matches: for (int i = 0; i < 8; i++) or for (int i = -6; i <= 6; i++)
+    const loopBounds = [];
+    const loopRegex = /\bfor\s*\(\s*\w+\s+\w+\s*=\s*(-?\d+)\s*;\s*\w+\s*[<>=!]+\s*(-?\d+)\s*;/g;
+    let m;
+    while ((m = loopRegex.exec(stripped)) !== null) {
+      const lo = parseInt(m[1]);
+      const hi = parseInt(m[2]);
+      loopBounds.push(Math.abs(hi - lo) + 1);
+    }
+
+    // Count texture reads in the source
+    const texReads = (stripped.match(/\btexture2D\s*\(/g) || []).length;
+
+    // Track nesting: use brace depth to find which loops are nested inside others
+    // Build a stack of loop scopes
+    const lines = stripped.split('\n');
+    let braceDepth = 0;
+    let loopStack = []; // depths where loops start
+    let maxNest = 0;
+    let loopIdx = 0;
+    const nestedGroups = []; // arrays of loop bounds that are nested together
+    let currentGroup = [];
+
+    for (const line of lines) {
+      if (/\bfor\s*\(/.test(line)) {
+        loopStack.push(braceDepth);
+        currentGroup.push(loopBounds[loopIdx] || 10);
+        loopIdx++;
+        maxNest = Math.max(maxNest, loopStack.length);
+      }
+      for (const ch of line) {
+        if (ch === '{') braceDepth++;
+        if (ch === '}') {
+          braceDepth--;
+          // Check if a loop scope ended
+          if (loopStack.length > 0 && braceDepth <= loopStack[loopStack.length - 1]) {
+            loopStack.pop();
+            if (loopStack.length === 0 && currentGroup.length > 0) {
+              nestedGroups.push([...currentGroup]);
+              currentGroup = [];
+            }
+          }
+        }
+      }
+    }
+    if (currentGroup.length > 0) nestedGroups.push(currentGroup);
+
+    // Worst-case ops: for each nested group, multiply the bounds together, then multiply by texture reads
+    let worstGroupOps = 0;
+    for (const group of nestedGroups) {
+      let ops = 1;
+      for (const bound of group) ops *= bound;
+      ops *= Math.max(texReads, 1);
+      worstGroupOps = Math.max(worstGroupOps, ops);
+    }
+
+    // Also check total iterations across all loops (for shaders with many separate loops)
+    const totalIter = loopBounds.reduce((a, b) => a + b, 0);
+
+    // Thresholds calibrated from real crashes:
+    // Old oil paint killer: 8 * 9 * ~4 texReads = 288 ops/pixel → GPU timeout at 1080p
+    // Triple nested: 8 * 9 * 20 * 1 = 1440 → guaranteed crash
+    // Safe Kuwahara: 13 * 13 * 1 = 169 → fine
+    // Safe Voronoi: 9 * 1 = 9 → fine
+    if (worstGroupOps > 800) {
+      return { ok: false, warning: 'BLOCKED: Shader estimated at ~' + worstGroupOps.toLocaleString() + ' ops/pixel (nested loops x texture reads). This will crash the GPU. Reduce loop counts or nesting.' };
+    }
+    if (worstGroupOps > 300) {
+      return { ok: true, warning: 'WARNING: Heavy shader (~' + worstGroupOps.toLocaleString() + ' ops/pixel). May cause stuttering on some GPUs.' };
+    }
+    if (maxNest >= 3) {
+      return { ok: false, warning: 'BLOCKED: Triple-nested loops detected (depth ' + maxNest + '). This will likely crash the GPU.' };
+    }
+    return { ok: true, warning: null };
+  }
+
   function compileToLayer(layerId, source, _precompiledProg) {
     const layer = getLayer(layerId);
     if (!layer || layer.type !== 'shader') return { ok: false, errors: 'Not a shader layer' };
@@ -415,6 +498,15 @@
 
     // Store source for context-loss recovery
     layer._isfSource = source;
+
+    // Complexity precheck — block shaders that would crash the GPU
+    const complexity = checkShaderComplexity(source);
+    if (!complexity.ok) {
+      return { ok: false, errors: complexity.warning };
+    }
+    if (complexity.warning) {
+      console.warn('[ShaderClaw] ' + complexity.warning);
+    }
 
     const { frag, parsed, headerLineCount } = buildFragmentShader(source);
     isfRenderer._headerLines = headerLineCount;
@@ -630,6 +722,15 @@
           layer._pendingCompile.handle.dispose();
           layer._pendingCompile = null;
         }
+
+        // Complexity precheck before async compile
+        const asyncComplexity = checkShaderComplexity(src);
+        if (!asyncComplexity.ok) {
+          errorBar.textContent = asyncComplexity.warning;
+          errorBar.classList.add('show');
+          return { ok: false, errors: asyncComplexity.warning };
+        }
+        if (asyncComplexity.warning) console.warn('[ShaderClaw] ' + asyncComplexity.warning);
 
         // Parse ISF and build fragment shader (CPU-only, fast)
         const { frag, parsed, headerLineCount } = buildFragmentShader(src);
@@ -3028,6 +3129,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   }
 
   function ensureSignalRow(row, binding, layerId) {
+    // Skip rebuild if signal row already exists for this binding (prevents losing user input mid-drag)
+    const existingSr = row.nextElementSibling;
+    if (existingSr && existingSr.classList.contains('signal-row') && existingSr.dataset.bindParam === row.dataset.name) {
+      return;
+    }
     removeSignalRow(row);
     // Clean up any legacy elements
     let next = row.nextElementSibling;
@@ -3061,8 +3167,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     opts.innerHTML = `
       <canvas class="sopt-curve" width="400" height="200"></canvas>
       <div class="signal-opt-row"><label>Source</label><select class="sopt-signal">${buildSignalOptions(binding)}</select></div>
-      <div class="signal-opt-row sopt-range-row"><label>Min</label><input type="range" class="sopt-min-slider" min="${binding._pMin || 0}" max="${binding._pMax || 1}" step="0.0001" value="${binding.min}"><span class="sopt-val sopt-min-val">${parseFloat(binding.min).toFixed(4)}</span></div>
-      <div class="signal-opt-row sopt-range-row"><label>Max</label><input type="range" class="sopt-max-slider" min="${binding._pMin || 0}" max="${binding._pMax || 1}" step="0.0001" value="${binding.max}"><span class="sopt-val sopt-max-val">${parseFloat(binding.max).toFixed(4)}</span></div>
+      <div class="signal-opt-row sopt-range-row"><label>Min</label><input type="range" class="sopt-min-slider" min="0" max="1" step="0.0001" value="${((binding.min - (binding._pMin||0)) / ((binding._pMax||1) - (binding._pMin||0))).toFixed(4)}"><span class="sopt-val sopt-min-val">${parseFloat(binding.min).toFixed(4)}</span></div>
+      <div class="signal-opt-row sopt-range-row"><label>Max</label><input type="range" class="sopt-max-slider" min="0" max="1" step="0.0001" value="${((binding.max - (binding._pMin||0)) / ((binding._pMax||1) - (binding._pMin||0))).toFixed(4)}"><span class="sopt-val sopt-max-val">${parseFloat(binding.max).toFixed(4)}</span></div>
       <div class="signal-opt-row"><label>Smooth</label><input type="range" class="sopt-smooth" min="0" max="1" step="0.01" value="${binding.smoothing||0}"><span class="sopt-val sopt-smooth-val">${Math.round((binding.smoothing||0)*100)}%</span></div>
       <div class="signal-opt-row"><label>Easing</label><select class="sopt-easing">
         <option value="linear">Linear</option><option value="easeIn">Ease In</option><option value="easeOut">Ease Out</option><option value="easeInOut">Ease In Out</option><option value="spring">Spring</option><option value="custom">Custom</option>
@@ -3306,35 +3412,40 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     minSlider.addEventListener('input', function() {
       const layer = getLayer(layerId);
       if (!layer) return;
-      const v = parseFloat(this.value);
-      if (isNaN(v)) return;
+      const t = parseFloat(this.value); // normalized 0-1
+      if (isNaN(t)) return;
       const b = layer.mpBindings.find(b => b.param === row.dataset.name);
+      const pMin = b ? (b._pMin || 0) : 0;
+      const pMax = b ? (b._pMax || 1) : 1;
+      const v = pMin + t * (pMax - pMin);
       if (b) { b.min = v; updateRangeIndicator(row, b); }
       minVal.textContent = v.toFixed(4);
     });
     // Click value label to type precise number
     minVal.style.cursor = 'pointer';
     minVal.addEventListener('click', function() {
+      const b = getLayer(layerId)?.mpBindings?.find(b => b.param === row.dataset.name);
       const input = document.createElement('input');
       input.type = 'number';
       input.step = '0.0001';
-      input.value = minSlider.value;
-      input.style.cssText = 'width:50px;background:rgba(0,0,0,0.5);border:1px solid rgba(232,64,87,0.4);border-radius:4px;color:#fff;font-size:11px;padding:2px 4px;text-align:right;';
+      input.value = b ? b.min.toFixed(4) : '0';
+      input.style.cssText = 'width:60px;background:rgba(0,0,0,0.5);border:1px solid rgba(232,64,87,0.4);border-radius:4px;color:#fff;font-size:11px;padding:2px 4px;text-align:right;';
       this.replaceWith(input);
       input.focus();
       input.select();
       const finish = () => {
         const v = parseFloat(input.value);
+        const pMin = b ? (b._pMin || 0) : 0;
+        const pMax = b ? (b._pMax || 1) : 1;
         if (!isNaN(v)) {
-          minSlider.value = v;
-          minSlider.dispatchEvent(new Event('input'));
+          if (b) { b.min = v; updateRangeIndicator(row.closest('.control-row') || row, b); }
+          minSlider.value = ((v - pMin) / (pMax - pMin)).toFixed(4);
         }
         const span = document.createElement('span');
         span.className = 'sopt-val sopt-min-val';
         span.style.cursor = 'pointer';
-        span.textContent = parseFloat(minSlider.value).toFixed(4);
+        span.textContent = (b ? b.min : v).toFixed(4);
         input.replaceWith(span);
-        // Re-bind click
         span.addEventListener('click', arguments.callee);
       };
       input.addEventListener('blur', finish);
@@ -3347,32 +3458,38 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     maxSlider.addEventListener('input', function() {
       const layer = getLayer(layerId);
       if (!layer) return;
-      const v = parseFloat(this.value);
-      if (isNaN(v)) return;
+      const t = parseFloat(this.value); // normalized 0-1
+      if (isNaN(t)) return;
       const b = layer.mpBindings.find(b => b.param === row.dataset.name);
+      const pMin = b ? (b._pMin || 0) : 0;
+      const pMax = b ? (b._pMax || 1) : 1;
+      const v = pMin + t * (pMax - pMin);
       if (b) { b.max = v; updateRangeIndicator(row, b); }
       maxVal.textContent = v.toFixed(4);
     });
     maxVal.style.cursor = 'pointer';
     maxVal.addEventListener('click', function() {
+      const b = getLayer(layerId)?.mpBindings?.find(b => b.param === row.dataset.name);
       const input = document.createElement('input');
       input.type = 'number';
       input.step = '0.0001';
-      input.value = maxSlider.value;
-      input.style.cssText = 'width:50px;background:rgba(0,0,0,0.5);border:1px solid rgba(232,64,87,0.4);border-radius:4px;color:#fff;font-size:11px;padding:2px 4px;text-align:right;';
+      input.value = b ? b.max.toFixed(4) : '1';
+      input.style.cssText = 'width:60px;background:rgba(0,0,0,0.5);border:1px solid rgba(232,64,87,0.4);border-radius:4px;color:#fff;font-size:11px;padding:2px 4px;text-align:right;';
       this.replaceWith(input);
       input.focus();
       input.select();
       const finish = () => {
         const v = parseFloat(input.value);
+        const pMin = b ? (b._pMin || 0) : 0;
+        const pMax = b ? (b._pMax || 1) : 1;
         if (!isNaN(v)) {
-          maxSlider.value = v;
-          maxSlider.dispatchEvent(new Event('input'));
+          if (b) { b.max = v; updateRangeIndicator(row.closest('.control-row') || row, b); }
+          maxSlider.value = ((v - pMin) / (pMax - pMin)).toFixed(4);
         }
         const span = document.createElement('span');
         span.className = 'sopt-val sopt-max-val';
         span.style.cursor = 'pointer';
-        span.textContent = parseFloat(maxSlider.value).toFixed(4);
+        span.textContent = (b ? b.max : v).toFixed(4);
         input.replaceWith(span);
         span.addEventListener('click', arguments.callee);
       };
@@ -3396,7 +3513,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   function updateSignalRows() {
     const rows = document.querySelectorAll('.signal-row');
     if (!rows.length) return;
-    const audioSigs = { audioLevel, audioBass, audioMid, audioHigh };
+    const audioSigs = {
+      audioLevel, audioBass, audioMid, audioHigh,
+      audioBassHit, audioMidHit, audioHighHit,
+      _envBass, _envMid, _envHigh, _envLevel,
+      audioBassTime: audioBassTime % 1,
+      audioMidTime: audioMidTime % 1,
+      audioHighTime: audioHighTime % 1,
+    };
     const derived = (typeof gestureProcessor !== 'undefined' && gestureProcessor.derived) || {};
     for (const sr of rows) {
       const paramName = sr.dataset.bindParam;

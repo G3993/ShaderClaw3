@@ -626,5 +626,15 @@
       "Simulation"
     ],
     "file": "flow.fs"
+  },
+  {
+    "id": 449,
+    "title": "Sonoluminescence",
+    "description": "Sonoluminescence — glowing bubble in water with concentric ripples, glass vessel, and audio-reactive pulse",
+    "categories": [
+      "Generator",
+      "Nature"
+    ],
+    "file": "sonoluminescence.fs"
   }
 ]

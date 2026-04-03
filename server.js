@@ -601,6 +601,121 @@ const httpServer = createServer(async (req, res) => {
     return;
   }
 
+  // ---- Noun Project API proxy (OAuth 1.0a signed) ----
+  const NP_KEY = "08802b9ef0da437d8bc48c648c4f0832";
+  const NP_SECRET = "d7b60ef9f7984963bd187dc31df39591";
+
+  // Search icons — GET /api/nounproject/search?q=arrow&limit=20
+  if (urlPath === "/api/nounproject/search" && req.method === "GET") {
+    const qs = new URL(req.url, `http://localhost:${PORT}`).searchParams;
+    const query = qs.get("q") || "";
+    const limit = qs.get("limit") || "20";
+    if (!query) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Missing q parameter" }));
+      return;
+    }
+    try {
+      const apiUrl = `https://api.thenounproject.com/v2/icon?query=${encodeURIComponent(query)}&limit=${limit}&thumbnail_size=200&include_svg=1`;
+      const { createHmac, randomBytes } = await import("crypto");
+      const nonce = randomBytes(16).toString("hex");
+      const timestamp = Math.floor(Date.now() / 1000).toString();
+      const params = { query, limit, thumbnail_size: "200", include_svg: "1" };
+      const oauthParams = {
+        oauth_consumer_key: NP_KEY, oauth_nonce: nonce,
+        oauth_signature_method: "HMAC-SHA1", oauth_timestamp: timestamp, oauth_version: "1.0",
+        ...params,
+      };
+      const sorted = Object.keys(oauthParams).sort().map(k =>
+        encodeURIComponent(k) + "=" + encodeURIComponent(oauthParams[k])
+      ).join("&");
+      const baseString = "GET&" + encodeURIComponent("https://api.thenounproject.com/v2/icon") + "&" + encodeURIComponent(sorted);
+      const sig = createHmac("sha1", encodeURIComponent(NP_SECRET) + "&").update(baseString).digest("base64");
+      const authHeader = "OAuth " + [
+        `oauth_consumer_key="${NP_KEY}"`, `oauth_nonce="${nonce}"`,
+        `oauth_signature="${encodeURIComponent(sig)}"`, `oauth_signature_method="HMAC-SHA1"`,
+        `oauth_timestamp="${timestamp}"`, `oauth_version="1.0"`,
+      ].join(", ");
+      const resp = await fetch(apiUrl, { headers: { Authorization: authHeader } });
+      const data = await resp.text();
+      res.writeHead(resp.ok ? 200 : resp.status, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
+      res.end(data);
+    } catch (e) {
+      res.writeHead(502, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Noun Project search failed: " + e.message }));
+    }
+    return;
+  }
+
+  // Proxy icon thumbnail — GET /api/nounproject/icon/:id/thumb
+  // Fetches the 200px PNG thumbnail and proxies it (avoids CORS issues)
+  if (urlPath.match(/^\/api\/nounproject\/icon\/\d+\/thumb$/) && req.method === "GET") {
+    const iconId = urlPath.split("/")[4];
+    try {
+      const thumbUrl = `https://static.thenounproject.com/png/${iconId}-200.png`;
+      const resp = await fetch(thumbUrl);
+      if (!resp.ok) { res.writeHead(resp.status); res.end(); return; }
+      const buf = Buffer.from(await resp.arrayBuffer());
+      res.writeHead(200, { "Content-Type": "image/png", "Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=86400" });
+      res.end(buf);
+    } catch (e) {
+      res.writeHead(502, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Thumbnail fetch failed: " + e.message }));
+    }
+    return;
+  }
+
+  // Get icon detail + try SVG download — GET /api/nounproject/icon/:id
+  if (urlPath.match(/^\/api\/nounproject\/icon\/\d+$/) && req.method === "GET") {
+    const iconId = urlPath.split("/")[4];
+    try {
+      // First try the SVG download (requires paid plan)
+      const dlUrl = `https://api.thenounproject.com/v2/icon/${iconId}/download?filetype=svg&color=ffffff`;
+      const { createHmac, randomBytes } = await import("crypto");
+      const nonce = randomBytes(16).toString("hex");
+      const timestamp = Math.floor(Date.now() / 1000).toString();
+      const params = { filetype: "svg", color: "ffffff" };
+      const oauthParams = {
+        oauth_consumer_key: NP_KEY, oauth_nonce: nonce,
+        oauth_signature_method: "HMAC-SHA1", oauth_timestamp: timestamp, oauth_version: "1.0",
+        ...params,
+      };
+      const sorted = Object.keys(oauthParams).sort().map(k =>
+        encodeURIComponent(k) + "=" + encodeURIComponent(oauthParams[k])
+      ).join("&");
+      const baseString = "GET&" + encodeURIComponent(`https://api.thenounproject.com/v2/icon/${iconId}/download`) + "&" + encodeURIComponent(sorted);
+      const sig = createHmac("sha1", encodeURIComponent(NP_SECRET) + "&").update(baseString).digest("base64");
+      const authHeader = "OAuth " + [
+        `oauth_consumer_key="${NP_KEY}"`, `oauth_nonce="${nonce}"`,
+        `oauth_signature="${encodeURIComponent(sig)}"`, `oauth_signature_method="HMAC-SHA1"`,
+        `oauth_timestamp="${timestamp}"`, `oauth_version="1.0"`,
+      ].join(", ");
+      const resp = await fetch(dlUrl, { headers: { Authorization: authHeader } });
+      const data = await resp.json();
+      if (data.base64_encoded_file) {
+        const svg = Buffer.from(data.base64_encoded_file, "base64").toString("utf-8");
+        res.writeHead(200, { "Content-Type": "image/svg+xml", "Access-Control-Allow-Origin": "*" });
+        res.end(svg);
+        return;
+      }
+      // Fallback: proxy the thumbnail PNG as an image
+      const thumbUrl = `https://static.thenounproject.com/png/${iconId}-200.png`;
+      const thumbResp = await fetch(thumbUrl);
+      if (thumbResp.ok) {
+        const buf = Buffer.from(await thumbResp.arrayBuffer());
+        res.writeHead(200, { "Content-Type": "image/png", "Access-Control-Allow-Origin": "*" });
+        res.end(buf);
+      } else {
+        res.writeHead(404, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Icon not found" }));
+      }
+    } catch (e) {
+      res.writeHead(502, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Icon fetch failed: " + e.message }));
+    }
+    return;
+  }
+
   // Diagnostic report — POST /api/diag (browser sends errors)
   if (urlPath === "/api/diag" && req.method === "POST") {
     let body = "";

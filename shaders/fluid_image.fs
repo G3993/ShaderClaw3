@@ -15,8 +15,10 @@
     { "NAME": "specAmount", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 1.5, "MIN": 0.0, "MAX": 5.0 },
     { "NAME": "specPow", "LABEL": "Spec Power", "TYPE": "float", "DEFAULT": 36.0, "MIN": 4.0, "MAX": 128.0 },
     { "NAME": "showUV", "LABEL": "Show UV", "TYPE": "bool", "DEFAULT": false },
-    { "NAME": "moveMode", "LABEL": "Movement", "TYPE": "long", "VALUES": [0,1,2], "LABELS": ["None","Swirl","Pulse"], "DEFAULT": 0 },
+    { "NAME": "moveMode", "LABEL": "Movement", "TYPE": "long", "VALUES": [0,1,2,3,4], "LABELS": ["None","Freeform","Center","Wave","Vortex"], "DEFAULT": 0 },
     { "NAME": "moveSpeed", "LABEL": "Move Speed", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.05, "MAX": 2.0 },
+    { "NAME": "moveSpread", "LABEL": "Move Spread", "TYPE": "float", "DEFAULT": 0.7, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "moveIntensity", "LABEL": "Move Intensity", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ],
   "PASSES": [
@@ -138,19 +140,99 @@ void main() {
             }
         }
 
-        // ---- Movement modes ----
+        // ---- Movement patterns (matched to CFD Paint) ----
         float t = TIME * moveSpeed;
+        float spread = mix(0.05, 0.42, moveSpread);
+        float intensity = moveIntensity * 0.15;
+        float splatR = splatRadius * 2.5;
+        float splatR2 = splatR * splatR;
+        float cutoff2 = splatR2 * 12.0;
 
         if (mMode == 1) {
-            // Swirl — rotating current in center
-            vec2 scr = fract((pos / Res) - 0.5 + 0.5) - 0.5;
-            float swirlStr = 0.003 * splatForce;
-            col.xy += swirlStr * cos(t * 0.3 - vec2(0.0, 1.57)) / (dot(scr, scr) / 0.05 + 0.05);
+            // Freeform — 3 wandering splats
+            for (int s = 0; s < 3; s++) {
+                float fs = float(s);
+                float phase = t * (0.5 + fs * 0.3) + fs * 1.257;
+                vec2 splatPos = vec2(
+                    0.5 + spread * sin(phase) * cos(phase * 0.7 + fs),
+                    0.5 + spread * cos(phase * 0.8) * sin(phase * 0.5 + fs * 1.5)
+                );
+                vec2 mDiff = uv - splatPos;
+                mDiff.x *= aspect;
+                float dist2 = dot(mDiff, mDiff);
+                if (dist2 < cutoff2) {
+                    col.xy += vec2(
+                        cos(phase * 1.3 + fs),
+                        sin(phase * 0.9 + fs * 2.0)
+                    ) * intensity * exp(-dist2 / splatR2);
+                }
+            }
         } else if (mMode == 2) {
-            // Pulse — radial breathing from center
-            vec2 scr = fract((pos / Res) - 0.5 + 0.5) - 0.5;
-            float pulse = sin(t * 0.8) * 0.004 * splatForce;
-            col.xy += normalize(scr + 0.001) * pulse / (dot(scr, scr) / 0.03 + 0.1);
+            // Center — 3 radial pulses + vortex
+            for (int s = 0; s < 3; s++) {
+                float fs = float(s);
+                float phase = t * (0.8 + fs * 0.25) + fs * 1.257;
+                float r = spread * 0.5 * (0.3 + 0.7 * abs(sin(phase * 0.5)));
+                float a = phase * 0.7 + fs * 1.257;
+                vec2 splatPos = vec2(0.5 + cos(a) * r, 0.5 + sin(a) * r);
+                vec2 mDiff = uv - splatPos;
+                mDiff.x *= aspect;
+                float dist2 = dot(mDiff, mDiff);
+                if (dist2 < cutoff2) {
+                    vec2 dir = normalize(splatPos - 0.5 + 0.001);
+                    col.xy += dir * sin(phase * 1.5) * intensity * 1.5 * exp(-dist2 / splatR2);
+                }
+            }
+            vec2 cDiff = uv - 0.5;
+            cDiff.x *= aspect;
+            float centralFalloff = exp(-dot(cDiff, cDiff) / (spread * spread * 0.3));
+            col.xy += vec2(-cDiff.y, cDiff.x) * sin(t * 0.6) * intensity * 0.5 * centralFalloff;
+        } else if (mMode == 3) {
+            // Wave — 3 sweeping splats + global wave field
+            for (int s = 0; s < 3; s++) {
+                float fs = float(s);
+                float wavePhase = t * 0.8 + fs * 0.7;
+                vec2 splatPos = vec2(
+                    0.5 + spread * sin(wavePhase * 0.6 + fs * 0.8),
+                    0.5 + spread * 0.7 * sin(wavePhase * 1.1 + fs * 1.7)
+                );
+                vec2 mDiff = uv - splatPos;
+                mDiff.x *= aspect;
+                float dist2 = dot(mDiff, mDiff);
+                if (dist2 < cutoff2) {
+                    col.xy += vec2(
+                        cos(wavePhase * 0.6 + fs * 0.8) * intensity * 1.2,
+                        sin(wavePhase * 2.2 + fs) * intensity * 0.6
+                    ) * exp(-dist2 / splatR2);
+                }
+            }
+            col.xy += vec2(
+                sin(uv.x * 8.0 + t * 1.5) * sin(uv.y * 6.0 - t * 0.8),
+                cos(uv.x * 5.0 - t)
+            ) * intensity * 0.1;
+        } else if (mMode == 4) {
+            // Vortex — 3 spinning splats + global rotation
+            for (int s = 0; s < 3; s++) {
+                float fs = float(s);
+                float vortexPhase = t * (0.6 + fs * 0.2);
+                float r = spread * (0.15 + fs * 0.15);
+                vec2 center = vec2(
+                    0.5 + spread * 0.3 * sin(t * 0.3 + fs),
+                    0.5 + spread * 0.3 * cos(t * 0.25 + fs * 1.5)
+                );
+                vec2 splatPos = center + vec2(cos(vortexPhase), sin(vortexPhase)) * r;
+                vec2 mDiff = uv - splatPos;
+                mDiff.x *= aspect;
+                float dist2 = dot(mDiff, mDiff);
+                if (dist2 < cutoff2) {
+                    vec2 radial = splatPos - center;
+                    col.xy += vec2(-radial.y, radial.x) * intensity * 2.0 / (r + 0.05) * exp(-dist2 / splatR2);
+                }
+            }
+            vec2 gDiff = uv - 0.5;
+            gDiff.x *= aspect;
+            float rotFalloff = exp(-dot(gDiff, gDiff) / (spread * spread));
+            col.xy += vec2(-gDiff.y, gDiff.x) * (sin(t * 0.4) > 0.0 ? 1.0 : -1.0) * intensity * 0.3 * rotFalloff;
         }
 
         // Audio — bass creates force splats

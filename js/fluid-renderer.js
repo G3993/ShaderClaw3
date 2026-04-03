@@ -33,6 +33,10 @@ class FluidRenderer {
       BLOOM: false,
       SHADING: true,
       MOVEMENT: true,
+      MOVE_PATTERN: 0,     // 0=Freeform, 1=Center, 2=Wave, 3=Vortex, 4=Pulse
+      MOVE_SPEED: 0.5,
+      MOVE_SPREAD: 0.7,
+      MOVE_INTENSITY: 0.5,
     };
     // Sync initial dissipation from life
     this.config.DENSITY_DISSIPATION = this._lifeToDissipation(this.config.LIFE);
@@ -49,6 +53,12 @@ class FluidRenderer {
     this._splatQueue = [];
     this._pointerColor = { r: 0.91, g: 0.25, b: 0.34 }; // ShaderClaw red
     this._movementTime = 0;
+    // Virtual cursors for movement patterns — track position for continuous delta-based splats
+    this._moveCursors = [
+      { x: 0.5, y: 0.5, prevX: 0.5, prevY: 0.5, color: null },
+      { x: 0.5, y: 0.5, prevX: 0.5, prevY: 0.5, color: null },
+      { x: 0.5, y: 0.5, prevX: 0.5, prevY: 0.5, color: null },
+    ];
     // Pinch-to-fade state
     this.pinchFading = false; // true while any hand is pinching
     this.pinchOpacity = 1.0;  // current fade level (1 = full, 0 = invisible)
@@ -784,20 +794,74 @@ class FluidRenderer {
       if (this.pinchOpacity >= 1) this.pinchFading = false;
     }
 
-    // Ambient movement — slow, visible blooms from center
+    // Movement patterns — virtual cursors that simulate continuous mouse movement
     if (this.config.MOVEMENT) {
-      this._movementTime += dt;
-      if (this._movementTime > 0.2) {
-        this._movementTime -= 0.2;
-        const t = performance.now() * 0.001;
-        // Slow bloom near center — low force so ink spreads gently
-        const x = 0.5 + (Math.random() - 0.5) * 0.12;
-        const y = 0.5 + (Math.random() - 0.5) * 0.12;
-        const angle = t * 0.3 + Math.random() * Math.PI * 2;
-        const force = 80 + Math.random() * 60;
-        const c = this._randomColor();
-        c.r *= 5; c.g *= 5; c.b *= 5;
-        this.addSplat(x, y, Math.cos(angle) * force, Math.sin(angle) * force, c);
+      const t = performance.now() * 0.001 * this.config.MOVE_SPEED;
+      const spread = this.config.MOVE_SPREAD * 0.42;
+      const forceScale = this.config.MOVE_INTENSITY * this.config.SPLAT_FORCE * 0.8;
+      const pat = this.config.MOVE_PATTERN;
+
+      for (let s = 0; s < 3; s++) {
+        const cur = this._moveCursors[s];
+        const fs = s;
+
+        // Save previous position
+        cur.prevX = cur.x;
+        cur.prevY = cur.y;
+
+        // Compute new target position based on pattern
+        if (pat === 0) {
+          // Freeform — smooth Lissajous wandering
+          const phase = t * (0.5 + fs * 0.3) + fs * 1.257;
+          cur.x = 0.5 + spread * Math.sin(phase) * Math.cos(phase * 0.7 + fs);
+          cur.y = 0.5 + spread * Math.cos(phase * 0.8) * Math.sin(phase * 0.5 + fs * 1.5);
+        } else if (pat === 1) {
+          // Center — orbiting with pulsing radius
+          const phase = t * (0.8 + fs * 0.25) + fs * 1.257;
+          const r = spread * 0.5 * (0.3 + 0.7 * Math.abs(Math.sin(phase * 0.5)));
+          const a = phase * 0.7 + fs * 1.257;
+          cur.x = 0.5 + Math.cos(a) * r;
+          cur.y = 0.5 + Math.sin(a) * r;
+        } else if (pat === 2) {
+          // Wave — sweeping horizontal with vertical oscillation
+          const wavePhase = t * 0.8 + fs * 0.7;
+          cur.x = 0.5 + spread * Math.sin(wavePhase * 0.6 + fs * 0.8);
+          cur.y = 0.5 + spread * 0.7 * Math.sin(wavePhase * 1.1 + fs * 1.7);
+        } else if (pat === 3) {
+          // Vortex — spinning around drifting centers
+          const vortexPhase = t * (0.6 + fs * 0.2);
+          const r = spread * (0.15 + fs * 0.15);
+          const cx = 0.5 + spread * 0.3 * Math.sin(t * 0.3 + fs);
+          const cy = 0.5 + spread * 0.3 * Math.cos(t * 0.25 + fs * 1.5);
+          cur.x = cx + Math.cos(vortexPhase) * r;
+          cur.y = cy + Math.sin(vortexPhase) * r;
+        } else {
+          // Pulse — expanding rings from center
+          const pulse = (t * 2.0 * (0.3 + fs * 0.2) + fs * 0.5) % 1.0;
+          const pulseR = pulse * spread * 1.5;
+          const a = fs * 2.094 + t * 0.3;
+          const cx = 0.5 + spread * 0.4 * Math.sin(t * 0.2 + fs * 2.094);
+          const cy = 0.5 + spread * 0.4 * Math.cos(t * 0.15 + fs * 2.094);
+          cur.x = cx + Math.cos(a) * pulseR;
+          cur.y = cy + Math.sin(a) * pulseR;
+        }
+
+        // Compute delta (just like real mouse movement)
+        const dx = cur.x - cur.prevX;
+        const dy = cur.y - cur.prevY;
+        const speed = Math.sqrt(dx * dx + dy * dy);
+
+        // Only splat if cursor is actually moving (prevents stationary blobs)
+        if (speed > 0.0005) {
+          // Cycle cursor color periodically
+          if (!cur.color || Math.random() < 0.02) {
+            cur.color = this._randomColor();
+          }
+          // Scale force by delta — exactly how mouse splats work
+          const fx = dx * forceScale;
+          const fy = dy * forceScale;
+          this.addSplat(cur.x, cur.y, fx, fy, cur.color);
+        }
       }
     }
 
@@ -863,6 +927,10 @@ class FluidRenderer {
       { NAME: 'simResolution', LABEL: 'Sim Resolution', TYPE: 'long', DEFAULT: this.config.SIM_RESOLUTION, MIN: 32, MAX: 256, VALUES: [32, 64, 128, 256] },
       { NAME: 'dyeResolution', LABEL: 'Dye Resolution', TYPE: 'long', DEFAULT: this.config.DYE_RESOLUTION, MIN: 128, MAX: 2048, VALUES: [128, 256, 512, 1024, 2048] },
       { NAME: 'movement', LABEL: 'Movement', TYPE: 'bool', DEFAULT: this.config.MOVEMENT },
+      { NAME: 'movePattern', LABEL: 'Move Pattern', TYPE: 'long', DEFAULT: this.config.MOVE_PATTERN, VALUES: [0, 1, 2, 3, 4], LABELS: ['Freeform', 'Center', 'Wave', 'Vortex', 'Pulse'] },
+      { NAME: 'moveSpeed', LABEL: 'Move Speed', TYPE: 'float', DEFAULT: this.config.MOVE_SPEED, MIN: 0.1, MAX: 2.0 },
+      { NAME: 'moveSpread', LABEL: 'Move Spread', TYPE: 'float', DEFAULT: this.config.MOVE_SPREAD, MIN: 0.0, MAX: 1.0 },
+      { NAME: 'moveIntensity', LABEL: 'Move Intensity', TYPE: 'float', DEFAULT: this.config.MOVE_INTENSITY, MIN: 0.0, MAX: 1.0 },
       { NAME: 'shading', LABEL: 'Shading', TYPE: 'bool', DEFAULT: this.config.SHADING },
       { NAME: 'colorful', LABEL: 'Colorful', TYPE: 'bool', DEFAULT: this.config.COLORFUL },
     ];
@@ -891,6 +959,10 @@ class FluidRenderer {
       splatRadius: 'SPLAT_RADIUS',
       splatForce: 'SPLAT_FORCE',
       movement: 'MOVEMENT',
+      movePattern: 'MOVE_PATTERN',
+      moveSpeed: 'MOVE_SPEED',
+      moveSpread: 'MOVE_SPREAD',
+      moveIntensity: 'MOVE_INTENSITY',
       shading: 'SHADING',
       colorful: 'COLORFUL',
     };
