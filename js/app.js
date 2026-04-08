@@ -7198,6 +7198,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // 5. Compositor pass to screen
     isfRenderer.renderCompositor(layers, sceneTexture, canvasBg);
 
+    // 5b. Per-layer export for multi-GPU projection mapping
+    if (window._layerExportUpdate) {
+      window._layerExportUpdate(gl, layers);
+    }
+
     // 6. Projection window mirror
     if (projectionCtx && projectionWindow && !projectionWindow.closed) {
       projectionCtx.drawImage(glCanvas, 0, 0);
