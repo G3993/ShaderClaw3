@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Mirror Fractal — recursive mirror reflections that fold space, audio-reactive",
+  "DESCRIPTION": "Mirror Fractal — recursive mirror reflections that fold space, audio-refoldActive",
   "CATEGORIES": ["VFX"],
   "INPUTS": [
     { "NAME": "inputTex", "LABEL": "Input", "TYPE": "image" },
@@ -33,7 +33,7 @@ void main() {
     float maxFolds = folds + bass * 2.0;
     for (int i = 0; i < 8; i++) {
         float fi = float(i);
-        float active = step(fi, maxFolds - 0.5);
+        float foldActive = step(fi, maxFolds - 0.5);
 
         // Fold along different axes
         float foldAngle = fi * 1.618 + t * 0.2;
@@ -42,13 +42,13 @@ void main() {
         // Mirror reflection across axis
         float d = dot(p, axis);
         vec2 folded = p - 2.0 * d * axis;
-        p = mix(p, folded, active * step(d, 0.0));
+        p = mix(p, folded, foldActive * step(d, 0.0));
 
         // Scale down + offset — mid drives fold scale
         float effectiveFoldScale = foldScale + mid * 0.8;
-        p = mix(p, p * effectiveFoldScale, active);
+        p = mix(p, p * effectiveFoldScale, foldActive);
         vec2 off = vec2(0.5 + sin(t + fi) * 0.2, 0.3 + cos(t * 1.3 + fi) * 0.2);
-        p = mix(p, p - off, active);
+        p = mix(p, p - off, foldActive);
     }
 
     // Map back to UV

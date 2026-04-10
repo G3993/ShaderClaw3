@@ -97,6 +97,11 @@
             "LABEL": "FG Color",
             "TYPE": "color",
             "DEFAULT": [1.0, 1.0, 1.0, 1.0]
+        },
+        {
+            "NAME": "inputImage",
+            "LABEL": "Texture",
+            "TYPE": "image"
         }
     ]
 }*/
@@ -154,7 +159,23 @@ void main() {
         field = 1.0 - field;
     }
 
-    color = mix(backgroundColor.rgb, foregroundColor.rgb, field);
+    vec3 fg = foregroundColor.rgb;
+    if (IMG_SIZE_inputImage.x > 0.0) {
+        // Sample a grid and average to get the dominant color
+        vec3 avg = vec3(0.0);
+        for (int y = 0; y < 4; y++) {
+            for (int x = 0; x < 4; x++) {
+                vec2 uv = (vec2(float(x), float(y)) + 0.5) / 4.0;
+                if (_flip_inputImage) uv.y = 1.0 - uv.y;
+                avg += IMG_NORM_PIXEL(inputImage, uv).rgb;
+            }
+        }
+        fg = avg / 16.0;
+        // Boost: normalize to preserve hue but push brightness up
+        float peak = max(fg.r, max(fg.g, fg.b));
+        if (peak > 0.01) fg *= 1.0 / peak;
+    }
+    color = mix(backgroundColor.rgb, fg, field);
 
     if (showCenters) {
         float center = 1.0 - step(centerSize, dist);

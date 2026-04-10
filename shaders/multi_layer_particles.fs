@@ -1,18 +1,24 @@
 /*{
-  "DESCRIPTION": "Multi-Layer Particles — N particles in shared coordinate space, split across layers for multi-GPU projection mapping. Set layerIndex differently on each ShaderClaw layer (0, 1, 2...) to split particles across GPU streams.",
+  "DESCRIPTION": "Multi-GPU Tiled Particles — spatial tiling for multi-GPU projection. Each GPU renders a tile of a larger virtual canvas. All particles exist in the full space; each GPU sees its slice. 3 GPUs at 832x480 = 2496x480 seamless output.",
   "CREDIT": "Etherea / ShaderClaw",
   "CATEGORIES": ["Generator", "Projection"],
   "INPUTS": [
-    { "NAME": "layerIndex", "LABEL": "Layer Index", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 7.0 },
-    { "NAME": "layerCount", "LABEL": "Layer Count", "TYPE": "float", "DEFAULT": 3.0, "MIN": 1.0, "MAX": 8.0 },
-    { "NAME": "particleCount", "LABEL": "Particles", "TYPE": "float", "DEFAULT": 30.0, "MIN": 3.0, "MAX": 100.0 },
-    { "NAME": "particleSize", "LABEL": "Size", "TYPE": "float", "DEFAULT": 0.06, "MIN": 0.01, "MAX": 0.2 },
-    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "DEFAULT": 0.4, "MIN": 0.0, "MAX": 2.0 },
+    { "NAME": "tileIndex", "LABEL": "Tile Index", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 7.0 },
+    { "NAME": "tileCount", "LABEL": "Tile Count", "TYPE": "float", "DEFAULT": 3.0, "MIN": 1.0, "MAX": 8.0 },
+    { "NAME": "tileAxis", "LABEL": "Tile Axis", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "overlap", "LABEL": "Overlap", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 0.2 },
+    { "NAME": "particleCount", "LABEL": "Particles", "TYPE": "float", "DEFAULT": 12.0, "MIN": 1.0, "MAX": 100.0 },
+    { "NAME": "particleSize", "LABEL": "Size", "TYPE": "float", "DEFAULT": 0.04, "MIN": 0.005, "MAX": 0.2 },
+    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "trailLength", "LABEL": "Trail", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "audioDrive", "LABEL": "Audio Drive", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 5.0 },
     { "NAME": "colorMode", "LABEL": "Color Mode", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "accentColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.7, 0.3, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 1.0 }
+    { "NAME": "audioBass", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "audioMid", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "audioHigh", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "audioLevel", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "syncTime", "TYPE": "float", "DEFAULT": -1.0, "MIN": -1.0, "MAX": 99999.0 }
   ],
   "PASSES": [
     { "TARGET": "trail", "PERSISTENT": true },
@@ -35,20 +41,20 @@ vec3 hash3(float n) {
 }
 
 // ============================================================
-// Particle position — deterministic from ID and time
+// Particle position in GLOBAL virtual canvas space (0-1)
+// All GPUs compute the same positions — each GPU just views a slice
 // ============================================================
 
 vec2 particlePos(float id, float t) {
-    // Each particle has a unique orbit: Lissajous curves with hash-driven frequencies
     vec2 h = hash2(id * 7.13);
-    float fx = 0.3 + h.x * 1.7;  // x frequency
-    float fy = 0.5 + h.y * 1.3;  // y frequency
-    float px = hash1(id * 3.91);  // x phase
-    float py = hash1(id * 5.17);  // y phase
+    float fx = 0.2 + h.x * 0.8;
+    float fy = 0.3 + h.y * 0.7;
+    float px = hash1(id * 3.91);
+    float py = hash1(id * 5.17);
 
-    // Amplitude varies per particle (keep inside 0-1 with margin)
-    float ax = 0.15 + hash1(id * 11.3) * 0.3;
-    float ay = 0.15 + hash1(id * 13.7) * 0.3;
+    // Full-range orbits across the entire virtual canvas
+    float ax = 0.3 + hash1(id * 11.3) * 0.15;
+    float ay = 0.25 + hash1(id * 13.7) * 0.2;
 
     return vec2(
         0.5 + ax * sin(t * fx + px * 6.2832),
@@ -57,10 +63,34 @@ vec2 particlePos(float id, float t) {
 }
 
 // ============================================================
-// Particle color — three modes
+// Map pixel UV to global virtual canvas coordinates
 // ============================================================
 
-vec3 particleColor(float id, float count) {
+vec2 uvToGlobal(vec2 uv) {
+    float tiles = max(floor(tileCount + 0.5), 1.0);
+    float tile = floor(tileIndex + 0.5);
+    float axis = floor(tileAxis + 0.5); // 0 = horizontal, 1 = vertical
+
+    // Each tile covers 1/N of the virtual canvas plus overlap on edges
+    float tileSize = 1.0 / tiles;
+    float tileStart = tile * tileSize - overlap;
+    float tileEnd = (tile + 1.0) * tileSize + overlap;
+    float tileSpan = tileEnd - tileStart;
+
+    if (axis < 0.5) {
+        // Horizontal tiling: tiles are side by side
+        return vec2(tileStart + uv.x * tileSpan, uv.y);
+    } else {
+        // Vertical tiling: tiles are stacked
+        return vec2(uv.x, tileStart + uv.y * tileSpan);
+    }
+}
+
+// ============================================================
+// Particle color
+// ============================================================
+
+vec3 particleColor(float id) {
     float mode = floor(colorMode + 0.5);
 
     if (mode < 0.5) {
@@ -75,17 +105,16 @@ vec3 particleColor(float id, float count) {
             base.r * (0.333 - cs * 0.333 + sn * 0.577) + base.g * (0.333 - cs * 0.333 - sn * 0.577) + base.b * (0.667 + cs * 0.333)
         ) * (0.7 + 0.3 * hash1(id * 2.37));
     } else if (mode < 1.5) {
-        // Mode 1: per-layer distinct color (layers get different hues)
-        float layerHue = floor(layerIndex + 0.5) / max(floor(layerCount + 0.5), 1.0);
-        float hue = layerHue + hash1(id * 13.37) * 0.1;
-        // HSV to RGB
+        // Mode 1: each particle gets a unique hue
+        float hue = hash1(id * 17.31);
         vec3 rgb = clamp(abs(mod(hue * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
         return rgb * (0.7 + 0.3 * hash1(id * 2.37));
     } else {
-        // Mode 2: rainbow per particle
-        float hue = hash1(id * 17.31);
-        vec3 rgb = clamp(abs(mod(hue * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
-        return rgb;
+        // Mode 2: warm palette (amber → crimson → gold)
+        float t = hash1(id * 17.31);
+        vec3 a = vec3(1.0, 0.6, 0.1);  // amber
+        vec3 b = vec3(0.9, 0.15, 0.2); // crimson
+        return mix(a, b, t) * (0.7 + 0.3 * hash1(id * 2.37));
     }
 }
 
@@ -94,36 +123,47 @@ vec3 particleColor(float id, float count) {
 // ============================================================
 
 vec4 passTrail(vec2 uv) {
-    // Fade previous frame
     vec4 prev = texture2D(trail, uv);
-    float fade = 0.9 + trailLength * 0.09; // 0.9 to 0.99
+    float fade = 0.9 + trailLength * 0.09;
 
     vec3 col = prev.rgb * fade;
     float alpha = prev.a * fade;
 
-    float t = TIME * speed;
+    // Use syncTime if set (>= 0), otherwise fall back to built-in TIME
+    float baseTime = syncTime >= 0.0 ? syncTime : TIME;
+    float t = baseTime * speed;
     float count = floor(particleCount);
-    float layers = max(floor(layerCount + 0.5), 1.0);
-    float myLayer = floor(layerIndex + 0.5);
 
-    // Audio-reactive size pulse
     float audioPulse = 1.0 + audioBass * audioDrive * 0.5;
 
-    float aspect = RENDERSIZE.x / RENDERSIZE.y;
-    vec2 uvAspect = vec2(uv.x * aspect, uv.y);
+    // Map this pixel to global virtual canvas coordinates
+    vec2 globalUV = uvToGlobal(uv);
 
+    // Virtual canvas aspect ratio (tileCount-wide if horizontal)
+    float tiles = max(floor(tileCount + 0.5), 1.0);
+    float axis = floor(tileAxis + 0.5);
+    float virtualAspect;
+    if (axis < 0.5) {
+        virtualAspect = (RENDERSIZE.x * tiles) / RENDERSIZE.y;
+    } else {
+        virtualAspect = RENDERSIZE.x / (RENDERSIZE.y * tiles);
+    }
+
+    vec2 gAspect = vec2(globalUV.x * virtualAspect, globalUV.y);
+
+    // Render ALL particles — they exist in the global space
+    // This GPU only "sees" particles that fall within its tile region
     for (float i = 0.0; i < 100.0; i++) {
         if (i >= count) break;
 
-        // Layer assignment: this particle belongs to layer (i mod layerCount)
-        float assignedLayer = mod(i, layers);
-        if (abs(assignedLayer - myLayer) > 0.5) continue;
-
         vec2 pos = particlePos(i, t);
-        vec2 posAspect = vec2(pos.x * aspect, pos.y);
+        vec2 posAspect = vec2(pos.x * virtualAspect, pos.y);
 
-        float dist = length(uvAspect - posAspect);
+        float dist = length(gAspect - posAspect);
         float sz = particleSize * audioPulse * (0.7 + hash1(i * 2.37) * 0.6);
+
+        // Skip particles too far away (optimization — outside this tile)
+        if (dist > sz * 20.0) continue;
 
         // Soft glow falloff
         float glow = sz / (dist + 0.001);
@@ -132,7 +172,7 @@ vec4 passTrail(vec2 uv) {
         // Hard core
         float core = smoothstep(sz, sz * 0.3, dist);
 
-        vec3 pCol = particleColor(i, count);
+        vec3 pCol = particleColor(i);
 
         col += pCol * (core + glow);
         alpha += core + glow * 0.5;
@@ -147,17 +187,7 @@ vec4 passTrail(vec2 uv) {
 
 vec4 passFinal(vec2 uv) {
     vec4 trailCol = texture2D(trail, uv);
-
-    // Tone mapping — prevent blowout from accumulated trails
     vec3 col = trailCol.rgb / (1.0 + trailCol.rgb);
-
-    if (transparentBg) {
-        float lum = dot(col, vec3(0.299, 0.587, 0.114));
-        float alpha = clamp(lum * 3.0, 0.0, 1.0);
-        if (trailCol.a < 0.01) alpha = 0.0;
-        return vec4(col, alpha);
-    }
-
     return vec4(col, 1.0);
 }
 
