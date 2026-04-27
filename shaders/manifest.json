@@ -626,5 +626,27 @@
       "Simulation"
     ],
     "file": "flow.fs"
+  },
+  {
+    "id": 449,
+    "title": "Soph Orb",
+    "description": "Soft 3D gradient orb with drifting color stops, rim glow, and optional wireframe ground grid — four pickable colors",
+    "categories": [
+      "Generator",
+      "3D"
+    ],
+    "file": "soph_orb.fs"
+  },
+  {
+    "id": 450,
+    "title": "Edges",
+    "description": "Particle field bouncing off screen edges with vortex perturbation. Grid-seeded, audio-reactive, velocity-stretched streaks.",
+    "type": "generator",
+    "categories": [
+      "Generator",
+      "Particles",
+      "Audio Reactive"
+    ],
+    "file": "edges.fs"
   }
 ]
