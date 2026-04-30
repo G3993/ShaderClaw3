@@ -5,7 +5,8 @@
   "description": "ISF shader creation tool with MCP server for Claude Code",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "publish:easel-shaders": "node tools/publish-easel-shaders.mjs"
   },
   "engines": {
     "node": ">=18"
