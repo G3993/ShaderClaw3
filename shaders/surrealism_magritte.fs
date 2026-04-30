@@ -256,5 +256,17 @@ void main() {
         }
     }
 
+    // Surprise: every ~33s a green apple silhouette grows then deflates
+    // at the canvas centre — Magritte's "Son of Man". Briefly impossible.
+    {
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        float _ph = fract(TIME / 33.0);
+        float _f  = smoothstep(0.0, 0.06, _ph) * smoothstep(0.32, 0.20, _ph);
+        float _scale = 0.10 * sin(_ph * 9.4);
+        vec2 _d = (_suv - vec2(0.5, 0.5)) / max(_scale, 1e-3);
+        float _apple = smoothstep(1.10, 0.95, length(_d) + 0.10 * cos(atan(_d.y, _d.x) * 5.0));
+        col = mix(col, vec3(0.20, 0.55, 0.18), _f * _apple * 0.65);
+    }
+
     gl_FragColor = vec4(col, 1.0);
 }

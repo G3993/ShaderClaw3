@@ -3,23 +3,26 @@
   "DESCRIPTION": "Cubism after Picasso's analytic phase — Portrait of Kahnweiler (1910) and Ma Jolie (1912). N translucent rectangular planes, each rotated and sampling the source from its own viewpoint, alpha-stacked with per-plane gradient shading. Near-monochrome ochre/umber palette, optional stencilled letter fragments. Picasso's grid of perspectives rendered as overlapping SDF planes — no tessellation, no facets.",
   "INPUTS": [
     { "NAME": "picassoWork", "LABEL": "Painting", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Kahnweiler (1910)", "Demoiselles d'Avignon (1907)", "Three Musicians (1921)", "Guernica (1937)", "Ma Jolie (1912)"] },
-    { "NAME": "planes", "LABEL": "Planes", "TYPE": "float", "MIN": 3.0, "MAX": 18.0, "DEFAULT": 11.0 },
-    { "NAME": "planeSize", "LABEL": "Plane Size", "TYPE": "float", "MIN": 0.06, "MAX": 0.45, "DEFAULT": 0.22 },
-    { "NAME": "planeAlpha", "LABEL": "Plane Alpha", "TYPE": "float", "MIN": 0.10, "MAX": 0.85, "DEFAULT": 0.42 },
-    { "NAME": "rotateRange", "LABEL": "Rotation Range", "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.55 },
-    { "NAME": "scaleVar", "LABEL": "Scale Variance", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55 },
-    { "NAME": "aspectVar", "LABEL": "Aspect Variance", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6 },
-    { "NAME": "centerBias", "LABEL": "Center Bias", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.65 },
-    { "NAME": "viewpointSpread", "LABEL": "Viewpoint Spread", "TYPE": "float", "MIN": 0.0, "MAX": 0.6, "DEFAULT": 0.22 },
-    { "NAME": "lightDir", "LABEL": "Light Direction", "TYPE": "float", "MIN": 0.0, "MAX": 6.2832, "DEFAULT": 1.2 },
-    { "NAME": "shading", "LABEL": "Plane Shading", "TYPE": "float", "MIN": 0.0, "MAX": 0.8, "DEFAULT": 0.42 },
-    { "NAME": "edgeDarkness", "LABEL": "Edge Darkness", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55 },
-    { "NAME": "ochreStrength", "LABEL": "Ochre Strength", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.82 },
-    { "NAME": "warmth", "LABEL": "Palette Warmth", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55 },
-    { "NAME": "vignette", "LABEL": "Vignette", "TYPE": "float", "MIN": 0.0, "MAX": 0.8, "DEFAULT": 0.35 },
-    { "NAME": "letterFragments", "LABEL": "Letter Fragments", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.35 },
-    { "NAME": "drift", "LABEL": "Composition Drift", "TYPE": "float", "MIN": 0.0, "MAX": 0.20, "DEFAULT": 0.05 },
-    { "NAME": "recomposeRate", "LABEL": "Recompose Rate", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.3 },
+    { "NAME": "planes", "LABEL": "Planes", "TYPE": "float", "MIN": 3.0, "MAX": 24.0, "DEFAULT": 20.0 },
+    { "NAME": "planeSize", "LABEL": "Plane Size", "TYPE": "float", "MIN": 0.06, "MAX": 0.45, "DEFAULT": 0.18 },
+    { "NAME": "planeAlpha", "LABEL": "Plane Alpha", "TYPE": "float", "MIN": 0.10, "MAX": 0.85, "DEFAULT": 0.55 },
+    { "NAME": "edgeFeather", "LABEL": "Edge Feather", "TYPE": "float", "MIN": 0.0, "MAX": 0.6, "DEFAULT": 0.35 },
+    { "NAME": "skewAmount",  "LABEL": "Plane Skew",   "TYPE": "float", "MIN": 0.0, "MAX": 0.9,  "DEFAULT": 0.45 },
+    { "NAME": "rotateRange", "LABEL": "Rotation Range", "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.42 },
+    { "NAME": "scaleVar", "LABEL": "Scale Variance", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.45 },
+    { "NAME": "aspectVar", "LABEL": "Aspect Variance", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55 },
+    { "NAME": "centerBias", "LABEL": "Center Bias", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.78 },
+    { "NAME": "viewpointSpread", "LABEL": "Viewpoint Spread", "TYPE": "float", "MIN": 0.0, "MAX": 0.6, "DEFAULT": 0.18 },
+    { "NAME": "lightDir", "LABEL": "Light Direction", "TYPE": "float", "MIN": 0.0, "MAX": 6.2832, "DEFAULT": 2.4 },
+    { "NAME": "shading", "LABEL": "Plane Shading", "TYPE": "float", "MIN": 0.0, "MAX": 0.8, "DEFAULT": 0.65 },
+    { "NAME": "brushwork", "LABEL": "Brushwork", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.35 },
+    { "NAME": "edgeDarkness", "LABEL": "Edge Darkness", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.65 },
+    { "NAME": "ochreStrength", "LABEL": "Ochre Strength", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.00 },
+    { "NAME": "warmth", "LABEL": "Palette Warmth", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.40 },
+    { "NAME": "vignette", "LABEL": "Vignette", "TYPE": "float", "MIN": 0.0, "MAX": 0.8, "DEFAULT": 0.45 },
+    { "NAME": "letterFragments", "LABEL": "Letter Fragments", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
+    { "NAME": "drift", "LABEL": "Composition Drift", "TYPE": "float", "MIN": 0.0, "MAX": 0.20, "DEFAULT": 0.025 },
+    { "NAME": "recomposeRate", "LABEL": "Recompose Rate", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.12 },
     { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
     { "NAME": "compositionSeed", "LABEL": "Seed", "TYPE": "float", "MIN": 0.0, "MAX": 80.0, "DEFAULT": 0.0 },
     { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" }
@@ -44,6 +47,88 @@ float hash11(float n) {
 }
 float hash21(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+// 2D value noise — used for painterly brushwork inside facets.
+float vnoise(vec2 p) {
+    vec2 ip = floor(p), fp = fract(p);
+    fp = fp * fp * (3.0 - 2.0 * fp);
+    float a = hash21(ip);
+    float b = hash21(ip + vec2(1.0, 0.0));
+    float c = hash21(ip + vec2(0.0, 1.0));
+    float d = hash21(ip + vec2(1.0, 1.0));
+    return mix(mix(a, b, fp.x), mix(c, d, fp.x), fp.y);
+}
+
+// Brush stroke noise — directional fbm tilted along the lit direction so
+// the texture inside each facet reads as paint, not isotropic grain.
+float brushNoise(vec2 p, float dir) {
+    float c = cos(dir), s = sin(dir);
+    vec2 q = vec2(c * p.x + s * p.y, -s * p.x + c * p.y);
+    q.y *= 3.0; // anisotropic — strokes elongate along light direction
+    float v = 0.0;
+    float a = 0.55;
+    for (int i = 0; i < 4; i++) {
+        v += vnoise(q) * a;
+        q *= 2.07;
+        a *= 0.5;
+    }
+    return v;
+}
+
+// Soft SDF blob — used to assemble the figure's body parts.
+float sdEllipse(vec2 p, vec2 c, vec2 r, float rot) {
+    float ca = cos(rot), sa = sin(rot);
+    vec2 d = p - c;
+    d = vec2(ca * d.x - sa * d.y, sa * d.x + ca * d.y);
+    return length(d / r) - 1.0;
+}
+
+// Procedural "Girl with a Mandolin" subject mass — used when no inputTex
+// is bound. Returns vec2(luminance, depth) where:
+//   .x = surface brightness 0..1 (modulated by a top-left light source)
+//   .y = depth/density 0..1 (1 = on figure, 0 = empty paper)
+// The figure is composed as a pile of overlapping ellipses: head, torso,
+// shoulders, hips, mandolin oval, sound-hole, neck. Coordinates are in
+// canvas-fitted UV space; aspect already pre-corrected by caller.
+vec2 subjectMass(vec2 uv, float t) {
+    // Slow drift so the subject "breathes" between facet recompositions.
+    float dx = sin(t * 0.07) * 0.012;
+    float dy = cos(t * 0.05) * 0.010;
+    vec2 p = uv + vec2(dx, dy);
+
+    float density = 0.0;
+
+    // Head — top-center ellipse, slightly tilted (Picasso's head leans).
+    density = max(density, smoothstep(0.10, -0.04, sdEllipse(p, vec2(0.50, 0.78), vec2(0.10, 0.13), -0.18)));
+    // Neck
+    density = max(density, smoothstep(0.06, -0.02, sdEllipse(p, vec2(0.50, 0.66), vec2(0.05, 0.06), 0.00)));
+    // Shoulders / upper torso
+    density = max(density, smoothstep(0.10, -0.04, sdEllipse(p, vec2(0.50, 0.55), vec2(0.18, 0.10), 0.00)));
+    // Mid torso
+    density = max(density, smoothstep(0.12, -0.04, sdEllipse(p, vec2(0.50, 0.42), vec2(0.20, 0.12), 0.00)));
+    // Hips / sitting mass
+    density = max(density, smoothstep(0.14, -0.04, sdEllipse(p, vec2(0.50, 0.26), vec2(0.24, 0.14), 0.00)));
+    // Mandolin body — oval lower-right, hugged by the right arm
+    density = max(density, smoothstep(0.10, -0.04, sdEllipse(p, vec2(0.62, 0.22), vec2(0.13, 0.16), 0.32)));
+    // Mandolin neck running up-left toward the player's hand
+    density = max(density, smoothstep(0.05, -0.02, sdEllipse(p, vec2(0.55, 0.36), vec2(0.04, 0.10), 0.55)));
+    // Right arm reaching across to the mandolin
+    density = max(density, smoothstep(0.08, -0.02, sdEllipse(p, vec2(0.45, 0.36), vec2(0.10, 0.05), -0.35)));
+
+    // Top-left raking light gives the figure form. Light comes from upper
+    // left; sin-curve falloff so cheekbones/torso top read as bright,
+    // bottom-right reads as shadow.
+    vec2 lightVec = normalize(vec2(-0.6, 0.8));
+    float lit = dot(p - 0.5, lightVec) * 1.6 + 0.45;
+    lit = clamp(lit, 0.05, 1.0);
+
+    // Slight grain across the mass so it doesn't look like a flat cutout.
+    float grain = vnoise(p * 18.0) * 0.15;
+    float lum = lit * 0.85 + 0.10 + grain;
+    lum = clamp(lum, 0.05, 1.05);
+
+    return vec2(lum, density);
 }
 
 vec3 ochreLut(vec3 c, float strength, float warm) {
@@ -79,10 +164,17 @@ vec3 picassoLut(int w, vec3 c, float strength) {
         vec3 cool = vec3(0.30, 0.28, 0.24) + L * vec3(0.55, 0.48, 0.40);
         vec3 hot  = vec3(0.45, 0.34, 0.20) + L * vec3(0.60, 0.46, 0.28);
         target = mix(cool, hot, 0.7);
-    } else {                 // 0 = Kahnweiler 1910 (current default LUT)
-        vec3 cool = vec3(0.32, 0.30, 0.26) + L * vec3(0.55, 0.50, 0.42);
-        vec3 hot  = vec3(0.42, 0.32, 0.18) + L * vec3(0.62, 0.50, 0.30);
-        target = mix(cool, hot, 0.55);
+    } else {                 // 0 = Kahnweiler / Girl with a Mandolin 1910
+        // 4-stop lookup keyed on luminance, sampling the actual reference
+        // palette: dark sepia → cool grey → warm tan → cream highlight.
+        // Picasso's analytic monochrome lives in this narrow band.
+        vec3 c0 = vec3(0.18, 0.16, 0.13);   // deep shadow sepia
+        vec3 c1 = vec3(0.42, 0.40, 0.36);   // cool slate grey
+        vec3 c2 = vec3(0.72, 0.65, 0.52);   // warm tan
+        vec3 c3 = vec3(0.92, 0.88, 0.78);   // cream highlight
+        if      (L < 0.33) target = mix(c0, c1, L / 0.33);
+        else if (L < 0.66) target = mix(c1, c2, (L - 0.33) / 0.33);
+        else               target = mix(c2, c3, (L - 0.66) / 0.34);
     }
     return mix(c, target, strength);
 }
@@ -145,17 +237,20 @@ void main() {
     // Background — warm cream paper, vignetted toward edges so the eye
     // is led to the central pile of planes (Picasso's compositions
     // collapse mass toward the centre of the frame).
-    vec3 paper = vec3(0.82, 0.76, 0.62);
+    vec3 paper = vec3(0.74, 0.68, 0.56);
     float vig = smoothstep(0.30, 0.95, length(uv - 0.5));
     paper *= 1.0 - vig * vignette;
+
+    // Faint paper grain so the background reads as canvas, not flat.
+    paper *= 0.92 + 0.08 * vnoise(uv * 280.0);
     vec3 col = paper;
 
-    int N = int(clamp(planes, 1.0, 18.0));
+    int N = int(clamp(planes, 1.0, 24.0));
 
     // Walk planes back-to-front. Each iteration tests if the fragment
     // lies inside the rotated rectangle and, if so, composites a sampled
     // and shaded patch onto the running col via alpha-over.
-    for (int i = 0; i < 18; i++) {
+    for (int i = 0; i < 24; i++) {
         if (i >= N) break;
 
         float fi = float(i) + compositionSeed * 3.71;
@@ -195,28 +290,46 @@ void main() {
         vec2 local = vec2(ca * d.x - sa * d.y,
                           sa * d.x + ca * d.y);
 
-        // SDF-style inside test for an oriented rectangle.
-        if (abs(local.x) > halfSize.x || abs(local.y) > halfSize.y) continue;
+        // Per-plane parallelogram skew — pushes each plane off-square so
+        // the inside test rejects a tilted-rectangle (cubist polygon),
+        // not just an axis-aligned one. Two independent skew angles per
+        // plane give 4-sided polygons of varying obliqueness.
+        float skX = (hash11(fi * 41.3) - 0.5) * 2.0 * skewAmount;
+        float skY = (hash11(fi * 47.9) - 0.5) * 2.0 * skewAmount;
+        vec2 skewed = vec2(local.x + local.y * skX,
+                           local.y + local.x * skY);
 
-        // Per-plane "viewpoint" — each plane samples the input from a
+        // Feathered SDF — distance from plane edge in normalized units.
+        // Negative = inside, positive = outside. We keep planes that are
+        // within edgeFeather of their boundary so edges blend painterly.
+        float edgeX = halfSize.x - abs(skewed.x);
+        float edgeY = halfSize.y - abs(skewed.y);
+        float edgeDist = min(edgeX, edgeY) / planeSize;
+        float feather = max(edgeFeather, 0.0001);
+        if (edgeDist < -feather) continue;
+        float edgeMix = clamp(edgeDist / feather + 0.5, 0.0, 1.0);
+        edgeMix = smoothstep(0.0, 1.0, edgeMix);
+
+        // Per-plane "viewpoint" — each plane samples the subject from a
         // slightly different region so adjacent planes show the same
-        // content rotated/translated. This is the analytic-cubism
-        // multi-perspective signature.
+        // content shifted/rotated. This is analytic cubism's signature.
         vec2 vp = (vec2(hash11(fi * 23.7), hash11(fi * 29.3)) - 0.5)
                 * viewpointSpread;
+        vec2 worldSampleUV = ctr + vp + (local * 0.6); // sample in world space
         vec2 sUV = (local / max(halfSize, vec2(1e-4))) * 0.45 + 0.5 + vp;
 
-        vec3 sample;
+        vec3 sample_;
         if (IMG_SIZE_inputTex.x > 0.0) {
-            sample = texture(inputTex, fract(sUV)).rgb;
+            sample_ = texture(inputTex, fract(sUV)).rgb;
         } else {
-            // Procedural fallback: warm horizontal striation, with a
-            // TIME term per-plane so each plane's content shifts.
-            float stripe = sin(sUV.y * 11.0 + sUV.x * 2.0
-                              + TIME * 0.5 + fi * 1.7) * 0.5 + 0.5;
-            sample = mix(vec3(0.55, 0.43, 0.28),
-                         vec3(0.30, 0.24, 0.18), stripe);
-            sample *= 0.85 + 0.15 * sin(sUV.x * 23.0 + TIME * 0.3);
+            // No input bound — show the cubist scaffold itself: a soft
+            // tonal field driven by world position + slow noise, so each
+            // facet reads as a faceted plane of paint without trying to
+            // render a particular figure. The faceting IS the subject.
+            float field = vnoise(worldSampleUV * 4.5 + vec2(TIME * 0.04, 0.0));
+            float field2 = vnoise(worldSampleUV * 1.7 + fi * 0.31);
+            float lum = mix(0.30, 0.92, field * 0.7 + field2 * 0.3);
+            sample_ = vec3(lum) * vec3(0.95, 0.92, 0.85);
         }
 
         // Per-plane lighting: gradient along a direction = global lightDir
@@ -226,23 +339,29 @@ void main() {
         vec2  lvec  = vec2(cos(ldJit), sin(ldJit));
         float shade = dot(local / max(halfSize, vec2(1e-4)), lvec);
         shade = shade * 0.5 + 0.5;
-        sample *= 1.0 - shading + shading * shade;
+        sample_ *= 1.0 - shading + shading * shade;
 
-        // Alpha-over composite. Per-plane alpha jitter, multiplied by
-        // the time-driven fade so planes phase in and out.
+        // Painterly brushwork — anisotropic noise tilted along light dir
+        // gives each facet a visible stroke texture instead of flat fill.
+        if (brushwork > 0.0) {
+            float bn = brushNoise(local * 18.0 + fi * 4.7, ldJit);
+            sample_ *= 1.0 - brushwork * 0.35 + brushwork * 0.35 * bn * 2.0;
+        }
+
+        // Alpha-over composite, modulated by feathered edge and per-plane
+        // fade cycle so planes phase in and out without hard boundaries.
         float alpha = clamp(planeAlpha
                           * (0.55 + hash11(fi * 37.3) * 0.7)
-                          * pow(fadeT, 1.5),
+                          * pow(fadeT, 1.5)
+                          * edgeMix,
                           0.0, 0.95);
-        col = mix(col, sample, alpha);
+        col = mix(col, sample_, alpha);
 
-        // Hairline edge darkening — Picasso's planes are bounded by
-        // pencil-line scaffolds inside the analytic phase.
-        float edgeX = halfSize.x - abs(local.x);
-        float edgeY = halfSize.y - abs(local.y);
-        float edgeD = min(edgeX, edgeY) / planeSize;
-        float edgeMask = smoothstep(0.0, 0.022, edgeD);
-        col *= mix(1.0 - edgeDarkness * 0.6, 1.0, edgeMask);
+        // Hairline pencil-line scaffolding at the plane's actual edge
+        // (not the feathered zone) — Picasso bounded analytic planes
+        // with thin graphite contours.
+        float lineMask = smoothstep(0.0, 0.012, edgeDist / planeSize);
+        col *= mix(1.0 - edgeDarkness * 0.5, 1.0, lineMask);
     }
 
     // Stencilled letter fragments scattered across the painting.

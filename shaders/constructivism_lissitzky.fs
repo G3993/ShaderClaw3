@@ -9,6 +9,7 @@
     {"NAME":"glyphIntensity","TYPE":"float","MIN":0.0,"MAX":1.0,"DEFAULT":0.6},
     {"NAME":"compositionJitter","TYPE":"float","MIN":0.0,"MAX":0.02,"DEFAULT":0.005},
     {"NAME":"useTex","TYPE":"bool","DEFAULT":false},
+    {"NAME":"audioReact","TYPE":"float","MIN":0.0,"MAX":2.0,"DEFAULT":1.0},
     {"NAME":"inputTex","TYPE":"image"}
   ]
 }*/
@@ -152,6 +153,20 @@ void main() {
     // Cyrillic-style glyph clusters — flicker on treble.
     float gf = glyphField(uv) * glyphIntensity * (0.7 + audioHigh * 0.5);
     col = mix(col, BLACK, gf);
+
+    // Surprise: every ~22s a single red diagonal beam sweeps the canvas
+    // (Lissitzky's "Beat the Whites with the Red Wedge" energy), brief.
+    {
+        float _ph = fract(TIME / 22.0);
+        float _f  = smoothstep(0.0, 0.05, _ph) * smoothstep(0.35, 0.20, _ph);
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        // Rotate uv 45°, take a thin slab around a moving x = -0.2..1.2
+        float _t = (_ph - 0.05) / 0.30;
+        vec2 _r = vec2(_suv.x * 0.7071 + _suv.y * 0.7071,
+                      -_suv.x * 0.7071 + _suv.y * 0.7071);
+        float _band = exp(-pow((_r.x - (-0.2 + 1.4 * _t)) * 30.0, 2.0));
+        col = mix(col, vec3(0.90, 0.10, 0.08), _f * _band * 0.85);
+    }
 
     gl_FragColor = vec4(col, 1.0);
 }

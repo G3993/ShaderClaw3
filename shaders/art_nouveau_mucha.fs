@@ -186,5 +186,17 @@ void main() {
     // Audio breath
     col *= 0.92 + audioLevel * audioReact * 0.10;
 
+    // Surprise: every ~28s a luminous moth wing silhouette flutters
+    // across the lower half — symmetric scalloped form, brief and quiet.
+    {
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        float _ph = fract(TIME / 28.0);
+        float _f  = smoothstep(0.0, 0.06, _ph) * smoothstep(0.30, 0.18, _ph);
+        vec2 _p = (_suv - vec2(0.5, 0.32 + 0.06 * sin(TIME * 0.7)));
+        _p.x = abs(_p.x);
+        float _wing = smoothstep(0.18, 0.0, length(_p - vec2(0.10, 0.0)) + 0.06 * sin(_p.y * 24.0 + TIME));
+        col = mix(col, vec3(1.00, 0.92, 0.62), _f * _wing * 0.55);
+    }
+
     gl_FragColor = vec4(col, 1.0);
 }

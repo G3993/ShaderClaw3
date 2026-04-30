@@ -209,5 +209,14 @@ void main() {
         }
     }
 
+    // Surprise: every ~14 seconds a gold-leaf flash washes the brightest
+    // splatters with metallic gold for ~1 second — riff on Pollock's
+    // aluminium/bronze paints. Looks like the painter just touched the
+    // canvas with metal.
+    float goldPhase = fract(TIME / 14.0);
+    float goldFlash = smoothstep(0.0, 0.10, goldPhase) * smoothstep(0.18, 0.10, goldPhase);
+    float lum = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(col, vec3(1.00, 0.85, 0.35), goldFlash * smoothstep(0.55, 0.85, lum) * 0.6);
+
     gl_FragColor = vec4(col, 1.0);
 }

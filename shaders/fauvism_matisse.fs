@@ -165,5 +165,20 @@ void main() {
     float grain = (hash21(uv * RENDERSIZE) - 0.5) * 0.04;
     col += grain * paperShow;
 
+    // Surprise: every ~26s a flash of cut-paper goldfish swims through
+    // the mid-band — Matisse's late paper cut-outs. Two oval bodies and
+    // a fanning tail in saturated vermillion.
+    {
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        float _ph = fract(TIME / 26.0);
+        float _f  = smoothstep(0.0, 0.06, _ph) * smoothstep(0.40, 0.22, _ph);
+        float _x  = (_ph - 0.06) / 0.34;
+        vec2 _c1 = vec2(_x, 0.55 + 0.04 * sin(_x * 12.0));
+        vec2 _c2 = vec2(_x - 0.10, 0.48 + 0.05 * sin(_x * 12.0 + 2.0));
+        float _fish = max(smoothstep(0.030, 0.0, length((_suv - _c1) * vec2(0.55, 1.4))),
+                          smoothstep(0.026, 0.0, length((_suv - _c2) * vec2(0.55, 1.4))));
+        col = mix(col, vec3(0.95, 0.25, 0.10), _f * _fish * 0.85);
+    }
+
     gl_FragColor = vec4(col, 1.0);
 }

@@ -208,5 +208,14 @@ void main() {
         }
     }
 
+    // Surprise: anti-art glitch — every ~17s the entire canvas inverts
+    // for one frame (~0.05s), like a Höch photomontage being thrown into
+    // a dark room and out again. Pure shock, then gone.
+    {
+        float _ph = fract(TIME / 17.0);
+        float _flash = step(_ph, 0.04);
+        col = mix(col, 1.0 - col, _flash);
+    }
+
     gl_FragColor = vec4(col, 1.0);
 }

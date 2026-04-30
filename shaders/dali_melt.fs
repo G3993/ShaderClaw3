@@ -107,5 +107,16 @@ void main() {
     // Subtle S-curve tone map for that wet-paint look.
     col = smoothstep(vec3(-0.05), vec3(1.05), col);
 
+    // Surprise: a tiny black ant slowly traverses the canvas — Dalí's
+    // recurring symbol of decay. Wraps around every ~25s.
+    {
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        float _t = fract(TIME / 25.0);
+        vec2 _ant = vec2(_t, 0.20 + 0.06 * sin(_t * 18.0));
+        float _d  = length((_suv - _ant) * vec2(1.0, 1.4));
+        float _body = smoothstep(0.014, 0.0, _d);
+        col = mix(col, vec3(0.05, 0.04, 0.04), _body);
+    }
+
     gl_FragColor = vec4(col, 1.0);
 }

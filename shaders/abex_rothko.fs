@@ -129,5 +129,14 @@ void main() {
     col *= 1.0 + audioBass * audioInfluence * 0.7
               + audioLevel * audioInfluence;
 
+    // Surprise: once every ~47 seconds, a single horizontal "memory line"
+    // ghosts across the canvas — the trace of a previous painting on the
+    // same canvas. Visible for ~3 seconds, very faint.
+    float gPhase = fract(TIME / 47.0);
+    float gFade = smoothstep(0.0, 0.05, gPhase) * smoothstep(0.20, 0.10, gPhase);
+    float gY = 0.30 + 0.40 * hash21(vec2(floor(TIME / 47.0), 0.0));
+    float gLine = exp(-pow((uv.y - gY) * 80.0, 2.0));
+    col += vec3(0.20, 0.15, 0.10) * gLine * gFade * 0.25;
+
     gl_FragColor = vec4(col, 1.0);
 }

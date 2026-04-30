@@ -144,5 +144,19 @@ void main() {
     float pulse = 1.0 + audioLevel * 0.05;
     col = mix(paper, col, clamp(pulse, 0.5, 1.05));
 
+    // Surprise: every ~13s a Sottsass squiggle — three quick zigzag
+    // strokes — chases across the canvas in lipstick pink. The pattern
+    // language always wanted to be a doodle.
+    {
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        float _ph = fract(TIME / 13.0);
+        float _f  = smoothstep(0.0, 0.05, _ph) * smoothstep(0.28, 0.16, _ph);
+        float _x  = (_ph - 0.05) / 0.23;
+        float _zig = 0.5 + 0.20 * sin(_x * 28.0) * sin(_x * 11.0);
+        float _line = exp(-pow((_suv.y - _zig) * 60.0, 2.0));
+        float _on = step(_suv.x, _x) * step(_x - 0.30, _suv.x);
+        col = mix(col, vec3(1.0, 0.40, 0.65), _f * _line * _on * 0.85);
+    }
+
     gl_FragColor = vec4(col, 1.0);
 }

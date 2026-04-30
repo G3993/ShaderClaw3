@@ -188,5 +188,19 @@ void main() {
                   lm * (0.6 + audioHigh * audioReact * 0.4));
     }
 
+    // Surprise: occasionally a Malevich Black Square appears at one of
+    // the four corners — a quiet historical wink, ~0.8s every ~35s.
+    {
+        float _ph = fract(TIME / 35.0);
+        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.18, 0.10, _ph);
+        float _which = floor(fract(TIME / 35.0 + 0.5) * 4.0);
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        vec2 _origin = vec2(_which < 2.0 ? 0.06 : 0.74,
+                            (mod(_which, 2.0) < 1.0) ? 0.06 : 0.74);
+        vec2 _d = _suv - _origin;
+        float _sq = step(0.0, _d.x) * step(_d.x, 0.20) * step(0.0, _d.y) * step(_d.y, 0.20);
+        col = mix(col, vec3(0.02), _f * _sq);
+    }
+
     gl_FragColor = vec4(col, 1.0);
 }

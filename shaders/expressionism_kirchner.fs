@@ -205,5 +205,16 @@ void main() {
     // Audio-driven luminance breath
     col *= 0.92 + audioLevel * audioReact * 0.12;
 
+    // Surprise: every ~19s a sodium-yellow streetlamp glow swells from
+    // the upper edge — a Berlin window cracking open onto an alley.
+    {
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        float _ph = fract(TIME / 19.0);
+        float _f  = smoothstep(0.0, 0.08, _ph) * smoothstep(0.32, 0.18, _ph);
+        float _x  = 0.20 + 0.60 * fract(sin(floor(TIME / 19.0) * 71.3) * 43758.5453);
+        float _r  = length((_suv - vec2(_x, 1.05)) * vec2(1.6, 1.0));
+        col = mix(col, vec3(1.00, 0.78, 0.35), _f * smoothstep(0.40, 0.0, _r) * 0.6);
+    }
+
     gl_FragColor = vec4(col, 1.0);
 }

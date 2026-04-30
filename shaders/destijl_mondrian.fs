@@ -186,5 +186,21 @@ void main() {
         col = mix(col, q, 0.10);
     }
 
+    // Surprise: every ~31s a single rectangle quietly turns Mondrian-
+    // forbidden green for ~0.5s. Forbidden because Mondrian's manifesto
+    // banned green from the canon — so the painting briefly heretical.
+    {
+        float _ph = fract(TIME / 31.0);
+        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.20, 0.10, _ph);
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        // Pick a hashed rectangular region to recolor
+        float _h = fract(sin(floor(TIME / 31.0) * 91.7) * 43758.5453);
+        vec2 _o = vec2(0.05 + _h * 0.55, 0.05 + fract(_h * 13.7) * 0.55);
+        vec2 _s = vec2(0.18 + fract(_h * 7.3) * 0.20, 0.18 + fract(_h * 11.1) * 0.20);
+        vec2 _q = (_suv - _o) / _s;
+        float _in = step(0.0, _q.x) * step(_q.x, 1.0) * step(0.0, _q.y) * step(_q.y, 1.0);
+        col = mix(col, vec3(0.10, 0.55, 0.20), _f * _in * 0.75);
+    }
+
     gl_FragColor = vec4(col, 1.0);
 }
