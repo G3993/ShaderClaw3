@@ -2,6 +2,7 @@
   "CATEGORIES": ["Generator", "Art Movement", "Audio Reactive"],
   "DESCRIPTION": "Color-field after Rothko's Orange Red Yellow (1961) and the Chapel paintings (1971) — stacked Gaussian-blurred rectangles floating on a coloured ground, edges deeply feathered, very slow shimmer. Meditative, never crisp. The breath is gentle even when audio is loud — the painting refuses to be hurried.",
   "INPUTS": [
+    { "NAME": "rothkoWork", "LABEL": "Painting", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Orange Red Yellow (1961)", "No.61 Rust+Blue (1953)", "White Center (1950)", "Seagram Maroon (1958)", "Black on Maroon (1959)"] },
     { "NAME": "bandCount", "LABEL": "Bands", "TYPE": "float", "MIN": 2.0, "MAX": 4.0, "DEFAULT": 3.0 },
     { "NAME": "feather", "LABEL": "Feather", "TYPE": "float", "MIN": 0.04, "MAX": 0.30, "DEFAULT": 0.16 },
     { "NAME": "innerInset", "LABEL": "Rectangle Inset", "TYPE": "float", "MIN": 0.0, "MAX": 0.18, "DEFAULT": 0.06 },
@@ -73,11 +74,17 @@ void main() {
 
     int N = int(clamp(bandCount, 2.0, 4.0));
 
-    // Sample band colours — either fixed or sampled at three points
-    // along inputTex's central column.
+    // Per-painting band palette — five canonical Rothko colour worlds.
+    // User colour pickers (topColor/midColor/botColor) override only
+    // when rothkoWork == 0 (default), preserving manual control.
     vec3 cTop = topColor.rgb;
     vec3 cMid = midColor.rgb;
     vec3 cBot = botColor.rgb;
+    int rw = int(rothkoWork);
+    if      (rw == 1) { cTop = vec3(0.55, 0.18, 0.18); cMid = vec3(0.20, 0.22, 0.45); cBot = vec3(0.40, 0.16, 0.20); }
+    else if (rw == 2) { cTop = vec3(0.92, 0.86, 0.78); cMid = vec3(0.85, 0.32, 0.20); cBot = vec3(0.55, 0.18, 0.40); }
+    else if (rw == 3) { cTop = vec3(0.30, 0.05, 0.06); cMid = vec3(0.18, 0.04, 0.05); cBot = vec3(0.10, 0.03, 0.04); }
+    else if (rw == 4) { cTop = vec3(0.05, 0.02, 0.03); cMid = vec3(0.28, 0.05, 0.06); cBot = vec3(0.10, 0.03, 0.04); }
     if (useTex && IMG_SIZE_inputTex.x > 0.0) {
         cTop = texture(inputTex, vec2(0.5, 0.85)).rgb;
         cMid = texture(inputTex, vec2(0.5, 0.50)).rgb;

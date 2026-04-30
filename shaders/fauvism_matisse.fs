@@ -144,23 +144,6 @@ void main() {
     col = saturateColor(col,
               saturationBoost * (0.85 + audioLevel * audioReact * 0.25));
 
-    // Snap to nearest Fauvist primary — pulls washy paint values toward
-    // unmodulated colour like Matisse's palette discipline. The 0.35
-    // mix keeps brushwork variance, but the dominant hue snaps clean.
-    vec3 best = FAUVE[0];
-    float bd = 1e9;
-    for (int k = 0; k < 6; k++) {
-        float dd = dot(col - FAUVE[k], col - FAUVE[k]);
-        if (dd < bd) { bd = dd; best = FAUVE[k]; }
-    }
-    col = mix(col, best, 0.35);
-
-    // Complementary edge boost — Matisse "Green Line" portrait vibrate.
-    float Lc = dot(col, vec3(0.299, 0.587, 0.114));
-    float ex = abs(dFdx(Lc)) + abs(dFdy(Lc));
-    col = mix(col, vec3(1.0) - col,
-              smoothstep(0.05, 0.20, ex) * 0.40);
-
     // Paper grain showing through where pigment is thin.
     float grain = (hash21(uv * RENDERSIZE) - 0.5) * 0.04;
     col += grain * paperShow;

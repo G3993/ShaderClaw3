@@ -2,6 +2,7 @@
   "CATEGORIES": ["Generator", "Art Movement", "Audio Reactive"],
   "DESCRIPTION": "Bauhaus after Kandinsky's Composition VIII (1923) and Several Circles (1926) — geometric SDF primitives floating on white, each shape strictly paired to its primary (yellow triangle, red square, blue circle). Lissajous orbits, weighted-circle gradient halos, thin black supporting lines.",
   "INPUTS": [
+    { "NAME": "kandinskyWork", "LABEL": "Painting", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Composition VIII (1923)", "Several Circles (1926)", "Yellow Red Blue (1925)", "Composition X (1939)", "On White II (1923)"] },
     { "NAME": "shapeCount", "LABEL": "Shape Count", "TYPE": "float", "MIN": 4.0, "MAX": 22.0, "DEFAULT": 13.0 },
     { "NAME": "shapeSize", "LABEL": "Shape Size", "TYPE": "float", "MIN": 0.04, "MAX": 0.20, "DEFAULT": 0.09 },
     { "NAME": "orbitSpeed", "LABEL": "Orbit Speed", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.25 },
@@ -49,7 +50,16 @@ void main() {
     float aspect = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
     vec2 P = vec2(uv.x * aspect, uv.y);
 
-    vec3 col = vec3(0.97, 0.96, 0.92);  // Bauhaus warm white
+    // Per-painting background — Composition VIII / Several Circles
+    // (black) / Yellow-Red-Blue (warm white) / Composition X (black) /
+    // On White II (pure white).
+    int kw = int(kandinskyWork);
+    vec3 col;
+    if      (kw == 1) col = vec3(0.06, 0.06, 0.08);  // Several Circles black
+    else if (kw == 3) col = vec3(0.04, 0.04, 0.05);  // Composition X black
+    else if (kw == 4) col = vec3(0.97, 0.97, 0.97);  // On White II
+    else if (kw == 2) col = vec3(0.95, 0.92, 0.84);  // Yellow Red Blue warm
+    else              col = vec3(0.97, 0.96, 0.92);  // Composition VIII default
 
     // Palette — strict pairing or input-derived.
     vec3 yellowC = vec3(0.98, 0.85, 0.10);
