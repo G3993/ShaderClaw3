@@ -104,6 +104,17 @@ void main() {
 
     c = clamp(c, 0.0, 1.0);
 
+    // Surprise: every ~30s a heat-shimmer ripples across one diagonal —
+    // the carbon weave catches a thermal flux for ~1.5s.
+    {
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        float _ph = fract(TIME / 30.0);
+        float _f  = smoothstep(0.0, 0.06, _ph) * smoothstep(0.30, 0.18, _ph);
+        float _diag = _suv.x + _suv.y;
+        float _wave = sin((_diag - _ph * 4.0) * 14.0) * 0.5 + 0.5;
+        c = mix(c, c * (0.8 + 0.4 * _wave), _f * 0.5);
+    }
+
     if (transparentBg) {
         float lum = dot(c, vec3(0.299, 0.587, 0.114));
         gl_FragColor = vec4(c, lum);

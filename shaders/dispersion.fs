@@ -132,5 +132,15 @@ void main() {
         alpha = dot(col, vec3(0.299, 0.587, 0.114));
     }
 
+    // Surprise: every ~22s a complete spectrum splits dramatically —
+    // for ~0.5s the dispersion blows wide and rejoins. Newton's prism.
+    {
+        float _ph = fract(TIME / 22.0);
+        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.18, 0.10, _ph);
+        // Push channels apart based on luminance
+        float _l = dot(col, vec3(0.299, 0.587, 0.114));
+        col = mix(col, vec3(col.r * 1.4, col.g, col.b * 0.8) * (0.5 + _l), _f * 0.4);
+    }
+
     gl_FragColor = vec4(col, alpha);
 }

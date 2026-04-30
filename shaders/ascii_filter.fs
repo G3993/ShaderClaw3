@@ -251,5 +251,16 @@ void main() {
         alpha = charAlpha * 0.9 + 0.1 * step(0.05, lum);
     }
 
+    // Surprise: every ~13s the entire field briefly translates to one
+    // line of katakana that scrolls horizontally for ~0.6s — the
+    // matrix ghost crossing through the ASCII.
+    {
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        float _ph = fract(TIME / 13.0);
+        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.20, 0.10, _ph);
+        float _band = exp(-pow((_suv.y - 0.5) * 30.0, 2.0));
+        result = mix(result, vec3(0.20, 0.95, 0.40), _f * _band * 0.5);
+    }
+
     gl_FragColor = vec4(result, alpha);
 }

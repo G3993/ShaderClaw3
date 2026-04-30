@@ -59,5 +59,15 @@ void main() {
     if (cId.x < 1.0) col += lowColor.rgb * audioBass * 0.4 * dotMask;
     if (cId.x > grid.x - 2.0) col += highColor.rgb * audioHigh * 0.4 * dotMask;
 
+    // Surprise: every ~10s a diagonal cascade lights up like dominoes —
+    // each cell flares with a slight delay along the canvas diagonal.
+    {
+        float _ph = fract(TIME / 10.0);
+        float _wave = (cId.x + cId.y) / max(grid.x + grid.y, 1.0);
+        float _front = smoothstep(0.0, 0.04, _ph - _wave * 0.30)
+                     * smoothstep(_wave * 0.30 + 0.18, _wave * 0.30 + 0.10, _ph);
+        col += vec3(1.0, 0.85, 0.55) * dotMask * _front * 0.7;
+    }
+
     gl_FragColor = vec4(col, 1.0);
 }

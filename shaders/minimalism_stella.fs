@@ -99,5 +99,17 @@ void main() {
 
     col *= 0.86 + audioLevel * audioReact * 0.18;
 
+    // Surprise: every ~55s a single off-diagonal stripe rebels — for
+    // ~1s one band tilts sideways from the otherwise rigid grid.
+    // Stella once said "what you see is what you see"; here, briefly, it's lying.
+    {
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        float _ph = fract(TIME / 55.0);
+        float _f  = smoothstep(0.0, 0.05, _ph) * smoothstep(0.22, 0.12, _ph);
+        float _r = _suv.x * 0.7071 - _suv.y * 0.7071;
+        float _stripe = step(0.42, fract(_r * 8.0)) * step(fract(_r * 8.0), 0.50);
+        col = mix(col, vec3(0.85, 0.10, 0.10), _f * _stripe * 0.6);
+    }
+
     gl_FragColor = vec4(col + gap * audioHigh * audioReact * 0.08, 1.0);
 }
