@@ -23,11 +23,41 @@ float vnoise(vec2 p) {
 }
 
 // Procedural Dali desert — used when no inputTex is supplied. Sky→ochre.
+// Melting clock SDF — Persistence of Memory signifier. A pocket-watch
+// oval that sags over an implied branch, with a tapered drape tail.
+float sdMeltingClock(vec2 p) {
+    vec2 q = p - vec2(0.5, 0.55);
+    float sag = smoothstep(-0.10, 0.18, q.x) * 0.10
+              + smoothstep( 0.10, -0.18, q.x) * 0.05;
+    q.y += sag;
+    float body  = length(q * vec2(1.4, 1.0)) - 0.08;
+    float drape = max(q.x - 0.04,
+                      max(-(q.y + 0.08), q.y + 0.18));
+    drape = max(drape, length(q - vec2(0.06, -0.10)) - 0.05);
+    return min(body, drape);
+}
+
 vec3 daliDesert(vec2 uv) {
     vec3 sky    = mix(vec3(0.95, 0.78, 0.55), vec3(0.55, 0.45, 0.6), 1.0 - uv.y);
     vec3 ground = mix(vec3(0.7, 0.55, 0.32), vec3(0.42, 0.30, 0.2), 1.0 - uv.y);
     float horizon = smoothstep(0.42, 0.46, uv.y);
-    return mix(ground, sky, horizon);
+    vec3 col = mix(ground, sky, horizon);
+    // Iconic Dalí signifier — a single melting clock on the desert.
+    float clock = sdMeltingClock(uv);
+    if (clock < 0.0) {
+        col = vec3(0.85, 0.72, 0.40);  // ochre clock face
+        // Hour-mark dots ringing the body
+        vec2 q = uv - vec2(0.5, 0.55);
+        float th = atan(q.y, q.x);
+        float r  = length(q * vec2(1.4, 1.0));
+        float hourMark = step(0.066, r) * step(r, 0.075)
+                       * step(0.85, abs(sin(th * 6.0)));
+        col = mix(col, vec3(0.18, 0.12, 0.08), hourMark);
+    }
+    // Gold-rim outline
+    col = mix(col, vec3(0.95, 0.78, 0.30),
+              smoothstep(0.004, 0.0, abs(clock)) * 0.85);
+    return col;
 }
 
 vec3 sampleSrc(vec2 uv) {

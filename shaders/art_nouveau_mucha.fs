@@ -42,12 +42,23 @@ float hash11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
 
 vec3 fieldColor(int style, vec2 uv, float warm, float audioLvl) {
     if (style == 0) {
-        // Mucha pastel field
+        // Mucha pastel field with Byzantine halo arc behind the upper
+        // half — the iconic Mucha signature device (Gismonda, Job,
+        // Zodiac all share it). Without it the shader reads as
+        // generic art-nouveau wallpaper.
         vec3 cream = vec3(0.97, 0.93, 0.84);
         vec3 rose  = vec3(0.94, 0.80, 0.78);
         vec3 sage  = vec3(0.78, 0.86, 0.74);
         vec3 mid   = mix(sage, rose, warm);
-        return mix(cream, mid, smoothstep(0.0, 1.0, uv.y));
+        vec3 base  = mix(cream, mid, smoothstep(0.0, 1.0, uv.y));
+        vec2 halo  = uv - vec2(0.5, 0.62);
+        float r    = length(halo);
+        // Gilded ring at radius ~0.30
+        float arc  = smoothstep(0.36, 0.30, r) - smoothstep(0.30, 0.24, r);
+        base = mix(base, vec3(0.92, 0.78, 0.36), arc * 0.55);
+        // Soft mid-tone disc behind the figure
+        base = mix(base, mid * 0.92, smoothstep(0.36, 0.0, r) * 0.18);
+        return base;
     } else if (style == 1) {
         // Klimt mosaic gold ground — deep gold with subtle pattern
         vec3 gold     = mix(vec3(0.62, 0.45, 0.18), vec3(0.92, 0.78, 0.36), warm);

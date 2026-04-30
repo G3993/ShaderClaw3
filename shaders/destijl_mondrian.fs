@@ -116,6 +116,33 @@ void main() {
         }
     }
 
+    // ---- Static rectangular cell fills — the canonical Mondrian
+    // ---- *Composition with Red, Blue and Yellow* device. Without
+    // ---- these, shader is Boogie Woogie only; with them, it can read
+    // ---- as either the late jazz grids OR the classical primary
+    // ---- compositions. Cells positioned and sized at hashed offsets,
+    // ---- drift slowly so they breathe without strobing.
+    {
+        const int CELLS = 4;
+        const vec3 CELL_COLS[4] = vec3[4](
+            BBW_RED, BBW_BLUE, BBW_YELLOW, BBW_GREY);
+        for (int k = 0; k < CELLS; k++) {
+            float fk = float(k) + compositionSeed * 5.71;
+            vec2 cMin = vec2(hash11(fk * 1.7) * 0.55,
+                             hash11(fk * 2.3) * 0.55);
+            vec2 cSize = vec2(0.12 + hash11(fk * 3.1) * 0.18,
+                              0.10 + hash11(fk * 4.7) * 0.16);
+            // Slow drift so cells don't read as dead-static geometry.
+            cMin += 0.008 * vec2(sin(TIME * 0.11 + fk),
+                                 cos(TIME * 0.09 + fk * 1.7));
+            vec2 cMax = cMin + cSize;
+            if (uv.x > cMin.x && uv.x < cMax.x
+             && uv.y > cMin.y && uv.y < cMax.y) {
+                col = CELL_COLS[k];
+            }
+        }
+    }
+
     // ---- Intersection glow ----
     // Where a horizontal and vertical lane cross, paint a small primary
     // square that pulses with the bass — Boogie Woogie's brightest beats.

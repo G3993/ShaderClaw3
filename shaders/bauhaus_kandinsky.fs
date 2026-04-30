@@ -148,7 +148,14 @@ void main() {
 
         if (sd < bestSD) {
             bestSD = sd;
-            bestCol = (t == 0) ? yellowC : (t == 1) ? redC : blueC;
+            // Every 4th shape gets a checkerboard interior — Composition
+            // VIII signature pattern (chess-grid fills inside primitives).
+            vec2  chk    = floor(lp / max(sz * 0.32, 1e-4));
+            bool  chkOn  = (mod(chk.x + chk.y, 2.0) < 1.0);
+            bool  useChk = (mod(fi, 4.0) >= 3.0);
+            vec3  baseC  = (t == 0) ? yellowC : (t == 1) ? redC : blueC;
+            vec3  altC   = vec3(0.05, 0.05, 0.06);
+            bestCol = useChk ? (chkOn ? baseC : altC) : baseC;
         }
     }
     float fillMask = 1.0 - smoothstep(0.0, 0.0025, bestSD);

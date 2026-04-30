@@ -111,19 +111,17 @@ void main() {
     if (IMG_SIZE_inputTex.x > 0.0) {
         raw = texture(inputTex, uv).rgb;
     } else {
-        // Procedural mapping pattern — RG = UV gradient, hashed cell
-        // tints, black grid lines. Same idea as Easel's mapping image.
-        vec3 base = vec3(uv.x, uv.y, 0.5);
-        vec2 g = floor(uv * 8.0);
-        vec2 gf = fract(uv * 8.0);
-        float h = fract(sin(dot(g, vec2(127.1, 311.7))) * 43758.5453);
-        vec3 cellTint = vec3(sin(h * 6.28),
-                             sin(h * 6.28 + 2.09),
-                             sin(h * 6.28 + 4.19)) * 0.3 + 0.5;
-        base = mix(base, base * cellTint, 0.4);
-        float lineMask = step(min(gf.x, gf.y), 0.04)
-                       + step(0.96, max(gf.x, gf.y));
-        raw = mix(base, vec3(0.05), clamp(lineMask, 0.0, 1.0) * 0.6);
+        // Whaam! radial starburst fallback — comic-explosion silhouette
+        // in red/yellow on cobalt sky. The Lichtenstein iconic graphic.
+        float aspectF = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
+        vec2 cuv = (uv - vec2(0.5)) * vec2(aspectF, 1.0);
+        float ang = atan(cuv.y, cuv.x);
+        float r   = length(cuv);
+        float burstR = 0.30 + 0.08 * sin(ang * 8.0 + TIME * 0.30);
+        float burst      = step(r, burstR);
+        float burstInner = step(r, burstR * 0.60);
+        raw = mix(LIK_BLUE * 0.7, LIK_YELLOW, burst);
+        raw = mix(raw, LIK_RED, burstInner);
     }
 
     float lum = dot(raw, vec3(0.299, 0.587, 0.114));

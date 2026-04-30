@@ -119,6 +119,25 @@ void main() {
                 float pulse = step(hash21(wuv + floor(TIME * 0.7)), 0.6);
                 fresh = mix(fresh, vec3(0.95, 0.85, 0.45), pulse * 0.65);
             }
+            // Elongated street figures — tall green-black coats with
+            // pink masklike faces, the *Street, Berlin* (1913) signature.
+            // Five vertical figures arranged in a row across the canvas.
+            for (int kf = 0; kf < 5; kf++) {
+                float ff = float(kf);
+                vec2 fc = vec2(0.18 + ff * 0.16
+                              + 0.02 * sin(TIME * 0.30 + ff),
+                              0.55);
+                vec2 fd = sUV - fc;
+                float coat = length(fd * vec2(8.0, 1.6)) - 0.18;
+                if (coat < 0.0) {
+                    fresh = mix(fresh, vec3(0.18, 0.32, 0.12), 0.95);
+                }
+                vec2 hd = fd - vec2(0.0, -0.18);
+                float face = length(hd * vec2(8.0, 4.0)) - 0.06;
+                if (face < 0.0) {
+                    fresh = mix(fresh, vec3(0.95, 0.68, 0.55), 0.92);
+                }
+            }
         }
 
         // Apply carve overlay — the ridged noise modulates source brightness

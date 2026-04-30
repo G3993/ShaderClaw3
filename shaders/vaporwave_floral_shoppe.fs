@@ -158,6 +158,38 @@ void main() {
     col = mix(col, vec3(0.18, 0.10, 0.18),
               smoothstep(0.003, 0.0, abs(bsd)));
 
+    // Roses on the floor — the *Floral Shoppe* namesake (Macintosh Plus
+    // 2011 album cover). Three pink-magenta rosettes scattered across
+    // the foreground; without them the shader is "vaporwave scene"
+    // rather than the specific album cover.
+    if (uv.y < horizonY - 0.04) {
+        for (int rIdx = 0; rIdx < 3; rIdx++) {
+            float fr = float(rIdx);
+            vec2 rC = vec2(0.18 + fr * 0.32
+                          + 0.01 * sin(TIME * 0.30 + fr),
+                           horizonY - 0.08 - fr * 0.04);
+            vec2 rD = uv - rC; rD.x *= aspect;
+            float rS = 0.04 + 0.04 * (horizonY - uv.y);
+            float ang = atan(rD.y, rD.x);
+            // 5-petal rosette — radius modulated by cos(petals*angle).
+            float petalR = rS * (0.7 + 0.3 * abs(cos(ang * 2.5
+                                                + TIME * 0.20)));
+            float rL = length(rD);
+            if (rL < petalR) {
+                vec3 roseInner = vec3(1.00, 0.55, 0.78);
+                vec3 roseOuter = vec3(0.82, 0.18, 0.52);
+                vec3 roseC = mix(roseInner, roseOuter, rL / petalR);
+                col = mix(col, roseC,
+                          smoothstep(petalR, petalR - 0.005, rL));
+            }
+            // Small green stem dot below.
+            vec2 sD = rD - vec2(0.0, -rS * 1.2);
+            if (length(sD) < rS * 0.25) {
+                col = mix(col, vec3(0.20, 0.55, 0.30), 0.85);
+            }
+        }
+    }
+
     // Chromatic aberration — works in procedural mode too. Uses a
     // luminance-modulated channel push so the shift breathes with
     // brightness instead of needing a real texture sample.

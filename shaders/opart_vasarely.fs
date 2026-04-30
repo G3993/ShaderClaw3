@@ -72,16 +72,25 @@ void main() {
     float hueShift = (uv.x + uv.y * 0.4) * 0.5
                    + TIME * hueRotateSpeed
                    + TIME * 0.05 * audioMid * audioReact;
-    vec3 colA, colB;
+    // Polychrome ring assignment — canonical Vasarely Vega-Nor cycles
+    // through ~4 hues per ring index, not just two-tone alternation.
+    int ringIdx = int(floor(phase / 3.14159));
+    vec3 vegaP[4] = vec3[4](
+        hsv2rgb(vec3(fract(0.55 + hueShift), saturation, 0.95)),  // teal
+        hsv2rgb(vec3(fract(0.10 + hueShift), saturation, 0.95)),  // orange
+        hsv2rgb(vec3(fract(0.85 + hueShift), saturation, 0.95)),  // magenta
+        hsv2rgb(vec3(fract(0.30 + hueShift), saturation, 0.95))   // yellow-green
+    );
     if (useTex && IMG_SIZE_inputTex.x > 0.0) {
-        colA = texture(inputTex, vec2(0.15, 0.5)).rgb;
-        colB = texture(inputTex, vec2(0.85, 0.5)).rgb;
-    } else {
-        colA = hsv2rgb(vec3(fract(hueA + hueShift), saturation, 0.95));
-        colB = hsv2rgb(vec3(fract(hueB + hueShift), saturation, 0.95));
+        // When a texture is bound, sample 4 fixed points for the palette
+        vegaP[0] = texture(inputTex, vec2(0.15, 0.5)).rgb;
+        vegaP[1] = texture(inputTex, vec2(0.45, 0.5)).rgb;
+        vegaP[2] = texture(inputTex, vec2(0.75, 0.5)).rgb;
+        vegaP[3] = texture(inputTex, vec2(0.95, 0.5)).rgb;
     }
-
-    vec3 col = mix(colA, colB, band);
+    vec3 colA = vegaP[ringIdx & 3];
+    vec3 colB = vegaP[(ringIdx + 1) & 3];
+    vec3 col  = mix(colA, colB, band);
 
     // Centre highlight — bulge focal point glows brighter, sells volume.
     float spec = exp(-pow(r * 4.0 / max(bulgeRadius, 1e-3), 2.0))

@@ -3,7 +3,7 @@
   "DESCRIPTION": "Color-field after Rothko's Orange Red Yellow (1961) and the Chapel paintings (1971) — stacked Gaussian-blurred rectangles floating on a coloured ground, edges deeply feathered, very slow shimmer. Meditative, never crisp. The breath is gentle even when audio is loud — the painting refuses to be hurried.",
   "INPUTS": [
     { "NAME": "bandCount", "LABEL": "Bands", "TYPE": "float", "MIN": 2.0, "MAX": 4.0, "DEFAULT": 3.0 },
-    { "NAME": "feather", "LABEL": "Feather", "TYPE": "float", "MIN": 0.04, "MAX": 0.30, "DEFAULT": 0.12 },
+    { "NAME": "feather", "LABEL": "Feather", "TYPE": "float", "MIN": 0.04, "MAX": 0.30, "DEFAULT": 0.16 },
     { "NAME": "innerInset", "LABEL": "Rectangle Inset", "TYPE": "float", "MIN": 0.0, "MAX": 0.18, "DEFAULT": 0.06 },
     { "NAME": "groundColor", "LABEL": "Ground Color", "TYPE": "color", "DEFAULT": [0.32, 0.10, 0.10, 1.0] },
     { "NAME": "topColor", "LABEL": "Top Band", "TYPE": "color", "DEFAULT": [0.92, 0.50, 0.22, 1.0] },
@@ -53,6 +53,13 @@ float bandShape(vec2 uv, float yLo, float yHi, float xInset, float feath) {
     float xMask = smoothstep(xInset, xInset + feath * 0.6, uv.x)
                 * (1.0 - smoothstep(1.0 - xInset - feath * 0.6,
                                     1.0 - xInset, uv.x));
+    // Painterly inner glow — band centres slightly brighter than edges
+    // so each rectangle reads as having internal radiance, not flat fill.
+    // The chapel-painting "light from within" Rothko quality.
+    float bandCenterY  = (yLo + yHi) * 0.5;
+    float dyFromCenter = abs(uv.y - bandCenterY)
+                       / max((yHi - yLo) * 0.5, 1e-4);
+    yMask *= 1.0 + 0.08 * (1.0 - dyFromCenter * dyFromCenter);
     return yMask * xMask;
 }
 

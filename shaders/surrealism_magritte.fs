@@ -2,7 +2,8 @@
   "CATEGORIES": ["Generator", "Art Movement", "Audio Reactive"],
   "DESCRIPTION": "Surrealism after Magritte's Empire of Light (1953) and Golconda (1953) — photoreal procedural sky with illustrative clouds, a floating SDF object (apple, bowler hat, rock or pipe), long hard-light shadow on the ground, and Golconda-style ghost duplicates spawning on bass impacts. The impossible rendered with deadpan illustration.",
   "INPUTS": [
-    { "NAME": "objectChoice", "LABEL": "Object", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Apple", "Bowler Hat", "Rock", "Pipe"] },
+    { "NAME": "magritteScene", "LABEL": "Scene", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Standard Sky", "Empire of Light", "Castle of the Pyrenees", "Treachery of Images", "Black Magic"] },
+    { "NAME": "objectChoice", "LABEL": "Object", "TYPE": "long", "DEFAULT": 4, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Apple", "Bowler Hat", "Rock", "Pipe", "Son of Man"] },
     { "NAME": "objectSize", "LABEL": "Object Size", "TYPE": "float", "MIN": 0.04, "MAX": 0.30, "DEFAULT": 0.13 },
     { "NAME": "objectX", "LABEL": "Object X", "TYPE": "float", "MIN": 0.2, "MAX": 0.8, "DEFAULT": 0.5 },
     { "NAME": "horizonY", "LABEL": "Horizon", "TYPE": "float", "MIN": 0.25, "MAX": 0.75, "DEFAULT": 0.55 },
@@ -86,26 +87,73 @@ float sdPipe(vec2 p, float s) {
     return min(bowl, stem);
 }
 
+// Son of Man — bowler-hat figure with green apple covering face.
+// The single most-reproduced Magritte; previously unreachable.
+// Returns the union SDF; the renderer treats the apple region as a
+// distinct material via a colour test inside main().
+float sdSonOfMan(vec2 p, float s) {
+    // Hat sitting atop a head + shoulders profile
+    vec2 hp = p - vec2(0.0, s * 0.65);
+    float crown = length(vec2(hp.x * 1.05, max(hp.y, 0.0))) - s * 0.42;
+    float brim  = max(abs(hp.x) - s * 0.62, abs(hp.y + s * 0.04) - s * 0.06);
+    float hat   = min(crown, brim);
+    // Head (hidden behind apple)
+    float head  = length(p - vec2(0.0, s * 0.10)) - s * 0.42;
+    // Shoulders
+    float sh = length(max(vec2(abs(p.x) - s * 0.55,
+                                abs(p.y + s * 0.42) - s * 0.10), 0.0))
+             - s * 0.20;
+    // Apple in front of face — slightly off-centre and forward.
+    float apple = length(p - vec2(0.0, s * 0.06)) - s * 0.30;
+    return min(min(min(hat, head), sh), apple);
+}
+
+bool sonOfManApple(vec2 p, float s) {
+    return length(p - vec2(0.0, s * 0.06)) < s * 0.30;
+}
+
 float objectSDF(vec2 p, float s, int kind) {
     if (kind == 0) return sdApple(p, s);
     if (kind == 1) return sdBowler(p, s);
     if (kind == 2) return sdRock(p, s);
-    return sdPipe(p, s);
+    if (kind == 3) return sdPipe(p, s);
+    return sdSonOfMan(p, s);
 }
 
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     float aspect = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
 
-    // Sky gradient — cobalt at top, cream at horizon (Magritte's daytime).
-    vec3 sky = mix(skyHorizonColor.rgb, skyTopColor.rgb,
-                   smoothstep(horizonY, 1.0, uv.y));
+    // Per-scene sky/ground palette. Magritte's compositional set spans:
+    // Standard daytime sky (default), Empire of Light's day-sky-over-
+    // night-street paradox, the Castle of the Pyrenees floating-rock
+    // sea, the Treachery of Images flat copperplate cream, and the
+    // Black Magic dark-sky figure-on-cliff scene.
+    int scene = int(magritteScene);
+    vec3 skyTop = skyTopColor.rgb;
+    vec3 skyHor = skyHorizonColor.rgb;
+    vec3 grdC   = groundColor.rgb;
+    if (scene == 1) {        // Empire of Light — day sky, night street
+        skyTop = vec3(0.42, 0.62, 0.85);
+        skyHor = vec3(0.95, 0.92, 0.78);
+        grdC   = vec3(0.05, 0.05, 0.08);   // pitch-black street
+    } else if (scene == 2) { // Castle of the Pyrenees — sea + sky
+        skyTop = vec3(0.28, 0.40, 0.62);
+        skyHor = vec3(0.50, 0.62, 0.75);
+        grdC   = vec3(0.18, 0.30, 0.42);   // dark stormy sea
+    } else if (scene == 3) { // Treachery of Images — flat cream ground
+        skyTop = vec3(0.94, 0.90, 0.78);
+        skyHor = vec3(0.94, 0.90, 0.78);
+        grdC   = vec3(0.94, 0.90, 0.78);
+    } else if (scene == 4) { // Black Magic — dark sky, pale figure
+        skyTop = vec3(0.06, 0.05, 0.10);
+        skyHor = vec3(0.18, 0.16, 0.22);
+        grdC   = vec3(0.10, 0.10, 0.14);
+    }
 
-    // Ground gradient — slightly warmer toward horizon.
-    vec3 ground = groundColor.rgb;
-    ground = mix(ground * 0.65, ground * 1.05,
-                 smoothstep(0.0, horizonY, uv.y));
-
+    vec3 sky = mix(skyHor, skyTop, smoothstep(horizonY, 1.0, uv.y));
+    vec3 ground = mix(grdC * 0.65, grdC * 1.05,
+                      smoothstep(0.0, horizonY, uv.y));
     vec3 col = (uv.y > horizonY) ? sky : ground;
 
     // Magritte clouds — only above horizon.
@@ -162,7 +210,18 @@ void main() {
             if (kind == 0)      obj = vec3(0.45, 0.78, 0.20); // apple green
             else if (kind == 1) obj = vec3(0.10, 0.08, 0.06); // bowler black
             else if (kind == 2) obj = vec3(0.62, 0.55, 0.45); // rock
-            else                obj = vec3(0.26, 0.16, 0.10); // pipe brown
+            else if (kind == 3) obj = vec3(0.26, 0.16, 0.10); // pipe brown
+            else {
+                // Son of Man — apple is green, hat is black, body is
+                // dark suit. Test which sub-region this fragment is in.
+                if (sonOfManApple(d, objectSize)) {
+                    obj = vec3(0.42, 0.74, 0.20);   // apple green
+                } else if (d.y > objectSize * 0.55) {
+                    obj = vec3(0.10, 0.08, 0.06);   // bowler hat
+                } else {
+                    obj = vec3(0.16, 0.14, 0.18);   // dark suit / body
+                }
+            }
         }
         // Lambert shading from upper-left
         float lit = 0.55 + 0.45 * dot(normalize(d + vec2(0.001)),

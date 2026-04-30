@@ -2,8 +2,9 @@
   "CATEGORIES": ["Generator", "Art Movement", "Audio Reactive"],
   "DESCRIPTION": "Pollock action painting — N independent drippers wander the canvas via curl-noise advection, depositing thick paint into a persistent buffer that fades slowly. All-over skein composition: black, aluminium, ochre, cadmium red on raw canvas. After Number 1A (1948) and Autumn Rhythm (1950).",
   "INPUTS": [
-    { "NAME": "drippers", "LABEL": "Drippers", "TYPE": "float", "MIN": 4.0, "MAX": 24.0, "DEFAULT": 12.0 },
-    { "NAME": "strokeWidth", "LABEL": "Stroke Width", "TYPE": "float", "MIN": 0.001, "MAX": 0.02, "DEFAULT": 0.0035 },
+    { "NAME": "pollockWork", "LABEL": "Painting", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Autumn Rhythm (1950)", "Lavender Mist (1950)", "Number 1A (1948)", "Blue Poles (1952)", "Convergence (1952)"] },
+    { "NAME": "drippers", "LABEL": "Drippers", "TYPE": "float", "MIN": 4.0, "MAX": 32.0, "DEFAULT": 22.0 },
+    { "NAME": "strokeWidth", "LABEL": "Stroke Width", "TYPE": "float", "MIN": 0.001, "MAX": 0.025, "DEFAULT": 0.006 },
     { "NAME": "turbulence", "LABEL": "Turbulence", "TYPE": "float", "MIN": 0.5, "MAX": 6.0, "DEFAULT": 2.4 },
     { "NAME": "wanderSpeed", "LABEL": "Wander Speed", "TYPE": "float", "MIN": 0.01, "MAX": 0.4, "DEFAULT": 0.18 },
     { "NAME": "paintFade", "LABEL": "Paint Persistence", "TYPE": "float", "MIN": 0.94, "MAX": 1.0, "DEFAULT": 0.985 },
@@ -83,15 +84,42 @@ vec2 dripperPos(int id, float t, float turb, float speed) {
     return clamp(p, 0.02, 0.98);
 }
 
+// Per-painting palette swap — Pollock's drip-period spans wildly
+// different colour worlds: Lavender Mist's pinks and pale greys vs
+// Blue Poles's cobalt verticals vs Number 1A's ochre/black.
+void pollockPalette(int w, out vec3 c0, out vec3 c1, out vec3 c2,
+                    out vec3 c3, out vec3 c4) {
+    if (w == 1) {            // Lavender Mist 1950 — pink/grey/white veils
+        c0 = vec3(0.18, 0.16, 0.18); c1 = vec3(0.93, 0.91, 0.92);
+        c2 = vec3(0.78, 0.66, 0.74); c3 = vec3(0.55, 0.50, 0.58);
+        c4 = vec3(0.88, 0.78, 0.82);
+    } else if (w == 2) {     // Number 1A 1948 — handprints, ochre + black
+        c0 = vec3(0.06, 0.05, 0.05); c1 = vec3(0.96, 0.94, 0.88);
+        c2 = vec3(0.70, 0.55, 0.20); c3 = vec3(0.40, 0.32, 0.20);
+        c4 = vec3(0.85, 0.75, 0.55);
+    } else if (w == 3) {     // Blue Poles 1952 — cobalt verticals
+        c0 = vec3(0.05, 0.04, 0.04); c1 = vec3(0.92, 0.88, 0.78);
+        c2 = vec3(0.10, 0.22, 0.62); c3 = vec3(0.78, 0.18, 0.14);
+        c4 = vec3(0.65, 0.55, 0.20);
+    } else if (w == 4) {     // Convergence 1952 — white/red/yellow chaos
+        c0 = vec3(0.05, 0.04, 0.04); c1 = vec3(0.96, 0.95, 0.92);
+        c2 = vec3(0.85, 0.20, 0.18); c3 = vec3(0.92, 0.78, 0.20);
+        c4 = vec3(0.20, 0.30, 0.55);
+    } else {                 // 0 = Autumn Rhythm 1950 (default)
+        c0 = POL_BLACK; c1 = POL_WHITE; c2 = POL_SILVR;
+        c3 = POL_RED;   c4 = POL_OCHRE;
+    }
+}
+
 vec3 dripperColor(int id, vec3 srcSample, float blackBias) {
+    vec3 c0, c1, c2, c3, c4;
+    pollockPalette(int(pollockWork), c0, c1, c2, c3, c4);
     float h = hash11(float(id) * 7.13);
-    // Bias toward black per blackWeight — Pollock's drip lattice is
-    // black-dominant with white and silver as counterpoints.
-    if (h < blackBias)            return POL_BLACK;
-    if (h < blackBias + 0.18)     return POL_WHITE;
-    if (h < blackBias + 0.32)     return POL_SILVR;
-    if (h < blackBias + 0.42)     return POL_RED;
-    return POL_OCHRE;
+    if (h < blackBias)            return c0;
+    if (h < blackBias + 0.18)     return c1;
+    if (h < blackBias + 0.32)     return c2;
+    if (h < blackBias + 0.42)     return c3;
+    return c4;
 }
 
 void main() {
@@ -125,21 +153,29 @@ void main() {
         // like real flicks of enamel — not all uniform.
         float wHash = hash11(float(0) + floor(TIME * 1.2));  // shared baseline
         float w = strokeWidth * (1.0 + audioLevel * audioReact * 0.8);
-        for (int i = 0; i < 24; i++) {
+        for (int i = 0; i < 32; i++) {
             if (i >= N) break;
             float fi = float(i);
-            // Each dripper has its own time offset so they don't all
-            // synchronise at the same canvas location on launch.
-            vec2 p = dripperPos(i, t + hash11(fi * 0.71) * 8.0,
-                                turbulence, 1.0);
-            vec2 d = uv - p;
+            // Sample each dripper at TWO time-offsets and deposit along
+            // the SEGMENT between previous and current head positions.
+            // Converts per-frame stamps into continuous skeins —
+            // *Autumn Rhythm* lattice density instead of bead-chains.
+            float tOff = hash11(fi * 0.71) * 8.0;
+            vec2 pNow  = dripperPos(i, t + tOff, turbulence, 1.0);
+            vec2 pPrev = dripperPos(i, t + tOff - 0.06, turbulence, 1.0);
+            // Distance from fragment to the segment pPrev→pNow
+            vec2 ab = pNow - pPrev;
+            float h = clamp(dot(uv - pPrev, ab) / max(dot(ab, ab), 1e-6),
+                            0.0, 1.0);
+            vec2 cl = pPrev + ab * h;
+            vec2 d  = uv - cl;
             d.x *= aspect;
             float ds = length(d);
             if (ds > w * 4.0) continue;
             float falloff = smoothstep(w, w * 0.4, ds);
             if (falloff < 0.001) continue;
             vec3 src = (IMG_SIZE_inputTex.x > 0.0)
-                     ? texture(inputTex, p).rgb : vec3(0.5);
+                     ? texture(inputTex, cl).rgb : vec3(0.5);
             vec3 c = useTexColor ? src
                                  : dripperColor(i, src, blackWeight);
             prev = mix(prev, c, falloff);

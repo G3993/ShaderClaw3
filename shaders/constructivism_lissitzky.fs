@@ -87,6 +87,24 @@ float glyphField(vec2 uv) {
         float bar  = step(0.85, h) * step(0.4, cf.y) * step(cf.y, 0.6);
         total = max(total, max(vert, bar));
     }
+    // Banner-scale typography across top of poster — Rodchenko grammar.
+    // The defining Constructivist mark: poster-banner type running edge-to-edge.
+    {
+        vec2 origin = vec2(0.10, 0.05);
+        origin.x += sin(TIME * 0.15) * 0.01;
+        vec2 local = (uv - origin) * vec2(7.0, 3.5);
+        if (!(any(lessThan(local, vec2(0.0))) ||
+              local.x > 5.0 || local.y > 1.0)) {
+            vec2 ci = floor(local);
+            float h  = hash21(ci);
+            float vert = step(h, 0.55) * step(0.18, fract(local.x))
+                       * step(fract(local.x), 0.55);
+            float bar  = step(0.55, h) * step(h, 0.85)
+                       * step(0.40, fract(local.y))
+                       * step(fract(local.y), 0.62);
+            total = max(total, max(vert, bar));
+        }
+    }
     return total;
 }
 
@@ -121,7 +139,7 @@ void main() {
               - axis * 0.05
               - axis * triangleThrust * thrustT
               - axis * triangleThrust * audioBass * 0.4;
-    float tri = wedge(uv, apex, -axis, 0.55, 0.18);
+    float tri = wedge(uv, apex, -axis, 0.55, 0.32);
     col = mix(col, RED, tri);
 
     // 0-4 black bars at varying diagonals, gently rotating with audioMid.

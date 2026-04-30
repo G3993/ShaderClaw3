@@ -71,8 +71,34 @@ void main() {
             q.x *= aspect;
             q = mat2(cos(r), -sin(r), sin(r), cos(r)) * q;
 
-            // SDF inside-rectangle test
-            if (abs(q.x) > s || abs(q.y) > s * aR) continue;
+            // Höch's collage grammar: face-oval cutouts (heads) +
+            // gear-cog silhouettes (machine parts) + occasional
+            // newsprint rectangle. Hashed kind selector per-strip.
+            int  kind = int(hash11(fi * 27.3) * 3.0);
+            float edgeMask = 0.0;
+            if (kind == 0) {
+                // Face oval — Höch's cut-out heads.
+                vec2 qN = q / vec2(s, s * aR);
+                float r = length(qN * vec2(0.85, 1.20));
+                if (r > 1.0) continue;
+                edgeMask = smoothstep(1.0, 0.85, r);
+            } else if (kind == 1) {
+                // 12-toothed gear/cog silhouette — machine parts.
+                vec2 qN = q / vec2(s, s * aR);
+                float ang = atan(qN.y, qN.x);
+                float gearR = 0.85 + 0.10 * step(0.5, fract(ang * 12.0 / 6.2832));
+                float r = length(qN);
+                if (r > gearR) continue;
+                edgeMask = smoothstep(gearR, gearR - 0.10, r);
+            } else {
+                // Newsprint rectangle with torn-paper jag.
+                if (abs(q.x) > s || abs(q.y) > s * aR) continue;
+                float jag = hash21(q * 40.0 + bt) * 0.04;
+                float edgeX = (s - abs(q.x)) / s;
+                float edgeY = (s * aR - abs(q.y)) / (s * aR);
+                edgeMask = smoothstep(0.0, 0.06,
+                                     min(edgeX, edgeY) - jag);
+            }
 
             // Sample input from a hashed offset region — different
             // viewpoint per strip (this is the photomontage core).
@@ -83,32 +109,14 @@ void main() {
             if (IMG_SIZE_inputTex.x > 0.0) {
                 patch = texture(inputTex, fract(sampleUV)).rgb;
             } else {
-                // Fallback: hashed colour swatches mimicking newsprint cuts
                 float hh = hash11(fi * 17.1);
                 patch = (hh < 0.3) ? vec3(0.85, 0.78, 0.62)
                        : (hh < 0.55) ? vec3(0.45, 0.40, 0.32)
                        : (hh < 0.78) ? vec3(0.18, 0.16, 0.14)
                        : vec3(0.65, 0.20, 0.18);
             }
-
-            // Random desaturation on some strips — Höch's sources were
-            // halftone-grey magazines.
-            if (hash11(fi * 19.3) < 0.45) {
-                patch = vec3(dot(patch, vec3(0.33)));
-            }
-            // Random invert on a few — gives Dada wrongness.
-            if (hash11(fi * 23.7) < 0.10) {
-                patch = vec3(1.0) - patch;
-            }
-
-            // Torn-paper irregularity — hash-jagged edge instead of
-            // a clean smoothstep so strips read as cut-and-glued, not
-            // perfect rectangles.
-            float jag = hash21(q * 40.0 + bt) * 0.04;
-            float edgeX = (s - abs(q.x)) / s;
-            float edgeY = (s * aR - abs(q.y)) / (s * aR);
-            float edgeMask = smoothstep(0.0, 0.06,
-                                       min(edgeX, edgeY) - jag);
+            if (hash11(fi * 19.3) < 0.45) patch = vec3(dot(patch, vec3(0.33)));
+            if (hash11(fi * 23.7) < 0.10) patch = vec3(1.0) - patch;
 
             prev = mix(prev, patch, edgeMask);
         }

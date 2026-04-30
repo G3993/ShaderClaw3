@@ -7,7 +7,7 @@
     { "NAME": "flowSpeed", "LABEL": "Flow Speed", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.25 },
     { "NAME": "paintFade", "LABEL": "Paint Persistence", "TYPE": "float", "MIN": 0.92, "MAX": 1.0, "DEFAULT": 0.988 },
     { "NAME": "dropRate", "LABEL": "Drop Rate", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55 },
-    { "NAME": "dropSize", "LABEL": "Drop Size", "TYPE": "float", "MIN": 0.005, "MAX": 0.08, "DEFAULT": 0.028 },
+    { "NAME": "dropSize", "LABEL": "Drop Size", "TYPE": "float", "MIN": 0.005, "MAX": 0.20, "DEFAULT": 0.028 },
     { "NAME": "saturationBoost", "LABEL": "Saturation", "TYPE": "float", "MIN": 0.6, "MAX": 1.8, "DEFAULT": 1.15 },
     { "NAME": "paperShow", "LABEL": "Paper Show-through", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.18 },
     { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },

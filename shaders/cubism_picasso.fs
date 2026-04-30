@@ -2,6 +2,7 @@
   "CATEGORIES": ["Generator", "Art Movement", "Audio Reactive"],
   "DESCRIPTION": "Cubism after Picasso's analytic phase — Portrait of Kahnweiler (1910) and Ma Jolie (1912). N translucent rectangular planes, each rotated and sampling the source from its own viewpoint, alpha-stacked with per-plane gradient shading. Near-monochrome ochre/umber palette, optional stencilled letter fragments. Picasso's grid of perspectives rendered as overlapping SDF planes — no tessellation, no facets.",
   "INPUTS": [
+    { "NAME": "picassoWork", "LABEL": "Painting", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Kahnweiler (1910)", "Demoiselles d'Avignon (1907)", "Three Musicians (1921)", "Guernica (1937)", "Ma Jolie (1912)"] },
     { "NAME": "planes", "LABEL": "Planes", "TYPE": "float", "MIN": 3.0, "MAX": 18.0, "DEFAULT": 11.0 },
     { "NAME": "planeSize", "LABEL": "Plane Size", "TYPE": "float", "MIN": 0.06, "MAX": 0.45, "DEFAULT": 0.22 },
     { "NAME": "planeAlpha", "LABEL": "Plane Alpha", "TYPE": "float", "MIN": 0.10, "MAX": 0.85, "DEFAULT": 0.42 },
@@ -53,30 +54,86 @@ vec3 ochreLut(vec3 c, float strength, float warm) {
     return mix(c, ochre, strength);
 }
 
-// Procedural stencilled letter fragments — sparse mono-spaced glyph rows.
-// Real text rendering would need a font atlas; the canonical Picasso
-// letter scraps (BAL, JOU, MA JOLIE) are stylised enough that hash-driven
-// vertical/horizontal strokes read correctly at painting scale.
+// Per-painting palette LUT — Picasso's career spans wildly different
+// colour worlds: monochrome ochre Kahnweiler vs the pink+ochre+ultramarine
+// of Demoiselles, the synthetic-flat saturated colour of Three Musicians,
+// and the pure greyscale of Guernica.
+vec3 picassoLut(int w, vec3 c, float strength) {
+    float L = dot(c, vec3(0.299, 0.587, 0.114));
+    vec3 target;
+    if (w == 1) {            // Demoiselles 1907 — pink/ochre on ultramarine
+        vec3 hot  = vec3(0.85, 0.62, 0.55) * L + vec3(0.18, 0.10, 0.06);
+        vec3 cool = vec3(0.18, 0.20, 0.55) * L + vec3(0.05, 0.08, 0.18);
+        target = mix(cool, hot, smoothstep(0.30, 0.65, L));
+    } else if (w == 2) {     // Three Musicians 1921 — synthetic flat colour
+        // Posterize toward a 4-colour synthetic-cubist palette.
+        if      (L < 0.25) target = vec3(0.10, 0.08, 0.05);
+        else if (L < 0.50) target = vec3(0.55, 0.18, 0.14);   // dark red
+        else if (L < 0.75) target = vec3(0.92, 0.78, 0.18);   // mustard
+        else               target = vec3(0.18, 0.30, 0.62);   // ultramarine
+    } else if (w == 3) {     // Guernica 1937 — pure greyscale, hard contrast
+        float Lc = pow(L, 0.85);
+        target = vec3(Lc) * vec3(1.02, 1.00, 0.98);
+    } else if (w == 4) {     // Ma Jolie 1911-12 — analytic with letter scraps
+        // Same warm ochre as Kahnweiler but brown-shifted.
+        vec3 cool = vec3(0.30, 0.28, 0.24) + L * vec3(0.55, 0.48, 0.40);
+        vec3 hot  = vec3(0.45, 0.34, 0.20) + L * vec3(0.60, 0.46, 0.28);
+        target = mix(cool, hot, 0.7);
+    } else {                 // 0 = Kahnweiler 1910 (current default LUT)
+        vec3 cool = vec3(0.32, 0.30, 0.26) + L * vec3(0.55, 0.50, 0.42);
+        vec3 hot  = vec3(0.42, 0.32, 0.18) + L * vec3(0.62, 0.50, 0.30);
+        target = mix(cool, hot, 0.55);
+    }
+    return mix(c, target, strength);
+}
+
+// Picasso analytic-cubism letter scraps — JOU / MA JOLIE / BAL are the
+// canonical stencilled fragments. Drawn as explicit per-letter SDFs so
+// the marks actually READ as letters at painting scale, not as noise.
+float drawJ(vec2 p) {
+    float bar  = step(0.40, p.x) * step(p.x, 0.60) * step(0.20, p.y);
+    float hook = step(0.10, p.x) * step(p.x, 0.40)
+               * step(0.10, p.y) * step(p.y, 0.30);
+    return max(bar, hook);
+}
+float drawO(vec2 p) {
+    vec2 d = p - 0.5;
+    float r = length(d * vec2(1.4, 1.0));
+    return step(0.30, r) * step(r, 0.45);
+}
+float drawU(vec2 p) {
+    float L = step(0.10, p.x) * step(p.x, 0.30) * step(0.20, p.y);
+    float R = step(0.70, p.x) * step(p.x, 0.90) * step(0.20, p.y);
+    float B = step(0.10, p.x) * step(p.x, 0.90)
+            * step(0.10, p.y) * step(p.y, 0.30);
+    return max(max(L, R), B);
+}
+float drawA(vec2 p) {
+    float L = step(0.10, p.x) * step(p.x, 0.28) * step(0.10, p.y);
+    float R = step(0.72, p.x) * step(p.x, 0.90) * step(0.10, p.y);
+    float T = step(0.10, p.x) * step(p.x, 0.90) * step(0.85, p.y);
+    float M = step(0.20, p.x) * step(p.x, 0.80)
+            * step(0.45, p.y) * step(p.y, 0.55);
+    return max(max(L, R), max(T, M));
+}
 float letterField(vec2 uv, float seed) {
+    // 4 letter cells at hashed-but-drifting positions, scaled to read
+    // legibly across the canvas. Rotates through J / O / U / A.
     float total = 0.0;
-    for (int g = 0; g < 4; g++) {
-        float fg = float(g);
-        vec2 origin = vec2(hash11(fg * 13.7 + seed),
-                           hash11(fg * 17.1 + seed + 5.3));
-        vec2 ld = (uv - origin) * vec2(72.0, 28.0);
-        if (ld.x < 0.0 || ld.y < 0.0 ||
-            ld.x > 12.0 + hash11(fg * 3.7) * 6.0 || ld.y > 3.0) continue;
-        vec2 ci = floor(ld);
-        float h = hash11(ci.x + ci.y * 13.0 + fg * 7.7 + seed);
-        // Vertical stroke if h<0.55, horizontal crossbar if h<0.85.
-        float vert = step(h, 0.55) * step(0.18, fract(ld.x))
-                   * step(fract(ld.x), 0.55)
-                   * step(0.10, fract(ld.y))
-                   * step(fract(ld.y), 0.92);
-        float bar  = step(0.55, h) * step(h, 0.85)
-                   * step(0.40, fract(ld.y))
-                   * step(fract(ld.y), 0.62);
-        total = max(total, max(vert, bar));
+    for (int i = 0; i < 4; i++) {
+        float fi = float(i);
+        vec2 origin = vec2(0.18 + hash11(fi + seed) * 0.6,
+                           0.18 + hash11(fi * 3.7 + seed) * 0.6);
+        origin += 0.01 * vec2(sin(TIME * 0.20 + fi),
+                              cos(TIME * 0.17 + fi));
+        vec2 lp = (uv - origin) * vec2(18.0, 14.0);
+        if (lp.x < 0.0 || lp.x > 1.0
+         || lp.y < 0.0 || lp.y > 1.0) continue;
+        float ink = (i == 0) ? drawJ(lp)
+                  : (i == 1) ? drawO(lp)
+                  : (i == 2) ? drawU(lp)
+                             : drawA(lp);
+        total = max(total, ink);
     }
     return total;
 }
@@ -195,7 +252,7 @@ void main() {
     }
 
     // Final palette compression toward Picasso's umber-ochre.
-    col = ochreLut(col, ochreStrength, warmth + audioHigh * audioReact * 0.15);
+    col = picassoLut(int(picassoWork), col, ochreStrength);
 
     // Subtle audio luminance breath.
     col *= 0.93 + audioLevel * audioReact * 0.12;

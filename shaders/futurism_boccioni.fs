@@ -2,7 +2,7 @@
   "CATEGORIES": ["Generator", "Art Movement", "Audio Reactive"],
   "DESCRIPTION": "Futurism after Boccioni Dynamism of a Cyclist (1913) and Balla Dynamism of a Dog on a Leash (1912) — persistent frame-feedback motion-blur trails along an oscillating velocity vector, radiating force lines from a wandering origin, divisionist colour dabs streaking the trail. Speed as visual concept, all of it actually moving.",
   "INPUTS": [
-    { "NAME": "trailPersistence", "LABEL": "Trail Persistence", "TYPE": "float", "MIN": 0.85, "MAX": 0.998, "DEFAULT": 0.96 },
+    { "NAME": "trailPersistence", "LABEL": "Trail Persistence", "TYPE": "float", "MIN": 0.85, "MAX": 0.998, "DEFAULT": 0.88 },
     { "NAME": "velocityMag", "LABEL": "Velocity Magnitude", "TYPE": "float", "MIN": 0.0, "MAX": 0.10, "DEFAULT": 0.040 },
     { "NAME": "velocityRotSpeed", "LABEL": "Velocity Rotation", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.15 },
     { "NAME": "phantomCount", "LABEL": "Phantom Copies", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 5.0 },
@@ -42,16 +42,22 @@ vec3 hsv2rgb(vec3 c) {
 }
 
 vec3 fallbackBody(vec2 uv, vec2 vel) {
-    // A moving silhouette acts as the subject when no input is bound.
+    // Boccioni Dynamism of a Cyclist (1913) — discrete faceted wedge
+    // shards radiating from the moving centre, NOT a smooth blob.
+    // Cobalt + orange palette per the painting.
     vec2 c = vec2(0.5) + vel * sin(TIME * 0.7) * 6.0;
     vec2 d = uv - c;
-    vec2 vn = length(vel) > 0.001 ? normalize(vel) : vec2(1.0, 0.0);
-    vec2 vp = vec2(-vn.y, vn.x);
-    vec2 local = vec2(dot(d, vn), dot(d, vp));
-    float blob = smoothstep(0.16, 0.0, length(local * vec2(0.55, 1.5)));
-    vec3 sky  = mix(vec3(0.10, 0.06, 0.08), vec3(0.30, 0.18, 0.12), uv.y);
-    vec3 body = mix(vec3(0.95, 0.42, 0.20), vec3(0.55, 0.18, 0.12), uv.y);
-    return mix(sky, body, blob);
+    float ang = atan(d.y, d.x);
+    float r   = length(d);
+    // 7-bladed faceted wedge silhouette — fractured cyclist forms.
+    float blade  = pow(abs(sin(ang * 3.5 + TIME * 0.4)), 0.6);
+    float bladeR = 0.18 + 0.10 * blade;
+    float wedge  = smoothstep(bladeR + 0.02, bladeR - 0.02, r);
+    vec3 sky    = vec3(0.10, 0.14, 0.30);
+    vec3 cobalt = vec3(0.08, 0.30, 0.78);
+    vec3 orange = vec3(0.98, 0.45, 0.10);
+    vec3 body   = mix(cobalt, orange, blade);
+    return mix(sky, body, wedge);
 }
 
 void main() {
@@ -92,23 +98,24 @@ void main() {
         // — Balla's dog with 20 leg positions.
         vec2 vn = length(vel) > 1e-5 ? normalize(vel) : vec2(1.0, 0.0);
         vec2 vp = vec2(-vn.y, vn.x);
+        // Max-blend phantoms — Boccioni Cyclist's discrete fractured
+        // copies, not a soft additive average. Each phantom remains a
+        // distinct overlapping plane, NOT a smoothed motion-blur.
         vec3 newC = vec3(0.0);
-        float wsum = 0.0;
         int PC = int(clamp(phantomCount, 1.0, 10.0));
         for (int i = 0; i < 10; i++) {
             if (i >= PC) break;
             float fi = float(i);
-            float w = exp(-fi * 0.3);
             vec2 off = vp * (fi - float(PC) * 0.5)
                      * phantomSpread * 0.18;
             vec2 sUV = uv - off;
             vec3 c = (IMG_SIZE_inputTex.x > 0.0)
                    ? texture(inputTex, sUV).rgb
                    : fallbackBody(sUV, vel);
-            newC += c * w;
-            wsum += w;
+            // Per-phantom darkening so closer-to-head copies are brighter.
+            float w = 1.0 - fi / float(PC) * 0.6;
+            newC = max(newC, c * w);
         }
-        newC /= max(wsum, 1e-4);
 
         // Composite new on top — but with low alpha so the trail dominates.
         // Effective: prev decays, new gets stamped on each frame.

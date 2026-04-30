@@ -81,18 +81,22 @@ void main() {
         if (IMG_SIZE_inputTex.x > 0.0) {
             fresh = texture(inputTex, uv).rgb;
         } else {
-            // Fallback: scrolling stripes + flickering 8x8 blocks +
-            // moving ring — much more glitchy structure than a smooth
-            // gradient, so the datamosh artefacts have something to bite.
-            vec3 stripes = vec3(
-                step(0.5, fract(uv.x * 5.0 + TIME * 0.30)),
-                step(0.5, fract(uv.y * 7.0 - TIME * 0.20)),
-                step(0.7, hash21(floor(uv * 40.0) + floor(TIME * 2.0))));
-            float ang = atan(uv.y - 0.5, uv.x - 0.5);
-            vec3 ring = vec3(0.5 + 0.5 * cos(ang * 3.0 + TIME * 1.7),
-                             0.5 + 0.5 * sin(length(uv - 0.5) * 12.0 - TIME * 0.7),
-                             0.5);
-            fresh = mix(ring, stripes, 0.45);
+            // Pink Dot fallback — Takeshi Murata 2007. A single pulsing
+            // pink biomorphic blob on dark ground; the mosh accumulator
+            // smears it along the motion vector every frame, which IS
+            // Murata's canonical glitch-art process.
+            vec2 dC = vec2(0.5, 0.5)
+                    + 0.10 * vec2(sin(TIME * 0.40),
+                                  cos(TIME * 0.32));
+            vec2 dD = uv - dC;
+            float angP = atan(dD.y, dD.x);
+            float dR = 0.18 + 0.05 * sin(TIME * 0.70)
+                            + 0.04 * sin(angP * 5.0 + TIME * 1.30);
+            float blob = length(dD * vec2(1.4, 1.0)) - dR;
+            float blobMask = smoothstep(0.02, -0.02, blob);
+            vec3 dark = vec3(0.04, 0.02, 0.06);
+            vec3 pink = vec3(0.95, 0.42, 0.78);
+            fresh = mix(dark, pink, blobMask);
         }
 
         vec3 outC = freeze
