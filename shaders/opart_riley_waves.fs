@@ -55,5 +55,16 @@ void main() {
     float flash = smoothstep(0.85, 1.0, audioLevel);
     col = mix(col, vec3(1.0) - col, flash * 0.4);
 
+    // Surprise: every ~16s the wave frequency briefly doubles — for
+    // ~0.5s the eye sees twice as many bands, optical-illusion judder.
+    // Bridget Riley's whole game.
+    {
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        float _ph = fract(TIME / 16.0);
+        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.18, 0.08, _ph);
+        float _doubled = step(0.5, fract(_suv.y * 80.0)) * 2.0 - 1.0;
+        col = mix(col, vec3(0.5 + 0.5 * _doubled), _f * 0.45);
+    }
+
     gl_FragColor = vec4(col, 1.0);
 }

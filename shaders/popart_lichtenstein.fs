@@ -247,5 +247,22 @@ void main() {
         col = mix(col, LIK_INK, tail * 0.6);
     }
 
+    // Surprise: every ~14s a sudden onomatopoeia bubble flashes —
+    // a yellow starburst with a bold black outline at a corner. POW!
+    {
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        float _ph = fract(TIME / 14.0);
+        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.20, 0.10, _ph);
+        vec2 _o = vec2(0.78, 0.78);
+        vec2 _d = (_suv - _o);
+        float _ang = atan(_d.y, _d.x);
+        float _r = length(_d);
+        float _spike = 0.10 + 0.04 * cos(_ang * 12.0);
+        float _star = smoothstep(_spike, _spike * 0.92, _r);
+        float _outline = smoothstep(_spike + 0.012, _spike + 0.005, _r) * (1.0 - _star);
+        col = mix(col, vec3(1.0, 0.85, 0.15), _f * _star * 0.85);
+        col = mix(col, vec3(0.05),             _f * _outline);
+    }
+
     gl_FragColor = vec4(col, 1.0);
 }

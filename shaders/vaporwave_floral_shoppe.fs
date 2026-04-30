@@ -254,5 +254,17 @@ void main() {
     // VHS posterize
     col = floor(col * 16.0) / 16.0;
 
+    // Surprise: every ~37s a single Roman bust silhouette ghosts in
+    // (Macintosh Plus aesthetic) at the horizon for ~2s, faded magenta.
+    {
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        float _ph = fract(TIME / 37.0);
+        float _f  = smoothstep(0.0, 0.06, _ph) * smoothstep(0.30, 0.18, _ph);
+        vec2 _bp = (_suv - vec2(0.5, horizonY + 0.10));
+        float _bust = smoothstep(0.10, 0.06, length(_bp * vec2(2.0, 1.0)))
+                    + smoothstep(0.06, 0.04, length((_bp + vec2(0.0, 0.04)) * vec2(1.4, 1.0)));
+        col = mix(col, vec3(0.95, 0.50, 0.85), _f * _bust * 0.50);
+    }
+
     gl_FragColor = vec4(col, 1.0);
 }

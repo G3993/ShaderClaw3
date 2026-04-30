@@ -197,6 +197,18 @@ void main() {
 
     result = clamp(result, 0.0, 1.0);
 
+    // Surprise: every ~23s a bee shadow buzzes past — a tiny dark
+    // specter loops the petals for ~1.2s.
+    {
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        float _ph = fract(TIME / 23.0);
+        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.24, 0.14, _ph);
+        float _t = (_ph - 0.04) / 0.20;
+        vec2 _bee = vec2(0.5 + 0.30 * sin(_t * 8.0), 0.5 + 0.30 * cos(_t * 6.0));
+        float _body = smoothstep(0.018, 0.0, length(_suv - _bee));
+        result = mix(result, vec3(0.05, 0.04, 0.04), _body * _f);
+    }
+
     if (transparentBg) {
         float lum = dot(result, vec3(0.299, 0.587, 0.114));
         float a = max(lum, 1.0 - smoothstep(0.0, 0.02, l - 0.01));

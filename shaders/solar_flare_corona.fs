@@ -115,5 +115,21 @@ void main() {
     // Global brightness with audioLevel
     col *= 0.7 + audioLevel * 0.5;
 
+    // Surprise: every ~60s a coronal mass ejection — for ~3s a single
+    // bright plasma plume erupts asymmetrically from the limb and trails
+    // outward, then dissipates.
+    {
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        float _ph = fract(TIME / 60.0);
+        float _f  = smoothstep(0.0, 0.06, _ph) * smoothstep(0.30, 0.20, _ph);
+        float _angle = floor(TIME / 60.0) * 2.39 + 1.7;
+        vec2 _dir = vec2(cos(_angle), sin(_angle));
+        float _proj = dot(_suv - 0.5, _dir);
+        float _para = abs(dot(_suv - 0.5, vec2(-_dir.y, _dir.x)));
+        float _plume = smoothstep(0.45, 0.10, _proj) * smoothstep(0.04, 0.0, _para)
+                     * step(0.05, _proj);
+        col += vec3(1.0, 0.55, 0.20) * _plume * _f * 1.5;
+    }
+
     gl_FragColor = vec4(col, 1.0);
 }
