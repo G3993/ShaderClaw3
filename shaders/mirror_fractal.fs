@@ -68,5 +68,17 @@ void main() {
 
     float alpha = 1.0;
     if (transparentBg) alpha = smoothstep(0.02, 0.15, dot(col, vec3(0.3)));
+
+    // Surprise: every ~20s a single asymmetry leaks through — for ~0.7s
+    // the bottom half offsets while the top stays mirrored. The illusion
+    // breaks momentarily, the trick is shown.
+    {
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        float _ph = fract(TIME / 20.0);
+        float _f  = smoothstep(0.0, 0.05, _ph) * smoothstep(0.20, 0.10, _ph);
+        if (_suv.y < 0.5) {
+            col = mix(col, col.gbr, _f * 0.5);
+        }
+    }
     gl_FragColor = vec4(col, alpha);
 }

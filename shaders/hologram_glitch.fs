@@ -67,5 +67,13 @@ void main() {
     // Transmission strength: low audio dims the hologram (signal is weak).
     col *= 0.5 + audioLevel * 0.6;
 
+    // Surprise: every ~9s the carrier wave drops out completely for
+    // ~120ms — the receiver loses lock then re-syncs. A blink.
+    {
+        float _ph = fract(TIME / 9.0);
+        float _drop = step(_ph, 0.06);
+        col = mix(col, vec3(0.02, 0.02, 0.03), _drop * 0.95);
+    }
+
     gl_FragColor = vec4(col, 1.0);
 }
