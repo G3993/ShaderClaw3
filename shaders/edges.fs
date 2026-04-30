@@ -3,7 +3,7 @@
     "CATEGORIES": ["Generator", "Particles", "Audio Reactive"],
     "CREDIT": "Easel / edges v1",
     "INPUTS": [
-        { "NAME": "motionSpeed",    "TYPE": "float", "DEFAULT": 1.2, "MIN": 0.0, "MAX": 4.0, "LABEL": "Motion Speed" },
+        { "NAME": "motionSpeed",    "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 1.0, "LABEL": "Motion Speed" },
         { "NAME": "chaos",          "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0, "LABEL": "Chaos" },
         { "NAME": "particleSize",   "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 4.0, "LABEL": "Particle Size" },
         { "NAME": "stretch",        "TYPE": "float", "DEFAULT": 1.2, "MIN": 0.0, "MAX": 4.0, "LABEL": "Stretch" },

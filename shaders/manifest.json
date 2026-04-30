@@ -1002,5 +1002,73 @@
       "Nature"
     ],
     "file": "sonoluminescence.fs"
+  },
+  {
+    "id": 493,
+    "title": "Swirl Spin",
+    "description": "Moving Lissajous spot painted into a slowly-rotating feedback field. Ported from Shadertoy XsyGzz.",
+    "file": "swirl_spin.fs",
+    "type": "generator",
+    "categories": [
+      "Generator",
+      "Feedback"
+    ]
+  },
+  {
+    "id": 494,
+    "title": "Reverse Flow Field",
+    "description": "Colored seeds streaked backward through an animated cellular flow. Looks like wind-blown grass tips. Ported from Shadertoy X3BBD1.",
+    "file": "reverse_flow_field.fs",
+    "type": "generator",
+    "categories": [
+      "Generator",
+      "Flow"
+    ]
+  },
+  {
+    "id": 495,
+    "title": "Arcane Lands",
+    "description": "Raymarched landscape flythrough with god rays and lens flare. Ported from Shadertoy XdcfR7 by Dave Hoskins.",
+    "file": "arcane_lands.fs",
+    "type": "generator",
+    "categories": [
+      "Generator",
+      "3D"
+    ]
+  },
+  {
+    "id": 496,
+    "title": "Interactive Particles",
+    "description": "1024 particles attracted to a center point and the cursor. Click and drag to pull them around. Ported from Shadertoy McXXzH.",
+    "file": "interactive_particles.fs",
+    "type": "generator",
+    "categories": [
+      "Generator",
+      "Particles",
+      "Interactive"
+    ]
+  },
+  {
+    "id": 497,
+    "title": "Vaporwave Hologram",
+    "description": "Y2K vaporwave scene transmitted through a degrading holographic channel \u2014 sun, grid, Y2K swarm, katakana with vertical tear, RGB shift, EMI bursts.",
+    "file": "vapor_hologram.fs",
+    "type": "generator",
+    "categories": [
+      "Generator",
+      "Glitch",
+      "Audio Reactive"
+    ]
+  },
+  {
+    "id": 498,
+    "title": "Cavern Black Sun",
+    "description": "Falling through Deep Cavern ring tunnel toward a Black Hole Sun at the vanishing point. Rings outside, warped fbm rays at the core.",
+    "file": "cavern_black_sun.fs",
+    "type": "generator",
+    "categories": [
+      "Generator",
+      "Audio Reactive"
+    ]
   }
 ]
