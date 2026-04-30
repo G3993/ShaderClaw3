@@ -150,7 +150,7 @@ void main() {
         // Oscillator: per-character Y offset
         float oscY = oscAmount * sin(TIME * oscSpeed * 6.2832 + float(i) * oscSpread * 3.14159);
 
-        if (ch >= 0 && ch <= 25) {
+        if (ch >= 0 && ch <= 36 && ch != 26) {
             vec2 cellUV = vec2((p.x - cx) / charW, (p.y - (originY + oscY)) / charH);
             if (cellUV.x >= 0.0 && cellUV.x <= 1.0 && cellUV.y >= 0.0 && cellUV.y <= 1.0) {
                 float s = sampleChar(ch, cellUV);

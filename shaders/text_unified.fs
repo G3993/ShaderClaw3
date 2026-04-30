@@ -304,7 +304,7 @@ vec4 effectCascade(vec2 uv) {
         float gc = (clx/cf) * 5.0, gr = localY * 7.0;
         if (gc >= 0.0 && gc < 5.0 && gr >= 0.0 && gr < 7.0) {
             int ch = getChar(slot);
-            if (ch >= 0 && ch <= 25) textHit = charPixel(ch, gc, gr);
+            if (ch >= 0 && ch <= 36 && ch != 26) textHit = charPixel(ch, gc, gr);
         }
     }
 
@@ -375,7 +375,7 @@ vec4 effectDigifade(vec2 uv, int sub) {
                 float gc = (clx/cf)*5.0, gr = (ry/cH)*7.0;
                 if (gc >= 0.0 && gc < 5.0 && gr >= 0.0 && gr < 7.0) {
                     int ch = getChar(slot);
-                    if (ch >= 0 && ch <= 25) textHit = max(textHit, charPixel(ch, gc, gr));
+                    if (ch >= 0 && ch <= 36 && ch != 26) textHit = max(textHit, charPixel(ch, gc, gr));
                 }
             }
         }
@@ -456,7 +456,7 @@ vec4 effectCoil(vec2 uv, int sub) {
     float textHit = 0.0;
     if (cellUV.x >= 0.0 && cellUV.x <= 1.0 && cellUV.y >= 0.0 && cellUV.y <= 1.0) {
         int ch = getChar(ti);
-        if (ch >= 0 && ch <= 25) textHit = sampleChar(ch, cellUV);
+        if (ch >= 0 && ch <= 36 && ch != 26) textHit = sampleChar(ch, cellUV);
     }
 
     bool inv = mod(ringIdx, 2.0) < 1.0;
@@ -519,7 +519,7 @@ vec4 effectFlag(vec2 uv, int sub) {
         float gc = (clx/cf)*5.0, gr = ly*7.0;
         if (gc >= 0.0 && gc < 5.0 && gr >= 0.0 && gr < 7.0) {
             int ch = getChar(slot);
-            if (ch >= 0 && ch <= 25) textHit = charPixel(ch, gc, gr);
+            if (ch >= 0 && ch <= 36 && ch != 26) textHit = charPixel(ch, gc, gr);
         }
     }
 
@@ -580,7 +580,7 @@ vec4 effectBricks(vec2 uv, int sub) {
         if (gc >= 0.0 && gc < 5.0 && gr >= 0.0 && gr < 7.0) {
             int ci2 = int(mod(float(charIdx), float(numChars)));
             int ch = getChar(ci2);
-            if (ch >= 0 && ch <= 25) textHit = charPixel(ch, gc, gr);
+            if (ch >= 0 && ch <= 36 && ch != 26) textHit = charPixel(ch, gc, gr);
         }
     }
 
@@ -641,7 +641,7 @@ vec4 effectSpacy(vec2 uv, int sub) {
         float gc = (clx/cf)*5.0, gr = gy*7.0;
         if (gc >= 0.0 && gc < 5.0 && gr >= 0.0 && gr < 7.0) {
             int ch = getChar(slot);
-            if (ch >= 0 && ch <= 25) textHit = charPixel(ch, gc, gr);
+            if (ch >= 0 && ch <= 36 && ch != 26) textHit = charPixel(ch, gc, gr);
         }
     }
 

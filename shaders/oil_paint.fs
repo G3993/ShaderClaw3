@@ -26,7 +26,6 @@ vec2 fitUV(vec2 pos) {
 // This creates the flat-color brush stroke look of oil paintings
 vec3 kuwahara(vec2 uv, float radius) {
     vec2 texel = 1.0 / RENDERSIZE;
-    int r = int(radius);
 
     vec3 mean[4];
     vec3 var_acc[4];
@@ -42,20 +41,24 @@ vec3 kuwahara(vec2 uv, float radius) {
     // Sample the 4 quadrants around the pixel
     for (int j = -6; j <= 6; j++) {
         for (int i = -6; i <= 6; i++) {
-            if (abs(i) > r || abs(j) > r) continue;
+            if (abs(float(i)) > radius || abs(float(j)) > radius) continue;
 
-            vec2 offset = vec2(float(i), float(j)) * texel;
             vec3 c = texture2D(inputImage, fitUV((uv * RENDERSIZE) + vec2(float(i), float(j)))).rgb;
 
             // Determine which quadrant(s) this sample belongs to
             // Quadrant 0: top-right, 1: top-left, 2: bottom-left, 3: bottom-right
+            // Use loop to assign to correct quadrant (WebGL requires const/loop index)
             int qi = (i >= 0) ? 0 : 1;
             int qj = (j >= 0) ? 0 : 2;
             int q = qi + qj;
 
-            mean[q] += c;
-            var_acc[q] += c * c;
-            count[q] += 1.0;
+            for (int k = 0; k < 4; k++) {
+                if (k == q) {
+                    mean[k] += c;
+                    var_acc[k] += c * c;
+                    count[k] += 1.0;
+                }
+            }
         }
     }
 

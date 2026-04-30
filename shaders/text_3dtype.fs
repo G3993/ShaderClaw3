@@ -103,7 +103,7 @@ float textHit(vec2 uv, float aspect) {
     for (int i = 0; i < 48; i++) {
         if (i >= numChars) break;
         int ch = getChar(i);
-        if (ch >= 0 && ch <= 25) {
+        if (ch >= 0 && ch <= 36 && ch != 26) {
             float cx = startX + float(i) * cellStep;
             float cy = startY;
             vec2 cellUV = vec2((p.x - cx) / charW, (p.y - cy) / charH);
