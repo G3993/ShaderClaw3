@@ -308,5 +308,16 @@ void main() {
         alpha = 1.0;
     }
 
+    // Surprise: every ~32s a single horizontal scan-line cuts across,
+    // marking the moment a measurement is taken — the data is observed.
+    {
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        float _ph = fract(TIME / 32.0);
+        float _y  = (_ph - 0.04) / 0.30;
+        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.34, 0.18, _ph);
+        float _line = exp(-pow((_suv.y - _y) * 200.0, 2.0));
+        col += vec3(0.4, 1.0, 0.8) * _line * _f;
+    }
+
     gl_FragColor = vec4(col, alpha);
 }

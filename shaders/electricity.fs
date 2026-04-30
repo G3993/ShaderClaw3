@@ -82,5 +82,13 @@ void main() {
     col = col * col;
     col = col * col;
 
+    // Surprise: every ~11s a brief power-out — the entire field cuts to
+    // black for ~80ms then resumes. Distant thunder behind the bolt.
+    {
+        float _ph = fract(TIME / 11.0);
+        float _cut = step(_ph, 0.04);
+        col = mix(col, vec3(0.0), _cut * 0.85);
+    }
+
     gl_FragColor = vec4(col, 1.0);
 }

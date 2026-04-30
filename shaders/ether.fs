@@ -46,5 +46,19 @@ void main() {
         alpha = clamp(dot(cl, vec3(0.299, 0.587, 0.114)) * 1.5, 0.0, 1.0);
     }
 
+    // Surprise: every ~50s a chromatic aurora curtain ripples once
+    // across the field — the ether gets pulled through a dispersive
+    // medium for ~2s.
+    {
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        float _ph = fract(TIME / 50.0);
+        float _f  = smoothstep(0.0, 0.05, _ph) * smoothstep(0.30, 0.18, _ph);
+        float _wave = sin(_suv.y * 8.0 + TIME * 4.0);
+        vec3 _shift = vec3(sin(_suv.y * 6.0 + TIME * 2.0),
+                           sin(_suv.y * 6.0 + TIME * 2.0 + 2.094),
+                           sin(_suv.y * 6.0 + TIME * 2.0 + 4.188)) * 0.5 + 0.5;
+        cl += _shift * 0.22 * _f * _wave * _wave;
+    }
+
     gl_FragColor = vec4(cl, alpha);
 }

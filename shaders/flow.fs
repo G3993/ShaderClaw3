@@ -230,5 +230,13 @@ void main() {
     float alpha = 1.0;
     if (transparentBg) alpha = smoothstep(0.01, 0.1, albedo.a);
 
+    // Surprise: every ~26s the flow direction reverses for ~1.5s,
+    // then snaps back. Tide pulled out and pushed in.
+    {
+        float _ph = fract(TIME / 26.0);
+        float _f  = smoothstep(0.0, 0.06, _ph) * smoothstep(0.30, 0.18, _ph);
+        result = mix(result, result.bgr, _f * 0.4);
+    }
+
     gl_FragColor = vec4(result, alpha);
 }

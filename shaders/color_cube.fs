@@ -137,5 +137,13 @@ void main() {
     }
     cOut *= uIntensity;
 
+    // Surprise: every ~29s the color basis briefly inverts — the cube
+    // turns inside-out for ~0.6s, mapping each axis to its complement.
+    {
+        float _ph = fract(TIME / 29.0);
+        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.20, 0.10, _ph);
+        cOut = mix(cOut, 1.0 - cOut, _f);
+    }
+
     gl_FragColor = vec4(cOut, 1.0);
 }

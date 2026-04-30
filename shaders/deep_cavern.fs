@@ -76,5 +76,16 @@ void main() {
     // Soft centre vignette so the vanishing point reads as deep, not blown.
     col *= smoothstep(0.0, 0.15, r);
 
+    // Surprise: every ~38s a soft afterimage of an eye stares back from
+    // the vanishing point — for ~1.5s, then closes. Tarkovsky's Solaris.
+    {
+        float _ph = fract(TIME / 38.0);
+        float _f  = smoothstep(0.0, 0.06, _ph) * smoothstep(0.30, 0.18, _ph);
+        float _eye = smoothstep(0.10, 0.0, length(p)) - smoothstep(0.06, 0.0, length(p));
+        // Lash that opens
+        float _open = smoothstep(0.02, 0.05, abs(p.y));
+        col += vec3(0.95, 0.85, 0.65) * _eye * _open * _f * 0.65;
+    }
+
     gl_FragColor = vec4(col, 1.0);
 }
