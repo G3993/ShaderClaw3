@@ -150,5 +150,14 @@ void main() {
     // Audio luminance breath
     col *= 0.88 + audioLevel * audioReact * 0.18;
 
+    // Surprise: every ~21s the latent space "remembers" — a crisp pixel
+    // grid briefly resolves out of the noise as if a recognizable image
+    // is about to emerge, then dissolves. Quantization peeks through.
+    {
+        float _ph = fract(TIME / 21.0);
+        float _f  = smoothstep(0.0, 0.05, _ph) * smoothstep(0.30, 0.18, _ph);
+        col = mix(col, floor(col * 6.0) / 6.0, _f * 0.55);
+    }
+
     gl_FragColor = vec4(col, 1.0);
 }

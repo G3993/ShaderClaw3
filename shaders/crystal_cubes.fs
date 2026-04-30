@@ -179,5 +179,17 @@ void main() {
     alpha = 0.0;
   }
 
+  // Surprise: every ~36s the crystals all chord together — for ~1.5s
+  // every cube fires a bright internal refraction at once, then dims.
+  // Like a chandelier catching morning light all at the same moment.
+  {
+    float _ph = fract(TIME / 36.0);
+    float _f  = smoothstep(0.0, 0.06, _ph) * smoothstep(0.28, 0.16, _ph);
+    if (hit) {
+      float _b = dot(col, vec3(0.299, 0.587, 0.114));
+      col += vec3(0.7, 0.85, 1.0) * _f * (0.4 + _b * 0.6);
+    }
+  }
+
   gl_FragColor = vec4(col, alpha);
 }

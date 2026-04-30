@@ -55,5 +55,18 @@ void main() {
     float halo = smoothstep(lineSharpness * 4.0, 0.0, abs(f)) - line;
     col += sandColor.rgb * halo * 0.25 * bright;
 
+    // Surprise: every ~30s a phantom resonance — for ~2s, two extra
+    // overtones beat against the primary, briefly revealing a finer
+    // interference pattern (the plate hits a higher harmonic).
+    {
+        float _ph = fract(TIME / 30.0);
+        float _f  = smoothstep(0.0, 0.10, _ph) * smoothstep(0.40, 0.25, _ph);
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        float _h = sin(_suv.x * 60.0) * sin(_suv.y * 60.0)
+                 + sin(_suv.x * 47.0 + 1.7) * sin(_suv.y * 47.0 + 0.4);
+        float _harmonic = smoothstep(lineSharpness * 6.0, 0.0, abs(_h));
+        col += sandColor.rgb * _harmonic * _f * 0.4;
+    }
+
     gl_FragColor = vec4(col, 1.0);
 }
