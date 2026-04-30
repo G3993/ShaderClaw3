@@ -253,5 +253,13 @@ void main() {
         alpha = clamp(textMask, 0.0, 1.0);
     }
 
+    // Surprise: every ~19s a brief warm gold halo blooms outward from
+    // text edges (~0.6s). The signature insists.
+    {
+        float _ph = fract(TIME / 19.0);
+        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.20, 0.12, _ph);
+        col += vec3(1.0, 0.78, 0.32) * textMask * _f * 0.5;
+    }
+
     gl_FragColor = vec4(col, alpha);
 }
