@@ -10,6 +10,13 @@
     { "NAME": "layers", "LABEL": "Layers", "TYPE": "float", "MIN": 5.0, "MAX": 60.0, "DEFAULT": 40.0 },
     { "NAME": "bloom", "LABEL": "Bloom", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "depth", "LABEL": "Depth", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
+    { "NAME": "depthFalloff", "LABEL": "Depth Falloff", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.7 },
+    { "NAME": "shadowStrength", "LABEL": "Shadow Strength", "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.6 },
+    { "NAME": "shadowSoftness", "LABEL": "Shadow Softness", "TYPE": "float", "MIN": 0.5, "MAX": 6.0, "DEFAULT": 2.0 },
+    { "NAME": "innerShadow", "LABEL": "Inner Shadow", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.45 },
+    { "NAME": "rimLight", "LABEL": "Rim Light", "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.35 },
+    { "NAME": "petalContrast", "LABEL": "Petal Contrast", "TYPE": "float", "MIN": 0.5, "MAX": 2.5, "DEFAULT": 1.2 },
+    { "NAME": "ambientOcclusion", "LABEL": "Ambient Occlusion", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.4 },
     { "NAME": "noiseAmount", "LABEL": "Noise", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
     { "NAME": "spinSpeed", "LABEL": "Spin", "TYPE": "float", "MIN": -3.0, "MAX": 3.0, "DEFAULT": 0.0 },
     { "NAME": "pulseSpeed", "LABEL": "Pulse", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.25 },
@@ -144,14 +151,40 @@ void main() {
         float hueVal = rn * hueRange + hueShift + aMid * 0.1;
         vec3 col = hueToColor(hueVal).rgb;
 
-        // Depth shading: inner layers slightly darker
-        col *= 0.7 + 0.3 * t;
+        // Layered depth shading — inner layers progressively darker
+        // by depthFalloff^layer-distance, giving real recession.
+        float depthShade = pow(t, depthFalloff);
+        col *= mix(0.30, 1.05, depthShade);
+
+        // Petal contrast — exaggerate the bright/dark range per layer.
+        col = mix(vec3(0.5), col, petalContrast);
+
+        // Inner shadow — petal interior darkens toward the centre,
+        // suggesting curved petal undersides catching less light.
+        float interior = 1.0 - smoothstep(0.0, 0.15, l);
+        col *= 1.0 - interior * innerShadow * (1.0 - t);
+
+        // Petal rim light — small bright halo just inside each layer's
+        // outer edge so petals read as having a glossy lifted edge.
+        float rim = exp(-pow((l - zn) * 80.0 / max(shadowSoftness, 0.5), 2.0));
+        col += vec3(1.0, 0.95, 0.85) * rim * rimLight * t;
 
         result = mix(result, col, d);
 
-        // Dark edge outline between layers
+        // Dropped shadow under each petal — outer ring of darker pixels
+        // beyond the petal edge so layers cast onto the layer below.
+        float shadowRing = SS(l - SF * shadowSoftness * (1.0 + i * 0.04), zn)
+                         - SS(l, zn);
+        result = mix(result, vec3(0.0),
+                     shadowRing * shadowStrength * t * 0.6);
+
+        // Dark edge outline between layers — kept from original.
         float dd = SS(l, zn) * SS(zn - SF, l);
         result = mix(result, vec3(0.0), dd * (0.6 + 0.4 * depth));
+
+        // Ambient occlusion — every petal layer slightly darkens the
+        // accumulated colour so deep stacks feel recessed.
+        result *= 1.0 - d * ambientOcclusion * 0.05;
     }
 
     // Center glow

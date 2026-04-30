@@ -2,15 +2,16 @@
   "CATEGORIES": ["Generator", "Art Movement", "Audio Reactive"],
   "DESCRIPTION": "German Expressionism after Kirchner Street Berlin (1913), Nolde Last Supper (1909), Heckel Crouching Woman (1913) — high-contrast posterize over carved-wood ridged noise, time-driven horizontal shear that leans the perspective like a Berlin streetcar tilt, persistent paint accumulation for stacked woodcut grooves, acid LUT and black ridge contours from luma edge-detect. No Voronoi, no cells, real movement.",
   "INPUTS": [
-    { "NAME": "shearAmount",  "LABEL": "Perspective Shear",  "TYPE": "float", "MIN": 0.0,  "MAX": 0.40, "DEFAULT": 0.18 },
-    { "NAME": "shearSpeed",   "LABEL": "Shear Speed",        "TYPE": "float", "MIN": 0.0,  "MAX": 1.5,  "DEFAULT": 0.5 },
-    { "NAME": "carveScale",   "LABEL": "Wood-Carve Scale",   "TYPE": "float", "MIN": 2.0,  "MAX": 16.0, "DEFAULT": 6.5 },
-    { "NAME": "ridgeAmp",     "LABEL": "Ridge Amplitude",    "TYPE": "float", "MIN": 0.0,  "MAX": 0.20, "DEFAULT": 0.07 },
-    { "NAME": "flow",         "LABEL": "Carve Flow",         "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.30 },
-    { "NAME": "acidTint",     "LABEL": "Acid Tint",          "TYPE": "float", "MIN": 0.0,  "MAX": 0.80, "DEFAULT": 0.42 },
-    { "NAME": "contrast",     "LABEL": "Contrast",           "TYPE": "float", "MIN": 1.0,  "MAX": 2.4,  "DEFAULT": 1.55 },
-    { "NAME": "posterize",    "LABEL": "Posterize Steps",    "TYPE": "float", "MIN": 2.0,  "MAX": 8.0,  "DEFAULT": 4.0 },
-    { "NAME": "inkLines",     "LABEL": "Ink Edge Strength",  "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.55 },
+    { "NAME": "shearAmount",  "LABEL": "Perspective Shear",  "TYPE": "float", "MIN": 0.0,  "MAX": 0.50, "DEFAULT": 0.28 },
+    { "NAME": "shearSpeed",   "LABEL": "Shear Speed",        "TYPE": "float", "MIN": 0.0,  "MAX": 1.5,  "DEFAULT": 0.7 },
+    { "NAME": "carveScale",   "LABEL": "Wood-Carve Scale",   "TYPE": "float", "MIN": 2.0,  "MAX": 16.0, "DEFAULT": 5.5 },
+    { "NAME": "ridgeAmp",     "LABEL": "Ridge Amplitude",    "TYPE": "float", "MIN": 0.0,  "MAX": 0.20, "DEFAULT": 0.10 },
+    { "NAME": "flow",         "LABEL": "Carve Flow",         "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.35 },
+    { "NAME": "acidTint",     "LABEL": "Acid Tint",          "TYPE": "float", "MIN": 0.0,  "MAX": 1.00, "DEFAULT": 0.70 },
+    { "NAME": "contrast",     "LABEL": "Contrast",           "TYPE": "float", "MIN": 1.0,  "MAX": 3.0,  "DEFAULT": 1.95 },
+    { "NAME": "posterize",    "LABEL": "Posterize Steps",    "TYPE": "float", "MIN": 2.0,  "MAX": 8.0,  "DEFAULT": 3.0 },
+    { "NAME": "inkLines",     "LABEL": "Ink Edge Strength",  "TYPE": "float", "MIN": 0.0,  "MAX": 1.5,  "DEFAULT": 0.85 },
+    { "NAME": "anguishHue",   "LABEL": "Anguish Hue Shift",  "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.5 },
     { "NAME": "paintFade",    "LABEL": "Paint Persistence",  "TYPE": "float", "MIN": 0.92, "MAX": 1.0,  "DEFAULT": 0.985 },
     { "NAME": "audioReact",   "LABEL": "Audio React",        "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
     { "NAME": "resetField",   "LABEL": "Reset",              "TYPE": "bool",  "DEFAULT": false },
@@ -156,25 +157,50 @@ void main() {
 
     vec3 col = texture(carveBuf, uv).rgb;
 
-    // Acid LUT — magenta + sulphur yellow + cobalt unevenly mixed.
-    // Strength capped per the Kirchner spec (>0.6 looks like a 90s filter).
-    vec3 acid = mix(vec3(0.7, 1.4, 0.4), vec3(1.4, 0.5, 1.3), 0.5);
+    // Brücke acid LUT — anguishHue cycles through 4 Expressionist
+    // colour anguishes: Nolde sulphur/scarlet, Kirchner magenta/cyan,
+    // Heckel cobalt/orange, Munch raw-flesh. Each pair is a true
+    // Brücke palette — pure unmixed primaries, complementary clash.
+    vec3 acidA, acidB;
+    float h = fract(anguishHue + TIME * 0.03);
+    if (h < 0.25) {       // Nolde — sulphur yellow + cadmium scarlet
+        acidA = vec3(1.6, 1.5, 0.20);
+        acidB = vec3(1.6, 0.30, 0.22);
+    } else if (h < 0.50) {// Kirchner — acid magenta + cyan
+        acidA = vec3(1.5, 0.30, 1.4);
+        acidB = vec3(0.20, 1.4, 1.5);
+    } else if (h < 0.75) {// Heckel — cobalt + burnt orange
+        acidA = vec3(0.30, 0.45, 1.6);
+        acidB = vec3(1.6, 0.65, 0.18);
+    } else {              // Munch — raw flesh + bruise violet
+        acidA = vec3(1.5, 0.95, 0.65);
+        acidB = vec3(0.65, 0.18, 0.95);
+    }
+    vec3 acid = mix(acidA, acidB,
+                    sin(uv.x * 3.14 + uv.y * 2.0) * 0.5 + 0.5);
     col = mix(col, col * acid,
-              clamp(acidTint, 0.0, 0.7)
-              * (0.5 + audioHigh * audioReact * 0.5));
+              acidTint * (0.5 + audioHigh * audioReact * 0.5));
 
-    // Hard contrast curve — flatten mid-tones into stark light/dark.
+    // Hard contrast curve — Munch's stark light/dark, the psychic
+    // anguish made visible through brutal value reduction.
     col = (col - 0.5) * contrast + 0.5;
 
     // Posterize — discrete colour steps for the woodblock-print feel.
     float steps = max(2.0, posterize);
     col = floor(col * steps) / (steps - 1.0);
 
-    // Black ink edges from luma gradient.
+    // Saturation ramp — push the posterized blocks toward maximum
+    // chroma so each block reads as a pure unmixed Brücke pigment.
+    {
+        float L2 = dot(col, vec3(0.299, 0.587, 0.114));
+        col = mix(vec3(L2), col, 1.45);
+    }
+
+    // Heavier black ink edges — Brücke woodcuts had FAT contours.
     float L = dot(col, vec3(0.299, 0.587, 0.114));
     float edge = length(vec2(dFdx(L), dFdy(L)));
-    float ink = smoothstep(0.05, 0.18, edge * (0.4 + audioMid * audioReact * 0.8));
-    col = mix(col, vec3(0.05, 0.04, 0.06), ink * inkLines);
+    float ink = smoothstep(0.03, 0.12, edge * (0.5 + audioMid * audioReact * 0.8));
+    col = mix(col, vec3(0.04, 0.03, 0.05), ink * inkLines);
 
     // Audio-driven luminance breath
     col *= 0.92 + audioLevel * audioReact * 0.12;

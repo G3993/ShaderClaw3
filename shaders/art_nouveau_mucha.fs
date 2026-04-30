@@ -41,6 +41,7 @@ float hash21(vec2 p) {
 float hash11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
 
 vec3 fieldColor(int style, vec2 uv, float warm, float audioLvl) {
+    float aspectF = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
     if (style == 0) {
         // Mucha pastel field with Byzantine halo arc behind the upper
         // half — the iconic Mucha signature device (Gismonda, Job,
@@ -51,7 +52,9 @@ vec3 fieldColor(int style, vec2 uv, float warm, float audioLvl) {
         vec3 sage  = vec3(0.78, 0.86, 0.74);
         vec3 mid   = mix(sage, rose, warm);
         vec3 base  = mix(cream, mid, smoothstep(0.0, 1.0, uv.y));
-        vec2 halo  = uv - vec2(0.5, 0.62);
+        // Aspect-correct halo so it renders as a circle in screen
+        // space, not a vertical ellipse on widescreen displays.
+        vec2 halo  = (uv - vec2(0.5, 0.62)) * vec2(aspectF, 1.0);
         float r    = length(halo);
         // Gilded ring at radius ~0.30
         float arc  = smoothstep(0.36, 0.30, r) - smoothstep(0.30, 0.24, r);

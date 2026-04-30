@@ -3,7 +3,7 @@
   "DESCRIPTION": "Pollock action painting — N independent drippers wander the canvas via curl-noise advection, depositing thick paint into a persistent buffer that fades slowly. All-over skein composition: black, aluminium, ochre, cadmium red on raw canvas. After Number 1A (1948) and Autumn Rhythm (1950).",
   "INPUTS": [
     { "NAME": "pollockWork", "LABEL": "Painting", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Autumn Rhythm (1950)", "Lavender Mist (1950)", "Number 1A (1948)", "Blue Poles (1952)", "Convergence (1952)"] },
-    { "NAME": "drippers", "LABEL": "Drippers", "TYPE": "float", "MIN": 4.0, "MAX": 32.0, "DEFAULT": 22.0 },
+    { "NAME": "drippers", "LABEL": "Drippers", "TYPE": "float", "MIN": 4.0, "MAX": 100.0, "DEFAULT": 40.0 },
     { "NAME": "strokeWidth", "LABEL": "Stroke Width", "TYPE": "float", "MIN": 0.001, "MAX": 0.025, "DEFAULT": 0.006 },
     { "NAME": "turbulence", "LABEL": "Turbulence", "TYPE": "float", "MIN": 0.5, "MAX": 6.0, "DEFAULT": 2.4 },
     { "NAME": "wanderSpeed", "LABEL": "Wander Speed", "TYPE": "float", "MIN": 0.01, "MAX": 0.4, "DEFAULT": 0.18 },
@@ -125,7 +125,7 @@ vec3 dripperColor(int id, vec3 srcSample, float blackBias) {
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     float aspect = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
-    int N = int(clamp(drippers, 1.0, 24.0));
+    int N = int(clamp(drippers, 1.0, 100.0));
 
     // ============= PASS 0 — paintBuf accumulation =============
     if (PASSINDEX == 0) {
@@ -153,7 +153,10 @@ void main() {
         // like real flicks of enamel — not all uniform.
         float wHash = hash11(float(0) + floor(TIME * 1.2));  // shared baseline
         float w = strokeWidth * (1.0 + audioLevel * audioReact * 0.8);
-        for (int i = 0; i < 32; i++) {
+        // Hard loop bound 100 — GLSL needs a constant upper limit on
+        // for-loop counters. The early `break` keeps actual cost
+        // proportional to the live N, not to the 100 ceiling.
+        for (int i = 0; i < 100; i++) {
             if (i >= N) break;
             float fi = float(i);
             // Sample each dripper at TWO time-offsets and deposit along
