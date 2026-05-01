@@ -8,7 +8,10 @@
     { "NAME": "weaveScale", "LABEL": "Weave Scale", "TYPE": "float", "MIN": 0.3, "MAX": 3.0, "DEFAULT": 1.0 },
     { "NAME": "sheenStrength", "LABEL": "Sheen Strength", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.7 },
     { "NAME": "waveAmount", "LABEL": "Wave", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.3 },
-    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 0.5 },
+    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 0.6 },
+    { "NAME": "depthBump",   "LABEL": "Weave Depth",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55 },
+    { "NAME": "highlight",   "LABEL": "Highlights",    "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.85 },
+    { "NAME": "scrollSpeed", "LABEL": "Scroll Speed",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.25 },
     { "NAME": "mouseDeform", "LABEL": "Mouse Deform", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "invert", "LABEL": "Invert", "TYPE": "bool", "DEFAULT": true },
     { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.3 },
@@ -52,6 +55,10 @@ void main() {
 
     float t = TIME * speed;
 
+    // Continuous fabric scroll — the weave drifts diagonally so even at
+    // rest the surface is alive.
+    uv += vec2(t * scrollSpeed * 0.05, t * scrollSpeed * 0.04);
+
     // Audio-driven wave boost
     float audioWave = audioBass * audioReact * 0.02;
     float audioShimmer = audioHigh * audioReact;
@@ -59,6 +66,14 @@ void main() {
     // Gentle wave distortion
     uv.y += waveAmount * 0.03 * sin(8.0 * uv.x - t);
     uv.x += waveAmount * 0.015 * sin(6.0 * uv.y - t * 0.7);
+
+    // Depth bump — slow large-scale undulation that gives the fabric
+    // a "draped over something" feel rather than perfectly flat.
+    if (depthBump > 0.0) {
+        float drape = sin(uv.x * 3.0 + t * 0.4) * cos(uv.y * 2.5 + t * 0.5);
+        uv.x += drape * depthBump * 0.012;
+        uv.y += drape * depthBump * 0.008;
+    }
 
     // Audio ripple
     uv.y += audioWave * sin(12.0 * uv.x + t * 3.0);
@@ -79,8 +94,9 @@ void main() {
     // Base grayscale fabric
     vec3 c = vec3(s);
 
-    // Directional sheen highlight
+    // Directional sheen highlight + extra raking light from upper-left
     c += sheenStrength * sheenColor.rgb * d;
+    c += sheenColor.rgb * pow(max(d, 0.0), 6.0) * highlight * 0.6;
 
     // Shadow in the folds
     c *= 1.0 - max(0.0, 0.8 * d);

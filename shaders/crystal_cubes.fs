@@ -25,9 +25,9 @@
       "NAME": "cubeCount",
       "LABEL": "Cubes",
       "TYPE": "float",
-      "DEFAULT": 4.0,
+      "DEFAULT": 7.0,
       "MIN": 2.0,
-      "MAX": 5.0
+      "MAX": 12.0
     },
     {
       "NAME": "roundness",
@@ -64,7 +64,7 @@ float scene(vec3 p) {
   float bassPulse = smoothstep(0.0, 1.0, audioBass) * 0.15;
   float midRot = smoothstep(0.0, 1.0, audioMid) * 0.5 + 0.3;
 
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 12; i++) {
     if (float(i) >= cubeCount) break;
     float fi = float(i);
     float phase = fi * 1.2566; // TAU/5
@@ -157,12 +157,22 @@ void main() {
       col += texCol * (spec1 + spec2 * 0.5) * fresnel * 0.7;
       col += texCol * pow(1.0 - max(dot(n, v), 0.0), 3.0) * 0.25;
     } else {
-      // Glass-like procedural
-      vec3 albedo = vec3(0.85, 0.92, 1.0);
-      col = albedo * (diff1 + diff2) * 0.3;
-      col += vec3(1.0) * spec1 * fresnel * 1.5;
-      col += vec3(0.6, 0.7, 1.0) * spec2 * 0.5;
-      col += vec3(0.5, 0.6, 0.9) * pow(1.0 - max(dot(n, v), 0.0), 4.0) * 0.6;
+      // Procedural "demo" texture — colorful gradient + slow noise so
+      // the crystal's refraction has something rich to bend, instead of
+      // showing all-white when no inputTex is bound.
+      vec2 procUV = texUV + n.xy * refractionStrength;
+      // Cosine-palette gradient
+      vec3 grad = 0.5 + 0.5 * cos(6.28318 *
+                  (procUV.x * 1.2 + procUV.y * 0.8 + TIME * 0.05) +
+                  vec3(0.0, 2.094, 4.188));
+      // Soft animated bands
+      float band = sin(procUV.y * 14.0 + TIME * 0.3 + procUV.x * 4.0) * 0.5 + 0.5;
+      vec3 procCol = mix(grad, vec3(0.85, 0.92, 1.0), 0.3) * (0.7 + 0.3 * band);
+
+      col = procCol * (diff1 + diff2) * 0.5;
+      col += procCol * (spec1 + spec2 * 0.5) * fresnel * 0.9;
+      col += vec3(1.0) * spec1 * fresnel * 1.2;
+      col += procCol * pow(1.0 - max(dot(n, v), 0.0), 3.0) * 0.35;
     }
 
     // Subtle audio glow

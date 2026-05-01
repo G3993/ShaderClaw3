@@ -12,6 +12,11 @@
     { "NAME": "botColor", "LABEL": "Bottom Band", "TYPE": "color", "DEFAULT": [0.95, 0.78, 0.30, 1.0] },
     { "NAME": "shimmer", "LABEL": "Shimmer", "TYPE": "float", "MIN": 0.0, "MAX": 0.12, "DEFAULT": 0.04 },
     { "NAME": "shimmerSpeed", "LABEL": "Shimmer Speed", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.04 },
+    { "NAME": "bandBleed",   "LABEL": "Band Bleed",      "TYPE": "float", "MIN": 0.0, "MAX": 0.50, "DEFAULT": 0.18 },
+    { "NAME": "groundMix",   "LABEL": "Ground Mix",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.20 },
+    { "NAME": "colorBreath", "LABEL": "Color Breath",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.30 },
+    { "NAME": "breathSpeed", "LABEL": "Breath Speed",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.10 },
+    { "NAME": "rotation",    "LABEL": "Rotation",        "TYPE": "float", "MIN": -0.5,"MAX": 0.5,  "DEFAULT": 0.0 },
     { "NAME": "vignette", "LABEL": "Vignette", "TYPE": "float", "MIN": 0.0, "MAX": 0.5, "DEFAULT": 0.22 },
     { "NAME": "grain", "LABEL": "Film Grain", "TYPE": "float", "MIN": 0.0, "MAX": 0.04, "DEFAULT": 0.012 },
     { "NAME": "audioInfluence", "LABEL": "Audio Influence (capped)", "TYPE": "float", "MIN": 0.0, "MAX": 0.10, "DEFAULT": 0.04 },
@@ -91,23 +96,51 @@ void main() {
         cBot = texture(inputTex, vec2(0.5, 0.15)).rgb;
     }
 
+    // Color breath — slowly cross-fade band colors among themselves so
+    // the painting is never literally still. Three independent phases.
+    if (colorBreath > 0.001) {
+        float bt = TIME * breathSpeed;
+        vec3 bTop = mix(cTop, mix(cMid, cBot, 0.5), 0.5 + 0.5 * sin(bt * 0.7));
+        vec3 bMid = mix(cMid, cTop, 0.5 + 0.5 * sin(bt * 0.5 + 1.7));
+        vec3 bBot = mix(cBot, cMid, 0.5 + 0.5 * sin(bt * 0.6 + 3.1));
+        cTop = mix(cTop, bTop, colorBreath);
+        cMid = mix(cMid, bMid, colorBreath);
+        cBot = mix(cBot, bBot, colorBreath);
+    }
+
+    // Blend each band with ground for that subdued chapel feel
+    cTop = mix(cTop, groundColor.rgb, groundMix);
+    cMid = mix(cMid, groundColor.rgb, groundMix);
+    cBot = mix(cBot, groundColor.rgb, groundMix);
+
+    // Slow rotation — a gentle drift keyed off rotation slider
+    if (rotation != 0.0) {
+        vec2 c = uv - 0.5;
+        float a = TIME * rotation * 0.05;
+        float ca = cos(a), sa = sin(a);
+        uv = 0.5 + vec2(ca * c.x - sa * c.y, sa * c.x + ca * c.y);
+    }
+
     // Band layout — top band tallest, middle smaller, bottom small.
     // Insets give the floating-rectangle feel. Feather is large.
     float xIn = clamp(innerInset, 0.0, 0.4);
     float fth = feather;
 
+    // bandBleed widens the feather for cross-band color bleed
+    float fthB = fth * (1.0 + bandBleed * 4.0);
+
     if (N >= 3) {
         // 3-band Orange/Red/Yellow layout
-        float t1 = bandShape(uv, 0.62, 0.92, xIn, fth);
-        float t2 = bandShape(uv, 0.34, 0.58, xIn, fth);
-        float t3 = bandShape(uv, 0.08, 0.30, xIn, fth);
+        float t1 = bandShape(uv, 0.62, 0.92, xIn, fthB);
+        float t2 = bandShape(uv, 0.34, 0.58, xIn, fthB);
+        float t3 = bandShape(uv, 0.08, 0.30, xIn, fthB);
         col = mix(col, cTop, t1);
         col = mix(col, cMid, t2);
         col = mix(col, cBot, t3);
     } else {
         // 2-band layout
-        float t1 = bandShape(uv, 0.55, 0.92, xIn, fth);
-        float t2 = bandShape(uv, 0.10, 0.46, xIn, fth);
+        float t1 = bandShape(uv, 0.55, 0.92, xIn, fthB);
+        float t2 = bandShape(uv, 0.10, 0.46, xIn, fthB);
         col = mix(col, cTop, t1);
         col = mix(col, cBot, t2);
     }
