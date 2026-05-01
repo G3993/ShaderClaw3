@@ -712,17 +712,6 @@
     "file": "solar_flare_corona.fs"
   },
   {
-    "id": 472,
-    "title": "Deep Cavern",
-    "description": "Falling slowly into an infinite tunnel that breathes. Concentric rings recede forever; the camera tilts with the mouse. Eliasson + 2001 stargate.",
-    "type": "generator",
-    "categories": [
-      "Generator",
-      "Audio Reactive"
-    ],
-    "file": "deep_cavern.fs"
-  },
-  {
     "id": 474,
     "title": "Art Nouveau (Mucha)",
     "description": "Sinuous whiplash tendrils flowing over a pastel cream/rose/sage field, framing an oval portrait that breathes with audio. Decorative, ornamental \u2014 after Mucha c.1900.",
@@ -1057,17 +1046,6 @@
     "categories": [
       "Generator",
       "Glitch",
-      "Audio Reactive"
-    ]
-  },
-  {
-    "id": 498,
-    "title": "Cavern Black Sun",
-    "description": "Falling through Deep Cavern ring tunnel toward a Black Hole Sun at the vanishing point. Rings outside, warped fbm rays at the core.",
-    "file": "cavern_black_sun.fs",
-    "type": "generator",
-    "categories": [
-      "Generator",
       "Audio Reactive"
     ]
   }

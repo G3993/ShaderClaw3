@@ -1,43 +1,42 @@
 /*{
   "CATEGORIES": ["Generator", "Art Movement", "Audio Reactive"],
-  "DESCRIPTION": "Fauvism after Matisse — living pigment. Persistent paint buffer advected by a curl-noise velocity field; new drops of pure Fauvist primary colour erupt continuously. TouchDesigner-style fluid feedback as wild colour liberation, no cells, no outlines.",
+  "DESCRIPTION": "Fauvism after Matisse — pure complementary fields painted in unmodulated Fauvist primaries. Animated Voronoi-cell regions, each filled with a single primary, soft brushwork inside, painterly edges between cells. After Open Window Collioure (1905), Green Line Portrait (1905), and Joy of Life (1906).",
   "INPUTS": [
-    { "NAME": "swirlStrength", "LABEL": "Swirl Strength", "TYPE": "float", "MIN": 0.0, "MAX": 0.05, "DEFAULT": 0.012 },
-    { "NAME": "swirlScale", "LABEL": "Swirl Scale", "TYPE": "float", "MIN": 1.0, "MAX": 8.0, "DEFAULT": 3.0 },
-    { "NAME": "flowSpeed", "LABEL": "Flow Speed", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.25 },
-    { "NAME": "paintFade", "LABEL": "Paint Persistence", "TYPE": "float", "MIN": 0.92, "MAX": 1.0, "DEFAULT": 0.988 },
-    { "NAME": "dropRate", "LABEL": "Drop Rate", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55 },
-    { "NAME": "dropSize", "LABEL": "Drop Size", "TYPE": "float", "MIN": 0.005, "MAX": 0.08, "DEFAULT": 0.028 },
-    { "NAME": "saturationBoost", "LABEL": "Saturation", "TYPE": "float", "MIN": 0.6, "MAX": 1.8, "DEFAULT": 1.15 },
-    { "NAME": "paperShow", "LABEL": "Paper Show-through", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.18 },
-    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "paletteShift", "LABEL": "Palette Shift", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "inputBleed", "LABEL": "Input Bleed", "TYPE": "float", "MIN": 0.0, "MAX": 0.5, "DEFAULT": 0.0 },
-    { "NAME": "resetField", "LABEL": "Reset", "TYPE": "bool", "DEFAULT": false },
-    { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" }
-  ],
-  "PASSES": [
-    { "TARGET": "paintBuf", "PERSISTENT": true },
-    {}
+    { "NAME": "cellCount",      "LABEL": "Cells",         "TYPE": "float", "MIN": 4.0,  "MAX": 32.0, "DEFAULT": 14.0 },
+    { "NAME": "drift",          "LABEL": "Drift Speed",   "TYPE": "float", "MIN": 0.0,  "MAX": 1.5,  "DEFAULT": 0.30 },
+    { "NAME": "swirl",          "LABEL": "Swirl",         "TYPE": "float", "MIN": 0.0,  "MAX": 0.50, "DEFAULT": 0.18 },
+    { "NAME": "swirlScale",     "LABEL": "Swirl Scale",   "TYPE": "float", "MIN": 0.5,  "MAX": 6.0,  "DEFAULT": 2.4 },
+    { "NAME": "edgeBlur",       "LABEL": "Edge Blur",     "TYPE": "float", "MIN": 0.0,  "MAX": 0.30, "DEFAULT": 0.08 },
+    { "NAME": "brushStrength",  "LABEL": "Brush Strength","TYPE": "float", "MIN": 0.0,  "MAX": 0.80, "DEFAULT": 0.32 },
+    { "NAME": "brushScale",     "LABEL": "Brush Scale",   "TYPE": "float", "MIN": 4.0,  "MAX": 80.0, "DEFAULT": 22.0 },
+    { "NAME": "complementary",  "LABEL": "Complementary", "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.45 },
+    { "NAME": "saturation",     "LABEL": "Saturation",    "TYPE": "float", "MIN": 0.4,  "MAX": 2.0,  "DEFAULT": 1.18 },
+    { "NAME": "paletteShift",   "LABEL": "Palette Shift", "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.0 },
+    { "NAME": "paperShow",      "LABEL": "Paper Show",    "TYPE": "float", "MIN": 0.0,  "MAX": 0.40, "DEFAULT": 0.10 },
+    { "NAME": "audioReact",     "LABEL": "Audio React",   "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
+    { "NAME": "inputBleed",     "LABEL": "Input Bleed",   "TYPE": "float", "MIN": 0.0,  "MAX": 0.7,  "DEFAULT": 0.0 },
+    { "NAME": "inputTex",       "LABEL": "Texture",       "TYPE": "image" }
   ]
 }*/
 
-// Hand-tuned Fauvist palette — Matisse "Open Window, Collioure" 1905;
-// Derain "Charing Cross Bridge" 1906. Pure unmodulated complementaries.
-const vec3 FAUVE[6] = vec3[6](
-    vec3(0.94, 0.30, 0.55),  // hot pink
-    vec3(0.96, 0.32, 0.16),  // vermilion
-    vec3(0.97, 0.83, 0.20),  // lemon
-    vec3(0.30, 0.66, 0.32),  // sap green
-    vec3(0.10, 0.32, 0.78),  // cobalt
-    vec3(0.62, 0.34, 0.68)   // mauve
-);
-const vec3 PAPER = vec3(0.96, 0.93, 0.85);
+// 9-stop Fauvist palette — Matisse + Derain + Vlaminck unmodulated primaries.
+const vec3 FAUVE0 = vec3(0.96, 0.32, 0.16);  // vermilion
+const vec3 FAUVE1 = vec3(0.97, 0.83, 0.20);  // lemon
+const vec3 FAUVE2 = vec3(0.30, 0.66, 0.32);  // sap green
+const vec3 FAUVE3 = vec3(0.10, 0.32, 0.78);  // cobalt
+const vec3 FAUVE4 = vec3(0.94, 0.30, 0.55);  // hot pink
+const vec3 FAUVE5 = vec3(0.62, 0.34, 0.68);  // mauve
+const vec3 FAUVE6 = vec3(0.95, 0.55, 0.10);  // cadmium orange
+const vec3 FAUVE7 = vec3(0.18, 0.55, 0.65);  // viridian
+const vec3 FAUVE8 = vec3(0.85, 0.10, 0.25);  // alizarin
+const vec3 PAPER  = vec3(0.96, 0.93, 0.85);
 
 float hash21(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 }
-
+vec2 hash22(vec2 p) {
+    return vec2(hash21(p), hash21(p + 17.3));
+}
 float vnoise(vec2 p) {
     vec2 ip = floor(p), fp = fract(p);
     fp = fp * fp * (3.0 - 2.0 * fp);
@@ -47,138 +46,154 @@ float vnoise(vec2 p) {
     float d = hash21(ip + vec2(1.0, 1.0));
     return mix(mix(a, b, fp.x), mix(c, d, fp.x), fp.y);
 }
-
-// Curl noise → divergence-free 2D velocity field. Advecting a buffer by
-// curl(fbm) gives the smoke-like swirl that TD's "FluidStream" macro
-// uses, without solving Navier-Stokes.
-vec2 curl(vec2 p) {
-    float e = 0.01;
-    float n1 = vnoise(p + vec2(0.0,  e)) - vnoise(p - vec2(0.0,  e));
-    float n2 = vnoise(p + vec2( e, 0.0)) - vnoise(p - vec2( e, 0.0));
-    return vec2(n1, -n2) / (2.0 * e);
+float fbm(vec2 p) {
+    float v = 0.0, a = 0.5;
+    for (int i = 0; i < 4; i++) { v += vnoise(p) * a; p *= 2.07; a *= 0.5; }
+    return v;
+}
+vec3 fauvePalette(float idx) {
+    int i = int(mod(idx, 9.0));
+    if (i == 0) return FAUVE0;
+    if (i == 1) return FAUVE1;
+    if (i == 2) return FAUVE2;
+    if (i == 3) return FAUVE3;
+    if (i == 4) return FAUVE4;
+    if (i == 5) return FAUVE5;
+    if (i == 6) return FAUVE6;
+    if (i == 7) return FAUVE7;
+    return FAUVE8;
+}
+vec3 saturateCol(vec3 c, float a) {
+    float L = dot(c, vec3(0.299, 0.587, 0.114));
+    return mix(vec3(L), c, a);
 }
 
-vec3 saturateColor(vec3 c, float amt) {
-    float l = dot(c, vec3(0.299, 0.587, 0.114));
-    return mix(vec3(l), c, amt);
+// Voronoi: returns the two closest seed distances + closest-cell color.
+// Animated by adding a curl-noise displacement to seed positions so the
+// painted regions migrate organically (TouchDesigner-style flow).
+vec3 fauveVoronoi(vec2 uv, float aspect, float t) {
+    // Choose grid density based on cellCount; nearest-9 search keeps cost stable.
+    float n = clamp(cellCount, 4.0, 32.0);
+    vec2 p = uv * vec2(aspect, 1.0) * sqrt(n);
+    vec2 ip = floor(p);
+    vec2 fp = fract(p);
+
+    float bestD1 = 1e9, bestD2 = 1e9;
+    vec3 bestColor = FAUVE0;
+    for (int j = -1; j <= 1; j++) {
+        for (int i = -1; i <= 1; i++) {
+            vec2 cell = ip + vec2(float(i), float(j));
+            vec2 jitter = hash22(cell);
+            // Drift: each seed orbits inside its cell over time.
+            jitter += swirl * vec2(sin(t * drift + cell.x * 1.7),
+                                   cos(t * drift + cell.y * 2.3));
+            vec2 seed = vec2(float(i), float(j)) + jitter - fp;
+            float d = length(seed);
+            if (d < bestD1) {
+                bestD2 = bestD1;
+                bestD1 = d;
+                float idx = mod(cell.x * 3.7 + cell.y * 7.13 + paletteShift * 9.0, 9.0);
+                bestColor = fauvePalette(idx);
+            } else if (d < bestD2) {
+                bestD2 = d;
+            }
+        }
+    }
+    // Pack edge distance into the color's alpha-equivalent via length encoding.
+    // We return rgb only; caller derives edge from a separate call if needed.
+    return bestColor;
+}
+
+// Edge metric: distance to nearest cell boundary (bestD2 - bestD1) — used
+// for painterly edge softening.
+float fauveVoronoiEdge(vec2 uv, float aspect, float t) {
+    float n = clamp(cellCount, 4.0, 32.0);
+    vec2 p = uv * vec2(aspect, 1.0) * sqrt(n);
+    vec2 ip = floor(p);
+    vec2 fp = fract(p);
+
+    float bestD1 = 1e9, bestD2 = 1e9;
+    for (int j = -1; j <= 1; j++) {
+        for (int i = -1; i <= 1; i++) {
+            vec2 cell = ip + vec2(float(i), float(j));
+            vec2 jitter = hash22(cell);
+            jitter += swirl * vec2(sin(t * drift + cell.x * 1.7),
+                                   cos(t * drift + cell.y * 2.3));
+            vec2 seed = vec2(float(i), float(j)) + jitter - fp;
+            float d = length(seed);
+            if (d < bestD1)      { bestD2 = bestD1; bestD1 = d; }
+            else if (d < bestD2) { bestD2 = d; }
+        }
+    }
+    return bestD2 - bestD1;
 }
 
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     float aspect = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
+    float t = TIME * (1.0 + audioMid * audioReact * 0.4);
 
-    // ============= PASS 0 — paintBuf advection + drop deposition =============
-    if (PASSINDEX == 0) {
+    // Curl-noise displacement on the read coordinate — pigment swirls.
+    float fb = fbm(uv * swirlScale + t * 0.10);
+    vec2 disp = (vec2(fb, fbm(uv.yx * swirlScale + t * 0.13 + 5.0)) - 0.5)
+              * swirl * 0.20;
 
-        // Reset / first frame → paper.
-        if (FRAMEINDEX < 2 || resetField) {
-            gl_FragColor = vec4(PAPER, 1.0);
-            return;
-        }
+    vec2 sUV = uv + disp;
+    vec3 col = fauveVoronoi(sUV, aspect, t);
+    float edge = fauveVoronoiEdge(sUV, aspect, t);
 
-        // Sample previous frame at a UV displaced by curl noise. This is
-        // the advection step — pigment flows along the velocity field.
-        vec2 vel = curl(vec2(uv.x * aspect, uv.y) * swirlScale
-                      + TIME * flowSpeed)
-                 * swirlStrength * (1.0 + audioBass * audioReact * 1.5);
-        vec3 prev = texture(paintBuf, uv - vel).rgb;
+    // Painterly brushwork inside cells — anisotropic noise tilted by a
+    // slow rotation. Adds visible brush direction without crossing the
+    // cell boundaries.
+    float brushAngle = sin(t * 0.05) * 1.2;
+    float ca = cos(brushAngle), sa = sin(brushAngle);
+    vec2 q = vec2(ca * uv.x + sa * uv.y, -sa * uv.x + ca * uv.y);
+    q.y *= 3.5;
+    float brush = fbm(q * brushScale);
+    col *= 1.0 - brushStrength * 0.35 + brushStrength * 0.7 * brush;
 
-        // Slow fade toward paper — pigment evaporates so old strokes die
-        // gradually instead of saturating the buffer.
-        prev = mix(PAPER, prev, paintFade);
-
-        // Drop deposition: a sparse, audio-driven grid of new pigment
-        // drops in random Fauvist primaries. Each pixel decides whether
-        // a drop centre is near it and tints toward that drop's colour.
-        float gridN = 16.0;
-        vec3 deposit = prev;
-        for (int j = -1; j <= 1; j++) {
-            for (int i = -1; i <= 1; i++) {
-                vec2 g = floor(uv * gridN)
-                       + vec2(floor(TIME * 0.13), floor(TIME * 0.17))
-                       + vec2(float(i), float(j));
-                // Time bucket so drops emerge in waves, not constantly.
-                float bucket = floor(TIME * (1.0 + audioMid * 2.0) * 1.5);
-                vec2 seed = g + bucket * 7.31;
-                float roll = hash21(seed);
-                if (roll > (1.0 - dropRate * (0.7 + audioBass * 0.6))) continue;
-
-                // Drop centre — jittered inside its grid cell.
-                vec2 c = (g + vec2(hash21(seed + 13.7),
-                                   hash21(seed + 19.3))) / gridN;
-                vec2 d = uv - c;
-                d.x *= aspect / gridN * gridN; // approx square space
-                float r = dropSize * (0.5 + hash21(seed + 31.1));
-                float falloff = smoothstep(r, 0.0, length(d));
-                if (falloff < 0.001) continue;
-
-                int ci = int(mod(hash21(seed + 47.9) * 6.0
-                              + paletteShift * 6.0, 6.0));
-                vec3 dropCol = FAUVE[ci];
-                deposit = mix(deposit, dropCol, falloff * 0.85);
-            }
-        }
-
-        // Optional bleed from input texture — uses live video as a paint
-        // mask, low opacity so the field is still mostly self-driven.
-        if (IMG_SIZE_inputTex.x > 0.0 && inputBleed > 0.0) {
-            vec3 src = texture(inputTex, uv).rgb;
-            // Snap source to nearest Fauvist primary so it doesn't read
-            // photographic — the painter disagrees with reality.
-            vec3 best = FAUVE[0];
-            float bd = 1e9;
-            for (int k = 0; k < 6; k++) {
-                float dd = dot(src - FAUVE[k], src - FAUVE[k]);
-                if (dd < bd) { bd = dd; best = FAUVE[k]; }
-            }
-            deposit = mix(deposit, best, inputBleed);
-        }
-
-        gl_FragColor = vec4(deposit, 1.0);
-        return;
+    // Edge softening — within edgeBlur of a cell boundary, blend toward
+    // the average of neighbours by sampling a slightly displaced point.
+    if (edge < edgeBlur) {
+        vec2 nudge = (hash22(floor(uv * 200.0)) - 0.5) * 0.005;
+        vec3 neighbor = fauveVoronoi(sUV + nudge * 6.0, aspect, t);
+        float blend = 1.0 - edge / max(edgeBlur, 1e-4);
+        col = mix(col, neighbor, blend * 0.55);
     }
 
-    // ============= PASS 1 — output ============================================
+    // Black contour line where edge is very thin — Matisse "Green Line".
+    float contour = smoothstep(0.0, 0.012, edge);
+    col *= mix(0.20, 1.0, contour);
 
-    vec3 col = texture(paintBuf, uv).rgb;
-    col = saturateColor(col,
-              saturationBoost * (0.85 + audioLevel * audioReact * 0.25));
-
-    // Snap to nearest Fauvist primary — pulls washy paint values toward
-    // unmodulated colour like Matisse's palette discipline. The 0.35
-    // mix keeps brushwork variance, but the dominant hue snaps clean.
-    vec3 best = FAUVE[0];
-    float bd = 1e9;
-    for (int k = 0; k < 6; k++) {
-        float dd = dot(col - FAUVE[k], col - FAUVE[k]);
-        if (dd < bd) { bd = dd; best = FAUVE[k]; }
+    // Optional input texture bleed — snaps to the closest Fauvist primary.
+    if (IMG_SIZE_inputTex.x > 0.0 && inputBleed > 0.0) {
+        vec3 src = texture(inputTex, uv).rgb;
+        vec3 best = FAUVE0; float bd = 1e9;
+        for (int k = 0; k < 9; k++) {
+            vec3 cand = fauvePalette(float(k));
+            float dd = dot(src - cand, src - cand);
+            if (dd < bd) { bd = dd; best = cand; }
+        }
+        col = mix(col, best, inputBleed);
     }
-    col = mix(col, best, 0.35);
 
-    // Complementary edge boost — Matisse "Green Line" portrait vibrate.
-    float Lc = dot(col, vec3(0.299, 0.587, 0.114));
-    float ex = abs(dFdx(Lc)) + abs(dFdy(Lc));
-    col = mix(col, vec3(1.0) - col,
-              smoothstep(0.05, 0.20, ex) * 0.40);
+    // Complementary edge zing — bright pixels get pulled toward inverted
+    // hue along boundaries, like the green line in the Matisse portrait.
+    if (complementary > 0.0) {
+        float compMix = (1.0 - smoothstep(0.0, 0.04, edge)) * complementary;
+        col = mix(col, 1.0 - col, compMix * 0.4);
+    }
 
-    // Paper grain showing through where pigment is thin.
+    // Global saturation push — Fauvism wants pure unmodulated colour.
+    col = saturateCol(col, saturation * (0.92 + audioBass * audioReact * 0.18));
+
+    // Paper grain peeking through where pigment thins.
     float grain = (hash21(uv * RENDERSIZE) - 0.5) * 0.04;
-    col += grain * paperShow;
+    col = mix(col, col + grain, paperShow);
+    col = mix(col, PAPER, paperShow * (1.0 - smoothstep(0.0, 0.02, edge)) * 0.10);
 
-    // Surprise: every ~26s a flash of cut-paper goldfish swims through
-    // the mid-band — Matisse's late paper cut-outs. Two oval bodies and
-    // a fanning tail in saturated vermillion.
-    {
-        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
-        float _ph = fract(TIME / 26.0);
-        float _f  = smoothstep(0.0, 0.06, _ph) * smoothstep(0.40, 0.22, _ph);
-        float _x  = (_ph - 0.06) / 0.34;
-        vec2 _c1 = vec2(_x, 0.55 + 0.04 * sin(_x * 12.0));
-        vec2 _c2 = vec2(_x - 0.10, 0.48 + 0.05 * sin(_x * 12.0 + 2.0));
-        float _fish = max(smoothstep(0.030, 0.0, length((_suv - _c1) * vec2(0.55, 1.4))),
-                          smoothstep(0.026, 0.0, length((_suv - _c2) * vec2(0.55, 1.4))));
-        col = mix(col, vec3(0.95, 0.25, 0.10), _f * _fish * 0.85);
-    }
+    // Audio breath
+    col *= 0.90 + audioLevel * audioReact * 0.20;
 
     gl_FragColor = vec4(col, 1.0);
 }
