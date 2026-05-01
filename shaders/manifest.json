@@ -1015,17 +1015,6 @@
     ]
   },
   {
-    "id": 495,
-    "title": "Arcane Lands",
-    "description": "Raymarched landscape flythrough with god rays and lens flare. Ported from Shadertoy XdcfR7 by Dave Hoskins.",
-    "file": "arcane_lands.fs",
-    "type": "generator",
-    "categories": [
-      "Generator",
-      "3D"
-    ]
-  },
-  {
     "id": 496,
     "title": "Interactive Particles",
     "description": "1024 particles attracted to a center point and the cursor. Click and drag to pull them around. Ported from Shadertoy McXXzH.",
