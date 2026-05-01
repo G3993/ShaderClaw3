@@ -209,10 +209,52 @@ void main() {
         }
     }
 
+    // ──────────────────────────────────────────────────────────────────
+    // Depth & paint dimensionality: simulate raised paint surface by
+    // computing local "height" (average luminance neighbourhood) and
+    // applying directional lighting. Paint where the dots are pops up.
+    // ──────────────────────────────────────────────────────────────────
+    {
+        // Sample 5 neighbours to compute a coarse height field.
+        vec2 e = 1.0 / RENDERSIZE;
+        float hC = dot(texture(paintBuf, uv).rgb,                 vec3(0.299, 0.587, 0.114));
+        float hL = dot(texture(paintBuf, uv - vec2(e.x, 0.0)).rgb, vec3(0.299, 0.587, 0.114));
+        float hR = dot(texture(paintBuf, uv + vec2(e.x, 0.0)).rgb, vec3(0.299, 0.587, 0.114));
+        float hD = dot(texture(paintBuf, uv - vec2(0.0, e.y)).rgb, vec3(0.299, 0.587, 0.114));
+        float hU = dot(texture(paintBuf, uv + vec2(0.0, e.y)).rgb, vec3(0.299, 0.587, 0.114));
+        // Surface normal from height gradient
+        vec2 grad = vec2(hR - hL, hU - hD);
+        // Light from upper-left at 45° elevation
+        vec2 lightDir = normalize(vec2(-0.6, 0.8));
+        float diff = clamp(dot(normalize(vec2(grad.x, grad.y) * 8.0 + vec2(0.0, 0.0001)), lightDir), -1.0, 1.0);
+        float specBoost = pow(max(diff, 0.0), 8.0);
+        // Highlight on raised paint, shadow on the down-slope side
+        col *= 1.0 + diff * 0.18;
+        col += vec3(1.0, 0.95, 0.85) * specBoost * 0.20;
+        // Wet paint glistening — small bright dots where paint is densest
+        col += vec3(0.9, 0.85, 0.75) * smoothstep(0.75, 1.0, hC) * 0.15;
+    }
+
+    // Multiple splatter scales — large drops + medium + fine spray
+    // already exist in one scale; add a second pass at finer scale for
+    // depth and busyness in dense areas.
+    {
+        float n2 = 80.0;
+        vec2 g2 = uv * n2;
+        vec2 gi2 = floor(g2);
+        float r2 = hash21(gi2 + 73.1);
+        if (r2 > 1.0 - splatterDensity * 0.04 * (0.5 + audioHigh * audioReact * 1.5)) {
+            float spat2 = step(length(fract(g2) - 0.5), 0.22);
+            int cidx2 = int(hash21(gi2 + 27.3) * 4.0);
+            vec3 sc2 = (cidx2 == 0) ? POL_BLACK
+                     : (cidx2 == 1) ? POL_WHITE
+                     : (cidx2 == 2) ? POL_RED : POL_OCHRE;
+            col = mix(col, sc2, spat2 * 0.7);
+        }
+    }
+
     // Surprise: every ~14 seconds a gold-leaf flash washes the brightest
-    // splatters with metallic gold for ~1 second — riff on Pollock's
-    // aluminium/bronze paints. Looks like the painter just touched the
-    // canvas with metal.
+    // splatters with metallic gold for ~1 second.
     float goldPhase = fract(TIME / 14.0);
     float goldFlash = smoothstep(0.0, 0.10, goldPhase) * smoothstep(0.18, 0.10, goldPhase);
     float lum = dot(col, vec3(0.299, 0.587, 0.114));

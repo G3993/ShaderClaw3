@@ -1,193 +1,152 @@
 /*{
   "CATEGORIES": ["Generator", "Art Movement", "Audio Reactive"],
-  "DESCRIPTION": "Art Nouveau after Mucha (Gismonda 1894), Klimt (gold-mosaic period 1907), and Beardsley (Peacock Skirt 1893) — persistent paint buffer continuously inscribed by N parametric whiplash strokes flowing across the canvas, depositing gold and ink along sinuous S-curves. Frame-feedback gives the strokes lasting trails so the painting LIVES; nothing static, nothing stacked. Pure flowing line, in motion.",
+  "DESCRIPTION": "Art Nouveau after Mucha + 1960s San Francisco psychedelic poster art — ornate flowing frame, blooming concentric flowers at the center, sinuous whiplash tendrils, hippy palette (hot pink, lavender, sunflower, peacock teal, aubergine, gold). Single pass; animated breath; the frame opens and closes with bass.",
   "INPUTS": [
-    { "NAME": "artistStyle",     "LABEL": "Style",             "TYPE": "long",  "DEFAULT": 0, "VALUES": [0, 1, 2], "LABELS": ["Whiplash Curves", "Mosaic Gold Ground", "Pure Linework"] },
-    { "NAME": "tendrilCount",    "LABEL": "Tendril Count",     "TYPE": "float", "MIN": 2.0,  "MAX": 24.0, "DEFAULT": 10.0 },
-    { "NAME": "tendrilSpeed",    "LABEL": "Tendril Speed",     "TYPE": "float", "MIN": 0.02, "MAX": 1.0,  "DEFAULT": 0.20 },
-    { "NAME": "strokeWidth",     "LABEL": "Stroke Width",      "TYPE": "float", "MIN": 0.001,"MAX": 0.015,"DEFAULT": 0.0035 },
-    { "NAME": "whiplashAmp",     "LABEL": "Whiplash Amp",      "TYPE": "float", "MIN": 0.05, "MAX": 0.50, "DEFAULT": 0.20 },
-    { "NAME": "harmonicMix",     "LABEL": "Harmonic Mix",      "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.50 },
-    { "NAME": "paintFade",       "LABEL": "Paint Persistence", "TYPE": "float", "MIN": 0.92, "MAX": 1.0,  "DEFAULT": 0.985 },
-    { "NAME": "goldRatio",       "LABEL": "Gold Stroke Ratio", "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.45 },
-    { "NAME": "fieldWarmth",     "LABEL": "Field Warmth",      "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.6 },
-    { "NAME": "petalBloom",      "LABEL": "Petal Bloom",       "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.45 },
-    { "NAME": "audioReact",      "LABEL": "Audio React",       "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
-    { "NAME": "resetField",      "LABEL": "Reset",             "TYPE": "bool",  "DEFAULT": false },
-    { "NAME": "inputTex",        "LABEL": "Texture",           "TYPE": "image" }
-  ],
-  "PASSES": [
-    { "TARGET": "paintBuf", "PERSISTENT": true },
-    {}
+    { "NAME": "petalCount",     "LABEL": "Petal Count",     "TYPE":"float","MIN":3.0, "MAX":24.0, "DEFAULT":12.0 },
+    { "NAME": "flowerLayers",   "LABEL": "Flower Layers",   "TYPE":"float","MIN":1.0, "MAX":5.0,  "DEFAULT":3.0 },
+    { "NAME": "tendrilCount",   "LABEL": "Tendrils",        "TYPE":"float","MIN":0.0, "MAX":12.0, "DEFAULT":6.0 },
+    { "NAME": "tendrilWidth",   "LABEL": "Tendril Width",   "TYPE":"float","MIN":0.001,"MAX":0.015,"DEFAULT":0.005 },
+    { "NAME": "frameStrength",  "LABEL": "Frame Strength",  "TYPE":"float","MIN":0.0, "MAX":1.0,  "DEFAULT":0.85 },
+    { "NAME": "frameWidth",     "LABEL": "Frame Width",     "TYPE":"float","MIN":0.02,"MAX":0.18, "DEFAULT":0.07 },
+    { "NAME": "rotateSpeed",    "LABEL": "Rotation Speed",  "TYPE":"float","MIN":0.0, "MAX":1.5,  "DEFAULT":0.18 },
+    { "NAME": "breathe",        "LABEL": "Breathe",         "TYPE":"float","MIN":0.0, "MAX":0.30, "DEFAULT":0.08 },
+    { "NAME": "goldStrength",   "LABEL": "Gold",            "TYPE":"float","MIN":0.0, "MAX":1.0,  "DEFAULT":0.55 },
+    { "NAME": "paletteShift",   "LABEL": "Palette Shift",   "TYPE":"float","MIN":0.0, "MAX":1.0,  "DEFAULT":0.0 },
+    { "NAME": "audioReact",     "LABEL": "Audio React",     "TYPE":"float","MIN":0.0, "MAX":2.0,  "DEFAULT":1.0 },
+    { "NAME": "inputTex",       "LABEL": "Texture",         "TYPE":"image" }
   ]
 }*/
 
-// Mucha's whiplash line is the SUBJECT, not a frame ornament around one.
-// We simulate the strokes as moving pen-tips: each tendril is a
-// parametric S-curve whose head walks across the canvas over time. At
-// each fragment, we compute distance-to-nearest-tendril-head; if close,
-// we deposit colour. The persistent paintBuf makes those deposits last
-// — the strokes accumulate as continuous traces, decaying slowly so the
-// painting evolves rather than freezes.
-//
-// Three artist styles share the technique but differ in palette:
-//   0 — Mucha:    pastel cream/rose field, gold + ink strokes, soft halo bloom
-//   1 — Klimt:    deep gold field with mosaic micro-pattern, ink strokes
-//   2 — Beardsley: pure black-on-white, no gold, dense lacework
+// Hippy / Mucha palette — strong saturated tones with cream paper +
+// bronze gold for contour lines.
+const vec3 PALE_CREAM   = vec3(0.96, 0.92, 0.78);
+const vec3 HOT_PINK     = vec3(0.96, 0.30, 0.60);
+const vec3 LAVENDER     = vec3(0.72, 0.55, 0.92);
+const vec3 SUNFLOWER    = vec3(0.99, 0.78, 0.18);
+const vec3 PEACOCK      = vec3(0.10, 0.55, 0.65);
+const vec3 AUBERGINE    = vec3(0.32, 0.10, 0.40);
+const vec3 BURNT_ORANGE = vec3(0.92, 0.45, 0.18);
+const vec3 SAGE         = vec3(0.40, 0.65, 0.40);
+const vec3 GOLD         = vec3(0.95, 0.78, 0.30);
+const vec3 CONTOUR      = vec3(0.18, 0.10, 0.08);
 
-float hash21(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-}
 float hash11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
 
-vec3 fieldColor(int style, vec2 uv, float warm, float audioLvl) {
-    float aspectF = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
-    if (style == 0) {
-        // Mucha pastel field with Byzantine halo arc behind the upper
-        // half — the iconic Mucha signature device (Gismonda, Job,
-        // Zodiac all share it). Without it the shader reads as
-        // generic art-nouveau wallpaper.
-        vec3 cream = vec3(0.97, 0.93, 0.84);
-        vec3 rose  = vec3(0.94, 0.80, 0.78);
-        vec3 sage  = vec3(0.78, 0.86, 0.74);
-        vec3 mid   = mix(sage, rose, warm);
-        vec3 base  = mix(cream, mid, smoothstep(0.0, 1.0, uv.y));
-        // Aspect-correct halo so it renders as a circle in screen
-        // space, not a vertical ellipse on widescreen displays.
-        vec2 halo  = (uv - vec2(0.5, 0.62)) * vec2(aspectF, 1.0);
-        float r    = length(halo);
-        // Gilded ring at radius ~0.30
-        float arc  = smoothstep(0.36, 0.30, r) - smoothstep(0.30, 0.24, r);
-        base = mix(base, vec3(0.92, 0.78, 0.36), arc * 0.55);
-        // Soft mid-tone disc behind the figure
-        base = mix(base, mid * 0.92, smoothstep(0.36, 0.0, r) * 0.18);
-        return base;
-    } else if (style == 1) {
-        // Klimt mosaic gold ground — deep gold with subtle pattern
-        vec3 gold     = mix(vec3(0.62, 0.45, 0.18), vec3(0.92, 0.78, 0.36), warm);
-        // Mosaic tiles — drift slowly so the gold ground micro-shimmers
-        // instead of reading as a frozen Voronoi-like tile field.
-        vec2 g = floor((uv + 0.005 * vec2(sin(TIME * 0.05),
-                                          cos(TIME * 0.04))) * 80.0);
-        float h = hash21(g + floor(TIME * 0.3)) * 0.18;
-        return gold * (0.85 + h);
-    } else {
-        // Beardsley: pure white field
-        return vec3(0.98, 0.97, 0.94);
-    }
-}
-
-vec3 strokeColor(int style, float seed, float gold) {
-    vec3 GOLD = vec3(0.94, 0.82, 0.36);
-    vec3 INK  = vec3(0.10, 0.07, 0.05);
-    if (style == 2) {
-        // Beardsley — only ink
-        return INK;
-    }
-    if (style == 1) {
-        // Klimt — ink lines on gold ground
-        return INK;
-    }
-    return (seed < gold) ? GOLD : INK;
-}
-
-// Parametric whiplash position: an S-curve crossing the canvas over time
-// `t`, with tendril `id` having its own start/end and amplitude.
-vec2 tendrilPos(float t, int id, float amp, float harmonics) {
-    float fid = float(id);
-    // Travel direction — diagonal vector chosen per tendril
-    float startAng = hash11(fid * 1.31) * 6.2832;
-    vec2 startPt = vec2(0.5) + 0.6 * vec2(cos(startAng), sin(startAng));
-    float endAng = startAng + 3.14159 + (hash11(fid * 2.97) - 0.5) * 1.5;
-    vec2 endPt = vec2(0.5) + 0.6 * vec2(cos(endAng), sin(endAng));
-
-    // Ping-pong along the path so the head reverses smoothly instead of
-    // teleporting back to start. smoothstep gives an S-curve acceleration
-    // — actual Mucha whiplash, not a linear gradient ride.
-    float tt = abs(fract(t * 0.5 + hash11(fid * 5.7)) * 2.0 - 1.0);
-    vec2 base = mix(startPt, endPt, smoothstep(0.0, 1.0, tt));
-
-    vec2 dir = normalize(endPt - startPt + 1e-5);
-    vec2 perp = vec2(-dir.y, dir.x);
-    // Low-frequency arc bend — the whole stroke arcs across its length.
-    base += perp * sin(tt * 3.14159) * amp * 0.5;
-
-    float w1 = sin(tt * 6.2832 + fid * 1.7) * amp;
-    float w2 = sin(tt * 12.566 + fid * 2.3 + 1.3)
-            * amp * 0.4 * harmonics;
-    return base + perp * (w1 + w2);
+vec3 hippyColor(float idx) {
+    int i = int(mod(idx + paletteShift * 7.0, 7.0));
+    if (i == 0) return HOT_PINK;
+    if (i == 1) return LAVENDER;
+    if (i == 2) return SUNFLOWER;
+    if (i == 3) return PEACOCK;
+    if (i == 4) return AUBERGINE;
+    if (i == 5) return BURNT_ORANGE;
+    return SAGE;
 }
 
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     float aspect = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
-    int style = int(artistStyle);
+    vec2 cuv = (uv - 0.5) * vec2(aspect, 1.0);
+    float r  = length(cuv);
+    float th = atan(cuv.y, cuv.x);
+    float t = TIME * rotateSpeed;
 
-    // ============= PASS 0 — paintBuf accumulation =============
-    if (PASSINDEX == 0) {
+    // Background — cream with subtle rose-tint vignette
+    vec3 col = mix(PALE_CREAM, mix(PALE_CREAM, HOT_PINK, 0.20), smoothstep(0.0, 0.7, r));
 
-        if (FRAMEINDEX < 2 || resetField) {
-            gl_FragColor = vec4(fieldColor(style, uv,
-                                            fieldWarmth, audioLevel), 1.0);
-            return;
-        }
-
-        vec3 prev = texture(paintBuf, uv).rgb;
-        // Slow decay back to field — strokes dissolve over many seconds.
-        vec3 field = fieldColor(style, uv, fieldWarmth, audioLevel);
-        prev = mix(field, prev, paintFade);
-
-        // Walk each tendril head at this frame's TIME and check if our
-        // fragment is on the head's stroke.
-        int N = int(clamp(tendrilCount, 1.0, 24.0));
-        float t  = TIME * tendrilSpeed
-                 * (1.0 + audioMid * audioReact * 0.6);
-        vec3 col = prev;
-        for (int i = 0; i < 24; i++) {
-            if (i >= N) break;
-            float fi = float(i);
-            vec2 head = tendrilPos(t + hash11(fi * 9.7) * 6.0, i,
-                                   whiplashAmp, harmonicMix);
-            // Distance to head + a short tail shadow sampled along path
-            // (head only — the tail is generated by the persistent buffer
-            // accumulating successive heads frame by frame).
-            vec2 d = uv - head; d.x *= aspect;
-            float dh = length(d);
-            float w = strokeWidth * (1.0 + audioBass * audioReact * 0.4)
-                    * (0.7 + hash11(fi * 11.7) * 0.6);
-            if (dh < w * 4.0) {
-                float falloff = smoothstep(w, 0.0, dh);
-                if (falloff > 0.001) {
-                    vec3 sc = strokeColor(style,
-                                          hash11(fi * 13.3),
-                                          goldRatio);
-                    col = mix(col, sc, falloff);
-                }
-            }
-        }
-        gl_FragColor = vec4(col, 1.0);
-        return;
+    // ── Concentric flower layers ──────────────────────────────────────
+    int L = int(clamp(flowerLayers, 1.0, 5.0));
+    for (int li = 0; li < 5; li++) {
+        if (li >= L) break;
+        float fl = float(li);
+        float layerR = 0.10 + fl * 0.10;                // base radius
+        float layerRot = t * (0.4 + fl * 0.3) * (li % 2 == 0 ? 1.0 : -1.0);
+        // Breath: layers expand/contract with bass
+        float breath = 1.0 + sin(TIME * 0.5 + fl) * breathe + audioBass * audioReact * 0.05;
+        layerR *= breath;
+        // Petal pattern: radius modulated by cos(petalCount * theta)
+        float pcount = petalCount * (li % 2 == 0 ? 1.0 : 0.7);
+        float petalR = layerR * (1.0 + 0.35 * cos(pcount * (th + layerRot)));
+        // Filled petal ring
+        float ring = smoothstep(0.008, 0.002, abs(r - petalR));
+        // Petal fill — color by layer
+        vec3 petalCol = hippyColor(fl + floor(t * 0.25));
+        col = mix(col, petalCol, smoothstep(petalR + 0.005, petalR - 0.015, r) * 0.65);
+        // Bright contour
+        col = mix(col, CONTOUR, ring * 0.7);
     }
 
-    // ============= PASS 1 — output ============================================
-
-    vec3 col = texture(paintBuf, uv).rgb;
-
-    // Petal bloom — Mucha's tendrils sometimes terminate in lily-bud or
-    // peacock-eye flourishes. We add a faint radial highlight at any
-    // pixel that is bright (gold-laden) — gives the metallic edge bloom
-    // characteristic of Klimt's gold-leaf and Mucha's gilt accents.
-    if (style != 2 && petalBloom > 0.0) {
-        float L = dot(col, vec3(0.299, 0.587, 0.114));
-        float goldness = clamp(L - 0.55, 0.0, 1.0);
-        col += vec3(0.95, 0.78, 0.30) * goldness * petalBloom * 0.45;
+    // ── Center stamen — golden disc with hatched lines ────────────────
+    {
+        float disc = smoothstep(0.045, 0.040, r);
+        col = mix(col, GOLD * (1.0 + 0.4 * sin(TIME * 1.0)), disc * 0.85);
+        // Stamen radial spikes
+        float spikes = step(0.85, abs(sin(th * 18.0))) * step(r, 0.07) * step(0.04, r);
+        col = mix(col, CONTOUR, spikes * 0.5);
     }
 
-    // Audio breath
-    col *= 0.92 + audioLevel * audioReact * 0.10;
+    // ── Whiplash tendrils — sinuous curves flowing across the canvas ──
+    int T = int(clamp(tendrilCount, 0.0, 12.0));
+    for (int i = 0; i < 12; i++) {
+        if (i >= T) break;
+        float fi = float(i);
+        // Each tendril is a parametric curve. Sample a fixed number of
+        // points along it and accumulate to the closest distance.
+        float phase = TIME * 0.10 + fi * 1.7;
+        float minDist = 1e9;
+        for (int k = 0; k < 12; k++) {
+            float fk = float(k) / 11.0;
+            // Ribbon path: gentle sin curve from edge to edge
+            float u = fk;
+            vec2 P = vec2(mix(-aspect * 0.5, aspect * 0.5, u),
+                          0.40 * sin(u * 4.0 + phase + fi * 0.7) +
+                          0.20 * sin(u * 7.5 + phase * 1.3 + fi));
+            float d = length(cuv - P);
+            minDist = min(minDist, d);
+        }
+        float ribbon = smoothstep(tendrilWidth, 0.0, minDist);
+        vec3 tendrilCol = hippyColor(fi + 1.0);
+        col = mix(col, tendrilCol, ribbon * 0.85);
+        // Gold edge
+        float ribbonEdge = smoothstep(tendrilWidth * 1.6, tendrilWidth, minDist) - ribbon;
+        col = mix(col, GOLD, ribbonEdge * goldStrength);
+    }
+
+    // ── Ornate frame at the canvas edges ──────────────────────────────
+    if (frameStrength > 0.001) {
+        // Distance from canvas edge
+        vec2 edgeD = min(uv, 1.0 - uv);
+        float edge = min(edgeD.x, edgeD.y);
+        // Ornate scallops along the edge
+        float scallop = sin(uv.x * 28.0 + sin(TIME * 0.3) * 0.5) * 0.5 + 0.5;
+        scallop *= sin(uv.y * 28.0) * 0.5 + 0.5;
+        float frameW = frameWidth * (1.0 + audioMid * audioReact * 0.10);
+        float frameInside = smoothstep(frameW, frameW * 0.7, edge);
+        // Gold frame band
+        col = mix(col, GOLD, frameInside * frameStrength * (0.7 + 0.3 * scallop));
+        // Inner contour line of the frame
+        float inner = smoothstep(0.003, 0.0, abs(edge - frameW * 0.6));
+        col = mix(col, CONTOUR, inner * frameStrength);
+        // Corner rosettes
+        for (int c = 0; c < 4; c++) {
+            float fc = float(c);
+            vec2 corner = vec2(mod(fc, 2.0), floor(fc / 2.0));
+            float dC = length(uv - corner);
+            float rose = smoothstep(0.05, 0.04, dC) * (0.5 + 0.5 * sin(th * 8.0));
+            col = mix(col, GOLD, rose * frameStrength * 0.85);
+            float roseRing = smoothstep(0.005, 0.0, abs(dC - 0.05));
+            col = mix(col, CONTOUR, roseRing * frameStrength);
+        }
+    }
+
+    // Optional input texture — bleeds into the central flower area
+    if (IMG_SIZE_inputTex.x > 0.0) {
+        float diskMask = smoothstep(0.40, 0.20, r);
+        vec3 src = texture(inputTex, uv).rgb;
+        col = mix(col, src, diskMask * 0.30);
+    }
 
     // Surprise: every ~28s a luminous moth wing silhouette flutters
-    // across the lower half — symmetric scalloped form, brief and quiet.
     {
         vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
         float _ph = fract(TIME / 28.0);
@@ -197,6 +156,9 @@ void main() {
         float _wing = smoothstep(0.18, 0.0, length(_p - vec2(0.10, 0.0)) + 0.06 * sin(_p.y * 24.0 + TIME));
         col = mix(col, vec3(1.00, 0.92, 0.62), _f * _wing * 0.55);
     }
+
+    // Audio breath
+    col *= 0.92 + audioLevel * audioReact * 0.10;
 
     gl_FragColor = vec4(col, 1.0);
 }

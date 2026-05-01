@@ -159,5 +159,43 @@ void main() {
         col = mix(col, floor(col * 6.0) / 6.0, _f * 0.55);
     }
 
+    // Phantom face/eye reveal — the latent space "remembers" a face every
+    // ~16s. A pair of dark blob-eyes and a soft jawline ghost in for ~2s,
+    // dissolves back into noise. Anadol's almost-faces.
+    {
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        float aspect = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
+        float _ph = fract(TIME / 16.0);
+        float _f  = smoothstep(0.0, 0.10, _ph) * smoothstep(0.30, 0.18, _ph);
+        // Hashed face center per cycle
+        float cy = floor(TIME / 16.0);
+        vec2 fc = vec2(0.30 + 0.40 * fract(sin(cy * 17.3) * 43758.5453),
+                       0.30 + 0.40 * fract(sin(cy * 31.7) * 43758.5453));
+        vec2 fp = (_suv - fc) * vec2(aspect, 1.0);
+        // Two eye sockets
+        float eyeL = smoothstep(0.05, 0.0, length(fp - vec2(-0.05, 0.04)));
+        float eyeR = smoothstep(0.05, 0.0, length(fp - vec2( 0.05, 0.04)));
+        // Soft jaw oval
+        float jaw = smoothstep(0.18, 0.10, length(fp * vec2(1.0, 1.4)));
+        col = mix(col, col * 0.30, max(eyeL, eyeR) * _f * 0.85);
+        col = mix(col, col * 1.10 + vec3(0.05, 0.04, 0.06), jaw * _f * 0.25);
+    }
+
+    // Diffusion artifact: very subtle pixel-grid that pulses with bass —
+    // the model's quantized latent peeking through.
+    {
+        float grid = step(0.5, fract(gl_FragCoord.x / 8.0))
+                   * step(0.5, fract(gl_FragCoord.y / 8.0));
+        col *= 1.0 - audioBass * audioReact * 0.06 * grid;
+    }
+
+    // Soft chromatic aberration on bright edges (diffusion-model wobble)
+    {
+        float lum = dot(col, vec3(0.299, 0.587, 0.114));
+        float g = smoothstep(0.55, 0.85, lum);
+        col.r = mix(col.r, col.r * 1.05, g * 0.35);
+        col.b = mix(col.b, col.b * 0.95, g * 0.35);
+    }
+
     gl_FragColor = vec4(col, 1.0);
 }
