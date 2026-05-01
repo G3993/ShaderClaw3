@@ -9,8 +9,11 @@
     { "NAME": "orbitRange", "LABEL": "Orbit Range", "TYPE": "float", "MIN": 0.0, "MAX": 0.5, "DEFAULT": 0.22 },
     { "NAME": "haloStrength", "LABEL": "Halo Strength", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55 },
     { "NAME": "haloRadius", "LABEL": "Halo Radius", "TYPE": "float", "MIN": 1.2, "MAX": 4.0, "DEFAULT": 2.2 },
-    { "NAME": "lineCount", "LABEL": "Support Lines", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 4.0 },
-    { "NAME": "lineWidth", "LABEL": "Line Width", "TYPE": "float", "MIN": 0.0008, "MAX": 0.005, "DEFAULT": 0.0018 },
+    { "NAME": "lineCount", "LABEL": "Support Lines", "TYPE": "float", "MIN": 0.0, "MAX": 16.0, "DEFAULT": 8.0 },
+    { "NAME": "lineWidth", "LABEL": "Line Width", "TYPE": "float", "MIN": 0.0008, "MAX": 0.008, "DEFAULT": 0.0028 },
+    { "NAME": "lineMotion", "LABEL": "Line Motion", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.45 },
+    { "NAME": "patternBands", "LABEL": "Pattern Bands", "TYPE": "float", "MIN": 0.0, "MAX": 6.0, "DEFAULT": 3.0 },
+    { "NAME": "patternFlow", "LABEL": "Pattern Flow", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.50 },
     { "NAME": "springReact", "LABEL": "Bass Spring", "TYPE": "float", "MIN": 0.0, "MAX": 0.4, "DEFAULT": 0.12 },
     { "NAME": "strictPairing", "LABEL": "Strict Pairing", "TYPE": "bool", "DEFAULT": true },
     { "NAME": "useTexPalette", "LABEL": "Sample Tex for Palette", "TYPE": "bool", "DEFAULT": false },
@@ -172,20 +175,52 @@ void main() {
     col = mix(col, bestCol, fillMask);
 
     // Pass 3 — thin black support lines — diagonal scaffolds across
-    // the canvas, characteristic of Composition VIII.
-    int NL = int(clamp(lineCount, 0.0, 10.0));
-    for (int k = 0; k < 10; k++) {
+    // the canvas, characteristic of Composition VIII. Each line drifts.
+    int NL = int(clamp(lineCount, 0.0, 16.0));
+    for (int k = 0; k < 16; k++) {
         if (k >= NL) break;
         float fk = float(k) + compositionSeed * 0.71;
-        float angle = hash11(fk * 1.7) * 6.2832;
+        float angle = hash11(fk * 1.7) * 6.2832
+                    + sin(TIME * lineMotion * 0.5 + fk * 1.3) * 0.4;
         vec2 dir = vec2(cos(angle), sin(angle));
         vec2 pt  = vec2(hash11(fk * 3.3), hash11(fk * 5.1));
-        // Distance from point to infinite line at pt with direction dir.
+        pt += vec2(sin(TIME * lineMotion + fk),
+                   cos(TIME * lineMotion * 0.8 + fk * 1.7)) * 0.04;
         vec2 d = uv - pt;
         float perp = abs(d.x * (-dir.y) + d.y * dir.x);
-        float lm = smoothstep(lineWidth, 0.0, perp);
+        float lw = lineWidth * (0.7 + hash11(fk * 7.13) * 0.7);
+        float lm = smoothstep(lw, 0.0, perp);
+        // Some lines are dashed (variety)
+        if (hash11(fk * 11.7) > 0.6) {
+            float along = d.x * dir.x + d.y * dir.y;
+            float dash = step(0.5, fract(along * 28.0 + TIME * lineMotion * 0.5));
+            lm *= dash;
+        }
         col = mix(col, vec3(0.05, 0.05, 0.06),
                   lm * (0.6 + audioHigh * audioReact * 0.4));
+    }
+
+    // Pattern bands — thin parallel stripes filling negative space; flow
+    // adds movement within the patterns themselves.
+    if (patternBands > 0.001) {
+        int PB = int(clamp(patternBands, 0.0, 6.0));
+        for (int pb = 0; pb < 6; pb++) {
+            if (pb >= PB) break;
+            float fpb = float(pb);
+            float pbAng = hash11(fpb * 13.7) * 6.2832 + TIME * patternFlow * 0.3;
+            vec2 pbDir = vec2(cos(pbAng), sin(pbAng));
+            vec2 pbCtr = vec2(hash11(fpb * 17.3), hash11(fpb * 19.1));
+            float pbW = 0.06 + hash11(fpb * 23.7) * 0.10;
+            vec2 dRel = uv - pbCtr;
+            float along = dRel.x * pbDir.x + dRel.y * pbDir.y;
+            float across = abs(dRel.x * (-pbDir.y) + dRel.y * pbDir.x);
+            if (across < pbW) {
+                float stripe = sin(along * 60.0 + TIME * patternFlow * 2.0) * 0.5 + 0.5;
+                float band = step(0.6, stripe);
+                float fade = smoothstep(pbW, pbW * 0.5, across);
+                col = mix(col, vec3(0.06, 0.06, 0.08), band * fade * 0.45);
+            }
+        }
     }
 
     // Surprise: occasionally a Malevich Black Square appears at one of
