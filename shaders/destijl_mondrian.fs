@@ -4,7 +4,9 @@
   "INPUTS": [
     { "NAME": "lanesH", "LABEL": "Horizontal Lanes", "TYPE": "float", "MIN": 2.0, "MAX": 14.0, "DEFAULT": 6.0 },
     { "NAME": "lanesV", "LABEL": "Vertical Lanes", "TYPE": "float", "MIN": 2.0, "MAX": 14.0, "DEFAULT": 6.0 },
-    { "NAME": "laneWidth", "LABEL": "Lane Width", "TYPE": "float", "MIN": 0.002, "MAX": 0.025, "DEFAULT": 0.008 },
+    { "NAME": "laneWidth", "LABEL": "Lane Width", "TYPE": "float", "MIN": 0.002, "MAX": 0.040, "DEFAULT": 0.018 },
+    { "NAME": "rectMotion", "LABEL": "Rectangle Motion", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.45 },
+    { "NAME": "rectCount", "LABEL": "Rectangles", "TYPE": "float", "MIN": 0.0, "MAX": 16.0, "DEFAULT": 8.0 },
     { "NAME": "pulseDensity", "LABEL": "Pulse Density", "TYPE": "float", "MIN": 0.5, "MAX": 12.0, "DEFAULT": 4.0 },
     { "NAME": "pulseSize", "LABEL": "Pulse Size", "TYPE": "float", "MIN": 0.005, "MAX": 0.04, "DEFAULT": 0.014 },
     { "NAME": "marchSpeed", "LABEL": "March Speed", "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.35 },
@@ -186,14 +188,50 @@ void main() {
         col = mix(col, q, 0.10);
     }
 
+    // ── Animated colored rectangles drifting across the grid ──────────
+    // Adds the "movement" the user wants — colored rectangles that
+    // glide between grid intersections, all bordered with thick black.
+    int RC = int(clamp(rectCount, 0.0, 16.0));
+    for (int ri = 0; ri < 16; ri++) {
+        if (ri >= RC) break;
+        float fri = float(ri);
+        // Each rect drifts on a unique low-frequency path
+        vec2 home = vec2(hash11(fri * 7.13), hash11(fri * 11.7));
+        vec2 wobble = vec2(sin(TIME * rectMotion * 0.5 + fri * 1.3),
+                           cos(TIME * rectMotion * 0.4 + fri * 1.7)) * 0.04;
+        vec2 ctr = home + wobble;
+        // Snap centers to lane intersections so rects always sit "in" the grid
+        float lH = clamp(lanesH, 2.0, 14.0);
+        float lV = clamp(lanesV, 2.0, 14.0);
+        ctr.x = floor(ctr.x * lV + 0.5) / lV;
+        ctr.y = floor(ctr.y * lH + 0.5) / lH;
+        // Size — varies, snaps to grid cells
+        vec2 hs = vec2(0.06 + 0.08 * hash11(fri * 13.3),
+                       0.05 + 0.07 * hash11(fri * 17.9));
+        vec2 d = abs(uv - ctr);
+        if (d.x < hs.x && d.y < hs.y) {
+            float ridx = mod(fri, 4.0);
+            vec3 rc = (ridx < 0.5) ? BBW_RED
+                    : (ridx < 1.5) ? BBW_YELLOW
+                    : (ridx < 2.5) ? BBW_BLUE
+                                   : BBW_PAPER;
+            col = rc;
+        }
+        // Thick black outline (Mondrian's signature heavy black borders)
+        float outerX = abs(uv.x - ctr.x) - hs.x;
+        float outerY = abs(uv.y - ctr.y) - hs.y;
+        float edge = max(outerX, outerY);
+        // Outline thickness scales with laneWidth (now defaults thicker)
+        col = mix(col, vec3(0.05),
+                  smoothstep(laneWidth + 0.002, laneWidth - 0.002, abs(edge)) * 0.95);
+    }
+
     // Surprise: every ~31s a single rectangle quietly turns Mondrian-
-    // forbidden green for ~0.5s. Forbidden because Mondrian's manifesto
-    // banned green from the canon — so the painting briefly heretical.
+    // forbidden green for ~0.5s.
     {
         float _ph = fract(TIME / 31.0);
         float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.20, 0.10, _ph);
         vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
-        // Pick a hashed rectangular region to recolor
         float _h = fract(sin(floor(TIME / 31.0) * 91.7) * 43758.5453);
         vec2 _o = vec2(0.05 + _h * 0.55, 0.05 + fract(_h * 13.7) * 0.55);
         vec2 _s = vec2(0.18 + fract(_h * 7.3) * 0.20, 0.18 + fract(_h * 11.1) * 0.20);

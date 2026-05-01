@@ -12,7 +12,12 @@
         { "NAME": "color1", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0], "LABEL": "Core" },
         { "NAME": "color2", "TYPE": "color", "DEFAULT": [0.1, 0.7, 1.0, 1.0], "LABEL": "Halo" },
         { "NAME": "bg",     "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.03, 1.0], "LABEL": "Background" },
-        { "NAME": "glow",   "TYPE": "float", "DEFAULT": 1.3, "MIN": 0.0, "MAX": 3.0, "LABEL": "Glow" }
+        { "NAME": "glow",   "TYPE": "float", "DEFAULT": 1.3, "MIN": 0.0, "MAX": 3.0, "LABEL": "Glow" },
+        { "NAME": "ledMode",       "TYPE": "bool",  "DEFAULT": true,  "LABEL": "LED Wall" },
+        { "NAME": "ledSize",       "TYPE": "float", "DEFAULT": 220.0, "MIN": 50.0, "MAX": 600.0, "LABEL": "LED Density" },
+        { "NAME": "trailDecay",    "TYPE": "float", "DEFAULT": 0.85,  "MIN": 0.0,  "MAX": 1.0, "LABEL": "Trail Length" },
+        { "NAME": "particleCount", "TYPE": "float", "DEFAULT": 96.0,  "MIN": 20.0, "MAX": 200.0, "LABEL": "Particle Count" },
+        { "NAME": "colorJitter",   "TYPE": "float", "DEFAULT": 0.40,  "MIN": 0.0,  "MAX": 1.0, "LABEL": "Color Jitter" }
     ]
 }*/
 
@@ -114,9 +119,47 @@ void main() {
         float core = smoothstep(r, 0.0, d);
         float halo = exp(-d * 70.0);
 
-        acc += mix(color2.rgb, color1.rgb, core) * (core + halo * 0.35);
+        // Per-particle color jitter — gives the LED-wall variety look
+        vec3 c1 = color1.rgb;
+        vec3 c2 = color2.rgb;
+        if (colorJitter > 0.0) {
+            float h = hash11(float(i) * 11.7);
+            vec3 hueShift = 0.5 + 0.5 * cos(6.28318 * h + vec3(0.0, 2.094, 4.188));
+            c1 = mix(c1, hueShift,             colorJitter);
+            c2 = mix(c2, hueShift * 0.7 + 0.3, colorJitter);
+        }
+        acc += mix(c2, c1, core) * (core + halo * 0.35);
+
+        // Trail — extra ghost samples behind the segment
+        if (trailDecay > 0.001) {
+            for (int tk = 1; tk <= 3; tk++) {
+                float ftk = float(tk);
+                vec2 ghostA = a - vel * ftk * 0.10 * trailDecay;
+                vec2 ghostB = a;
+                vec2 paG = uv - ghostA;
+                vec2 baG = ghostB - ghostA;
+                float dG2 = dot(baG, baG);
+                if (dG2 > 1e-6) {
+                    float hG = clamp(dot(paG, baG) / dG2, 0.0, 1.0);
+                    float ddG = length(paG - baG * hG);
+                    float fadeG = 1.0 - ftk / 4.0;
+                    acc += mix(c2, c1, smoothstep(r, 0.0, ddG)) * fadeG * 0.20;
+                }
+            }
+        }
     }
 
     vec3 rgb = bg.rgb + acc * glow;
+
+    // LED wall mode: quantize to a grid, leaving black "gaps" between LEDs
+    if (ledMode) {
+        vec2 ledUV = uv * ledSize;
+        vec2 lf = fract(ledUV) - 0.5;
+        float dotMask = smoothstep(0.45, 0.30, length(lf));
+        // Black bezel between LEDs, brightness boost on the lit dot
+        rgb = rgb * (0.20 + 0.80 * dotMask);
+        rgb += rgb * dotMask * 0.4;  // a touch of bloom on lit cells
+    }
+
     gl_FragColor = vec4(rgb, 1.0);
 }
