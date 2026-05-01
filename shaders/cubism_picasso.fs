@@ -21,8 +21,13 @@
     { "NAME": "warmth", "LABEL": "Palette Warmth", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.40 },
     { "NAME": "vignette", "LABEL": "Vignette", "TYPE": "float", "MIN": 0.0, "MAX": 0.8, "DEFAULT": 0.45 },
     { "NAME": "letterFragments", "LABEL": "Letter Fragments", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "drift", "LABEL": "Composition Drift", "TYPE": "float", "MIN": 0.0, "MAX": 0.20, "DEFAULT": 0.025 },
-    { "NAME": "recomposeRate", "LABEL": "Recompose Rate", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.12 },
+    { "NAME": "drift", "LABEL": "Composition Drift", "TYPE": "float", "MIN": 0.0, "MAX": 0.20, "DEFAULT": 0.05 },
+    { "NAME": "recomposeRate", "LABEL": "Recompose Rate", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.18 },
+    { "NAME": "depthParallax", "LABEL": "Depth Parallax", "TYPE": "float", "MIN": 0.0, "MAX": 0.30, "DEFAULT": 0.10 },
+    { "NAME": "spaceCurve",    "LABEL": "Space Curvature","TYPE": "float", "MIN": 0.0, "MAX": 0.50, "DEFAULT": 0.18 },
+    { "NAME": "colorBlend",    "LABEL": "Color Blend",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.55 },
+    { "NAME": "specStrength",  "LABEL": "Specular",       "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.45 },
+    { "NAME": "specSharpness", "LABEL": "Specular Sharp", "TYPE": "float", "MIN": 0.0, "MAX": 0.10, "DEFAULT": 0.025 },
     { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
     { "NAME": "compositionSeed", "LABEL": "Seed", "TYPE": "float", "MIN": 0.0, "MAX": 80.0, "DEFAULT": 0.0 },
     { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" }
@@ -234,6 +239,15 @@ void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     float aspect = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
 
+    // Space curvature — gentle barrel/lens warp before plane evaluation.
+    // Pulls the composition into a curved-space cubist read instead of a
+    // flat poster. Strength on spaceCurve.
+    {
+        vec2 c = uv - 0.5;
+        float r2 = dot(c, c);
+        uv = 0.5 + c * (1.0 + spaceCurve * r2 * 1.6);
+    }
+
     // Background — warm cream paper, vignetted toward edges so the eye
     // is led to the central pile of planes (Picasso's compositions
     // collapse mass toward the centre of the frame).
@@ -271,6 +285,16 @@ void main() {
         // so the painting is constantly recomposing.
         float fadeT = sin(TIME * recomposeRate + fi * 2.7) * 0.5 + 0.5;
 
+        // Per-plane DEPTH — distance from camera in [0..1]. Front planes
+        // are larger and parallax-shifted more; back planes anchor the
+        // composition. This is the "curvature of space and time" layer.
+        float depth = hash11(fi * 53.7);
+        // Apply parallax based on distance from canvas center
+        vec2 cFromCenter = uv - 0.5;
+        ctr += cFromCenter * (depth - 0.5) * depthParallax;
+        // Front planes are larger and slow-drift more; back planes squat.
+        float depthScale = mix(0.7, 1.4, depth);
+
         // Plane half-extents. AspectVar lets some planes be tall, some
         // squat — Picasso's planes are not uniform rectangles.
         float hSz = hash11(fi * 7.13);
@@ -279,6 +303,7 @@ void main() {
                              planeSize * (0.30 + hAp * 0.9));
         halfSize *= 1.0 + (hSz - 0.5) * 2.0 * scaleVar;
         halfSize.y *= 0.5 + hAp * aspectVar;
+        halfSize *= depthScale;
 
         // Rotation
         float rot = (hash11(fi * 11.7) - 0.5) * 2.0 * rotateRange
@@ -326,10 +351,20 @@ void main() {
             // tonal field driven by world position + slow noise, so each
             // facet reads as a faceted plane of paint without trying to
             // render a particular figure. The faceting IS the subject.
-            float field = vnoise(worldSampleUV * 4.5 + vec2(TIME * 0.04, 0.0));
-            float field2 = vnoise(worldSampleUV * 1.7 + fi * 0.31);
+            // Depth-driven flow: front planes flow faster than back ones.
+            float flowSpeed = mix(0.02, 0.10, depth);
+            float field  = vnoise(worldSampleUV * 4.5 + vec2(TIME * flowSpeed, 0.0));
+            float field2 = vnoise(worldSampleUV * 1.7 + fi * 0.31 + TIME * flowSpeed * 0.5);
             float lum = mix(0.30, 0.92, field * 0.7 + field2 * 0.3);
-            sample_ = vec3(lum) * vec3(0.95, 0.92, 0.85);
+            // Per-depth tint — back layers cooler, front layers warmer
+            vec3 depthTint = mix(vec3(0.78, 0.82, 0.95), vec3(1.05, 0.96, 0.78), depth);
+            sample_ = vec3(lum) * depthTint;
+            // Color blend across layers — weave a secondary hue tied to
+            // a slowly-rotating phasor so the painting breathes color.
+            vec3 hueA = vec3(0.95, 0.55, 0.25);
+            vec3 hueB = vec3(0.30, 0.55, 0.92);
+            float hueT = sin(TIME * 0.10 + fi * 0.7 + worldSampleUV.x * 2.0) * 0.5 + 0.5;
+            sample_ = mix(sample_, mix(hueA, hueB, hueT) * lum * 1.15, colorBlend * 0.5);
         }
 
         // Per-plane lighting: gradient along a direction = global lightDir
@@ -356,6 +391,17 @@ void main() {
                           * edgeMix,
                           0.0, 0.95);
         col = mix(col, sample_, alpha);
+
+        // Specular highlight on a chosen plane edge (front-facing toward
+        // light direction). Mimics a subtle CG bevel — the cubism revival
+        // through computer graphics, not a print.
+        if (specStrength > 0.0) {
+            float specEdge = smoothstep(specSharpness * 1.2, specSharpness * 0.2,
+                                         abs(edgeDist) / planeSize);
+            float specSide = max(dot(local / max(halfSize, vec2(1e-4)), lvec), 0.0);
+            col += vec3(1.0, 0.95, 0.82) * specEdge * specSide * specStrength
+                 * mix(0.4, 1.0, depth) * alpha;
+        }
 
         // Hairline pencil-line scaffolding at the plane's actual edge
         // (not the feathered zone) — Picasso bounded analytic planes
