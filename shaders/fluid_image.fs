@@ -19,19 +19,25 @@
     { "NAME": "moveSpeed", "LABEL": "Move Speed", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.05, "MAX": 2.0 },
     { "NAME": "moveSpread", "LABEL": "Move Spread", "TYPE": "float", "DEFAULT": 0.7, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "moveIntensity", "LABEL": "Move Intensity", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "poseForce", "LABEL": "Body Force", "TYPE": "float", "DEFAULT": 2.0, "MIN": 0.0, "MAX": 6.0 },
+    { "NAME": "poseSpawn", "LABEL": "Body Spawn", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
+    { "NAME": "poseRadius", "LABEL": "Body Radius", "TYPE": "float", "DEFAULT": 0.08, "MIN": 0.02, "MAX": 0.25 },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ],
   "PASSES": [
     { "TARGET": "velBuf", "PERSISTENT": true },
     { "TARGET": "uvBuf", "PERSISTENT": true },
+    { "TARGET": "prevPoseBuf", "PERSISTENT": true, "WIDTH": "33", "HEIGHT": "1" },
     {}
   ]
 }*/
 
 // Fluid Image — UV-advection fluid simulation
-// Pass 0: Velocity field (rotational self-advection, RotNum=5)
+// Pass 0: Velocity field (rotational self-advection + mouse/movement/audio/pose splats)
 // Pass 1: UV advection buffer (stores displaced UV coordinates)
-// Pass 2: Final render (sample original image at warped UVs + surface lighting)
+// Pass 2: prevPoseBuf (33x1 snapshot of mpPoseLandmarks — written AFTER velBuf so
+//         next frame's velBuf reads last frame's pose as the "previous" sample)
+// Pass 3: Final render (sample original image at warped UVs + surface lighting)
 
 #define PI2 6.283185
 #define RotNum 5
@@ -49,6 +55,60 @@ float _ang = PI2 / float(RotNum);
 vec2 rot2(vec2 v, float a) {
     float c = cos(a), s = sin(a);
     return vec2(c * v.x - s * v.y, s * v.x + c * v.y);
+}
+
+// ---- Pose landmark sampling ----
+// mpPoseLandmarks is a 33x1 RGBA texture. Each landmark is stored as:
+//   R = x in [0..1], G = 1-y in [0..1] (already inverted in JS), B = z+0.5, A = visibility.
+// Sample at texel centers (i+0.5)/33 to avoid any LINEAR interpolation issues.
+// X is mirrored here to match the selfie-view flipped webcam, same convention as hand splats.
+vec2 poseJoint(int idx) {
+    vec4 lm = texture2D(mpPoseLandmarks, vec2((float(idx) + 0.5) / 33.0, 0.5));
+    return vec2(1.0 - lm.r, lm.g);
+}
+float poseJointVis(int idx) {
+    return texture2D(mpPoseLandmarks, vec2((float(idx) + 0.5) / 33.0, 0.5)).a;
+}
+vec2 prevPoseJoint(int idx) {
+    vec4 lm = texture2D(prevPoseBuf, vec2((float(idx) + 0.5) / 33.0, 0.5));
+    return vec2(1.0 - lm.r, lm.g);
+}
+
+// Apply one joint's splat to the velocity color. Force direction = joint movement since
+// last frame (fluid "follows the body"), plus a weaker radial push outward from the joint
+// center (fluid "spawns from the skeleton"). Unrolled via literal int calls to avoid
+// GLSL ES 1.00 dynamic indexing restrictions.
+void poseSplat(int idx, vec2 uv, float aspect, float r2, float cutoff2,
+               float followForce, float spawnForce, inout vec4 col) {
+    float vis = poseJointVis(idx);
+    if (vis < 0.3) return;
+
+    vec2 cur  = poseJoint(idx);
+    vec2 prev = prevPoseJoint(idx);
+
+    // Reject the first-frame case where prevPoseBuf is still zero — gives a huge bogus delta.
+    // If the prev sample reads as (1.0, 0.0) (the mirror of an unpopulated 0,0 texel) or
+    // matches current within epsilon, treat as zero motion.
+    vec2 delta = cur - prev;
+    if (dot(prev, prev) < 0.001 || abs(prev.x - 1.0) < 0.0001) delta = vec2(0.0);
+    // Clamp per-frame travel so a lost-then-found landmark doesn't teleport.
+    delta = clamp(delta, vec2(-0.15), vec2(0.15));
+
+    vec2 diff = uv - cur;
+    diff.x *= aspect;
+    float dist2 = dot(diff, diff);
+    if (dist2 >= cutoff2) return;
+
+    float falloff = exp(-dist2 / r2);
+
+    // Follow: push fluid in the direction the joint moved.
+    vec2 followVec = delta * followForce;
+    // Spawn: radial outward from the joint, scaled by visibility so low-confidence
+    // joints contribute less. Never zero — that's the "spawning from skeleton" feel.
+    vec2 radial = normalize(diff + vec2(0.0001)) * spawnForce * 0.02 * vis;
+
+    col.xy += (followVec + radial) * falloff;
+    col.xy = clamp(col.xy, 0.0, 1.0);
 }
 
 // ---- Multi-scale rotational curl measurement ----
@@ -235,6 +295,32 @@ void main() {
             col.xy += vec2(-gDiff.y, gDiff.x) * (sin(t * 0.4) > 0.0 ? 1.0 : -1.0) * intensity * 0.3 * rotFalloff;
         }
 
+        // ---- Body tracking: splats at every visible skeleton joint ----
+        // When pose is active, inject fluid at 13 key body joints. Each splat combines a
+        // movement-following force (fluid tracks body motion) with a radial outward spawn
+        // force (fluid emanates from the skeleton even when still).
+        if (mpPoseActive > 0.5) {
+            float poseR  = poseRadius;
+            float poseR2 = poseR * poseR;
+            float poseCutoff2 = poseR2 * 12.0;
+            // Unrolled joint list (literal ints required for GLSL ES 1.00 texture2D indexing
+            // inside helper calls). Key points: nose + shoulders + elbows + wrists +
+            // hips + knees + ankles.
+            poseSplat( 0, uv, aspect, poseR2, poseCutoff2, poseForce, poseSpawn, col); // nose
+            poseSplat(11, uv, aspect, poseR2, poseCutoff2, poseForce, poseSpawn, col); // L shoulder
+            poseSplat(12, uv, aspect, poseR2, poseCutoff2, poseForce, poseSpawn, col); // R shoulder
+            poseSplat(13, uv, aspect, poseR2, poseCutoff2, poseForce, poseSpawn, col); // L elbow
+            poseSplat(14, uv, aspect, poseR2, poseCutoff2, poseForce, poseSpawn, col); // R elbow
+            poseSplat(15, uv, aspect, poseR2, poseCutoff2, poseForce, poseSpawn, col); // L wrist
+            poseSplat(16, uv, aspect, poseR2, poseCutoff2, poseForce, poseSpawn, col); // R wrist
+            poseSplat(23, uv, aspect, poseR2, poseCutoff2, poseForce, poseSpawn, col); // L hip
+            poseSplat(24, uv, aspect, poseR2, poseCutoff2, poseForce, poseSpawn, col); // R hip
+            poseSplat(25, uv, aspect, poseR2, poseCutoff2, poseForce, poseSpawn, col); // L knee
+            poseSplat(26, uv, aspect, poseR2, poseCutoff2, poseForce, poseSpawn, col); // R knee
+            poseSplat(27, uv, aspect, poseR2, poseCutoff2, poseForce, poseSpawn, col); // L ankle
+            poseSplat(28, uv, aspect, poseR2, poseCutoff2, poseForce, poseSpawn, col); // R ankle
+        }
+
         // Audio — bass creates force splats
         if (audioBass > 0.2) {
             float at = float(FRAMEINDEX) * 0.1;
@@ -287,7 +373,20 @@ void main() {
         return;
     }
 
-    // ===== PASS 2: Final Render =====
+    // ===== PASS 2: prevPoseBuf snapshot (33x1) =====
+    // Runs AFTER velBuf/uvBuf so next frame's velocity pass reads this as the "previous"
+    // pose sample for per-joint delta computation.
+    if (PASSINDEX == 2) {
+        if (mpPoseActive > 0.5) {
+            gl_FragColor = texture2D(mpPoseLandmarks, uv);
+        } else {
+            // Pose off — write zeros so stale landmarks don't resurrect when re-enabled.
+            gl_FragColor = vec4(0.0);
+        }
+        return;
+    }
+
+    // ===== PASS 3: Final Render =====
 
     // Read warped UVs from the advection buffer
     vec2 warpedUV = texture2D(uvBuf, uv).rg;
