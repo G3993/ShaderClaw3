@@ -904,18 +904,6 @@
     "file": "glitch_datamosh.fs"
   },
   {
-    "id": 491,
-    "title": "AI Latent Drift",
-    "description": "Multi-octave fbm walked by three LFOs through curl-noise warp, directionally blurred to diffusion-model softness, muted palette arc, phantom feature pulses on bass. Refik Anadol / Klingemann territory.",
-    "type": "generator",
-    "categories": [
-      "Generator",
-      "Art Movement",
-      "Audio Reactive"
-    ],
-    "file": "ai_latent_drift.fs"
-  },
-  {
     "id": 9,
     "title": "Geometric",
     "description": "Geometric planet with procedural surface patterns",

@@ -77,20 +77,35 @@ void main() {
         vec2 baseA = vec2(bxA, byA) * 2.0 - 1.0;
         vec2 baseB = vec2(bxB, byB) * 2.0 - 1.0;
 
-        // Chaos: per-particle noise displacement that drifts in time. Adds
-        // non-periodic jitter without ever escaping the canvas.
+        // Chaos: stacked sin layers at different frequencies + a per-particle
+        // tumble. With chaos > 0 each particle deviates strongly from its
+        // base bounce path, with chaos = 0 it follows the orbit cleanly.
+        // Previous version was scaled by 0.25 — far too weak to read.
+        float chT = t * 0.7;
+        float chTb = (t+dt) * 0.7;
+        // Three octaves of sin per axis at different frequencies + per-
+        // particle phase offsets — non-periodic-feeling drift
         vec2 chaosA = vec2(
-            sin(t * (1.1 + s1 * 1.3) + s3 * 6.28),
-            cos(t * (0.9 + s2 * 1.5) + s4 * 6.28)
-        ) * chaos * 0.25;
+            sin(chT  * (1.1 + s1 * 1.3) + s3 * 6.28) * 0.55
+          + sin(chT  * (3.7 + s2 * 1.7) + s4 * 6.28) * 0.30
+          + sin(chT  * (0.4 + s3 * 0.9) + s1 * 6.28) * 0.20,
+            cos(chT  * (0.9 + s2 * 1.5) + s4 * 6.28) * 0.55
+          + cos(chT  * (3.1 + s1 * 1.4) + s3 * 6.28) * 0.30
+          + cos(chT  * (0.6 + s4 * 1.1) + s2 * 6.28) * 0.20
+        ) * chaos * 0.55;
         vec2 chaosB = vec2(
-            sin((t+dt) * (1.1 + s1 * 1.3) + s3 * 6.28),
-            cos((t+dt) * (0.9 + s2 * 1.5) + s4 * 6.28)
-        ) * chaos * 0.25;
+            sin(chTb * (1.1 + s1 * 1.3) + s3 * 6.28) * 0.55
+          + sin(chTb * (3.7 + s2 * 1.7) + s4 * 6.28) * 0.30
+          + sin(chTb * (0.4 + s3 * 0.9) + s1 * 6.28) * 0.20,
+            cos(chTb * (0.9 + s2 * 1.5) + s4 * 6.28) * 0.55
+          + cos(chTb * (3.1 + s1 * 1.4) + s3 * 6.28) * 0.30
+          + cos(chTb * (0.6 + s4 * 1.1) + s2 * 6.28) * 0.20
+        ) * chaos * 0.55;
         baseA += chaosA;
         baseB += chaosB;
-        baseA = clamp(baseA, vec2(-1.0), vec2(1.0));
-        baseB = clamp(baseB, vec2(-1.0), vec2(1.0));
+        // Wrap (not clamp) so chaotic particles re-enter rather than stick to edges
+        baseA = mod(baseA + 1.0, 2.0) - 1.0;
+        baseB = mod(baseB + 1.0, 2.0) - 1.0;
 
         // Aspect-stretched world-space positions.
         vec2 posA = vec2(baseA.x * aspect, baseA.y);
