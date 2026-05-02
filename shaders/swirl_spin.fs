@@ -24,7 +24,7 @@ vec4 passSwirl(vec2 fragCoord) {
                    + c2.yx * vec2(-twist, twist)) / res;
     vec4 prev = texture(swirlBuf, sampleP);
 
-    float t = TIME * speed;
+    float t = TIME * speed * (1.0 + audioLevel * 2.0);
     vec4 col = vec4(sin(t * vec3(13.0, 11.0, 17.0)) * 0.5 + 0.5, 1.0);
 
     vec2 spotCenter = sin(vec2(11.0, 13.0) * t) * 60.0 + res * 0.5;
