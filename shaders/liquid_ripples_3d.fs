@@ -73,5 +73,10 @@ void main() {
     // Subtle fog wash so corners don't go pitch black.
     col += fogColor.rgb * 0.3;
 
+    // Contour edge lines at ripple zero-crossings
+    float cBand = abs(fract(totalH * 2.0 + 0.5) - 0.5) * 2.0;
+    float contour = 1.0 - smoothstep(0.0, 0.15, cBand);
+    col += contour * vec3(0.5, 0.8, 1.0) * 0.7;
+
     gl_FragColor = vec4(col, 1.0);
 }
