@@ -642,18 +642,6 @@
     "file": "liquid_ripples_3d.fs"
   },
   {
-    "id": 466,
-    "title": "Dali Melt",
-    "description": "Pixels droop and smear downward in slow heavy waves like Dal\u00ed's melting clocks. Audio bursts widen the drips, Cocteau Twins chromatic separation.",
-    "type": "generator",
-    "categories": [
-      "Effect",
-      "Generator",
-      "Audio Reactive"
-    ],
-    "file": "dali_melt.fs"
-  },
-  {
     "id": 467,
     "title": "Turrell Chroma",
     "description": "Breathing volume of pure colour-light \u2014 almost no motion, just slow chromatic drift. Architectural light, not screen content. Aten Reign / Skyspace.",
