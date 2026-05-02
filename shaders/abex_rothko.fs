@@ -129,18 +129,39 @@ void main() {
     // bandBleed widens the feather for cross-band color bleed
     float fthB = fth * (1.0 + bandBleed * 4.0);
 
+    // Vertical color flow — colors slowly travel up and down the canvas
+    // over time, swapping between bands so the painting feels alive
+    // (still respecting Rothko's slow tempo). breathSpeed drives this.
+    float flowPhase = TIME * breathSpeed * 0.15;
+    float flowSin   = sin(flowPhase) * 0.5 + 0.5;       // 0..1
+    float flowCos   = sin(flowPhase + 2.094) * 0.5 + 0.5;
+    float flowThree = sin(flowPhase + 4.188) * 0.5 + 0.5;
+    // Crossfade band colors smoothly through each other on a 3-stage
+    // cycle so each band rotates through Top/Mid/Bot positions.
+    vec3 flowTop = cTop * flowSin   + cMid * (1.0 - flowSin);
+    vec3 flowMid = cMid * flowCos   + cBot * (1.0 - flowCos);
+    vec3 flowBot = cBot * flowThree + cTop * (1.0 - flowThree);
+    // Mix flow into the originals so it adds to (not replaces) breath
+    cTop = mix(cTop, flowTop, colorBreath * 0.6);
+    cMid = mix(cMid, flowMid, colorBreath * 0.6);
+    cBot = mix(cBot, flowBot, colorBreath * 0.6);
+
+    // Band positions also drift vertically so colors physically move
+    // between zones, not just shift hue in place.
+    float bDrift = sin(TIME * breathSpeed * 0.20) * 0.04 * colorBreath;
+
     if (N >= 3) {
-        // 3-band Orange/Red/Yellow layout
-        float t1 = bandShape(uv, 0.62, 0.92, xIn, fthB);
-        float t2 = bandShape(uv, 0.34, 0.58, xIn, fthB);
-        float t3 = bandShape(uv, 0.08, 0.30, xIn, fthB);
+        // 3-band Orange/Red/Yellow layout, drifting vertically
+        float t1 = bandShape(uv, 0.62 + bDrift, 0.92 + bDrift, xIn, fthB);
+        float t2 = bandShape(uv, 0.34 - bDrift, 0.58 - bDrift, xIn, fthB);
+        float t3 = bandShape(uv, 0.08 + bDrift * 0.5, 0.30 + bDrift * 0.5, xIn, fthB);
         col = mix(col, cTop, t1);
         col = mix(col, cMid, t2);
         col = mix(col, cBot, t3);
     } else {
         // 2-band layout
-        float t1 = bandShape(uv, 0.55, 0.92, xIn, fthB);
-        float t2 = bandShape(uv, 0.10, 0.46, xIn, fthB);
+        float t1 = bandShape(uv, 0.55 + bDrift, 0.92 + bDrift, xIn, fthB);
+        float t2 = bandShape(uv, 0.10 - bDrift, 0.46 - bDrift, xIn, fthB);
         col = mix(col, cTop, t1);
         col = mix(col, cBot, t2);
     }
