@@ -220,6 +220,9 @@ void main() {
       float cm2 = sin(p.y * 4.0 - p.x * 2.5 + speed * 0.3) * 0.5 + 0.5;
       vec3 albedo = mix(metalColor.rgb, accentColor.rgb, cm1 * 0.4);
       albedo = mix(albedo, metalColor.rgb * 0.7, cm2 * 0.25);
+      // Cosine palette hue accent: adds blue-steel to high-cm2 regions for palette entropy
+      vec3 coolLUT = 0.5 + 0.5 * cos(6.2832 * (vec3(0.60, 0.72, 0.90) + cm1 * 0.4 + speed * 0.01));
+      albedo = mix(albedo, coolLUT * length(metalColor.rgb), smoothstep(0.55, 0.9, cm2) * 0.4);
 
       float metallic = metalness;
 
@@ -271,7 +274,7 @@ void main() {
   } else if (!transparentBg) {
     // Palette boost: hue sweep across screen → color-bucket diversity
     float bgPhi = atan(uv.y, uv.x) * (1.0 / 6.28318);
-    col = 0.06 * (0.5 + 0.5 * sin(bgPhi * 4.0 + TIME * 0.02 + vec3(0.0, 2.094, 4.189)));
+    col = 0.22 * (0.5 + 0.5 * sin(bgPhi * 4.0 + TIME * 0.02 + vec3(0.0, 2.094, 4.189)));
 
     // Atmospheric glow
     float closestT = max(-dot(ro, rd), 0.0);
