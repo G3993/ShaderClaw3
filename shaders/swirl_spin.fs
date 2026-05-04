@@ -30,7 +30,11 @@ vec4 passSwirl(vec2 fragCoord) {
     vec2 spotCenter = sin(vec2(11.0, 13.0) * t) * 60.0 + res * 0.5;
     float idx = smoothstep(6.0 * spotSize, 20.0 * spotSize, length(fragCoord - spotCenter));
 
-    return mix(col, prev, idx);
+    // Warm hue background: visible before persistent buffer warms (prev starts black).
+    // Fades out once buffer has content, so it doesn't alter the steady-state look.
+    vec3 bgHue = 0.5 + 0.5 * sin(t * 0.3 + vec3(0.0, 2.094, 4.189));
+    vec4 warm = mix(vec4(bgHue * 0.2, 1.0), prev, min(length(prev.rgb) * 5.0, 1.0));
+    return mix(col, warm, idx);
 }
 
 vec4 passFinal(vec2 fragCoord) {
