@@ -2,12 +2,12 @@
   "CATEGORIES": ["Generator", "Audio Reactive"],
   "DESCRIPTION": "Sound made literally visible — concentric ripples rolling across stacked depth-planes, audio frequencies sculpting cymatic interference patterns in 3D space.",
   "INPUTS": [
-    {"NAME":"layers","TYPE":"float","MIN":1.0,"MAX":6.0,"DEFAULT":4.0},
+    {"NAME":"layers","TYPE":"float","MIN":1.0,"MAX":6.0,"DEFAULT":6.0},
     {"NAME":"freqScale","TYPE":"float","MIN":4.0,"MAX":40.0,"DEFAULT":16.0},
     {"NAME":"speed","TYPE":"float","MIN":0.0,"MAX":4.0,"DEFAULT":1.5},
     {"NAME":"refraction","TYPE":"float","MIN":0.0,"MAX":0.08,"DEFAULT":0.02},
     {"NAME":"parallax","TYPE":"float","MIN":0.0,"MAX":0.3,"DEFAULT":0.08},
-    {"NAME":"idleAmp","TYPE":"float","MIN":0.0,"MAX":0.5,"DEFAULT":0.1},
+    {"NAME":"idleAmp","TYPE":"float","MIN":0.0,"MAX":0.5,"DEFAULT":0.15},
     {"NAME":"fogColor","TYPE":"color","DEFAULT":[0.02,0.04,0.08,1.0]},
     {"NAME":"inputTex","TYPE":"image"}
   ]
@@ -22,8 +22,9 @@ vec2 hashPos(int L) {
 }
 
 // Per-layer base colour — bass layers warm/red, treble layers cool/cyan.
+// Slow TIME drift cycles the palette across frames for colour-bucket entropy.
 vec3 planeColor(int L, float layers) {
-    float t = float(L) / max(layers - 1.0, 1.0);
+    float t = fract(float(L) / max(layers - 1.0, 1.0) + TIME * 0.05);
     return mix(vec3(1.0, 0.4, 0.2), vec3(0.2, 0.8, 1.0), t);
 }
 
