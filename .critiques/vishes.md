@@ -20,3 +20,23 @@
 - Bloom uses 5×5 kernel (unchanged, but larger radius relative to hdrPeak)
 **HDR peaks reached:** walker cells at hdrPeak * audio = 2.5–3.5; bloom spreads to ~1.5 surrounding cells
 **Estimated rating:** 3.8★
+
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 3D SDF — NEW ANGLE: 2D cellular walker trail system → 3D coral reef bioluminescence
+**Critique:**
+1. Reference fidelity: 2D cell-walker trails replaced with 3D organic coral formation with bioluminescent glow.
+2. Compositional craft: 5 coral colonies spread on dark ocean floor; orbiting camera gives wide environmental shot; screenspace bloom halos add glow depth.
+3. Technical execution: Capsule-based branching tree SDFs (2 levels); bioluminescent orb scan for nearest colony; transmittance fog.
+4. Liveness: Orbiting camera (TIME*0.12); per-colony pulse (sin*0.2); audio modulates glow.
+5. Differentiation: 3D branching organic forms vs 2D grid walker trails; bioluminescent (cyan/violet/teal) vs hue-drifting desaturated; ocean floor setting vs abstract grid.
+**Changes:**
+- Full rewrite from 2D walker trails to 3D coral reef SDF scene
+- Capsule branching tree SDFs (base + 2 sub-branches per colony)
+- 5 coral colonies on ocean floor
+- Bio-palette: bio-cyan, violet, deep teal — fully saturated
+- Deep ocean depth fog + void black ambient
+- Screenspace bloom halos for glow spread
+- Audio modulates pulse intensity + hdrPeak
+**HDR peaks reached:** bio glow exp(-d*5) * hdrPeak * audio = 3.0 * 1.6 = ~4.8 at colony center
+**Estimated rating:** 4.0★
