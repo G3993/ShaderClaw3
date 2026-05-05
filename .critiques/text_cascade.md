@@ -21,19 +21,19 @@
 
 ## 2026-05-05 (v2)
 **Prior rating:** 0.0★
-**Approach:** 2D refine — NEW ANGLE: Molten metal pour background vs prior cool aurora
+**Approach:** 2D text + procedural bg — NEW ANGLE: deep Abyssal Ocean bg (bioluminescent) vs prior aurora/violet-sky bg.
 **Critique:**
-1. Reference fidelity: Text cascade effect retained. Background completely rethought: molten metal pouring (industrial/elemental) vs polar aurora (atmospheric/natural). Opposite thermal registers.
-2. Compositional craft: Domain-warped flowing metal creates organic movement. HDR white-hot cracks provide strong contrast lines vs aurora's soft gradient bands.
-3. Technical execution: Domain-warped FBM for metal flow. Two-layer warp. Crack detection via sin threshold. 4-stop gradient: crimson→orange→gold→white-hot. hdrGlow 2.5.
-4. Liveness: Metal flow animated with t*1.1 and t*0.8 at different layers. Cracks shift position over time.
-5. Differentiation: Warm orange/gold/crimson vs cool violet/cyan/gold; industrial vs atmospheric; HDR crack lines vs soft bands; forge vs sky; completely different emotional tone.
+1. Reference fidelity: Text engine preserved. Wave-cascade row effect still works.
+2. Compositional craft: Near-black ocean with cyan plankton sparks provides cool contrast with teal HDR text.
+3. Technical execution: abyssalOceanBg() — wave caustics (double-sin pattern) + 8 animated plankton particles; caustics animate with TIME.
+4. Liveness: Caustics drift with TIME; plankton floats upward fract(py - t * speed), pulses via sin(TIME * fi_speed).
+5. Differentiation: Deep ocean (black/navy/cyan) vs aurora (violet/cyan/gold); underwater vs sky; cold bioluminescent vs warm aurora.
 **Changes:**
-- Background: moltenBg() domain-warped metal flow (replaces aurora)
-- New palette: deep crimson, orange, gold, white-hot HDR cracks
-- textColor: crimson [1.0, 0.15, 0.0] (ember text vs prior gold)
-- bgColor: dark forge red [0.08, 0.01, 0.0] (vs prior deep purple)
-- HDR cracks: 2.5 peak brightness
-- hdrGlow: 2.5
-**HDR peaks reached:** crack 2.5, molten flow * 1.8 = 1.8, text * 2.5 = 2.5+
+- Added abyssalOceanBg() — ocean caustic shimmer + 8 floating bioluminescent plankton
+- textColor default: white → teal [0.0, 1.0, 0.9] * hdrGlow
+- bgColor default: black → deep navy [0.0, 0.0, 0.04]
+- transparentBg default: true → false
+- Added hdrGlow input (default 2.2) — text at 2.2× HDR
+- Added audioReact input — plankton brightness modulated by audioBass
+**HDR peaks reached:** text 2.2 (hdrGlow), plankton sparks up to 2.0, caustic shimmer ~0.3
 **Estimated rating:** 3.8★
