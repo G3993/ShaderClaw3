@@ -18,3 +18,22 @@
 - audioMod input added
 **HDR peaks reached:** gold text * 2.2 = 2.2 direct; with audio 3.0+
 **Estimated rating:** 3.8★
+
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 2D refine — NEW ANGLE: Molten metal pour background vs prior cool aurora
+**Critique:**
+1. Reference fidelity: Text cascade effect retained. Background completely rethought: molten metal pouring (industrial/elemental) vs polar aurora (atmospheric/natural). Opposite thermal registers.
+2. Compositional craft: Domain-warped flowing metal creates organic movement. HDR white-hot cracks provide strong contrast lines vs aurora's soft gradient bands.
+3. Technical execution: Domain-warped FBM for metal flow. Two-layer warp. Crack detection via sin threshold. 4-stop gradient: crimson→orange→gold→white-hot. hdrGlow 2.5.
+4. Liveness: Metal flow animated with t*1.1 and t*0.8 at different layers. Cracks shift position over time.
+5. Differentiation: Warm orange/gold/crimson vs cool violet/cyan/gold; industrial vs atmospheric; HDR crack lines vs soft bands; forge vs sky; completely different emotional tone.
+**Changes:**
+- Background: moltenBg() domain-warped metal flow (replaces aurora)
+- New palette: deep crimson, orange, gold, white-hot HDR cracks
+- textColor: crimson [1.0, 0.15, 0.0] (ember text vs prior gold)
+- bgColor: dark forge red [0.08, 0.01, 0.0] (vs prior deep purple)
+- HDR cracks: 2.5 peak brightness
+- hdrGlow: 2.5
+**HDR peaks reached:** crack 2.5, molten flow * 1.8 = 1.8, text * 2.5 = 2.5+
+**Estimated rating:** 3.8★

@@ -11,9 +11,10 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.15, 0.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.08, 0.01, 0.0, 1.0] },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 2.5 },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
@@ -93,6 +94,42 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
+// BACKGROUND: MOLTEN METAL — orange/gold/crimson pour
+// =======================================================================
+
+// Molten metal pour — orange/gold/crimson
+vec3 moltenBg(vec2 uv, float t) {
+    // Flowing metal using domain-warped FBM
+    vec2 p = uv * 3.0;
+    float s1 = sin(p.x * 2.1 + t * 0.7) * cos(p.y * 1.7 + t * 0.4);
+    float s2 = sin(p.x * 3.7 - t * 0.5) * sin(p.y * 2.9 + t * 0.6);
+    float s3 = cos(p.x * 1.3 + p.y * 2.7 + t * 0.9);
+    float warp = s1 * 0.5 + s2 * 0.3 + s3 * 0.2;
+
+    vec2 wp = p + vec2(warp * 0.4, warp * 0.3);
+    float flow1 = sin(wp.x * 2.0 + t * 1.1) * 0.5 + 0.5;
+    float flow2 = cos(wp.y * 2.5 - t * 0.8) * 0.5 + 0.5;
+    float flow = flow1 * flow2;
+
+    // Cracks (bright lines where metal cools)
+    float crackBase = sin(wp.x * 8.0 + wp.y * 6.0 + t * 2.0);
+    float crack = smoothstep(0.85, 1.0, abs(crackBase));
+
+    // 4-color molten palette: deep crimson / orange / gold / white-hot
+    vec3 col;
+    if (flow < 0.25) col = mix(vec3(0.15,0.0,0.0), vec3(0.7,0.15,0.0), flow*4.0);
+    else if (flow < 0.60) col = mix(vec3(0.7,0.15,0.0), vec3(1.0,0.55,0.0), (flow-0.25)/0.35);
+    else col = mix(vec3(1.0,0.55,0.0), vec3(1.0,0.9,0.3), (flow-0.60)/0.40);
+
+    // HDR white-hot cracks
+    col += vec3(1.0, 0.9, 0.7) * crack * 2.5;
+    // HDR hot spots
+    col *= 1.8;
+
+    return col;
+}
+
+// =======================================================================
 // EFFECT: CASCADE - tiled rows with wave offsets
 // =======================================================================
 
@@ -147,6 +184,14 @@ vec4 effectCascade(vec2 uv) {
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     vec4 col = effectCascade(uv);
+
+    // Composite molten background when not transparent
+    if (!transparentBg) {
+        vec3 bg = moltenBg(uv, TIME);
+        // Text layer: use hdrGlow to boost text luminance
+        vec3 textLayer = col.rgb * hdrGlow;
+        col = vec4(mix(bg, textLayer, col.a), 1.0);
+    }
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
