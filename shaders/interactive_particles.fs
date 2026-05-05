@@ -8,7 +8,8 @@
     { "NAME": "particleSize",   "LABEL": "Particle Size",  "TYPE": "float", "DEFAULT": 0.0005, "MIN": 0.0001, "MAX": 0.003 },
     { "NAME": "intensity",      "LABEL": "Intensity",      "TYPE": "float", "DEFAULT": 1.9,    "MIN": 0.5,    "MAX": 3.0 },
     { "NAME": "contrast",       "LABEL": "Contrast",       "TYPE": "float", "DEFAULT": 1.04,   "MIN": 0.5,    "MAX": 2.0 },
-    { "NAME": "gamma",          "LABEL": "Gamma",          "TYPE": "float", "DEFAULT": 1.6,    "MIN": 1.0,    "MAX": 3.0 },
+    { "NAME": "gamma",          "LABEL": "Exposure",       "TYPE": "float", "DEFAULT": 1.6,    "MIN": 1.0,    "MAX": 3.0 },
+    { "NAME": "audioReact",     "LABEL": "Audio React",    "TYPE": "float", "DEFAULT": 1.0,    "MIN": 0.0,    "MAX": 2.0 },
     { "NAME": "centerAttractor","LABEL": "Center Attract", "TYPE": "bool",  "DEFAULT": true },
     { "NAME": "wrapEdges",      "LABEL": "Wrap Edges",     "TYPE": "bool",  "DEFAULT": true },
     { "NAME": "bounce",         "LABEL": "Bounce",         "TYPE": "float", "DEFAULT": 0.4,    "MIN": 0.0,    "MAX": 1.5 },
@@ -44,8 +45,6 @@ vec3 hsl2rgb(vec3 c) {
     vec3 rgb = clamp(abs(mod(c.x * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
     return c.z + c.y * (rgb - 0.5) * (1.0 - abs(2.0 * c.z - 1.0));
 }
-
-float ltos1(float x) { return x <= 0.0031308 ? x * 12.92 : 1.055 * pow(x, 0.4166667) - 0.055; }
 
 // ──────────────────────────────────────────────────────────────────────
 // Pass 0 — Buffer A: simulate one particle per pixel (slots 32×32 = 1024)
@@ -109,7 +108,8 @@ vec4 passSim(vec2 fragCoord) {
 // ──────────────────────────────────────────────────────────────────────
 vec3 renderParticles(vec2 uv) {
     vec3 color = vec3(0.01);
-    float drawSize = particleSize * ASPECT;
+    float bassBoost = 0.5 + 0.5 * audioBass * audioReact;
+    float drawSize = particleSize * ASPECT * bassBoost;
 
     for (int y = 0; y < P_ITERATOR; y++) {
         for (int x = 0; x < P_ITERATOR; x++) {
@@ -148,12 +148,10 @@ vec4 passFinal(vec2 fragCoord) {
     vec2 uv = fragCoord / RENDERSIZE;
     vec3 col = renderParticles(uv);
 
-    // Contrast + ACES tonemap + sRGB encode + gamma
+    // Contrast then linear HDR exposure — host applies ACES+gamma
     col = (col - 0.5) * contrast + 0.5;
-    col = (col * (2.51 * col + 0.03)) / (col * (2.43 * col + 0.59) + 0.14);
-    col = vec3(ltos1(col.r), ltos1(col.g), ltos1(col.b));
-    col = pow(col, vec3(1.0 / gamma));
-    return vec4(col, 1.0);
+    col *= gamma;
+    return vec4(max(col, 0.0), 1.0);
 }
 
 // ──────────────────────────────────────────────────────────────────────
