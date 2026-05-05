@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Spacy - perspective tunnel rows",
+  "DESCRIPTION": "Desert Dust Storm — text tumbles through sirocco sandstorm with warm ochre/sienna atmosphere",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Spacy","Spacy Bridge","Spacy Whitney","Spacy Recede"], "DEFAULT": 0 },
@@ -12,9 +12,10 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.12, 0.04, 0.01, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.85, 0.45, 0.10, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true },
+    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 0.7, "MIN": 0.0, "MAX": 2.0 }
   ]
 }*/
 
@@ -94,7 +95,7 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
-// EFFECT: SPACY - perspective tunnel rows
+// EFFECT: SPACY - Desert Dust Storm
 // =======================================================================
 
 vec4 effectSpacy(vec2 uv, int sub) {
@@ -145,12 +146,29 @@ vec4 effectSpacy(vec2 uv, int sub) {
         }
     }
 
-    bool inv = mod(ri, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
+    // Desert palette
+    float audioMod = 0.5 + 0.5 * audioBass * audioReact;
+    vec3 OCHRE    = vec3(0.85, 0.45, 0.10);
+    vec3 SIENNA   = vec3(0.55, 0.18, 0.04);
+    vec3 TERRACOT = vec3(2.0, 0.9, 0.3);   // HDR hot terracotta
+    vec3 DUST     = vec3(0.7, 0.55, 0.35);
+    vec3 INK      = vec3(0.06, 0.02, 0.01);
+    // Dust layer: varies by row depth — far rows more dust-hazed
+    float rowDepth = dc; // dc = abs(rn-0.5)*2.0 from existing code
+    float dustAmt = rowDepth * 0.7 + sin(TIME * 1.3 + ri * 0.4) * 0.1;
+    vec3 bgDesert = mix(OCHRE, SIENNA, uv.y * 0.5);
+    bgDesert = mix(bgDesert, DUST, dustAmt * 0.6);
+    // Bright horizon band
+    float horizon = exp(-abs(uv.y - 0.5) * 4.0);
+    bgDesert += TERRACOT * horizon * 0.3 * audioMod;
+    // Audio brightens near-rows (those with dc near 1.0 = large text)
+    bgDesert *= 0.8 + 0.2 * audioMod;
+    // Text: dark sienna cutouts
+    bool inv3 = mod(ri, 2.0) < 1.0;
+    vec3 rowBg = inv3 ? bgDesert : bgDesert * 0.75;
+    vec3 fc = mix(rowBg, INK, textHit);
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
+    if (transparentBg) { a = textHit; fc = INK; }
     return vec4(fc, a);
 }
 
@@ -184,5 +202,5 @@ void main() {
         col = mix(col, glitched, smoothstep(0.0, 0.3, g));
     }
 
-    gl_FragColor = col;
+    gl_FragColor = vec4(col.rgb, col.a);
 }
