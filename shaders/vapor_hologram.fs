@@ -1,22 +1,22 @@
 /*{
-  "DESCRIPTION": "Vaporwave Hologram — Y2K vaporwave scene transmitted through a degrading holographic channel. Pass 0 renders the full vaporwave (sun, grid, Y2K swarm, katakana). Pass 1 layers hologram glitch on top: vertical tear, RGB shift, EMI bursts, hologram tint, scanlines.",
+  "DESCRIPTION": "Cyberpunk Rainy Alley — dark rain-soaked alley with neon signs and wet reflections transmitted through a degrading holographic channel. Pass 0 renders the alley scene. Pass 1 layers hologram glitch on top: vertical tear, RGB shift, EMI bursts, hologram tint, scanlines.",
   "CATEGORIES": ["Generator", "Glitch", "Audio Reactive"],
-  "CREDIT": "Easel — combines vaporwave_floral_shoppe + hologram_glitch",
+  "CREDIT": "Easel — cyberpunk alley + hologram_glitch",
   "INPUTS": [
     { "NAME": "horizonY",         "LABEL": "Horizon",         "TYPE": "float", "MIN": 0.40, "MAX": 0.75, "DEFAULT": 0.55 },
-    { "NAME": "skyTopColor",      "LABEL": "Sky Top",         "TYPE": "color", "DEFAULT": [1.0, 0.42, 0.71, 1.0] },
-    { "NAME": "skyHorizonColor",  "LABEL": "Sky Horizon",     "TYPE": "color", "DEFAULT": [0.36, 0.85, 0.76, 1.0] },
+    { "NAME": "skyTopColor",      "LABEL": "Sky Top",         "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.03, 1.0] },
+    { "NAME": "skyHorizonColor",  "LABEL": "Sky Horizon",     "TYPE": "color", "DEFAULT": [0.0, 0.02, 0.06, 1.0] },
     { "NAME": "sunSize",          "LABEL": "Sun Size",        "TYPE": "float", "MIN": 0.05, "MAX": 0.40, "DEFAULT": 0.22 },
     { "NAME": "sunBars",          "LABEL": "Sun Bars",        "TYPE": "float", "MIN": 0.0,  "MAX": 12.0, "DEFAULT": 6.0 },
     { "NAME": "gridDensity",      "LABEL": "Grid Density",    "TYPE": "float", "MIN": 4.0,  "MAX": 24.0, "DEFAULT": 12.0 },
     { "NAME": "gridPersp",        "LABEL": "Grid Perspective","TYPE": "float", "MIN": 0.5,  "MAX": 4.0,  "DEFAULT": 1.8 },
     { "NAME": "gridSpeed",        "LABEL": "Grid Speed",      "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.25 },
-    { "NAME": "y2kCount",         "LABEL": "Y2K Object Count","TYPE": "float", "MIN": 0.0,  "MAX": 20.0, "DEFAULT": 12.0 },
-    { "NAME": "y2kSpeed",         "LABEL": "Y2K Speed",       "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.6 },
-    { "NAME": "y2kSize",          "LABEL": "Y2K Size",        "TYPE": "float", "MIN": 0.02, "MAX": 0.20, "DEFAULT": 0.07 },
+    { "NAME": "y2kCount",         "LABEL": "Rain Density",    "TYPE": "float", "MIN": 0.0,  "MAX": 20.0, "DEFAULT": 12.0 },
+    { "NAME": "y2kSpeed",         "LABEL": "Rain Speed",      "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.6 },
+    { "NAME": "y2kSize",          "LABEL": "Rain Width",      "TYPE": "float", "MIN": 0.02, "MAX": 0.20, "DEFAULT": 0.07 },
     { "NAME": "y2kChaos",         "LABEL": "Chaos",           "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.7 },
-    { "NAME": "katakanaIntensity","LABEL": "Katakana",        "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.6 },
-    { "NAME": "vaporPosterize",   "LABEL": "Vapor Posterize", "TYPE": "float", "MIN": 1.0,  "MAX": 32.0, "DEFAULT": 16.0 },
+    { "NAME": "katakanaIntensity","LABEL": "Billboard",       "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.6 },
+    { "NAME": "vaporPosterize",   "LABEL": "Posterize",       "TYPE": "float", "MIN": 1.0,  "MAX": 32.0, "DEFAULT": 16.0 },
     { "NAME": "holoChroma",       "LABEL": "Holo Chroma",     "TYPE": "float", "MIN": 0.0,  "MAX": 0.04, "DEFAULT": 0.012 },
     { "NAME": "holoScanFreq",     "LABEL": "Holo Scanlines",  "TYPE": "float", "MIN": 1.0,  "MAX": 4.0,  "DEFAULT": 2.0 },
     { "NAME": "holoTear",         "LABEL": "Tear Probability","TYPE": "float", "MIN": 0.0,  "MAX": 0.3,  "DEFAULT": 0.06 },
@@ -34,175 +34,205 @@
 }*/
 
 // ──────────────────────────────────────────────────────────────────────
-// Shared
+// Shared utilities
 // ──────────────────────────────────────────────────────────────────────
 float hash21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float hash11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
 
-vec3 hsv2rgb(vec3 c) {
-    vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
-    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
-    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
-}
-
-// ──────────────────────────────────────────────────────────────────────
-// Y2K SDF shapes
-// ──────────────────────────────────────────────────────────────────────
-float sdHeart(vec2 p) {
-    p.x = abs(p.x);
-    if (p.y + p.x > 1.0)
-        return sqrt(dot(p - vec2(0.25, 0.75), p - vec2(0.25, 0.75))) - sqrt(2.0) / 4.0;
-    return sqrt(min(dot(p - vec2(0.0, 1.0),  p - vec2(0.0, 1.0)),
-                    dot(p - 0.5 * max(p.x + p.y, 0.0), p - 0.5 * max(p.x + p.y, 0.0))))
-         * sign(p.x - p.y);
-}
-float sdStar5(vec2 p, float r) {
-    const vec2 k1 = vec2(0.809016994, -0.587785252);
-    const vec2 k2 = vec2(-k1.x, k1.y);
-    p.x = abs(p.x);
-    p -= 2.0 * max(dot(k1, p), 0.0) * k1;
-    p -= 2.0 * max(dot(k2, p), 0.0) * k2;
-    p.x = abs(p.x);
-    p.y -= r;
-    vec2 ba = vec2(-0.309016994, 0.951056516) * 0.4;
-    float h = clamp(dot(p, ba) / dot(ba, ba), 0.0, 1.0);
-    return length(p - ba * h) * sign(p.y * ba.x - p.x * ba.y);
-}
-float sdSparkle(vec2 p) {
-    return min(max(abs(p.x) - 0.08, abs(p.y) - 0.30),
-               max(abs(p.y) - 0.08, abs(p.x) - 0.30));
-}
+// Signed distance: rounded rectangle (2D)
 float sdRoundBox(vec2 p, vec2 b, float r) {
     vec2 q = abs(p) - b + r;
     return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
 }
-float sdSmiley(vec2 p, float r) {
-    float face  = length(p) - r;
-    float eyeL  = length(p - vec2(-r * 0.35, r * 0.25)) - r * 0.10;
-    float eyeR  = length(p - vec2( r * 0.35, r * 0.25)) - r * 0.10;
-    float mr1   = abs(length(p - vec2(0.0, -r * 0.05)) - r * 0.45) - r * 0.06;
-    float mouth = max(mr1, -p.y);
-    float feat  = min(min(eyeL, eyeR), mouth);
-    return max(face, -feat);
-}
 
 // ──────────────────────────────────────────────────────────────────────
-// PASS 0 — Render vaporwave scene to "vapor" buffer
+// PASS 0 — Render cyberpunk rainy alley to "vapor" buffer
 // ──────────────────────────────────────────────────────────────────────
-vec4 passVapor(vec2 fragCoord) {
+vec4 passAlley(vec2 fragCoord) {
     vec2 uv = fragCoord / RENDERSIZE.xy;
-    float aspect = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
 
-    // Sky gradient
+    // ── Sky / void background ──────────────────────────────────
     vec3 sky = mix(skyHorizonColor.rgb, skyTopColor.rgb,
-                   smoothstep(horizonY - 0.05, 1.0, uv.y));
+                   smoothstep(0.3, 1.0, uv.y));
     vec3 col = sky;
 
-    // Sun
-    vec2 sc = vec2(0.5, horizonY);
-    vec2 sd = uv - sc; sd.x *= aspect;
-    float sr = sunSize * (1.0 + audioBass * audioReact * 0.06);
-    if (length(sd) < sr) {
-        float ty = clamp((sd.y / sr + 1.0) * 0.5, 0.0, 1.0);
-        vec3 sunC = mix(vec3(0.98, 0.45, 0.20), vec3(1.0, 0.20, 0.62), ty);
-        if (sunBars > 0.0) {
-            float barY = sd.y / sr;
-            float barMask = step(0.0, sin(barY * sunBars * 3.14159 + 0.4 + TIME * 0.5));
-            sunC = mix(sunC, sky, barMask * 0.55);
+    // ── Alley walls (left & right bands) ────────────────────────
+    vec3 wallColor = vec3(0.04, 0.04, 0.06);
+    float wallL = smoothstep(0.27, 0.22, uv.x);
+    float wallR = smoothstep(0.73, 0.78, uv.x);
+    col = mix(col, wallColor, wallL + wallR);
+
+    // Subtle brick texture on walls
+    if (uv.x < 0.27 || uv.x > 0.73) {
+        vec2 brickUV;
+        if (uv.x < 0.27) {
+            brickUV = vec2((0.25 - uv.x) * 10.0, uv.y * 12.0);
+        } else {
+            brickUV = vec2((uv.x - 0.75) * 10.0, uv.y * 12.0);
         }
-        col = sunC;
+        float rowShift = floor(brickUV.y) * 0.5;
+        vec2 brickCell = floor(vec2(brickUV.x + rowShift, brickUV.y));
+        float mortar = smoothstep(0.05, 0.12, fract(brickUV.x + rowShift)) *
+                       smoothstep(0.05, 0.12, fract(brickUV.y));
+        col = mix(col, wallColor * 0.6, (1.0 - mortar) * (wallL + wallR));
     }
 
-    // Perspective grid floor
-    if (uv.y < horizonY) {
-        float dh = max(horizonY - uv.y, 0.001);
-        vec2 gridUV = vec2((uv.x - 0.5) / (dh * gridPersp + 0.05),
-                           1.0 / dh - TIME * gridSpeed
-                              * (1.0 + audioMid * audioReact * 0.4));
-        float gx = abs(fract(gridUV.x * gridDensity) - 0.5);
-        float gy = abs(fract(gridUV.y) - 0.5);
-        float lineW = 0.04 * dh;
-        float line = smoothstep(0.5 - lineW, 0.5, max(gx, gy));
-        vec3 floorBase = mix(vec3(0.10, 0.05, 0.18),
-                             vec3(0.55, 0.10, 0.45), uv.y / horizonY);
-        col = mix(floorBase, vec3(1.0, 0.42, 0.85), line);
-        col = mix(col, sky, smoothstep(horizonY - 0.04, horizonY, uv.y));
+    // ── Neon sign — LEFT WALL: hot magenta rectangle ─────────────────
+    {
+        float signFlicker = sin(TIME * 2.3 + 0.0) * 0.3 + 0.7;
+        // Sign region: x in [0.02,0.22], y in [0.50,0.65]
+        vec2 signCenter = vec2(0.12, 0.575);
+        vec2 signHalf   = vec2(0.09, 0.07);
+        float r = 0.008;
+        vec2  sp = uv - signCenter;
+        float outline = sdRoundBox(sp, signHalf, r);
+        // Outer glow
+        float glow = exp(-max(outline, 0.0) * 80.0);
+        // Inner bright edge
+        float edge = smoothstep(0.003, 0.0, abs(outline));
+        vec3  magenta = vec3(1.0, 0.0, 0.8) * 2.0 * signFlicker;
+        col += magenta * (edge * 1.8 + glow * 0.4) * wallL;
+
+        // Horizontal bars inside sign (fake text rows)
+        float inside = step(outline, 0.0);
+        float bars = step(0.5, sin((sp.y / signHalf.y * 3.0 + TIME * 1.5) * 6.28));
+        col = mix(col, vec3(0.04, 0.01, 0.03), inside * bars * wallL * 0.8);
     }
 
-    // Y2K chaos layer — bouncing primitives
-    int N = int(clamp(y2kCount, 0.0, 20.0));
-    for (int i = 0; i < 20; i++) {
-        if (i >= N) break;
+    // ── Neon sign — RIGHT WALL: electric cyan rectangle ──────────────
+    {
+        float signFlicker = sin(TIME * 1.7 + 1.4) * 0.3 + 0.7;
+        vec2 signCenter = vec2(0.88, 0.525);
+        vec2 signHalf   = vec2(0.08, 0.065);
+        float r = 0.008;
+        vec2  sp = uv - signCenter;
+        float outline = sdRoundBox(sp, signHalf, r);
+        float glow = exp(-max(outline, 0.0) * 80.0);
+        float edge = smoothstep(0.003, 0.0, abs(outline));
+        vec3  cyan = vec3(0.0, 0.9, 1.0) * 2.0 * signFlicker;
+        col += cyan * (edge * 1.8 + glow * 0.4) * wallR;
+
+        float inside = step(outline, 0.0);
+        float bars = step(0.5, sin((sp.y / signHalf.y * 3.0 - TIME * 1.8) * 6.28));
+        col = mix(col, vec3(0.0, 0.02, 0.04), inside * bars * wallR * 0.8);
+    }
+
+    // ── Holographic ad billboard — upper center ────────────────────
+    {
+        // Billboard spans x=[0.28,0.72], y=[0.60,0.88]
+        float inBB = step(0.28, uv.x) * step(uv.x, 0.72) *
+                     step(0.60, uv.y) * step(uv.y, 0.88);
+        if (inBB > 0.5) {
+            vec2 bbUV = (uv - vec2(0.28, 0.60)) / vec2(0.44, 0.28);
+            // Horizontal scan bars of shifting cyan/violet
+            float scanLine = floor(bbUV.y * 14.0);
+            float phase = scanLine * 0.37 + TIME * 0.8;
+            float hue = fract(phase * 0.15);
+            // Alternate cyan and violet bands
+            vec3 bandCol;
+            if (mod(scanLine, 2.0) < 1.0) {
+                bandCol = vec3(0.0, 0.9, 1.0); // cyan
+            } else {
+                bandCol = vec3(0.6, 0.1, 1.0); // violet
+            }
+            bandCol *= 1.5 + 0.5 * sin(TIME * 3.0 + scanLine * 0.9);
+            // Fake character pattern inside each bar
+            float charX = fract(bbUV.x * 20.0 + floor(scanLine) * 0.5);
+            float charPat = step(0.4, charX) * step(charX, 0.85);
+            col = mix(col, bandCol * charPat, katakanaIntensity * 0.9 * inBB);
+            // Billboard frame glow
+            vec2 bbCenter = vec2(0.5, 0.5);
+            float frame = sdRoundBox(bbUV - bbCenter, vec2(0.5, 0.5), 0.02);
+            float frameGlow = exp(-max(frame, 0.0) * 30.0);
+            float frameEdge = smoothstep(0.004, 0.0, abs(frame));
+            col += vec3(0.0, 0.9, 1.0) * (frameEdge * 1.2 + frameGlow * 0.3) * inBB;
+        }
+    }
+
+    // ── 96 rain streaks ───────────────────────────────────────────────
+    // Three palette colors: hot magenta, electric cyan, amber
+    vec3 rainPalette[3];
+    rainPalette[0] = vec3(1.0, 0.0,  0.8);  // hot magenta
+    rainPalette[1] = vec3(0.0, 0.9,  1.0);  // electric cyan
+    rainPalette[2] = vec3(1.0, 0.6,  0.0);  // amber
+
+    for (int i = 0; i < 96; i++) {
         float fi = float(i);
-        float cycle = floor(TIME * y2kSpeed * (0.3 + hash11(fi * 1.3) * 0.7) + fi * 0.7);
-        float life  = fract(TIME * y2kSpeed * (0.3 + hash11(fi * 1.3) * 0.7) + fi * 0.7);
-        float h1 = hash11(fi + cycle * 7.13);
-        float h2 = hash11(fi + cycle * 13.7);
-        float h3 = hash11(fi + cycle * 19.3);
-        float h4 = hash11(fi + cycle * 23.1);
-        vec2 startP = vec2(h1, h2);
-        vec2 vel    = (vec2(h3, h4) - 0.5) * 1.5;
-        vec2 ctr    = startP + vel * life * y2kChaos;
-        ctr = vec2(0.5 + sin(ctr.x * 3.14159) * 0.45,
-                   0.5 + sin(ctr.y * 3.14159) * 0.45);
-        float sz   = y2kSize * (0.6 + h1 * 0.8)
-                   * (0.7 + 0.3 * sin(TIME * 4.0 + fi))
-                   * (1.0 + audioBass * audioReact * 0.4);
-        float hue  = fract(h2 + TIME * 0.05);
-        vec3 shapeCol = hsv2rgb(vec3(hue, 0.85, 0.95));
-        float vis = smoothstep(0.0, 0.15, life) * smoothstep(1.0, 0.85, life);
-        float rot = TIME * (0.5 + h3 * 2.0) + fi * 1.7;
-        float ca  = cos(rot), sa = sin(rot);
-        vec2 d    = uv - ctr; d.x *= aspect;
-        vec2 lp   = vec2(ca * d.x - sa * d.y, sa * d.x + ca * d.y) / max(sz, 1e-4);
-        int kind = int(hash11(fi * 31.7) * 5.0);
-        float dist;
-        if      (kind == 0) dist = sdHeart(lp + vec2(0.0, 0.5));
-        else if (kind == 1) dist = sdStar5(lp, 0.85);
-        else if (kind == 2) dist = sdSparkle(lp * 1.2);
-        else if (kind == 3) dist = sdRoundBox(lp, vec2(0.85, 0.40), 0.20);
-        else                dist = sdSmiley(lp, 0.85);
-        if (dist < 0.0) col = mix(col, shapeCol, vis);
-        col = mix(col, vec3(1.0), smoothstep(0.04, 0.0, abs(dist)) * vis * 0.5);
+        float speed = 0.4 + hash11(fi * 3.17) * 0.9
+                    + audioLevel * audioReact * 0.3;
+        float xPos  = hash11(fi * 7.13 + floor(TIME * speed * 0.1 + fi * 0.07));
+        float yOff  = fract(TIME * speed * 0.25 + hash11(fi * 11.3));
+        // y goes from 1 to 0 (top to bottom), reset via fract
+        float yCenter = 1.0 - yOff;
+        float length_  = 0.04 + hash11(fi * 5.71) * 0.06;
+        float width_   = 0.0015 + hash11(fi * 2.37) * 0.002;
+
+        // Capsule / vertical streak SDF
+        float dx = abs(uv.x - xPos);
+        float dy = uv.y - yCenter;
+        float streak = max(dx - width_, abs(dy - length_ * 0.5) - length_ * 0.5);
+        float alpha = smoothstep(0.002, 0.0, streak);
+
+        int palIdx = int(mod(fi, 3.0));
+        vec3 rainCol;
+        if (palIdx == 0) rainCol = rainPalette[0];
+        else if (palIdx == 1) rainCol = rainPalette[1];
+        else rainCol = rainPalette[2];
+
+        // Skip rain inside wall bands only slightly (let some bleed through for atmosphere)
+        float inAlley = smoothstep(0.20, 0.26, uv.x) * smoothstep(0.80, 0.74, uv.x);
+        col += rainCol * alpha * 2.5 * (0.3 + inAlley * 0.7);
+    }
+
+    // ── Wet ground reflections (bottom quarter) ──────────────────────
+    if (uv.y < 0.28) {
+        float reflY = uv.y / 0.28; // 0 at bottom, 1 at ground horizon
+
+        // Shimmer distortion
+        float shimmer = sin(uv.x * 60.0 + TIME * 4.0) * 0.01
+                      + sin(uv.x * 37.0 - TIME * 2.7) * 0.006;
+        vec2 reflUV = vec2(uv.x + shimmer, 0.28 + (0.28 - uv.y)); // flip above
+
+        // Sample reflected scene approximately with procedural colors
+        // Left neon magenta reflection
+        float reflMag = exp(-abs(uv.x - 0.12) * 12.0);
+        // Right neon cyan reflection
+        float reflCyan = exp(-abs(uv.x - 0.88) * 12.0);
+
+        float flickerM = sin(TIME * 2.3) * 0.3 + 0.7;
+        float flickerC = sin(TIME * 1.7 + 1.4) * 0.3 + 0.7;
+
+        vec3 reflMagCol  = vec3(1.0, 0.0, 0.8) * reflMag * flickerM;
+        vec3 reflCyanCol = vec3(0.0, 0.9, 1.0) * reflCyan * flickerC;
+
+        float puddleFade = reflY; // attenuate near bottom edge
+        col += (reflMagCol + reflCyanCol) * 1.8 * (1.0 - puddleFade * 0.7);
+
+        // Ground surface tint — very dark wet concrete
+        float groundMix = smoothstep(0.28, 0.0, uv.y) * 0.7;
+        col = mix(col, vec3(0.02, 0.02, 0.03), groundMix * 0.5);
     }
 
     // Optional input texture overlay
     if (IMG_SIZE_inputTex.x > 0.0) {
-        vec3 src = texture(inputTex, fract(uv + vec2(sin(TIME * 0.3) * 0.05, 0.0))).rgb;
+        vec3 src = texture2D(inputTex, fract(uv + vec2(sin(TIME * 0.3) * 0.05, 0.0))).rgb;
         float sL = dot(src, vec3(0.299, 0.587, 0.114));
         col = mix(col, src, smoothstep(0.20, 0.40, sL) * 0.6);
     }
 
-    // Katakana ribbon (top)
-    {
-        float total = 0.0;
-        for (int g = 0; g < 6; g++) {
-            float fg = float(g);
-            vec2 origin = vec2(0.05 + fg * 0.15, 0.85);
-            vec2 ld = (uv - origin) * vec2(60.0, 28.0);
-            if (ld.x < 0.0 || ld.y < 0.0 || ld.x > 8.0 || ld.y > 4.0) continue;
-            vec2 ci = floor(ld);
-            float h = hash21(ci + floor(TIME * (0.4 + audioHigh * audioReact * 1.2)));
-            float vert = step(h, 0.55) * step(0.30, fract(ld.x)) * step(fract(ld.x), 0.55);
-            float bar  = step(0.55, h) * step(h, 0.85) * step(0.40, fract(ld.y)) * step(fract(ld.y), 0.62);
-            total = max(total, max(vert, bar));
-        }
-        col = mix(col, vec3(0.7, 1.0, 0.85), total * katakanaIntensity);
-    }
-
-    // VHS posterize before hologram (gives the holo something quantized to glitch)
+    // Posterize (gives holo something quantized to glitch)
     if (vaporPosterize > 1.0) col = floor(col * vaporPosterize) / vaporPosterize;
 
     return vec4(col, 1.0);
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// PASS 1 — Hologram glitch over vapor buffer
+// PASS 1 — Hologram glitch over alley buffer
 // ──────────────────────────────────────────────────────────────────────
 vec4 passHologram(vec2 fragCoord) {
     vec2 uv = fragCoord / RENDERSIZE.xy;
 
-    // Vertical tear — band-shifted bands of vapor.
+    // Vertical tear — band-shifted bands of the buffer
     float bandH = 0.04;
     float bandY = floor(uv.y / bandH) * bandH;
     float tearTrig = step(1.0 - holoTear * (1.0 + audioBass * audioReact),
@@ -211,9 +241,9 @@ vec4 passHologram(vec2 fragCoord) {
 
     // RGB chromatic shift on the vapor buffer
     float ch = holoChroma * (1.0 + audioHigh * audioReact);
-    float r = texture(vapor, clamp(uv + vec2( ch, 0.0), 0.0, 1.0)).r;
-    float g = texture(vapor, clamp(uv,                 0.0, 1.0)).g;
-    float b = texture(vapor, clamp(uv - vec2( ch, 0.0), 0.0, 1.0)).b;
+    float r = texture2D(vapor, clamp(uv + vec2( ch, 0.0), 0.0, 1.0)).r;
+    float g = texture2D(vapor, clamp(uv,                  0.0, 1.0)).g;
+    float b = texture2D(vapor, clamp(uv - vec2( ch, 0.0), 0.0, 1.0)).b;
     vec3 holo = vec3(r, g, b) * holoTint.rgb;
 
     // Scanlines (resolution-aware)
@@ -236,13 +266,13 @@ vec4 passHologram(vec2 fragCoord) {
     // Transmission strength — low audio dims the hologram (signal weakens)
     holo *= 0.5 + audioLevel * 0.6;
 
-    // Mix: 0 = pure vapor, 1 = full hologram
-    vec3 vapor_ = texture(vapor, fragCoord / RENDERSIZE.xy).rgb;
-    return vec4(mix(vapor_, holo, holoMix), 1.0);
+    // Mix: 0 = pure alley, 1 = full hologram
+    vec3 alley = texture2D(vapor, fragCoord / RENDERSIZE.xy).rgb;
+    return vec4(mix(alley, holo, holoMix), 1.0);
 }
 
 // ──────────────────────────────────────────────────────────────────────
 void main() {
-    if (PASSINDEX == 0) FragColor = passVapor(gl_FragCoord.xy);
-    else                FragColor = passHologram(gl_FragCoord.xy);
+    if (PASSINDEX == 0) gl_FragColor = passAlley(gl_FragCoord.xy);
+    else                gl_FragColor = passHologram(gl_FragCoord.xy);
 }
