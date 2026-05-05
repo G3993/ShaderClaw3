@@ -1,180 +1,130 @@
 /*{
-    "DESCRIPTION": "Particle field bouncing off the edges of the canvas. Grid-seeded, audio-reactive, velocity-stretched streaks.",
-    "CATEGORIES": ["Generator", "Particles", "Audio Reactive"],
-    "CREDIT": "Easel / edges v1",
-    "INPUTS": [
-        { "NAME": "motionSpeed",    "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 1.0, "LABEL": "Motion Speed" },
-        { "NAME": "chaos",          "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0, "LABEL": "Chaos" },
-        { "NAME": "particleSize",   "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 4.0, "LABEL": "Particle Size" },
-        { "NAME": "stretch",        "TYPE": "float", "DEFAULT": 1.2, "MIN": 0.0, "MAX": 4.0, "LABEL": "Stretch" },
-        { "NAME": "vortexStrength", "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 3.0, "LABEL": "Vortex" },
-        { "NAME": "audioReactivity","TYPE": "float", "DEFAULT": 0.7, "MIN": 0.0, "MAX": 2.0, "LABEL": "Audio" },
-        { "NAME": "color1", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0], "LABEL": "Core" },
-        { "NAME": "color2", "TYPE": "color", "DEFAULT": [0.1, 0.7, 1.0, 1.0], "LABEL": "Halo" },
-        { "NAME": "bg",     "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.03, 1.0], "LABEL": "Background" },
-        { "NAME": "glow",   "TYPE": "float", "DEFAULT": 1.3, "MIN": 0.0, "MAX": 3.0, "LABEL": "Glow" },
-        { "NAME": "ledMode",       "TYPE": "bool",  "DEFAULT": true,  "LABEL": "LED Wall" },
-        { "NAME": "ledSize",       "TYPE": "float", "DEFAULT": 220.0, "MIN": 50.0, "MAX": 600.0, "LABEL": "LED Density" },
-        { "NAME": "trailDecay",    "TYPE": "float", "DEFAULT": 0.85,  "MIN": 0.0,  "MAX": 1.0, "LABEL": "Trail Length" },
-        { "NAME": "particleCount", "TYPE": "float", "DEFAULT": 96.0,  "MIN": 20.0, "MAX": 200.0, "LABEL": "Particle Count" },
-        { "NAME": "colorJitter",   "TYPE": "float", "DEFAULT": 0.40,  "MIN": 0.0,  "MAX": 1.0, "LABEL": "Color Jitter" }
-    ]
+  "DESCRIPTION": "Molten Lava — triple domain-warp FBM fluid with hot lava palette",
+  "CATEGORIES": ["Generator"],
+  "INPUTS": [
+    { "NAME": "audioReact",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.8 },
+    { "NAME": "flowSpeed",    "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.35 },
+    { "NAME": "warpStrength", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.3 }
+  ]
 }*/
 
-float hash11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
+precision highp float;
 
-// Triangle-wave bounce: x (time-like) folded into [0,1] with reflection.
-float bounce01(float x) { return abs(fract(x * 0.5) * 2.0 - 1.0); }
+// ---------------------------------------------------------------------------
+// PALETTE — exactly 5 hand-chosen lava colors, no others
+// ---------------------------------------------------------------------------
+#define BLACK_CRUST vec3(0.02, 0.01, 0.0)
+#define CRIMSON     vec3(0.6,  0.0,  0.0)
+#define ORANGE      vec3(1.0,  0.35, 0.0)
+#define YELLOW      vec3(1.0,  0.85, 0.0)
+#define WHITE_HOT   vec3(2.5,  2.2,  1.8)   // HDR peak
 
-// 2D sinusoidal "vortex" — cheap analytic flow field, no noise tables.
-vec2 vortex(vec2 p, float t) {
-    float a = sin(p.x * 1.3 + t * 0.7) + cos(p.y * 1.7 - t * 0.5);
-    float b = cos(p.x * 1.9 - t * 0.4) + sin(p.y * 1.1 + t * 0.9);
-    return vec2(a, b) * 0.5;
+// ---------------------------------------------------------------------------
+// Hash & FBM
+// ---------------------------------------------------------------------------
+vec2 hash2(vec2 p) {
+    p = vec2(dot(p, vec2(127.1, 311.7)),
+             dot(p, vec2(269.5, 183.3)));
+    return fract(sin(p) * 43758.5453123);
 }
 
+float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+}
+
+float noise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i + vec2(0.0, 0.0)),
+                   hash(i + vec2(1.0, 0.0)), u.x),
+               mix(hash(i + vec2(0.0, 1.0)),
+                   hash(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+
+float fbm(vec2 p) {
+    float v = 0.0;
+    float a = 0.5;
+    vec2  shift = vec2(100.0);
+    mat2  rot   = mat2(cos(0.5), sin(0.5), -sin(0.5), cos(0.5));
+    for (int i = 0; i < 5; i++) {
+        v += a * noise(p);
+        p  = rot * p * 2.0 + shift;
+        a *= 0.5;
+    }
+    return v;
+}
+
+// ---------------------------------------------------------------------------
+// Piecewise lava color map  (f in 0..1)
+// ---------------------------------------------------------------------------
+vec3 lavaColor(float f) {
+    // 0.00 – 0.25 : BLACK_CRUST → CRIMSON
+    // 0.25 – 0.50 : CRIMSON     → ORANGE
+    // 0.50 – 0.72 : ORANGE      → YELLOW
+    // 0.72 – 1.00 : YELLOW      → WHITE_HOT
+    vec3 c;
+    if (f < 0.25) {
+        c = mix(BLACK_CRUST, CRIMSON, smoothstep(0.0, 0.25, f));
+    } else if (f < 0.50) {
+        c = mix(CRIMSON, ORANGE, smoothstep(0.25, 0.50, f));
+    } else if (f < 0.72) {
+        c = mix(ORANGE, YELLOW, smoothstep(0.50, 0.72, f));
+    } else {
+        c = mix(YELLOW, WHITE_HOT, smoothstep(0.72, 1.0, f));
+    }
+    return c;
+}
+
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
 void main() {
-    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
+    vec2 uv = isf_FragNormCoord;
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
-    uv.x *= aspect;
 
-    float t = TIME;
-    float audio = audioLevel + audioBass * 1.1 + audioHigh * 0.5;
+    // Scale to aspect-correct coords, lava flows horizontally
+    vec2 p = uv * vec2(aspect, 1.0) * 3.5;
 
-    vec3 acc = vec3(0.0);
-    const int N = 256;
+    float t    = TIME * flowSpeed;
+    float audio = 0.5 + 0.5 * audioBass * audioReact;  // modulator pattern
+    float ws    = warpStrength * audio;                  // audio drives warp amplitude
 
-    for (int i = 0; i < N; i++) {
-        float fi = float(i);
-        float s1 = hash11(fi * 1.37);
-        float s2 = hash11(fi * 2.91 + 0.5);
-        float s3 = hash11(fi * 4.17 + 0.3);
-        float s4 = hash11(fi * 7.53 + 0.7);
+    // ---------------------------------------------------------------------------
+    // Triple domain warp  (classic Quilez / Inigo technique)
+    // q = first warp layer
+    vec2 q = vec2(
+        fbm(p + t * vec2(0.13, 0.07)),
+        fbm(p + vec2(5.2, 1.3) + t * vec2(0.09, 0.11))
+    );
+    // r = second warp layer driven by q
+    vec2 r = vec2(
+        fbm(p + ws * q + vec2(1.7, 9.2) + t * vec2(0.07, 0.05)),
+        fbm(p + ws * q + vec2(8.3, 2.8) + t * vec2(0.11, 0.09))
+    );
+    // f = final warped FBM
+    float f = fbm(p + ws * r);
 
-        // Wider speed range + two stacked oscillators per axis → richer, less
-        // periodic-feeling motion. Each particle has a dominant and secondary
-        // frequency at 1.7× offset, mixed 70/30.
-        float speedX1 = (0.2 + s1 * 2.8) * motionSpeed;
-        float speedY1 = (0.2 + s2 * 2.8) * motionSpeed;
-        float speedX2 = speedX1 * (1.0 + s3 * 0.8);
-        float speedY2 = speedY1 * (1.0 + s4 * 0.8);
-        float phaseX  = s3 * 6.2832;
-        float phaseY  = s4 * 6.2832;
-        float phaseX2 = s1 * 3.1416;
-        float phaseY2 = s2 * 3.1416;
+    // Remap 0..1 softly
+    f = clamp(f, 0.0, 1.0);
 
-        float dt = 0.02;
-        // Mix two bouncing oscillators so paths don't feel clockwork-regular.
-        float bxA = bounce01(t      * speedX1 + phaseX) * 0.7
-                  + bounce01(t      * speedX2 + phaseX2) * 0.3;
-        float byA = bounce01(t      * speedY1 + phaseY) * 0.7
-                  + bounce01(t      * speedY2 + phaseY2) * 0.3;
-        float bxB = bounce01((t+dt) * speedX1 + phaseX) * 0.7
-                  + bounce01((t+dt) * speedX2 + phaseX2) * 0.3;
-        float byB = bounce01((t+dt) * speedY1 + phaseY) * 0.7
-                  + bounce01((t+dt) * speedY2 + phaseY2) * 0.3;
+    // ---------------------------------------------------------------------------
+    // Base lava color
+    vec3 col = lavaColor(f);
 
-        vec2 baseA = vec2(bxA, byA) * 2.0 - 1.0;
-        vec2 baseB = vec2(bxB, byB) * 2.0 - 1.0;
-
-        // Chaos: stacked sin layers at different frequencies + a per-particle
-        // tumble. With chaos > 0 each particle deviates strongly from its
-        // base bounce path, with chaos = 0 it follows the orbit cleanly.
-        // Previous version was scaled by 0.25 — far too weak to read.
-        float chT = t * 0.7;
-        float chTb = (t+dt) * 0.7;
-        // Three octaves of sin per axis at different frequencies + per-
-        // particle phase offsets — non-periodic-feeling drift
-        vec2 chaosA = vec2(
-            sin(chT  * (1.1 + s1 * 1.3) + s3 * 6.28) * 0.55
-          + sin(chT  * (3.7 + s2 * 1.7) + s4 * 6.28) * 0.30
-          + sin(chT  * (0.4 + s3 * 0.9) + s1 * 6.28) * 0.20,
-            cos(chT  * (0.9 + s2 * 1.5) + s4 * 6.28) * 0.55
-          + cos(chT  * (3.1 + s1 * 1.4) + s3 * 6.28) * 0.30
-          + cos(chT  * (0.6 + s4 * 1.1) + s2 * 6.28) * 0.20
-        ) * chaos * 0.55;
-        vec2 chaosB = vec2(
-            sin(chTb * (1.1 + s1 * 1.3) + s3 * 6.28) * 0.55
-          + sin(chTb * (3.7 + s2 * 1.7) + s4 * 6.28) * 0.30
-          + sin(chTb * (0.4 + s3 * 0.9) + s1 * 6.28) * 0.20,
-            cos(chTb * (0.9 + s2 * 1.5) + s4 * 6.28) * 0.55
-          + cos(chTb * (3.1 + s1 * 1.4) + s3 * 6.28) * 0.30
-          + cos(chTb * (0.6 + s4 * 1.1) + s2 * 6.28) * 0.20
-        ) * chaos * 0.55;
-        baseA += chaosA;
-        baseB += chaosB;
-        // Wrap (not clamp) so chaotic particles re-enter rather than stick to edges
-        baseA = mod(baseA + 1.0, 2.0) - 1.0;
-        baseB = mod(baseB + 1.0, 2.0) - 1.0;
-
-        // Aspect-stretched world-space positions.
-        vec2 posA = vec2(baseA.x * aspect, baseA.y);
-        vec2 posB = vec2(baseB.x * aspect, baseB.y);
-
-        // Optional vortex perturbation.
-        posA += vortex(posA, t)          * vortexStrength * 0.08;
-        posB += vortex(posB, t + dt)     * vortexStrength * 0.08;
-
-        vec2 vel = (posB - posA) / dt;
-        float speed = length(vel);
-
-        // Capsule endpoints for motion-stretched particle.
-        float stretchLen = 0.006 * stretch * (0.5 + audio * audioReactivity);
-        vec2 a = posA - vel * stretchLen;
-        vec2 b = posA + vel * stretchLen;
-
-        // Distance to capsule (line segment with rounded caps).
-        vec2 pa = uv - a;
-        vec2 ba = b - a;
-        float denom = max(dot(ba, ba), 1e-6);
-        float h = clamp(dot(pa, ba) / denom, 0.0, 1.0);
-        float d = length(pa - ba * h);
-
-        float r = 0.012 * particleSize * (0.6 + audio * audioReactivity * 0.6);
-        float core = smoothstep(r, 0.0, d);
-        float halo = exp(-d * 70.0);
-
-        // Per-particle color jitter — gives the LED-wall variety look
-        vec3 c1 = color1.rgb;
-        vec3 c2 = color2.rgb;
-        if (colorJitter > 0.0) {
-            float h = hash11(float(i) * 11.7);
-            vec3 hueShift = 0.5 + 0.5 * cos(6.28318 * h + vec3(0.0, 2.094, 4.188));
-            c1 = mix(c1, hueShift,             colorJitter);
-            c2 = mix(c2, hueShift * 0.7 + 0.3, colorJitter);
-        }
-        acc += mix(c2, c1, core) * (core + halo * 0.35);
-
-        // Trail — extra ghost samples behind the segment
-        if (trailDecay > 0.001) {
-            for (int tk = 1; tk <= 3; tk++) {
-                float ftk = float(tk);
-                vec2 ghostA = a - vel * ftk * 0.10 * trailDecay;
-                vec2 ghostB = a;
-                vec2 paG = uv - ghostA;
-                vec2 baG = ghostB - ghostA;
-                float dG2 = dot(baG, baG);
-                if (dG2 > 1e-6) {
-                    float hG = clamp(dot(paG, baG) / dG2, 0.0, 1.0);
-                    float ddG = length(paG - baG * hG);
-                    float fadeG = 1.0 - ftk / 4.0;
-                    acc += mix(c2, c1, smoothstep(r, 0.0, ddG)) * fadeG * 0.20;
-                }
-            }
-        }
+    // ---------------------------------------------------------------------------
+    // Crack veins: iso-contours at high f values
+    // Only where f > 0.72 (the hot zone)
+    if (f > 0.72) {
+        float crackF   = fract(f * 6.0) - 0.5;
+        float fw       = max(fwidth(f) * 6.0, 0.001);
+        float crackMask = 1.0 - smoothstep(0.5, 2.0, abs(crackF) / fw);
+        // Only blend crack veins in the hot zone
+        float hotMask  = smoothstep(0.72, 0.85, f);
+        col = mix(col, WHITE_HOT, crackMask * hotMask);
     }
 
-    vec3 rgb = bg.rgb + acc * glow;
-
-    // LED wall mode: quantize to a grid, leaving black "gaps" between LEDs
-    if (ledMode) {
-        vec2 ledUV = uv * ledSize;
-        vec2 lf = fract(ledUV) - 0.5;
-        float dotMask = smoothstep(0.45, 0.30, length(lf));
-        // Black bezel between LEDs, brightness boost on the lit dot
-        rgb = rgb * (0.20 + 0.80 * dotMask);
-        rgb += rgb * dotMask * 0.4;  // a touch of bloom on lit cells
-    }
-
-    gl_FragColor = vec4(rgb, 1.0);
+    // ---------------------------------------------------------------------------
+    // Output — linear HDR, no clamp, no ACES, no gamma
+    gl_FragColor = vec4(col, 1.0);
 }
