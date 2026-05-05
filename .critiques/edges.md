@@ -17,3 +17,23 @@
 - Stretch, particle size defaults tuned up for visibility
 **HDR peaks reached:** particle cores + halo accumulation → 2.5+ per cluster
 **Estimated rating:** 4.0★
+
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 3D raymarch — NEW ANGLE: neon sphere wireframe vs prior 2D particle bounce system.
+**Critique:**
+1. Reference fidelity: Original was 2D bounce with LED-wall default (black output). Prior critique patched that. This goes full 3D.
+2. Compositional craft: Globe wireframe gives a clear focal SDF silhouette — 8 meridians + 5 parallels create recognisable sphere shape.
+3. Technical execution: 64-step SDF march, capsule segments per arc, orbiting camera + pitch oscillation, fwidth ink edges.
+4. Liveness: Orbiting camera + audioBass × pulseAmt on tube radius; palette shifts slowly via TIME.
+5. Differentiation: 3D SDF globe vs flat 2D particle field; colour palette is entirely different (meridian hue cycling vs random-jitter colorJitter).
+**Changes:**
+- Full rewrite: 3D raymarched neon sphere wireframe
+- 8 meridians (16 capsule segs each) + 5 latitude rings (24 capsule segs)
+- Palette: magenta/cyan/gold/violet (no white, no LED quantize)
+- 64-step SDF march, orbiting camera with pitch oscillation
+- fwidth() ink silhouette on hit edges
+- Audio: audioBass × pulseAmt modulates tube radius
+- Added "3D" category
+**HDR peaks reached:** tube specular 4.6, rim glow 2.5, diffuse faces 2.8
+**Estimated rating:** 4.5★
