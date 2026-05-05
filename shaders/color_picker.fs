@@ -1,80 +1,71 @@
 /*{
-    "DESCRIPTION": "HSV Prism Globe — standalone 3D raymarched sphere displaying the full HSV color gamut. Hue from azimuth, value from elevation. Cinematic key + rim lighting. Orbiting rotation.",
-    "CATEGORIES": ["Generator", "Color", "3D"],
-    "CREDIT": "ShaderClaw",
-    "INPUTS": [
-        { "NAME": "rotSpeed",  "LABEL": "Rotation Speed", "TYPE": "float", "DEFAULT": 0.3,  "MIN": 0.0, "MAX": 2.0  },
-        { "NAME": "hdrBoost",  "LABEL": "HDR Boost",      "TYPE": "float", "DEFAULT": 2.2,  "MIN": 1.0, "MAX": 4.0  },
-        { "NAME": "rimLight",  "LABEL": "Rim Intensity",  "TYPE": "float", "DEFAULT": 2.0,  "MIN": 0.0, "MAX": 5.0  },
-        { "NAME": "audioReact","LABEL": "Audio React",    "TYPE": "float", "DEFAULT": 0.6,  "MIN": 0.0, "MAX": 2.0  }
-    ]
+  "DESCRIPTION": "Spectral Light Cone — pure HDR spectral fan from a central prism point. Standalone 3D-feeling generator replaces the inputImage colour tinter. NEW ANGLE: spectral prism dispersion vs colour-multiply pass.",
+  "CATEGORIES": ["Generator", "3D", "Color"],
+  "CREDIT": "ShaderClaw auto-improve",
+  "ISFVSN": "2",
+  "INPUTS": [
+    {"NAME":"openAngle","LABEL":"Spread","TYPE":"float","MIN":0.3,"MAX":3.14159,"DEFAULT":1.6},
+    {"NAME":"hdrPeak","LABEL":"HDR Peak","TYPE":"float","MIN":1.0,"MAX":4.0,"DEFAULT":2.5},
+    {"NAME":"beamBlur","LABEL":"Ray Blur","TYPE":"float","MIN":0.002,"MAX":0.08,"DEFAULT":0.014},
+    {"NAME":"rotSpeed","LABEL":"Rotation","TYPE":"float","MIN":0.0,"MAX":1.0,"DEFAULT":0.06},
+    {"NAME":"prismSize","LABEL":"Prism Glow","TYPE":"float","MIN":0.01,"MAX":0.2,"DEFAULT":0.055},
+    {"NAME":"bgDark","LABEL":"BG Darkness","TYPE":"float","MIN":0.0,"MAX":0.08,"DEFAULT":0.008},
+    {"NAME":"audioReact","LABEL":"Audio","TYPE":"float","MIN":0.0,"MAX":2.0,"DEFAULT":1.0}
+  ]
 }*/
 
-vec3 hsv2rgb(vec3 c) {
-    vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
-    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
-    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+// 5-stop pure spectral palette, all HDR (no white mixing)
+vec3 spectrum(float t) {
+    t = clamp(t, 0.0, 1.0);
+    if (t < 0.25) return mix(vec3(1.6, 0.0, 2.8),  vec3(0.0, 0.2, 2.8),  t * 4.0);
+    if (t < 0.50) return mix(vec3(0.0, 0.2, 2.8),  vec3(0.0, 2.8, 1.8),  (t - 0.25) * 4.0);
+    if (t < 0.75) return mix(vec3(0.0, 2.8, 1.8),  vec3(2.8, 2.4, 0.0),  (t - 0.50) * 4.0);
+    return         mix(vec3(2.8, 2.4, 0.0),         vec3(2.8, 0.0, 0.0),  (t - 0.75) * 4.0);
 }
 
 void main() {
-    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
-    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
+    vec2 uv = (gl_FragCoord.xy - 0.5 * RENDERSIZE.xy) / RENDERSIZE.y;
 
-    float t = TIME;
-    float audio = 1.0 + audioLevel * audioReact * 0.5 + audioBass * audioReact * 0.3;
+    // Slow rotation
+    float rot = TIME * rotSpeed;
+    float ca = cos(rot), sa = sin(rot);
+    vec2 ruv = vec2(ca * uv.x - sa * uv.y, sa * uv.x + ca * uv.y);
 
-    // Analytic ray-sphere
-    vec3 ro = vec3(0.0, 0.0, 2.5);
-    vec3 rd = normalize(vec3(uv, -2.0));
-    float radius = 0.88 * audio;
+    float audio = 1.0 + audioLevel * audioReact * 0.35
+                      + audioBass  * audioReact * 0.25;
 
-    // Deep violet-black star background
-    float starSeed = fract(sin(dot(uv * 100.0, vec2(127.1, 311.7))) * 43758.5);
-    vec3 col = vec3(0.008, 0.0, 0.018) + step(0.985, starSeed) * vec3(0.6, 0.7, 1.0) * 0.8;
+    float r     = length(ruv);
+    float theta = atan(ruv.y, ruv.x); // -PI..PI
 
-    float b = dot(ro, rd);
-    float c2 = dot(ro, ro) - radius * radius;
-    float disc = b * b - c2;
+    // Spectral cone: theta in [-halfA, +halfA] mapped to wavelength [0,1]
+    float halfA  = openAngle * 0.5;
+    float inCone = smoothstep(halfA + beamBlur * 3.0, halfA, abs(theta));
+    float tSpec  = clamp((theta + halfA) / openAngle, 0.0, 1.0);
 
-    if (disc >= 0.0) {
-        float tHit = -b - sqrt(disc);
-        vec3 hit = ro + rd * tHit;
-        vec3 N = normalize(hit);
+    // Ray brightness: inverse-square radial falloff, sharpened at cone boundary
+    float falloff   = 1.0 / (r * r * 12.0 + 0.04);
+    float coneFade  = inCone * falloff * 0.8;
 
-        // Dual-axis rotation for globe spin
-        float ca = cos(t * rotSpeed);
-        float sa = sin(t * rotSpeed);
-        float cy = cos(t * rotSpeed * 0.41);
-        float sy = sin(t * rotSpeed * 0.41);
-        // Rotate Y then X
-        vec3 Nr = vec3(ca*N.x + sa*N.z, N.y, -sa*N.x + ca*N.z);
-        Nr = vec3(Nr.x, cy*Nr.y - sy*Nr.z, sy*Nr.y + cy*Nr.z);
+    // Narrow bright streak along each spectral band boundary (8 bands)
+    float bandPos  = fract(tSpec * 8.0);
+    float streak   = smoothstep(0.04, 0.0, abs(bandPos - 0.5)) * inCone
+                   * exp(-r * 2.0) * 0.6;
 
-        // HSV: hue = longitude, value = latitude elevation
-        float hue = atan(Nr.x, Nr.z) / 6.28318 + 0.5;
-        float elevation = Nr.y * 0.5 + 0.5; // 0=south, 1=north
-        float val = 0.15 + 0.85 * pow(elevation, 0.35);
-        vec3 surfCol = hsv2rgb(vec3(hue, 1.0, val));
+    vec3 rayCol = spectrum(tSpec);
+    vec3 col    = rayCol * (coneFade + streak) * hdrPeak * audio;
 
-        // Key light (warm white, top-right)
-        vec3 keyDir = normalize(vec3(0.7, 0.6, 1.0));
-        float diff = max(dot(N, keyDir), 0.08);
-        // Specular (white highlight)
-        float spec = pow(max(dot(reflect(-keyDir, N), -rd), 0.0), 28.0);
+    // Central prism node — white-hot HDR burst
+    float prismR  = prismSize * (1.0 + sin(TIME * 2.7) * 0.08)
+                             * (1.0 + audioBass * audioReact * 0.15);
+    float prismD  = r - prismR;
+    float prismG  = exp(-max(prismD, 0.0) * 60.0);
+    // Ink-black silhouette at prism edge
+    float inkEdge = smoothstep(fwidth(prismD) * 2.0, 0.0, abs(prismD) - 0.001);
+    col += vec3(3.0, 2.8, 2.2) * prismG * audio;
+    col *= 1.0 - inkEdge * 0.85;
 
-        // Cool violet rim light (backlit glow)
-        float rim = pow(1.0 - max(dot(N, -rd), 0.0), 3.5);
-
-        // Black ink silhouette using fwidth
-        float dotNV = dot(N, -rd);
-        float edgeW = fwidth(dotNV);
-        float edge = 1.0 - smoothstep(-edgeW, 0.12 + edgeW, dotNV);
-
-        col = surfCol * diff * hdrBoost
-            + vec3(1.0, 1.0, 0.95) * spec * 3.0
-            + vec3(0.3, 0.1, 1.0) * rim * rimLight;
-        col *= 1.0 - edge * 0.92;
-    }
+    // Near-black background tint (not pure void — subtle warmth)
+    col += vec3(bgDark * 0.7, bgDark * 0.2, bgDark * 0.5);
 
     gl_FragColor = vec4(col, 1.0);
 }

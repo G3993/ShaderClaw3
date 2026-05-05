@@ -1,20 +1,18 @@
 ## 2026-05-05
 **Prior rating:** 0.0★
-**Approach:** 3D raymarch — NEW ANGLE: Standalone HSV Prism Globe (first critique, replacing image-tint effect)
+**Approach:** 3D spectral prism — NEW ANGLE: first take — standalone spectral light-cone fan replacing inputImage colour tinter.
 **Critique:**
-1. Reference fidelity: Original was an image tint utility. New version becomes a standalone color gamut visualizer — HSV sphere is a natural "color picker" reference.
-2. Compositional craft: Full-screen sphere with star background. Hue gradient along azimuth, value gradient from pole to pole. Strong focal point.
-3. Technical execution: Analytic ray-sphere intersection (no march needed). Dual-axis rotation for globe tumble. fwidth() edge AA for black silhouette. Violet rim light creates HDR glow corona.
-4. Liveness: Dual-axis rotation via TIME * rotSpeed. Audio modulates sphere radius (bass pulse).
-5. Differentiation: Completely new concept: standalone 3D color sphere vs image effect. First proper generator in this slot.
+1. Reference fidelity: Original was a colour-tinting pass requiring inputImage; produced nothing standalone. Full concept replacement.
+2. Compositional craft: Central prism glow as white-hot focal point; spectral fan radiates outward with strong directionality.
+3. Technical execution: 5-stop HDR spectrum (violet→blue→cyan→green→yellow→red); slow rotation; 8 per-band streak edges via fwidth AA.
+4. Liveness: TIME-driven rotation + audio-pulsed prism size (audioLevel + audioBass).
+5. Differentiation: Completely new concept; zero overlap with input-image colour multiply.
 **Changes:**
-- Full rewrite: standalone HSV sphere generator (no inputImage)
-- Analytic ray-sphere intersection (optimal for sphere)
-- HSV mapped to sphere surface: longitude→hue, latitude→value, sat=1.0
-- Dual-axis rotation animates the color globe
-- Star background (hash-based point stars)
-- Violet rim light (cool backlight glow) → HDR 2.0+
-- fwidth() AA silhouette edge
-- Audio modulates sphere radius
-**HDR peaks reached:** surfCol * 2.2 (hdrBoost) + spec * 3.0 + rim * 2.0 = ~3.5 at specular + rim
+- Full rewrite: standalone spectral dispersion generator
+- 5-stop pure spectral palette all HDR (no white mixing)
+- Central prism node white-hot 3.0 HDR with ink silhouette via fwidth
+- Spectral fan: 8 thin streak bands for visual sharpness
+- Audio modulates prism size + global brightness
+- bgDark parameter controls near-void background warmth
+**HDR peaks reached:** prism node 3.0, ray peak 2.5×audio, streak peaks ~2.0
 **Estimated rating:** 4.0★
