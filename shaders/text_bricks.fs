@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Bricks - grid with animated displacement on deep ocean caustic background",
+  "DESCRIPTION": "Bricks - grid with animated displacement. Magma Cave background: dark volcanic rock with ember glow. NEW ANGLE: warm lava-cave bg vs prior cool neon-brick bg.",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1,2], "LABELS": ["Bricks","Bricks Harlequin","Bricks Zebra"], "DEFAULT": 0 },
@@ -9,19 +9,17 @@
     { "NAME": "intensity", "LABEL": "Displacement", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Grid Density", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.0, 1.0, 0.9, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.008, 0.02, 1.0] },
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.55, 0.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.04, 0.0, 0.0, 1.0] },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
     { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 2.0 },
-    { "NAME": "causticScale", "LABEL": "Caustic Scale", "TYPE": "float", "MIN": 1.0, "MAX": 8.0, "DEFAULT": 3.5 },
-    { "NAME": "causticSpeed", "LABEL": "Caustic Speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.6 }
+    { "NAME": "audioReact", "LABEL": "Audio", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
 const float PI = 3.14159265;
 const float TWO_PI = 6.28318530;
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
 float charPixel(int ch, float col, float row) {
     if (ch < 0 || ch > 36) return 0.0;
     vec2 uv = vec2(col / 5.0, row / 7.0);
@@ -92,75 +90,37 @@ float sampleChar(int ch, vec2 uv) {
 }
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+float hash2(vec2 p) { return fract(sin(dot(p,vec2(127.1,311.7))) * 43758.5453); }
 
-// =======================================================================
-// DEEP OCEAN CAUSTICS BACKGROUND
-// Animated underwater caustic light patterns — blue/cyan/teal palette
-// TIME-driven sin/cos wave interference, HDR peaks 2.0+ at concentrations
-// =======================================================================
+vec3 magmaCaveBg(vec2 uv) {
+    float t = TIME * 0.28;
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    vec2 p = vec2(uv.x * aspect, uv.y) * 3.5;
 
-vec3 deepOceanBg(vec2 uv) {
-    float t = TIME * causticSpeed;
-    vec2 p = uv * causticScale;
+    float n1 = hash2(floor(p        )) * 0.5 + hash2(floor(p * 2.0)) * 0.3 + hash2(floor(p * 4.0)) * 0.2;
+    float n2 = abs(sin(p.x * 4.1 + t) * sin(p.y * 3.7 - t * 0.7));
 
-    // Multi-layer wave interference — 5 overlapping wave sources
-    // Each wave has unique frequency, phase, and direction
-    float w1 = sin(p.x * 1.7 + p.y * 1.1 + t * 1.3)
-              * cos(p.x * 0.9 - p.y * 1.4 + t * 0.9);
-    float w2 = sin(p.x * 2.3 - p.y * 0.7 + t * 1.7)
-              * cos(p.x * 1.3 + p.y * 2.1 - t * 1.1);
-    float w3 = sin(p.x * 0.8 + p.y * 2.9 - t * 0.8)
-              * cos(p.x * 2.1 - p.y * 0.6 + t * 1.4);
-    float w4 = sin(p.x * 3.1 + p.y * 1.3 + t * 0.7)
-              * cos(p.x * 0.5 + p.y * 3.3 - t * 1.6);
-    float w5 = sin(p.x * 1.4 - p.y * 2.4 + t * 2.1)
-              * cos(p.x * 2.7 + p.y * 0.8 + t * 0.5);
+    float seam = smoothstep(0.08, 0.0, abs(fract(p.x * 1.3 + n1 * 0.4) - 0.5) * 2.0 - 0.3);
+    seam      += smoothstep(0.08, 0.0, abs(fract(p.y * 1.7 + n2 * 0.3) - 0.5) * 2.0 - 0.3);
+    seam       = min(seam, 1.0);
 
-    // Sum waves — range [-1, 1]
-    float wave = (w1 + w2 + w3 + w4 + w5) / 5.0;
+    float ember = 0.0;
+    for (int i = 0; i < 6; i++) {
+        vec2 ec = vec2(hash(float(i)*3.7 + floor(t*0.3)) - 0.5,
+                       hash(float(i)*7.1 + floor(t*0.3)) - 0.5) * vec2(aspect, 1.0);
+        float d = length(vec2(uv.x * aspect, uv.y) - (ec + vec2(aspect*0.5, 0.5)));
+        ember += (0.5 + 0.5*sin(TIME*(0.8+float(i)*0.3) + float(i)*2.1)) * 0.06
+                 / (d * d + 0.02);
+    }
+    ember = min(ember, 1.5);
 
-    // Caustic concentration: squared and boosted — bright where waves reinforce
-    float caustic = wave * wave;           // [0, 1]
-    float causticHDR = caustic * caustic;  // sharpen — spiky bright peaks
+    vec3 rock = mix(vec3(0.04, 0.0, 0.0), vec3(0.08, 0.01, 0.0), n1);
+    vec3 seamCol = mix(vec3(0.8, 0.05, 0.0), vec3(2.2, 0.8, 0.0), seam);
+    vec3 emberCol = mix(vec3(0.5, 0.08, 0.0), vec3(2.5, 1.2, 0.0), ember);
 
-    // Deep navy base
-    vec3 deepNavy  = vec3(0.0, 0.008, 0.02);
-    // Ocean blue mid-tone
-    vec3 oceanBlue = vec3(0.0, 0.5, 0.8);
-    // Cyan caustic highlight
-    vec3 cyanTeal  = vec3(0.0, 0.9, 1.0);
-    // Bioluminescent peak
-    vec3 bioGreen  = vec3(0.0, 1.0, 0.6);
-
-    // Base underwater tone blended with caustic intensity
-    vec3 col = mix(deepNavy, oceanBlue, smoothstep(0.0, 0.5, caustic));
-    col = mix(col, cyanTeal, smoothstep(0.4, 0.75, caustic));
-
-    // HDR caustic peak spikes — concentrate where all waves reinforce
-    // Threshold: top 15% of caustic values go HDR (2.0+)
-    float peak = smoothstep(0.7, 1.0, causticHDR);
-    col += mix(cyanTeal, bioGreen, peak) * peak * 2.2;
-
-    // Secondary shimmer layer — fine-grained caustic detail
-    float shimmer = sin(p.x * 8.3 + t * 3.1) * sin(p.y * 7.1 - t * 2.7);
-    shimmer = shimmer * shimmer * smoothstep(0.3, 0.7, caustic);
-    col += cyanTeal * shimmer * 0.4;
-
-    // Depth fog: darker at edges and bottom (vignette for underwater depth)
-    vec2 centeredUV = uv - 0.5;
-    float edgeDist = 1.0 - length(centeredUV) * 1.6;
-    float depthFog = smoothstep(0.0, 0.8, edgeDist);
-    // Bottom is darker (light enters from above)
-    float verticalFog = 0.5 + 0.5 * uv.y;
-    float fog = depthFog * (0.6 + 0.4 * verticalFog);
-    col *= fog;
-
-    return col;
+    float audio = 1.0 + audioBass * audioReact * 0.25;
+    return (rock + seamCol * seam + emberCol * ember * 0.4) * audio;
 }
-
-// =======================================================================
-// EFFECT: BRICKS - grid with animated displacement
-// =======================================================================
 
 vec4 effectBricks(vec2 uv, int sub) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
@@ -210,22 +170,13 @@ vec4 effectBricks(vec2 uv, int sub) {
         }
     }
 
-    if (transparentBg) {
-        // Transparent mode: text only with aqua bioluminescent glow
-        float a = textHit;
-        vec3 fc = textColor.rgb * hdrGlow;
-        return vec4(fc, a);
-    }
-
-    // Opaque mode: deep ocean caustics background + aqua text
-    vec3 oceanBg = deepOceanBg(uv);
-
     bool inv = mod(ri, 2.0) < 1.0;
-    vec3 fg = inv ? oceanBg : textColor.rgb * hdrGlow;
-    vec3 bg = inv ? textColor.rgb * hdrGlow : oceanBg;
+    vec3 fg = inv ? bgColor.rgb : textColor.rgb * hdrGlow;
+    vec3 bg = inv ? textColor.rgb * hdrGlow : mix(bgColor.rgb, magmaCaveBg(uv), 0.92);
     vec3 fc = mix(bg, fg, textHit);
-
-    return vec4(fc, 1.0);
+    float a = 1.0;
+    if (transparentBg) { a = textHit; fc = textColor.rgb * hdrGlow; }
+    return vec4(fc, a);
 }
 
 void main() {

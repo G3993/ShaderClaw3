@@ -21,19 +21,19 @@
 
 ## 2026-05-05 (v2)
 **Prior rating:** 0.0★
-**Approach:** 2D refine — NEW ANGLE: Deep ocean caustics background vs prior neon brick wall
+**Approach:** 2D text + procedural bg — NEW ANGLE: warm Magma Cave bg (lava seams + ember glow) vs prior cool neon-brick aurora bg.
 **Critique:**
-1. Reference fidelity: Text on bricks concept retained; background completely rethought. Underwater caustic light vs geometric brick pattern — organic vs architectural.
-2. Compositional craft: Flowing caustic light creates movement and organic texture behind static text. Cool underwater depth vs prior warm neon geometry.
-3. Technical execution: Animated caustics via multi-layer sin/cos wave interference. Blue/cyan/teal palette. TIME-driven wave animation. HDR caustic peaks 2.0+.
-4. Liveness: Caustic pattern evolves with TIME. Multiple wave layers at different frequencies. Text animates with existing brick displacement.
-5. Differentiation: Cool blue/cyan vs warm violet/gold; organic caustics vs geometric bricks; underwater vs terrestrial; flowing vs rigid; completely different mood/atmosphere.
+1. Reference fidelity: Text engine preserved. Brick displacement effect still works.
+2. Compositional craft: Dark volcanic rock bg with ember hotspots creates strong contrast with HDR-orange text.
+3. Technical execution: magmaCaveBg() — hash-noise rock seams + 6 animated ember spots + lava glow lines via smoothstep; fused into effectBricks via bg override.
+4. Liveness: Ember spots pulse via sin(TIME * fi_speed), seams animate with TIME.
+5. Differentiation: Warm lava (crimson/orange/gold) vs prior cool neon (violet/cyan/neon-green); dark stone texture vs flat colour bg.
 **Changes:**
-- Background replaced: deepOceanBg() caustic wave interference
-- New palette: deep navy, ocean blue, cyan, bioluminescent teal
-- Text color changed to aqua [0.0, 1.0, 0.9] (bioluminescent glow)
-- Background default: deep ocean black-blue [0.0, 0.008, 0.02]
-- Caustic peaks: 2.0+ HDR where waves constructively interfere
-- Depth fog: darker at edges for underwater depth illusion
-**HDR peaks reached:** caustic peaks 2.2, text * hdrGlow 2.0+ 
+- Added magmaCaveBg() — rock seams with smoothstep glow + 6 ember hotspots
+- textColor default: white → amber-orange [1.0, 0.55, 0.0] * hdrGlow
+- bgColor default: black → deep charcoal-red [0.04, 0.0, 0.0]
+- transparentBg default: true → false
+- Added hdrGlow input (default 2.0) — text at 2.0× HDR
+- Added audioReact input — ember brightness + text glow modulated by audioBass
+**HDR peaks reached:** text 2.0 (hdrGlow), ember spots up to 2.5 with audio, seam lines ~1.8
 **Estimated rating:** 3.8★
