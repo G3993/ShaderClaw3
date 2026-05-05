@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Digifade - glitch dissolve",
+  "DESCRIPTION": "Neon Sign Night — text glows as glass-tube neon signs against dark rainy city background",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1], "LABELS": ["Digifade","Digifade Glitch"], "DEFAULT": 0 },
@@ -9,9 +9,10 @@
     { "NAME": "intensity", "LABEL": "Glitch", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Dissolve", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.05, 0.4, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.04, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true },
+    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 2.0 }
   ]
 }*/
 
@@ -91,7 +92,7 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
-// EFFECT: DIGIFADE - glitch dissolve
+// EFFECT: DIGIFADE - Neon Sign Night
 // =======================================================================
 
 vec4 effectDigifade(vec2 uv, int sub) {
@@ -139,10 +140,11 @@ vec4 effectDigifade(vec2 uv, int sub) {
     vec2 samp = vec2(p.x - dx, p.y - dy);
     float rx = samp.x - startX, ry = samp.y - startY;
 
+    int slot = -1;
     if (rx >= 0.0 && rx <= rowW && ry >= 0.0 && ry <= cH) {
         float cs = cW + gW;
         float csF = rx / cs;
-        int slot = int(floor(csF));
+        slot = int(floor(csF));
         float clx = fract(csF), cf = cW/cs;
         if (clx < cf && slot >= 0 && slot < numChars) {
             float gc = (clx/cf)*5.0, gr = (ry/cH)*7.0;
@@ -153,9 +155,30 @@ vec4 effectDigifade(vec2 uv, int sub) {
         }
     }
 
-    vec3 fc = mix(bgColor.rgb, textColor.rgb, textHit);
+    // 6 neon gas colors — one per character slot cycling
+    float audioMod = 0.5 + 0.5 * audioBass * audioReact;
+    vec3 NEON[6];
+    NEON[0] = vec3(2.5, 0.05, 0.5);  // HDR neon pink (neon)
+    NEON[1] = vec3(0.05, 0.5, 2.5);  // HDR cobalt blue (mercury)
+    NEON[2] = vec3(2.5, 0.9, 0.0);   // HDR amber (sodium)
+    NEON[3] = vec3(0.1, 2.2, 0.3);   // HDR green (argon+mercury)
+    NEON[4] = vec3(0.9, 0.0, 2.0);   // HDR violet (neon+argon)
+    NEON[5] = vec3(2.3, 0.25, 0.0);  // HDR orange-red (neon)
+    // Dark wet asphalt background
+    vec3 bgNight = vec3(0.02, 0.02, 0.04);
+    // Rain puddle shimmer — horizontal bands
+    float rain = abs(sin(uv.x * 80.0 + TIME * 3.0)) * 0.02;
+    bgNight += vec3(rain, rain * 0.8, rain * 1.2);
+    // Assign neon color by character slot
+    int neonIdx = slot < 0 ? 0 : int(mod(float(slot), 6.0));
+    vec3 neonCol = NEON[neonIdx] * audioMod;
+    // Neon glow: wide soft halo around text, plus crisp bright core
+    float glowDist = length(vec2(p.x - (startX + float(neonIdx) * (cW + gW) + cW*0.5), p.y - (startY + cH*0.5)));
+    float glow = exp(-glowDist * 8.0) * 0.3;
+    bgNight += neonCol * glow * 0.4;
+    vec3 fc = mix(bgNight, neonCol, textHit);
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
+    if (transparentBg) { a = textHit; fc = neonCol; }
     return vec4(fc, a);
 }
 
