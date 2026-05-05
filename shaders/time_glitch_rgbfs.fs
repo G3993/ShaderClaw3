@@ -1,137 +1,45 @@
 /*{
-  "DESCRIPTION": "Fractured Prism — shattered octahedral polyhedra cluster orbiting in a neon void. Hot magenta, electric lime, and burnt gold palette.",
-  "CATEGORIES": ["Generator", "3D", "Glitch"],
+  "DESCRIPTION": "Wireframe Cyberspace — classic 90s green wireframe terrain, first-person flying. v4: nostalgic cyberspace vs v3 VHS horror / v1+v2 3D signal planes.",
+  "CATEGORIES": ["Generator","3D"],
+  "CREDIT": "ShaderClaw auto-improve v4",
   "INPUTS": [
-    { "NAME": "shardCount",  "LABEL": "Shard Count",  "TYPE": "float", "MIN": 2.0,  "MAX": 8.0,   "DEFAULT": 6.0 },
-    { "NAME": "scatterDist", "LABEL": "Scatter Dist", "TYPE": "float", "MIN": 0.3,  "MAX": 2.5,   "DEFAULT": 1.2 },
-    { "NAME": "spinSpeed",   "LABEL": "Spin Speed",   "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,   "DEFAULT": 0.4 },
-    { "NAME": "camDist",     "LABEL": "Camera Dist",  "TYPE": "float", "MIN": 3.0,  "MAX": 8.0,   "DEFAULT": 5.0 },
-    { "NAME": "specPow",     "LABEL": "Specular Pow", "TYPE": "float", "MIN": 8.0,  "MAX": 128.0, "DEFAULT": 32.0 },
-    { "NAME": "audioPulse",  "LABEL": "Audio Pulse",  "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,   "DEFAULT": 0.7 }
+    {"NAME":"flySpeed","TYPE":"float","DEFAULT":0.7,"MIN":0.0,"MAX":3.0},
+    {"NAME":"waveAmt", "TYPE":"float","DEFAULT":0.3,"MIN":0.0,"MAX":1.5},
+    {"NAME":"hdrBoost","TYPE":"float","DEFAULT":2.8,"MIN":1.0,"MAX":4.0},
+    {"NAME":"audioMod","TYPE":"float","DEFAULT":1.0,"MIN":0.0,"MAX":2.0}
   ]
 }*/
-
-// ── Hashing ──────────────────────────────────────────────────────────────
-float hash11(float n) { return fract(sin(n * 127.1) * 43758.5453); }
-
-// ── Rotation matrices ─────────────────────────────────────────────────────
-mat3 rotY(float a) {
-    float c = cos(a), s = sin(a);
-    return mat3(c,0.0,s, 0.0,1.0,0.0, -s,0.0,c);
+float terrainH(float px, float pz, float t){
+    return waveAmt*(sin(px*1.3+t)*0.4+sin(pz*2.1-t*0.7)*0.3+sin(px*0.7+pz*1.1+t*0.5)*0.3);
 }
-mat3 rotX(float a) {
-    float c = cos(a), s = sin(a);
-    return mat3(1.0,0.0,0.0, 0.0,c,-s, 0.0,s,c);
-}
-
-// ── Octahedron SDF (approximates icosahedron cheaply) ────────────────────
-float sdOctahedron(vec3 p, float s) {
-    p = abs(p);
-    return (p.x + p.y + p.z - s) * 0.57735027;
-}
-
-// ── Scene ─────────────────────────────────────────────────────────────────
-struct Hit { float dist; int id; };
-
-Hit map(vec3 p) {
-    Hit h;
-    h.dist = 1e9;
-    h.id = -1;
-    int N = int(clamp(shardCount, 1.0, 8.0));
-    for (int i = 0; i < 8; i++) {
-        if (i >= N) break;
-        float fi = float(i);
-        float angle = fi * 6.28318 / float(N);
-        float yOff  = (hash11(fi * 3.7) - 0.5) * 0.9;
-        vec3 center = vec3(cos(angle) * scatterDist, yOff, sin(angle) * scatterDist);
-        float rot   = TIME * spinSpeed * (0.3 + hash11(fi * 1.3) * 0.7) + fi * 1.4;
-        vec3 lp     = rotX(rot * 0.7) * rotY(rot) * (p - center);
-        float size  = 0.3 + hash11(fi * 7.1) * 0.2;
-        // Audio pulsates shard size
-        float pulsedSize = size * (1.0 + audioLevel * audioPulse * 0.15);
-        float d = sdOctahedron(lp, pulsedSize);
-        if (d < h.dist) { h.dist = d; h.id = i; }
+void main(){
+    vec2 uv=isf_FragNormCoord*2.0-1.0; uv.x*=RENDERSIZE.x/RENDERSIZE.y;
+    float t=TIME*flySpeed; float audio=1.0+(audioLevel+audioBass*0.4)*audioMod*0.22;
+    vec3 G_HOT=vec3(0.1,2.8,0.4)*hdrBoost*audio;
+    vec3 G_MID=vec3(0.05,1.6,0.2)*hdrBoost*audio;
+    vec3 G_DIM=vec3(0.02,0.6,0.08)*hdrBoost*audio;
+    vec3 W_NODE=vec3(0.5,3.0,0.6)*hdrBoost*audio;
+    vec3 BG=vec3(0);
+    vec3 ro=vec3(0,0.3,-t); vec3 rd=normalize(vec3(uv.x*0.9,uv.y*0.5-0.2,1.0));
+    float horizGlow=exp(-abs(uv.y+0.18)*3.5)*0.4;
+    vec3 col=BG+G_DIM*horizGlow;
+    float dist=0.0; bool hit=false;
+    for(int i=0;i<64;i++){
+        vec3 pos=ro+rd*dist;
+        float hy=terrainH(pos.x,pos.z,t);
+        if(pos.y<hy){hit=true;break;}
+        if(dist>25.0)break;
+        dist+=max((pos.y-hy)*0.5,0.05);
     }
-    return h;
-}
-
-vec3 calcNormal(vec3 p) {
-    vec2 e = vec2(1e-3, 0.0);
-    return normalize(vec3(
-        map(p + e.xyy).dist - map(p - e.xyy).dist,
-        map(p + e.yxy).dist - map(p - e.yxy).dist,
-        map(p + e.yyx).dist - map(p - e.yyx).dist
-    ));
-}
-
-void main() {
-    vec2 uv = (gl_FragCoord.xy / RENDERSIZE.xy) * 2.0 - 1.0;
-    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
-
-    // Camera orbiting the cluster
-    vec3 ro = vec3(sin(TIME * 0.15) * camDist,
-                   camDist * 0.4,
-                   cos(TIME * 0.15) * camDist);
-    vec3 target = vec3(0.0, 0.0, 0.0);
-
-    vec3 fwd   = normalize(target - ro);
-    vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), fwd));
-    vec3 up    = cross(fwd, right);
-    vec3 rd    = normalize(fwd + uv.x * right + uv.y * up);
-
-    // ── Palette ──────────────────────────────────────────────────────────
-    vec3 colMagenta  = vec3(2.5, 0.0, 2.0);
-    vec3 colLime     = vec3(0.5, 2.5, 0.0);
-    vec3 colGold     = vec3(2.5, 1.8, 0.0);
-    vec3 colSpecular = vec3(3.0, 3.0, 2.5);
-
-    // ── Raymarching ──────────────────────────────────────────────────────
-    vec3 col = vec3(0.0); // void black background
-    float t  = 0.1;
-    bool hit = false;
-    int hitId = -1;
-    vec3 hitPos;
-
-    for (int i = 0; i < 64; i++) {
-        vec3 p = ro + rd * t;
-        Hit h  = map(p);
-        if (h.dist < 0.001) {
-            hit    = true;
-            hitId  = h.id;
-            hitPos = p;
-            break;
-        }
-        t += h.dist;
-        if (t > 30.0) break;
+    if(hit){
+        vec3 hp=ro+rd*dist; float cellSz=0.5;
+        float gx=abs(fract(hp.x/cellSz)*2.0-1.0); float gz=abs(fract(hp.z/cellSz)*2.0-1.0);
+        float lineX=smoothstep(0.08,0.0,1.0-gx); float lineZ=smoothstep(0.08,0.0,1.0-gz);
+        float grid=max(lineX,lineZ); float fog=exp(-dist*0.12);
+        float hy=terrainH(hp.x,hp.z,t);
+        float normH=(hy/waveAmt+1.0)*0.5;
+        col+=mix(G_DIM,G_HOT,normH)*grid*fog;
+        col+=W_NODE*lineX*lineZ*fog*0.6;
     }
-
-    if (hit) {
-        vec3 n = calcNormal(hitPos);
-
-        // Material color by shard id
-        vec3 matCol;
-        int mod3 = int(mod(float(hitId), 3.0));
-        if      (mod3 == 0) matCol = colMagenta;
-        else if (mod3 == 1) matCol = colLime;
-        else                matCol = colGold;
-
-        // Phong lighting
-        vec3 keyLight = normalize(vec3(1.5, 3.0, 1.0));
-        float diff    = max(dot(n, keyLight), 0.0);
-        vec3 hv       = normalize(keyLight - rd);
-        float spec    = pow(max(dot(n, hv), 0.0), specPow) * 3.0;
-
-        // Silhouette darkening
-        float sv = 1.0 - max(dot(n, -rd), 0.0);
-        col = matCol * (0.05 + diff * 0.95);
-        col += colSpecular * spec;
-        col  = mix(col, vec3(0.0), sv * sv * 0.6);
-
-        // fwidth silhouette AA
-        float fw = fwidth(map(hitPos).dist);
-        float aa = 1.0 - smoothstep(0.0, fw * 2.0, map(hitPos).dist);
-        col *= aa;
-    }
-
-    gl_FragColor = vec4(col, 1.0);
+    gl_FragColor=vec4(col,1.0);
 }
