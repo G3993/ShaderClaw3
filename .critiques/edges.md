@@ -17,3 +17,24 @@
 - Stretch, particle size defaults tuned up for visibility
 **HDR peaks reached:** particle cores + halo accumulation → 2.5+ per cluster
 **Estimated rating:** 4.0★
+
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 3D raymarch — NEW ANGLE: 2D particle bounce (prior) → 3D nested torus-ring Fabergé lattice (Painterly lighting)
+**Critique:**
+1. Reference fidelity: Prior neon particle bounce is 2D; new version is a genuine 3D object with orbital structure and volume.
+2. Compositional craft: N nested tori at orthogonal/diagonal angles create a sphere-like Fabergé lattice — strong centered silhouette.
+3. Technical execution: 80-step march, each ring is an sdTorus with rotX/rotY/rotZ transforms, fwidth() AA on all edges.
+4. Liveness: TIME-driven ring rotation + orbiting camera; audio modulates ring radius.
+5. Differentiation: Different primitive vocabulary (tori vs capsule-particle), different lighting (painterly diffuse/rim vs neon accumulation), different palette (gold/magenta/emerald cycle vs fixed neon).
+**Changes:**
+- Full rewrite from 2D particle system to 3D torus lattice
+- Up to 7 tori at orthogonal and diagonal orientations (ringCount param)
+- Each ring spins at different speed offset (spinSpeed * various multipliers)
+- Hue from 3D position + TIME for animated palette cycling
+- Painterly: diffuse + key specular + rim light
+- Black ink edge via fwidth
+- Orbiting camera (camA = t * 0.11)
+- 4-color palette: gold, magenta, emerald, white-hot (cycling via HSV hue)
+**HDR peaks reached:** tube core + rim contribution 2.4+, white spec 2.4
+**Estimated rating:** 4.2★
