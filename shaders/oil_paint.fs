@@ -1,124 +1,217 @@
 /*{
-  "DESCRIPTION": "Oil paint effect — Kuwahara filter with relief lighting for painterly brush strokes",
-  "CREDIT": "ShaderClaw (Kuwahara approach inspired by flockaroo)",
-  "CATEGORIES": ["Effect"],
+  "DESCRIPTION": "Painted Canyon Sunset — wide raymarched canyon at golden hour. Warm/cool two-zone lighting, procedural FBM brush-stroke texture on canyon walls, sun disc.",
+  "CREDIT": "ShaderClaw auto-improve",
+  "ISFVSN": "2",
+  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
   "INPUTS": [
-    { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "brushRadius", "LABEL": "Brush Size", "TYPE": "float", "DEFAULT": 4.0, "MIN": 1.0, "MAX": 12.0 },
-    { "NAME": "paintSpec", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "vignetteAmt", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
-  ],
-  "PASSES": [
-    { "TARGET": "paintBuf", "PERSISTENT": true },
-    {}
+    {"NAME":"sunAngle",   "TYPE":"float","DEFAULT":0.4, "MIN":0.0,  "MAX":1.5708,"LABEL":"Sun Angle"},
+    {"NAME":"paintDetail","TYPE":"float","DEFAULT":0.4, "MIN":0.0,  "MAX":1.0,   "LABEL":"Paint Detail"},
+    {"NAME":"hdrPeak",    "TYPE":"float","DEFAULT":2.0, "MIN":1.0,  "MAX":4.0,   "LABEL":"HDR Peak"},
+    {"NAME":"audioReact", "TYPE":"float","DEFAULT":0.5, "MIN":0.0,  "MAX":2.0,   "LABEL":"Audio React"},
+    {"NAME":"cameraRoll", "TYPE":"float","DEFAULT":0.0, "MIN":-0.5, "MAX":0.5,   "LABEL":"Camera Roll"}
   ]
 }*/
 
-#define PI 3.1415927
+// ---------- noise / FBM (2-D, used on 3-D wall surfaces via xz) ----------
 
-// Aspect-correct UV
-vec2 fitUV(vec2 pos) {
-    return (pos - 0.5 * RENDERSIZE) * min(IMG_SIZE_inputImage.y / RENDERSIZE.y, IMG_SIZE_inputImage.x / RENDERSIZE.x) / IMG_SIZE_inputImage + 0.5;
+float hashV(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 }
 
-// Kuwahara filter: find the quadrant with lowest variance and use its mean color
-// This creates the flat-color brush stroke look of oil paintings
-vec3 kuwahara(vec2 uv, float radius) {
-    vec2 texel = 1.0 / RENDERSIZE;
+float vnoise2(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    float a = hashV(i + vec2(0,0));
+    float b = hashV(i + vec2(1,0));
+    float c = hashV(i + vec2(0,1));
+    float d = hashV(i + vec2(1,1));
+    return mix(mix(a,b,u.x), mix(c,d,u.x), u.y);
+}
 
-    vec3 mean[4];
-    vec3 var_acc[4];
-    float count[4];
+// 3-D FBM using xz and y slices
+float fbmWall(vec3 p, float toffset) {
+    vec2 q = p.xz + vec2(p.y * 0.5, 0.0) + vec2(toffset);
+    float v = 0.0, a = 0.5;
+    for (int i = 0; i < 5; i++) {
+        v += a * vnoise2(q);
+        q *= 2.13;
+        a *= 0.48;
+    }
+    return v;
+}
 
-    // Initialize accumulators
+float fbmSky(vec2 p) {
+    float v = 0.0, a = 0.5;
     for (int i = 0; i < 4; i++) {
-        mean[i] = vec3(0.0);
-        var_acc[i] = vec3(0.0);
-        count[i] = 0.0;
+        v += a * vnoise2(p);
+        p *= 2.0;
+        a *= 0.5;
     }
-
-    // Sample the 4 quadrants around the pixel
-    for (int j = -6; j <= 6; j++) {
-        for (int i = -6; i <= 6; i++) {
-            if (abs(float(i)) > radius || abs(float(j)) > radius) continue;
-
-            vec3 c = texture2D(inputImage, fitUV((uv * RENDERSIZE) + vec2(float(i), float(j)))).rgb;
-
-            // Determine which quadrant(s) this sample belongs to
-            // Quadrant 0: top-right, 1: top-left, 2: bottom-left, 3: bottom-right
-            // Use loop to assign to correct quadrant (WebGL requires const/loop index)
-            int qi = (i >= 0) ? 0 : 1;
-            int qj = (j >= 0) ? 0 : 2;
-            int q = qi + qj;
-
-            for (int k = 0; k < 4; k++) {
-                if (k == q) {
-                    mean[k] += c;
-                    var_acc[k] += c * c;
-                    count[k] += 1.0;
-                }
-            }
-        }
-    }
-
-    // Find the quadrant with minimum variance
-    float minVar = 1e8;
-    vec3 result = vec3(0.0);
-
-    for (int q = 0; q < 4; q++) {
-        if (count[q] < 1.0) continue;
-        vec3 m = mean[q] / count[q];
-        vec3 v = var_acc[q] / count[q] - m * m;
-        float totalVar = v.r + v.g + v.b;
-        if (totalVar < minVar) {
-            minVar = totalVar;
-            result = m;
-        }
-    }
-
-    return result;
+    return v;
 }
+
+// ---------- SDFs ----------
+
+float sdBox(vec3 p, vec3 b) {
+    vec3 q = abs(p) - b;
+    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
+}
+
+// ---------- scene SDF ----------
+// Returns vec2: x=dist, y=material (0=floor, 1=left wall, 2=right wall)
+
+vec2 sceneSDF(vec3 p, float tOff, float pDetail) {
+    // Canyon floor: infinite plane at y=-1
+    float floorDist = p.y + 1.0;
+
+    // Canyon walls: SDF box with FBM displacement
+    // Left wall: center at (-2.5, 1.5, 0), half-size (0.5, 2.5, 30)
+    vec3 leftCenter  = vec3(-2.5, 1.5, 0.0);
+    vec3 rightCenter = vec3( 2.5, 1.5, 0.0);
+    vec3 wallHalf    = vec3(0.5, 2.5, 30.0);
+
+    float leftFBM  = fbmWall(p * 2.0, tOff);
+    float rightFBM = fbmWall(p * 2.0 + vec3(17.3, 5.1, 9.7), tOff);
+
+    float leftDist  = sdBox(p - leftCenter,  wallHalf) + (leftFBM  - 0.5) * 0.3 * pDetail;
+    float rightDist = sdBox(p - rightCenter, wallHalf) + (rightFBM - 0.5) * 0.3 * pDetail;
+
+    // find closest
+    float bestDist = floorDist;
+    float bestMat  = 0.0;
+    if (leftDist < bestDist)  { bestDist = leftDist;  bestMat = 1.0; }
+    if (rightDist < bestDist) { bestDist = rightDist; bestMat = 2.0; }
+
+    return vec2(bestDist, bestMat);
+}
+
+// ---------- finite-difference normal ----------
+
+vec3 sceneNormal(vec3 p, float tOff, float pDetail) {
+    float eps = 0.002;
+    vec2 e = vec2(eps, 0.0);
+    float dx = sceneSDF(p + e.xyy, tOff, pDetail).x - sceneSDF(p - e.xyy, tOff, pDetail).x;
+    float dy = sceneSDF(p + e.yxy, tOff, pDetail).x - sceneSDF(p - e.yxy, tOff, pDetail).x;
+    float dz = sceneSDF(p + e.yyx, tOff, pDetail).x - sceneSDF(p - e.yyx, tOff, pDetail).x;
+    return normalize(vec3(dx, dy, dz));
+}
+
+// ---------- main ----------
 
 void main() {
-    vec2 pos = gl_FragCoord.xy;
-    vec2 uv = pos / RENDERSIZE;
+    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
+    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
 
-    // ==== PASS 0: Kuwahara paint filter ====
-    if (PASSINDEX == 0) {
-        gl_FragColor = vec4(kuwahara(uv, brushRadius), 1.0);
-        return;
+    // camera roll
+    float cr = cameraRoll;
+    vec2 uvR = vec2(uv.x * cos(cr) - uv.y * sin(cr),
+                    uv.x * sin(cr) + uv.y * cos(cr));
+
+    // audio
+    float aLevel = 1.0 + audioLevel * audioReact;
+    float aBass  = 1.0 + audioBass  * audioReact * 0.8;
+
+    // sun direction from angle
+    vec3 sunDir = normalize(vec3(cos(sunAngle) * 0.6, sin(sunAngle), -cos(sunAngle) * 0.4));
+
+    // camera: looking down the canyon (along -Z), slightly elevated
+    vec3 camPos = vec3(0.0, 0.8, 6.0);
+    vec3 fwd    = normalize(vec3(0.0, -0.15, -1.0));
+    vec3 right  = normalize(cross(fwd, vec3(0.0,1.0,0.0)));
+    vec3 upV    = cross(right, fwd);
+
+    vec3 rd = normalize(fwd + uvR.x * right * 0.7 + uvR.y * upV * 0.7);
+    vec3 ro  = camPos;
+
+    float tOff = TIME * 0.05;
+
+    // ---------- raymarch ----------
+    float totalDist = 0.0;
+    float matID = -1.0;
+    bool hit = false;
+    for (int step = 0; step < 64; step++) {
+        vec3 p = ro + rd * totalDist;
+        vec2 res = sceneSDF(p, tOff, paintDetail);
+        float d = res.x;
+        if (d < 0.005) {
+            matID = res.y;
+            hit = true;
+            break;
+        }
+        totalDist += d * 0.85;
+        if (totalDist > 30.0) break;
     }
 
-    // ==== PASS 1: Relief lighting ====
-    vec2 texel = 1.0 / RENDERSIZE;
-    float valC = dot(texture2D(paintBuf, uv).rgb, vec3(0.333));
-    float valR = dot(texture2D(paintBuf, uv + vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valL = dot(texture2D(paintBuf, uv - vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valU = dot(texture2D(paintBuf, uv + vec2(0.0, texel.y)).rgb, vec3(0.333));
-    float valD = dot(texture2D(paintBuf, uv - vec2(0.0, texel.y)).rgb, vec3(0.333));
+    // ---- sky / background ----
+    // sunset gradient: dark blue-black at top → orange/gold at horizon
+    vec3 skyBase   = mix(vec3(0.0, 0.02, 0.3), vec3(1.0, 0.35, 0.0) * hdrPeak * 0.6,
+                         pow(max(0.0, 1.0 - rd.y * 2.5), 0.5));
+    // warm horizon band
+    float horizBand = exp(-abs(rd.y) * 6.0);
+    skyBase += vec3(1.0, 0.7, 0.0) * horizBand * 0.4 * hdrPeak;
 
-    vec3 norm = normalize(vec3(
-        (valR - valL) / texel.x,
-        (valU - valD) / texel.y,
-        150.0
-    ));
+    // cloud streaks in sky
+    vec2 skyUV = rd.xz / (abs(rd.y) + 0.01) * 0.15;
+    float clouds = fbmSky(skyUV + vec2(tOff * 2.0));
+    skyBase += vec3(1.0, 0.55, 0.1) * clouds * 0.15 * max(0.0, -rd.y * 2.0 + 1.0);
 
-    vec3 light = normalize(vec3(-1.0, 1.0, 1.4));
-    float diff = clamp(dot(norm, light), 0.0, 1.0);
-    float spec = pow(clamp(dot(reflect(light, norm), vec3(0.0, 0.0, -1.0)), 0.0, 1.0), 12.0) * paintSpec;
+    // sun disc
+    float sunDot = dot(rd, sunDir);
+    float sunDisc = step(0.998, sunDot);
+    float sunGlow = exp(-(1.0 - sunDot) * 120.0) * (1.0 - sunDisc);
+    skyBase += vec3(2.0, 1.2, 0.3) * sunDisc * hdrPeak * aLevel;
+    skyBase += vec3(1.0, 0.55, 0.1) * sunGlow * 0.8 * hdrPeak;
 
-    gl_FragColor = texture2D(paintBuf, uv) * mix(diff, 1.0, 0.9)
-                 + spec * vec4(0.85, 1.0, 1.15, 1.0);
+    vec3 col = skyBase;
 
-    // Vignette
-    if (vignetteAmt > 0.0) {
-        vec2 scc = (pos - 0.5 * RENDERSIZE) / RENDERSIZE.x;
-        float vign = 1.1 - vignetteAmt * dot(scc, scc);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.x / RENDERSIZE.x * PI) * 40.0);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.y / RENDERSIZE.y * PI) * 20.0);
-        gl_FragColor.xyz *= vign;
+    if (hit) {
+        vec3 p = ro + rd * totalDist;
+        vec3 N = sceneNormal(p, tOff, paintDetail);
+
+        // fwidth-based SDF edge AA
+        float fw = fwidth(totalDist);
+
+        // paint-stroke texture: modulate surface by FBM
+        float stroke = sin(fbmWall(p * 5.0, 0.0) * 3.14159 * 4.0) * 0.5 + 0.5;
+        stroke = mix(0.5, stroke, paintDetail);
+
+        // warm sun light
+        float NdotSun  = max(0.0, dot(N, sunDir));
+        vec3  lightWarm = NdotSun * vec3(1.0, 0.7, 0.2) * 2.0 * hdrPeak * aLevel;
+
+        // cool sky fill (from above)
+        float NdotSky  = max(0.0, dot(N, vec3(0.0,1.0,0.0)));
+        vec3  lightCool = NdotSky * vec3(0.1, 0.2, 0.6) * 0.8;
+
+        // shadow self-occlusion: bottom of walls darker
+        float vertShadow = clamp((p.y + 1.0) / 3.0, 0.0, 1.0);
+
+        if (matID < 0.5) {
+            // ---------- canyon floor ----------
+            vec3 groundBase = vec3(0.6, 0.2, 0.0); // rust
+            col = groundBase * stroke * (lightWarm * 0.6 + lightCool + 0.05);
+
+        } else {
+            // ---------- canyon wall (left or right) ----------
+            // Warm face vs cool shadow split
+            vec3 rockWarm = vec3(0.9, 0.45, 0.1);
+            vec3 rockCool = vec3(0.15, 0.05, 0.4);
+            float warmCoolT = clamp(NdotSun * 1.5, 0.0, 1.0);
+            vec3 rockBase = mix(rockCool, rockWarm, warmCoolT);
+            rockBase = mix(rockBase, rockBase * stroke, 0.4);
+
+            col = rockBase * (lightWarm + lightCool + 0.04) * vertShadow;
+
+            // add rim where walls face viewer
+            float rimFace = max(0.0, dot(N, normalize(-rd)));
+            col += rockWarm * pow(rimFace, 3.0) * 0.3 * hdrPeak;
+        }
+
+        // distance fog toward sky color
+        float fogT = clamp(totalDist / 28.0, 0.0, 1.0);
+        fogT = fogT * fogT;
+        col = mix(col, skyBase * 0.3, fogT);
     }
 
-    gl_FragColor.w = 1.0;
+    gl_FragColor = vec4(col, 1.0);
 }
