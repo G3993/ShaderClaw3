@@ -19,3 +19,25 @@
 - holoGlow default: 0.7 → 1.4
 **HDR peaks reached:** sun 2.2, Y2K shapes 2.0, grid lines 2.0, katakana 2.5, holo spec 2.0+
 **Estimated rating:** 4.5★
+
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 2D refine — NEW ANGLE: cyberpunk noir city at dusk (moon + building silhouettes + rain reflections + neon sign rectangles) replaces vaporwave (sun + Y2K shapes + katakana); entirely different scene composition and palette (void black/neon vs pastel pink/cyan)
+**Critique:**
+1. Reference fidelity: 2-pass hologram architecture preserved; scene content completely different (noir vs vaporwave = different cultural reference).
+2. Compositional craft: Moon haze + building skyline silhouettes + rain reflection floor + floating neon signs creates strong layered depth; each element occupies a distinct spatial zone.
+3. Technical execution: Audio-dependency bug (holo *= 0.5 + audioLevel × 0.6) fixed with max(0.82, ...); neon signs use proper SDF outline + fill; building silhouette uses hash-based profile.
+4. Liveness: Rain streaks scroll (TIME × rainSpeed × 8); neon signs slowly drift + blink (sin(TIME × freq + fi)); katakana replaced with Matrix-green to match noir palette.
+5. Differentiation: Prior = vaporwave (pastel sun/grid/Y2K/katakana, cyan holoTint) → this = noir city (moon/skyline/rain/neon-signs, acid-green holoTint [0,1,0.55]); different palette, different cultural reference, different spatial grammar (vertical signs vs bouncing shapes).
+**Changes:**
+- Complete passVapor() → passCity() rewrite
+- Sky: void black → deep violet gradient (not pink→cyan)
+- Moon: large silver-white HDR circle with haze, replaces sun-with-bars
+- Building silhouette: hash-based skyline profile at horizonY + lit windows
+- Rain floor: horizontal streak system replaces perspective grid
+- Neon signs: SDF rectangle outlines (6 hue-distinct neons), replaces Y2K shapes
+- Katakana: Matrix green [0,1,0.35] × 1.6 replaces teal
+- holoTint default: acid green [0,1,0.55]
+- Fixed: holo *= max(0.82, 0.65 + audioLevel × audioReact × 0.4)
+**HDR peaks reached:** moon 2.2, neon sign outlines 2.5 × audioBoost, window lights 1.5, katakana 1.6×0.55=0.88
+**Estimated rating:** 4.5★
