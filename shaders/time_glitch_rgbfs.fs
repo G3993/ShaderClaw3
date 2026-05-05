@@ -1,457 +1,114 @@
 /*{
-  "DESCRIPTION": "Buffers 8 recent frames",
-  "CREDIT": "by VIDVOX",
-  "CATEGORIES": [
-    "Glitch"
-  ],
+  "DESCRIPTION": "Crystal Lattice — infinite 3D grid of neon diamond crystals, traversed by a slow fly-through camera. Cinematic HDR lighting.",
+  "CREDIT": "ShaderClaw auto-improve",
+  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
   "INPUTS": [
-    {
-      "NAME": "inputImage",
-      "TYPE": "image"
-    },
-    {
-      "NAME": "inputDelay",
-      "LABEL": "Buffer",
-      "TYPE": "color",
-      "DEFAULT": [
-        0.25,
-        0.5,
-        0.75,
-        0.5
-      ]
-    },
-    {
-      "NAME": "inputRate",
-      "LABEL": "Buffer Lag",
-      "TYPE": "float",
-      "MIN": 1,
-      "MAX": 20,
-      "DEFAULT": 4
-    },
-    {
-      "NAME": "glitch_size",
-      "LABEL": "Size",
-      "TYPE": "float",
-      "MIN": 0,
-      "MAX": 0.5,
-      "DEFAULT": 0.1
-    },
-    {
-      "NAME": "glitch_horizontal",
-      "LABEL": "Horizontal Amount",
-      "TYPE": "float",
-      "MIN": 0,
-      "MAX": 1,
-      "DEFAULT": 0.2
-    },
-    {
-      "NAME": "glitch_vertical",
-      "LABEL": "Vertical Amount",
-      "TYPE": "float",
-      "MIN": 0,
-      "MAX": 1,
-      "DEFAULT": 0
-    },
-    {
-      "NAME": "randomize_size",
-      "LABEL": "Randomize Size",
-      "TYPE": "bool",
-      "DEFAULT": 1
-    },
-    {
-      "NAME": "randomize_position",
-      "LABEL": "Randomize Position",
-      "TYPE": "bool",
-      "DEFAULT": 0
-    },
-    {
-      "NAME": "randomize_zoom",
-      "LABEL": "Randomize Zoom",
-      "TYPE": "bool",
-      "DEFAULT": 0
-    }
-  ],
-  "PASSES": [
-    {
-      "TARGET": "lastRow",
-      "WIDTH:": 1,
-      "HEIGHT": 1,
-      "DESCRIPTION": "this buffer stores the last frame's odd / even state",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer8",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer7",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer6",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer5",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer4",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer3",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer2",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer1",
-      "persistent": true
-    },
-    {}
+    { "NAME": "crystalSize",  "LABEL": "Crystal Size", "TYPE": "float", "DEFAULT": 0.36, "MIN": 0.1,  "MAX": 0.48 },
+    { "NAME": "latticeScale", "LABEL": "Cell Scale",   "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.4,  "MAX": 2.5  },
+    { "NAME": "hdrPeak",      "LABEL": "HDR Peak",     "TYPE": "float", "DEFAULT": 2.5,  "MIN": 1.0,  "MAX": 4.0  },
+    { "NAME": "audioPulse",   "LABEL": "Audio Pulse",  "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 2.0  },
+    { "NAME": "driftSpeed",   "LABEL": "Fly Speed",    "TYPE": "float", "DEFAULT": 0.4,  "MIN": 0.0,  "MAX": 1.5  }
   ]
 }*/
 
+float hash1(float n) { return fract(sin(n * 127.1) * 43758.5); }
+float hash3(vec3 p)  { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5); }
 
-float rand(vec2 co){
-    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+// Octahedron SDF: (|x|+|y|+|z|-r) / sqrt(3)
+float sdOct(vec3 p, float r) {
+    return (abs(p.x) + abs(p.y) + abs(p.z) - r) * 0.57735;
 }
 
+// Thin connector rods between lattice nodes
+float sdRods(vec3 p, float cr) {
+    return min(min(length(p.yz), length(p.xz)), length(p.xy)) - cr;
+}
 
-void main()
-{
-	//	first pass: read the "buffer7" into "buffer8"
-	//	apply lag on each pass
-	//	if this is the first pass, i'm going to read the position from the "lastRow" image, and write a new position based on this and the hold variables
-	if (PASSINDEX == 0)	{
-		vec4		srcPixel = IMG_PIXEL(lastRow,vec2(0.5));
-		//	i'm only using the X and Y components, which are the X and Y offset (normalized) for the frame
-		if (inputRate == 0.0)	{
-			srcPixel.x = 0.0;
-			srcPixel.y = 0.0;
-		}
-		else if (inputRate <= 1.0)	{
-			srcPixel.x = (srcPixel.x) > 0.5 ? 0.0 : 1.0;
-			srcPixel.y = 0.0;
-		}
-		else {
-			srcPixel.x = srcPixel.x + 1.0 / inputRate + srcPixel.y;
-			if (srcPixel.x > 1.0)	{
-				srcPixel.y = mod(srcPixel.x, 1.0);
-				srcPixel.x = 0.0;
-			}
-		}
-		gl_FragColor = srcPixel;
-	}
-	if (PASSINDEX == 1)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer7);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer8);
-		}
-	}
-	else if (PASSINDEX == 2)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer6);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer7);
-		}
-	}
-	else if (PASSINDEX == 3)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer5);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer6);
-		}
-	}
-	else if (PASSINDEX == 4)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer4);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer5);
-		}
-	}
-	else if (PASSINDEX == 5)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer3);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer4);
-		}
-	}
-	else if (PASSINDEX == 6)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer2);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer3);
-		}
-	}
-	else if (PASSINDEX == 7)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer1);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer2);
-		}
-	}
-	else if (PASSINDEX == 8)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(inputImage);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer1);
-		}
-	}
-	else if (PASSINDEX == 9)	{
-		//	Figure out which section I'm in and draw the appropriate buffer there
-		vec2 tex = isf_FragNormCoord;
-		vec4 color = vec4(0.0);		
-		//	figure out the "input delay shift" for this pixel...
-		float randomDelayShift = 0.0;
-		
-		vec2 xy; 
-		xy.x = isf_FragNormCoord[0];
-		xy.y = isf_FragNormCoord[1];
-	
-		//	quantize the xy to the glitch_amount size
-		//xy = floor(xy / glitch_size) * glitch_size;
-		vec2 random;
+vec2 scene(vec3 wp) {
+    // Drift camera forward and weave
+    vec3 p = wp;
+    p.z   += TIME * driftSpeed * 0.5;
+    p.x   += sin(TIME * driftSpeed * 0.28) * 0.18;
+    p.y   += cos(TIME * driftSpeed * 0.19) * 0.1;
 
-		float local_glitch_size = glitch_size;
-		float random_offset = 0.0;
-	
-		if (randomize_size)	{
-			random_offset = mod(rand(vec2(TIME,TIME)), 1.0);
-			local_glitch_size = random_offset * glitch_size;
-		}
-	
-		if (local_glitch_size > 0.0)	{
-			random.x = rand(vec2(floor(random_offset + xy.y / local_glitch_size) * local_glitch_size, TIME));
-			random.y = rand(vec2(floor(random_offset + xy.x / local_glitch_size) * local_glitch_size, TIME));
-		}
-		else	{
-			random.x = rand(vec2(xy.x, TIME));
-			random.y = rand(vec2(xy.y, TIME));
-		}
-	
-		//	if doing a horizontal glitch do a random shift
-		if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-			randomDelayShift = clamp(random.x + random.y, 0.0, 2.0);
-		}
-		else if (random.x < glitch_horizontal)	{
-			randomDelayShift = clamp(random.x + random.y, 0.0, 2.0);
-		}
-		else if (random.y < glitch_vertical)	{
-			randomDelayShift = clamp(random.x + random.y, 0.0, 2.0);
-		}
-		
-		vec4 pixelBuffer = randomDelayShift * inputDelay * 9.0;
-		
-		if (randomize_zoom)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				float level = (random.x + random.y) / 3.0 + 0.90;
-				tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-			}
-			else if (random.x < glitch_horizontal)	{
-				float level = (random.x) / 2.0 + 0.95;
-				tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-			}
-			else if (random.y < glitch_vertical)	{
-				float level = (random.y) / 2.0 + 0.95;
-				tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-			}
-		}
-		
-		if (randomize_position)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				tex.x = mod(tex.x + inputDelay.r * random.x, 1.0);
-				tex.y = mod(tex.y + inputDelay.r * random.y, 1.0);
-			}
-			else if (random.x < glitch_horizontal)	{
-				tex.y = mod(tex.y + inputDelay.r * random.x, 1.0);
-			}
-			else if (random.y < glitch_vertical)	{
-				tex.x = mod(tex.x + inputDelay.r * random.y, 1.0);
-			}
-			//	apply small random zoom too
-		}
-		
-		if (pixelBuffer.r < 1.0)	{
-			color.r = IMG_NORM_PIXEL(inputImage, tex).r;
-		}
-		else if (pixelBuffer.r < 2.0)	{
-			color.r = IMG_NORM_PIXEL(buffer1, tex).r;
-		}
-		else if (pixelBuffer.r < 3.0)	{
-			color.r = IMG_NORM_PIXEL(buffer2, tex).r;
-		}
-		else if (pixelBuffer.r < 4.0)	{
-			color.r = IMG_NORM_PIXEL(buffer3, tex).r;
-		}
-		else if (pixelBuffer.r < 5.0)	{
-			color.r = IMG_NORM_PIXEL(buffer4, tex).r;
-		}
-		else if (pixelBuffer.r < 6.0)	{
-			color.r = IMG_NORM_PIXEL(buffer5, tex).r;
-		}
-		else if (pixelBuffer.r < 7.0)	{
-			color.r = IMG_NORM_PIXEL(buffer6, tex).r;
-		}
-		else if (pixelBuffer.r < 8.0)	{
-			color.r = IMG_NORM_PIXEL(buffer7, tex).r;
-		}
-		else	{
-			color.r = IMG_NORM_PIXEL(buffer8, tex).r;
-		}
-		
-		if (randomize_position)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				tex.x = mod(tex.x + random.x * inputDelay.g, 1.0);
-				tex.y = mod(tex.y + random.y * inputDelay.g, 1.0);
-			}
-			else if (random.x < glitch_horizontal)	{
-				tex.y = mod(tex.y + random.x * inputDelay.g, 1.0);
-			}
-			else if (random.y < glitch_vertical)	{
-				tex.x = mod(tex.x + random.y * inputDelay.g, 1.0);
-			}
-			//	apply small random zoom too
-			//float level = inputDelay.g * random.x / 5.0 + 0.9;
-			//tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-		}
-		
-		if (pixelBuffer.g < 1.0)	{
-			color.g = IMG_NORM_PIXEL(inputImage, tex).g;
-		}
-		else if (pixelBuffer.g < 2.0)	{
-			color.g = IMG_NORM_PIXEL(buffer1, tex).g;
-		}
-		else if (pixelBuffer.g < 3.0)	{
-			color.g = IMG_NORM_PIXEL(buffer2, tex).g;
-		}
-		else if (pixelBuffer.g < 4.0)	{
-			color.g = IMG_NORM_PIXEL(buffer3, tex).g;
-		}
-		else if (pixelBuffer.g < 5.0)	{
-			color.g = IMG_NORM_PIXEL(buffer4, tex).g;
-		}
-		else if (pixelBuffer.g < 6.0)	{
-			color.g = IMG_NORM_PIXEL(buffer5, tex).g;
-		}
-		else if (pixelBuffer.g < 7.0)	{
-			color.g = IMG_NORM_PIXEL(buffer6, tex).g;
-		}
-		else if (pixelBuffer.g < 8.0)	{
-			color.g = IMG_NORM_PIXEL(buffer7, tex).g;
-		}
-		else	{
-			color.g = IMG_NORM_PIXEL(buffer8, tex).g;
-		}
-		
-		if (randomize_position)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				tex.x = mod(tex.x + random.x * inputDelay.b, 1.0);
-				tex.y = mod(tex.y + random.y * inputDelay.b, 1.0);
-			}
-			else if (random.x < glitch_horizontal)	{
-				tex.y = mod(tex.y + random.x * inputDelay.b, 1.0);
-			}
-			else if (random.y < glitch_vertical)	{
-				tex.x = mod(tex.x + random.y * inputDelay.b, 1.0);
-			}
-			//	apply small random zoom too
-			//float level = inputDelay.b * random.x / 5.0 + 0.9;
-			//tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-		}
-		
-		if (pixelBuffer.b < 1.0)	{
-			color.b = IMG_NORM_PIXEL(inputImage, tex).b;
-		}
-		else if (pixelBuffer.b < 2.0)	{
-			color.b = IMG_NORM_PIXEL(buffer1, tex).b;
-		}
-		else if (pixelBuffer.b < 3.0)	{
-			color.b = IMG_NORM_PIXEL(buffer2, tex).b;
-		}
-		else if (pixelBuffer.b < 4.0)	{
-			color.b = IMG_NORM_PIXEL(buffer3, tex).b;
-		}
-		else if (pixelBuffer.b < 5.0)	{
-			color.b = IMG_NORM_PIXEL(buffer4, tex).b;
-		}
-		else if (pixelBuffer.b < 6.0)	{
-			color.b = IMG_NORM_PIXEL(buffer5, tex).b;
-		}
-		else if (pixelBuffer.b < 7.0)	{
-			color.b = IMG_NORM_PIXEL(buffer6, tex).b;
-		}
-		else if (pixelBuffer.b < 8.0)	{
-			color.b = IMG_NORM_PIXEL(buffer7, tex).b;
-		}
-		else	{
-			color.b = IMG_NORM_PIXEL(buffer8, tex).b;
-		}
-		
-		if (randomize_position)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				tex.x = mod(tex.x + random.x * inputDelay.a, 1.0);
-				tex.y = mod(tex.y + random.y * inputDelay.a, 1.0);
-			}
-			else if (random.x < glitch_horizontal)	{
-				tex.y = mod(tex.y + random.x * inputDelay.a, 1.0);
-			}
-			else if (random.y < glitch_vertical)	{
-				tex.x = mod(tex.x + random.y * inputDelay.a, 1.0);
-			}
-			//	apply small random zoom too
-			//float level = inputDelay.a * random.x / 5.0 + 0.9;
-			//tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-		}
-		
-		if (pixelBuffer.a < 1.0)	{
-			color.a = IMG_NORM_PIXEL(inputImage, tex).a;
-		}
-		else if (pixelBuffer.a < 2.0)	{
-			color.a = IMG_NORM_PIXEL(buffer1, tex).a;
-		}
-		else if (pixelBuffer.a < 3.0)	{
-			color.a = IMG_NORM_PIXEL(buffer2, tex).a;
-		}
-		else if (pixelBuffer.a < 4.0)	{
-			color.a = IMG_NORM_PIXEL(buffer3, tex).a;
-		}
-		else if (pixelBuffer.a < 5.0)	{
-			color.a = IMG_NORM_PIXEL(buffer4, tex).a;
-		}
-		else if (pixelBuffer.a < 6.0)	{
-			color.a = IMG_NORM_PIXEL(buffer5, tex).a;
-		}
-		else if (pixelBuffer.a < 7.0)	{
-			color.a = IMG_NORM_PIXEL(buffer6, tex).a;
-		}
-		else if (pixelBuffer.a < 8.0)	{
-			color.a = IMG_NORM_PIXEL(buffer7, tex).a;
-		}
-		else	{
-			color.a = IMG_NORM_PIXEL(buffer8, tex).a;
-		}
+    float scale = latticeScale;
+    vec3 cellP  = p / scale;
+    vec3 cellId = floor(cellP + 0.5);
+    vec3 q      = (cellP - cellId) * scale;
 
-		gl_FragColor = color;
-	}
+    float cs  = crystalSize * (1.0 + audioBass * audioPulse * 0.09);
+    float cry = sdOct(q, cs);
+    float rod = sdRods(q, cs * 0.07);
+    float d   = min(cry, rod);
+
+    float id  = hash3(cellId);
+    return vec2(d, id);
+}
+
+vec3 getNormal(vec3 p) {
+    vec2 e = vec2(0.001, 0.0);
+    return normalize(vec3(
+        scene(p+e.xyy).x - scene(p-e.xyy).x,
+        scene(p+e.yxy).x - scene(p-e.yxy).x,
+        scene(p+e.yyx).x - scene(p-e.yyx).x
+    ));
+}
+
+// 5-hue fully saturated palette
+vec3 crystalColor(float id) {
+    int ci = int(id * 4.999);
+    if (ci == 0) return vec3(0.45, 0.0,  1.0);  // violet
+    if (ci == 1) return vec3(0.0,  1.0,  0.85); // cyan
+    if (ci == 2) return vec3(1.0,  0.05, 0.6);  // magenta
+    if (ci == 3) return vec3(1.0,  0.75, 0.0);  // gold
+               return vec3(0.15, 1.0,  0.2);   // green
+}
+
+void main() {
+    vec2 uv = (gl_FragCoord.xy - RENDERSIZE*0.5) / min(RENDERSIZE.x, RENDERSIZE.y);
+
+    // Slowly rotating orbit camera
+    float camA  = TIME * 0.09;
+    float camEl = sin(TIME * 0.13) * 0.35;
+    vec3 ro = vec3(sin(camA)*cos(camEl), sin(camEl), cos(camA)*cos(camEl)) * 2.2;
+    vec3 ta = ro + vec3(sin(camA+0.25), 0.0, cos(camA+0.25)) * 2.5;
+    vec3 fw = normalize(ta - ro);
+    vec3 ri = normalize(cross(fw, vec3(0.0, 1.0, 0.0)));
+    vec3 up = cross(ri, fw);
+    vec3 rd = normalize(uv.x*ri + uv.y*up + 1.5*fw);
+
+    // Dark void background
+    vec3 bg = vec3(0.0, 0.0, 0.007);
+
+    float t = 0.02; float hitId = -1.0;
+    for (int i = 0; i < 64; i++) {
+        vec2 res = scene(ro + rd*t);
+        if (res.x < 0.002) { hitId = res.y; break; }
+        if (t > 12.0) break;
+        t += res.x * 0.75;
+    }
+
+    vec3 col = bg;
+    if (hitId >= 0.0) {
+        vec3 p  = ro + rd*t;
+        vec3 n  = getNormal(p);
+        vec3 L1 = normalize(vec3(1.0, 1.5, 0.3));
+        vec3 L2 = normalize(vec3(-0.5, 0.4, -0.8));
+
+        vec3 basecol = crystalColor(hitId);
+
+        float diff = max(dot(n, L1), 0.0)*0.55 + max(dot(n, L2), 0.0)*0.25 + 0.2;
+        float spec = pow(max(dot(reflect(-L1, n), -rd), 0.0), 48.0)
+                   + pow(max(dot(reflect(-L2, n), -rd), 0.0), 32.0) * 0.5;
+        float fres = pow(1.0 - max(dot(n, -rd), 0.0), 4.0);
+
+        col  = basecol * diff * hdrPeak;
+        col += vec3(1.0) * spec * hdrPeak;       // white HDR spec
+        col += basecol   * fres * hdrPeak * 0.9; // colored HDR fresnel rim
+
+        // Depth fog towards void
+        col = mix(col, bg, clamp(t / 12.0, 0.0, 1.0) * 0.4);
+    }
+
+    gl_FragColor = vec4(col, 1.0);
 }
