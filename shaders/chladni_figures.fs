@@ -1,15 +1,16 @@
 /*{
-  "CATEGORIES": ["Generator", "Audio Reactive", "Geometric"],
-  "DESCRIPTION": "Sand on a vibrating plate. Audio frequencies sculpt classic Chladni nodal lines into living constellations. 1787 plate physics rendered as light.",
+  "CATEGORIES": ["Generator", "Audio Reactive", "Geometric", "3D"],
+  "DESCRIPTION": "Chladni Figures 3D — sand on a vibrating plate, raymarched with bump-mapped nodal ridges and Blinn-Phong lighting. Audio frequencies sculpt the standing wave modes in real time.",
   "INPUTS": [
-    {"NAME":"baseN","TYPE":"float","MIN":1.0,"MAX":12.0,"DEFAULT":3.0},
-    {"NAME":"baseM","TYPE":"float","MIN":1.0,"MAX":12.0,"DEFAULT":5.0},
-    {"NAME":"audioModeRange","TYPE":"float","MIN":0.0,"MAX":8.0,"DEFAULT":4.0},
-    {"NAME":"lineSharpness","TYPE":"float","MIN":0.001,"MAX":0.1,"DEFAULT":0.02},
-    {"NAME":"jitter","TYPE":"float","MIN":0.0,"MAX":0.05,"DEFAULT":0.005},
-    {"NAME":"sandColor","TYPE":"color","DEFAULT":[0.95,0.88,0.7,1.0]},
-    {"NAME":"plateColor","TYPE":"color","DEFAULT":[0.06,0.05,0.05,1.0]},
-    {"NAME":"inputTex","TYPE":"image"}
+    {"NAME":"baseN","LABEL":"Mode N","TYPE":"float","MIN":1.0,"MAX":12.0,"DEFAULT":3.0},
+    {"NAME":"baseM","LABEL":"Mode M","TYPE":"float","MIN":1.0,"MAX":12.0,"DEFAULT":5.0},
+    {"NAME":"audioModeRange","LABEL":"Audio Mode Range","TYPE":"float","MIN":0.0,"MAX":8.0,"DEFAULT":4.0},
+    {"NAME":"lineSharpness","LABEL":"Line Sharpness","TYPE":"float","MIN":0.001,"MAX":0.1,"DEFAULT":0.02},
+    {"NAME":"jitter","LABEL":"Sand Grain","TYPE":"float","MIN":0.0,"MAX":0.05,"DEFAULT":0.005},
+    {"NAME":"audioReact","LABEL":"Audio React","TYPE":"float","MIN":0.0,"MAX":2.0,"DEFAULT":1.0},
+    {"NAME":"sandColor","LABEL":"Sand","TYPE":"color","DEFAULT":[0.95,0.88,0.7,1.0]},
+    {"NAME":"plateColor","LABEL":"Plate","TYPE":"color","DEFAULT":[0.06,0.05,0.05,1.0]},
+    {"NAME":"inputTex","LABEL":"Plate Texture","TYPE":"image"}
   ]
 }*/
 
@@ -17,56 +18,122 @@
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
+float sdBox(vec3 p, vec3 b) {
+    vec3 d = abs(p) - b;
+    return length(max(d, 0.0)) + min(max(d.x, max(d.y, d.z)), 0.0);
+}
+
+float chladniF(vec2 q, float n, float m) {
+    return sin(n * PI * q.x) * sin(m * PI * q.y)
+         - sin(m * PI * q.x) * sin(n * PI * q.y);
+}
+
+float sandH(vec2 q, float n, float m, float sharpness) {
+    return smoothstep(sharpness * 2.0, 0.0, abs(chladniF(q, n, m)));
+}
+
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
 
-    // Smooth audio-driven mode evolution. We avoid integer-only floor() jumps
-    // by using float modes — the Chladni equation is well-defined for floats
-    // and produces smooth pattern transitions instead of strobing mode-flips.
-    // Slight TIME drift so the pattern keeps evolving even when audio is flat.
+    float bass = 0.5 + 0.5 * audioBass * audioReact;
+    float lvl  = 0.5 + 0.5 * audioLevel * audioReact;
+
     float n = baseN + audioBass * audioModeRange + sin(TIME * 0.05) * 0.5;
     float m = baseM + audioHigh * audioModeRange + cos(TIME * 0.07) * 0.5;
-    // Degenerate guard: when n == m, the equation collapses to zero everywhere.
     if (abs(n - m) < 0.5) m += 1.0;
 
-    // Per-pixel jitter coupled to audioMid — sand vibrates more at louder mids.
-    vec2 q = uv + (vec2(hash(uv), hash(uv + 1.3)) - 0.5) * jitter * (audioMid + 0.1);
+    // Camera — slow orbit, looking down at the plate
+    float camA = TIME * 0.12;
+    vec3 ro = vec3(sin(camA) * 2.0, 1.8, cos(camA) * 2.0);
+    vec3 fwd = normalize(-ro);
+    vec3 right = normalize(cross(fwd, vec3(0.0, 1.0, 0.0)));
+    vec3 up = cross(right, fwd);
+    vec2 ndc = (uv - 0.5) * vec2(aspect, 1.0);
+    vec3 rd = normalize(fwd + ndc.x * right + ndc.y * up);
 
-    // The Chladni equation for a square plate clamped at edges:
-    //   f(x,y) = sin(nπx)sin(mπy) − sin(mπx)sin(nπy)
-    // Nodal lines are where f ≈ 0 — sand settles there.
-    float f = sin(n * PI * q.x) * sin(m * PI * q.y)
-            - sin(m * PI * q.x) * sin(n * PI * q.y);
+    vec3 plateHalf = vec3(1.0, 0.025, 1.0);
+    vec3 col = vec3(0.005, 0.005, 0.01);
 
-    // Lines: sharp where |f| is small.
-    float line = smoothstep(lineSharpness, 0.0, abs(f));
-
-    // Plate texture — optional inputTex underneath the sand.
-    vec3 plate = plateColor.rgb;
-    if (IMG_SIZE_inputTex.x > 0.0) {
-        plate = mix(plateColor.rgb, texture(inputTex, uv).rgb * 0.4, 0.5);
+    float t = 0.0;
+    bool hit = false;
+    vec3 hitP;
+    for (int i = 0; i < 64; i++) {
+        vec3 p = ro + rd * t;
+        float d = sdBox(p, plateHalf);
+        if (d < 0.001) { hitP = p; hit = true; break; }
+        if (t > 9.0) break;
+        t += max(d * 0.7, 0.002);
     }
 
-    // Sand brightness pulses with audioLevel — louder = brighter sand.
-    float bright = 0.5 + audioLevel * 1.2;
-    vec3 col = mix(plate, sandColor.rgb * bright, line);
+    if (hit) {
+        vec2 plateUV = hitP.xz * 0.5 + 0.5;
 
-    // Soft halo around the nodal lines so they feel like piles, not strokes.
-    float halo = smoothstep(lineSharpness * 4.0, 0.0, abs(f)) - line;
-    col += sandColor.rgb * halo * 0.25 * bright;
+        // Sand grain jitter (audioMid modulates grain)
+        float mids = 0.5 + 0.5 * audioMid * audioReact;
+        vec2 jUV = plateUV + (vec2(hash(plateUV * 37.1), hash(plateUV * 61.3 + 1.7)) - 0.5)
+                           * jitter * (0.8 + mids * 0.5);
 
-    // Surprise: every ~30s a phantom resonance — for ~2s, two extra
-    // overtones beat against the primary, briefly revealing a finer
-    // interference pattern (the plate hits a higher harmonic).
-    {
-        float _ph = fract(TIME / 30.0);
-        float _f  = smoothstep(0.0, 0.10, _ph) * smoothstep(0.40, 0.25, _ph);
-        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
-        float _h = sin(_suv.x * 60.0) * sin(_suv.y * 60.0)
-                 + sin(_suv.x * 47.0 + 1.7) * sin(_suv.y * 47.0 + 0.4);
-        float _harmonic = smoothstep(lineSharpness * 6.0, 0.0, abs(_h));
-        col += sandColor.rgb * _harmonic * _f * 0.4;
+        float sandRaw = sandH(jUV, n, m, lineSharpness);
+        float sandFw = max(fwidth(sandRaw), 0.005);
+        float sandAA = smoothstep(0.5 - sandFw, 0.5 + sandFw, sandRaw);
+
+        // Surface normal via finite differences on SDF
+        vec2 ev = vec2(0.001, 0.0);
+        vec3 N = normalize(vec3(
+            sdBox(hitP + ev.xyy, plateHalf) - sdBox(hitP - ev.xyy, plateHalf),
+            sdBox(hitP + ev.yxy, plateHalf) - sdBox(hitP - ev.yxy, plateHalf),
+            sdBox(hitP + ev.yyx, plateHalf) - sdBox(hitP - ev.yyx, plateHalf)
+        ));
+
+        // Bump map on top face — sand ridges perturb normal
+        if (N.y > 0.5) {
+            float be = 0.004;
+            float hL = sandH(plateUV - vec2(be, 0.0), n, m, lineSharpness);
+            float hR = sandH(plateUV + vec2(be, 0.0), n, m, lineSharpness);
+            float hD = sandH(plateUV - vec2(0.0, be), n, m, lineSharpness);
+            float hU = sandH(plateUV + vec2(0.0, be), n, m, lineSharpness);
+            vec3 bumpN = normalize(vec3((hL - hR) * 0.8, 0.06, (hD - hU) * 0.8));
+            N = normalize(mix(N, bumpN, sandAA * 0.85));
+        }
+
+        // Blinn-Phong lighting
+        vec3 L = normalize(vec3(0.6, 1.0, 0.4));
+        vec3 V = normalize(-rd);
+        vec3 H = normalize(L + V);
+        float diff = max(dot(N, L), 0.0);
+        float spec = pow(max(dot(N, H), 0.0), 32.0);
+
+        // Plate base — optional texture
+        vec3 plateBase = plateColor.rgb;
+        if (IMG_SIZE_inputTex.x > 0.0)
+            plateBase = mix(plateColor.rgb, texture(inputTex, plateUV).rgb * 0.5, 0.5);
+
+        vec3 matCol = mix(plateBase, sandColor.rgb, sandAA);
+        float matSpec = mix(0.30, 0.12, sandAA);
+
+        // Diffuse + HDR specular
+        col = matCol * (0.15 + diff * 0.85);
+        col += vec3(1.0, 0.97, 0.90) * spec * matSpec * 2.5 * (0.8 + bass * 1.2);
+
+        // Sand ridge emissive glow — HDR when audio is loud
+        col += sandColor.rgb * sandAA * 1.2 * (0.5 + lvl);
+
+        // Phantom resonance — higher harmonic every ~30s
+        float ph = fract(TIME / 30.0);
+        float flashF = smoothstep(0.0, 0.10, ph) * smoothstep(0.40, 0.25, ph);
+        float fineF = sin(hitP.x * 60.0) * sin(hitP.z * 60.0)
+                    + sin(hitP.x * 47.0 + 1.7) * sin(hitP.z * 47.0 + 0.4);
+        float harmonic = smoothstep(lineSharpness * 6.0, 0.0, abs(fineF));
+        col += sandColor.rgb * harmonic * flashF * 0.6 * (0.7 + bass * 0.6);
+
+        // Plate edge accent
+        float edgeDist = length(max(abs(hitP.xz) - vec2(0.92), 0.0));
+        col += plateBase * 0.4 * exp(-edgeDist * 22.0);
     }
+
+    // Vignette
+    col *= 1.0 - 0.55 * dot((uv - 0.5), (uv - 0.5)) * 3.0;
 
     gl_FragColor = vec4(col, 1.0);
 }
