@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Cascade - tiled rows with wave offsets",
+  "DESCRIPTION": "Cascade — tiled rows with wave offsets over an expanding radial sunburst background. Warm crimson/orange/gold palette.",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
@@ -11,16 +11,19 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.9, 0.2, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.05, 0.0, 0.0, 1.0] },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.2 },
+    { "NAME": "burstRays", "LABEL": "Burst Rays", "TYPE": "float", "MIN": 6.0, "MAX": 32.0, "DEFAULT": 16.0 },
+    { "NAME": "burstSpeed", "LABEL": "Burst Speed", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.4 },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "audioMod", "LABEL": "Audio Mod", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
 const float PI = 3.14159265;
 const float TWO_PI = 6.28318530;
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
 float charPixel(int ch, float col, float row) {
     if (ch < 0 || ch > 36) return 0.0;
     vec2 uv = vec2(col / 5.0, row / 7.0);
@@ -84,19 +87,50 @@ int charCount() {
     return n > 0 ? n : 1;
 }
 
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
-}
-
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
-// =======================================================================
-// EFFECT: CASCADE - tiled rows with wave offsets
-// =======================================================================
+// ──────────────────────────────────────────────────────────────────────
+// Sunburst radial background — warm crimson/orange/gold, no white mixing
+// ──────────────────────────────────────────────────────────────────────
+vec3 sunburstBg(vec2 uv){
+    float audio = 1.0 + audioLevel * audioMod * 0.5;
+    vec2 center = vec2(0.5, 0.5);
+    vec2 rel = uv - center;
+    float ang = atan(rel.y, rel.x);
+    float r   = length(rel) * 2.0;
 
-vec4 effectCascade(vec2 uv) {
+    float t = TIME * burstSpeed;
+
+    // Rotating rays: alternating bright/dark sectors
+    float rayT = fract((ang / TWO_PI + t * 0.05) * burstRays);
+    float ray = smoothstep(0.5, 0.0, abs(rayT - 0.5));  // bright bands
+
+    // Radial gradient: bright core → deep bg
+    float radial = exp(-r * r * 1.2) * (1.0 + audioBass * audioMod * 0.4);
+
+    // Color: core is orange-white, rays are gold, far field is deep crimson, void bg
+    vec3 coreCol  = vec3(1.0, 0.6,  0.1);  // orange
+    vec3 rayCol   = vec3(1.0, 0.8,  0.0);  // gold
+    vec3 farCol   = vec3(0.4, 0.01, 0.0);  // deep crimson
+    vec3 voidCol  = bgColor.rgb;
+
+    vec3 burst = mix(farCol, coreCol, radial);
+    burst = mix(burst, rayCol, ray * (1.0 - r) * 0.7);
+    burst = mix(voidCol, burst, smoothstep(1.2, 0.0, r));
+
+    // Pulsing concentric rings (HDR)
+    float ringT = fract(r * 3.0 - t * 1.5);
+    float ring = exp(-ringT * ringT * 40.0) * (0.5 - r * 0.3);
+    ring = max(ring, 0.0);
+    burst += vec3(1.0, 0.5, 0.0) * ring * hdrGlow * 0.5 * audio;
+
+    return burst;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Cascade effect
+// ──────────────────────────────────────────────────────────────────────
+float effectCascadeHit(vec2 uv) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
     int numChars = charCount();
     float waveAmount = intensity;
@@ -130,48 +164,42 @@ vec4 effectCascade(vec2 uv) {
             if (ch >= 0 && ch <= 36 && ch != 26) textHit = charPixel(ch, gc, gr);
         }
     }
-
-    bool inv = mod(rowIdx, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
-    return vec4(fc, a);
+    return textHit;
 }
-
-// =======================================================================
-// MAIN
-// =======================================================================
 
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
-    vec4 col = effectCascade(uv);
+
+    float textHit = effectCascadeHit(uv);
+
+    vec3 bg = transparentBg ? bgColor.rgb : sunburstBg(uv);
+    float audio = 1.0 + audioLevel * audioMod * 0.4;
+    vec3 textCol = textColor.rgb * hdrGlow * audio;
+
+    // Alternate row colors: gold vs crimson
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    float rows = floor(mix(5.0, 30.0, density));
+    float rowIdx = floor(uv.y * rows);
+    bool altRow = mod(rowIdx, 2.0) < 1.0;
+    if(altRow) textCol = vec3(0.9, 0.15, 0.0) * hdrGlow * audio;  // crimson row
+
+    vec3 col = mix(bg, textCol, textHit);
+    float a = transparentBg ? textHit : 1.0;
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
-        float t = TIME * 17.0;
-        float band = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
-        float bandNoise = fract(sin(band * 91.7 + t) * 43758.5);
+        float t2 = TIME * 17.0;
+        float band = floor(uv.y * mix(8.0, 40.0, g) + t2 * 3.0);
+        float bandNoise = fract(sin(band * 91.7 + t2) * 43758.5);
         float bandActive = step(1.0 - g * 0.6, bandNoise);
         float shift = (bandNoise - 0.5) * 0.08 * g * bandActive;
         float chromaAmt = g * 0.015;
-        vec2 uvR = uv + vec2(shift + chromaAmt, 0.0);
-        vec2 uvB = uv + vec2(shift - chromaAmt, 0.0);
-        vec2 uvG = uv + vec2(shift, chromaAmt * 0.5);
-        vec4 cR = effectCascade(uvR);
-        vec4 cG = effectCascade(uvG);
-        vec4 cB = effectCascade(uvB);
-        vec4 glitched = vec4(cR.r, cG.g, cB.b, max(max(cR.a, cG.a), cB.a));
-        float scanline = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
-        float blockX = floor(uv.x * 6.0);
-        float blockY = floor(uv.y * 4.0);
-        float blockNoise = fract(sin((blockX + blockY * 7.0) * 113.1 + floor(t * 8.0)) * 43758.5);
-        float dropout = step(1.0 - g * 0.15, blockNoise);
-        glitched.rgb *= scanline;
-        glitched.rgb *= 1.0 - dropout;
+        float tR = effectCascadeHit(uv + vec2(shift + chromaAmt, 0.0));
+        float tG = effectCascadeHit(uv + vec2(shift, chromaAmt * 0.5));
+        float tB = effectCascadeHit(uv + vec2(shift - chromaAmt, 0.0));
+        vec3 glitched = mix(bg, textCol, (tR + tG + tB) / 3.0);
         col = mix(col, glitched, smoothstep(0.0, 0.3, g));
     }
 
-    gl_FragColor = col;
+    gl_FragColor = vec4(col, a);
 }
