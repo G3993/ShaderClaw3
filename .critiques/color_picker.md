@@ -1,18 +1,16 @@
 ## 2026-05-05 (v3)
 **Prior rating:** 0★
-**Approach:** 2D procedural — NEW ANGLE: Gothic rose window (vs v1 3D spectral prism / v2 Fauvism cut-outs)
+**Approach:** 3D raymarch — NEW ANGLE: Gyroid minimal surface flythrough (cinematic) vs v1 3D spectral prism, v2 2D Fauvist biomorphics
 **Critique:**
-1. Reference fidelity: Strong cathedral/gothic stained glass identity with concentric ring structure, lead cames, and jewel-tone palette.
-2. Compositional craft: Radial symmetry with 5-zone layout (hub, inner petals, mid ring, outer ring, frame) gives strong focal center.
-3. Technical execution: fwidth() AA on all came edges; polar decomposition for clean sector geometry; audio modulates HDR brightness.
-4. Liveness: Slow rotation (TIME * rotateSpeed * 0.4) gives meditative motion; sin() transmission pulse adds secondary animation.
-5. Differentiation: Fully 2D jewel-glass aesthetic, warm/cool contrast (amber hub vs cobalt/violet petals), black lead as dominant negative space.
+1. Reference: Gyroid labyrinthine tunnels — strong infinite architectural depth
+2. Composition: Close-up interior flythrough with orbiting camera — tight portrait vs v1 wide prism
+3. Technical: 72-step march on gyroid isovalue SDF (Lipschitz 1.732), fwidth AA on silhouettes
+4. Liveness: Camera orbit + gyroid flow both TIME-driven; audio modulates scale
+5. Differentiation: 3D recursive tunnels vs v1 glass prism, vs v2 flat 2D biomorphics
 **Changes:**
-- Complete rewrite from text-picker utility to standalone rose window generator
-- 5 jewel-tone palette: cobalt, crimson, amber, emerald, violet (no white-mixing)
-- Concentric ring structure with black lead cames via fwidth() AA
-- Slow rotation driven by TIME
-- HDR transmission glow: glass * (1 + transmit) where transmit peaks ~0.35
-- Audio modulates hdrBoost multiplicatively (not gating)
-**HDR peaks reached:** amber hub 2.2×1.4×1.5 = 4.6 peak; crimson ring 2.2 direct; violet 2.2×0.8
+- Full rewrite from image-tint effect to standalone 3D gyroid generator
+- 4-color saturated palette (violet/cyan/magenta/gold), position-based, zero white
+- Black ink silhouettes via grazing-angle darkening (fwidth AA)
+- Audio modulates gyroid scale as modulator
+**HDR peaks reached:** 2.5 (palette × glowPeak default) + 0.35×2.5 specular = ~3.4 peaks
 **Estimated rating:** 4.0★
