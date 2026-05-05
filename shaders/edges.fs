@@ -1,156 +1,111 @@
 /*{
-  "DESCRIPTION": "Electric Storm — forking lightning bolt SDF columns in 3D void. Painterly dramatic lighting, HDR plasma cores.",
+  "DESCRIPTION": "Acid Rain Noir — neon rain streaks over a black city skyline silhouette. Acid green / hot magenta / electric cyan on void black.",
   "CREDIT": "ShaderClaw auto-improve v7",
-  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
+  "CATEGORIES": ["Generator"],
   "INPUTS": [
-    { "NAME": "boltCount",  "LABEL": "Bolt Count",  "TYPE": "float", "DEFAULT": 5.0,  "MIN": 1.0,  "MAX": 8.0 },
-    { "NAME": "branchAmt",  "LABEL": "Branches",    "TYPE": "float", "DEFAULT": 3.0,  "MIN": 0.0,  "MAX": 6.0 },
-    { "NAME": "stormSpeed", "LABEL": "Storm Speed",  "TYPE": "float", "DEFAULT": 0.4,  "MIN": 0.0,  "MAX": 2.0 },
-    { "NAME": "hdrPeak",    "LABEL": "HDR Peak",     "TYPE": "float", "DEFAULT": 2.5,  "MIN": 1.0,  "MAX": 4.0 },
-    { "NAME": "coreColor",  "LABEL": "Core Color",   "TYPE": "color", "DEFAULT": [1.0, 0.95, 0.5, 1.0] },
-    { "NAME": "arcColor",   "LABEL": "Arc Color",    "TYPE": "color", "DEFAULT": [0.2, 0.5, 1.0, 1.0] },
-    { "NAME": "audioMod",   "LABEL": "Audio Mod",    "TYPE": "float", "DEFAULT": 0.8,  "MIN": 0.0,  "MAX": 2.0 }
+    { "NAME": "rainSpeed",  "LABEL": "Rain Speed",    "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.1, "MAX": 2.0 },
+    { "NAME": "neonGlow",   "LABEL": "Neon Glow",     "TYPE": "float", "DEFAULT": 2.5,  "MIN": 1.0, "MAX": 4.0 },
+    { "NAME": "skylineH",   "LABEL": "Skyline Height","TYPE": "float", "DEFAULT": 0.38, "MIN": 0.1, "MAX": 0.7 },
+    { "NAME": "audioReact", "LABEL": "Audio",         "TYPE": "float", "DEFAULT": 0.8,  "MIN": 0.0, "MAX": 2.0 }
   ]
 }*/
 
-#define MAX_STEPS 72
-#define SURF_DIST 0.003
-#define MAX_DIST  12.0
-#define PI 3.14159265
-
-float hash11(float n) { return fract(sin(n * 127.1) * 43758.5453); }
-
-// Capsule (bolt segment) SDF
-float sdCapsule(vec3 p, vec3 a, vec3 b, float r) {
-    vec3 ab = b - a;
-    float t = clamp(dot(p - a, ab) / dot(ab, ab), 0.0, 1.0);
-    return length(p - a - ab * t) - r;
+float hash11(float n) {
+    return fract(sin(n * 127.1) * 43758.5453);
 }
 
-// Jagged lightning bolt: 8 segments with random jags
-float boltSDF(vec3 p, float seed, float t, float radius) {
-    vec3 a = vec3((hash11(seed) - 0.5) * 1.6, 2.2, (hash11(seed + 1.0) - 0.5) * 1.0);
-    float d = MAX_DIST;
-    for (int i = 0; i < 8; i++) {
-        float fi = float(i);
-        float step = 4.4 / 8.0;
-        float jx = (hash11(seed + fi * 3.7 + t * 0.3) - 0.5) * 0.55;
-        float jz = (hash11(seed + fi * 5.1 + t * 0.3) - 0.5) * 0.35;
-        vec3 b = a + vec3(jx, -step, jz);
-        d = min(d, sdCapsule(p, a, b, radius));
-        a = b;
-    }
-    return d;
+float hash21(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 }
 
-// Side branches off main bolt
-float branchSDF(vec3 p, float seed, float t, float radius) {
-    float d = MAX_DIST;
-    float nb = floor(clamp(branchAmt, 0.0, 6.0));
-    for (int b = 0; b < 6; b++) {
-        if (float(b) >= nb) break;
-        float fb = float(b);
-        float brSeed = seed + fb * 17.3;
-        float sy = 1.8 - fb * 0.55;
-        vec3 ba = vec3((hash11(brSeed) - 0.5) * 1.0, sy, (hash11(brSeed + 1.0) - 0.5) * 0.6);
-        for (int i = 0; i < 4; i++) {
-            float fi = float(i);
-            float jx = (hash11(brSeed + fi * 4.3 + t * 0.25) - 0.5) * 0.5;
-            float jy = -0.3 - hash11(brSeed + fi * 2.1) * 0.2;
-            float jz = (hash11(brSeed + fi * 6.7 + t * 0.25) - 0.5) * 0.4;
-            vec3 bb = ba + vec3(jx, jy, jz);
-            d = min(d, sdCapsule(p, ba, bb, radius * 0.55));
-            ba = bb;
-        }
-    }
-    return d;
-}
-
-float scene(vec3 p, float t) {
-    float d = MAX_DIST;
-    float nb = floor(clamp(boltCount, 1.0, 8.0));
-    for (int i = 0; i < 8; i++) {
-        if (float(i) >= nb) break;
-        float seed = float(i) * 23.7 + floor(t * stormSpeed * 0.5) * 3.1;
-        d = min(d, boltSDF(p, seed, t, 0.025));
-        d = min(d, branchSDF(p, seed, t, 0.025));
-    }
-    return d;
-}
-
-vec3 calcNormal(vec3 p, float t) {
-    vec2 e = vec2(0.001, 0.0);
-    return normalize(vec3(
-        scene(p + e.xyy, t) - scene(p - e.xyy, t),
-        scene(p + e.yxy, t) - scene(p - e.yxy, t),
-        scene(p + e.yyx, t) - scene(p - e.yyx, t)
-    ));
+// Building height at x (normalized 0..1 screen x), returns 0..1
+float buildH(float x) {
+    float cell = floor(x * 22.0);
+    return 0.12 + hash11(cell * 7.31) * 0.88;
 }
 
 void main() {
-    vec2 uv = (gl_FragCoord.xy / RENDERSIZE.xy) * 2.0 - 1.0;
-    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
+    vec2 uv = isf_FragNormCoord;
+    float aspect = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
 
-    float audio = 1.0 + audioLevel * audioMod + audioBass * audioMod * 0.6;
-    float t = TIME;
+    // Audio: boosts streak length and brightness
+    float audio = 1.0 + audioLevel * audioReact + audioBass * audioReact * 0.4;
 
-    // Camera looks up into the storm from below-front
-    float camSwing = sin(t * stormSpeed * 0.2) * 0.3;
-    vec3 ro = vec3(camSwing, -1.8, 4.5);
-    vec3 target = vec3(0.0, 0.5, 0.0);
-    vec3 fwd = normalize(target - ro);
-    vec3 rgt = normalize(cross(vec3(0.0, 1.0, 0.0), fwd));
-    vec3 upV = cross(fwd, rgt);
-    vec3 rd  = normalize(fwd + uv.x * rgt * 0.85 + uv.y * upV * 0.85);
+    // ── Sky gradient: near-black blue-violet ───────────────────────
+    float skyT = uv.y;
+    vec3 col = mix(vec3(0.0, 0.0, 0.03), vec3(0.05, 0.0, 0.10), skyT);
 
-    // Dark storm sky background with subtle cloud texture
-    float skyGrad = smoothstep(-0.3, 1.0, uv.y * 0.5 + 0.5);
-    vec3 col = mix(vec3(0.01, 0.01, 0.03), vec3(0.03, 0.02, 0.08), skyGrad);
-    float cx = sin(uv.x * 3.1 + t * 0.07) * sin(uv.y * 2.3 - t * 0.05);
-    col += vec3(0.02, 0.015, 0.04) * smoothstep(-0.2, 0.5, cx);
+    // ── Rain streaks (128) ────────────────────────────────────
+    for (int i = 0; i < 128; i++) {
+        float fi = float(i);
 
-    // Raymarch
-    float tHit = -1.0;
-    float dist = 0.05;
-    for (int i = 0; i < MAX_STEPS; i++) {
-        float d = scene(ro + rd * dist, t);
-        if (d < SURF_DIST) { tHit = dist; break; }
-        if (dist > MAX_DIST) break;
-        dist += max(d * 0.6, 0.005);
+        float sx   = hash11(fi * 1.313);
+        float spd  = rainSpeed * (0.4 + hash11(fi * 2.73) * 0.8) * audio;
+        float yPos = fract(hash11(fi * 5.17) + TIME * spd);
+        float len  = (0.07 + hash11(fi * 3.91) * 0.12) * audio;
+
+        // Color cycle based on hash
+        float hc = hash11(fi * 6.19);
+        vec3 streakCol;
+        if (hc < 0.33) {
+            streakCol = vec3(0.2, 1.0, 0.0);   // acid green
+        } else if (hc < 0.66) {
+            streakCol = vec3(1.0, 0.0, 0.8);   // hot magenta
+        } else {
+            streakCol = vec3(0.0, 0.8, 1.0);   // electric cyan
+        }
+
+        // X distance: aspect-corrected, sub-pixel AA
+        float dx = (uv.x - sx) * aspect;
+        float xMask = smoothstep(0.0014, 0.0, abs(dx));
+
+        // Vertical: streak falls downward. yPos=0 → top, increases to bottom
+        float topY = 1.0 - yPos;
+        float botY = topY - len;
+
+        // Only the pixels inside the streak band
+        float inStreak = step(botY, uv.y) * step(uv.y, topY);
+
+        // Fade envelope: sharp at top (tip), full brightness near bottom
+        float fadeEnv = 1.0 - clamp((uv.y - botY) / max(len, 0.001), 0.0, 1.0);
+        fadeEnv = fadeEnv * fadeEnv;  // sharper tip
+
+        float intensity = xMask * inStreak * fadeEnv * neonGlow;
+
+        // Only draw streaks in the sky (above building silhouette)
+        float bh = buildH(uv.x) * skylineH;
+        float skyMask = step(bh, uv.y);
+
+        col += streakCol * intensity * skyMask;
     }
 
-    if (tHit > 0.0) {
-        vec3 p = ro + rd * tHit;
-        vec3 n = calcNormal(p, t);
-
-        // Plasma core: volt yellow → white hot
-        float core = pow(max(0.0, dot(-rd, n)), 1.2);
-        vec3 coreC = coreColor.rgb * hdrPeak * audio;
-
-        // Arc glow: electric blue corona
-        float arcGlow = pow(max(0.0, 1.0 - max(0.0, dot(-rd, n))), 3.0);
-        vec3 arcC = arcColor.rgb * arcGlow * hdrPeak * 0.7 * audio;
-
-        // Black ink silhouette at thin angles
-        float ink = smoothstep(0.0, 0.25, core);
-
-        col = (coreC * core + arcC) * ink;
-
-        float fw = fwidth(scene(p, t));
-        float aa = smoothstep(fw * 2.0, 0.0, abs(scene(p, t)));
-        col *= aa;
+    // ── Wet ground neon reflections ──────────────────────────────
+    float groundLine = skylineH * 0.28;
+    if (uv.y < groundLine) {
+        float shimmer = sin(uv.x * 70.0 + TIME * 7.0) * 0.5 + 0.5;
+        float groundT = 1.0 - uv.y / max(groundLine, 0.001);
+        groundT = groundT * groundT;
+        float magGlow  = shimmer * groundT * 0.6;
+        float cyanGlow = (1.0 - shimmer) * groundT * 0.5;
+        col += vec3(1.0, 0.0, 0.8) * magGlow  * neonGlow * 0.6;
+        col += vec3(0.0, 0.8, 1.0) * cyanGlow * neonGlow * 0.6;
     }
 
-    // Ambient glow from bolt positions bleeding into bg
-    float nb = floor(clamp(boltCount, 1.0, 8.0));
-    for (int i = 0; i < 8; i++) {
-        if (float(i) >= nb) break;
-        float seed = float(i) * 23.7 + floor(t * stormSpeed * 0.5) * 3.1;
-        float bx = (hash11(seed) - 0.5) * 1.6 / 4.5;
-        float glowDist = abs(uv.x - bx) * 3.0 + abs(uv.y - 0.2) * 2.0;
-        float ambGlow = exp(-glowDist * glowDist * 4.0);
-        col += arcColor.rgb * ambGlow * hdrPeak * 0.35 * audio;
+    // ── Building silhouettes ───────────────────────────────────
+    float bh = buildH(uv.x) * skylineH;
+    if (uv.y < bh) {
+        // Solid black building fill
+        col = vec3(0.0);
+
+        // Dim amber window glow via 2D grid hash
+        float winX = floor(uv.x * 80.0);
+        float winY = floor(uv.y * 60.0);
+        float winH = hash21(vec2(winX, winY));
+        if (winH > 0.78) {
+            float winBright = (winH - 0.78) / 0.22;
+            col += vec3(0.9, 0.65, 0.1) * winBright * winBright * 0.25;
+        }
     }
 
-    FragColor = vec4(col, 1.0);
+    gl_FragColor = vec4(col, 1.0);
 }
