@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Spacy - perspective tunnel rows",
+  "DESCRIPTION": "Spacy — perspective tunnel rows over a crystal hex-lattice background (cool ice-blue geometric depth illusion)",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Spacy","Spacy Bridge","Spacy Whitney","Spacy Recede"], "DEFAULT": 0 },
@@ -12,16 +12,74 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.2 },
+    { "NAME": "audioMod", "LABEL": "Audio Mod", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.8 },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
 const float PI = 3.14159265;
 const float TWO_PI = 6.28318530;
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
+float hash11(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+float hash21(vec2 p)  { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+
+// Hexagonal grid coordinates
+vec2 hexToAxial(vec2 p) {
+    float q = (2.0/3.0) * p.x;
+    float r = (-1.0/3.0) * p.x + (sqrt(3.0)/3.0) * p.y;
+    return vec2(q, r);
+}
+vec2 axialRound(vec2 ax) {
+    float xg = ax.x, yg = ax.y, zg = -ax.x - ax.y;
+    float rx = round(xg), ry = round(yg), rz = round(zg);
+    float dx = abs(rx - xg), dy = abs(ry - yg), dz = abs(rz - zg);
+    if (dx > dy && dx > dz) rx = -ry - rz;
+    else if (dy > dz)       ry = -rx - rz;
+    return vec2(rx, ry);
+}
+
+// Crystal hex-lattice background
+// Palette: void [0,0,0.02], ice-blue [0.1,0.5,1.0], frost [0.6,0.85,1.0]*0.12, white HDR spec
+vec3 crystalLatticeBg(vec2 uv, float audioBoost) {
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    vec2 p = vec2(uv.x * aspect, uv.y);
+
+    float t = TIME * 0.2;
+    float hexScale = 8.0;
+    vec2 hp = p * hexScale;
+    vec2 ax = hexToAxial(hp);
+    vec2 hexId = axialRound(ax);
+
+    // Per-hex properties
+    float h1 = hash21(hexId);
+    float h2 = hash21(hexId + 7.3);
+
+    // Breathing depth illusion — each hex pulses at a slightly different phase
+    float depth = 0.3 + 0.7 * h1;
+    float pulse = sin(t * (0.4 + h2 * 0.6) + h1 * TWO_PI) * 0.5 + 0.5;
+    float luminance = depth * pulse * 0.22;  // subtle, stays dark behind text
+
+    // Edge of each hex brightens (wireframe effect)
+    vec2 localAx = ax - hexId;
+    float qr = abs(localAx.x), rr = abs(localAx.y), sr = abs(localAx.x + localAx.y);
+    float edgeDist = max(qr, max(rr, sr));  // distance from hex center in axial coords
+    float edge = smoothstep(0.42, 0.50, edgeDist);  // edge ring
+
+    // Ice-blue color with depth tint
+    vec3 frostColor = mix(vec3(0.05, 0.30, 0.80), vec3(0.50, 0.80, 1.0), depth);
+    vec3 col = frostColor * luminance;
+    col += vec3(0.4, 0.7, 1.0) * edge * 0.18 * (0.7 + pulse * 0.3);
+
+    // Occasional bright hex face (audio-reactive "active crystal")
+    float active = step(0.88, h2 + audioBass * audioMod * 0.15);
+    float activeGlow = active * pulse * audioBoost * 0.15;
+    col += vec3(0.2, 0.7, 1.0) * activeGlow;
+
+    return col;
+}
+
+// Atlas-only font engine
 float charPixel(int ch, float col, float row) {
     if (ch < 0 || ch > 36) return 0.0;
     vec2 uv = vec2(col / 5.0, row / 7.0);
@@ -85,16 +143,8 @@ int charCount() {
     return n > 0 ? n : 1;
 }
 
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
-}
-
-float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
-
 // =======================================================================
-// EFFECT: SPACY - perspective tunnel rows
+// EFFECT: SPACY — perspective rows over crystal hex lattice
 // =======================================================================
 
 vec4 effectSpacy(vec2 uv, int sub) {
@@ -102,6 +152,8 @@ vec4 effectSpacy(vec2 uv, int sub) {
     int numChars = charCount();
     float rws = floor(mix(3.0, 20.0, density));
     float sR = mix(0.5, 1.5, intensity);
+
+    float audioBoost = 1.0 + audioBass * audioMod * 0.5;
 
     float minS=0.3, maxS=2.5, track=0.15, scM=1.0;
     bool mirror = false;
@@ -145,12 +197,27 @@ vec4 effectSpacy(vec2 uv, int sub) {
         }
     }
 
-    bool inv = mod(ri, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
+    // Crystal hex lattice background
+    vec3 bg = crystalLatticeBg(uv, audioBoost);
+
+    // Warm gold-amber text against cold ice lattice — maximum chromatic contrast
+    // Even rows: gold [1.0, 0.85, 0.0], odd rows: orange [1.0, 0.45, 0.0]
+    float isOdd = mod(ri, 2.0);
+    vec3 textCol = isOdd > 0.5 ? vec3(1.0, 0.45, 0.0) : vec3(1.0, 0.85, 0.0);
+    textCol *= hdrGlow * (1.0 + audioLevel * audioMod);
+
+    // Depth dimming: far rows dimmer
+    float depthDim = mix(0.55, 1.0, dc);
+    textCol *= depthDim;
+
+    // AA + silhouette
+    float aa = fwidth(textHit) * 2.0;
+    float mask = smoothstep(0.5 - aa, 0.5 + aa, textHit);
+    vec3 inkBg = bg * (1.0 - mask * 0.93);
+    vec3 fc = inkBg + textCol * mask;
+
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
+    if (transparentBg) { a = mask; fc = textCol; }
     return vec4(fc, a);
 }
 
