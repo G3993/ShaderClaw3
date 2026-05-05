@@ -1,3 +1,25 @@
+## 2026-05-05 (v7)
+**Prior rating:** 0.0★
+**Approach:** 3D raymarch — NEW ANGLE: plasma tori (neon/hot) vs prior Arctic Shard (ice/cold); different SDF primitive, different lighting, different palette
+**Critique:**
+1. Reference fidelity: v1 Arctic Shard was ice crystals — strong but cold; exhausts the geometric crystal vocabulary.
+2. Compositional craft: Static ring of shards → dynamic orbiting tori at varied radii and tilts.
+3. Technical execution: Torus SDF with tilted + spinning individual planes; plasma tube-radius oscillation via sin.
+4. Liveness: Per-torus orbital spin + plasma frequency pulse + audio modulation.
+5. Differentiation: Hot neon palette (magenta→cyan→gold→green→violet) vs cold blue ice — opposite thermal metaphor.
+**Changes:**
+- Full rewrite: "Plasma Torus Array" — 8 configurable tori, 64-step raymarch
+- Torus SDF with individually tilted orbital planes and spin rates
+- Plasma tube radius oscillates with torus angle × TIME (breathing plasma look)
+- HSV hue cycle across tori: magenta→cyan→gold→green→violet (fully saturated)
+- White-hot core at perpendicular-to-camera via dot product mix
+- Black ink silhouette edge at glancing angles
+- Ambient halo bleed from each torus orbit into dark void background
+- Audio modulates hdrPeak and amplitude
+- Camera orbits array slowly on a wide arc with height bob
+**HDR peaks reached:** white-hot torus core 2.8+, plasma color 2.8, halo bleed 0.85
+**Estimated rating:** 4.0★
+
 ## 2026-05-05
 **Prior rating:** 0.0★
 **Approach:** 3D raymarch
