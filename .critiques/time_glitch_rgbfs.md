@@ -19,3 +19,24 @@
 - audioMod modulates displacement and brightness
 **HDR peaks reached:** per-channel hdrBoost * diffuse = 2.0; white spec adds ~2.5
 **Estimated rating:** 4.0★
+
+## 2026-05-05
+**Prior rating:** 0.0★
+**Approach:** 2D Plasma Storm (domain-warped clouds + fork lightning)
+**Critique:**
+1. Reference fidelity: Complete rewrite — no usable reference; original required inputImage and produced nothing standalone.
+2. Compositional craft: Double domain-warp FBM creates turbulent cloud masses with natural variation; fork lightning with branches gives strong vertical focal elements.
+3. Technical execution: Single-pass procedural generator; boltDist uses 16-segment piecewise-linear main bolt + 8-segment branch; plasma uses two-level domain warp with aspect correction.
+4. Liveness: TIME-driven plasma drift (speed param); lightning flashes at 3 Hz with hash-gated visibility; audioBass swells turbulence, audioMid boosts lightning appearance rate.
+5. Differentiation: Void-black / electric violet / hot cyan / gold / white-hot palette is distinctive; lightning fork geometry gives kinetic vertical structure against churning plasma.
+**Changes:**
+- Full rewrite as "Plasma Storm" — single-pass procedural generator
+- Double domain-warp FBM: q = fbm(p), r = fbm(p + turb*q), plasma = fbm(p + turb*r)
+- Plasma palette: void black → electric violet (2.5×) → hot cyan (2.75×) → gold (3.125×) → white-hot (3.625×)
+- Fork lightning: 16-segment main bolt (top→bottom) + 8-segment branch, hash-seeded piecewise-linear path
+- Lightning glow: white-hot core 4.5×, violet inner 3.5×, cyan outer 2.0×
+- Black ink crush: smoothstep(0.04, 0.14, plasma) ensures void-black gaps
+- Audio: audioBass modulates turbulence warp intensity; audioMid raises lightning appearance rate
+- lightningRate param controls flash duty cycle; boltCount controls simultaneous bolts
+**HDR peaks reached:** plasma white-hot 3.625, lightning core 4.5, lightning violet 3.5, lightning cyan 2.0
+**Estimated rating:** 4.5★
