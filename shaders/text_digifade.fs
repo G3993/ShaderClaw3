@@ -9,9 +9,9 @@
     { "NAME": "intensity", "LABEL": "Glitch", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Dissolve", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.5, 0.9, 1.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.01, 0.08, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
@@ -89,6 +89,51 @@ float sampleChar(int ch, vec2 uv) {
 }
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+float hash11(float n) { return fract(sin(n * 127.1 + 3.141) * 43758.5453); }
+float hash21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+
+// =======================================================================
+// BACKGROUND: ARCTIC BLIZZARD STATION
+// Falling snow particles on deep indigo-navy arctic night sky
+// =======================================================================
+
+vec3 blizzard(vec2 uv) {
+    // Deep indigo-navy gradient background (bottom = slightly lighter)
+    float gradY = uv.y;
+    vec3 bg = mix(vec3(0.0, 0.02, 0.12), vec3(0.0, 0.01, 0.08), gradY);
+
+    // Ice mist layer: soft noise in indigo-white at low opacity
+    float mist1 = hash21(uv * 8.3 + vec2(TIME * 0.05, 0.0));
+    float mist2 = hash21(uv * 4.7 + vec2(0.0, TIME * 0.04));
+    float mist = (mist1 * 0.5 + mist2 * 0.5);
+    bg += vec3(0.2, 0.3, 0.6) * mist * 0.07;
+
+    // 80 snow particles
+    vec3 snow = vec3(0.0);
+    for (float i = 0.0; i < 80.0; i += 1.0) {
+        float fi = i;
+        // Hash-based base X position
+        float bx = hash11(fi * 1.31);
+        // Fall speed varies per particle
+        float fallSpeed = 0.2 + hash11(fi * 2.73) * 0.3;
+        // Vertical position: falls downward with fract wrap
+        float sy = fract(hash11(fi * 5.17) + TIME * fallSpeed);
+        // Wind drift: horizontal sine displacement
+        float windDrift = sin(sy * 8.0 + TIME * 1.5) * 0.03;
+        float sx = bx + windDrift;
+        // Wrap X into [0,1]
+        sx = fract(sx);
+
+        // Snow particle: small white dot
+        float dist = length(uv - vec2(sx, sy));
+        float particle = smoothstep(0.005, 0.0, dist);
+        // Slightly vary brightness for depth
+        float brightness = 0.8 + hash11(fi * 7.11) * 0.2;
+        snow += vec3(brightness, brightness + 0.05, brightness + 0.1) * particle * 1.8;
+    }
+
+    return bg + snow;
+}
 
 // =======================================================================
 // EFFECT: DIGIFADE - glitch dissolve
@@ -153,9 +198,19 @@ vec4 effectDigifade(vec2 uv, int sub) {
         }
     }
 
-    vec3 fc = mix(bgColor.rgb, textColor.rgb, textHit);
+    vec3 fc;
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
+
+    if (transparentBg) {
+        a = textHit;
+        fc = textColor.rgb * 2.5;
+    } else {
+        vec3 bg = blizzard(uv);
+        // Text: ice blue HDR core + faint ice-blue halo
+        vec3 textHDR = textColor.rgb * 2.5 + vec3(0.3, 0.7, 1.0) * 0.8 * textHit;
+        fc = mix(bg, textHDR, textHit);
+    }
+
     return vec4(fc, a);
 }
 
