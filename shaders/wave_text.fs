@@ -119,6 +119,7 @@ void main() {
     // Accumulate text hits
     float mainHit = 0.0;
     float shadowHit = 0.0;
+    float hitCharIdx = 0.0;
 
     // Shadow offset in UV space
     vec2 shadowOff = vec2(0.005, -0.005);
@@ -152,7 +153,7 @@ void main() {
 
         if (mainCellUV.x >= 0.0 && mainCellUV.x <= 1.0 && mainCellUV.y >= 0.0 && mainCellUV.y <= 1.0) {
             float px = sampleChar(ch, mainCellUV);
-            mainHit = max(mainHit, px);
+            if (px > mainHit) { mainHit = px; hitCharIdx = float(i); }
         }
 
         // --- Shadow (offset behind main text) ---
@@ -180,18 +181,20 @@ void main() {
 
     vec4 result = bg;
 
-    // Shadow layer: dark color at 30% opacity, behind main text
-    if (shadowHit > 0.5) {
-        vec4 shadColor = vec4(0.0, 0.0, 0.0, 0.3);
-        result = vec4(
-            mix(result.rgb, shadColor.rgb, shadColor.a),
-            result.a + shadColor.a * (1.0 - result.a)
-        );
+    // Shadow layer: solid black ink for crisp contrast
+    if (shadowHit > 0.5 && mainHit < 0.5) {
+        result = vec4(vec3(0.0), transparentBg ? 0.9 : 1.0);
     }
 
-    // Main text layer on top
+    // Main text: per-char saturated HDR color cycling with wave phase
     if (mainHit > 0.5) {
-        result = vec4(textColor.rgb, textColor.a);
+        float hue = fract(hitCharIdx * 0.137 + TIME * speed * 0.05);
+        vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
+        vec3 hp = abs(fract(hue + K.xyz) * 6.0 - K.www);
+        // Blend with textColor if user set one, otherwise pure rainbow
+        float tLum = dot(textColor.rgb, vec3(0.333));
+        vec3 charCol = clamp(hp - K.xxx, 0.0, 1.0) * mix(2.5, tLum * 2.5, 0.4);
+        result = vec4(charCol, textColor.a);
     }
 
     gl_FragColor = result;
