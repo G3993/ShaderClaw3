@@ -14,7 +14,9 @@
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
     { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.0 },
+    { "NAME": "audioMod", "LABEL": "Audio Mod", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
@@ -94,6 +96,68 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
+// BACKGROUND: WORMHOLE VORTEX
+// Centered geometric singularity — twisted radial rings, violet/gold palette.
+// Completely different from starfield (no dots) — pure geometric topology.
+// =======================================================================
+
+vec3 generateBackground(vec2 uv) {
+    vec2  center = vec2(0.5, 0.5);
+    vec2  d      = uv - center;
+    float r      = length(d);
+    float theta  = atan(d.y, d.x);
+
+    // Warp: theta twisted inward — faster twist near singularity
+    float twist  = TIME * 0.4 + 0.3 / max(r, 0.01);
+    float thetaW = theta + twist;
+
+    // Radial ring pattern: pulses outward over TIME
+    float ringPhase = fract(r * 8.0 - TIME * 0.5);
+    float ringEdge  = abs(ringPhase - 0.5) * 2.0;  // 0 at ring center, 1 at edge
+
+    // Ring sharpness
+    float ring = pow(max(1.0 - ringEdge, 0.0), 3.5);
+
+    // Angular modulation: slight petal structure from the twist
+    float petal = 0.5 + 0.5 * sin(thetaW * 3.0 + TIME * 0.6);
+    ring = clamp(ring + petal * 0.15 * ring, 0.0, 1.0);
+
+    // Edge flash at ring peak (thin crisp white-hot accent)
+    float edgeFlash = smoothstep(0.04, 0.0, abs(ringPhase - 0.5)) * smoothstep(0.0, 0.6, r);
+
+    // Radial mask: void at center and far edge, bright mid-zone
+    float radialMask = smoothstep(0.02, 0.18, r) * smoothstep(0.60, 0.35, r);
+
+    // Color ramp: center black -> violet -> gold -> outer black
+    float rNorm = clamp(r / 0.5, 0.0, 1.0);
+    vec3 cBlack  = vec3(0.0, 0.0, 0.0);
+    vec3 cViolet = vec3(0.8, 0.0, 2.2);    // HDR deep violet
+    vec3 cGold   = vec3(2.2, 1.5, 0.0);    // HDR gold
+
+    vec3 radialColor;
+    if (rNorm < 0.35) {
+        radialColor = mix(cBlack, cViolet, smoothstep(0.0, 0.35, rNorm));
+    } else if (rNorm < 0.65) {
+        radialColor = mix(cViolet, cGold, smoothstep(0.35, 0.65, rNorm));
+    } else {
+        radialColor = mix(cGold, cBlack, smoothstep(0.65, 1.0, rNorm));
+    }
+
+    // Ring color with radial mask
+    vec3 ringColor  = radialColor * ring * radialMask;
+
+    // White-hot HDR edge flash
+    vec3 flashColor = vec3(3.0, 3.0, 3.5) * edgeFlash * radialMask;
+
+    // Subtle rotating ambient near center
+    float ambient = sin(thetaW * 1.5) * 0.5 + 0.5;
+    ambient *= smoothstep(0.5, 0.05, r);
+    vec3 ambientColor = cViolet * ambient * 0.12;
+
+    return ringColor + flashColor + ambientColor;
+}
+
+// =======================================================================
 // EFFECT: SPACY - perspective tunnel rows
 // =======================================================================
 
@@ -157,6 +221,62 @@ vec4 effectSpacy(vec2 uv, int sub) {
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     int p = int(preset);
+
+    if (!transparentBg) {
+        // Compute textHit directly for HDR composite
+        float aspect = RENDERSIZE.x / RENDERSIZE.y;
+        int numChars = charCount();
+        float rws = floor(mix(3.0, 20.0, density));
+        float sR = mix(0.5, 1.5, intensity);
+
+        float minS=0.3, maxS=2.5, track=0.15, scM=1.0;
+        bool mirror = false;
+
+        if (p == 0) { minS=0.3/sR; maxS=2.5*sR; }
+        else if (p == 1) { minS=0.2/sR; maxS=3.0*sR; track=0.05; scM=1.4; }
+        else if (p == 2) { minS=0.4/sR; maxS=2.0*sR; track=0.2; scM=0.9; mirror=true; }
+        else { minS=0.15/sR; maxS=2.0*sR; track=0.12; }
+
+        float rH = 1.0/rws;
+        float sY = mod(uv.y + TIME*speed*scM, 1.0);
+        float ri = clamp(floor(sY/rH), 0.0, rws-1.0);
+        float ly = fract(sY/rH);
+
+        float rn = (ri+0.5)/rws;
+        float dc = abs(rn-0.5)*2.0;
+        float rs = mix(minS, maxS, dc*dc)*textScale;
+
+        float cH = rH*rs;
+        float cW = cH*(5.0/7.0)*(1.0/aspect);
+        float gW = cW*track;
+        float wordW = max(float(numChars)*(cW+gW), 0.001);
+
+        float px = uv.x;
+        if (mirror && rn < 0.5) px = 1.0 - px;
+
+        float piw = mod(px - 0.5 + wordW * 0.5, wordW);
+        if (piw < 0.0) piw += wordW;
+        float cs = cW+gW, csF = piw/cs;
+        int slot = int(floor(csF));
+        float clx = fract(csF), cf = cW/cs;
+        float tsy = 0.5-rs*0.5;
+        float gy = (ly-tsy)/rs;
+
+        float textHit = 0.0;
+        if (clx < cf && slot >= 0 && slot < numChars && gy >= 0.0 && gy <= 1.0) {
+            float gc = (clx/cf)*5.0, gr = gy*7.0;
+            if (gc >= 0.0 && gc < 5.0 && gr >= 0.0 && gr < 7.0) {
+                int ch = getChar(slot);
+                if (ch >= 0 && ch <= 36 && ch != 26) textHit = charPixel(ch, gc, gr);
+            }
+        }
+
+        vec3 bg = generateBackground(uv);
+        vec3 finalColor = bg + textHit * textColor.rgb * hdrGlow * audioMod;
+        gl_FragColor = vec4(finalColor, 1.0);
+        return;
+    }
+
     vec4 col = effectSpacy(uv, p);
 
     if (_voiceGlitch > 0.01) {
