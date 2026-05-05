@@ -150,14 +150,15 @@ void main() {
         // Base text color
         vec3 col = textColor.rgb;
 
-        // Mix in shine glow
-        col = mix(col, shineColor.rgb, shineAmount * 0.7);
+        // Mix in shine glow — boost above 1.0 for bloom
+        col = mix(col, shineColor.rgb * 1.5, shineAmount);
 
-        // Add specular on top (additive for bright punch)
-        col += shineColor.rgb * specular * 1.5;
+        // Add specular highlight — HDR peak for bloom pipeline
+        col += shineColor.rgb * specular * 4.0;
 
-        // Clamp to prevent exceeding valid range
-        col = min(col, vec3(1.0));
+        // Black ink shadow side: pixels far from shine are deep-dark for contrast
+        float darkSide = smoothstep(shineWidth * 2.0, shineWidth * 5.0, distToShine);
+        col = mix(col, col * 0.15, darkSide * 0.6);
 
         finalColor = vec4(col, textColor.a);
     } else {
