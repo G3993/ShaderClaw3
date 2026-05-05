@@ -1,260 +1,207 @@
 /*{
-  "DESCRIPTION": "Gravity Streams — orbiting particles with glowing trails, deferred lighting, and texture-mapped streams",
-  "CATEGORIES": ["Generator", "Simulation"],
+  "DESCRIPTION": "Gravity Streams 3D — plasma orbs on 3D orbital paths with volumetric neon trails and HDR cinematic lighting.",
+  "CATEGORIES": ["Generator", "Simulation", "3D"],
   "INPUTS": [
-    { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "particleSize", "LABEL": "Particle Size", "TYPE": "float", "DEFAULT": 12.0, "MIN": 2.0, "MAX": 64.0 },
-    { "NAME": "orbitSpeed", "LABEL": "Speed", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 5.0 },
-    { "NAME": "orbitChaos", "LABEL": "Chaos", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fadeRate", "LABEL": "Trail Fade", "TYPE": "float", "DEFAULT": 0.002, "MIN": 0.0, "MAX": 0.05 },
-    { "NAME": "glossiness", "LABEL": "Glossiness", "TYPE": "float", "DEFAULT": 120.0, "MIN": 4.0, "MAX": 256.0 },
-    { "NAME": "specular", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "surfaceHeight", "LABEL": "Surface Depth", "TYPE": "float", "DEFAULT": 384.0, "MIN": 0.0, "MAX": 800.0 },
-    { "NAME": "glowAmount", "LABEL": "Glow", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "vignette", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "scrollSpeed", "LABEL": "Camera Scroll", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "texScale", "LABEL": "Tex Scale", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 5.0 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
-  ],
-  "PASSES": [
-    { "TARGET": "albedoBuf", "PERSISTENT": true },
-    { "TARGET": "normalBuf", "PERSISTENT": true },
-    {}
+    { "NAME": "orbitSpeed",  "LABEL": "Speed",       "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0, "MAX": 5.0 },
+    { "NAME": "orbitChaos",  "LABEL": "Chaos",       "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "glowAmount",  "LABEL": "Glow",        "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0, "MAX": 3.0 },
+    { "NAME": "trailLength", "LABEL": "Trail",       "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "audioDrive",  "LABEL": "Audio Drive", "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0, "MAX": 5.0 },
+    { "NAME": "bgColor",     "LABEL": "Background",  "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.01, 1.0] },
+    { "NAME": "transparentBg","LABEL":"Transparent", "TYPE": "bool",  "DEFAULT": false }
   ]
 }*/
 
-// Gravity Streams — analytical orbits (no persistent particle buffer needed)
-// Particle positions computed from TIME using multi-frequency Lissajous orbits
-// with gravitational clustering. Trails + deferred lighting in persistent buffers.
+// ─── Gravity Streams 3D ──────────────────────────────────────────────────────
+// 8 plasma orbs on layered Lissajous orbits in 3D space.
+// Volumetric glow trails computed analytically from sampled past positions —
+// no persistent buffers. Linear HDR output; host applies soft-knee tonemap.
+// ─────────────────────────────────────────────────────────────────────────────
 
-#define N_PARTICLES 12
-#define PI 3.14159265
+#define N_ORBS        8
+#define STEPS         64
+#define TRAIL_STEPS   14
+#define PI            3.14159265359
 
-float hash(vec2 co) {
-    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+float hash(float n)  { return fract(sin(n * 127.1) * 43758.5453); }
+
+// 4-color saturated neon palette — blue, magenta, gold, cyan
+vec3 orbColor(int i) {
+    int c = int(mod(float(i), 4.0));
+    if (c == 0) return vec3(0.0,  0.55, 3.0);   // electric blue
+    if (c == 1) return vec3(3.0,  0.0,  1.2);   // hot magenta
+    if (c == 2) return vec3(2.8,  1.4,  0.0);   // acid gold
+    return           vec3(0.0,  2.8,  0.9);     // cyan-teal
 }
 
-// Compute particle position analytically from time
-// Uses layered sinusoidal orbits that simulate gravitational interaction
-vec2 particlePos(int id, float t) {
+// 3D orbital position — Lissajous + attractor perturbation
+vec3 orbPos(int id, float t) {
     float fi = float(id);
-    float seed1 = hash(vec2(fi * 7.13, 1.0));
-    float seed2 = hash(vec2(fi * 3.71, 2.0));
-    float seed3 = hash(vec2(fi * 11.37, 3.0));
-    float seed4 = hash(vec2(fi * 5.91, 4.0));
+    float s1 = hash(fi * 7.13), s2 = hash(fi * 3.71);
+    float s3 = hash(fi * 11.37), s4 = hash(fi * 5.91);
 
-    // Base orbit — each particle has unique frequency + phase
-    float baseFreq = 0.3 + seed1 * 0.4;
-    float basePhase = seed2 * PI * 2.0;
-    float baseRadius = 0.12 + seed3 * 0.25;
+    float bFreq = 0.22 + s1 * 0.30;
+    float bPhase = s2 * PI * 2.0;
+    float bR   = 2.2 + s3 * 2.2;
+    float wFreq = 0.65 + s4 * 1.2;
+    float wAmt  = (0.14 + s1 * 0.22) * (1.0 + orbitChaos * 2.5);
 
-    // Secondary wobble (simulates gravitational perturbation)
-    float wobbleFreq = 0.7 + seed4 * 1.3;
-    float wobbleAmt = 0.03 + seed1 * 0.08;
+    // Two slow attractors in opposition
+    float at = t * 0.12;
+    vec3 a1 = vec3(sin(at) * 0.9, cos(at * 1.3) * 0.6, sin(at * 0.8) * 0.7);
+    vec3 a2 = -a1;
+    vec3 att = mod(fi, 2.0) < 1.0 ? a1 : a2;
 
-    // Gravitational clustering — particles share common attractor points
-    // Two attractors orbiting slowly
-    float a1x = sin(t * 0.13) * 0.15;
-    float a1y = cos(t * 0.17) * 0.12;
-    float a2x = sin(t * 0.11 + PI) * 0.12;
-    float a2y = cos(t * 0.14 + PI) * 0.15;
-
-    // Each particle orbits around one of the attractors (alternating)
-    float attract = mod(fi, 2.0) < 0.5 ? 1.0 : 0.0;
-    float ax = mix(a1x, a2x, attract);
-    float ay = mix(a1y, a2y, attract);
-
-    // Occasionally swap attractor allegiance (creates stream crossings)
-    float swapPhase = sin(t * 0.08 + fi * 0.7);
-    if (swapPhase > 0.3) {
-        ax = mix(ax, a2x, smoothstep(0.3, 0.8, swapPhase));
-        ay = mix(ay, a2y, smoothstep(0.3, 0.8, swapPhase));
-    }
-
-    float wobbleScale = wobbleAmt * (1.0 + orbitChaos * 2.0);
-
-    float x = 0.5 + ax
-        + cos(t * baseFreq + basePhase) * baseRadius
-        + sin(t * wobbleFreq + seed3 * 5.0) * wobbleScale;
-
-    float y = 0.5 + ay
-        + sin(t * baseFreq * 0.8 + basePhase + 1.57) * baseRadius * 0.7
-        + cos(t * wobbleFreq * 0.9 + seed1 * 5.0) * wobbleScale;
-
-    // Keep in bounds
-    x = clamp(x, 0.02, 0.98);
-    y = clamp(y, 0.02, 0.98);
-
-    return vec2(x, y) * RENDERSIZE;
+    return att + vec3(
+        cos(t * bFreq + bPhase)         * bR         + sin(t * wFreq + s3*5.0) * wAmt,
+        sin(t * bFreq * 0.83 + bPhase + PI*0.5) * bR * 0.72 + cos(t * wFreq * 0.9 + s1*5.0) * wAmt * 0.55,
+        cos(t * bFreq * 1.15 + s4*PI)  * bR * 0.65  + sin(t * wFreq * 0.72 + s2*4.0) * wAmt
+    );
 }
 
-vec2 texUV(vec2 px) {
-    vec2 st = px / RENDERSIZE;
-    float ar = RENDERSIZE.x / RENDERSIZE.y;
-    float tar = IMG_SIZE_inputTex.x / max(IMG_SIZE_inputTex.y, 1.0);
-    vec2 c = st - 0.5;
-    float r = ar / max(tar, 0.001);
-    if (r > 1.0) c.x *= r; else c.y /= r;
-    c /= texScale;
-    return fract(c + 0.5);
+// SDF scene — all orbs as spheres, audio-pulsed radius
+float sceneSDF(vec3 p, float t, out int hitId) {
+    float d = 1e10;
+    hitId = -1;
+    for (int i = 0; i < N_ORBS; i++) {
+        vec3 pos = orbPos(i, t);
+        float pulse = 1.0 + audioBass * audioDrive * 0.22 * hash(float(i) * 11.3);
+        float r = (0.15 + hash(float(i) * 3.7) * 0.07) * pulse;
+        float di = length(p - pos) - r;
+        if (di < d) { d = di; hitId = i; }
+    }
+    return d;
+}
+
+vec3 calcNormal(vec3 p, float t) {
+    int dummy;
+    vec2 e = vec2(0.003, 0.0);
+    return normalize(vec3(
+        sceneSDF(p + e.xyy, t, dummy) - sceneSDF(p - e.xyy, t, dummy),
+        sceneSDF(p + e.yxy, t, dummy) - sceneSDF(p - e.yxy, t, dummy),
+        sceneSDF(p + e.yyx, t, dummy) - sceneSDF(p - e.yyx, t, dummy)
+    ));
 }
 
 void main() {
-    vec2 Res = RENDERSIZE;
-    vec2 pos = gl_FragCoord.xy;
-    vec2 uv = isf_FragNormCoord;
-    float pSize = particleSize;
+    vec2 uv = (gl_FragCoord.xy - RENDERSIZE.xy * 0.5) / min(RENDERSIZE.x, RENDERSIZE.y);
+
+    // Slow-orbiting camera
+    float camA = TIME * 0.065;
+    float camDist = 10.0;
+    vec3 ro = vec3(sin(camA) * camDist, 3.5 + sin(camA * 0.6) * 1.8, cos(camA) * camDist);
+    vec3 fwd   = normalize(-ro);
+    vec3 right = normalize(cross(fwd, vec3(0.0, 1.0, 0.0)));
+    vec3 up    = cross(right, fwd);
+    vec3 rd    = normalize(fwd * 1.35 + right * uv.x + up * uv.y);
+
     float t = TIME * orbitSpeed;
 
-    // ===== PASS 0: Albedo (trails) =====
-    // Interpolate between previous and current position to draw continuous trails
-    if (PASSINDEX == 0) {
-        vec2 scrollUV = (pos + vec2(scrollSpeed, 0.0) + 0.5) / Res;
-        vec4 col = texture2D(albedoBuf, scrollUV);
-        col.a *= (1.0 - fadeRate);
+    // ── Raymarch ────────────────────────────────────────────────────────────
+    float dist = 0.0;
+    bool hit = false;
+    int hitOrb = -1;
+    vec3 hitP;
+    int dummy;
 
-        bool hasTex = IMG_SIZE_inputTex.x > 0.0;
-        // Use real frame delta with slight overshoot to prevent gaps
-        float dt = TIMEDELTA * orbitSpeed * 1.2;
+    for (int i = 0; i < STEPS; i++) {
+        vec3 p = ro + rd * dist;
+        float d = sceneSDF(p, t, dummy);
+        if (d < 0.004) { hit = true; hitP = p; break; }
+        dist += d;
+        if (dist > 28.0) break;
+    }
 
-        for (int i = 0; i < N_PARTICLES; i++) {
-            vec2 ppCur = particlePos(i, t);
-            vec2 ppPrev = particlePos(i, t - dt);
+    // Identify which orb was hit
+    if (hit) {
+        float bestD = 1e10;
+        for (int i = 0; i < N_ORBS; i++) {
+            vec3 pos = orbPos(i, t);
+            float pulse = 1.0 + audioBass * audioDrive * 0.22 * hash(float(i) * 11.3);
+            float r = (0.15 + hash(float(i) * 3.7) * 0.07) * pulse;
+            float di = abs(length(hitP - pos) - r);
+            if (di < bestD) { bestD = di; hitOrb = i; }
+        }
+    }
 
-            vec3 pc;
-            if (hasTex) {
-                // Sample texture at midpoint for stable color along trail
-                vec2 ppMid = (ppCur + ppPrev) * 0.5;
-                pc = texture2D(inputTex, texUV(ppMid)).rgb;
-            } else {
-                float fi = float(i);
-                pc = normalize(vec3(0.1) +
-                    vec3(hash(vec2(fi, 0.1) + TIME * 0.01),
-                         hash(vec2(fi, 1.7) + TIME * 0.01),
-                         hash(vec2(fi, 3.1) + TIME * 0.01)));
+    // ── Volumetric trail accumulation ───────────────────────────────────────
+    // For each orb, sample past positions and accumulate glow along the ray.
+    // This creates luminous tube-like trails without persistent buffers.
+    vec3 col = bgColor.rgb;
+    float TRAIL_DT = 0.10 * trailLength;
+
+    for (int i = 0; i < N_ORBS; i++) {
+        vec3 oc = orbColor(i);
+
+        // Halo from current position
+        {
+            vec3 pos = orbPos(i, t);
+            vec3 toOrb = pos - ro;
+            float proj = dot(toOrb, rd);
+            if (proj > 0.0) {
+                float perp2 = dot(toOrb, toOrb) - proj * proj;
+                float halo = exp(-perp2 * 1.2) * glowAmount;
+                col += oc * halo * 1.8;
             }
-
-            // Capsule SDF: distance from pixel to line segment (prev → cur)
-            vec2 seg = ppCur - ppPrev;
-            float segLen = length(seg);
-            float dist;
-            if (segLen < 0.5) {
-                dist = distance(pos, ppCur);
-            } else {
-                vec2 toPos = pos - ppPrev;
-                float proj = clamp(dot(toPos, seg) / (segLen * segLen), 0.0, 1.0);
-                dist = distance(pos, ppPrev + seg * proj);
-            }
-
-            float a = smoothstep(pSize, pSize * 0.4, dist);
-            col = mix(col, vec4(pc, 1.0), a);
         }
 
-        gl_FragColor = col;
-        return;
-    }
-
-    // ===== PASS 1: Normals (trails) =====
-    if (PASSINDEX == 1) {
-        vec2 scrollUV = (pos + vec2(scrollSpeed, 0.0) + 0.5) / Res;
-        vec4 nrm = texture2D(normalBuf, scrollUV);
-        float dt = TIMEDELTA * orbitSpeed * 1.2;
-
-        for (int i = 0; i < N_PARTICLES; i++) {
-            vec2 ppCur = particlePos(i, t);
-            vec2 ppPrev = particlePos(i, t - dt);
-
-            vec2 seg = ppCur - ppPrev;
-            float segLen = length(seg);
-            vec2 closest;
-            if (segLen < 0.5) {
-                closest = ppCur;
-            } else {
-                vec2 toPos = pos - ppPrev;
-                float proj = clamp(dot(toPos, seg) / (segLen * segLen), 0.0, 1.0);
-                closest = ppPrev + seg * proj;
-            }
-
-            vec2 v = pos - closest;
-            float l = length(v);
-            float a = smoothstep(pSize, pSize * 0.4, l);
-            float z = sqrt(abs(pSize * pSize - l * l));
-            nrm = mix(nrm, vec4(normalize(vec3(v, z)), 1.0), a);
+        // Trail: past positions, exponentially fading
+        for (int s = 1; s <= TRAIL_STEPS; s++) {
+            float tOff  = float(s) * TRAIL_DT;
+            float fade  = pow(1.0 - float(s) / float(TRAIL_STEPS + 1), 2.2);
+            vec3 pos    = orbPos(i, t - tOff);
+            vec3 toOrb  = pos - ro;
+            float proj  = dot(toOrb, rd);
+            if (proj < 0.0) continue;
+            float perp2 = dot(toOrb, toOrb) - proj * proj;
+            float glow  = exp(-perp2 * 3.5) * fade * glowAmount;
+            col += oc * glow * 0.55;
         }
-
-        gl_FragColor = nrm;
-        return;
     }
 
-    // ===== PASS 2: Compositing =====
-    vec4 albedo = texture2D(albedoBuf, uv);
-    vec3 rawN = texture2D(normalBuf, uv).xyz;
-    vec3 normal = length(rawN) > 0.01 ? normalize(rawN) : vec3(0.0, 0.0, 1.0);
+    // ── Surface shading if hit ───────────────────────────────────────────────
+    if (hit && hitOrb >= 0) {
+        vec3 n  = calcNormal(hitP, t);
+        vec3 v  = normalize(ro - hitP);
+        vec3 oc = orbColor(hitOrb);
 
-    // Simple directional light on the trail surface
-    vec3 lDir = normalize(vec3(1.0, 2.0, 1.5));
-    float nDot = clamp(dot(normal, lDir), 0.0, 1.0);
-    float diff = mix(0.3, 1.0, nDot);
-    float spec = pow(clamp(dot(reflect(-lDir, normal), vec3(0,0,1)), 0.0, 1.0), glossiness) * specular;
+        // Cinematic two-light setup
+        vec3 L1 = normalize(vec3(2.5, 3.5, 1.5));
+        vec3 L2 = normalize(vec3(-1.2, -0.5, 2.0));
+        float diff1 = max(dot(n, L1), 0.0);
+        float diff2 = max(dot(n, L2), 0.0) * 0.35;
 
-    // Lit trail color
-    vec3 result = albedo.rgb * diff + vec3(spec * 0.3);
+        vec3 H1 = normalize(L1 + v);
+        float spec = pow(max(dot(n, H1), 0.0), 28.0);
+        float fres = pow(1.0 - max(dot(n, v), 0.0), 2.0);
 
-    // Mix with background based on trail alpha
-    result = mix(bgColor.rgb, result, min(albedo.a * 1.2, 1.0));
+        // HDR surface — specular 3.0+, fresnel rim 2.5+
+        vec3 surf = oc * (diff1 + diff2 + 0.15);
+        surf += vec3(2.5, 2.5, 3.0) * spec * 3.5;         // white-hot specular peak
+        surf += oc * fres * 2.8;                           // HDR rim glow
+        surf += oc * audioBass * audioDrive * 0.6;         // audio pulse
 
-    // Particle glow — drawn along the SAME capsule that the trail pass
-    // uses, so the orb sits exactly on the rendered ball, not ahead of it.
-    float dt = TIMEDELTA * orbitSpeed * 1.2;
-    for (int i = 0; i < N_PARTICLES; i++) {
-        vec2 ppCur = particlePos(i, t);
-        vec2 ppPrev = particlePos(i, t - dt);
-        // Sample the trail color at the midpoint so the orb tints from
-        // the same source as the trail core.
-        vec2 ppMid = (ppCur + ppPrev) * 0.5;
-        vec3 pc = texture2D(albedoBuf, ppMid / Res).rgb;
-        if (dot(pc, pc) < 0.01) pc = vec3(0.5);
+        // Orb surface dominates but absorbs some background trail
+        col = surf + col * 0.08;
+    }
 
-        // Capsule distance — same math as the trail render.
-        vec2 seg = ppCur - ppPrev;
-        float segLen = length(seg);
-        float dist;
-        if (segLen < 0.5) {
-            dist = distance(pos, ppCur);
-        } else {
-            vec2 toPos = pos - ppPrev;
-            float proj = clamp(dot(toPos, seg) / (segLen * segLen), 0.0, 1.0);
-            dist = distance(pos, ppPrev + seg * proj);
+    // ── Surprise: every ~22s one orb "goes nova" for ~0.4s ──────────────────
+    {
+        float _ph = fract(TIME / 22.0);
+        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.22, 0.12, _ph);
+        int   _novaOrb = 3;
+        vec3  _novaPos = orbPos(_novaOrb, t);
+        vec3  _toNova  = _novaPos - ro;
+        float _proj    = dot(_toNova, rd);
+        if (_proj > 0.0) {
+            float _perp2 = dot(_toNova, _toNova) - _proj * _proj;
+            float _burst = exp(-_perp2 * 0.15) * _f * 4.0;
+            col += orbColor(_novaOrb) * _burst;
         }
-
-        // Tight core matched to the trail pSize so orb == ball
-        float core = smoothstep(pSize * 0.8, 0.0, dist);
-        float halo = smoothstep(pSize * 2.0, pSize * 0.5, dist) * 0.25;
-        result += pc * (core + halo) * glowAmount * 0.4;
     }
-
-    // Vignette
-    if (vignette > 0.001) {
-        vec2 co = (uv - 0.5) * (Res.x / Res.y) * 2.0;
-        float rf = length(co) * 0.25 * vignette;
-        float rf2 = rf * rf + 1.0;
-        result *= pow(1.0 / (rf2 * rf2), 2.24);
-    }
-
-    // Gamma
-    result = pow(max(result, vec3(0.0)), vec3(1.0 / 2.2));
 
     float alpha = 1.0;
-    if (transparentBg) alpha = smoothstep(0.01, 0.1, albedo.a);
+    if (transparentBg) alpha = smoothstep(0.0, 0.12, length(col - bgColor.rgb));
 
-    // Surprise: every ~26s the flow direction reverses for ~1.5s,
-    // then snaps back. Tide pulled out and pushed in.
-    {
-        float _ph = fract(TIME / 26.0);
-        float _f  = smoothstep(0.0, 0.06, _ph) * smoothstep(0.30, 0.18, _ph);
-        result = mix(result, result.bgr, _f * 0.4);
-    }
-
-    gl_FragColor = vec4(result, alpha);
+    gl_FragColor = vec4(col, alpha);
 }
