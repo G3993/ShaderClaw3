@@ -33,7 +33,7 @@ vec4 passSwirl(vec2 fragCoord) {
     // Warm hue background: visible before persistent buffer warms (prev starts black).
     // Fades out once buffer has content, so it doesn't alter the steady-state look.
     vec3 bgHue = 0.5 + 0.5 * sin(t * 0.3 + vec3(0.0, 2.094, 4.189));
-    vec4 warm = mix(vec4(bgHue * 0.2, 1.0), prev, min(length(prev.rgb) * 5.0, 1.0));
+    vec4 warm = mix(vec4(bgHue * 0.55, 1.0), prev, min(length(prev.rgb) * 5.0, 1.0));
     return mix(col, warm, idx);
 }
 
