@@ -1,136 +1,129 @@
 /*{
-  "DESCRIPTION": "Sumi-e Ink Wash — converts input to Japanese ink painting with Sobel edge strokes and cinnabar seals",
-  "CATEGORIES": ["Effect"],
-  "INPUTS": [
-    { "NAME": "inputImage",  "TYPE": "image" },
-    { "NAME": "inkStrength", "TYPE": "float", "MIN": 0.5, "MAX": 5.0,  "DEFAULT": 2.2 },
-    { "NAME": "washBlur",    "TYPE": "float", "MIN": 1.0, "MAX": 8.0,  "DEFAULT": 3.5 },
-    { "NAME": "sealChance",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.5 },
-    { "NAME": "audioReact",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 0.6 }
-  ],
-  "PASSES": [
-    { "TARGET": "blurBuf" },
-    {}
-  ]
+    "DESCRIPTION": "Sumi-e Ink Wash — converts input to Japanese ink painting with Sobel edge strokes and cinnabar seals",
+    "CREDIT": "ShaderClaw auto-improve v2",
+    "ISFVSN": "2",
+    "CATEGORIES": ["Effect"],
+    "INPUTS": [
+        {
+            "NAME": "inputImage",
+            "TYPE": "image"
+        },
+        {
+            "NAME": "inkStrength",
+            "TYPE": "float",
+            "DEFAULT": 2.2,
+            "MIN": 0.5,
+            "MAX": 5.0
+        },
+        {
+            "NAME": "washBlur",
+            "TYPE": "float",
+            "DEFAULT": 3.5,
+            "MIN": 1.0,
+            "MAX": 8.0
+        },
+        {
+            "NAME": "sealChance",
+            "TYPE": "float",
+            "DEFAULT": 0.5,
+            "MIN": 0.0,
+            "MAX": 1.0
+        },
+        {
+            "NAME": "audioReact",
+            "TYPE": "float",
+            "DEFAULT": 0.6,
+            "MIN": 0.0,
+            "MAX": 2.0
+        }
+    ],
+    "PASSES": [
+        { "TARGET": "blurBuf" },
+        {}
+    ]
 }*/
 
 precision highp float;
 
-// ---------------------------------------------------------------------------
-// PALETTE — exactly 4 + cinnabar accent, no others
-// ---------------------------------------------------------------------------
-#define PAPER      vec3(2.00, 1.85, 1.60)   // HDR warm paper
-#define LIGHT_INK  vec3(0.45, 0.40, 0.35)   // pale wash
-#define DARK_INK   vec3(0.03, 0.025, 0.02)  // deep sumi
-#define CINNABAR   vec3(1.80, 0.05, 0.00)   // HDR red seal accent
-
-// ---------------------------------------------------------------------------
-// PASS 0 — 9x9 Gaussian blur of inputImage → blurBuf
-// ---------------------------------------------------------------------------
-#ifdef PASSINDEX
-#if PASSINDEX == 0
-
-// Gaussian weights for radius-4 kernel (sigma ≈ 1.7)
-// Computed as 1-D separable; we do a single 2-D 9x9 pass here for simplicity.
-float gauss9[9];
-
-void buildGauss() {
-    // unnormalised 1-D weights: sigma = (washBlur / 8.0) * 4.0 + 0.5
-    // For simplicity use fixed weights that give soft wash look
-    gauss9[0] = 0.0625;
-    gauss9[1] = 0.1250;
-    gauss9[2] = 0.1875;
-    gauss9[3] = 0.2500;
-    gauss9[4] = 0.3125;  // not normalised — we'll divide
-    gauss9[5] = 0.2500;
-    gauss9[6] = 0.1875;
-    gauss9[7] = 0.1250;
-    gauss9[8] = 0.0625;
-}
+// ---- Palette ----
+const vec3 PAPER      = vec3(2.0,  1.85, 1.60);   // HDR warm paper
+const vec3 LIGHT_INK  = vec3(0.45, 0.40, 0.35);   // pale wash
+const vec3 DARK_INK   = vec3(0.03, 0.025,0.02);   // deep sumi
+const vec3 CINNABAR   = vec3(1.8,  0.05, 0.0);    // HDR red seal accent
 
 void main() {
-    vec2 uv      = isf_FragNormCoord;
-    vec2 texel   = 1.0 / RENDERSIZE;
-    float radius = washBlur;                 // blur radius in pixels
-    vec4 sum     = vec4(0.0);
-    float wTotal = 0.0;
+    vec2 uv = isf_FragNormCoord;
 
-    for (int x = -4; x <= 4; x++) {
-        for (int y = -4; y <= 4; y++) {
-            float wx = exp(-float(x * x) / (2.0 * radius * radius));
-            float wy = exp(-float(y * y) / (2.0 * radius * radius));
-            float w  = wx * wy;
-            vec2 offset = vec2(float(x), float(y)) * texel;
-            sum    += IMG_NORM_PIXEL(inputImage, uv + offset) * w;
-            wTotal += w;
-        }
-    }
-    gl_FragColor = sum / wTotal;
-}
-
-#endif // PASSINDEX == 0
-
-// ---------------------------------------------------------------------------
-// PASS 1 — Sumi-e tone mapping + Sobel edges + cinnabar seals
-// ---------------------------------------------------------------------------
-#if PASSINDEX == 1
-
-void main() {
-    vec2 uv    = isf_FragNormCoord;
+#if defined(PASSINDEX) && PASSINDEX == 0
+    // ---- Pass 0: 9x9 Gaussian blur of inputImage ----
     vec2 texel = 1.0 / RENDERSIZE;
+    float radius = washBlur;
+
+    // Gaussian kernel weights for offsets -4..+4
+    float weights[9];
+    weights[0] = 0.0162;
+    weights[1] = 0.0540;
+    weights[2] = 0.1216;
+    weights[3] = 0.1945;
+    weights[4] = 0.2270;
+    weights[5] = 0.1945;
+    weights[6] = 0.1216;
+    weights[7] = 0.0540;
+    weights[8] = 0.0162;
+
+    vec4 blurred = vec4(0.0);
+    for (int i = 0; i < 9; i++) {
+        float offset = float(i - 4) * radius;
+        vec2 uvX = uv + vec2(offset * texel.x, 0.0);
+        vec2 uvY = uv + vec2(0.0, offset * texel.y);
+        blurred += IMG_NORM_PIXEL(inputImage, clamp(uvX, 0.0, 1.0)) * weights[i] * 0.5;
+        blurred += IMG_NORM_PIXEL(inputImage, clamp(uvY, 0.0, 1.0)) * weights[i] * 0.5;
+    }
+    gl_FragColor = blurred;
+
+#else
+    // ---- Pass 1: Sumi-e tone mapping + Sobel edges + cinnabar seals ----
 
     // Audio modulator
     float audio = 0.5 + 0.5 * audioBass * audioReact;
 
-    // Sample blurred image
+    // Sample blurred buffer
     vec4 blurred = IMG_NORM_PIXEL(blurBuf, uv);
-
-    // Luminance
     float lum = dot(blurred.rgb, vec3(0.299, 0.587, 0.114));
 
-    // ---------------------------------------------------------------------------
-    // Sobel edge detection on blurBuf (4-neighbour)
-    float lumL = dot(IMG_NORM_PIXEL(blurBuf, uv + vec2(-texel.x, 0.0)).rgb, vec3(0.299, 0.587, 0.114));
-    float lumR = dot(IMG_NORM_PIXEL(blurBuf, uv + vec2( texel.x, 0.0)).rgb, vec3(0.299, 0.587, 0.114));
-    float lumD = dot(IMG_NORM_PIXEL(blurBuf, uv + vec2(0.0, -texel.y)).rgb, vec3(0.299, 0.587, 0.114));
-    float lumU = dot(IMG_NORM_PIXEL(blurBuf, uv + vec2(0.0,  texel.y)).rgb, vec3(0.299, 0.587, 0.114));
-
-    float gx   = lumR - lumL;
-    float gy   = lumU - lumD;
+    // ---- Sobel edge detection on blurBuf (4-neighbor) ----
+    vec2 texel = 1.0 / RENDERSIZE;
+    float lumR  = dot(IMG_NORM_PIXEL(blurBuf, uv + vec2( texel.x, 0.0)).rgb, vec3(0.299, 0.587, 0.114));
+    float lumL  = dot(IMG_NORM_PIXEL(blurBuf, uv + vec2(-texel.x, 0.0)).rgb, vec3(0.299, 0.587, 0.114));
+    float lumU  = dot(IMG_NORM_PIXEL(blurBuf, uv + vec2(0.0,  texel.y)).rgb, vec3(0.299, 0.587, 0.114));
+    float lumD  = dot(IMG_NORM_PIXEL(blurBuf, uv + vec2(0.0, -texel.y)).rgb, vec3(0.299, 0.587, 0.114));
+    float gx = lumR - lumL;
+    float gy = lumU - lumD;
     float edge = clamp(sqrt(gx * gx + gy * gy) * inkStrength * 3.0, 0.0, 1.0);
 
-    // ---------------------------------------------------------------------------
-    // Tone mapping — ink concentration
+    // ---- Ink tone mapping ----
     float inkConc = pow(1.0 - lum, inkStrength * 0.5 * audio);
+    inkConc = clamp(inkConc, 0.0, 1.0);
 
-    // Piecewise lerp: low inkConc → PAPER, mid → LIGHT_INK, high → DARK_INK
     vec3 tonedColor;
     if (inkConc < 0.35) {
-        tonedColor = mix(PAPER, LIGHT_INK, smoothstep(0.0, 0.35, inkConc));
+        tonedColor = mix(PAPER, LIGHT_INK, inkConc / 0.35);
     } else {
-        tonedColor = mix(LIGHT_INK, DARK_INK, smoothstep(0.35, 1.0, inkConc));
+        tonedColor = mix(LIGHT_INK, DARK_INK, (inkConc - 0.35) / 0.65);
     }
 
-    // ---------------------------------------------------------------------------
-    // Stroke edges with dark ink
+    // ---- Stroke edges with dark ink ----
     tonedColor = mix(tonedColor, DARK_INK, edge * 0.85 * inkStrength * 0.4);
 
-    // ---------------------------------------------------------------------------
-    // Cinnabar seals — replace brightest regions with HDR red accent
-    // Uses a stable hash derived from UV to scatter seal blobs
-    if (lum > 0.9) {
-        // Small scattered blobs: use quantised uv grid
-        vec2 cell  = floor(uv * 18.0);
-        float h    = fract(sin(dot(cell, vec2(127.1, 311.7))) * 43758.5453);
-        // Only paint seal where hash < sealChance threshold
-        float sealMask = step(h, sealChance * 0.35);
-        tonedColor = mix(tonedColor, CINNABAR, sealMask);
-    }
+    // ---- Cinnabar seals: on brightest regions ----
+    // Use a simple pseudo-random pattern based on fragment position
+    vec2 seed = floor(gl_FragCoord.xy / 8.0);
+    float rand = fract(sin(dot(seed, vec2(127.1, 311.7))) * 43758.5453);
+    float sealMask = step(0.9, lum) * step(rand, sealChance * 0.35);
+    tonedColor = mix(tonedColor, CINNABAR, sealMask);
 
-    // ---------------------------------------------------------------------------
-    // Output — linear HDR, no clamp, no ACES, no gamma
+    // Output LINEAR HDR — no clamp, no ACES, no gamma
     gl_FragColor = vec4(tonedColor, 1.0);
-}
 
-#endif // PASSINDEX == 1
-#endif // PASSINDEX defined
+#endif
+}
