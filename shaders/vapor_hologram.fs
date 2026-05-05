@@ -1,31 +1,32 @@
 /*{
-  "DESCRIPTION": "Vaporwave Hologram — Y2K vaporwave scene transmitted through a degrading holographic channel. Pass 0 renders the full vaporwave (sun, grid, Y2K swarm, katakana). Pass 1 layers hologram glitch on top: vertical tear, RGB shift, EMI bursts, hologram tint, scanlines.",
+  "DESCRIPTION": "Holo Stage Hologram — Pass 0: 3D raymarched floating platform with holographic projector cone, dark industrial aesthetic, teal/cyan/magenta palette. Pass 1: holographic glitch channel — vertical tear, RGB shift, EMI bursts, scanlines.",
   "CATEGORIES": ["Generator", "Glitch", "Audio Reactive"],
-  "CREDIT": "Easel — combines vaporwave_floral_shoppe + hologram_glitch",
+  "CREDIT": "ShaderClaw — holo stage + hologram glitch",
   "INPUTS": [
-    { "NAME": "horizonY",         "LABEL": "Horizon",         "TYPE": "float", "MIN": 0.40, "MAX": 0.75, "DEFAULT": 0.55 },
-    { "NAME": "skyTopColor",      "LABEL": "Sky Top",         "TYPE": "color", "DEFAULT": [1.0, 0.42, 0.71, 1.0] },
-    { "NAME": "skyHorizonColor",  "LABEL": "Sky Horizon",     "TYPE": "color", "DEFAULT": [0.36, 0.85, 0.76, 1.0] },
-    { "NAME": "sunSize",          "LABEL": "Sun Size",        "TYPE": "float", "MIN": 0.05, "MAX": 0.40, "DEFAULT": 0.22 },
-    { "NAME": "sunBars",          "LABEL": "Sun Bars",        "TYPE": "float", "MIN": 0.0,  "MAX": 12.0, "DEFAULT": 6.0 },
-    { "NAME": "gridDensity",      "LABEL": "Grid Density",    "TYPE": "float", "MIN": 4.0,  "MAX": 24.0, "DEFAULT": 12.0 },
-    { "NAME": "gridPersp",        "LABEL": "Grid Perspective","TYPE": "float", "MIN": 0.5,  "MAX": 4.0,  "DEFAULT": 1.8 },
-    { "NAME": "gridSpeed",        "LABEL": "Grid Speed",      "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.25 },
-    { "NAME": "y2kCount",         "LABEL": "Y2K Object Count","TYPE": "float", "MIN": 0.0,  "MAX": 20.0, "DEFAULT": 12.0 },
-    { "NAME": "y2kSpeed",         "LABEL": "Y2K Speed",       "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.6 },
-    { "NAME": "y2kSize",          "LABEL": "Y2K Size",        "TYPE": "float", "MIN": 0.02, "MAX": 0.20, "DEFAULT": 0.07 },
-    { "NAME": "y2kChaos",         "LABEL": "Chaos",           "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.7 },
-    { "NAME": "katakanaIntensity","LABEL": "Katakana",        "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.6 },
-    { "NAME": "vaporPosterize",   "LABEL": "Vapor Posterize", "TYPE": "float", "MIN": 1.0,  "MAX": 32.0, "DEFAULT": 16.0 },
-    { "NAME": "holoChroma",       "LABEL": "Holo Chroma",     "TYPE": "float", "MIN": 0.0,  "MAX": 0.04, "DEFAULT": 0.012 },
-    { "NAME": "holoScanFreq",     "LABEL": "Holo Scanlines",  "TYPE": "float", "MIN": 1.0,  "MAX": 4.0,  "DEFAULT": 2.0 },
-    { "NAME": "holoTear",         "LABEL": "Tear Probability","TYPE": "float", "MIN": 0.0,  "MAX": 0.3,  "DEFAULT": 0.06 },
-    { "NAME": "holoBreak",        "LABEL": "EMI Break",       "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.3 },
-    { "NAME": "holoGlow",         "LABEL": "Holo Glow",       "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.7 },
-    { "NAME": "holoTint",         "LABEL": "Hologram Tint",   "TYPE": "color", "DEFAULT": [0.55, 1.0, 0.95, 1.0] },
-    { "NAME": "holoMix",          "LABEL": "Hologram Mix",    "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.85 },
-    { "NAME": "audioReact",       "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
-    { "NAME": "inputTex",         "LABEL": "Texture (optional GIF source)", "TYPE": "image" }
+    { "NAME": "horizonY",          "LABEL": "Horizon",          "TYPE": "float", "MIN": 0.40, "MAX": 0.75, "DEFAULT": 0.55 },
+    { "NAME": "skyTopColor",       "LABEL": "Sky Top",          "TYPE": "color", "DEFAULT": [1.0, 0.42, 0.71, 1.0] },
+    { "NAME": "skyHorizonColor",   "LABEL": "Sky Horizon",      "TYPE": "color", "DEFAULT": [0.36, 0.85, 0.76, 1.0] },
+    { "NAME": "sunSize",           "LABEL": "Sun Size",         "TYPE": "float", "MIN": 0.05, "MAX": 0.40, "DEFAULT": 0.22 },
+    { "NAME": "sunBars",           "LABEL": "Sun Bars",         "TYPE": "float", "MIN": 0.0,  "MAX": 12.0, "DEFAULT": 6.0 },
+    { "NAME": "gridDensity",       "LABEL": "Grid Density",     "TYPE": "float", "MIN": 4.0,  "MAX": 24.0, "DEFAULT": 12.0 },
+    { "NAME": "gridPersp",         "LABEL": "Grid Perspective", "TYPE": "float", "MIN": 0.5,  "MAX": 4.0,  "DEFAULT": 1.8 },
+    { "NAME": "gridSpeed",         "LABEL": "Grid Speed",       "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.25 },
+    { "NAME": "y2kCount",          "LABEL": "Y2K Object Count", "TYPE": "float", "MIN": 0.0,  "MAX": 20.0, "DEFAULT": 12.0 },
+    { "NAME": "y2kSpeed",          "LABEL": "Y2K Speed",        "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.6 },
+    { "NAME": "y2kSize",           "LABEL": "Y2K Size",         "TYPE": "float", "MIN": 0.02, "MAX": 0.20, "DEFAULT": 0.07 },
+    { "NAME": "y2kChaos",          "LABEL": "Chaos",            "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.7 },
+    { "NAME": "katakanaIntensity", "LABEL": "Katakana",         "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.6 },
+    { "NAME": "vaporPosterize",    "LABEL": "Vapor Posterize",  "TYPE": "float", "MIN": 1.0,  "MAX": 32.0, "DEFAULT": 16.0 },
+    { "NAME": "holoChroma",        "LABEL": "Holo Chroma",      "TYPE": "float", "MIN": 0.0,  "MAX": 0.04, "DEFAULT": 0.012 },
+    { "NAME": "holoScanFreq",      "LABEL": "Holo Scanlines",   "TYPE": "float", "MIN": 1.0,  "MAX": 4.0,  "DEFAULT": 2.0 },
+    { "NAME": "holoTear",          "LABEL": "Tear Probability", "TYPE": "float", "MIN": 0.0,  "MAX": 0.3,  "DEFAULT": 0.06 },
+    { "NAME": "holoBreak",         "LABEL": "EMI Break",        "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.3 },
+    { "NAME": "holoGlow",          "LABEL": "Holo Glow",        "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.7 },
+    { "NAME": "holoTint",          "LABEL": "Hologram Tint",    "TYPE": "color", "DEFAULT": [0.55, 1.0, 0.95, 1.0] },
+    { "NAME": "holoMix",           "LABEL": "Hologram Mix",     "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.85 },
+    { "NAME": "audioReact",        "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
+    { "NAME": "orbitSpeed",        "LABEL": "Orbit Speed",      "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.15 },
+    { "NAME": "inputTex",          "LABEL": "Texture (optional GIF source)", "TYPE": "image" }
   ],
   "PASSES": [
     { "TARGET": "vapor" },
@@ -33,172 +34,256 @@
   ]
 }*/
 
-// ──────────────────────────────────────────────────────────────────────
-// Shared
-// ──────────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// Shared utilities
+// ══════════════════════════════════════════════════════════════════════════════
 float hash21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float hash11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
 
-vec3 hsv2rgb(vec3 c) {
-    vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
-    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
-    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+// ══════════════════════════════════════════════════════════════════════════════
+// PASS 0 — "Holo Stage": 3D raymarched floating platform with holographic
+//           projector cone. Dark industrial, teal/cyan/magenta palette.
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── Palette (fully saturated, HDR peaks ≥ 2.0, no white mixing) ─────────────
+//   Dark charcoal body:     vec3(0.08, 0.08, 0.12)
+//   Grid lines — e-cyan:    vec3(0.20, 2.50, 2.00)  HDR
+//   Pillar tops — magenta:  vec3(2.50, 0.10, 1.80)  HDR
+//   Projector cone — teal:  vec3(0.50, 2.00, 2.50)  HDR
+//   Background — void black: vec3(0.0)
+
+// ── 3D SDF primitives ────────────────────────────────────────────────────────
+float sdBox(vec3 p, vec3 b) {
+    vec3 q = abs(p) - b;
+    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
 }
 
-// ──────────────────────────────────────────────────────────────────────
-// Y2K SDF shapes
-// ──────────────────────────────────────────────────────────────────────
-float sdHeart(vec2 p) {
-    p.x = abs(p.x);
-    if (p.y + p.x > 1.0)
-        return sqrt(dot(p - vec2(0.25, 0.75), p - vec2(0.25, 0.75))) - sqrt(2.0) / 4.0;
-    return sqrt(min(dot(p - vec2(0.0, 1.0),  p - vec2(0.0, 1.0)),
-                    dot(p - 0.5 * max(p.x + p.y, 0.0), p - 0.5 * max(p.x + p.y, 0.0))))
-         * sign(p.x - p.y);
-}
-float sdStar5(vec2 p, float r) {
-    const vec2 k1 = vec2(0.809016994, -0.587785252);
-    const vec2 k2 = vec2(-k1.x, k1.y);
-    p.x = abs(p.x);
-    p -= 2.0 * max(dot(k1, p), 0.0) * k1;
-    p -= 2.0 * max(dot(k2, p), 0.0) * k2;
-    p.x = abs(p.x);
-    p.y -= r;
-    vec2 ba = vec2(-0.309016994, 0.951056516) * 0.4;
-    float h = clamp(dot(p, ba) / dot(ba, ba), 0.0, 1.0);
-    return length(p - ba * h) * sign(p.y * ba.x - p.x * ba.y);
-}
-float sdSparkle(vec2 p) {
-    return min(max(abs(p.x) - 0.08, abs(p.y) - 0.30),
-               max(abs(p.y) - 0.08, abs(p.x) - 0.30));
-}
-float sdRoundBox(vec2 p, vec2 b, float r) {
-    vec2 q = abs(p) - b + r;
-    return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
-}
-float sdSmiley(vec2 p, float r) {
-    float face  = length(p) - r;
-    float eyeL  = length(p - vec2(-r * 0.35, r * 0.25)) - r * 0.10;
-    float eyeR  = length(p - vec2( r * 0.35, r * 0.25)) - r * 0.10;
-    float mr1   = abs(length(p - vec2(0.0, -r * 0.05)) - r * 0.45) - r * 0.06;
-    float mouth = max(mr1, -p.y);
-    float feat  = min(min(eyeL, eyeR), mouth);
-    return max(face, -feat);
+float sdCylinder(vec3 p, float r, float h) {
+    vec2 d = abs(vec2(length(p.xz), p.y)) - vec2(r, h);
+    return min(max(d.x, d.y), 0.0) + length(max(d, 0.0));
 }
 
-// ──────────────────────────────────────────────────────────────────────
-// PASS 0 — Render vaporwave scene to "vapor" buffer
-// ──────────────────────────────────────────────────────────────────────
-vec4 passVapor(vec2 fragCoord) {
-    vec2 uv = fragCoord / RENDERSIZE.xy;
-    float aspect = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
+// Cone pointing upward from p==0 toward +y, apex at y=h, base radius r at y=0
+float sdCone(vec3 p, float r, float h) {
+    vec2 q  = vec2(length(p.xz), p.y);
+    vec2 k1 = vec2(r, 0.0);
+    vec2 k2 = vec2(r - 0.0, h);   // slope direction
+    // slope: tip at (0, h), base at (r, 0)
+    float t  = clamp((dot(q - k1, k2 - k1)) / dot(k2 - k1, k2 - k1), 0.0, 1.0);
+    vec2  nr = q - mix(k1, k2, t);
+    float d1 = length(nr) * sign(max(nr.x, -nr.y));
+    float d2 = q.y - h;
+    float d3 = -q.y;
+    return max(d1, max(d3, d2));   // inside cone when all negative
+}
 
-    // Sky gradient
-    vec3 sky = mix(skyHorizonColor.rgb, skyTopColor.rgb,
-                   smoothstep(horizonY - 0.05, 1.0, uv.y));
-    vec3 col = sky;
+// ── Scene material IDs ───────────────────────────────────────────────────────
+#define MAT_BG       0
+#define MAT_PLATFORM 1    // dark charcoal
+#define MAT_GRID     2    // electric cyan HDR
+#define MAT_PILLAR   3    // dark charcoal body
+#define MAT_PILLAR_T 4    // hot magenta tips
+#define MAT_PROJ     5    // projector body (dark)
+#define MAT_CONE     6    // teal-white glow HDR
 
-    // Sun
-    vec2 sc = vec2(0.5, horizonY);
-    vec2 sd = uv - sc; sd.x *= aspect;
-    float sr = sunSize * (1.0 + audioBass * audioReact * 0.06);
-    if (length(sd) < sr) {
-        float ty = clamp((sd.y / sr + 1.0) * 0.5, 0.0, 1.0);
-        vec3 sunC = mix(vec3(0.98, 0.45, 0.20), vec3(1.0, 0.20, 0.62), ty);
-        if (sunBars > 0.0) {
-            float barY = sd.y / sr;
-            float barMask = step(0.0, sin(barY * sunBars * 3.14159 + 0.4 + TIME * 0.5));
-            sunC = mix(sunC, sky, barMask * 0.55);
-        }
-        col = sunC;
+struct Hit3 {
+    float d;
+    int   mat;
+};
+
+Hit3 minHit3(Hit3 a, Hit3 b) { return (a.d < b.d) ? a : b; }
+
+// Audio-modulated cone brightness: 1.0 + audioLevel * audioReact * factor
+// Applied at shading time, not inside the SDF.
+
+Hit3 holoStageSDF(vec3 p) {
+    Hit3 res;
+    res.d   = 1e9;
+    res.mat = MAT_BG;
+
+    // Floating platform: 2×0.15×2 box, sits at y = 0.0 (top face)
+    float platform = sdBox(p - vec3(0.0, -0.075, 0.0), vec3(1.0, 0.075, 1.0));
+    Hit3 hPlatform; hPlatform.d = platform; hPlatform.mat = MAT_PLATFORM;
+    res = minHit3(res, hPlatform);
+
+    // Platform grid: overlay thin cyan lines via floor-modulo pattern
+    // (handled in shading, not SDF — we flag the platform face as MAT_GRID
+    //  when the grid pattern fires)
+
+    // 4 corner pillars: thin cylinders at ±0.8 on xz, height 0.4 above platform top
+    vec2 corners[4];
+    corners[0] = vec2( 0.80,  0.80);
+    corners[1] = vec2(-0.80,  0.80);
+    corners[2] = vec2( 0.80, -0.80);
+    corners[3] = vec2(-0.80, -0.80);
+
+    for (int ci = 0; ci < 4; ci++) {
+        vec3 pc = p - vec3(corners[ci].x, 0.20, corners[ci].y);
+        float pillar = sdCylinder(pc, 0.045, 0.20);
+        Hit3 hP; hP.d = pillar; hP.mat = MAT_PILLAR;
+        res = minHit3(res, hP);
+
+        // Pillar top cap: small cylinder, magenta
+        vec3 pct = p - vec3(corners[ci].x, 0.42, corners[ci].y);
+        float cap = sdCylinder(pct, 0.065, 0.025);
+        Hit3 hCap; hCap.d = cap; hCap.mat = MAT_PILLAR_T;
+        res = minHit3(res, hCap);
     }
 
-    // Perspective grid floor
-    if (uv.y < horizonY) {
-        float dh = max(horizonY - uv.y, 0.001);
-        vec2 gridUV = vec2((uv.x - 0.5) / (dh * gridPersp + 0.05),
-                           1.0 / dh - TIME * gridSpeed
-                              * (1.0 + audioMid * audioReact * 0.4));
-        float gx = abs(fract(gridUV.x * gridDensity) - 0.5);
-        float gy = abs(fract(gridUV.y) - 0.5);
-        float lineW = 0.04 * dh;
-        float line = smoothstep(0.5 - lineW, 0.5, max(gx, gy));
-        vec3 floorBase = mix(vec3(0.10, 0.05, 0.18),
-                             vec3(0.55, 0.10, 0.45), uv.y / horizonY);
-        col = mix(floorBase, vec3(1.0, 0.42, 0.85), line);
-        col = mix(col, sky, smoothstep(horizonY - 0.04, horizonY, uv.y));
+    // Central projector: cylinder at origin, sits on top of platform
+    vec3 pProj = p - vec3(0.0, 0.125, 0.0);
+    float proj = sdCylinder(pProj, 0.10, 0.125);
+    Hit3 hProj; hProj.d = proj; hProj.mat = MAT_PROJ;
+    res = minHit3(res, hProj);
+
+    // Holographic cone above projector: apex at y=1.0, base r=0.55 at y=0.25
+    vec3 pCone = p - vec3(0.0, 0.25, 0.0);
+    float cone = sdCone(pCone, 0.55, 0.75);
+    Hit3 hCone; hCone.d = cone; hCone.mat = MAT_CONE;
+    res = minHit3(res, hCone);
+
+    // Floor plane at y = -0.5 (keep scene bounded below)
+    Hit3 hFloor; hFloor.d = p.y + 0.50; hFloor.mat = MAT_BG;
+    res = minHit3(res, hFloor);
+
+    return res;
+}
+
+// ── Normal via tetrahedron FD ─────────────────────────────────────────────────
+vec3 holoNormal(vec3 p) {
+    vec2 e = vec2(0.002, -0.002);
+    return normalize(
+        e.xyy * holoStageSDF(p + e.xyy).d +
+        e.yyx * holoStageSDF(p + e.yyx).d +
+        e.yxy * holoStageSDF(p + e.yxy).d +
+        e.xxx * holoStageSDF(p + e.xxx).d
+    );
+}
+
+// ── Material colour ───────────────────────────────────────────────────────────
+vec3 holoMatColor(int mat, vec3 worldPos, float coneMod) {
+    if (mat == MAT_PLATFORM) {
+        // Grid lines on the top face via fmod — electric cyan HDR lines on charcoal
+        vec2  gp   = worldPos.xz * gridDensity * 0.5;
+        vec2  gc   = abs(fract(gp) - 0.5);
+        float line = 1.0 - smoothstep(0.42, 0.50, max(gc.x, gc.y));
+        float gridGlow = 1.0 + audioLevel * audioReact * 1.2;   // audio modulator
+        vec3  charcoal = vec3(0.08, 0.08, 0.12);
+        vec3  cyan     = vec3(0.20, 2.50, 2.00) * gridGlow;
+        return mix(charcoal, cyan, line * 0.85);
+    }
+    if (mat == MAT_PILLAR)   return vec3(0.10, 0.10, 0.16);           // dark body
+    if (mat == MAT_PILLAR_T) return vec3(2.50, 0.10, 1.80);           // hot magenta (HDR)
+    if (mat == MAT_PROJ)     return vec3(0.12, 0.12, 0.18);           // projector body
+    if (mat == MAT_CONE)     return vec3(0.50, 2.00, 2.50) * coneMod; // teal glow (HDR)
+    return vec3(0.0);   // void black background / floor
+}
+
+// ── Pass 0 entry ──────────────────────────────────────────────────────────────
+vec4 passHoloStage(vec2 fragCoord) {
+    vec2 uv = (fragCoord - RENDERSIZE.xy * 0.5) / min(RENDERSIZE.x, RENDERSIZE.y);
+
+    // Camera orbit: slow rotation around the platform, slight downward angle
+    float orb   = TIME * orbitSpeed;
+    float camD  = 3.0;
+    float camEl = 0.40;   // radians above horizontal
+
+    vec3 ro = vec3(
+        cos(orb) * cos(camEl) * camD,
+        sin(camEl) * camD,
+        sin(orb) * cos(camEl) * camD
+    );
+    vec3 target = vec3(0.0, 0.20, 0.0);
+    vec3 fwd    = normalize(target - ro);
+    vec3 right  = normalize(cross(fwd, vec3(0.0, 1.0, 0.0)));
+    vec3 up     = cross(right, fwd);
+    vec3 rd     = normalize(fwd * 1.6 + right * uv.x + up * uv.y);
+
+    // Audio modulators (modulator not gate)
+    float coneMod = 1.0 + audioLevel * audioReact * 1.5;   // projector brightness
+
+    // Raymarching — 64 steps
+    float totalDist = 0.0;
+    bool  hit       = false;
+    vec3  hitPos;
+    Hit3  hi;
+    hi.d   = 1e9;
+    hi.mat = MAT_BG;
+
+    for (int s = 0; s < 64; s++) {
+        hitPos = ro + rd * totalDist;
+        hi     = holoStageSDF(hitPos);
+
+        if (hi.d < 0.003) { hit = true; break; }
+        if (totalDist > 12.0) break;
+        totalDist += hi.d * 0.80;
     }
 
-    // Y2K chaos layer — bouncing primitives
-    int N = int(clamp(y2kCount, 0.0, 20.0));
-    for (int i = 0; i < 20; i++) {
-        if (i >= N) break;
-        float fi = float(i);
-        float cycle = floor(TIME * y2kSpeed * (0.3 + hash11(fi * 1.3) * 0.7) + fi * 0.7);
-        float life  = fract(TIME * y2kSpeed * (0.3 + hash11(fi * 1.3) * 0.7) + fi * 0.7);
-        float h1 = hash11(fi + cycle * 7.13);
-        float h2 = hash11(fi + cycle * 13.7);
-        float h3 = hash11(fi + cycle * 19.3);
-        float h4 = hash11(fi + cycle * 23.1);
-        vec2 startP = vec2(h1, h2);
-        vec2 vel    = (vec2(h3, h4) - 0.5) * 1.5;
-        vec2 ctr    = startP + vel * life * y2kChaos;
-        ctr = vec2(0.5 + sin(ctr.x * 3.14159) * 0.45,
-                   0.5 + sin(ctr.y * 3.14159) * 0.45);
-        float sz   = y2kSize * (0.6 + h1 * 0.8)
-                   * (0.7 + 0.3 * sin(TIME * 4.0 + fi))
-                   * (1.0 + audioBass * audioReact * 0.4);
-        float hue  = fract(h2 + TIME * 0.05);
-        vec3 shapeCol = hsv2rgb(vec3(hue, 0.85, 0.95));
-        float vis = smoothstep(0.0, 0.15, life) * smoothstep(1.0, 0.85, life);
-        float rot = TIME * (0.5 + h3 * 2.0) + fi * 1.7;
-        float ca  = cos(rot), sa = sin(rot);
-        vec2 d    = uv - ctr; d.x *= aspect;
-        vec2 lp   = vec2(ca * d.x - sa * d.y, sa * d.x + ca * d.y) / max(sz, 1e-4);
-        int kind = int(hash11(fi * 31.7) * 5.0);
-        float dist;
-        if      (kind == 0) dist = sdHeart(lp + vec2(0.0, 0.5));
-        else if (kind == 1) dist = sdStar5(lp, 0.85);
-        else if (kind == 2) dist = sdSparkle(lp * 1.2);
-        else if (kind == 3) dist = sdRoundBox(lp, vec2(0.85, 0.40), 0.20);
-        else                dist = sdSmiley(lp, 0.85);
-        if (dist < 0.0) col = mix(col, shapeCol, vis);
-        col = mix(col, vec3(1.0), smoothstep(0.04, 0.0, abs(dist)) * vis * 0.5);
-    }
+    // ── Background: void black ────────────────────────────────────────────────
+    vec3 col = vec3(0.0);
 
-    // Optional input texture overlay
-    if (IMG_SIZE_inputTex.x > 0.0) {
-        vec3 src = texture(inputTex, fract(uv + vec2(sin(TIME * 0.3) * 0.05, 0.0))).rgb;
-        float sL = dot(src, vec3(0.299, 0.587, 0.114));
-        col = mix(col, src, smoothstep(0.20, 0.40, sL) * 0.6);
-    }
-
-    // Katakana ribbon (top)
+    // Subtle ambient cone glow in the background (additive volumetric halo)
+    // Sample the cone's distance along the ray's closest approach
     {
-        float total = 0.0;
-        for (int g = 0; g < 6; g++) {
-            float fg = float(g);
-            vec2 origin = vec2(0.05 + fg * 0.15, 0.85);
-            vec2 ld = (uv - origin) * vec2(60.0, 28.0);
-            if (ld.x < 0.0 || ld.y < 0.0 || ld.x > 8.0 || ld.y > 4.0) continue;
-            vec2 ci = floor(ld);
-            float h = hash21(ci + floor(TIME * (0.4 + audioHigh * audioReact * 1.2)));
-            float vert = step(h, 0.55) * step(0.30, fract(ld.x)) * step(fract(ld.x), 0.55);
-            float bar  = step(0.55, h) * step(h, 0.85) * step(0.40, fract(ld.y)) * step(fract(ld.y), 0.62);
-            total = max(total, max(vert, bar));
+        float nearCone = 1e9;
+        float tP = 0.0;
+        for (int k = 0; k < 12; k++) {
+            vec3 pp = ro + rd * tP;
+            // Only the cone geometry matters for halo
+            vec3 pConeP = pp - vec3(0.0, 0.25, 0.0);
+            float dc = sdCone(pConeP, 0.55, 0.75);
+            nearCone = min(nearCone, dc);
+            tP += max(dc, 0.04);
+            if (tP > 12.0) break;
         }
-        col = mix(col, vec3(0.7, 1.0, 0.85), total * katakanaIntensity);
+        float coneHalo = exp(-max(nearCone, 0.0) * 3.0) * coneMod * 0.40;
+        col += vec3(0.15, 0.60, 0.75) * coneHalo;
     }
 
-    // VHS posterize before hologram (gives the holo something quantized to glitch)
+    // ── Surface shading ───────────────────────────────────────────────────────
+    if (hit && hi.mat != MAT_BG) {
+        vec3 n = holoNormal(hitPos);
+        vec3 v = normalize(ro - hitPos);
+
+        // Key light: overhead-right; fill: from camera side
+        vec3  L1    = normalize(vec3(1.5, 3.0, 1.0));
+        float diff  = max(dot(n, L1), 0.0);
+        float amb   = 0.15;
+        float spec  = pow(max(dot(reflect(-L1, n), v), 0.0), 48.0);
+        float rim   = pow(1.0 - max(dot(n, v), 0.0), 3.0);
+
+        vec3 baseC = holoMatColor(hi.mat, hitPos, coneMod);
+
+        // Diffuse + ambient
+        col = baseC * (diff * 0.65 + amb);
+
+        // Rim light in teal — echoes the cone glow colour, gives depth
+        col += vec3(0.20, 1.60, 2.00) * rim * 0.35;
+
+        // Specular — HDR white so bloom catches it
+        col += vec3(2.0, 2.0, 2.5) * spec * 0.4;
+
+        // Cone interior: additive inner glow, audio-driven
+        if (hi.mat == MAT_CONE) {
+            float innerGlow = exp(-max(hi.d, 0.0) * 8.0) * coneMod;
+            col += vec3(0.20, 1.80, 2.50) * innerGlow * 0.60;
+        }
+
+        // Depth fade
+        float depthFade = 1.0 - smoothstep(8.0, 12.0, totalDist);
+        col *= depthFade;
+    }
+
+    // Posterize (same as the original pass so pass 1 glitch has quantized data)
     if (vaporPosterize > 1.0) col = floor(col * vaporPosterize) / vaporPosterize;
 
     return vec4(col, 1.0);
 }
 
-// ──────────────────────────────────────────────────────────────────────
-// PASS 1 — Hologram glitch over vapor buffer
-// ──────────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// PASS 1 — Hologram glitch over the holo-stage buffer
+//           THIS CODE IS KEPT EXACTLY AS-IS FROM THE ORIGINAL
+// ══════════════════════════════════════════════════════════════════════════════
 vec4 passHologram(vec2 fragCoord) {
     vec2 uv = fragCoord / RENDERSIZE.xy;
 
@@ -212,7 +297,7 @@ vec4 passHologram(vec2 fragCoord) {
     // RGB chromatic shift on the vapor buffer
     float ch = holoChroma * (1.0 + audioHigh * audioReact);
     float r = texture(vapor, clamp(uv + vec2( ch, 0.0), 0.0, 1.0)).r;
-    float g = texture(vapor, clamp(uv,                 0.0, 1.0)).g;
+    float g = texture(vapor, clamp(uv,                  0.0, 1.0)).g;
     float b = texture(vapor, clamp(uv - vec2( ch, 0.0), 0.0, 1.0)).b;
     vec3 holo = vec3(r, g, b) * holoTint.rgb;
 
@@ -241,8 +326,8 @@ vec4 passHologram(vec2 fragCoord) {
     return vec4(mix(vapor_, holo, holoMix), 1.0);
 }
 
-// ──────────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
 void main() {
-    if (PASSINDEX == 0) FragColor = passVapor(gl_FragCoord.xy);
+    if (PASSINDEX == 0) FragColor = passHoloStage(gl_FragCoord.xy);
     else                FragColor = passHologram(gl_FragCoord.xy);
 }

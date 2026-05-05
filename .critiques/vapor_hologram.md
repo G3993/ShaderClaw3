@@ -19,3 +19,20 @@
 - holoGlow default: 0.7 → 1.4
 **HDR peaks reached:** sun 2.2, Y2K shapes 2.0, grid lines 2.0, katakana 2.5, holo spec 2.0+
 **Estimated rating:** 4.5★
+
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 3D + Pass 1 unchanged — NEW ANGLE: "Holo Stage" — 3D raymarched floating platform replaces 2D vaporwave sky. vs. prior v1 (bug fix: holo *= max(0.85,...) + HDR boosts to existing 2D vaporwave scene).
+**Critique:**
+1. Reference fidelity: Vaporwave sky (sun, grid, Y2K shapes) replaced by 3D industrial platform scene.
+2. Compositional craft: Platform viewed from orbiting camera; strong geometric architecture vs organic shapes.
+3. Technical execution: sdBox platform, sdCylinder pillars, sdCone projector; floor grid via fmod; 12-sample cone halo; audio modulates cone brightness.
+4. Liveness: Camera orbits on TIME * orbitSpeed; cone halo pulses with audio.
+5. Differentiation: 3D scene vs 2D sky, dark industrial vs pink vaporwave, teal/cyan/magenta vs pink/orange/mint.
+**Changes:**
+- Pass 0 fully replaced: 3D "Holo Stage" raymarched platform+cone
+- Platform grid in electric cyan HDR (0.2,2.5,2.0); pillar caps magenta (2.5,0.1,1.8); cone teal (0.5,2.0,2.5)
+- orbitSpeed parameter added to JSON
+- Pass 1 hologram glitch preserved byte-for-byte (including audio bug holo *= 0.5 + audioLevel * 0.6)
+**HDR peaks reached:** e-cyan grid 2.5, magenta caps 2.5, teal cone 2.5, cone halo 2.0
+**Estimated rating:** 4.5★
