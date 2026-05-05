@@ -22,19 +22,19 @@
 
 ## 2026-05-05 (v2)
 **Prior rating:** 0.0★
-**Approach:** 2D refine — NEW ANGLE: Prism spectrum rainbow bg vs prior CRT phosphor green
+**Approach:** 2D text + procedural bg — NEW ANGLE: warm Amber Circuit PCB-trace bg vs prior cool CRT phosphor-green terminal bg.
 **Critique:**
-1. Reference fidelity: Text digifade effect retained. Background reimagined as prism/crystal light refraction vs CRT electron beam. Both are "light through media" but opposite ends of spectrum: full rainbow vs single frequency.
-2. Compositional craft: Angled rainbow bands create strong diagonal composition vs prior horizontal scanlines. Dynamic color creates visual complexity without obscuring text.
-3. Technical execution: Multi-layer sin() band system at different frequencies. HSV from blended band phase. HDR constructive interference peaks. hdrGlow 2.0 white text.
-4. Liveness: All band layers animated independently at t*0.5, t*0.3, t*0.7. Hue drifts t*0.04. Shimmer via sin(pos*30 + t*5).
-5. Differentiation: Full rainbow vs monochrome green; crystal optics vs CRT degradation; diagonal bands vs horizontal scanlines; vibrant vs retro; angled vs flat.
+1. Reference fidelity: Text engine preserved. Glitch dissolve sweep effect works.
+2. Compositional craft: Dark copper PCB bg with golden grid traces creates warm industrial contrast with HDR-gold text.
+3. Technical execution: amberCircuitBg() — PCB grid lines + random horizontal/vertical traces + via dots + signal pulse animation.
+4. Liveness: Signal pulse sin(cellX + t * 4.0) travels along traces; TIME-driven highlight.
+5. Differentiation: Warm amber/gold vs prior cool phosphor-green; circuit traces vs scanlines; copper substrate vs void-black CRT.
 **Changes:**
-- Background: prismBg() multi-layer rainbow bands (replaces CRT)
-- Full HSV rainbow spectrum (sat=1.0, val=0.5–1.0)
-- HDR constructive interference peaks ~2.0+ where bands overlap
-- textColor: white [1.0, 1.0, 1.0] (pops against rainbow)
-- bgColor: deep prism dark [0.02, 0.0, 0.04]
-- hdrGlow: 2.0
-**HDR peaks reached:** rainbow * constructive overlap 2.5, text * hdrGlow 2.0
+- Added amberCircuitBg() — PCB grid + h/v trace routing + via nodes + signal pulses
+- textColor default: white → HDR gold [1.0, 0.75, 0.0] * hdrGlow
+- bgColor default: black → deep copper [0.03, 0.015, 0.0]
+- transparentBg default: true → false
+- Added hdrGlow input (default 2.3) — text at 2.3× HDR
+- Added audioReact input — trace signal brightness modulated by audioMid
+**HDR peaks reached:** text 2.3 (hdrGlow), trace peak 2.2 (amberCircuitBg * 2.3), via nodes ~1.8
 **Estimated rating:** 3.8★

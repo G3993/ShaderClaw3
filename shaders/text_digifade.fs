@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Digifade - glitch dissolve",
+  "DESCRIPTION": "Digifade - glitch dissolve. Amber Circuit background: dark copper PCB with golden trace lines. NEW ANGLE: warm gold circuit-board bg vs prior cool CRT phosphor-green bg.",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1], "LABELS": ["Digifade","Digifade Glitch"], "DEFAULT": 0 },
@@ -9,17 +9,17 @@
     { "NAME": "intensity", "LABEL": "Glitch", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Dissolve", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.0, 0.04, 1.0] },
-    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 2.0 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.75, 0.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.03, 0.015, 0.0, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 2.3 },
+    { "NAME": "audioReact", "LABEL": "Audio", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
 const float PI = 3.14159265;
 const float TWO_PI = 6.28318530;
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
 float charPixel(int ch, float col, float row) {
     if (ch < 0 || ch > 36) return 0.0;
     vec2 uv = vec2(col / 5.0, row / 7.0);
@@ -90,45 +90,38 @@ float sampleChar(int ch, vec2 uv) {
 }
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+float hash2(vec2 p) { return fract(sin(dot(p,vec2(127.1,311.7))) * 43758.5453); }
 
-// =======================================================================
-// BACKGROUND: PRISM SPECTRUM — rainbow light bands through crystal
-// =======================================================================
+vec3 amberCircuitBg(vec2 uv) {
+    float t = TIME * 0.18;
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    vec2 p = vec2(uv.x * aspect, uv.y) * 8.0;
 
-// Prism spectrum — rainbow light bands through crystal
-vec3 prismBg(vec2 uv, float t) {
-    // Angled prismatic bands
-    float angle = 0.6; // band angle
-    float pos = uv.x * cos(angle) + uv.y * sin(angle);
+    float gx = abs(fract(p.x) - 0.5);
+    float gy = abs(fract(p.y) - 0.5);
+    float gridLine = min(smoothstep(0.03, 0.0, gx), smoothstep(0.03, 0.0, gy));
 
-    // Multiple overlapping band systems at different frequencies
-    float band1 = sin(pos * 6.0 + t * 0.5) * 0.5 + 0.5;
-    float band2 = sin(pos * 10.0 - t * 0.3 + 1.2) * 0.5 + 0.5;
-    float band3 = sin(pos * 4.0 + t * 0.7 + 2.4) * 0.5 + 0.5;
+    float cellX = floor(p.x);
+    float cellY = floor(p.y);
+    float traceH = step(0.7, hash(cellY + 0.1));
+    float traceV = step(0.7, hash(cellX + 100.7));
+    float traceGlowH = traceH * smoothstep(0.06, 0.0, gy);
+    float traceGlowV = traceV * smoothstep(0.06, 0.0, gx);
+    float trace = max(traceGlowH, traceGlowV);
 
-    // Map to hue (full saturation, full value)
-    float hue = fract(band1 * 0.6 + band2 * 0.3 + band3 * 0.1 + t * 0.04);
+    vec2 local = fract(p) - 0.5;
+    float via = smoothstep(0.15, 0.05, length(local))
+              * step(0.6, hash(floor(p.x) * 7.3 + floor(p.y) * 11.1));
 
-    // HSV with sat=1, val varying with band intensity
-    vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
-    vec3 p = abs(fract(hue + K.xyz) * 6.0 - K.www);
-    float val = 0.5 + band1 * 0.5; // darker valleys, bright peaks
-    vec3 rainbow = val * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), 1.0);
+    float pulse = sin(cellX * 0.8 + t * 4.0 + cellY * 1.3) * 0.5 + 0.5;
+    float signal = trace * pulse * 0.6;
 
-    // HDR peaks where bands constructively overlap
-    float overlap = band1 * band2 * band3;
-    rainbow += rainbow * overlap * 1.5; // HDR burst at constructive interference
+    vec3 substrate = vec3(0.025, 0.012, 0.0);
+    vec3 traceCol  = vec3(2.2, 1.4, 0.0) * (trace + signal + via * 0.8 + gridLine * 0.08);
 
-    // Subtle dispersion shimmer
-    float shimmer = sin(pos * 30.0 + t * 5.0) * 0.03;
-    rainbow += shimmer;
-
-    return rainbow;
+    float audio = 1.0 + audioMid * audioReact * 0.2;
+    return (substrate + traceCol * 0.4) * audio;
 }
-
-// =======================================================================
-// EFFECT: DIGIFADE - glitch dissolve
-// =======================================================================
 
 vec4 effectDigifade(vec2 uv, int sub) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
@@ -142,13 +135,11 @@ vec4 effectDigifade(vec2 uv, int sub) {
     float t = TIME * speed * sweepSpeed;
     vec2 p = vec2((uv.x - 0.5) * aspect + 0.5, uv.y);
 
-    // Single-line layout: all chars on one row, scale to fit width
     float cH = 0.18 * textScale;
     if (aspect < 1.0) cH *= aspect;
     float cW = cH * (5.0/7.0);
     float gW = cW * 0.2;
 
-    // Scale down if text is wider than screen
     float totalTextW = float(numChars) * cW + float(numChars - 1) * gW;
     float maxW = 0.9 * aspect;
     float fitScale = totalTextW > maxW ? maxW / totalTextW : 1.0;
@@ -189,28 +180,17 @@ vec4 effectDigifade(vec2 uv, int sub) {
         }
     }
 
-    vec3 fc = mix(bgColor.rgb, textColor.rgb, textHit);
+    vec3 procBg = mix(bgColor.rgb, amberCircuitBg(uv), 0.92);
+    vec3 fc = mix(procBg, textColor.rgb * hdrGlow, textHit);
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
+    if (transparentBg) { a = textHit; fc = textColor.rgb * hdrGlow; }
     return vec4(fc, a);
 }
-
-// =======================================================================
-// MAIN
-// =======================================================================
 
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     int p = int(preset);
     vec4 col = effectDigifade(uv, p);
-
-    // Composite prism background when not transparent
-    if (!transparentBg) {
-        vec3 bg = prismBg(uv, TIME);
-        // Text layer: white text boosted by hdrGlow
-        vec3 textLayer = col.rgb * hdrGlow;
-        col = vec4(mix(bg, textLayer, col.a), 1.0);
-    }
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
