@@ -36,3 +36,23 @@
 - Audio modulates density*brightness
 **HDR peaks reached:** ribbon center density accumulation * 2.5 = 2.5+; with audio 3.0+
 **Estimated rating:** 4.5★
+
+## 2026-05-05 (v4)
+**Prior rating:** 0.0★
+**Approach:** 2D Neon Silk Ribbons — NEW ANGLE: 2D volcanic palette (v1) → 3D volumetric aurora (v2) → 2D iso-contour ribbons on domain-warped field (v4)
+**Critique:**
+1. Reference fidelity: Flow field aesthetic preserved but rendered as glowing iso-contour ribbons rather than particle traces — still feels like flowing silk.
+2. Compositional craft: 14 ribbons cycle through cyan/magenta/gold/violet; double domain-warp creates complex flowing curves; void black ground maximizes saturation contrast.
+3. Technical execution: fwidth-based iso-contour width; black ink gap between adjacent ribbons (BG mix on ribbon centers); domain warp at two octaves.
+4. Liveness: warpSpeed drives field evolution; warpAmt controls turbulence; audio modulates brightness.
+5. Differentiation: 2D iso-contour vs v2 3D volumetric; ribbon/fabric aesthetic vs aurora curtain; tighter 4-color palette vs cycling hue gradient.
+**Changes:**
+- Full rewrite from 3D aurora to 2D iso-contour ribbon system
+- Double domain warp: q = sin/cos layer, r = secondary warp on (p+q)
+- field() = triple sinusoidal product for rich topology
+- 24 potential ribbon iso-lines (default 14)
+- fwidth-based adaptive ribbon width — no aliasing
+- Black ink gap between ribbon edges
+- Palette: cyan (0,2.5,2.3), magenta (2.5,0.05,1.8), gold (2.4,1.7,0), violet (1.5,0,2.5)
+**HDR peaks reached:** all 4 colors at hdrBoost*audio = 2.5–3.5+
+**Estimated rating:** 4.5★

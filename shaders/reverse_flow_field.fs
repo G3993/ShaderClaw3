@@ -1,85 +1,41 @@
 /*{
-    "DESCRIPTION": "Aurora Magnetica — 3D volumetric aurora curtains bending in a magnetic field. Wide upward camera. Palette: electric cyan, violet, gold, deep-space navy. 64-step volume march.",
-    "CATEGORIES": ["Generator", "3D", "Volumetric", "Audio Reactive"],
-    "CREDIT": "ShaderClaw auto-improve",
-    "INPUTS": [
-        { "NAME": "curtainDensity", "TYPE": "float", "DEFAULT": 3.0, "MIN": 1.0, "MAX": 8.0,  "LABEL": "Curtain Density" },
-        { "NAME": "waveSpeed",      "TYPE": "float", "DEFAULT": 0.4, "MIN": 0.0, "MAX": 2.0,  "LABEL": "Wave Speed" },
-        { "NAME": "hdrPeak",        "TYPE": "float", "DEFAULT": 2.5, "MIN": 1.0, "MAX": 4.0,  "LABEL": "HDR Peak" },
-        { "NAME": "audioMod",       "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0,  "LABEL": "Audio Mod" }
-    ]
+  "DESCRIPTION": "Neon Silk Ribbons — iso-contour ribbons of domain-warped FBM field. Cyan/magenta/gold/violet on void black. v4: contour ribbons vs v2 3D volumetric aurora / v1 volcanic flow trace.",
+  "CATEGORIES": ["Generator"],
+  "CREDIT": "ShaderClaw auto-improve v4",
+  "INPUTS": [
+    {"NAME":"ribbons",   "TYPE":"float","DEFAULT":14.0,"MIN":4.0,"MAX":24.0},
+    {"NAME":"warpSpeed", "TYPE":"float","DEFAULT":0.35,"MIN":0.0,"MAX":2.0},
+    {"NAME":"warpAmt",   "TYPE":"float","DEFAULT":1.2,"MIN":0.0,"MAX":3.0},
+    {"NAME":"hdrBoost",  "TYPE":"float","DEFAULT":2.5,"MIN":1.0,"MAX":4.0},
+    {"NAME":"audioMod",  "TYPE":"float","DEFAULT":1.0,"MIN":0.0,"MAX":2.0}
+  ]
 }*/
-
-float hash21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-
-float vnoise(vec2 p) {
-    vec2 i = floor(p); vec2 f = fract(p);
-    vec2 u = f * f * (3.0 - 2.0 * f);
-    return mix(mix(hash21(i), hash21(i+vec2(1,0)), u.x),
-               mix(hash21(i+vec2(0,1)), hash21(i+vec2(1,1)), u.x), u.y);
+vec2 domainWarp(vec2 p,float t){
+    vec2 q=vec2(sin(p.x*1.7+t)*cos(p.y*1.2-t*0.6),cos(p.x*1.3-t*0.4)*sin(p.y*2.1+t*0.7));
+    vec2 r=vec2(sin((p.x+q.x)*2.3+t*0.5),cos((p.y+q.y)*1.9-t*0.3));
+    return p+q*warpAmt*0.3+r*warpAmt*0.12;
 }
-
-float fbm2(vec2 p) {
-    float v = 0.0, a = 0.5;
-    for (int k = 0; k < 4; k++) { v += a * vnoise(p); p *= 2.2; a *= 0.5; }
-    return v;
-}
-
-float auroraDensity(vec3 p, float t) {
-    float xWarp = fbm2(vec2(p.x * 0.4 + t * 0.15, p.z * 0.3 + t * 0.08)) * 0.8;
-    float zWarp = fbm2(vec2(p.z * 0.35 - t * 0.12, p.x * 0.25 + t * 0.1)) * 0.8;
-    float curtain = sin((p.x + xWarp) * curtainDensity + t * waveSpeed)
-                  * cos((p.z + zWarp) * curtainDensity * 0.7 - t * waveSpeed * 0.6);
-    curtain = curtain * 0.5 + 0.5;
-    float hEnv = smoothstep(-0.2, 2.5, p.y) * smoothstep(6.0, 2.0, p.y);
-    return curtain * curtain * hEnv * 1.5;
-}
-
-vec3 auroraColor(vec3 p, float t) {
-    float phase = p.x * 0.3 + p.z * 0.2 + t * 0.2;
-    float fi = fract(phase * 0.25);
-    if (fi < 0.33) return mix(vec3(0.0, 0.9, 1.0),  vec3(0.5, 0.1, 1.0),  fi * 3.0);
-    if (fi < 0.67) return mix(vec3(0.5, 0.1, 1.0),  vec3(1.0, 0.75, 0.0), (fi-0.33)*3.0);
-    return             mix(vec3(1.0, 0.75, 0.0), vec3(0.0, 0.9,  1.0), (fi-0.67)*3.0);
-}
-
-void main() {
-    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
-    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
-    float t = TIME * 0.5;
-    float audio = 1.0 + audioLevel * audioMod + audioBass * audioMod * 0.5;
-
-    // Camera pointing up into sky, slow drift
-    vec3 ro = vec3(sin(TIME*0.07)*0.5, 0.0, cos(TIME*0.05)*0.5);
-    vec3 rd = normalize(vec3(uv.x * 0.85, 1.0, uv.y * 0.5 + 0.6));
-
-    // Deep-space navy background
-    float skyH = pow(max(rd.y, 0.0), 0.4);
-    vec3 bgCol = mix(vec3(0.0, 0.0, 0.02), vec3(0.0, 0.03, 0.14), skyH);
-
-    // Volumetric march through aurora layer
-    vec3 accCol   = vec3(0.0);
-    float transmit = 1.0;
-    float stepLen  = 0.1;
-
-    for (int i = 0; i < 64; i++) {
-        float dist = float(i) * stepLen;
-        vec3 p = ro + rd * dist;
-        if (p.y < -0.3 || p.y > 6.5) continue;
-        float dens = auroraDensity(p, t) * stepLen * 1.2;
-        if (dens > 0.001) {
-            vec3 aCol = auroraColor(p, t) * hdrPeak * audio;
-            accCol   += aCol * dens * transmit;
-            transmit *= exp(-dens * 0.8);
-            if (transmit < 0.01) break;
-        }
+float field(vec2 p){return sin(p.x*1.8+p.y*1.1)*cos(p.y*2.7-p.x*0.8)*sin(p.x*0.9+p.y*3.2);}
+void main(){
+    vec2 uv=isf_FragNormCoord*2.0-1.0; uv.x*=RENDERSIZE.x/RENDERSIZE.y;
+    float t=TIME*warpSpeed; float audio=1.0+(audioLevel+audioBass*0.5)*audioMod*0.22;
+    vec3 CYAN=vec3(0.0,2.5,2.3)*hdrBoost*audio;
+    vec3 MAG=vec3(2.5,0.05,1.8)*hdrBoost*audio;
+    vec3 GOLD=vec3(2.4,1.7,0.0)*hdrBoost*audio;
+    vec3 VIOLET=vec3(1.5,0.0,2.5)*hdrBoost*audio;
+    vec3 BG=vec3(0,0,0.012);
+    vec2 wp=domainWarp(uv,t); float f=field(wp);
+    int N=int(clamp(ribbons,4.0,24.0)); float step_f=2.0/float(N);
+    vec3 col=BG;
+    for(int i=0;i<24;i++){
+        if(i>=N)break; float fi=float(i);
+        float iso=-1.0+fi*step_f+step_f*0.5;
+        float d=abs(f-iso); float fw=fwidth(f)*0.4;
+        float ribbon=smoothstep(fw*2.5,fw*0.1,d);
+        int ci=int(mod(fi,4.0));
+        vec3 rc=(ci==0)?CYAN:(ci==1)?MAG:(ci==2)?GOLD:VIOLET;
+        col=mix(col,rc,ribbon*0.88);
+        col=mix(col,BG,smoothstep(fw*5.0,0.0,d-fw*0.5)*ribbon*0.55);
     }
-
-    vec3 col = bgCol * transmit + accCol;
-
-    // Faint stars
-    float star = step(0.983, hash21(floor(uv * 22.0) + 7.3)) * (0.6 + hash21(floor(uv * 22.0)) * 0.4);
-    col += vec3(star) * transmit * 1.8;
-
-    gl_FragColor = vec4(col, 1.0);
+    gl_FragColor=vec4(col,1.0);
 }
