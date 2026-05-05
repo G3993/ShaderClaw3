@@ -12,7 +12,8 @@
     { "NAME": "textScale", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
     { "NAME": "textColor", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
     { "NAME": "bgColor", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "TYPE": "bool", "DEFAULT": false }
+    { "NAME": "transparentBg", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
@@ -99,6 +100,8 @@ void main() {
     int numLayers = int(mix(4.0, 12.0, density));
     if (numLayers < 2) numLayers = 2;
 
+    float audioMod = 0.5 + 0.5 * audioLevel * audioReact;
+    float bassMod  = 0.5 + 0.5 * audioBass  * audioReact;
     vec3 ro = vec3(0.0, 0.0, 2.5);
     vec2 screen = (uv - 0.5) * vec2(aspect, 1.0);
     vec3 rd = normalize(vec3(screen, -1.5));
@@ -159,8 +162,9 @@ void main() {
             float diff = max(dot(wn, lightDir), 0.0);
             vec3 viewDir = normalize(-rd);
             vec3 h = normalize(lightDir + viewDir);
-            float spec = pow(max(dot(wn, h), 0.0), 32.0);
-            shade = 0.15 + diff * 0.7 + spec * 0.4;
+            // HDR specular: power 96 for sharp gloss; peak at 2.2×audioMod
+            float spec = pow(max(dot(wn, h), 0.0), 96.0);
+            shade = 0.15 + diff * 0.75 + spec * 2.2 * audioMod;
             if (e > 0) {
                 float phase = float(slot) * 1.3 + TIME * speed * cycleSpeed;
                 int style = int(mod(floor(phase), 10.0));
@@ -171,9 +175,13 @@ void main() {
         } else {
             shade = mix(0.35, 0.7, depthFactor);
         }
-        finalColor = textColor.rgb * clamp(shade, 0.0, 1.0);
+        // Linear HDR output — host applies ACES; remove clamp so specular blooms
+        finalColor = textColor.rgb * shade;
         finalAlpha = 1.0;
     }
+
+    // Bass-driven diffuse boost: text brightens on kick
+    finalColor += textColor.rgb * finalAlpha * max(0.0, bassMod - 0.7) * 1.2;
 
     gl_FragColor = vec4(finalColor, finalAlpha);
 }
