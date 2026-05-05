@@ -1,180 +1,225 @@
 /*{
-    "DESCRIPTION": "Particle field bouncing off the edges of the canvas. Grid-seeded, audio-reactive, velocity-stretched streaks.",
-    "CATEGORIES": ["Generator", "Particles", "Audio Reactive"],
-    "CREDIT": "Easel / edges v1",
-    "INPUTS": [
-        { "NAME": "motionSpeed",    "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 1.0, "LABEL": "Motion Speed" },
-        { "NAME": "chaos",          "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0, "LABEL": "Chaos" },
-        { "NAME": "particleSize",   "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 4.0, "LABEL": "Particle Size" },
-        { "NAME": "stretch",        "TYPE": "float", "DEFAULT": 1.2, "MIN": 0.0, "MAX": 4.0, "LABEL": "Stretch" },
-        { "NAME": "vortexStrength", "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 3.0, "LABEL": "Vortex" },
-        { "NAME": "audioReactivity","TYPE": "float", "DEFAULT": 0.7, "MIN": 0.0, "MAX": 2.0, "LABEL": "Audio" },
-        { "NAME": "color1", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0], "LABEL": "Core" },
-        { "NAME": "color2", "TYPE": "color", "DEFAULT": [0.1, 0.7, 1.0, 1.0], "LABEL": "Halo" },
-        { "NAME": "bg",     "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.03, 1.0], "LABEL": "Background" },
-        { "NAME": "glow",   "TYPE": "float", "DEFAULT": 1.3, "MIN": 0.0, "MAX": 3.0, "LABEL": "Glow" },
-        { "NAME": "ledMode",       "TYPE": "bool",  "DEFAULT": true,  "LABEL": "LED Wall" },
-        { "NAME": "ledSize",       "TYPE": "float", "DEFAULT": 220.0, "MIN": 50.0, "MAX": 600.0, "LABEL": "LED Density" },
-        { "NAME": "trailDecay",    "TYPE": "float", "DEFAULT": 0.85,  "MIN": 0.0,  "MAX": 1.0, "LABEL": "Trail Length" },
-        { "NAME": "particleCount", "TYPE": "float", "DEFAULT": 96.0,  "MIN": 20.0, "MAX": 200.0, "LABEL": "Particle Count" },
-        { "NAME": "colorJitter",   "TYPE": "float", "DEFAULT": 0.40,  "MIN": 0.0,  "MAX": 1.0, "LABEL": "Color Jitter" }
-    ]
+  "DESCRIPTION": "Crystal Ribbon Storm — 3D raymarched dark sphere core surrounded by 12 orbiting crystalline ribbons at varied inclinations. Cinematic three-point lighting.",
+  "CREDIT": "ShaderClaw auto-improve",
+  "ISFVSN": "2",
+  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
+  "INPUTS": [
+    {"NAME":"speed",       "TYPE":"float","DEFAULT":0.5, "MIN":0.0,"MAX":2.0,  "LABEL":"Orbit Speed"},
+    {"NAME":"ribbonScale", "TYPE":"float","DEFAULT":1.0, "MIN":0.3,"MAX":2.0,  "LABEL":"Ribbon Scale"},
+    {"NAME":"hdrPeak",     "TYPE":"float","DEFAULT":2.5, "MIN":1.0,"MAX":4.0,  "LABEL":"HDR Peak"},
+    {"NAME":"audioReact",  "TYPE":"float","DEFAULT":0.6, "MIN":0.0,"MAX":2.0,  "LABEL":"Audio React"}
+  ]
 }*/
 
-float hash11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
+// ---------- hash ----------
 
-// Triangle-wave bounce: x (time-like) folded into [0,1] with reflection.
-float bounce01(float x) { return abs(fract(x * 0.5) * 2.0 - 1.0); }
-
-// 2D sinusoidal "vortex" — cheap analytic flow field, no noise tables.
-vec2 vortex(vec2 p, float t) {
-    float a = sin(p.x * 1.3 + t * 0.7) + cos(p.y * 1.7 - t * 0.5);
-    float b = cos(p.x * 1.9 - t * 0.4) + sin(p.y * 1.1 + t * 0.9);
-    return vec2(a, b) * 0.5;
+float hashF(float n) {
+    return fract(sin(n) * 43758.5453123);
 }
+
+// ---------- rotation matrices ----------
+
+mat3 rotY(float a) {
+    float c = cos(a), s = sin(a);
+    return mat3(c, 0.0, s,  0.0, 1.0, 0.0,  -s, 0.0, c);
+}
+
+mat3 rotX(float a) {
+    float c = cos(a), s = sin(a);
+    return mat3(1.0, 0.0, 0.0,  0.0, c, -s,  0.0, s, c);
+}
+
+mat3 rotZ(float a) {
+    float c = cos(a), s = sin(a);
+    return mat3(c, -s, 0.0,  s, c, 0.0,  0.0, 0.0, 1.0);
+}
+
+// ---------- SDFs ----------
+
+float sdSphere(vec3 p, float r) {
+    return length(p) - r;
+}
+
+float sdBox(vec3 p, vec3 b) {
+    vec3 q = abs(p) - b;
+    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
+}
+
+float opUnion(float a, float b) {
+    return min(a, b);
+}
+
+// ---------- scene SDF + material id ----------
+// Returns vec2: x=dist, y=material (0=sphere, 1=ribbon)
+
+vec2 sceneSDF(vec3 p, float t, float spd, float rScale) {
+    float sphereDist = sdSphere(p, 0.5);
+
+    float bestRibbon = 1e10;
+
+    float orbitR = 1.3;
+    // ribbon half-extents
+    vec3 ribbonSize = vec3(0.8, 0.03, 0.03) * rScale;
+
+    for (int i = 0; i < 12; i++) {
+        float fi = float(i);
+        float h1 = hashF(fi * 1.37 + 0.5);
+        float h2 = hashF(fi * 3.71 + 1.2);
+        float h3 = hashF(fi * 7.13 + 2.9);
+
+        float orbitSpeed = spd * (0.3 + h1 * 0.4);
+        float angle = 6.28318 * fi / 12.0 + t * orbitSpeed;
+        float inclination = 3.14159 * h2 * 0.8;
+        float rollAngle   = 6.28318 * h3;
+
+        // ribbon center on orbit
+        vec3 ribbonCenter = vec3(cos(angle) * orbitR, 0.0, sin(angle) * orbitR);
+
+        // apply inclination rotation (tilt orbit plane)
+        ribbonCenter = rotX(inclination) * ribbonCenter;
+
+        // transform point into ribbon local space
+        vec3 lp = p - ribbonCenter;
+
+        // orient ribbon tangent to orbit: tangent = derivative of orbit w.r.t angle
+        // tangent in base orbit: (-sin(angle), 0, cos(angle))
+        vec3 tangent = rotX(inclination) * vec3(-sin(angle), 0.0, cos(angle));
+        // ribbon axis aligned along tangent
+        // build local frame
+        vec3 axisX = normalize(tangent);
+        vec3 axisY = vec3(0.0, 1.0, 0.0);
+        // if axisX too close to Y, pick Z
+        if (abs(axisX.y) > 0.9) axisY = vec3(0.0, 0.0, 1.0);
+        vec3 axisZ = normalize(cross(axisX, axisY));
+        axisY = cross(axisZ, axisX);
+
+        // apply extra roll
+        float cosR = cos(rollAngle), sinR = sin(rollAngle);
+        vec3 axisY2 = cosR * axisY + sinR * axisZ;
+        vec3 axisZ2 = -sinR * axisY + cosR * axisZ;
+
+        // project into local frame
+        vec3 lLocal = vec3(dot(lp, axisX), dot(lp, axisY2), dot(lp, axisZ2));
+        float d = sdBox(lLocal, ribbonSize);
+        bestRibbon = opUnion(bestRibbon, d);
+    }
+
+    if (sphereDist < bestRibbon) {
+        return vec2(sphereDist, 0.0);
+    }
+    return vec2(bestRibbon, 1.0);
+}
+
+// ---------- finite-difference normal ----------
+
+vec3 sceneNormal(vec3 p, float t, float spd, float rScale) {
+    float eps = 0.001;
+    vec2 e = vec2(eps, 0.0);
+    float dx = sceneSDF(p + e.xyy, t, spd, rScale).x - sceneSDF(p - e.xyy, t, spd, rScale).x;
+    float dy = sceneSDF(p + e.yxy, t, spd, rScale).x - sceneSDF(p - e.yxy, t, spd, rScale).x;
+    float dz = sceneSDF(p + e.yyx, t, spd, rScale).x - sceneSDF(p - e.yyx, t, spd, rScale).x;
+    return normalize(vec3(dx, dy, dz));
+}
+
+// ---------- main ----------
 
 void main() {
     vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
-    float aspect = RENDERSIZE.x / RENDERSIZE.y;
-    uv.x *= aspect;
+    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
 
-    float t = TIME;
-    float audio = audioLevel + audioBass * 1.1 + audioHigh * 0.5;
+    // audio
+    float aLevel = 1.0 + audioLevel * audioReact;
+    float aBass  = 1.0 + audioBass  * audioReact * 1.3;
 
-    vec3 acc = vec3(0.0);
-    const int N = 256;
+    // cinematic camera — slight orbit
+    float camA = TIME * speed * 0.15;
+    vec3 camPos = vec3(sin(camA) * 3.5, 0.8 + sin(TIME * speed * 0.07) * 0.3, cos(camA) * 3.5);
+    vec3 target  = vec3(0.0);
+    vec3 fwd     = normalize(target - camPos);
+    vec3 right   = normalize(cross(fwd, vec3(0.0,1.0,0.0)));
+    vec3 upV     = cross(right, fwd);
+    vec3 rd      = normalize(fwd + uv.x * right * 0.65 + uv.y * upV * 0.65);
+    vec3 ro      = camPos;
 
-    for (int i = 0; i < N; i++) {
-        float fi = float(i);
-        float s1 = hash11(fi * 1.37);
-        float s2 = hash11(fi * 2.91 + 0.5);
-        float s3 = hash11(fi * 4.17 + 0.3);
-        float s4 = hash11(fi * 7.53 + 0.7);
+    // ---------- raymarch ----------
+    float totalDist = 0.0;
+    float matID = -1.0;
+    bool hit = false;
 
-        // Wider speed range + two stacked oscillators per axis → richer, less
-        // periodic-feeling motion. Each particle has a dominant and secondary
-        // frequency at 1.7× offset, mixed 70/30.
-        float speedX1 = (0.2 + s1 * 2.8) * motionSpeed;
-        float speedY1 = (0.2 + s2 * 2.8) * motionSpeed;
-        float speedX2 = speedX1 * (1.0 + s3 * 0.8);
-        float speedY2 = speedY1 * (1.0 + s4 * 0.8);
-        float phaseX  = s3 * 6.2832;
-        float phaseY  = s4 * 6.2832;
-        float phaseX2 = s1 * 3.1416;
-        float phaseY2 = s2 * 3.1416;
-
-        float dt = 0.02;
-        // Mix two bouncing oscillators so paths don't feel clockwork-regular.
-        float bxA = bounce01(t      * speedX1 + phaseX) * 0.7
-                  + bounce01(t      * speedX2 + phaseX2) * 0.3;
-        float byA = bounce01(t      * speedY1 + phaseY) * 0.7
-                  + bounce01(t      * speedY2 + phaseY2) * 0.3;
-        float bxB = bounce01((t+dt) * speedX1 + phaseX) * 0.7
-                  + bounce01((t+dt) * speedX2 + phaseX2) * 0.3;
-        float byB = bounce01((t+dt) * speedY1 + phaseY) * 0.7
-                  + bounce01((t+dt) * speedY2 + phaseY2) * 0.3;
-
-        vec2 baseA = vec2(bxA, byA) * 2.0 - 1.0;
-        vec2 baseB = vec2(bxB, byB) * 2.0 - 1.0;
-
-        // Chaos: stacked sin layers at different frequencies + a per-particle
-        // tumble. With chaos > 0 each particle deviates strongly from its
-        // base bounce path, with chaos = 0 it follows the orbit cleanly.
-        // Previous version was scaled by 0.25 — far too weak to read.
-        float chT = t * 0.7;
-        float chTb = (t+dt) * 0.7;
-        // Three octaves of sin per axis at different frequencies + per-
-        // particle phase offsets — non-periodic-feeling drift
-        vec2 chaosA = vec2(
-            sin(chT  * (1.1 + s1 * 1.3) + s3 * 6.28) * 0.55
-          + sin(chT  * (3.7 + s2 * 1.7) + s4 * 6.28) * 0.30
-          + sin(chT  * (0.4 + s3 * 0.9) + s1 * 6.28) * 0.20,
-            cos(chT  * (0.9 + s2 * 1.5) + s4 * 6.28) * 0.55
-          + cos(chT  * (3.1 + s1 * 1.4) + s3 * 6.28) * 0.30
-          + cos(chT  * (0.6 + s4 * 1.1) + s2 * 6.28) * 0.20
-        ) * chaos * 0.55;
-        vec2 chaosB = vec2(
-            sin(chTb * (1.1 + s1 * 1.3) + s3 * 6.28) * 0.55
-          + sin(chTb * (3.7 + s2 * 1.7) + s4 * 6.28) * 0.30
-          + sin(chTb * (0.4 + s3 * 0.9) + s1 * 6.28) * 0.20,
-            cos(chTb * (0.9 + s2 * 1.5) + s4 * 6.28) * 0.55
-          + cos(chTb * (3.1 + s1 * 1.4) + s3 * 6.28) * 0.30
-          + cos(chTb * (0.6 + s4 * 1.1) + s2 * 6.28) * 0.20
-        ) * chaos * 0.55;
-        baseA += chaosA;
-        baseB += chaosB;
-        // Wrap (not clamp) so chaotic particles re-enter rather than stick to edges
-        baseA = mod(baseA + 1.0, 2.0) - 1.0;
-        baseB = mod(baseB + 1.0, 2.0) - 1.0;
-
-        // Aspect-stretched world-space positions.
-        vec2 posA = vec2(baseA.x * aspect, baseA.y);
-        vec2 posB = vec2(baseB.x * aspect, baseB.y);
-
-        // Optional vortex perturbation.
-        posA += vortex(posA, t)          * vortexStrength * 0.08;
-        posB += vortex(posB, t + dt)     * vortexStrength * 0.08;
-
-        vec2 vel = (posB - posA) / dt;
-        float speed = length(vel);
-
-        // Capsule endpoints for motion-stretched particle.
-        float stretchLen = 0.006 * stretch * (0.5 + audio * audioReactivity);
-        vec2 a = posA - vel * stretchLen;
-        vec2 b = posA + vel * stretchLen;
-
-        // Distance to capsule (line segment with rounded caps).
-        vec2 pa = uv - a;
-        vec2 ba = b - a;
-        float denom = max(dot(ba, ba), 1e-6);
-        float h = clamp(dot(pa, ba) / denom, 0.0, 1.0);
-        float d = length(pa - ba * h);
-
-        float r = 0.012 * particleSize * (0.6 + audio * audioReactivity * 0.6);
-        float core = smoothstep(r, 0.0, d);
-        float halo = exp(-d * 70.0);
-
-        // Per-particle color jitter — gives the LED-wall variety look
-        vec3 c1 = color1.rgb;
-        vec3 c2 = color2.rgb;
-        if (colorJitter > 0.0) {
-            float h = hash11(float(i) * 11.7);
-            vec3 hueShift = 0.5 + 0.5 * cos(6.28318 * h + vec3(0.0, 2.094, 4.188));
-            c1 = mix(c1, hueShift,             colorJitter);
-            c2 = mix(c2, hueShift * 0.7 + 0.3, colorJitter);
+    for (int step = 0; step < 64; step++) {
+        vec3 p = ro + rd * totalDist;
+        vec2 res = sceneSDF(p, TIME, speed, ribbonScale * aBass);
+        float d = res.x;
+        if (d < 0.001) {
+            matID = res.y;
+            hit = true;
+            break;
         }
-        acc += mix(c2, c1, core) * (core + halo * 0.35);
+        totalDist += d * 0.9;
+        if (totalDist > 20.0) break;
+    }
 
-        // Trail — extra ghost samples behind the segment
-        if (trailDecay > 0.001) {
-            for (int tk = 1; tk <= 3; tk++) {
-                float ftk = float(tk);
-                vec2 ghostA = a - vel * ftk * 0.10 * trailDecay;
-                vec2 ghostB = a;
-                vec2 paG = uv - ghostA;
-                vec2 baG = ghostB - ghostA;
-                float dG2 = dot(baG, baG);
-                if (dG2 > 1e-6) {
-                    float hG = clamp(dot(paG, baG) / dG2, 0.0, 1.0);
-                    float ddG = length(paG - baG * hG);
-                    float fadeG = 1.0 - ftk / 4.0;
-                    acc += mix(c2, c1, smoothstep(r, 0.0, ddG)) * fadeG * 0.20;
-                }
+    vec3 col = vec3(0.0, 0.0, 0.01); // void black background
+
+    if (hit) {
+        vec3 p = ro + rd * totalDist;
+        vec3 N = sceneNormal(p, TIME, speed, ribbonScale * aBass);
+
+        // three-point lights
+        vec3 keyDir  = normalize(vec3( 1.0, 0.8, 0.6));   // front-right
+        vec3 fillDir = normalize(vec3(-1.0, 0.3, 0.5));   // left
+        vec3 rimDir  = normalize(vec3( 0.0,-0.2,-1.0));   // behind viewer
+
+        float keyDiff  = max(0.0, dot(N, keyDir));
+        float fillDiff = max(0.0, dot(N, fillDir));
+        float rimDiff  = max(0.0, dot(N, rimDir));
+
+        // specular (Phong ^32)
+        vec3 viewDir = normalize(-rd);
+        vec3 keySpec  = vec3(pow(max(0.0, dot(reflect(-keyDir,  N), viewDir)), 32.0));
+        vec3 fillSpec = vec3(pow(max(0.0, dot(reflect(-fillDir, N), viewDir)), 32.0));
+        vec3 rimSpec  = vec3(pow(max(0.0, dot(reflect(-rimDir,  N), viewDir)), 32.0));
+
+        // HDR fwidth AA on SDF edge
+        float edgeFw = fwidth(totalDist);
+        float edgeSoft = 1.0 - smoothstep(0.0, edgeFw * 2.0, 0.001);
+
+        if (matID < 0.5) {
+            // ---------- sphere core ----------
+            vec3 sphereBase = vec3(0.02, 0.01, 0.03);
+            // dark with cool rim
+            vec3 lightCyan = vec3(0.0, 1.0, 1.0);
+            col = sphereBase
+                + lightCyan * fillDiff * 0.2
+                + vec3(0.3, 0.0, 1.0) * rimDiff * 0.5 * aLevel;
+
+        } else {
+            // ---------- crystal ribbon ----------
+            // base ribbon tint: cycles per ribbon by position
+            float ribbonHue = hashF(floor(totalDist * 3.0 + 7.3));
+            vec3 ribBase;
+            if (ribbonHue < 0.33) {
+                ribBase = vec3(0.0, 1.0, 1.0);    // electric cyan
+            } else if (ribbonHue < 0.66) {
+                ribBase = vec3(1.0, 0.0, 0.7);    // hot magenta
+            } else {
+                ribBase = vec3(0.3, 0.0, 1.0);    // deep violet
             }
+
+            // diamond white specular (HDR)
+            vec3 diamondSpec = vec3(1.0) * 2.5;
+
+            vec3 keyLight  = diamondSpec * keySpec  * hdrPeak * aLevel;
+            vec3 fillLight = vec3(0.0,1.0,1.0) * fillDiff * 0.6 * hdrPeak * 0.5;
+            vec3 rimLight  = vec3(1.0,0.0,0.7) * rimDiff  * hdrPeak * aLevel;
+
+            col = ribBase * 0.05
+                + ribBase  * keyDiff  * hdrPeak * 0.4 * aLevel
+                + fillLight
+                + rimLight
+                + keyLight;
         }
     }
 
-    vec3 rgb = bg.rgb + acc * glow;
-
-    // LED wall mode: quantize to a grid, leaving black "gaps" between LEDs
-    if (ledMode) {
-        vec2 ledUV = uv * ledSize;
-        vec2 lf = fract(ledUV) - 0.5;
-        float dotMask = smoothstep(0.45, 0.30, length(lf));
-        // Black bezel between LEDs, brightness boost on the lit dot
-        rgb = rgb * (0.20 + 0.80 * dotMask);
-        rgb += rgb * dotMask * 0.4;  // a touch of bloom on lit cells
-    }
-
-    gl_FragColor = vec4(rgb, 1.0);
+    gl_FragColor = vec4(col, 1.0);
 }
