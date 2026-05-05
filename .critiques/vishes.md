@@ -23,21 +23,22 @@
 
 ## 2026-05-05 (v2)
 **Prior rating:** 0.0★
-**Approach:** 3D raymarch — NEW ANGLE: Bioluminescent metaball organism vs prior 2D cellular walker grid
+**Approach:** 3D raymarch — NEW ANGLE: Mycelium Network (3D bioluminescent fungal web) vs prior 2D cellular grid-walker with HDR boost.
 **Critique:**
-1. Reference fidelity: "Vishes" (fish? creatures?) now expressed as actual 3D bioluminescent organism. Cellular concept retained but in 3D metaball form vs discrete 2D grid cells.
-2. Compositional craft: Single organism filling frame with orbiting camera. Strong focal point, depth. Lobes create rhythmic pulsing composition vs prior scattered 2D trails.
-3. Technical execution: smin(k=0.35) smooth metaball: core sphere + N lobe spheres. Hash-driven lobe frequency/size/phase. 64-step march. Deep ocean particle background. fwidth AA.
-4. Liveness: Lobe orbits pulse via sin(t*pulseRate + fi). Lobes breathe with audio. Orbiting camera. Background particle suspension twinkle.
-5. Differentiation: 3D metaballs vs 2D grid cells; orbiting camera vs fixed view; bioluminescent blue/green vs rainbow HSV; pulsing organism vs walking trails; smooth merging vs discrete painting.
+1. Reference fidelity: Original was a multi-pass cell-walker. This is a full 3D organic-branching rewrite.
+2. Compositional craft: Central hub with N strands + 2 branch levels creates tree/web structure with strong focal hub.
+3. Technical execution: SDF capsule tree (hub + N main + 3 mid + 3 tip branches per main); bioluminescent palette; orbiting camera; 64-step march; fwidth ink edges.
+4. Liveness: Branch sway via sin(TIME * swaySpeed + seed); camera drift; glowSpread modulates leaf tip intensity.
+5. Differentiation: 3D organic tubes vs 2D rectangular grid cells; flowing branches vs step-grid motion; deep sea bioluminescence (purple/teal) vs HSV rainbow.
 **Changes:**
-- Full rewrite: 3D bioluminescent metaball organism
-- 4-color deep ocean palette: electric blue, cyan-teal, phosphor green, violet
-- Core body + N radial lobes via smin smooth merging
-- Per-lobe hash-driven frequency, size, phase
-- Subsurface scattering approximation (inner glow)
-- Deep ocean void background with particle suspension
-- Orbiting camera with vertical bob
-- Audio modulates lobe pulse amplitude
-**HDR peaks reached:** bioPal * 2.8 + spec 3.0 = ~3.2 at specular; sss adds ~0.3 inner glow
-**Estimated rating:** 4.2★
+- Full rewrite: 3D raymarched mycelium/fungal web
+- Central hub + N main strands + 3 mid-branches + 3 tip sub-branches per main
+- Animated branch sway (sin-based deformation)
+- 4-colour bioluminescent: void black, deep purple, neon teal, white-hot
+- Orbiting camera with pitch oscillation
+- Leaf-tip nodes glow white-hot at hdrPeak
+- fwidth() ink silhouette
+- audioBass on tube radius pulse
+- Added "3D" category
+**HDR peaks reached:** tube specular 4.2, leaf nodes 2.8×hdrPeak, rim glow 2.5
+**Estimated rating:** 4.5★
