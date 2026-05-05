@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Reverse Flow Field — colored seeds streaked backward through an animated cellular flow field. Looks like wind-blown grass tips.",
+  "DESCRIPTION": "Reverse Flow Field — colored seeds streaked backward through an animated cellular flow field. Deep ocean palette: black voids to HDR seafoam peaks.",
   "CREDIT": "Ported from Shadertoy X3BBD1 by webwarrior (Material Maker output)",
   "CATEGORIES": ["Generator", "Flow"],
   "INPUTS": [
@@ -10,7 +10,8 @@
     { "NAME": "octaves",     "LABEL": "Octaves",         "TYPE": "float", "DEFAULT": 4.0,  "MIN": 1.0,  "MAX": 6.0 },
     { "NAME": "persistence", "LABEL": "Persistence",     "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.1,  "MAX": 0.9 },
     { "NAME": "dotDensity",  "LABEL": "Seed Density",    "TYPE": "float", "DEFAULT": 0.1,  "MIN": 0.01, "MAX": 0.5 },
-    { "NAME": "intensity",   "LABEL": "Brightness",      "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.2,  "MAX": 3.0 }
+    { "NAME": "intensity",   "LABEL": "Brightness",      "TYPE": "float", "DEFAULT": 2.5,  "MIN": 0.2,  "MAX": 3.0 },
+    { "NAME": "audioMod",    "LABEL": "Audio Modulator", "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 2.0 }
   ],
   "PASSES": [
     { "TARGET": "directions" },
@@ -19,9 +20,6 @@
   ]
 }*/
 
-// ──────────────────────────────────────────────────────────────────────
-// Shared hashes (used in both Buffer A and Buffer B in the original)
-// ──────────────────────────────────────────────────────────────────────
 float rand1(vec2 x) {
     return fract(cos(mod(dot(x, vec2(13.9898, 8.141)), 3.14)) * 43758.5453);
 }
@@ -35,9 +33,6 @@ vec3 rand3(vec2 x) {
                               dot(x, vec2(13.254, 5.867))), vec3(3.14))) * 43758.5453);
 }
 
-// ──────────────────────────────────────────────────────────────────────
-// Buffer A — animated cellular FBM, encoded as a direction vector
-// ──────────────────────────────────────────────────────────────────────
 float cellular6_noise_2d(vec2 coord, vec2 size, float offset, float seed) {
     vec2 o = floor(coord) + rand2(vec2(seed, 1.0 - seed)) + size;
     vec2 f = fract(coord);
@@ -90,9 +85,6 @@ vec4 passDirections(vec2 fragCoord) {
     return vec4(cos(theta) * 0.5 + 0.5, sin(theta) * 0.5 + 0.5, 0.0, 1.0);
 }
 
-// ──────────────────────────────────────────────────────────────────────
-// Buffer B — colored grass tip seeds (static gradient + dot mask)
-// ──────────────────────────────────────────────────────────────────────
 vec3 color_dots(vec2 uv, float size, float seed) {
     vec2 seed2 = rand2(vec2(seed, 1.0 - seed));
     uv /= size;
@@ -111,35 +103,49 @@ vec3 blend_darken(vec3 c1, vec3 c2, float opacity) {
     return opacity * min(c1, c2) + (1.0 - opacity) * c2;
 }
 
-vec4 grassGradient(float x) {
-    const float p0 = 0.363636, p1 = 0.592727, p2 = 0.804218, p3 = 0.907897;
-    const vec4 c0 = vec4(0.0,        0.0,        0.0,        1.0);
-    const vec4 c1 = vec4(0.05680800, 0.31962299, 0.15774099, 1.0);
-    const vec4 c2 = vec4(0.78224099, 0.78224099, 0.78224099, 1.0);
-    const vec4 c3 = vec4(1.0,        1.0,        1.0,        1.0);
-    if (x < p0) return c0;
-    if (x < p1) return mix(c0, c1, 0.5 - 0.5 * cos(3.14159265359 * (x - p0) / (p1 - p0)));
-    if (x < p2) return mix(c1, c2, 0.5 - 0.5 * cos(3.14159265359 * (x - p1) / (p2 - p1)));
-    if (x < p3) return mix(c2, c3, 0.5 - 0.5 * cos(3.14159265359 * (x - p2) / (p3 - p2)));
-    return c3;
+// Deep ocean gradient: black → midnight blue → vivid teal → HDR seafoam → HDR white
+vec4 oceanGradient(float x) {
+    const float p0 = 0.0,  p1 = 0.3,  p2 = 0.65, p3 = 0.85, p4 = 1.0;
+    const vec4 c0 = vec4(0.0,  0.0,  0.0,  1.0);   // black void
+    const vec4 c1 = vec4(0.02, 0.05, 0.35, 1.0);   // deep midnight blue
+    const vec4 c2 = vec4(0.0,  0.9,  0.85, 1.0);   // vivid teal
+    const vec4 c3 = vec4(0.8,  2.0,  2.2,  1.0);   // HDR seafoam-white peak
+    const vec4 c4 = vec4(2.5,  2.5,  2.5,  1.0);   // pure HDR white
+
+    if (x <= p0) return c0;
+    if (x < p1)  return mix(c0, c1, 0.5 - 0.5 * cos(3.14159265359 * (x - p0) / (p1 - p0)));
+    if (x < p2)  return mix(c1, c2, 0.5 - 0.5 * cos(3.14159265359 * (x - p1) / (p2 - p1)));
+    if (x < p3)  return mix(c2, c3, 0.5 - 0.5 * cos(3.14159265359 * (x - p2) / (p3 - p2)));
+    if (x < p4)  return mix(c3, c4, 0.5 - 0.5 * cos(3.14159265359 * (x - p3) / (p4 - p3)));
+    return c4;
 }
 
 vec4 passPositions(vec2 fragCoord) {
     float minSize = min(RENDERSIZE.x, RENDERSIZE.y);
     vec2 UV = vec2(0.0, 1.0) + vec2(1.0, -1.0) * (fragCoord - 0.5 * (RENDERSIZE - vec2(minSize))) / minSize;
     vec3 dotColor = color_dots(UV, 1.0 / 1024.0, 0.0);
-    vec4 grad     = grassGradient(dot(dotColor, vec3(1.0)) / 3.0);
+
+    // Map per-dot random color to one of 3 ocean seed colors
+    float dotIndex = rand1(floor(UV * 1024.0));
+    vec3 seedColor;
+    if (dotIndex < 0.333) {
+        seedColor = vec3(0.02, 0.05, 0.35);   // deep blue
+    } else if (dotIndex < 0.666) {
+        seedColor = vec3(0.0,  0.85, 0.9);    // electric teal
+    } else {
+        seedColor = vec3(0.6,  1.8,  1.9);    // seafoam HDR
+    }
+
+    vec4 grad     = oceanGradient(dot(dotColor, vec3(1.0)) / 3.0);
+    grad.rgb      = mix(grad.rgb, seedColor, 0.45);
+
     float dotMask = dots(UV, 1.0 / 1024.0, dotDensity, 0.334808);
     vec3  blended = blend_darken(grad.rgb, vec3(dotMask), 1.0 * grad.a);
     float a = min(1.0, dotMask + grad.a);
     return vec4(blended, a);
 }
 
-// ──────────────────────────────────────────────────────────────────────
-// Image — backward trace through the flow field, weighted by a bezier curve
-// ──────────────────────────────────────────────────────────────────────
 float weightCurve(float x) {
-    // Bezier curve: (0,0) → (0.707,0.293) → (1,1), tangents per the Material Maker spec
     const float p0x = 0.0,        p0y = 0.0,        p0rs = 0.0;
     const float p1x = 0.707107,   p1y = 0.292893,   p1ls = 1.0, p1rs = 1.0;
     const float p2x = 1.0,        p2y = 1.0,        p2ls = 4.0;
@@ -184,11 +190,11 @@ vec3 traceIntensity(vec2 pos) {
 vec4 passImage(vec2 fragCoord) {
     float maxSize = max(RENDERSIZE.x, RENDERSIZE.y);
     vec2 UV = vec2(0.0, 1.0) + vec2(1.0, -1.0) * (fragCoord - 0.5 * (RENDERSIZE - vec2(maxSize))) / maxSize;
-    vec3 col = traceIntensity(UV) * intensity;
+    float audioMult = 1.0 + audioLevel * audioMod * 0.3;
+    vec3 col = traceIntensity(UV) * intensity * audioMult;
     return vec4(col, 1.0);
 }
 
-// ──────────────────────────────────────────────────────────────────────
 void main() {
     vec2 fragCoord = gl_FragCoord.xy;
     if      (PASSINDEX == 0) FragColor = passDirections(fragCoord);
