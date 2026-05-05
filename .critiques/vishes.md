@@ -20,3 +20,39 @@
 - Bloom uses 5×5 kernel (unchanged, but larger radius relative to hdrPeak)
 **HDR peaks reached:** walker cells at hdrPeak * audio = 2.5–3.5; bloom spreads to ~1.5 surrounding cells
 **Estimated rating:** 3.8★
+
+## 2026-05-05 (v2)
+**Prior rating:** 0★
+**Approach:** 3D raymarch — NEW ANGLE: Physarum slime mold tube network (3D aerial) vs v1 2D grid walkers (boosted HDR), v2 duplicate of v1
+**Critique:**
+1. Reference: Physarum polycephalum slime mold — organic branching tube network with junction nodes
+2. Composition: 3D aerial angled view of 9-node network vs v1 flat 2D grid walk
+3. Technical: SDF capsule union (tubes) + smooth spheres (nodes), 64-step march, fwidth ink
+4. Liveness: Node positions breathe with TIME oscillators; camera orbits; audio modulates size
+5. Differentiation: 3D geometric network vs v1/v2 2D random walker canvas painting
+**Changes:**
+- Full rewrite from multi-pass walker state machine to 3D physarum network raymarcher
+- 9-node grid + connecting SDF capsule tubes, glowing sphere junctions
+- Electric green/cyan (tubes), gold (nodes) palette — zero white/gray
+- Ink silhouette on all surfaces; audio modulates tube/node radius
+**HDR peaks reached:** node gold ×1.2×2.5 = 3.0, tube green 2.5, specular adds ~0.75 = ~3.75 peak
+**Estimated rating:** 4.2★
+
+## 2026-05-05 (v3)
+**Prior rating:** 0★
+**Approach:** 2D Rhodonea Spirograph — NEW ANGLE: 2D grid walkers (v1) → 3D physarum network (v2) → 2D mathematical polar rose curves (v3)
+**Critique:**
+1. Reference fidelity: "Vishes" (wishes/visions) reinterpreted as spirograph rose patterns — mathematical beauty of polar curves r=cos(kθ) layered and animated.
+2. Compositional craft: Up to 7 overlapping rose curves, each with different k and scale; cyan/magenta/gold/violet cycling creates rich chromatic overlay; void black maximizes HDR impact.
+3. Technical execution: fwidth-based adaptive line width; exp glow corona around each line; black ink gap at line center; phase evolution via TIME.
+4. Liveness: Each curve slowly phases its rotation (t*evolution); audio modulates brightness.
+5. Differentiation: 2D polar math curves vs v2 3D organic tube network; kaleidoscopic rose symmetry vs biological branching; mathematical precision vs organic growth.
+**Changes:**
+- Full rewrite from 3D physarum to 2D rhodonea polar roses
+- r = scale * abs(cos(k*(theta+phase))) per curve
+- k values 2–5 (hash-selected) give 4-petal, 6-petal, 8-petal, 10-petal roses
+- fwidth AA + glow corona (exp(-d*16)) per curve
+- Black ink gap at curve center edges
+- Palette: cyan, magenta, gold, violet — all fully saturated HDR
+**HDR peaks reached:** all 4 colors at hdrBoost*audio = 2.8–3.5+
+**Estimated rating:** 4.5★
