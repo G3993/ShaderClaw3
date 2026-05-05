@@ -6,8 +6,8 @@
     { "NAME": "paperType", "LABEL": "Paper", "TYPE": "long", "DEFAULT": 2,
       "VALUES": [0, 1, 2, 3],
       "LABELS": ["Plain", "Dot Grid", "Graph Paper", "Lined Paper"] },
-    { "NAME": "paperColor", "LABEL": "Paper Color", "TYPE": "color", "DEFAULT": [0.05, 0.18, 0.38, 1.0] },
-    { "NAME": "inkColor", "LABEL": "Ink Color", "TYPE": "color", "DEFAULT": [0.95, 0.97, 1.0, 1.0] },
+    { "NAME": "paperColor", "LABEL": "Paper Color", "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.06, 1.0] },
+    { "NAME": "inkColor", "LABEL": "Ink Color", "TYPE": "color", "DEFAULT": [2.5, 2.5, 3.0, 1.0] },
     { "NAME": "gridSize", "LABEL": "Grid Size", "TYPE": "float", "DEFAULT": 40.0, "MIN": 8.0, "MAX": 120.0 },
     { "NAME": "gridLineStrength", "LABEL": "Grid Strength", "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "gridSubdiv", "LABEL": "Major Every", "TYPE": "float", "DEFAULT": 5.0, "MIN": 1.0, "MAX": 12.0 },
@@ -19,7 +19,7 @@
       "VALUES": [0, 1, 2],
       "LABELS": ["Lines", "Rectangles", "Mixed"] },
 
-    { "NAME": "inkIntensity", "LABEL": "Ink Intensity", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.2, "MAX": 2.5 },
+    { "NAME": "inkIntensity", "LABEL": "Ink Intensity", "TYPE": "float", "DEFAULT": 1.5, "MIN": 0.2, "MAX": 4.0 },
     { "NAME": "sketchSpeed", "LABEL": "Sketch Speed", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 2.5 },
     { "NAME": "strokeWidth", "LABEL": "Stroke Width", "TYPE": "float", "DEFAULT": 1.6, "MIN": 0.3, "MAX": 6.0 },
     { "NAME": "roughness", "LABEL": "Roughness", "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.5 },
@@ -38,7 +38,7 @@
     { "NAME": "hueSpread", "LABEL": "Hue Spread", "TYPE": "float", "DEFAULT": 0.75, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "colorSpeed", "LABEL": "Color Shift Speed", "TYPE": "float", "DEFAULT": 0.2, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "fillSaturation", "LABEL": "Fill Saturation", "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.0, "MAX": 1.2 },
-    { "NAME": "fillBrightness", "LABEL": "Fill Brightness", "TYPE": "float", "DEFAULT": 0.95, "MIN": 0.1, "MAX": 1.6 },
+    { "NAME": "fillBrightness", "LABEL": "Fill Brightness", "TYPE": "float", "DEFAULT": 1.5, "MIN": 0.1, "MAX": 3.0 },
 
     { "NAME": "screenAmount", "LABEL": "Halftone Blend", "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "screenSize", "LABEL": "Halftone Size", "TYPE": "float", "DEFAULT": 7.0, "MIN": 2.0, "MAX": 30.0 },
@@ -90,8 +90,9 @@ float vnoise(vec2 p) {
 // ---------- palette ----------
 // cosine palette: smooth hue-like band parameterized by t
 vec3 palette(float t) {
-    vec3 a = vec3(0.55);
-    vec3 b = vec3(0.45);
+    // HDR cosine palette — peaks at 0.9+1.2 = 2.1 linear
+    vec3 a = vec3(0.9);
+    vec3 b = vec3(1.2);
     vec3 c = vec3(1.0, 1.0, 1.0);
     vec3 d = vec3(0.00, 0.33, 0.67);
     return a + b * cos(TAU * (c * t + d));
@@ -473,7 +474,7 @@ void main() {
 
     ink += texHatch;
     ink *= inkIntensity;
-    ink = clamp(ink, 0.0, 1.3);
+    // No artificial clamp — let ink accumulate for HDR outline emission
 
     // ===== Compose =====
     vec3 col = paper;
