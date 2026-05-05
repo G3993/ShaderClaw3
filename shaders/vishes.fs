@@ -1,173 +1,148 @@
 /*{
-  "DESCRIPTION": "Vishes — cellular random walkers leaving hue-drifting color trails on a slow-fading grid",
-  "CREDIT": "ShaderClaw — cell-walker sketch translated to multi-pass ISF",
+  "DESCRIPTION": "Spiral Galaxy Core — 2D analytic spiral galaxy with differential rotation, dust lanes, and HDR core bloom. v9: 2D mathematical galaxy vs prior 3D coral reef, spirograph, graffiti walkers, lava lake, jellyfish, cube lattice.",
+  "CREDIT": "ShaderClaw auto-improve v9",
   "CATEGORIES": ["Generator"],
   "INPUTS": [
-    { "NAME": "gridSize", "LABEL": "Grid Size", "TYPE": "float", "DEFAULT": 120.0, "MIN": 20.0, "MAX": 400.0 },
-    { "NAME": "walkers", "LABEL": "Walkers", "TYPE": "float", "DEFAULT": 6.0, "MIN": 1.0, "MAX": 16.0 },
-    { "NAME": "stepRate", "LABEL": "Step Rate", "TYPE": "float", "DEFAULT": 40.0, "MIN": 1.0, "MAX": 240.0 },
-    { "NAME": "hueDrift", "LABEL": "Hue Drift", "TYPE": "float", "DEFAULT": 0.015, "MIN": 0.0, "MAX": 0.1 },
-    { "NAME": "fadeRate", "LABEL": "Trail Fade", "TYPE": "float", "DEFAULT": 0.004, "MIN": 0.0, "MAX": 0.08 },
-    { "NAME": "saturation", "LABEL": "Saturation", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "brightness", "LABEL": "Brightness", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "bloom", "LABEL": "Bloom", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "pulse", "LABEL": "Audio Pulse", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "bounceEdges", "LABEL": "Bounce Edges", "TYPE": "bool", "DEFAULT": true },
-    { "NAME": "backgroundColor", "LABEL": "BG Color", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] }
-  ],
-  "PASSES": [
-    { "TARGET": "stateBuf", "PERSISTENT": true, "WIDTH": 16, "HEIGHT": 1 },
-    { "TARGET": "canvas", "PERSISTENT": true },
-    {}
+    { "NAME": "rotSpeed",   "LABEL": "Rotation Speed", "TYPE": "float", "DEFAULT": 0.18,  "MIN": 0.0, "MAX": 1.0  },
+    { "NAME": "armCount",   "LABEL": "Spiral Arms",    "TYPE": "float", "DEFAULT": 2.0,   "MIN": 1.0, "MAX": 4.0  },
+    { "NAME": "armWrap",    "LABEL": "Arm Tightness",  "TYPE": "float", "DEFAULT": 2.8,   "MIN": 0.5, "MAX": 6.0  },
+    { "NAME": "starDensity","LABEL": "Star Density",   "TYPE": "float", "DEFAULT": 0.85,  "MIN": 0.1, "MAX": 2.0  },
+    { "NAME": "coreColor",  "LABEL": "Core Color",     "TYPE": "color", "DEFAULT": [1.0, 0.75, 0.2, 1.0]         },
+    { "NAME": "armColor",   "LABEL": "Arm Color",      "TYPE": "color", "DEFAULT": [0.0,  0.7,  1.0, 1.0]        },
+    { "NAME": "hdrPeak",    "LABEL": "HDR Peak",       "TYPE": "float", "DEFAULT": 2.8,   "MIN": 1.0, "MAX": 4.0  },
+    { "NAME": "audioReact", "LABEL": "Audio React",    "TYPE": "float", "DEFAULT": 0.7,   "MIN": 0.0, "MAX": 2.0  }
   ]
 }*/
 
-#define MAX_WALKERS 16
+#define PI 3.14159265359
 #define TAU 6.28318530718
 
-float hash11(float p) {
-    p = fract(p * 0.1031);
-    p *= p + 33.33;
-    p *= p + p;
-    return fract(p);
+float hash11(float n) { float p = fract(n * 0.1031); p *= p + 33.33; p *= p + p; return fract(p); }
+float hash12(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+
+// Value noise 1D
+float vnoise(float x) {
+    float i = floor(x); float f = fract(x);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(hash11(i), hash11(i + 1.0), f);
 }
 
-float hash12(vec2 p) {
-    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.x + p3.y) * p3.z);
-}
-
-vec3 hsv2rgb(vec3 c) {
-    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
-    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
-}
-
-vec2 neighborDir(int dir) {
-    if (dir == 0) return vec2(-1.0, -1.0);
-    if (dir == 1) return vec2( 0.0, -1.0);
-    if (dir == 2) return vec2( 1.0, -1.0);
-    if (dir == 3) return vec2(-1.0,  0.0);
-    if (dir == 4) return vec2( 1.0,  0.0);
-    if (dir == 5) return vec2(-1.0,  1.0);
-    if (dir == 6) return vec2( 0.0,  1.0);
-    return vec2( 1.0,  1.0);
-}
-
-vec4 readWalker(float id) {
-    return texture2D(stateBuf, vec2((id + 0.5) / 16.0, 0.5));
+// Star hash: fractured Voronoi-like — checks 9 neighboring cells
+float starField(vec2 p, float density) {
+    vec2 ip = floor(p * 60.0);
+    vec2 fp = fract(p * 60.0);
+    float bri = 0.0;
+    for (int x = -1; x <= 1; x++) {
+        for (int y = -1; y <= 1; y++) {
+            vec2 nb = ip + vec2(float(x), float(y));
+            float h = hash12(nb);
+            if (h > (1.0 - density * 0.04)) {
+                vec2 starPos = vec2(hash12(nb + 7.31), hash12(nb + 13.7));
+                float d = length(fp - (vec2(float(x), float(y)) + starPos));
+                bri += exp(-d * d * 300.0) * (0.3 + hash12(nb + 2.1) * 0.7);
+            }
+        }
+    }
+    return bri;
 }
 
 void main() {
-    vec2 Res = RENDERSIZE;
-    vec2 pos = gl_FragCoord.xy;
-    float cell = 1.0 / max(gridSize, 1.0);
-    float audio = 1.0 + audioLevel * pulse;
+    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    uv.x *= aspect;
 
-    // =============================================================
-    // PASS 0: advance walker state buffer (16x1)
-    // state encoding: vec4(x_norm, y_norm, hue, stepAccumulator)
-    // =============================================================
-    if (PASSINDEX == 0) {
-        float id = floor(pos.x);
-        if (id >= walkers) {
-            gl_FragColor = vec4(0.0);
-            return;
-        }
+    float audio = 1.0 + audioLevel * audioReact + audioBass * audioReact * 0.5;
+    float t = TIME * rotSpeed;
 
-        // Seed the walker near center on first frames
-        if (FRAMEINDEX < 2) {
-            float jx = (hash11(id * 7.31 + 1.0) - 0.5) * 0.15;
-            float jy = (hash11(id * 3.19 + 2.0) - 0.5) * 0.15;
-            float h0 = hash11(id * 11.7 + 3.0);
-            gl_FragColor = vec4(0.5 + jx, 0.5 + jy, h0, 0.0);
-            return;
-        }
+    float r = length(uv);
+    float theta = atan(uv.y, uv.x);
 
-        vec4 prev = readWalker(id);
-        vec2 p = prev.rg;
-        float h = prev.b;
-        float acc = prev.a + TIMEDELTA * stepRate * audio;
+    // ── Galactic background: deep space dark navy ──
+    vec3 col = vec3(0.0, 0.0, 0.02);
 
-        // Walk up to 6 discrete cell steps this frame
-        for (int s = 0; s < 6; s++) {
-            if (acc < 1.0) break;
-            acc -= 1.0;
+    // Faint star background haze (random field)
+    float bgStars = starField(uv * 0.25, 1.5);
+    col += vec3(0.6, 0.7, 1.0) * bgStars * 0.15;
 
-            float seed = TIME * 97.13 + id * 13.7 + float(s) * 3.31;
-            float r = hash12(vec2(seed, seed * 0.47));
-            int dir = int(floor(r * 8.0));
-            vec2 stepVec = neighborDir(dir) * cell;
-            p += stepVec;
+    // ── Spiral arms (analytic density) ──
+    int ARMS = int(clamp(armCount, 1.0, 4.0));
+    float armDensity = 0.0;
+    float armHue = 0.0;
 
-            if (bounceEdges) {
-                if (p.x < 0.0) p.x = -p.x;
-                if (p.x > 1.0) p.x = 2.0 - p.x;
-                if (p.y < 0.0) p.y = -p.y;
-                if (p.y > 1.0) p.y = 2.0 - p.y;
-            } else {
-                p = fract(p);
-            }
+    for (int arm = 0; arm < 4; arm++) {
+        if (arm >= ARMS) break;
+        float fa = float(arm);
+        float armPhase = fa * TAU / float(ARMS);
 
-            float dh = (hash12(vec2(seed + 7.7, id)) - 0.5) * 2.0 * hueDrift;
-            h = fract(h + dh + 1.0);
-        }
+        // Logarithmic spiral: theta_spiral = armWrap * ln(r) + armPhase
+        // Differential rotation: angular velocity ∝ 1/sqrt(r) (flat rotation curve)
+        float angVel = 1.0 / max(sqrt(r), 0.08);
+        float spiralTheta = armWrap * log(max(r, 0.01) * 4.0) + armPhase - t * angVel * 0.6;
 
-        gl_FragColor = vec4(p, h, acc);
-        return;
+        // Angular distance from arm center
+        float dTheta = theta - spiralTheta;
+        // Wrap to [-PI, PI]
+        dTheta = dTheta - TAU * floor((dTheta + PI) / TAU);
+
+        // Arm width increases with radius (arms flare outward)
+        float width = (0.25 + r * 0.5) / (1.0 + r * 2.0);
+        float contrib = exp(-dTheta * dTheta / (width * width + 0.01));
+
+        // Radial falloff: arms fade near center and at large radius
+        float radFade = smoothstep(0.05, 0.15, r) * exp(-r * 1.4);
+
+        armDensity += contrib * radFade;
+        armHue += contrib * radFade * (fa * 0.18);
     }
 
-    // =============================================================
-    // PASS 1: update persistent canvas (fade + paint walker cells)
-    // =============================================================
-    if (PASSINDEX == 1) {
-        vec2 uv = pos / Res;
-        vec4 prev = texture2D(canvas, uv);
-        vec4 col = prev * (1.0 - fadeRate);
+    // ── Arm color: mix between coreColor (inner) and armColor (outer) ──
+    float armMix = smoothstep(0.08, 0.45, r);
+    vec3 armCol = mix(coreColor.rgb, armColor.rgb, armMix) * hdrPeak;
 
-        // Aspect-correct grid so cells stay square
-        float aspect = Res.x / Res.y;
-        vec2 gridUV = vec2(uv.x * aspect, uv.y);
-        vec2 pxCell = floor(gridUV * gridSize);
+    // Arm glow with audio modulation
+    float density = armDensity * starDensity * audio;
+    col += armCol * density;
 
-        for (int i = 0; i < MAX_WALKERS; i++) {
-            if (float(i) >= walkers) break;
-            vec4 st = readWalker(float(i));
-            vec2 wGridUV = vec2(st.r * aspect, st.g);
-            vec2 wCell = floor(wGridUV * gridSize);
-            vec2 diff = abs(wCell - pxCell);
-            if (diff.x < 0.5 && diff.y < 0.5) {
-                vec3 rgb = hsv2rgb(vec3(st.b, saturation, brightness * audio));
-                col = vec4(rgb, 1.0);
-            }
-        }
+    // ── Dust lanes: dark absorption between arms (cinematic depth) ──
+    float dustAng = theta - t * 0.3;
+    float dustWave = vnoise(dustAng * 2.0 + armWrap * log(max(r, 0.01) * 4.0)) * 0.5;
+    float dustMask = smoothstep(0.05, 0.3, r) * dustWave * 0.6;
+    col = mix(col, vec3(0.0), dustMask);
 
-        gl_FragColor = col;
-        return;
+    // ── Galactic core: white-hot center with gold/orange corona ──
+    float coreR = 0.06 * (1.0 + audioBass * audioReact * 0.3);
+    float coreDist = r / max(coreR, 0.001);
+
+    // Inner core: white-hot
+    float coreIntensity = exp(-coreDist * coreDist * 0.8) * 3.5 * audio;
+    col += vec3(3.5, 3.2, 2.8) * coreIntensity; // HDR 3.5 white-hot
+
+    // Corona: gold-to-crimson
+    float corona = exp(-coreDist * coreDist * 0.05) * 1.5;
+    col += mix(coreColor.rgb, vec3(0.9, 0.1, 0.0), coreDist * 0.3) * corona * hdrPeak;
+
+    // ── Individual bright stars in arms: scattered sparkles ──
+    float armStars = 0.0;
+    for (int i = 0; i < 60; i++) {
+        float fi = float(i);
+        // Place star along a spiral arm
+        float rStar = 0.1 + hash11(fi * 1.37) * 0.65;
+        float angVelStar = 1.0 / max(sqrt(rStar), 0.08);
+        float armIdx = floor(hash11(fi * 3.71) * float(ARMS));
+        float thetaStar = armWrap * log(max(rStar, 0.01) * 4.0)
+                        + armIdx * TAU / float(ARMS)
+                        - t * angVelStar * 0.6
+                        + (hash11(fi * 7.53) - 0.5) * 0.8; // scatter off arm
+        vec2 starPos = vec2(cos(thetaStar), sin(thetaStar)) * rStar;
+        float d = length(uv - starPos);
+        float brightness = (0.4 + hash11(fi * 11.3) * 0.6) * exp(-d * d * 2000.0);
+        float hue = 0.55 + hash11(fi * 5.17) * 0.25; // blue-white stars
+        armStars += brightness;
     }
+    col += mix(armColor.rgb, vec3(2.5, 2.5, 2.5), 0.7) * armStars * hdrPeak;
 
-    // =============================================================
-    // PASS 2: final display (bloom + background blend)
-    // =============================================================
-    vec2 uv = pos / Res;
-    vec3 c = texture2D(canvas, uv).rgb;
+    // ── Edge vignette ──
+    col *= 1.0 - smoothstep(0.85, 1.3, r);
 
-    if (bloom > 0.001) {
-        vec3 sum = vec3(0.0);
-        float r = 2.5 / min(Res.x, Res.y);
-        for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {
-                vec2 off = vec2(float(x), float(y)) * r;
-                sum += texture2D(canvas, uv + off).rgb;
-            }
-        }
-        sum /= 25.0;
-        c += sum * bloom;
-    }
-
-    float lum = max(c.r, max(c.g, c.b));
-    float alpha = clamp(lum * 8.0, 0.0, 1.0);
-    vec3 outRgb = mix(backgroundColor.rgb, c, alpha);
-    gl_FragColor = vec4(outRgb, 1.0);
+    gl_FragColor = vec4(col, 1.0);
 }
