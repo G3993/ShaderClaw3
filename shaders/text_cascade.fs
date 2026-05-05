@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Cascade - tiled rows with wave offsets",
+  "DESCRIPTION": "Ink Rain — black calligraphy cascades over warm amber glow background",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
@@ -11,9 +11,10 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.04, 0.02, 0.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.5, 0.15, 0.0, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true },
+    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 0.7, "MIN": 0.0, "MAX": 2.0 }
   ]
 }*/
 
@@ -93,7 +94,7 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
-// EFFECT: CASCADE - tiled rows with wave offsets
+// EFFECT: CASCADE - Ink Rain on Amber Glow
 // =======================================================================
 
 vec4 effectCascade(vec2 uv) {
@@ -131,12 +132,26 @@ vec4 effectCascade(vec2 uv) {
         }
     }
 
-    bool inv = mod(rowIdx, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
+    // Amber glow background per pixel
+    float audioMod = 0.5 + 0.5 * audioBass * audioReact;
+    float t2 = TIME * speed * 0.8;
+    // Animated amber/honey glow — two overlapping warm radial gradients
+    vec2 gc1 = vec2(0.3 + sin(t2 * 0.31) * 0.2, 0.5 + cos(t2 * 0.27) * 0.3);
+    vec2 gc2 = vec2(0.7 + cos(t2 * 0.19) * 0.25, 0.5 + sin(t2 * 0.23) * 0.25);
+    float g1 = exp(-length(uv - gc1) * 2.5);
+    float g2 = exp(-length(uv - gc2) * 2.5);
+    vec3 AMBER_DEEP = vec3(0.5, 0.15, 0.0);
+    vec3 AMBER_GOLD = vec3(1.0, 0.65, 0.0);
+    vec3 AMBER_HOT  = vec3(2.2, 1.4, 0.0);   // HDR
+    vec3 INK_BLACK  = vec3(0.02, 0.01, 0.0);
+    vec3 bgAmber = AMBER_DEEP + (AMBER_GOLD - AMBER_DEEP) * (g1 + g2) * audioMod;
+    bgAmber += AMBER_HOT * smoothstep(0.6, 1.0, max(g1, g2)) * audioMod;
+    // Row alternation: odd rows slightly cooler amber
+    bool inv2 = mod(rowIdx, 2.0) < 1.0;
+    bgAmber *= inv2 ? 1.0 : 0.7;
+    vec3 fc = mix(bgAmber, INK_BLACK, textHit);
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
+    if (transparentBg) { a = textHit; fc = INK_BLACK; }
     return vec4(fc, a);
 }
 
