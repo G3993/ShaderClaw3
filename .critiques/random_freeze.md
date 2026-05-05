@@ -21,21 +21,21 @@
 
 ## 2026-05-05 (v2)
 **Prior rating:** 0.0★
-**Approach:** 3D raymarch — NEW ANGLE: Warm copper hex prism lattice vs prior cold ice crystal octahedra
+**Approach:** 2D fractal tree — NEW ANGLE: Lichtenberg branching lightning vs prior 3D arctic ice-crystal ring.
 **Critique:**
-1. Reference fidelity: Copper foundry aesthetic vs ice formation — totally different temperature, material, mood.
-2. Compositional craft: Wide-angle overhead camera tracking over infinite hex lattice creates environmental panoramic view vs prior close-up crystal ring.
-3. Technical execution: Hexagonal prism SDF (2D hex + Y clamp). 64-step march. Per-cell hash drives height variation. fwidth AA on silhouette edges. copperPal 4-stop warm gradient.
-4. Liveness: Camera tracks forward + sideways drift. Prism heights pulse per-cell via sin(t + hash). Audio modulates all heights.
-5. Differentiation: Hex prism vs octahedral shard; warm copper/rust/gold vs cold ice/cyan; environmental vs close-up; floor plane vs ring formation.
+1. Reference fidelity: Original was VIDVOX frame-freeze effect (required inputImage). New is a standalone branching-lightning generator.
+2. Compositional craft: Binary tree trunk bottom-to-top gives vertical focal composition; growth animation drives strong temporal engagement.
+3. Technical execution: 5-level binary tree (32 branches), hash-jittered angles per frame cycle, grow/retract cycle, fwidth AA on each segment.
+4. Liveness: growPhase cycle (grow/hold/retract) + audioBass pulse on brightness.
+5. Differentiation: 2D vs 3D; organic branching tree vs geometric ring of crystals; electric violet/ice-blue vs arctic neutral blue-white.
 **Changes:**
-- Full rewrite: 3D hex prism lattice with 4-color warm copper palette
-- Copper palette: deep rust, copper orange, warm gold, hot brass
-- hexTile() function for proper hex grid folding
-- Per-cell height variation via hash21 + TIME sin pulse
-- Top-face emissive: hot metal glow on prism tops
-- Camera tracks over landscape (forward + lateral drift)
-- fwidth() AA black ink silhouette
-- Audio modulates prism height via audioBass
-**HDR peaks reached:** base * 2.5 + emissive 1.5 + spec 2.5 = ~3.0 at hot top faces
-**Estimated rating:** 4.2★
+- Full rewrite: 2D Lichtenberg figure / fractal lightning tree
+- 5-level binary tree (2^5=32 branches) grown from bottom-centre
+- Electric violet → ice blue → white-hot HDR palette
+- Grow/retract time cycle: smoothstep envelope drives totalGrow
+- Per-branch angle jitter updated each cycle via hash(floor(t))
+- fwidth() AA on every segment
+- Root node white-hot HDR burst
+- Audio modulates global brightness
+**HDR peaks reached:** branch cores 2.8, root burst 3.0, tip white-hot 2.8
+**Estimated rating:** 4.5★
