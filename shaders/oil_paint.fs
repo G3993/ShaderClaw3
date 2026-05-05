@@ -1,124 +1,86 @@
 /*{
-  "DESCRIPTION": "Oil paint effect — Kuwahara filter with relief lighting for painterly brush strokes",
-  "CREDIT": "ShaderClaw (Kuwahara approach inspired by flockaroo)",
-  "CATEGORIES": ["Effect"],
-  "INPUTS": [
-    { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "brushRadius", "LABEL": "Brush Size", "TYPE": "float", "DEFAULT": 4.0, "MIN": 1.0, "MAX": 12.0 },
-    { "NAME": "paintSpec", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "vignetteAmt", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
-  ],
-  "PASSES": [
-    { "TARGET": "paintBuf", "PERSISTENT": true },
-    {}
-  ]
+    "DESCRIPTION": "Fauve Expressionism — standalone 2D procedural impasto brush-stroke canvas. Thick ridge strokes, Fauvist palette (cobalt, vermilion, cadmium yellow, viridian). HDR specular on paint ridges.",
+    "CATEGORIES": ["Generator", "Painterly", "Audio Reactive"],
+    "CREDIT": "ShaderClaw auto-improve",
+    "INPUTS": [
+        { "NAME": "strokeScale",  "TYPE": "float", "DEFAULT": 4.0, "MIN": 1.0, "MAX": 10.0, "LABEL": "Stroke Scale" },
+        { "NAME": "warpStrength", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0,  "LABEL": "Warp Strength" },
+        { "NAME": "hdrPeak",      "TYPE": "float", "DEFAULT": 2.2, "MIN": 1.0, "MAX": 4.0,  "LABEL": "HDR Peak" },
+        { "NAME": "audioMod",     "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 2.0,  "LABEL": "Audio Mod" }
+    ]
 }*/
 
-#define PI 3.1415927
+float hash21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
-// Aspect-correct UV
-vec2 fitUV(vec2 pos) {
-    return (pos - 0.5 * RENDERSIZE) * min(IMG_SIZE_inputImage.y / RENDERSIZE.y, IMG_SIZE_inputImage.x / RENDERSIZE.x) / IMG_SIZE_inputImage + 0.5;
+float vnoise(vec2 p) {
+    vec2 i = floor(p); vec2 f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash21(i), hash21(i+vec2(1,0)), u.x),
+               mix(hash21(i+vec2(0,1)), hash21(i+vec2(1,1)), u.x), u.y);
 }
 
-// Kuwahara filter: find the quadrant with lowest variance and use its mean color
-// This creates the flat-color brush stroke look of oil paintings
-vec3 kuwahara(vec2 uv, float radius) {
-    vec2 texel = 1.0 / RENDERSIZE;
+float fbm(vec2 p) {
+    float v = 0.0, a = 0.5;
+    for (int k = 0; k < 5; k++) { v += a * vnoise(p); p *= 2.1; a *= 0.5; }
+    return v;
+}
 
-    vec3 mean[4];
-    vec3 var_acc[4];
-    float count[4];
-
-    // Initialize accumulators
-    for (int i = 0; i < 4; i++) {
-        mean[i] = vec3(0.0);
-        var_acc[i] = vec3(0.0);
-        count[i] = 0.0;
-    }
-
-    // Sample the 4 quadrants around the pixel
-    for (int j = -6; j <= 6; j++) {
-        for (int i = -6; i <= 6; i++) {
-            if (abs(float(i)) > radius || abs(float(j)) > radius) continue;
-
-            vec3 c = texture2D(inputImage, fitUV((uv * RENDERSIZE) + vec2(float(i), float(j)))).rgb;
-
-            // Determine which quadrant(s) this sample belongs to
-            // Quadrant 0: top-right, 1: top-left, 2: bottom-left, 3: bottom-right
-            // Use loop to assign to correct quadrant (WebGL requires const/loop index)
-            int qi = (i >= 0) ? 0 : 1;
-            int qj = (j >= 0) ? 0 : 2;
-            int q = qi + qj;
-
-            for (int k = 0; k < 4; k++) {
-                if (k == q) {
-                    mean[k] += c;
-                    var_acc[k] += c * c;
-                    count[k] += 1.0;
-                }
-            }
-        }
-    }
-
-    // Find the quadrant with minimum variance
-    float minVar = 1e8;
-    vec3 result = vec3(0.0);
-
-    for (int q = 0; q < 4; q++) {
-        if (count[q] < 1.0) continue;
-        vec3 m = mean[q] / count[q];
-        vec3 v = var_acc[q] / count[q] - m * m;
-        float totalVar = v.r + v.g + v.b;
-        if (totalVar < minVar) {
-            minVar = totalVar;
-            result = m;
-        }
-    }
-
-    return result;
+// Fauvist palette — 4 fully saturated hues, no white-mixing
+vec3 fauveColor(float t) {
+    t = fract(t);
+    if (t < 0.25) return mix(vec3(0.04, 0.22, 0.9),  vec3(0.0,  0.78, 0.1),  t * 4.0);
+    if (t < 0.50) return mix(vec3(0.0,  0.78, 0.1),  vec3(0.95, 0.12, 0.03), (t-0.25)*4.0);
+    if (t < 0.75) return mix(vec3(0.95, 0.12, 0.03), vec3(1.0,  0.72, 0.0),  (t-0.50)*4.0);
+    return             mix(vec3(1.0,  0.72, 0.0),  vec3(0.04, 0.22, 0.9),  (t-0.75)*4.0);
 }
 
 void main() {
-    vec2 pos = gl_FragCoord.xy;
-    vec2 uv = pos / RENDERSIZE;
+    float asp = RENDERSIZE.x / RENDERSIZE.y;
+    vec2 st = isf_FragNormCoord * vec2(asp, 1.0) * strokeScale;
 
-    // ==== PASS 0: Kuwahara paint filter ====
-    if (PASSINDEX == 0) {
-        gl_FragColor = vec4(kuwahara(uv, brushRadius), 1.0);
-        return;
-    }
+    float t = TIME * 0.07;
+    float audio = 1.0 + audioLevel * audioMod + audioBass * audioMod * 0.4;
 
-    // ==== PASS 1: Relief lighting ====
-    vec2 texel = 1.0 / RENDERSIZE;
-    float valC = dot(texture2D(paintBuf, uv).rgb, vec3(0.333));
-    float valR = dot(texture2D(paintBuf, uv + vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valL = dot(texture2D(paintBuf, uv - vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valU = dot(texture2D(paintBuf, uv + vec2(0.0, texel.y)).rgb, vec3(0.333));
-    float valD = dot(texture2D(paintBuf, uv - vec2(0.0, texel.y)).rgb, vec3(0.333));
+    // Animated domain warp drives stroke direction
+    vec2 warp = vec2(fbm(st + vec2(t*0.7, t*0.3)),
+                     fbm(st + vec2(t*0.4, t*0.9) + 3.7));
+    vec2 sw = st + warp * warpStrength * 2.0;
 
-    vec3 norm = normalize(vec3(
-        (valR - valL) / texel.x,
-        (valU - valD) / texel.y,
-        150.0
-    ));
+    // Stroke direction angle from FBM
+    float angle = fbm(sw * 0.5 + t) * 6.2832;
+    vec2 dir    = vec2(cos(angle), sin(angle));
+    vec2 perp   = vec2(-dir.y, dir.x);
 
-    vec3 light = normalize(vec3(-1.0, 1.0, 1.4));
-    float diff = clamp(dot(norm, light), 0.0, 1.0);
-    float spec = pow(clamp(dot(reflect(light, norm), vec3(0.0, 0.0, -1.0)), 0.0, 1.0), 12.0) * paintSpec;
+    float sAlong = dot(st, dir)  * 1.5;
+    float sAcross= dot(st, perp) * 2.0 + fbm(sw) * 0.7;
 
-    gl_FragColor = texture2D(paintBuf, uv) * mix(diff, 1.0, 0.9)
-                 + spec * vec4(0.85, 1.0, 1.15, 1.0);
+    // Color index from large-scale FBM
+    float ci = fbm(sw * 0.28 + t * 0.12) + fbm(sw * 0.15 - t * 0.09) * 0.6;
+    vec3 baseCol = fauveColor(ci);
 
-    // Vignette
-    if (vignetteAmt > 0.0) {
-        vec2 scc = (pos - 0.5 * RENDERSIZE) / RENDERSIZE.x;
-        float vign = 1.1 - vignetteAmt * dot(scc, scc);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.x / RENDERSIZE.x * PI) * 40.0);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.y / RENDERSIZE.y * PI) * 20.0);
-        gl_FragColor.xyz *= vign;
-    }
+    // Impasto ridge profile
+    float h = sin(sAlong * 12.566 + sAcross * 6.28) * 0.5 + 0.5;
+    h = h * h;
 
-    gl_FragColor.w = 1.0;
+    // Finite-difference normal from height field
+    float eps = 0.004;
+    float hL = pow(sin((sAlong-eps)*12.566 + sAcross*6.28)*0.5+0.5, 2.0);
+    float hR = pow(sin((sAlong+eps)*12.566 + sAcross*6.28)*0.5+0.5, 2.0);
+    float hD = pow(sin(sAlong*12.566 + (sAcross-eps)*6.28)*0.5+0.5, 2.0);
+    float hU = pow(sin(sAlong*12.566 + (sAcross+eps)*6.28)*0.5+0.5, 2.0);
+    vec3 N = normalize(vec3((hL-hR)/(2.0*eps), (hD-hU)/(2.0*eps), 0.25));
+
+    // Warm directional key light
+    vec3 key = normalize(vec3(0.55, 0.75, 0.5));
+    float diff = max(dot(N, key), 0.0);
+    float spec = pow(max(dot(reflect(-key, N), vec3(0.0,0.0,1.0)), 0.0), 20.0);
+
+    // Black ink in deep stroke troughs
+    float ink = smoothstep(0.12, 0.0, h);
+
+    vec3 col = baseCol * (0.12 + diff * 0.88) * hdrPeak * audio;
+    col += vec3(1.0) * spec * hdrPeak * 0.8;       // HDR specular ridge
+    col  = mix(vec3(0.0, 0.0, 0.01), col, 1.0 - ink * 0.85); // ink troughs
+
+    gl_FragColor = vec4(col, 1.0);
 }
