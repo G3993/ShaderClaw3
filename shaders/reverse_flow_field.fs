@@ -20,7 +20,7 @@
 }*/
 
 // ──────────────────────────────────────────────────────────────────────
-// Shared hashes (used in both Buffer A and Buffer B in the original)
+// Shared hashes
 // ──────────────────────────────────────────────────────────────────────
 float rand1(vec2 x) {
     return fract(cos(mod(dot(x, vec2(13.9898, 8.141)), 3.14)) * 43758.5453);
@@ -95,31 +95,23 @@ vec4 passDirections(vec2 fragCoord) {
 // black crust → deep crimson → lava orange → hot yellow → white-hot HDR
 // ──────────────────────────────────────────────────────────────────────
 vec4 thermalGradient(float x) {
-    if (x < 0.15) {
-        return vec4(0.0, 0.0, 0.0, x / 0.15);
-    } else if (x < 0.35) {
-        return vec4(mix(vec3(0.0), vec3(0.55, 0.0, 0.0), (x - 0.15) / 0.20), 1.0);
-    } else if (x < 0.55) {
-        return vec4(mix(vec3(0.55, 0.0, 0.0), vec3(1.0, 0.38, 0.0), (x - 0.35) / 0.20), 1.0);
-    } else if (x < 0.75) {
-        return vec4(mix(vec3(1.0, 0.38, 0.0), vec3(1.0, 0.88, 0.0), (x - 0.55) / 0.20), 1.0);
-    } else {
-        // white-hot HDR peak at 2.5
-        return vec4(mix(vec3(1.0, 0.88, 0.0), vec3(2.5, 2.2, 1.8), (x - 0.75) / 0.25), 1.0);
-    }
+    if (x < 0.15) return vec4(0.0, 0.0, 0.0, x / 0.15);
+    if (x < 0.35) return vec4(mix(vec3(0.0), vec3(0.55, 0.0, 0.0), (x - 0.15) / 0.20), 1.0);
+    if (x < 0.55) return vec4(mix(vec3(0.55, 0.0, 0.0), vec3(1.0, 0.38, 0.0), (x - 0.35) / 0.20), 1.0);
+    if (x < 0.75) return vec4(mix(vec3(1.0, 0.38, 0.0), vec3(1.0, 0.88, 0.0), (x - 0.55) / 0.20), 1.0);
+    return vec4(mix(vec3(1.0, 0.88, 0.0), vec3(2.5, 2.2, 1.8), (x - 0.75) / 0.25), 1.0);
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// Buffer B — thermal lava seed colors (dot mask with thermal gradient)
+// Buffer B — thermal lava seeds (dot mask with thermalGradient colors)
 // ──────────────────────────────────────────────────────────────────────
 vec3 color_dots(vec2 uv, float size, float seed) {
     vec2 seed2 = rand2(vec2(seed, 1.0 - seed));
     uv /= size;
     vec2 point_pos = floor(uv) + vec2(0.5);
-    // Use thermalGradient to color seeds from rand3 brightness
     vec3 r = rand3(seed2 + point_pos);
-    float brightness = dot(r, vec3(1.0)) / 3.0;
-    return thermalGradient(brightness).rgb;
+    float t = dot(r, vec3(1.0)) / 3.0;
+    return thermalGradient(t).rgb;
 }
 
 float dots(vec2 uv, float size, float density, float seed) {
@@ -148,7 +140,6 @@ vec4 passPositions(vec2 fragCoord) {
 // Image — backward trace through the flow field, weighted by a bezier curve
 // ──────────────────────────────────────────────────────────────────────
 float weightCurve(float x) {
-    // Bezier curve: (0,0) → (0.707,0.293) → (1,1), tangents per the Material Maker spec
     const float p0x = 0.0,        p0y = 0.0,        p0rs = 0.0;
     const float p1x = 0.707107,   p1y = 0.292893,   p1ls = 1.0, p1rs = 1.0;
     const float p2x = 1.0,        p2y = 1.0,        p2ls = 4.0;
