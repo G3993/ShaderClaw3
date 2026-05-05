@@ -15,7 +15,8 @@
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.04, 1.0] },
     { "NAME": "voiceSync", "LABEL": "Voice Sync", "TYPE": "bool", "DEFAULT": false },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true },
-    { "NAME": "loop", "LABEL": "Loop", "TYPE": "bool", "DEFAULT": false }
+    { "NAME": "loop", "LABEL": "Loop", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
@@ -136,9 +137,12 @@ void main() {
     if (showCount <= 0) visibleW = 0.0;
     float originX = 0.5 - visibleW * 0.5;
 
+    float audioMod = 0.5 + 0.5 * audioLevel * audioReact;
+
     // Render characters
     float textMask = 0.0;
     vec3 textCol = vec3(0.0);
+    float glowAccum = 0.0;
     float lastX = originX;
 
     for (int i = 0; i < 64; i++) {
@@ -149,6 +153,11 @@ void main() {
         float cx = originX + float(i) * cellStep;
         // Oscillator: per-character Y offset
         float oscY = oscAmount * sin(TIME * oscSpeed * 6.2832 + float(i) * oscSpread * 3.14159);
+
+        // Glow halo accumulation — each revealed char contributes a radial halo
+        vec2 charCenter = vec2(cx + charW * 0.5, originY + oscY + charH * 0.5);
+        float gDist = length((p - charCenter) / max(vec2(charW, charH), 0.001));
+        glowAccum += exp(-gDist * gDist * 4.0) * 0.3;
 
         if (ch >= 0 && ch <= 36 && ch != 26) {
             vec2 cellUV = vec2((p.x - cx) / charW, (p.y - (originY + oscY)) / charH);
@@ -175,6 +184,11 @@ void main() {
 
     col = mix(col, textCol, clamp(textMask, 0.0, 1.0));
     if (transparentBg) alpha = clamp(textMask, 0.0, 1.0);
+
+    // HDR glow halo — drives bloom; peaks above 1.0 on loud audio
+    float glowAmt = glowAccum * audioMod * 1.6;
+    col += textColor.rgb * glowAmt;
+    if (transparentBg) alpha = max(alpha, min(glowAmt * 0.85, 1.0));
 
     gl_FragColor = vec4(col, alpha);
 }
