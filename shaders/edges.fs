@@ -1,180 +1,110 @@
 /*{
-    "DESCRIPTION": "Particle field bouncing off the edges of the canvas. Grid-seeded, audio-reactive, velocity-stretched streaks.",
-    "CATEGORIES": ["Generator", "Particles", "Audio Reactive"],
-    "CREDIT": "Easel / edges v1",
+    "DESCRIPTION": "Neon Grid Network — 3D raymarched SDF lattice of glowing neon tubes connecting pulsing node spheres. Orbiting camera. Audio pulses node size and tube brightness.",
+    "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
+    "CREDIT": "ShaderClaw",
     "INPUTS": [
-        { "NAME": "motionSpeed",    "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 1.0, "LABEL": "Motion Speed" },
-        { "NAME": "chaos",          "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0, "LABEL": "Chaos" },
-        { "NAME": "particleSize",   "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 4.0, "LABEL": "Particle Size" },
-        { "NAME": "stretch",        "TYPE": "float", "DEFAULT": 1.2, "MIN": 0.0, "MAX": 4.0, "LABEL": "Stretch" },
-        { "NAME": "vortexStrength", "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 3.0, "LABEL": "Vortex" },
-        { "NAME": "audioReactivity","TYPE": "float", "DEFAULT": 0.7, "MIN": 0.0, "MAX": 2.0, "LABEL": "Audio" },
-        { "NAME": "color1", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0], "LABEL": "Core" },
-        { "NAME": "color2", "TYPE": "color", "DEFAULT": [0.1, 0.7, 1.0, 1.0], "LABEL": "Halo" },
-        { "NAME": "bg",     "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.03, 1.0], "LABEL": "Background" },
-        { "NAME": "glow",   "TYPE": "float", "DEFAULT": 1.3, "MIN": 0.0, "MAX": 3.0, "LABEL": "Glow" },
-        { "NAME": "ledMode",       "TYPE": "bool",  "DEFAULT": true,  "LABEL": "LED Wall" },
-        { "NAME": "ledSize",       "TYPE": "float", "DEFAULT": 220.0, "MIN": 50.0, "MAX": 600.0, "LABEL": "LED Density" },
-        { "NAME": "trailDecay",    "TYPE": "float", "DEFAULT": 0.85,  "MIN": 0.0,  "MAX": 1.0, "LABEL": "Trail Length" },
-        { "NAME": "particleCount", "TYPE": "float", "DEFAULT": 96.0,  "MIN": 20.0, "MAX": 200.0, "LABEL": "Particle Count" },
-        { "NAME": "colorJitter",   "TYPE": "float", "DEFAULT": 0.40,  "MIN": 0.0,  "MAX": 1.0, "LABEL": "Color Jitter" }
+        { "NAME": "tubeRadius",  "LABEL": "Tube Radius",  "TYPE": "float", "DEFAULT": 0.040, "MIN": 0.01,  "MAX": 0.10  },
+        { "NAME": "nodeRadius",  "LABEL": "Node Size",    "TYPE": "float", "DEFAULT": 0.090, "MIN": 0.02,  "MAX": 0.20  },
+        { "NAME": "camSpeed",    "LABEL": "Orbit Speed",  "TYPE": "float", "DEFAULT": 0.25,  "MIN": 0.0,   "MAX": 1.0   },
+        { "NAME": "hdrPeak",     "LABEL": "HDR Peak",     "TYPE": "float", "DEFAULT": 2.8,   "MIN": 1.0,   "MAX": 5.0   },
+        { "NAME": "audioReact",  "LABEL": "Audio React",  "TYPE": "float", "DEFAULT": 0.8,   "MIN": 0.0,   "MAX": 2.0   }
     ]
 }*/
 
-float hash11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
+// 4-color neon: cyan / magenta / gold / violet
+vec3 neonPal(float t) {
+    t = fract(t);
+    if (t < 0.25) return mix(vec3(0.0,1.0,1.0),  vec3(1.0,0.0,1.0),  t*4.0);
+    if (t < 0.50) return mix(vec3(1.0,0.0,1.0),  vec3(1.0,0.85,0.0), (t-0.25)*4.0);
+    if (t < 0.75) return mix(vec3(1.0,0.85,0.0), vec3(0.5,0.0,1.0),  (t-0.50)*4.0);
+    return mix(vec3(0.5,0.0,1.0), vec3(0.0,1.0,1.0), (t-0.75)*4.0);
+}
 
-// Triangle-wave bounce: x (time-like) folded into [0,1] with reflection.
-float bounce01(float x) { return abs(fract(x * 0.5) * 2.0 - 1.0); }
+float hash11(float n) { return fract(sin(n*127.1)*43758.5453); }
+float hash13(vec3 p)  { return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453); }
 
-// 2D sinusoidal "vortex" — cheap analytic flow field, no noise tables.
-vec2 vortex(vec2 p, float t) {
-    float a = sin(p.x * 1.3 + t * 0.7) + cos(p.y * 1.7 - t * 0.5);
-    float b = cos(p.x * 1.9 - t * 0.4) + sin(p.y * 1.1 + t * 0.9);
-    return vec2(a, b) * 0.5;
+float sdCapsule(vec3 p, vec3 a, vec3 b, float r) {
+    vec3 ab = b-a, ap = p-a;
+    float t = clamp(dot(ap,ab)/dot(ab,ab), 0.0, 1.0);
+    return length(ap - ab*t) - r;
+}
+
+float sdSphere(vec3 p, float r) { return length(p) - r; }
+
+float map(vec3 p, float t) {
+    float audio = 1.0 + audioLevel * audioReact * 0.4 + audioBass * audioReact * 0.5;
+    float tr = tubeRadius;
+    float nr = nodeRadius * audio;
+
+    // Tiled lattice — 1-unit spacing
+    vec3 cell = floor(p + 0.5);
+    vec3 local = p - cell;
+
+    // Three axis tubes
+    float dx = sdCapsule(local, vec3(-0.5,0,0), vec3(0.5,0,0), tr);
+    float dy = sdCapsule(local, vec3(0,-0.5,0), vec3(0,0.5,0), tr);
+    float dz = sdCapsule(local, vec3(0,0,-0.5), vec3(0,0,0.5), tr);
+    float tubes = min(dx, min(dy, dz));
+
+    // Pulsing node at lattice vertex
+    float pulse = 0.2 * sin(t * 3.1 + hash13(cell) * 6.28);
+    float node = sdSphere(local, nr * (1.0 + pulse));
+
+    return min(tubes, node);
+}
+
+vec3 calcNormal(vec3 p, float t) {
+    vec2 e = vec2(0.001, 0.0);
+    return normalize(vec3(
+        map(p+e.xyy,t)-map(p-e.xyy,t),
+        map(p+e.yxy,t)-map(p-e.yxy,t),
+        map(p+e.yyx,t)-map(p-e.yyx,t)));
 }
 
 void main() {
     vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
-    float aspect = RENDERSIZE.x / RENDERSIZE.y;
-    uv.x *= aspect;
+    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
 
     float t = TIME;
-    float audio = audioLevel + audioBass * 1.1 + audioHigh * 0.5;
 
-    vec3 acc = vec3(0.0);
-    const int N = 256;
+    // Orbiting camera
+    float angle = t * camSpeed;
+    vec3 ro = vec3(cos(angle)*3.2, 1.5 + sin(t*0.27)*0.5, sin(angle)*3.2);
+    vec3 fw = normalize(vec3(0) - ro);
+    vec3 rg = normalize(cross(fw, vec3(0,1,0)));
+    vec3 up = cross(rg, fw);
+    vec3 rd = normalize(fw + uv.x*rg + uv.y*up);
 
-    for (int i = 0; i < N; i++) {
-        float fi = float(i);
-        float s1 = hash11(fi * 1.37);
-        float s2 = hash11(fi * 2.91 + 0.5);
-        float s3 = hash11(fi * 4.17 + 0.3);
-        float s4 = hash11(fi * 7.53 + 0.7);
+    vec3 col = vec3(0.0, 0.0, 0.012); // void black background
+    float dm = 0.01;
 
-        // Wider speed range + two stacked oscillators per axis → richer, less
-        // periodic-feeling motion. Each particle has a dominant and secondary
-        // frequency at 1.7× offset, mixed 70/30.
-        float speedX1 = (0.2 + s1 * 2.8) * motionSpeed;
-        float speedY1 = (0.2 + s2 * 2.8) * motionSpeed;
-        float speedX2 = speedX1 * (1.0 + s3 * 0.8);
-        float speedY2 = speedY1 * (1.0 + s4 * 0.8);
-        float phaseX  = s3 * 6.2832;
-        float phaseY  = s4 * 6.2832;
-        float phaseX2 = s1 * 3.1416;
-        float phaseY2 = s2 * 3.1416;
+    for (int i = 0; i < 64; i++) {
+        vec3 p = ro + rd * dm;
+        float d = map(p, t);
+        if (d < 0.002) {
+            vec3 N = calcNormal(p, t);
+            vec3 cell = floor(p + 0.5);
 
-        float dt = 0.02;
-        // Mix two bouncing oscillators so paths don't feel clockwork-regular.
-        float bxA = bounce01(t      * speedX1 + phaseX) * 0.7
-                  + bounce01(t      * speedX2 + phaseX2) * 0.3;
-        float byA = bounce01(t      * speedY1 + phaseY) * 0.7
-                  + bounce01(t      * speedY2 + phaseY2) * 0.3;
-        float bxB = bounce01((t+dt) * speedX1 + phaseX) * 0.7
-                  + bounce01((t+dt) * speedX2 + phaseX2) * 0.3;
-        float byB = bounce01((t+dt) * speedY1 + phaseY) * 0.7
-                  + bounce01((t+dt) * speedY2 + phaseY2) * 0.3;
+            // Color by lattice cell hash + slow time drift
+            float hue = hash13(cell) + t * 0.04;
+            vec3 neon = neonPal(hue) * hdrPeak;
 
-        vec2 baseA = vec2(bxA, byA) * 2.0 - 1.0;
-        vec2 baseB = vec2(bxB, byB) * 2.0 - 1.0;
+            vec3 light = normalize(vec3(1.0, 2.0, 1.5));
+            float diff = max(dot(N, light), 0.0);
+            float spec = pow(max(dot(reflect(-light,N), -rd), 0.0), 18.0);
 
-        // Chaos: stacked sin layers at different frequencies + a per-particle
-        // tumble. With chaos > 0 each particle deviates strongly from its
-        // base bounce path, with chaos = 0 it follows the orbit cleanly.
-        // Previous version was scaled by 0.25 — far too weak to read.
-        float chT = t * 0.7;
-        float chTb = (t+dt) * 0.7;
-        // Three octaves of sin per axis at different frequencies + per-
-        // particle phase offsets — non-periodic-feeling drift
-        vec2 chaosA = vec2(
-            sin(chT  * (1.1 + s1 * 1.3) + s3 * 6.28) * 0.55
-          + sin(chT  * (3.7 + s2 * 1.7) + s4 * 6.28) * 0.30
-          + sin(chT  * (0.4 + s3 * 0.9) + s1 * 6.28) * 0.20,
-            cos(chT  * (0.9 + s2 * 1.5) + s4 * 6.28) * 0.55
-          + cos(chT  * (3.1 + s1 * 1.4) + s3 * 6.28) * 0.30
-          + cos(chT  * (0.6 + s4 * 1.1) + s2 * 6.28) * 0.20
-        ) * chaos * 0.55;
-        vec2 chaosB = vec2(
-            sin(chTb * (1.1 + s1 * 1.3) + s3 * 6.28) * 0.55
-          + sin(chTb * (3.7 + s2 * 1.7) + s4 * 6.28) * 0.30
-          + sin(chTb * (0.4 + s3 * 0.9) + s1 * 6.28) * 0.20,
-            cos(chTb * (0.9 + s2 * 1.5) + s4 * 6.28) * 0.55
-          + cos(chTb * (3.1 + s1 * 1.4) + s3 * 6.28) * 0.30
-          + cos(chTb * (0.6 + s4 * 1.1) + s2 * 6.28) * 0.20
-        ) * chaos * 0.55;
-        baseA += chaosA;
-        baseB += chaosB;
-        // Wrap (not clamp) so chaotic particles re-enter rather than stick to edges
-        baseA = mod(baseA + 1.0, 2.0) - 1.0;
-        baseB = mod(baseB + 1.0, 2.0) - 1.0;
+            // fwidth black ink edge
+            float dotNV = dot(N, -rd);
+            float edgeW = fwidth(dotNV);
+            float edge = 1.0 - smoothstep(-edgeW, 0.13+edgeW, dotNV);
 
-        // Aspect-stretched world-space positions.
-        vec2 posA = vec2(baseA.x * aspect, baseA.y);
-        vec2 posB = vec2(baseB.x * aspect, baseB.y);
-
-        // Optional vortex perturbation.
-        posA += vortex(posA, t)          * vortexStrength * 0.08;
-        posB += vortex(posB, t + dt)     * vortexStrength * 0.08;
-
-        vec2 vel = (posB - posA) / dt;
-        float speed = length(vel);
-
-        // Capsule endpoints for motion-stretched particle.
-        float stretchLen = 0.006 * stretch * (0.5 + audio * audioReactivity);
-        vec2 a = posA - vel * stretchLen;
-        vec2 b = posA + vel * stretchLen;
-
-        // Distance to capsule (line segment with rounded caps).
-        vec2 pa = uv - a;
-        vec2 ba = b - a;
-        float denom = max(dot(ba, ba), 1e-6);
-        float h = clamp(dot(pa, ba) / denom, 0.0, 1.0);
-        float d = length(pa - ba * h);
-
-        float r = 0.012 * particleSize * (0.6 + audio * audioReactivity * 0.6);
-        float core = smoothstep(r, 0.0, d);
-        float halo = exp(-d * 70.0);
-
-        // Per-particle color jitter — gives the LED-wall variety look
-        vec3 c1 = color1.rgb;
-        vec3 c2 = color2.rgb;
-        if (colorJitter > 0.0) {
-            float h = hash11(float(i) * 11.7);
-            vec3 hueShift = 0.5 + 0.5 * cos(6.28318 * h + vec3(0.0, 2.094, 4.188));
-            c1 = mix(c1, hueShift,             colorJitter);
-            c2 = mix(c2, hueShift * 0.7 + 0.3, colorJitter);
+            col = neon * (0.15 + diff * 0.85) + vec3(1.0)*spec*2.5;
+            col *= 1.0 - edge * 0.9;
+            break;
         }
-        acc += mix(c2, c1, core) * (core + halo * 0.35);
-
-        // Trail — extra ghost samples behind the segment
-        if (trailDecay > 0.001) {
-            for (int tk = 1; tk <= 3; tk++) {
-                float ftk = float(tk);
-                vec2 ghostA = a - vel * ftk * 0.10 * trailDecay;
-                vec2 ghostB = a;
-                vec2 paG = uv - ghostA;
-                vec2 baG = ghostB - ghostA;
-                float dG2 = dot(baG, baG);
-                if (dG2 > 1e-6) {
-                    float hG = clamp(dot(paG, baG) / dG2, 0.0, 1.0);
-                    float ddG = length(paG - baG * hG);
-                    float fadeG = 1.0 - ftk / 4.0;
-                    acc += mix(c2, c1, smoothstep(r, 0.0, ddG)) * fadeG * 0.20;
-                }
-            }
-        }
+        if (dm > 10.0) break;
+        dm += max(d * 0.85, 0.005);
     }
 
-    vec3 rgb = bg.rgb + acc * glow;
-
-    // LED wall mode: quantize to a grid, leaving black "gaps" between LEDs
-    if (ledMode) {
-        vec2 ledUV = uv * ledSize;
-        vec2 lf = fract(ledUV) - 0.5;
-        float dotMask = smoothstep(0.45, 0.30, length(lf));
-        // Black bezel between LEDs, brightness boost on the lit dot
-        rgb = rgb * (0.20 + 0.80 * dotMask);
-        rgb += rgb * dotMask * 0.4;  // a touch of bloom on lit cells
-    }
-
-    gl_FragColor = vec4(rgb, 1.0);
+    gl_FragColor = vec4(col, 1.0);
 }
