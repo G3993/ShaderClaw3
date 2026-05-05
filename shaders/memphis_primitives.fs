@@ -18,10 +18,10 @@
 // in the grid picks one based on a hash, beat-jolted.
 vec3 palette(float h) {
     int i = int(floor(h * 5.0));
-    if (i == 0) return vec3(0.902, 0.224, 0.275);   // memphis red
-    if (i == 1) return vec3(0.957, 0.827, 0.369);   // memphis yellow
-    if (i == 2) return vec3(0.227, 0.525, 1.000);   // memphis blue
-    if (i == 3) return vec3(0.078, 0.078, 0.094);   // black
+    if (i == 0) return vec3(2.4, 0.12, 0.18);       // HDR memphis red
+    if (i == 1) return vec3(2.8, 2.1, 0.10);        // HDR memphis yellow
+    if (i == 2) return vec3(0.08, 0.28, 3.2);       // HDR memphis blue
+    if (i == 3) return vec3(0.03, 0.02, 0.05);      // ink black
     return vec3(0.96, 0.94, 0.88);                  // off-white (paper)
 }
 
@@ -68,6 +68,15 @@ float polkaDots(vec2 p, float r) {
     return 1.0 - smoothstep(0.0, 0.02, d);
 }
 
+// Ink outline compositing helper: sharp fwidth-based AA + black ink border
+vec3 inkFill(float d, vec3 c, vec3 bg) {
+    float pw = max(fwidth(d), 0.002);
+    float fill = 1.0 - smoothstep(-pw, pw, d);
+    float ink = smoothstep(pw * 6.0, pw, abs(d));
+    vec3 result = mix(bg, c, fill);
+    return mix(result, vec3(0.02, 0.01, 0.03), ink);
+}
+
 // Choose one of 7 primitives based on a hash. Returns flat colour
 // composited over the cell background paper.
 vec3 drawPrimitive(int kind, vec2 p, float ang, float scale, vec3 c, vec3 bg) {
@@ -75,40 +84,46 @@ vec3 drawPrimitive(int kind, vec2 p, float ang, float scale, vec3 c, vec3 bg) {
     p /= scale;
 
     if (kind == 0) {
-        // Circle disc
-        float d = sdCircle(p, 0.5);
-        return mix(c, bg, smoothstep(0.0, 0.02, d));
+        return inkFill(sdCircle(p, 0.5), c, bg);
     }
     if (kind == 1) {
-        // Square
-        float d = sdSquare(p, 0.5);
-        return mix(c, bg, smoothstep(0.0, 0.02, d));
+        return inkFill(sdSquare(p, 0.5), c, bg);
     }
     if (kind == 2) {
-        // Triangle
-        float d = sdTriangle(p, 0.5);
-        return mix(c, bg, smoothstep(0.0, 0.02, d));
+        return inkFill(sdTriangle(p, 0.5), c, bg);
     }
     if (kind == 3) {
-        // Checkerboard inside a circle frame
+        // Checkerboard inside a circle frame with ink border
         float frame = sdCircle(p, 0.5);
-        if (frame > 0.0) return bg;
-        return mix(bg, c, checker(p, 4.0));
+        float pw = max(fwidth(frame), 0.002);
+        float fill = 1.0 - smoothstep(-pw, pw, frame);
+        float ink = smoothstep(pw * 6.0, pw, abs(frame));
+        vec3 inner = mix(bg, c, checker(p, 4.0));
+        vec3 result = mix(bg, inner, fill);
+        return mix(result, vec3(0.02, 0.01, 0.03), ink);
     }
     if (kind == 4) {
-        // Diagonal stripes inside a square
+        // Diagonal stripes inside a square with ink border
         float d = sdSquare(p, 0.5);
-        if (d > 0.0) return bg;
-        return mix(bg, c, stripes(p, 4.0));
+        float pw = max(fwidth(d), 0.002);
+        float fill = 1.0 - smoothstep(-pw, pw, d);
+        float ink = smoothstep(pw * 6.0, pw, abs(d));
+        vec3 inner = mix(bg, c, stripes(p, 4.0));
+        vec3 result = mix(bg, inner, fill);
+        return mix(result, vec3(0.02, 0.01, 0.03), ink);
     }
     if (kind == 5) {
-        // Squiggle line bounded by cell
+        // Squiggle line — no bounding box
         return mix(bg, c, squiggle(p, 2.0, 0.06));
     }
-    // kind == 6: Polka dots
+    // kind == 6: Polka dots inside a square with ink border
     float frame = sdSquare(p, 0.5);
-    if (frame > 0.0) return bg;
-    return mix(bg, c, polkaDots(p, 0.18));
+    float pw = max(fwidth(frame), 0.002);
+    float fill = 1.0 - smoothstep(-pw, pw, frame);
+    float ink = smoothstep(pw * 6.0, pw, abs(frame));
+    vec3 inner = mix(bg, c, polkaDots(p, 0.18));
+    vec3 result = mix(bg, inner, fill);
+    return mix(result, vec3(0.02, 0.01, 0.03), ink);
 }
 
 void main() {
@@ -140,9 +155,9 @@ void main() {
 
     vec3 col = drawPrimitive(prim, cUV, ang, primitiveScale, palette(seed), paper);
 
-    // Audio-coupled scale jitter on the cell — gentle pulse with level.
-    float pulse = 1.0 + audioLevel * 0.05;
-    col = mix(paper, col, clamp(pulse, 0.5, 1.05));
+    // Audio-coupled brightness burst on beat
+    float pulse = 1.0 + audioLevel * audioBass * 0.7;
+    col *= pulse;
 
     // Surprise: every ~13s a Sottsass squiggle — three quick zigzag
     // strokes — chases across the canvas in lipstick pink. The pattern
@@ -155,7 +170,7 @@ void main() {
         float _zig = 0.5 + 0.20 * sin(_x * 28.0) * sin(_x * 11.0);
         float _line = exp(-pow((_suv.y - _zig) * 60.0, 2.0));
         float _on = step(_suv.x, _x) * step(_x - 0.30, _suv.x);
-        col = mix(col, vec3(1.0, 0.40, 0.65), _f * _line * _on * 0.85);
+        col = mix(col, vec3(3.5, 0.4, 1.8), _f * _line * _on * 0.9);
     }
 
     gl_FragColor = vec4(col, 1.0);
