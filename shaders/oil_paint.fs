@@ -1,124 +1,100 @@
 /*{
-  "DESCRIPTION": "Oil paint effect — Kuwahara filter with relief lighting for painterly brush strokes",
-  "CREDIT": "ShaderClaw (Kuwahara approach inspired by flockaroo)",
-  "CATEGORIES": ["Effect"],
+  "DESCRIPTION": "Obsidian Mirror — 3D shattered obsidian plane, glassy black shards with lava-orange fault cracks and white-hot reflections",
+  "CREDIT": "ShaderClaw auto-improve v9",
+  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
   "INPUTS": [
-    { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "brushRadius", "LABEL": "Brush Size", "TYPE": "float", "DEFAULT": 4.0, "MIN": 1.0, "MAX": 12.0 },
-    { "NAME": "paintSpec", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "vignetteAmt", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
-  ],
-  "PASSES": [
-    { "TARGET": "paintBuf", "PERSISTENT": true },
-    {}
+    {"NAME":"shardCount","LABEL":"Shard Count","TYPE":"float","MIN":3.0,"MAX":12.0,"DEFAULT":7.0},
+    {"NAME":"faultColor","LABEL":"Fault Glow","TYPE":"color","DEFAULT":[1.0,0.32,0.02,1.0]},
+    {"NAME":"spinSpeed","LABEL":"Orbit Speed","TYPE":"float","MIN":0.0,"MAX":0.5,"DEFAULT":0.1},
+    {"NAME":"hdrPeak","LABEL":"HDR Peak","TYPE":"float","MIN":1.0,"MAX":4.0,"DEFAULT":2.5},
+    {"NAME":"audioReact","LABEL":"Audio React","TYPE":"float","MIN":0.0,"MAX":2.0,"DEFAULT":1.0}
   ]
 }*/
 
-#define PI 3.1415927
+float h11(float p){p=fract(p*.1031);p*=p+33.33;p*=p+p;return fract(p);}
 
-// Aspect-correct UV
-vec2 fitUV(vec2 pos) {
-    return (pos - 0.5 * RENDERSIZE) * min(IMG_SIZE_inputImage.y / RENDERSIZE.y, IMG_SIZE_inputImage.x / RENDERSIZE.x) / IMG_SIZE_inputImage + 0.5;
+float sdBox(vec3 p,vec3 b){vec3 q=abs(p)-b;return length(max(q,0.))+min(max(q.x,max(q.y,q.z)),0.);}
+
+mat3 rotX(float a){float c=cos(a),s=sin(a);return mat3(1,0,0,0,c,-s,0,s,c);}
+mat3 rotY(float a){float c=cos(a),s=sin(a);return mat3(c,0,s,0,1,0,-s,0,c);}
+
+vec2 scene(vec3 p,float t){
+    float d=1e9; float mat=0.0;
+    int iN=int(clamp(shardCount,3.0,12.0));
+    for(int i=0;i<12;i++){
+        if(i>=iN) break;
+        float fi=float(i);
+        float ang=fi/shardCount*6.28318+t*spinSpeed;
+        float rr=0.18+h11(fi*7.31)*.45;
+        vec3 c=vec3(cos(ang)*rr,(h11(fi*3.7)-.5)*.5,sin(ang)*rr);
+        float tx=(h11(fi*3.7)-.5)*2.0;
+        float tz=(h11(fi*9.1)-.5)*2.0;
+        mat3 R=rotX(tx)*rotY(tz);
+        vec3 lp=R*(p-c);
+        float sz1=0.07+h11(fi*5.1)*.1;
+        float sz2=0.22+h11(fi*11.3)*.2;
+        float ds=sdBox(lp,vec3(sz1,sz2,0.005));
+        if(ds<d){d=ds;mat=fi+1.0;}
+    }
+    float gnd=p.y+0.65;
+    if(gnd<d){d=gnd;mat=0.0;}
+    return vec2(d,mat);
 }
 
-// Kuwahara filter: find the quadrant with lowest variance and use its mean color
-// This creates the flat-color brush stroke look of oil paintings
-vec3 kuwahara(vec2 uv, float radius) {
-    vec2 texel = 1.0 / RENDERSIZE;
+vec3 calcN(vec3 p,float t){
+    vec2 e=vec2(.001,0);
+    return normalize(vec3(
+        scene(p+e.xyy,t).x-scene(p-e.xyy,t).x,
+        scene(p+e.yxy,t).x-scene(p-e.yxy,t).x,
+        scene(p+e.yyx,t).x-scene(p-e.yyx,t).x));
+}
 
-    vec3 mean[4];
-    vec3 var_acc[4];
-    float count[4];
+void main(){
+    vec2 uv=(gl_FragCoord.xy-RENDERSIZE*.5)/min(RENDERSIZE.x,RENDERSIZE.y);
+    float t=TIME;
+    float audio=1.0+audioLevel*audioReact*.4;
 
-    // Initialize accumulators
-    for (int i = 0; i < 4; i++) {
-        mean[i] = vec3(0.0);
-        var_acc[i] = vec3(0.0);
-        count[i] = 0.0;
+    float camAng=t*spinSpeed;
+    vec3 ro=vec3(sin(camAng)*1.9,0.55+sin(t*.19)*.15,cos(camAng)*1.9);
+    vec3 fw=normalize(vec3(0,-0.22,0)-ro);
+    vec3 rt=normalize(cross(fw,vec3(0,1,0)));
+    vec3 up=cross(rt,fw);
+    vec3 rd=normalize(fw+uv.x*rt+uv.y*up);
+
+    float tm=0.05; float mat=-1.0;
+    for(int i=0;i<64;i++){
+        vec2 h=scene(ro+rd*tm,t);
+        if(h.x<.0006){mat=h.y;break;}
+        tm+=h.x;
+        if(tm>10.) break;
     }
 
-    // Sample the 4 quadrants around the pixel
-    for (int j = -6; j <= 6; j++) {
-        for (int i = -6; i <= 6; i++) {
-            if (abs(float(i)) > radius || abs(float(j)) > radius) continue;
+    vec3 VOID  =vec3(0.0,0.0,0.0);
+    vec3 OBSID =vec3(0.025,0.018,0.015);
+    vec3 FAULT =faultColor.rgb;
+    vec3 WHTHT =vec3(1.6,1.3,0.9);
 
-            vec3 c = texture2D(inputImage, fitUV((uv * RENDERSIZE) + vec2(float(i), float(j)))).rgb;
+    vec3 col=VOID;
 
-            // Determine which quadrant(s) this sample belongs to
-            // Quadrant 0: top-right, 1: top-left, 2: bottom-left, 3: bottom-right
-            // Use loop to assign to correct quadrant (WebGL requires const/loop index)
-            int qi = (i >= 0) ? 0 : 1;
-            int qj = (j >= 0) ? 0 : 2;
-            int q = qi + qj;
+    if(mat>=0.0){
+        vec3 p=ro+rd*tm;
+        vec3 n=calcN(p,t);
 
-            for (int k = 0; k < 4; k++) {
-                if (k == q) {
-                    mean[k] += c;
-                    var_acc[k] += c * c;
-                    count[k] += 1.0;
-                }
-            }
+        vec3 light=normalize(vec3(1.2,2.0,.8));
+        float diff=max(dot(n,light),0.0);
+        float spec=pow(max(dot(reflect(-light,n),-rd),0.0),150.0);
+        float rim=pow(1.0-abs(dot(-rd,n)),4.0);
+
+        if(mat<0.5){
+            col=OBSID*(diff*.4+.1)+FAULT*spec*hdrPeak*.5;
+        } else {
+            col=OBSID*(diff*.3+.08)
+               +FAULT*(rim*1.4+spec*.8)*hdrPeak*audio
+               +WHTHT*spec*2.5*hdrPeak;
         }
     }
 
-    // Find the quadrant with minimum variance
-    float minVar = 1e8;
-    vec3 result = vec3(0.0);
+    col+=FAULT*exp(-length(uv)*length(uv)*3.5)*.12*hdrPeak;
 
-    for (int q = 0; q < 4; q++) {
-        if (count[q] < 1.0) continue;
-        vec3 m = mean[q] / count[q];
-        vec3 v = var_acc[q] / count[q] - m * m;
-        float totalVar = v.r + v.g + v.b;
-        if (totalVar < minVar) {
-            minVar = totalVar;
-            result = m;
-        }
-    }
-
-    return result;
-}
-
-void main() {
-    vec2 pos = gl_FragCoord.xy;
-    vec2 uv = pos / RENDERSIZE;
-
-    // ==== PASS 0: Kuwahara paint filter ====
-    if (PASSINDEX == 0) {
-        gl_FragColor = vec4(kuwahara(uv, brushRadius), 1.0);
-        return;
-    }
-
-    // ==== PASS 1: Relief lighting ====
-    vec2 texel = 1.0 / RENDERSIZE;
-    float valC = dot(texture2D(paintBuf, uv).rgb, vec3(0.333));
-    float valR = dot(texture2D(paintBuf, uv + vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valL = dot(texture2D(paintBuf, uv - vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valU = dot(texture2D(paintBuf, uv + vec2(0.0, texel.y)).rgb, vec3(0.333));
-    float valD = dot(texture2D(paintBuf, uv - vec2(0.0, texel.y)).rgb, vec3(0.333));
-
-    vec3 norm = normalize(vec3(
-        (valR - valL) / texel.x,
-        (valU - valD) / texel.y,
-        150.0
-    ));
-
-    vec3 light = normalize(vec3(-1.0, 1.0, 1.4));
-    float diff = clamp(dot(norm, light), 0.0, 1.0);
-    float spec = pow(clamp(dot(reflect(light, norm), vec3(0.0, 0.0, -1.0)), 0.0, 1.0), 12.0) * paintSpec;
-
-    gl_FragColor = texture2D(paintBuf, uv) * mix(diff, 1.0, 0.9)
-                 + spec * vec4(0.85, 1.0, 1.15, 1.0);
-
-    // Vignette
-    if (vignetteAmt > 0.0) {
-        vec2 scc = (pos - 0.5 * RENDERSIZE) / RENDERSIZE.x;
-        float vign = 1.1 - vignetteAmt * dot(scc, scc);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.x / RENDERSIZE.x * PI) * 40.0);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.y / RENDERSIZE.y * PI) * 20.0);
-        gl_FragColor.xyz *= vign;
-    }
-
-    gl_FragColor.w = 1.0;
+    gl_FragColor=vec4(col,1.0);
 }
