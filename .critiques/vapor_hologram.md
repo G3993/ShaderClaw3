@@ -1,3 +1,24 @@
+## 2026-05-05 (v7)
+**Prior rating:** 0.0★
+**Approach:** 3D first-person fly-through (Synthwave Drive)
+**Critique:**
+1. Reference fidelity: Retrowave aesthetic preserved — hot pink/cyan/violet palette, perspective grid floor, striped sun — as an immersive 3D environment instead of a flat 2D scene.
+2. Compositional craft: First-person forward flight creates strong parallax depth; spinning octahedra at mid-distance add focal interest between sky and floor.
+3. Technical execution: Ray-plane intersection for floor grid; 80-step gem march stops at floor t; hash-seeded XZ cell repetition for infinite gem density.
+4. Liveness: Camera flies forward continuously; gems bob and spin; horizon bloom pulses with TIME.
+5. Differentiation: Completely different domain from prior 2D flat scene + hologram overlay; warm/cool balance (hot pink sky vs cyan grid) vs prior homogeneous pastel palette.
+**Changes:**
+- Full rewrite as "Synthwave Drive" — single-pass, no inputImage, no multi-pass
+- gemField(): sdOct octahedra in repeating 5×4.2 XZ cells; each gem hovering, spinning, hash-offset
+- gemColor(): 4-color palette (gemCol, mix, gold, traceCol)
+- renderSynthwave(): sky gradient + striped retrowave sun + floor grid + gem march
+- Perspective floor via ray-plane intersection; grid lines via fract SDF; fog via exp(-t * 0.032)
+- Camera: forward scroll + sinusoidal lateral wave
+- skyTop (deep violet), skyHorizon (hot pink), traceCol (cyan), gemCol (magenta)
+- Voice glitch handler preserved
+**HDR peaks reached:** sun 3.2, gem spec 2.8, gem diff+fres combined 4.5 peak, floor grid 2.5
+**Estimated rating:** 4.2★
+
 ## 2026-05-05
 **Prior rating:** 0.0★
 **Approach:** 2D refine (fix audio dependence, boost HDR)
