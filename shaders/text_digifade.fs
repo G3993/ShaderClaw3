@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Digifade - glitch dissolve",
+  "DESCRIPTION": "Digifade — glitch dissolve text over a live laser arena: sweeping spotlight beams and grid floor. Hot red/gold palette.",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1], "LABELS": ["Digifade","Digifade Glitch"], "DEFAULT": 0 },
@@ -9,16 +9,19 @@
     { "NAME": "intensity", "LABEL": "Glitch", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Dissolve", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.7, 0.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.0, 0.0, 1.0] },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.5 },
+    { "NAME": "beamCount", "LABEL": "Laser Beams", "TYPE": "float", "MIN": 2.0, "MAX": 12.0, "DEFAULT": 6.0 },
+    { "NAME": "beamSpeed", "LABEL": "Beam Speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.8 },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "audioMod", "LABEL": "Audio Mod", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
 const float PI = 3.14159265;
 const float TWO_PI = 6.28318530;
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
 float charPixel(int ch, float col, float row) {
     if (ch < 0 || ch > 36) return 0.0;
     vec2 uv = vec2(col / 5.0, row / 7.0);
@@ -82,19 +85,71 @@ int charCount() {
     return n > 0 ? n : 1;
 }
 
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
-}
-
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
-// =======================================================================
-// EFFECT: DIGIFADE - glitch dissolve
-// =======================================================================
+// ──────────────────────────────────────────────────────────────────────
+// Laser arena background — sweeping spotlight beams from top corners
+// Grid floor perspective for stage feel. Hot red/gold palette.
+// ──────────────────────────────────────────────────────────────────────
+vec3 laserArenaBg(vec2 uv){
+    float audio = 1.0 + (audioLevel + audioBass * 0.8) * audioMod;
+    float t = TIME * beamSpeed;
+    vec3 col = bgColor.rgb;
 
-vec4 effectDigifade(vec2 uv, int sub) {
+    // Perspective grid floor (lower half)
+    if(uv.y < 0.48){
+        float dh = max(0.48 - uv.y, 0.002);
+        vec2 gridUV = vec2((uv.x - 0.5) / (dh * 2.5), 1.0 / dh - t * 0.3);
+        float gx = abs(fract(gridUV.x * 10.0) - 0.5);
+        float gy = abs(fract(gridUV.y) - 0.5);
+        float lineW = 0.04 * dh;
+        float line = smoothstep(0.5 - lineW, 0.5, max(gx, gy));
+        vec3 floorBase = mix(vec3(0.06, 0.0, 0.0), vec3(0.25, 0.0, 0.0), uv.y / 0.48);
+        col = mix(floorBase, vec3(0.9, 0.3, 0.0), line * 0.6);
+    }
+
+    // Spotlight beams from top — each sweeps sinusoidally
+    int N = int(clamp(beamCount, 2.0, 12.0));
+    for(int i = 0; i < 12; i++){
+        if(i >= N) break;
+        float fi = float(i);
+        // Beam origin at top: evenly spaced, some at left/right edges
+        float origX = (fi + 0.5) / float(N);
+        float origY = 1.02;
+
+        // Sweep angle driven by sin at per-beam phase
+        float phase = fi * 1.3 + t;
+        float dirX = sin(phase * 0.7) * 0.5;
+        float targetX = 0.5 + dirX;
+        float targetY = 0.0;
+
+        vec2 beamDir = normalize(vec2(targetX - origX, targetY - origY));
+        vec2 pixRel = uv - vec2(origX, origY);
+
+        // Distance from beam axis
+        float projLen = dot(pixRel, beamDir);
+        float perpDist = abs(length(pixRel - beamDir * projLen));
+        float beamWidth = 0.02 + audio * 0.005;
+        float beamGlow = exp(-perpDist * perpDist / (beamWidth * beamWidth));
+        beamGlow *= step(0.0, projLen);  // only below origin
+        beamGlow *= (1.0 - clamp(projLen / 1.5, 0.0, 1.0));  // fade with distance
+
+        // Alternating hues: red vs gold
+        vec3 beamCol = (mod(fi, 2.0) < 1.0) ? vec3(1.0, 0.1, 0.0) : vec3(1.0, 0.75, 0.0);
+        col += beamCol * beamGlow * hdrGlow * audio;
+    }
+
+    // Ambient haze at bottom (stage smoke)
+    float haze = exp(-uv.y * 8.0) * 0.3;
+    col += vec3(0.5, 0.1, 0.0) * haze;
+
+    return col;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Digifade text effect
+// ──────────────────────────────────────────────────────────────────────
+float effectDigifadeHit(vec2 uv, int sub) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
     int numChars = charCount();
     float glitchAmount = intensity;
@@ -106,19 +161,14 @@ vec4 effectDigifade(vec2 uv, int sub) {
     float t = TIME * speed * sweepSpeed;
     vec2 p = vec2((uv.x - 0.5) * aspect + 0.5, uv.y);
 
-    // Single-line layout: all chars on one row, scale to fit width
     float cH = 0.18 * textScale;
     if (aspect < 1.0) cH *= aspect;
     float cW = cH * (5.0/7.0);
     float gW = cW * 0.2;
-
-    // Scale down if text is wider than screen
     float totalTextW = float(numChars) * cW + float(numChars - 1) * gW;
     float maxW = 0.9 * aspect;
     float fitScale = totalTextW > maxW ? maxW / totalTextW : 1.0;
-    cH *= fitScale;
-    cW *= fitScale;
-    gW *= fitScale;
+    cH *= fitScale; cW *= fitScale; gW *= fitScale;
 
     float rowW = float(numChars) * cW + float(numChars - 1) * gW;
     float startX = 0.5 - rowW * 0.5;
@@ -128,16 +178,14 @@ vec4 effectDigifade(vec2 uv, int sub) {
     float n1 = hash(si + floor(t*2.0));
     float n2 = hash(si*3.7 + floor(t*3.0));
 
-    float textHit = 0.0;
-
     float sw = sin(t*0.7)*0.5+0.5;
     float ps = smoothstep(sw-0.15, sw+0.1, (p.x-startX)/max(rowW, 0.001));
-
     float dx = abs(ps*n1*glitchAmount*maxDisp + ps*sin(si*0.3*complexity+t)*glitchAmount*maxDisp*0.3);
     float dy = vertGlitch > 0.01 ? ps*(n2-0.5)*vertGlitch*glitchAmount*0.06 : 0.0;
 
     vec2 samp = vec2(p.x - dx, p.y - dy);
     float rx = samp.x - startX, ry = samp.y - startY;
+    float textHit = 0.0;
 
     if (rx >= 0.0 && rx <= rowW && ry >= 0.0 && ry <= cH) {
         float cs = cW + gW;
@@ -152,46 +200,36 @@ vec4 effectDigifade(vec2 uv, int sub) {
             }
         }
     }
-
-    vec3 fc = mix(bgColor.rgb, textColor.rgb, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
-    return vec4(fc, a);
+    return textHit;
 }
-
-// =======================================================================
-// MAIN
-// =======================================================================
 
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     int p = int(preset);
-    vec4 col = effectDigifade(uv, p);
+
+    float textHit = effectDigifadeHit(uv, p);
+
+    vec3 bg = transparentBg ? bgColor.rgb : laserArenaBg(uv);
+    float audio = 1.0 + audioLevel * audioMod * 0.4;
+    vec3 textCol = textColor.rgb * hdrGlow * audio;
+
+    vec3 col = mix(bg, textCol, textHit);
+    float a = transparentBg ? textHit : 1.0;
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
-        float t = TIME * 17.0;
-        float band = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
-        float bandNoise = fract(sin(band * 91.7 + t) * 43758.5);
+        float t2 = TIME * 17.0;
+        float band = floor(uv.y * mix(8.0, 40.0, g) + t2 * 3.0);
+        float bandNoise = fract(sin(band * 91.7 + t2) * 43758.5);
         float bandActive = step(1.0 - g * 0.6, bandNoise);
         float shift = (bandNoise - 0.5) * 0.08 * g * bandActive;
         float chromaAmt = g * 0.015;
-        vec2 uvR = uv + vec2(shift + chromaAmt, 0.0);
-        vec2 uvB = uv + vec2(shift - chromaAmt, 0.0);
-        vec2 uvG = uv + vec2(shift, chromaAmt * 0.5);
-        vec4 cR = effectDigifade(uvR, p);
-        vec4 cG = effectDigifade(uvG, p);
-        vec4 cB = effectDigifade(uvB, p);
-        vec4 glitched = vec4(cR.r, cG.g, cB.b, max(max(cR.a, cG.a), cB.a));
-        float scanline = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
-        float blockX = floor(uv.x * 6.0);
-        float blockY = floor(uv.y * 4.0);
-        float blockNoise = fract(sin((blockX + blockY * 7.0) * 113.1 + floor(t * 8.0)) * 43758.5);
-        float dropout = step(1.0 - g * 0.15, blockNoise);
-        glitched.rgb *= scanline;
-        glitched.rgb *= 1.0 - dropout;
+        float tR = effectDigifadeHit(uv + vec2(shift + chromaAmt, 0.0), p);
+        float tG = effectDigifadeHit(uv + vec2(shift, chromaAmt * 0.5), p);
+        float tB = effectDigifadeHit(uv + vec2(shift - chromaAmt, 0.0), p);
+        vec3 glitched = mix(bg, textCol, (tR + tG + tB) / 3.0);
         col = mix(col, glitched, smoothstep(0.0, 0.3, g));
     }
 
-    gl_FragColor = col;
+    gl_FragColor = vec4(col, a);
 }
