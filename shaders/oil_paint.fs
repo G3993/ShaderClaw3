@@ -1,124 +1,71 @@
 /*{
-  "DESCRIPTION": "Oil paint effect — Kuwahara filter with relief lighting for painterly brush strokes",
-  "CREDIT": "ShaderClaw (Kuwahara approach inspired by flockaroo)",
-  "CATEGORIES": ["Effect"],
-  "INPUTS": [
-    { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "brushRadius", "LABEL": "Brush Size", "TYPE": "float", "DEFAULT": 4.0, "MIN": 1.0, "MAX": 12.0 },
-    { "NAME": "paintSpec", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "vignetteAmt", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
-  ],
-  "PASSES": [
-    { "TARGET": "paintBuf", "PERSISTENT": true },
-    {}
-  ]
+    "DESCRIPTION": "Azulejo Tiles — Portuguese cobalt-blue geometric ceramic tiling with glaze shimmer",
+    "CATEGORIES": ["Generator", "Geometry"],
+    "CREDIT": "ShaderClaw / Azulejo v1",
+    "INPUTS": [
+        { "NAME": "tileSize",        "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.04, "MAX": 0.40, "LABEL": "Tile Size" },
+        { "NAME": "groutW",          "TYPE": "float", "DEFAULT": 0.05, "MIN": 0.01, "MAX": 0.15, "LABEL": "Grout Width" },
+        { "NAME": "arcRadius",       "TYPE": "float", "DEFAULT": 0.37, "MIN": 0.10, "MAX": 0.55, "LABEL": "Arc Radius" },
+        { "NAME": "crossW",          "TYPE": "float", "DEFAULT": 0.10, "MIN": 0.03, "MAX": 0.30, "LABEL": "Cross Width" },
+        { "NAME": "hdrBlue",         "TYPE": "float", "DEFAULT": 2.5,  "MIN": 0.5,  "MAX": 5.0,  "LABEL": "Blue HDR" },
+        { "NAME": "hdrWhite",        "TYPE": "float", "DEFAULT": 3.0,  "MIN": 0.5,  "MAX": 5.0,  "LABEL": "White HDR" },
+        { "NAME": "pulse",           "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0,  "MAX": 2.0,  "LABEL": "Bass Pulse" },
+        { "NAME": "shimmer",         "TYPE": "float", "DEFAULT": 0.08, "MIN": 0.0,  "MAX": 0.25, "LABEL": "Glaze Shimmer" },
+        { "NAME": "audioReactivity", "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0,  "MAX": 2.0,  "LABEL": "Audio" }
+    ]
 }*/
 
-#define PI 3.1415927
-
-// Aspect-correct UV
-vec2 fitUV(vec2 pos) {
-    return (pos - 0.5 * RENDERSIZE) * min(IMG_SIZE_inputImage.y / RENDERSIZE.y, IMG_SIZE_inputImage.x / RENDERSIZE.x) / IMG_SIZE_inputImage + 0.5;
-}
-
-// Kuwahara filter: find the quadrant with lowest variance and use its mean color
-// This creates the flat-color brush stroke look of oil paintings
-vec3 kuwahara(vec2 uv, float radius) {
-    vec2 texel = 1.0 / RENDERSIZE;
-
-    vec3 mean[4];
-    vec3 var_acc[4];
-    float count[4];
-
-    // Initialize accumulators
-    for (int i = 0; i < 4; i++) {
-        mean[i] = vec3(0.0);
-        var_acc[i] = vec3(0.0);
-        count[i] = 0.0;
-    }
-
-    // Sample the 4 quadrants around the pixel
-    for (int j = -6; j <= 6; j++) {
-        for (int i = -6; i <= 6; i++) {
-            if (abs(float(i)) > radius || abs(float(j)) > radius) continue;
-
-            vec3 c = texture2D(inputImage, fitUV((uv * RENDERSIZE) + vec2(float(i), float(j)))).rgb;
-
-            // Determine which quadrant(s) this sample belongs to
-            // Quadrant 0: top-right, 1: top-left, 2: bottom-left, 3: bottom-right
-            // Use loop to assign to correct quadrant (WebGL requires const/loop index)
-            int qi = (i >= 0) ? 0 : 1;
-            int qj = (j >= 0) ? 0 : 2;
-            int q = qi + qj;
-
-            for (int k = 0; k < 4; k++) {
-                if (k == q) {
-                    mean[k] += c;
-                    var_acc[k] += c * c;
-                    count[k] += 1.0;
-                }
-            }
-        }
-    }
-
-    // Find the quadrant with minimum variance
-    float minVar = 1e8;
-    vec3 result = vec3(0.0);
-
-    for (int q = 0; q < 4; q++) {
-        if (count[q] < 1.0) continue;
-        vec3 m = mean[q] / count[q];
-        vec3 v = var_acc[q] / count[q] - m * m;
-        float totalVar = v.r + v.g + v.b;
-        if (totalVar < minVar) {
-            minVar = totalVar;
-            result = m;
-        }
-    }
-
-    return result;
-}
-
 void main() {
-    vec2 pos = gl_FragCoord.xy;
-    vec2 uv = pos / RENDERSIZE;
+    vec2 uv = isf_FragNormCoord;
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    vec2 uvA = vec2(uv.x * aspect, uv.y);
 
-    // ==== PASS 0: Kuwahara paint filter ====
-    if (PASSINDEX == 0) {
-        gl_FragColor = vec4(kuwahara(uv, brushRadius), 1.0);
-        return;
-    }
+    float breathe = 1.0 + audioBass * pulse * 0.06;
 
-    // ==== PASS 1: Relief lighting ====
-    vec2 texel = 1.0 / RENDERSIZE;
-    float valC = dot(texture2D(paintBuf, uv).rgb, vec3(0.333));
-    float valR = dot(texture2D(paintBuf, uv + vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valL = dot(texture2D(paintBuf, uv - vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valU = dot(texture2D(paintBuf, uv + vec2(0.0, texel.y)).rgb, vec3(0.333));
-    float valD = dot(texture2D(paintBuf, uv - vec2(0.0, texel.y)).rgb, vec3(0.333));
+    // Tile grid
+    vec2 tileCoord = uvA / (tileSize * breathe);
+    vec2 tileIdx   = floor(tileCoord);
+    vec2 lp        = fract(tileCoord);
 
-    vec3 norm = normalize(vec3(
-        (valR - valL) / texel.x,
-        (valU - valD) / texel.y,
-        150.0
-    ));
+    // Grout: smooth black border near tile edges
+    float groutMask = smoothstep(0.0, groutW,
+                        min(min(lp.x, 1.0 - lp.x),
+                            min(lp.y, 1.0 - lp.y)));
 
-    vec3 light = normalize(vec3(-1.0, 1.0, 1.4));
-    float diff = clamp(dot(norm, light), 0.0, 1.0);
-    float spec = pow(clamp(dot(reflect(light, norm), vec3(0.0, 0.0, -1.0)), 0.0, 1.0), 12.0) * paintSpec;
+    // Fold to first quadrant — produces 4-fold symmetric pattern
+    vec2 qp = abs(lp - 0.5);
 
-    gl_FragColor = texture2D(paintBuf, uv) * mix(diff, 1.0, 0.9)
-                 + spec * vec4(0.85, 1.0, 1.15, 1.0);
+    // Corner quarter-circles: arc centered at each tile corner (abs-folded to (0.5,0.5))
+    float arcDist  = length(qp - vec2(0.5, 0.5)) - arcRadius;
+    float arcAA    = fwidth(arcDist) * 1.5;
+    float cornerPat = smoothstep(arcAA, -arcAA, arcDist);
 
-    // Vignette
-    if (vignetteAmt > 0.0) {
-        vec2 scc = (pos - 0.5 * RENDERSIZE) / RENDERSIZE.x;
-        float vign = 1.1 - vignetteAmt * dot(scc, scc);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.x / RENDERSIZE.x * PI) * 40.0);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.y / RENDERSIZE.y * PI) * 20.0);
-        gl_FragColor.xyz *= vign;
-    }
+    // Center cross spanning full tile width and height
+    float crossAA  = fwidth(qp.x) * 1.5;
+    float crossPat = smoothstep(crossAA, -crossAA,
+                        max(qp.x - crossW, qp.y - crossW));
 
-    gl_FragColor.w = 1.0;
+    float pat = max(cornerPat, crossPat);
+
+    // Checkerboard: alternate blue-on-white / white-on-blue
+    float inv = mod(tileIdx.x + tileIdx.y, 2.0);
+    if (inv > 0.5) pat = 1.0 - pat;
+
+    // Glaze shimmer — slow sinusoidal brightness wave across each tile
+    float glaze = 1.0 - shimmer
+                + shimmer * sin(lp.x * 6.28318 + TIME * 0.38)
+                           * cos(lp.y * 4.50000 + TIME * 0.26);
+
+    // Audio brightness boost
+    float audioBright = 1.0 + audioBass * audioReactivity * 0.3;
+
+    vec3 BLUE  = vec3(0.06, 0.18, 1.00) * hdrBlue  * glaze * audioBright;
+    vec3 WHITE = vec3(1.00, 0.97, 0.92) * hdrWhite * glaze * audioBright;
+
+    vec3 col = mix(BLUE, WHITE, pat);
+
+    // Grout seam: near-void black
+    col = mix(vec3(0.0), col, groutMask);
+
+    gl_FragColor = vec4(col, 1.0);
 }

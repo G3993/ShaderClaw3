@@ -18,3 +18,25 @@
 - Audio modulates pulse intensity
 **HDR peaks reached:** white-hot crack edges 3.0, gold flow 1.5–2.5, orange mid-tone 1.0
 **Estimated rating:** 4.5★
+
+## 2026-05-05 (v11)
+**Prior rating:** 0.0★
+**Approach:** 2D refine (Azulejo Tiles — Portuguese geometric ceramic)
+**Critique:**
+1. Reference fidelity: Kuwahara requires image input — no standalone visual without source feed; wrong category for a generator catalog.
+2. Compositional craft: Multi-pass effect has no self-contained composition.
+3. Technical execution: Kuwahara implementation is clean; PERSISTENT buffer setup is correct but dependent on image input.
+4. Liveness: Zero TIME content; purely static filter effect.
+5. Differentiation: Kuwahara is a well-known filter with no audio reactivity or procedural content.
+**Changes:**
+- Full rewrite as "Azulejo Tiles" — Portuguese cobalt-blue/white geometric ceramic tiling
+- Single-pass generator, no image input required
+- Pattern: abs(lp-0.5) fold → corner quarter-circle SDFs + center cross SDF
+- AA via fwidth() for both arc and cross edges
+- Checkerboard alternation: mod(tileIdx.x + tileIdx.y, 2.0) swaps blue/white
+- Glaze shimmer: slow sin*cos wave across tile surface
+- Grout: smoothstep(0,groutW,...) → near-void black seams
+- audioBass pulse: tile grid breathes subtly with bass hits
+- Removed PASSES / PERSISTENT buffer — single-pass only
+**HDR peaks reached:** WHITE hdrWhite=3.0 × audioBright~1.3 → 3.9 peak; BLUE hdrBlue=2.5 → 3.25 peak
+**Estimated rating:** 4.2★
