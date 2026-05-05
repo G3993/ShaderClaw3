@@ -18,3 +18,24 @@
 - Black mortar lines provide dark accent contrast
 **HDR peaks reached:** textColor * 1.8 glow = 1.8 direct, ~2.7 with audio boost
 **Estimated rating:** 3.8★
+
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 3D raymarch — NEW ANGLE: prior 2D flat neon brick wall → 3D stone cathedral corridor with god rays (warm amber, environmental wide scene)
+**Critique:**
+1. Reference fidelity: Prior was a flat procedural neon brick background (2D); new is a full 3D Gothic stone corridor with arched vault and volumetric light shaft.
+2. Compositional craft: Eye-level camera looking down infinite hallway creates deep forced perspective; arch ribs frame the scene rhythmically.
+3. Technical execution: Box SDF for corridor walls, repeating arch rib slabs, brick mortar from fract() ridges, god ray via Gaussian beam X profile.
+4. Liveness: TIME-driven camera walk + side drift; audio modulates god ray intensity.
+5. Differentiation: 3D environmental vs 2D flat; warm stone/amber vs neon violet/cyan; god ray god-lit vs neon backlight; wide corridor vs poster-flat composition.
+**Changes:**
+- Full rewrite as 3D Gothic stone corridor
+- Box SDF corridor with repeating arch ribs (mod() spacing)
+- Procedural mortar via fract() height/depth ridges
+- God ray: Gaussian beam along X axis with falloff
+- Depth fog: exp(-dt * 0.05) mixed with shadow color
+- 4-color palette: warm stone tan, deep shadow, golden sunbeam, white-hot
+- Eye-level walking camera with sinusoidal drift
+- Black ink stone edges via fwidth AA
+**HDR peaks reached:** god ray peak 2.4+, sunlit specular 2.0, golden ridge 1.5
+**Estimated rating:** 4.0★
