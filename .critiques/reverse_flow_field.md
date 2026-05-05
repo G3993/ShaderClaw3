@@ -16,3 +16,23 @@
 - HDR peak: magma top ramp → 3.0× white-hot on high-intensity seeds
 **HDR peaks reached:** white-hot seeds 3.0, gold 2.0, orange 1.3
 **Estimated rating:** 3.5★
+
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 3D volumetric — NEW ANGLE: prior 2D flow field with magma palette → 3D volumetric deep sea with bioluminescent plankton (cool night palette)
+**Critique:**
+1. Reference fidelity: Prior is 2D LIC flow field with warm magma substitution; new is full 3D volumetric ocean trench with organic glowing life.
+2. Compositional craft: Drifting camera through dark water with scattered bioluminescent dots and a caustic floor — deep environmental immersion.
+3. Technical execution: 3D FBM plankton density with threshold, volumetric march accumulating glow, ocean floor SDF with caustic pattern.
+4. Liveness: TIME-driven plankton drift, camera drift, caustic animation, floor ripple; audio modulates glow intensity.
+5. Differentiation: 3D volumetric vs 2D flat; cool navy/teal palette vs warm magma; biological dot-glow vs continuous flow streaks; depth fog vs pure 2D.
+**Changes:**
+- Full rewrite as 3D volumetric ocean
+- 3D FBM plankton density with smoothstep threshold for discrete dots
+- Volumetric accumulation loop (64 steps, 0.12 step size)
+- Ocean floor with FBM height + caustic sin pattern
+- 4-color palette: abyssal navy, electric teal, bioluminescent cyan, white-hot
+- Depth fog: mix(navy, col, exp(-dt * 0.06))
+- Plankton hue varies by FBM: cyan-teal range
+**HDR peaks reached:** bioluminescent clusters 2.8+, caustic teal 1.5, white core plankton 3.0
+**Estimated rating:** 4.0★
