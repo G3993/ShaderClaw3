@@ -1,21 +1,23 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Tokyo Neon Rain — cascade rows as neon sign colors, rain-wet reflections, pure black bg",
+  "DESCRIPTION": "Cascade - tiled rows with wave offsets",
   "INPUTS": [
-    { "NAME": "msg",       "TYPE": "text",  "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
-    { "NAME": "fontFamily","LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
-    { "NAME": "speed",     "LABEL": "Speed",       "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
-    { "NAME": "intensity", "LABEL": "Wave Height",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "density",   "LABEL": "Row Count",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "textScale", "LABEL": "Size",         "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "oscSpeed",  "LABEL": "Osc Speed",    "TYPE": "float", "MIN": 0.0, "MAX": 10.0,"DEFAULT": 0.0 },
-    { "NAME": "oscAmount", "LABEL": "Osc Amount",   "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
-    { "NAME": "oscSpread", "LABEL": "Osc Spread",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "audioMod",  "LABEL": "Audio React",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.6 }
+    { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
+    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
+    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
+    { "NAME": "intensity", "LABEL": "Wave Height", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
+    { "NAME": "density", "LABEL": "Row Count", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
+    { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
+    { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
+    { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
+    { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 0.85, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.15, 0.04, 0.0, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
-const float PI     = 3.14159265;
+const float PI = 3.14159265;
 const float TWO_PI = 6.28318530;
 
 // Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
@@ -89,83 +91,120 @@ float sampleChar(int ch, vec2 uv) {
 }
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
 // =======================================================================
-// EFFECT: TOKYO NEON RAIN — dark street, per-row neon sign colors, rain
+// BACKGROUND: SOLAR GRANULATION
+// Voronoi convection cells simulating the sun's chromosphere
+// =======================================================================
+
+vec3 solarGranulation(vec2 uv) {
+    // Cell scale — granules ~0.08 UV units across
+    float scale = 1.0 / 0.08;
+    vec2 scaledUV = uv * scale;
+
+    // Slow TIME drift for convection motion
+    vec2 drift = vec2(TIME * 0.04, TIME * 0.03);
+
+    // Voronoi: find nearest seed in 3x3 neighborhood
+    vec2 cell = floor(scaledUV);
+    vec2 frac = fract(scaledUV);
+
+    float minDist = 9999.0;
+    vec2 nearestCell = vec2(0.0);
+
+    for (float dy = -1.0; dy <= 1.0; dy += 1.0) {
+        for (float dx = -1.0; dx <= 1.0; dx += 1.0) {
+            vec2 neighbor = cell + vec2(dx, dy);
+            // Animated seed position within cell
+            vec2 seed = vec2(
+                hash2(neighbor + vec2(0.0, 0.0)),
+                hash2(neighbor + vec2(1.7, 3.3))
+            );
+            seed += sin(seed * TWO_PI + drift) * 0.25;
+            seed = clamp(seed, 0.1, 0.9);
+
+            vec2 diff = neighbor + seed - scaledUV;
+            float d = length(diff);
+            if (d < minDist) {
+                minDist = d;
+                nearestCell = neighbor;
+            }
+        }
+    }
+
+    // Normalize distance: 0 = center, ~0.5+ = boundary
+    float t = minDist; // typically 0..0.7
+
+    // Color ramp: bright golden center → dark orange boundary
+    vec3 center   = vec3(1.0, 0.85, 0.2) * 2.0;   // HDR golden peak
+    vec3 boundary = vec3(0.4, 0.1, 0.0);           // dark orange groove
+
+    // Smooth step from center to boundary
+    vec3 col = mix(center, boundary, smoothstep(0.15, 0.48, t));
+
+    // White-hot plasma flares: high-frequency hash noise patches
+    float flareNoise = hash2(uv * 37.3 + vec2(TIME * 0.7, TIME * 0.5));
+    float flareNoise2 = hash2(uv * 19.1 + vec2(TIME * 0.4, TIME * 0.9));
+    float flare = smoothstep(0.85, 1.0, flareNoise) * smoothstep(0.12, 0.0, t);
+    float flare2 = smoothstep(0.92, 1.0, flareNoise2) * smoothstep(0.08, 0.0, t);
+    col += vec3(1.5, 1.3, 0.9) * (flare + flare2 * 0.7);
+
+    return col;
+}
+
+// =======================================================================
+// EFFECT: CASCADE - tiled rows with wave offsets
 // =======================================================================
 
 vec4 effectCascade(vec2 uv) {
-    float aspect   = RENDERSIZE.x / RENDERSIZE.y;
-    int   numChars = charCount();
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    int numChars = charCount();
     float waveAmount = intensity;
     float rows = floor(mix(5.0, 30.0, density));
 
-    // ---- Row geometry (unchanged from prior) ----
     float warpedY = uv.y + sin(uv.y * TWO_PI * 1.5 + TIME * speed * 1.5) * waveAmount * 0.06;
-    float rowH    = 1.0 / rows;
-    float rowIdx  = clamp(floor(warpedY / rowH), 0.0, rows - 1.0);
-    float localY  = fract(warpedY / rowH);
+    float rowH = 1.0 / rows;
+    float rowIdx = clamp(floor(warpedY / rowH), 0.0, rows - 1.0);
+    float localY = fract(warpedY / rowH);
 
-    float cH    = rowH;
-    float cW    = cH * (5.0/7.0) * (1.0/aspect) * textScale;
-    float gW    = cW * 0.15;
+    float cH = rowH;
+    float cW = cH * (5.0/7.0) * (1.0/aspect) * textScale;
+    float gW = cW * 0.15;
     float wordW = float(numChars) * (cW + gW);
 
-    float xOff = sin(rowIdx * 0.6 + TIME * speed * 2.0) * waveAmount * wordW * 1.5
-               + TIME * speed * 0.08;
+    float xOff = sin(rowIdx*0.6 + TIME*speed*2.0) * waveAmount * wordW * 1.5 + TIME*speed*0.08;
     float px = mod(uv.x + xOff - 0.5 + wordW * 0.5, wordW);
     if (px < 0.0) px += wordW;
 
-    float cs   = cW + gW;
-    float csF  = px / cs;
-    int   slot = int(floor(csF));
-    float clx  = fract(csF);
-    float cf   = cW / cs;
+    float cs = cW + gW;
+    float csF = px / cs;
+    int slot = int(floor(csF));
+    float clx = fract(csF);
+    float cf = cW / cs;
 
     float textHit = 0.0;
     if (clx < cf && slot >= 0 && slot < numChars) {
-        float gc = (clx / cf) * 5.0, gr = localY * 7.0;
+        float gc = (clx/cf) * 5.0, gr = localY * 7.0;
         if (gc >= 0.0 && gc < 5.0 && gr >= 0.0 && gr < 7.0) {
             int ch = getChar(slot);
             if (ch >= 0 && ch <= 36 && ch != 26) textHit = charPixel(ch, gc, gr);
         }
     }
 
-    // ---- Neon sign color: 4-cycle pure saturated primaries per row ----
-    int ri = int(mod(rowIdx, 4.0));
-    vec3 neonColor;
-    if      (ri == 0) neonColor = vec3(2.5,  0.05, 0.05);  // red
-    else if (ri == 1) neonColor = vec3(0.0,  2.5,  0.1);   // green
-    else if (ri == 2) neonColor = vec3(0.05, 0.1,  2.5);   // blue
-    else              neonColor = vec3(2.5,  2.2,  0.0);   // yellow
+    vec3 fc;
+    float a = 1.0;
 
-    // Audio modulates glow (scale, not gate)
-    neonColor *= 1.0 + audioLevel * audioMod * 0.25;
+    if (transparentBg) {
+        a = textHit;
+        fc = textColor.rgb * 2.5;
+    } else {
+        vec3 bg = solarGranulation(uv);
+        // Text always renders as HDR solar white over granulation background
+        fc = mix(bg, textColor.rgb * 2.5, textHit);
+    }
 
-    // ---- Rain streaks: fast vertical, sparse, dim blue-gray ----
-    float rainY    = fract(uv.y * 18.0 - TIME * speed * 4.0 + rowIdx * 0.7);
-    float rainXf   = floor(uv.x * 60.0 + rowIdx * 7.3);
-    float rainNoise = hash(rainXf + floor(TIME * 8.0) * 0.1);
-    float rain = step(0.94, rainNoise)
-               * smoothstep(0.0,  0.05, rainY)
-               * smoothstep(0.05, 0.0,  rainY - 0.04);
-
-    // ---- Reflection strip at bottom (y < 0.25): dim mirror of neon ----
-    float reflMask = smoothstep(0.25, 0.1, uv.y);
-
-    // ---- Compose ----
-    vec3 bg = vec3(0.0);
-    bg += vec3(0.2, 0.3, 0.4) * rain * 0.8;  // rain streaks on dark bg
-
-    // Puddle reflection glow in bottom strip
-    float reflGlow = reflMask * smoothstep(0.0, 0.08, textHit);
-    bg += neonColor * 0.4 * reflGlow;
-
-    // Neon sign text
-    float glow = textHit * (1.0 + audioLevel * audioMod * 0.4);
-    vec3 fc = bg + neonColor * glow;
-
-    return vec4(fc, 1.0);
+    return vec4(fc, a);
 }
 
 // =======================================================================
@@ -173,17 +212,17 @@ vec4 effectCascade(vec2 uv) {
 // =======================================================================
 
 void main() {
-    vec2 uv  = gl_FragCoord.xy / RENDERSIZE.xy;
+    vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     vec4 col = effectCascade(uv);
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
         float t = TIME * 17.0;
-        float band       = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
-        float bandNoise  = fract(sin(band * 91.7 + t) * 43758.5);
+        float band = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
+        float bandNoise = fract(sin(band * 91.7 + t) * 43758.5);
         float bandActive = step(1.0 - g * 0.6, bandNoise);
-        float shift      = (bandNoise - 0.5) * 0.08 * g * bandActive;
-        float chromaAmt  = g * 0.015;
+        float shift = (bandNoise - 0.5) * 0.08 * g * bandActive;
+        float chromaAmt = g * 0.015;
         vec2 uvR = uv + vec2(shift + chromaAmt, 0.0);
         vec2 uvB = uv + vec2(shift - chromaAmt, 0.0);
         vec2 uvG = uv + vec2(shift, chromaAmt * 0.5);
@@ -192,12 +231,12 @@ void main() {
         vec4 cB = effectCascade(uvB);
         vec4 glitched = vec4(cR.r, cG.g, cB.b, max(max(cR.a, cG.a), cB.a));
         float scanline = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
-        float blockX   = floor(uv.x * 6.0);
-        float blockY   = floor(uv.y * 4.0);
+        float blockX = floor(uv.x * 6.0);
+        float blockY = floor(uv.y * 4.0);
         float blockNoise = fract(sin((blockX + blockY * 7.0) * 113.1 + floor(t * 8.0)) * 43758.5);
-        float dropout  = step(1.0 - g * 0.15, blockNoise);
-        glitched.rgb  *= scanline;
-        glitched.rgb  *= 1.0 - dropout;
+        float dropout = step(1.0 - g * 0.15, blockNoise);
+        glitched.rgb *= scanline;
+        glitched.rgb *= 1.0 - dropout;
         col = mix(col, glitched, smoothstep(0.0, 0.3, g));
     }
 

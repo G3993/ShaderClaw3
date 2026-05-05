@@ -1,40 +1,17 @@
-## 2026-05-05 (v2)
+## 2026-05-05 (v5)
 **Prior rating:** 0.0★
-**Approach:** 2D refine — NEW ANGLE: Tokyo Neon Rain (pure saturated primary-per-row color cycling + rain streaks + puddle reflection vs prior aurora background)
+**Approach:** 2D background generator — NEW ANGLE: solar chromosphere granulation (vs. Ink Rain amber, Deep Sea Bioluminescence, Bioluminescent cave 3D — all ocean/biological)
 **Critique:**
-1. Reference fidelity: Cascade rows now as neon sign colors — rows = different colored signs in rain. Strong urban visual identity.
-2. Compositional craft: 4-color primary cycling (red/green/blue/yellow) per row creates bold stripe pattern; rain + reflection adds depth.
-3. Technical execution: Hash-based rain streaks, reflection puddle strip at y<0.25, audio modulates neon brightness.
-4. Liveness: Rain scrolls with TIME*speed*4, row offsets still TIME-driven.
-5. Differentiation: Pure black bg with primary neon vs prior aurora (violet/cyan/gold sinusoidal waves on purple bg).
+1. Reference fidelity: Solar granulation is a real astrophysical phenomenon — boiling convection cells on the sun's surface — visually striking and scientifically grounded.
+2. Compositional craft: Voronoi granulation provides strong texture; bright centers against dark boundaries creates natural contrast.
+3. Technical execution: 3×3 Voronoi neighborhood search; animated seed positions; HDR peaks on granule centers.
+4. Liveness: Slow TIME drift of granule seeds simulates convection motion.
+5. Differentiation: No ocean, no cave, no rain — stellar astrophysics is a completely new domain.
 **Changes:**
-- Row color: pure primary cycling (2.5,0.05,0.05)/(0,2.5,0.1)/(0.05,0.1,2.5)/(2.5,2.2,0) per mod(rowIdx,4)
-- Rain streaks: hash per column * TIME scroll
-- Reflection glow strip: uv.y < 0.25 puddle effect
-- audioMod input: neonColor *= 1.0 + audioLevel*audioMod*0.25
-- Background: pure black (0,0,0)
-- Removed transparentBg, bgColor, textColor inputs
-- _voiceGlitch + all font boilerplate preserved
-**HDR peaks reached:** neon text 2.5, yellow peak 2.5 (all 4 rows reach 2.5)
-**Estimated rating:** 3.8★
-
-## 2026-05-05
-**Prior rating:** 0.0★
-**Approach:** 2D refine (aurora background + HDR glow)
-**Critique:**
-1. Reference fidelity: Cascading tiled rows with wave offsets is a legitimate effect; invisible in transparent mode.
-2. Compositional craft: No background — transparent default means nothing visible standalone.
-3. Technical execution: Wave offset logic is correct; multi-row cascade works.
-4. Liveness: TIME-driven wave oscillation is present but hidden behind transparency.
-5. Differentiation: Cascade row effect is distinctive; needs a background to show it.
-**Changes:**
-- Added auroraBg() — 5-layer sinusoidal aurora with 4-color saturated palette
-- Aurora colors: violet, cyan, gold, magenta — all fully saturated
+- Added solarGranulation() Voronoi-based background
+- Solar palette: gold centers (2.0 HDR), dark orange boundaries, white-hot plasma flares (1.5 HDR)
 - transparentBg default: true→false
-- textColor default: white → gold [1.0, 0.85, 0.0]
-- bgColor default: black → deep purple [0.02, 0.0, 0.10]
-- hdrGlow default: 2.2 (gold text glows HDR)
-- Alternating row colors: gold vs magenta (row parity)
-- audioMod input added
-**HDR peaks reached:** gold text * 2.2 = 2.2 direct; with audio 3.0+
-**Estimated rating:** 3.8★
+- textColor solar white (2.5 HDR)
+- bgColor dark solar
+**HDR peaks reached:** plasma flares 1.5+, text 2.5, granule centers 2.0
+**Estimated rating:** 4.0★
