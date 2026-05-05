@@ -1,6 +1,7 @@
 node_modules/
 .env
 .vercel
+.claude/
 assets/abstract_concept.mov
 assets/ethereal_loop.mp4
 etherea_debug.log
