@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Bricks - grid with animated displacement",
+  "DESCRIPTION": "De Stijl Color Grid — Mondrian-palette brick cells with black text cutouts, audio-reactive saturation",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1,2], "LABELS": ["Bricks","Bricks Harlequin","Bricks Zebra"], "DEFAULT": 0 },
@@ -9,9 +9,10 @@
     { "NAME": "intensity", "LABEL": "Displacement", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Grid Density", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [1.0, 0.0, 0.05, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true },
+    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 0.7, "MIN": 0.0, "MAX": 2.0 }
   ]
 }*/
 
@@ -91,7 +92,7 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
-// EFFECT: BRICKS - grid with animated displacement
+// EFFECT: DE STIJL COLOR GRID — Mondrian palette, black text cutouts
 // =======================================================================
 
 vec4 effectBricks(vec2 uv, int sub) {
@@ -100,11 +101,12 @@ vec4 effectBricks(vec2 uv, int sub) {
     float waveAmount = intensity;
     float cols = floor(mix(5.0, 40.0, density));
 
+    // Wave displacement zeroed out — cells are static, only color changes
     float wX=0.0, wY=0.0, fX=3.0, fY=3.0, pm=0.0;
     bool brick = false;
-    if (sub == 0) { wX=0.3; fX=2.5; brick=true; }
-    else if (sub == 1) { wX=0.6; wY=0.6; pm=2.0; }
-    else { wX=1.0; fX=4.0; pm=1.0; }
+    if (sub == 0) { fX=2.5; brick=true; }
+    else if (sub == 1) { pm=2.0; }
+    else { fX=4.0; pm=1.0; }
 
     float rws = floor(cols*(7.0/5.0)/aspect);
     float cellW = 1.0/cols, cellH = 1.0/rws;
@@ -119,6 +121,7 @@ vec4 effectBricks(vec2 uv, int sub) {
         lx = fract(sx/cellW);
     }
 
+    // wX and wY are 0.0 — no wave displacement applied
     float t = TIME*speed*2.5;
     float phase = ci + ri;
     if (pm > 0.5 && pm < 1.5) phase = ri;
@@ -142,12 +145,24 @@ vec4 effectBricks(vec2 uv, int sub) {
         }
     }
 
-    bool inv = mod(ri, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
+    // De Stijl palette — 5 colors, no white-mixing
+    vec3 DESTIJL[5];
+    DESTIJL[0] = vec3(1.0, 0.0, 0.05);    // Mondrian red
+    DESTIJL[1] = vec3(0.0, 0.15, 0.9);    // Mondrian cobalt blue
+    DESTIJL[2] = vec3(1.0, 0.85, 0.0);    // Mondrian yellow
+    DESTIJL[3] = vec3(0.02, 0.02, 0.02);  // black cell
+    DESTIJL[4] = vec3(0.0, 0.15, 0.9);    // repeat cobalt for weighting
+
+    float cellSeed = hash(ci * 7.31 + ri * 13.79 + float(sub) * 3.17);
+    int paletteIdx = int(cellSeed * 5.0);
+    float audioMod = 0.5 + 0.5 * audioBass * audioReact;
+    vec3 cellColor = DESTIJL[paletteIdx] * (1.8 + 0.7 * audioMod);
+
+    // Text rendered as near-black cutouts in color cells
+    vec3 textInk = vec3(0.0, 0.0, 0.0);   // pure black text
+    vec3 fc = mix(cellColor, textInk, textHit);
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
+    if (transparentBg) { a = textHit; fc = textInk; }
     return vec4(fc, a);
 }
 
