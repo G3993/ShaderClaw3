@@ -12,9 +12,11 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.5, 0.95, 1.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.02, 0.08, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 2.2 },
+    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
@@ -93,6 +95,42 @@ float sampleChar(int ch, vec2 uv) {
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
+// ── Arctic Ice Cave background ────────────────────────────────────────────────
+// Deep azure shadows + stalactite silhouettes + specular ice sparkle
+vec3 arcticCaveBg(vec2 uv, float t) {
+    // Deep cave gradient: near-black at center, azure at edges
+    float depth = length(uv - 0.5) * 1.8;
+    vec3 cAbyss  = vec3(0.00, 0.02, 0.08);
+    vec3 cIce    = vec3(0.10, 0.55, 0.90);
+    vec3 cGlacier = vec3(0.20, 0.80, 1.00);
+    vec3 col = mix(cAbyss, cIce, smoothstep(0.0, 1.0, depth * 0.6));
+
+    // Stalactite silhouettes hanging from top
+    float stal = sin(uv.x * 18.0) * 0.5 + 0.5;
+    float stalHeight = 0.05 + stal * 0.12;
+    float stalMask = step(1.0 - stalHeight, uv.y);
+    col = mix(col, cAbyss * 0.2, stalMask * 0.8);
+
+    // Stalagmites rising from bottom
+    float stam = cos(uv.x * 14.0 + 0.7) * 0.5 + 0.5;
+    float stamHeight = 0.04 + stam * 0.08;
+    float stamMask = step(uv.y, stamHeight);
+    col = mix(col, cAbyss * 0.2, stamMask * 0.8);
+
+    // Ice sparkle (refraction highlights)
+    vec2 sparkCell = floor(uv * 55.0);
+    float sp = step(0.992, hash(sparkCell.x + sparkCell.y * 137.0 + floor(t * 4.0) * 29.0));
+    col += cGlacier * sp * 1.5;
+
+    // Drip effect: slow vertical streaks
+    float dripX = fract(uv.x * 22.0 + hash(floor(uv.x * 22.0)) * 3.0);
+    float dripT = fract(uv.y + hash(floor(uv.x * 22.0)) * 1.7 - t * 0.08);
+    float drip  = smoothstep(0.97, 1.0, dripT) * smoothstep(0.03, 0.0, abs(dripX - 0.5) - 0.008);
+    col += cGlacier * drip * 0.6;
+
+    return col;
+}
+
 // =======================================================================
 // EFFECT: SPACY - perspective tunnel rows
 // =======================================================================
@@ -145,13 +183,25 @@ vec4 effectSpacy(vec2 uv, int sub) {
         }
     }
 
-    bool inv = mod(ri, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
-    return vec4(fc, a);
+    float aud = 1.0 + (audioLevel + audioBass * 0.6) * audioReact * 0.4;
+
+    if (transparentBg) {
+        // Depth-fade HDR: close rows bright, far rows dimmer
+        float depthFade = mix(1.0, 0.3, clamp(ri / 8.0, 0.0, 1.0));
+        return vec4(textColor.rgb * hdrGlow * aud * depthFade, textHit);
+    }
+
+    // Arctic ice cave background + icy HDR text
+    vec2 uvN = gl_FragCoord.xy / RENDERSIZE.xy;
+    vec3 bg = arcticCaveBg(uvN, TIME);
+
+    // Close rows: glacier white-hot; far rows: icy cyan dim
+    float depthFade = mix(1.0, 0.25, clamp(ri / 8.0, 0.0, 1.0));
+    // Add slight warm-white spec to close text (ice facet reflection)
+    vec3 tCol = mix(textColor.rgb, vec3(1.2, 1.3, 1.5), textHit * 0.15 * (1.0 - ri * 0.1));
+    tCol *= hdrGlow * aud * depthFade;
+    vec3 fc = mix(bg, tCol, textHit);
+    return vec4(fc, 1.0);
 }
 
 void main() {
