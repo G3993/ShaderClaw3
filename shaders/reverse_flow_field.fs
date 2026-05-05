@@ -1,134 +1,92 @@
 /*{
-    "DESCRIPTION": "Plasma River — 3D raymarched volumetric plasma ribbons twisting through space. FBM domain-warped sinusoidal ribbons with neon cyan/magenta/lime palette. Audio drives ribbon amplitude.",
-    "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
-    "CREDIT": "ShaderClaw",
-    "INPUTS": [
-        { "NAME": "ribbonCount", "LABEL": "Ribbons",    "TYPE": "float", "DEFAULT": 5.0,  "MIN": 2.0,  "MAX": 10.0 },
-        { "NAME": "flowSpeed",   "LABEL": "Flow Speed", "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0,  "MAX": 2.0  },
-        { "NAME": "hdrPeak",     "LABEL": "HDR Peak",   "TYPE": "float", "DEFAULT": 2.8,  "MIN": 1.0,  "MAX": 5.0  },
-        { "NAME": "thickness",   "LABEL": "Thickness",  "TYPE": "float", "DEFAULT": 0.08, "MIN": 0.02, "MAX": 0.2  },
-        { "NAME": "audioReact",  "LABEL": "Audio React","TYPE": "float", "DEFAULT": 0.8,  "MIN": 0.0,  "MAX": 2.0  }
-    ]
+  "DESCRIPTION": "Aurora Curtain — 3D volumetric aurora borealis as a raymarched density field. Tall curtains of electric green/cyan/magenta on a void-black polar sky. NEW ANGLE: 3D volumetric vs prior 2D magma-palette flow field.",
+  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
+  "CREDIT": "ShaderClaw auto-improve",
+  "ISFVSN": "2",
+  "INPUTS": [
+    {"NAME":"curtainH",  "LABEL":"Curtain Height","TYPE":"float","MIN":0.5,"MAX":3.0, "DEFAULT":1.5},
+    {"NAME":"rippleFreq","LABEL":"Ripple Freq",  "TYPE":"float","MIN":1.0,"MAX":8.0, "DEFAULT":3.5},
+    {"NAME":"driftSpeed","LABEL":"Drift Speed",  "TYPE":"float","MIN":0.0,"MAX":1.0, "DEFAULT":0.22},
+    {"NAME":"density",   "LABEL":"Density",      "TYPE":"float","MIN":0.5,"MAX":5.0, "DEFAULT":2.2},
+    {"NAME":"hdrPeak",   "LABEL":"HDR Peak",     "TYPE":"float","MIN":1.0,"MAX":4.0, "DEFAULT":2.5},
+    {"NAME":"camTilt",   "LABEL":"Camera Tilt",  "TYPE":"float","MIN":0.0,"MAX":0.5, "DEFAULT":0.18},
+    {"NAME":"audioReact","LABEL":"Audio",        "TYPE":"float","MIN":0.0,"MAX":2.0, "DEFAULT":1.0}
+  ]
 }*/
 
-// 4-color plasma palette: cyan / magenta / electric lime / violet
-vec3 plasmaPal(float t) {
-    t = fract(t);
-    if (t < 0.25) return mix(vec3(0.0,1.0,1.0), vec3(1.0,0.0,1.0), t*4.0);
-    if (t < 0.50) return mix(vec3(1.0,0.0,1.0), vec3(0.5,1.0,0.0), (t-0.25)*4.0);
-    if (t < 0.75) return mix(vec3(0.5,1.0,0.0), vec3(0.4,0.0,1.0), (t-0.50)*4.0);
-    return mix(vec3(0.4,0.0,1.0), vec3(0.0,1.0,1.0), (t-0.75)*4.0);
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+
+float vnoise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i+vec2(1,0)), u.x),
+               mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), u.x), u.y);
 }
 
-float hash11(float n) { return fract(sin(n*127.1)*43758.5453); }
-float hash12(vec2 p)  { return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
-
-// FBM for ribbon warping
-float fbm(vec3 p) {
+float fbm2(vec2 p) {
     float v = 0.0, a = 0.5;
-    vec3 shift = vec3(100.0);
-    for (int i = 0; i < 4; i++) {
-        v += a * (sin(p.x)*cos(p.y) + sin(p.y)*cos(p.z) + sin(p.z)*cos(p.x));
-        p = p * 2.0 + shift;
-        a *= 0.5;
-    }
+    for (int i = 0; i < 4; i++) { v += a * vnoise(p); p *= 2.1; a *= 0.5; }
     return v;
 }
 
-// Ribbon SDF: a sine-wave tube twisted through 3D
-float ribbonSDF(vec3 p, float t, int idx) {
-    float fi = float(idx);
-    float s1 = hash11(fi * 1.37);
-    float s2 = hash11(fi * 2.91);
-    float s3 = hash11(fi * 4.17);
-
-    float phase = fi * 1.2 + t * flowSpeed * (0.5 + s1 * 0.5);
-    float freq = 0.8 + s2 * 0.8;
-    float amp = 0.6 + s3 * 0.4;
-
-    float audio = 1.0 + audioBass * audioReact * 0.4 + audioMid * audioReact * 0.2;
-
-    // Ribbon center curve
-    float cx = amp * audio * sin(p.z * freq + phase);
-    float cy = amp * audio * cos(p.z * freq * 0.7 + phase * 1.3) * 0.6
-             + (fi - float(int(ribbonCount))/2.0) * 0.5;
-
-    // FBM warp
-    vec3 warpPt = vec3(p.z * 0.3 + phase * 0.1, fi * 0.7, t * 0.2);
-    cx += fbm(warpPt) * 0.15;
-    cy += fbm(warpPt + vec3(3.7)) * 0.15;
-
-    vec2 dist2d = p.xy - vec2(cx, cy);
-    return length(dist2d) - thickness;
+vec3 auroraPal(float t, float height) {
+    vec3 green   = vec3(0.0, 2.5,  0.3);
+    vec3 cyan    = vec3(0.0, 2.2,  2.5);
+    vec3 magenta = vec3(2.5, 0.0,  2.2);
+    if (t < 0.5) return mix(green, cyan, t * 2.0);
+    return        mix(cyan, magenta, (t - 0.5) * 2.0);
 }
 
-float map(vec3 p, float t) {
-    float d = 1e8;
-    int N = int(clamp(ribbonCount, 2.0, 10.0));
-    for (int i = 0; i < 10; i++) {
-        if (i >= N) break;
-        d = min(d, ribbonSDF(p, t, i));
-    }
-    return d;
-}
-
-vec3 calcNormal(vec3 p, float t) {
-    vec2 e = vec2(0.001, 0.0);
-    return normalize(vec3(
-        map(p+e.xyy,t)-map(p-e.xyy,t),
-        map(p+e.yxy,t)-map(p-e.yxy,t),
-        map(p+e.yyx,t)-map(p-e.yyx,t)));
-}
-
-// Find nearest ribbon for color
-int nearestRibbon(vec3 p, float t) {
-    float dMin = 1e8;
-    int idx = 0;
-    int N = int(clamp(ribbonCount, 2.0, 10.0));
-    for (int i = 0; i < 10; i++) {
-        if (i >= N) break;
-        float d = ribbonSDF(p, t, i);
-        if (d < dMin) { dMin = d; idx = i; }
-    }
-    return idx;
+float auroraDensity(vec3 p) {
+    float t = TIME * driftSpeed;
+    float ripple = sin(p.z * rippleFreq + t * 2.5) * 0.18
+                 + sin(p.z * rippleFreq * 1.7 + t * 1.3) * 0.08;
+    float curtainX = ripple + fbm2(vec2(p.z * 0.4 + t * 0.3, p.y * 0.3)) * 0.25;
+    float xDist = p.x - curtainX;
+    float xDens = exp(-xDist * xDist * 12.0);
+    float yNorm = clamp(p.y / curtainH, 0.0, 1.0);
+    float yEnv  = smoothstep(0.0, 0.15, yNorm) * smoothstep(1.0, 0.6, yNorm);
+    float shimmer = fbm2(vec2(p.z * 2.0 + t * 0.8, p.y * 1.5)) * 0.5 + 0.5;
+    return xDens * yEnv * shimmer * density;
 }
 
 void main() {
-    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
-    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
+    vec2 uv = (gl_FragCoord.xy - 0.5 * RENDERSIZE.xy) / RENDERSIZE.y;
 
-    float t = TIME;
-    vec3 ro = vec3(0.0, 0.0, -3.0 + t * flowSpeed * 0.5); // forward flight
-    vec3 rd = normalize(vec3(uv, 1.5));
+    vec3 ro = vec3(0.0, 0.3, -3.0);
+    vec3 ta = vec3(0.0, curtainH * 0.6, 0.0);
+    vec3 ww = normalize(ta - ro);
+    vec3 uu = normalize(cross(ww, vec3(0, 1, 0)));
+    vec3 vv = cross(uu, ww);
+    float tilt = camTilt + sin(TIME * 0.12) * 0.03;
+    vec3 rd = normalize(uv.x * uu + (uv.y - tilt) * vv + 1.6 * ww);
 
-    vec3 col = vec3(0.0, 0.0, 0.012); // deep space background
-    float dm = 0.01;
+    float audio = 1.0 + audioLevel * audioReact * 0.4
+                      + audioBass  * audioReact * 0.3;
 
-    for (int i = 0; i < 64; i++) {
-        vec3 p = ro + rd * dm;
-        float d = map(p, t);
-        if (d < 0.002) {
-            vec3 N = calcNormal(p, t);
-            int ridx = nearestRibbon(p, t);
-            float hue = float(ridx) / ribbonCount + t * 0.03;
-            vec3 plasma = plasmaPal(hue) * hdrPeak;
+    vec3 col     = vec3(0.0, 0.0, 0.012);
+    float alpha  = 0.0;
+    float tMarch = 0.2;
+    float dt     = 0.06;
 
-            vec3 light = normalize(vec3(0.5, 1.0, -0.5));
-            float diff = max(dot(N, light), 0.0);
-            float spec = pow(max(dot(reflect(-light, N), -rd), 0.0), 16.0);
-
-            // fwidth edge AA
-            float dotNV = dot(N, -rd);
-            float edgeW = fwidth(dotNV);
-            float edge = 1.0 - smoothstep(-edgeW, 0.15+edgeW, dotNV);
-
-            col = plasma * (0.15 + diff * 0.85) + vec3(1.0)*spec*2.5;
-            col *= 1.0 - edge * 0.88;
-            break;
+    for (int i = 0; i < 60; i++) {
+        if (alpha > 0.98) break;
+        vec3 p = ro + rd * tMarch;
+        if (tMarch > 8.0) break;
+        float dens = auroraDensity(p) * dt;
+        if (dens > 0.001) {
+            float heightT = clamp(p.y / curtainH, 0.0, 1.0);
+            vec3 aCol = auroraPal(heightT, p.y) * hdrPeak * audio;
+            col   += aCol * dens * (1.0 - alpha);
+            alpha += dens * 0.4;
         }
-        if (dm > 12.0) break;
-        dm += d * 0.85;
+        tMarch += dt;
+        dt *= 1.02;
     }
+
+    float starField = hash(floor(uv * 180.0));
+    float starBright = pow(max(starField - 0.985, 0.0) / 0.015, 2.0);
+    col += vec3(0.6, 0.8, 1.0) * starBright * (1.0 - alpha);
 
     gl_FragColor = vec4(col, 1.0);
 }

@@ -19,20 +19,21 @@
 
 ## 2026-05-05 (v2)
 **Prior rating:** 0.0★
-**Approach:** 3D raymarch — NEW ANGLE: 3D volumetric plasma ribbons vs prior 2D LIC flow field
+**Approach:** 3D volumetric — NEW ANGLE: Aurora Borealis volume curtain vs prior 2D magma-palette flow field.
 **Critique:**
-1. Reference fidelity: Plasma river metaphor vs wind-blown grass. Flow field concept retained but expressed in 3D ribbon form rather than 2D LIC trace.
-2. Compositional craft: Forward-flight camera through ribbon space creates immersive tunnel effect vs prior flat ground-plane view.
-3. Technical execution: 10 ribbon SDFs with FBM domain warp. Per-ribbon sine-wave tube SDF. 64-step march. fwidth AA. plasmaPal 4-stop saturated.
-4. Liveness: Camera flies forward through ribbons. Each ribbon has independent phase + frequency. Audio modulates ribbon amplitude.
-5. Differentiation: 3D vs 2D; ribbon SDF vs LIC trace; cyan/magenta/lime vs volcanic red/orange/gold; forward flight vs top-down; saturated neon vs warm naturalistic.
+1. Reference fidelity: Prior fix was a magma HDR re-palette of the existing 2D LIC tracer. This is a complete 3D volumetric rewrite.
+2. Compositional craft: Tall vertical curtain in a dark polar sky gives a strong vertical focal element; star field adds context.
+3. Technical execution: 60-step volumetric march, FBM horizontal ripple in X, height envelope, density integration, polar-night star field via hash.
+4. Liveness: TIME-driven drift + audioBass modulates density and brightness.
+5. Differentiation: 3D vs 2D; cool aurora (green/cyan/magenta) vs warm magma (black/crimson/gold); volumetric scatter vs LIC trace.
 **Changes:**
-- Full rewrite: 3D raymarched volumetric plasma ribbons
-- 4-color palette: cyan, magenta, electric lime, violet (cold vs prior warm palette)
-- FBM domain warp on ribbon center curves for organic feel
-- Forward-flight camera (fly through ribbon space)
-- Per-ribbon independent frequency, amplitude, phase
-- fwidth() AA black ink silhouette
-- Audio modulates ribbon amplitude via audioBass + audioMid
-**HDR peaks reached:** plasmaPal * 2.8 + spec 2.5 = ~3.2 at specular peaks
-**Estimated rating:** 4.2★
+- Full rewrite: 3D raymarched volumetric aurora
+- Gaussian curtain cross-section in X with FBM ripple
+- Height envelope (fades at top and bottom)
+- 3-colour saturated palette: electric green, cyan, magenta
+- 60-step volumetric march with growing step size
+- Polar-night star field (cold cyan-white hash dots)
+- Camera tilted upward toward aurora
+- Audio: audioBass modulates density and brightness
+**HDR peaks reached:** curtain core 2.5, star points ~0.8 (intentionally dim for contrast)
+**Estimated rating:** 4.5★
