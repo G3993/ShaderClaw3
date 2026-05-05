@@ -11,16 +11,18 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.0, 1.0, 0.2, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.02, 0.0, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "DEFAULT": 2.2, "MIN": 0.5, "MAX": 4.0 },
+    { "NAME": "audioMod", "LABEL": "Audio Mod", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 2.0 }
   ]
 }*/
 
 const float PI = 3.14159265;
 const float TWO_PI = 6.28318530;
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
+// Atlas-only font engine (no bitmap fallback -- faster ANGLE compile)
 float charPixel(int ch, float col, float row) {
     if (ch < 0 || ch > 36) return 0.0;
     vec2 uv = vec2(col / 5.0, row / 7.0);
@@ -92,6 +94,52 @@ float sampleChar(int ch, vec2 uv) {
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
+vec3 matrixRainBg(vec2 uv) {
+    float t = TIME * 1.2;
+    float asp = RENDERSIZE.x / RENDERSIZE.y;
+
+    // Column grid
+    float colW = 0.022;
+    float col_ = floor(uv.x / colW);
+    float colFrac = fract(uv.x / colW);
+
+    // Per-column speed and phase
+    float h1 = fract(sin(col_ * 127.1) * 43758.5453);
+    float h2 = fract(sin(col_ * 311.7) * 43758.5453);
+    float colSpeed = 0.5 + h1 * 1.5;
+    float colPhase = h2 * 3.0;
+
+    // Falling position
+    float fallY = mod(uv.y + t * colSpeed + colPhase, 1.2) - 0.1;
+
+    // Leader glyph (brightest) at falling position
+    float leaderLen = 0.0 + h1 * 0.05;
+    float leaderMask = smoothstep(0.004, 0.0, abs(fallY - leaderLen));
+
+    // Trail fade
+    float trailLen = 0.12 + h2 * 0.18;
+    float trailMask = (fallY > 0.0 && fallY < trailLen)
+                    ? (1.0 - fallY / trailLen)
+                    : 0.0;
+
+    // Random character flicker per cell
+    float cellH = 0.022;
+    float cellRow = floor(uv.y / cellH);
+    float flicker = step(0.6, fract(sin((col_ + cellRow * 137.0) * 91.7 + floor(t * 8.0)) * 43758.5));
+
+    // Leader: white-hot HDR green
+    vec3 leaderCol = vec3(0.7, 1.0, 0.7) * 2.8;
+    // Trail: saturated lime green, fading
+    vec3 trailCol = vec3(0.0, 1.0, 0.15) * (trailMask * 1.5 + 0.1) * flicker;
+
+    vec3 c = leaderCol * leaderMask + trailCol;
+
+    // Background tint
+    c += vec3(0.0, 0.02, 0.0);
+
+    return c;
+}
+
 // =======================================================================
 // EFFECT: CASCADE - tiled rows with wave offsets
 // =======================================================================
@@ -147,6 +195,14 @@ vec4 effectCascade(vec2 uv) {
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     vec4 col = effectCascade(uv);
+
+    if (!transparentBg) {
+        float audio_m = 1.0 + audioLevel * audioMod;
+        vec3 bgRain = matrixRainBg(uv);
+        float txtA = smoothstep(0.3, 0.7, col.a);
+        vec3 txtHDR = textColor.rgb * hdrGlow * audio_m;
+        col = vec4(mix(bgRain, txtHDR, txtA), 1.0);
+    }
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;

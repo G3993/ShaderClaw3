@@ -1,3 +1,23 @@
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 2D ripple simulation — NEW ANGLE: warm amber preservation aesthetic; v1 was 3D ice Arctic Shard (cold blue/cyan), v2-v13 all 3D cold/shard/crystal. This is 2D, warm palette, completely different metaphor (resin preservation vs ice freezing).
+**Critique:**
+1. Reference fidelity: Amber-preserved specimens with interference rings is a compelling close-up macro-photography aesthetic.
+2. Compositional craft: N specimen centers create overlapping interference patterns; black inclusions provide strong focal anchors.
+3. Technical execution: Ring = sin(dist*freq - t) × exp(-dist) gives clean ripple envelope; pulse per-specimen adds life.
+4. Liveness: Independent pulse phases + ring animation creates continuously evolving amber surface.
+5. Differentiation: Warm amber/crimson/gold palette is opposite of all cold ice/crystal approaches (v1-v13).
+**Changes:**
+- Full rewrite: 2D amber resin simulation
+- N specimen inclusions with concentric ring halos
+- Warm HDR palette: deep amber, crimson, gold (hue 0.02-0.12)
+- Black inclusion cores for ink contrast
+- White-hot gold crest at 2.5 HDR
+- Dark trough shadow darkening
+- Audio modulates hdrPeak
+**HDR peaks reached:** ringTint * hdrPeak = 2.5 at crests; white-hot overlay adds 1.5 → total ~4.0 at peak
+**Estimated rating:** 4.1★
+
 ## 2026-05-05
 **Prior rating:** 0.0★
 **Approach:** 3D raymarch
