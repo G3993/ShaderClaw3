@@ -1,24 +1,22 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Bricks - grid with animated displacement",
+  "DESCRIPTION": "Cosmic Mosaic — galaxy-hued mosaic tiles with animated text displacement",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
-    { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1,2], "LABELS": ["Bricks","Bricks Harlequin","Bricks Zebra"], "DEFAULT": 0 },
     { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
-    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
-    { "NAME": "intensity", "LABEL": "Displacement", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "density", "LABEL": "Grid Density", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "speed",      "LABEL": "Speed",        "TYPE": "float", "MIN": 0.1, "MAX": 3.0,  "DEFAULT": 0.5  },
+    { "NAME": "intensity",  "LABEL": "Displacement", "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.5  },
+    { "NAME": "density",    "LABEL": "Grid Density", "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.5  },
+    { "NAME": "textScale",  "LABEL": "Text Size",    "TYPE": "float", "MIN": 0.3, "MAX": 2.0,  "DEFAULT": 0.85 },
+    { "NAME": "hdrText",    "LABEL": "Text HDR",     "TYPE": "float", "MIN": 1.0, "MAX": 4.0,  "DEFAULT": 2.8  },
+    { "NAME": "hdrTile",    "LABEL": "Tile HDR",     "TYPE": "float", "MIN": 0.5, "MAX": 3.0,  "DEFAULT": 2.0  },
+    { "NAME": "colorDrift", "LABEL": "Color Drift",  "TYPE": "float", "MIN": 0.0, "MAX": 0.15, "DEFAULT": 0.04 },
+    { "NAME": "groutWidth", "LABEL": "Grout Width",  "TYPE": "float", "MIN": 0.0, "MAX": 0.12, "DEFAULT": 0.04 },
+    { "NAME": "pulse",      "LABEL": "Audio Pulse",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 0.7  }
   ]
 }*/
 
-const float PI = 3.14159265;
-const float TWO_PI = 6.28318530;
-
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
+// Atlas-only font engine
 float charPixel(int ch, float col, float row) {
     if (ch < 0 || ch > 36) return 0.0;
     vec2 uv = vec2(col / 5.0, row / 7.0);
@@ -82,102 +80,100 @@ int charCount() {
     return n > 0 ? n : 1;
 }
 
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
-}
-
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
+vec3 hsv2rgb(vec3 c) {
+    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
 // =======================================================================
-// EFFECT: BRICKS - grid with animated displacement
+// EFFECT: COSMIC MOSAIC — galaxy-hued tiles with displaced text
+// Each grid cell is a distinct mosaic tile with its own galaxy color.
+// 6 hues, hash-assigned per cell, all slowly cycling together.
+// Black grout lines provide ink-contrast separation.
+// Text renders white-hot (HDR) over the tiles.
 // =======================================================================
 
-vec4 effectBricks(vec2 uv, int sub) {
+vec4 effectMosaic(vec2 uv) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
     int numChars = charCount();
-    float waveAmount = intensity;
     float cols = floor(mix(5.0, 40.0, density));
+    float rws  = floor(cols * (7.0 / 5.0) / aspect);
+    float cellW = 1.0 / cols;
+    float cellH = 1.0 / rws;
 
-    float wX=0.0, wY=0.0, fX=3.0, fY=3.0, pm=0.0;
-    bool brick = false;
-    if (sub == 0) { wX=0.3; fX=2.5; brick=true; }
-    else if (sub == 1) { wX=0.6; wY=0.6; pm=2.0; }
-    else { wX=1.0; fX=4.0; pm=1.0; }
+    float ci = clamp(floor(uv.x / cellW), 0.0, cols - 1.0);
+    float ri = clamp(floor(uv.y / cellH), 0.0, rws  - 1.0);
+    float lx = fract(uv.x / cellW);
+    float ly = fract(uv.y / cellH);
 
-    float rws = floor(cols*(7.0/5.0)/aspect);
-    float cellW = 1.0/cols, cellH = 1.0/rws;
-
-    float ci = clamp(floor(uv.x/cellW), 0.0, cols-1.0);
-    float ri = clamp(floor(uv.y/cellH), 0.0, rws-1.0);
-    float lx = fract(uv.x/cellW), ly = fract(uv.y/cellH);
-
-    if (brick && mod(ri, 2.0) > 0.5) {
-        float sx = uv.x + cellW*0.5;
-        ci = mod(floor(sx/cellW), cols);
-        lx = fract(sx/cellW);
-    }
-
-    float t = TIME*speed*2.5;
+    // Animated displacement
+    float t     = TIME * speed * 2.5;
     float phase = ci + ri;
-    if (pm > 0.5 && pm < 1.5) phase = ri;
-    else if (pm > 1.5) phase = (ci + ri)*PI;
+    lx = fract(lx + sin(phase * 2.5 + t)       * intensity * 0.3);
+    ly = fract(ly + sin(phase * 3.0 + t * 1.1) * intensity * 0.3);
 
-    lx = fract(lx + sin(phase*fX+t)*waveAmount*wX*0.3);
-    ly = fract(ly + sin(phase*fY+t*1.1)*waveAmount*wY*0.3);
+    // Galaxy tile color — 6 hues assigned by hash, slow global drift
+    float hueN   = floor(hash(ci * 7.31 + ri * 3.17) * 6.0);
+    float hue    = fract(hueN / 6.0 + TIME * colorDrift);
+    float audio  = 1.0 + audioBass * pulse;
+    vec3 tileCol = hsv2rgb(vec3(hue, 1.0, 1.0)) * hdrTile * audio;
 
-    int charIdx = int(mod(ci + ri*cols, float(numChars)));
-    float cWR = 5.0/7.0;
-    float sX = textScale*cWR, sY = textScale;
-    float mX = (1.0-sX)*0.5, mY = (1.0-sY)*0.5;
+    // Black grout lines at cell edges
+    float grout     = min(min(lx, 1.0 - lx), min(ly, 1.0 - ly));
+    float groutMask = smoothstep(0.0, groutWidth, grout);
+    tileCol *= groutMask;
+
+    // Text rendering
+    int charIdx = int(mod(ci + ri * cols, float(numChars)));
+    int ch      = getChar(charIdx);
 
     float textHit = 0.0;
-    if (lx >= mX && lx < 1.0-mX && ly >= mY && ly < 1.0-mY) {
-        float gc = ((lx-mX)/sX)*5.0, gr = ((ly-mY)/sY)*7.0;
-        if (gc >= 0.0 && gc < 5.0 && gr >= 0.0 && gr < 7.0) {
-            int ci2 = int(mod(float(charIdx), float(numChars)));
-            int ch = getChar(ci2);
-            if (ch >= 0 && ch <= 36 && ch != 26) textHit = charPixel(ch, gc, gr);
-        }
+    float cWR = 5.0 / 7.0;
+    float sX  = textScale * cWR, sY = textScale;
+    float mX  = (1.0 - sX) * 0.5,  mY = (1.0 - sY) * 0.5;
+
+    if (lx >= mX && lx < 1.0 - mX && ly >= mY && ly < 1.0 - mY) {
+        float gc = ((lx - mX) / sX) * 5.0;
+        float gr = ((ly - mY) / sY) * 7.0;
+        if (gc >= 0.0 && gc < 5.0 && gr >= 0.0 && gr < 7.0 &&
+                ch >= 0 && ch <= 36 && ch != 26)
+            textHit = charPixel(ch, gc, gr);
     }
 
-    bool inv = mod(ri, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
-    return vec4(fc, a);
+    // White-hot text over tile, warm white peaks
+    vec3 textCol = vec3(1.0, 0.95, 0.82) * hdrText * audio;
+
+    vec3 col = tileCol;
+    col = mix(col, textCol, textHit);
+
+    return vec4(col, 1.0);
 }
 
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
-    int p = int(preset);
-    vec4 col = effectBricks(uv, p);
+    vec4 col = effectMosaic(uv);
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
         float t = TIME * 17.0;
-        float band = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
+        float band      = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
         float bandNoise = fract(sin(band * 91.7 + t) * 43758.5);
         float bandActive = step(1.0 - g * 0.6, bandNoise);
-        float shift = (bandNoise - 0.5) * 0.08 * g * bandActive;
-        float chromaAmt = g * 0.015;
-        vec2 uvR = uv + vec2(shift + chromaAmt, 0.0);
-        vec2 uvB = uv + vec2(shift - chromaAmt, 0.0);
-        vec2 uvG = uv + vec2(shift, chromaAmt * 0.5);
-        vec4 cR = effectBricks(uvR, p);
-        vec4 cG = effectBricks(uvG, p);
-        vec4 cB = effectBricks(uvB, p);
-        vec4 glitched = vec4(cR.r, cG.g, cB.b, max(max(cR.a, cG.a), cB.a));
-        float scanline = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
-        float blockX = floor(uv.x * 6.0);
-        float blockY = floor(uv.y * 4.0);
+        float shift      = (bandNoise - 0.5) * 0.08 * g * bandActive;
+        float chromaAmt  = g * 0.015;
+        vec4 cR = effectMosaic(uv + vec2(shift + chromaAmt, 0.0));
+        vec4 cG = effectMosaic(uv + vec2(shift, chromaAmt * 0.5));
+        vec4 cB = effectMosaic(uv + vec2(shift - chromaAmt, 0.0));
+        vec4 glitched = vec4(cR.r, cG.g, cB.b, 1.0);
+        float scanline  = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
+        float blockX    = floor(uv.x * 6.0);
+        float blockY    = floor(uv.y * 4.0);
         float blockNoise = fract(sin((blockX + blockY * 7.0) * 113.1 + floor(t * 8.0)) * 43758.5);
-        float dropout = step(1.0 - g * 0.15, blockNoise);
-        glitched.rgb *= scanline;
-        glitched.rgb *= 1.0 - dropout;
+        float dropout   = step(1.0 - g * 0.15, blockNoise);
+        glitched.rgb   *= scanline * (1.0 - dropout);
         col = mix(col, glitched, smoothstep(0.0, 0.3, g));
     }
 
