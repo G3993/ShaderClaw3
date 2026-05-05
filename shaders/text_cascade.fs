@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Cascade - tiled rows with wave offsets",
+  "DESCRIPTION": "Cascade — tiled rows with wave offsets over a neon plasma vortex background",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
@@ -11,16 +11,43 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.5 },
+    { "NAME": "audioMod", "LABEL": "Audio Mod", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.8 },
+    { "NAME": "bgDim", "LABEL": "BG Dim", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.28 },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
 const float PI = 3.14159265;
 const float TWO_PI = 6.28318530;
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
+vec3 hsv2rgb(vec3 c) {
+    vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+// Neon plasma vortex — 4 saturated colors, domain-warped
+vec3 plasmaVortexBg(vec2 uv) {
+    float t = TIME * 0.22;
+    // two-level domain warp
+    vec2 q = vec2(sin(uv.y * 4.1 + t * 1.3 + uv.x * 2.0),
+                  cos(uv.x * 3.7 + t * 0.9 + uv.y * 1.5));
+    vec2 r = vec2(sin(uv.x * 3.2 + q.y * 2.1 + t * 0.7),
+                  cos(uv.y * 2.8 + q.x * 1.9 + t * 1.1));
+    float f = 0.5 + 0.5 * sin(dot(r, vec2(3.1, 2.7)) + t * 1.5);
+    float g = 0.5 + 0.5 * cos(dot(q, vec2(2.3, 3.5)) + t * 0.8 + uv.y * PI);
+    float h = 0.5 + 0.5 * sin(uv.x * 5.0 + t * 0.6 + r.x * 2.0);
+    // 4 fully saturated colors
+    vec3 c1 = vec3(1.0, 0.0, 1.0);   // magenta
+    vec3 c2 = vec3(0.0, 1.0, 1.0);   // cyan
+    vec3 c3 = vec3(0.35, 0.0, 1.0);  // violet
+    vec3 c4 = vec3(0.6,  1.0, 0.0);  // lime
+    vec3 col = mix(mix(c1, c2, f), mix(c3, c4, g), h);
+    return col;
+}
+
+// Atlas-only font engine
 float charPixel(int ch, float col, float row) {
     if (ch < 0 || ch > 36) return 0.0;
     vec2 uv = vec2(col / 5.0, row / 7.0);
@@ -84,16 +111,10 @@ int charCount() {
     return n > 0 ? n : 1;
 }
 
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
-}
-
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
-// EFFECT: CASCADE - tiled rows with wave offsets
+// EFFECT: CASCADE — wave-offset rows over plasma vortex
 // =======================================================================
 
 vec4 effectCascade(vec2 uv) {
@@ -101,6 +122,9 @@ vec4 effectCascade(vec2 uv) {
     int numChars = charCount();
     float waveAmount = intensity;
     float rows = floor(mix(5.0, 30.0, density));
+
+    // plasma background
+    vec3 bg = plasmaVortexBg(uv) * bgDim;
 
     float warpedY = uv.y + sin(uv.y * TWO_PI * 1.5 + TIME * speed * 1.5) * waveAmount * 0.06;
     float rowH = 1.0 / rows;
@@ -131,18 +155,23 @@ vec4 effectCascade(vec2 uv) {
         }
     }
 
-    bool inv = mod(rowIdx, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
+    // Per-row hue cycling (6 steps, fully saturated, audio-shifted)
+    float audioBoost = 1.0 + audioLevel * audioMod;
+    float hue = fract(rowIdx / 6.0 + TIME * 0.04 + audioBass * audioMod * 0.1);
+    vec3 rowColor = hsv2rgb(vec3(hue, 1.0, 1.0)) * hdrGlow * audioBoost;
+
+    // AA edge via fwidth
+    float aa = fwidth(textHit) * 2.0;
+    float mask = smoothstep(0.5 - aa, 0.5 + aa, textHit);
+
+    // Black ink gap behind text for silhouette contrast
+    vec3 inkBg = bg * (1.0 - mask * 0.85);
+    vec3 fc = inkBg + rowColor * mask;
+
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
+    if (transparentBg) { a = mask; fc = rowColor; }
     return vec4(fc, a);
 }
-
-// =======================================================================
-// MAIN
-// =======================================================================
 
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
