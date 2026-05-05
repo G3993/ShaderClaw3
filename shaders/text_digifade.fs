@@ -1,24 +1,22 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Digifade - glitch dissolve",
+  "DESCRIPTION": "Stellar Nebula Fade — digifade sweep dissolving text into cosmic nebula",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
-    { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1], "LABELS": ["Digifade","Digifade Glitch"], "DEFAULT": 0 },
     { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
-    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
-    { "NAME": "intensity", "LABEL": "Glitch", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "density", "LABEL": "Dissolve", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "speed",      "LABEL": "Speed",       "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
+    { "NAME": "intensity",  "LABEL": "Dissolve",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
+    { "NAME": "density",    "LABEL": "Slices",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
+    { "NAME": "textScale",  "LABEL": "Size",        "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
+    { "NAME": "nebulaScale","LABEL": "Nebula Scale","TYPE": "float", "MIN": 0.5, "MAX": 5.0, "DEFAULT": 2.0 },
+    { "NAME": "hdrText",    "LABEL": "Text HDR",    "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 2.8 },
+    { "NAME": "hdrNebula",  "LABEL": "Nebula HDR",  "TYPE": "float", "MIN": 0.5, "MAX": 3.0, "DEFAULT": 2.2 },
+    { "NAME": "pulse",      "LABEL": "Audio Pulse", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.7 }
   ]
 }*/
 
 const float PI = 3.14159265;
-const float TWO_PI = 6.28318530;
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
 float charPixel(int ch, float col, float row) {
     if (ch < 0 || ch > 36) return 0.0;
     vec2 uv = vec2(col / 5.0, row / 7.0);
@@ -82,114 +80,169 @@ int charCount() {
     return n > 0 ? n : 1;
 }
 
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
+float hash11(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+
+float hash21(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
 }
 
-float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+float vnoise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(
+        mix(hash21(i),              hash21(i + vec2(1.0, 0.0)), f.x),
+        mix(hash21(i + vec2(0.0, 1.0)), hash21(i + vec2(1.0, 1.0)), f.x),
+        f.y
+    );
+}
+
+float fbm4(vec2 p) {
+    float v = 0.0, amp = 0.5;
+    for (int i = 0; i < 4; i++) {
+        v += amp * vnoise(p);
+        p = p * 2.1 + vec2(1.7, 9.2);
+        amp *= 0.5;
+    }
+    return v;
+}
 
 // =======================================================================
-// EFFECT: DIGIFADE - glitch dissolve
+// NEBULA BACKGROUND — two FBM gas clouds + multi-scale star field
+// Palette: void navy / blue-violet gas / hot cyan veins / amber dust / white stars
 // =======================================================================
 
-vec4 effectDigifade(vec2 uv, int sub) {
+vec3 nebulaBg(vec2 uv, float audio) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
-    int numChars = charCount();
-    float glitchAmount = intensity;
+    vec2 p = vec2(uv.x * aspect, uv.y) * nebulaScale;
+    float tDrift = TIME * 0.04;
+
+    // Gas cloud 1 — blue-violet primary
+    float gas1 = fbm4(p + vec2(tDrift, 0.0));
+    // Gas cloud 2 — cyan secondary (different scale + offset)
+    float gas2 = fbm4(p * 1.6 + vec2(0.0, tDrift * 0.8) + 4.7);
+
+    vec3 VOID   = vec3(0.0,  0.01, 0.06);
+    vec3 BLUE   = vec3(0.1,  0.25, 0.9);
+    vec3 VIOLET = vec3(0.5,  0.0,  1.0);
+    vec3 CYAN   = vec3(0.0,  0.85, 1.0);
+    vec3 AMBER  = vec3(1.0,  0.65, 0.0);
+
+    float b = hdrNebula * audio;
+    vec3 col = VOID;
+    col = mix(col, BLUE   * b,        smoothstep(0.25, 0.55, gas1));
+    col = mix(col, VIOLET * b * 1.1,  smoothstep(0.50, 0.75, gas1));
+    col = mix(col, CYAN   * b * 0.9,  smoothstep(0.35, 0.65, gas2) * 0.7);
+    col = mix(col, AMBER  * b * 1.3,  smoothstep(0.65, 0.82, gas2) * 0.4);
+
+    // Star field — 3 density layers
+    for (int layer = 0; layer < 3; layer++) {
+        float scale = 40.0 + float(layer) * 35.0;
+        float seed  = float(layer) * 17.3;
+        vec2 sCell  = floor(p * scale);
+        float sh    = hash21(sCell + seed);
+        float sh2   = hash21(sCell * 7.31 + seed);
+        if (sh > 0.04) continue; // only 4% density per layer
+        vec2 pos    = fract(p * scale) - vec2(hash21(sCell + 0.7), hash21(sCell + 1.3));
+        float sr    = length(pos);
+        float sSize = 0.04 + sh2 * 0.08;
+        float star  = (1.0 - smoothstep(0.0, sSize, sr)) * (0.5 + sh2 * 0.5);
+        col += vec3(0.85, 0.92, 1.0) * star * (2.5 + audio * 0.5);
+    }
+
+    return col;
+}
+
+// =======================================================================
+// EFFECT: STELLAR NEBULA FADE — digifade sweep dissolves text into nebula
+// =======================================================================
+
+vec4 effectNebula(vec2 uv) {
+    float aspect  = RENDERSIZE.x / RENDERSIZE.y;
+    int numChars  = charCount();
     float sliceCount = mix(5.0, 100.0, density);
+    float t = TIME * speed;
 
-    float complexity = 1.0, sweepSpeed = 1.0, vertGlitch = 0.0, maxDisp = 0.3;
-    if (sub == 1) { complexity = 2.0; sweepSpeed = 1.3; maxDisp = 0.5; vertGlitch = 0.4; }
-
-    float t = TIME * speed * sweepSpeed;
     vec2 p = vec2((uv.x - 0.5) * aspect + 0.5, uv.y);
 
-    // Single-line layout: all chars on one row, scale to fit width
+    // Single-line layout
     float cH = 0.18 * textScale;
     if (aspect < 1.0) cH *= aspect;
-    float cW = cH * (5.0/7.0);
+    float cW = cH * (5.0 / 7.0);
     float gW = cW * 0.2;
 
-    // Scale down if text is wider than screen
     float totalTextW = float(numChars) * cW + float(numChars - 1) * gW;
     float maxW = 0.9 * aspect;
     float fitScale = totalTextW > maxW ? maxW / totalTextW : 1.0;
-    cH *= fitScale;
-    cW *= fitScale;
-    gW *= fitScale;
+    cH *= fitScale; cW *= fitScale; gW *= fitScale;
 
-    float rowW = float(numChars) * cW + float(numChars - 1) * gW;
+    float rowW  = float(numChars) * cW + float(numChars - 1) * gW;
     float startX = 0.5 - rowW * 0.5;
     float startY = 0.5 - cH * 0.5;
 
     float si = floor(uv.y * sliceCount);
-    float n1 = hash(si + floor(t*2.0));
-    float n2 = hash(si*3.7 + floor(t*3.0));
+    float n1 = hash11(si + floor(t * 2.0));
+    float n2 = hash11(si * 3.7 + floor(t * 3.0));
 
-    float textHit = 0.0;
+    // Sweep dissolve: sweeps left-to-right, displacing text into nebula static
+    float sw = sin(t * 0.7) * 0.5 + 0.5;
+    float ps = smoothstep(sw - 0.15, sw + 0.1, (p.x - startX) / max(rowW, 0.001));
 
-    float sw = sin(t*0.7)*0.5+0.5;
-    float ps = smoothstep(sw-0.15, sw+0.1, (p.x-startX)/max(rowW, 0.001));
-
-    float dx = abs(ps*n1*glitchAmount*maxDisp + ps*sin(si*0.3*complexity+t)*glitchAmount*maxDisp*0.3);
-    float dy = vertGlitch > 0.01 ? ps*(n2-0.5)*vertGlitch*glitchAmount*0.06 : 0.0;
+    float dx = abs(ps * n1 * intensity * 0.3 + ps * sin(si * 0.3 + t) * intensity * 0.09);
+    float dy = ps * (n2 - 0.5) * intensity * 0.04;
 
     vec2 samp = vec2(p.x - dx, p.y - dy);
-    float rx = samp.x - startX, ry = samp.y - startY;
+    float rx  = samp.x - startX;
+    float ry  = samp.y - startY;
 
+    float textHit = 0.0;
     if (rx >= 0.0 && rx <= rowW && ry >= 0.0 && ry <= cH) {
-        float cs = cW + gW;
-        float csF = rx / cs;
-        int slot = int(floor(csF));
-        float clx = fract(csF), cf = cW/cs;
+        float cs   = cW + gW;
+        float csF  = rx / cs;
+        int slot   = int(floor(csF));
+        float clx  = fract(csF), cf = cW / cs;
         if (clx < cf && slot >= 0 && slot < numChars) {
-            float gc = (clx/cf)*5.0, gr = (ry/cH)*7.0;
+            float gc = (clx / cf) * 5.0, gr = (ry / cH) * 7.0;
             if (gc >= 0.0 && gc < 5.0 && gr >= 0.0 && gr < 7.0) {
                 int ch = getChar(slot);
-                if (ch >= 0 && ch <= 36 && ch != 26) textHit = max(textHit, charPixel(ch, gc, gr));
+                if (ch >= 0 && ch <= 36 && ch != 26)
+                    textHit = max(textHit, charPixel(ch, gc, gr));
             }
         }
     }
 
-    vec3 fc = mix(bgColor.rgb, textColor.rgb, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
-    return vec4(fc, a);
+    float audio  = 1.0 + audioBass * pulse;
+    vec3 bg      = nebulaBg(uv, audio);
+    // Warm star-white text — solid before sweep front, dissolving after
+    vec3 textCol = vec3(1.0, 0.92, 0.65) * hdrText * audio;
+
+    vec3 col = mix(bg, textCol, textHit);
+    return vec4(col, 1.0);
 }
 
-// =======================================================================
-// MAIN
-// =======================================================================
-
 void main() {
-    vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
-    int p = int(preset);
-    vec4 col = effectDigifade(uv, p);
+    vec2 uv  = gl_FragCoord.xy / RENDERSIZE.xy;
+    vec4 col = effectNebula(uv);
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
         float t = TIME * 17.0;
-        float band = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
-        float bandNoise = fract(sin(band * 91.7 + t) * 43758.5);
+        float band       = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
+        float bandNoise  = fract(sin(band * 91.7 + t) * 43758.5);
         float bandActive = step(1.0 - g * 0.6, bandNoise);
-        float shift = (bandNoise - 0.5) * 0.08 * g * bandActive;
-        float chromaAmt = g * 0.015;
-        vec2 uvR = uv + vec2(shift + chromaAmt, 0.0);
-        vec2 uvB = uv + vec2(shift - chromaAmt, 0.0);
-        vec2 uvG = uv + vec2(shift, chromaAmt * 0.5);
-        vec4 cR = effectDigifade(uvR, p);
-        vec4 cG = effectDigifade(uvG, p);
-        vec4 cB = effectDigifade(uvB, p);
-        vec4 glitched = vec4(cR.r, cG.g, cB.b, max(max(cR.a, cG.a), cB.a));
-        float scanline = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
-        float blockX = floor(uv.x * 6.0);
-        float blockY = floor(uv.y * 4.0);
+        float shift      = (bandNoise - 0.5) * 0.08 * g * bandActive;
+        float chromaAmt  = g * 0.015;
+        vec4 cR = effectNebula(uv + vec2(shift + chromaAmt, 0.0));
+        vec4 cG = effectNebula(uv + vec2(shift, chromaAmt * 0.5));
+        vec4 cB = effectNebula(uv + vec2(shift - chromaAmt, 0.0));
+        vec4 glitched = vec4(cR.r, cG.g, cB.b, 1.0);
+        float scanline  = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
+        float blockX    = floor(uv.x * 6.0);
+        float blockY    = floor(uv.y * 4.0);
         float blockNoise = fract(sin((blockX + blockY * 7.0) * 113.1 + floor(t * 8.0)) * 43758.5);
-        float dropout = step(1.0 - g * 0.15, blockNoise);
-        glitched.rgb *= scanline;
-        glitched.rgb *= 1.0 - dropout;
+        float dropout   = step(1.0 - g * 0.15, blockNoise);
+        glitched.rgb   *= scanline * (1.0 - dropout);
         col = mix(col, glitched, smoothstep(0.0, 0.3, g));
     }
 
