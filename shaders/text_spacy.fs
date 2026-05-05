@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Spacy - perspective tunnel rows",
+  "DESCRIPTION": "Spacy — perspective tunnel rows above a volcanic lava field",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Spacy","Spacy Bridge","Spacy Whitney","Spacy Recede"], "DEFAULT": 0 },
@@ -12,16 +12,16 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.5, 0.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.03, 0.0, 0.0, 1.0] },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.0 },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
 const float PI = 3.14159265;
 const float TWO_PI = 6.28318530;
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
 float charPixel(int ch, float col, float row) {
     if (ch < 0 || ch > 36) return 0.0;
     vec2 uv = vec2(col / 5.0, row / 7.0);
@@ -85,17 +85,28 @@ int charCount() {
     return n > 0 ? n : 1;
 }
 
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
-}
-
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
-// =======================================================================
-// EFFECT: SPACY - perspective tunnel rows
-// =======================================================================
+// Volcanic lava field — procedural FBM heat glow (NOT starfield)
+vec3 lavaFloorBg(vec2 uv) {
+    float t = TIME * 0.3;
+    // FBM noise for lava texture
+    vec2 p = uv * 5.0;
+    float n  = sin(p.x + t) * sin(p.y - t * 0.7);
+    n += sin(p.x * 2.1 - t * 1.1) * sin(p.y * 1.9 + t * 0.8) * 0.5;
+    n += sin(p.x * 4.3 + t * 0.4) * sin(p.y * 3.7 - t * 1.3) * 0.25;
+    float heat = clamp(n * 0.5 + 0.5, 0.0, 1.0);
+    // Lava palette: deep crimson → orange → gold (4 tones)
+    vec3 c0 = vec3(0.05, 0.0, 0.0);     // deep black-crimson
+    vec3 c1 = vec3(0.6, 0.0, 0.0);      // deep red
+    vec3 c2 = vec3(1.0, 0.35, 0.0);     // orange
+    vec3 c3 = vec3(1.0, 0.85, 0.0);     // gold-white
+    vec3 col;
+    if (heat < 0.33)      col = mix(c0, c1, heat * 3.03);
+    else if (heat < 0.66) col = mix(c1, c2, (heat - 0.33) * 3.03);
+    else                  col = mix(c2, c3, (heat - 0.66) * 3.03);
+    return col * 0.35;
+}
 
 vec4 effectSpacy(vec2 uv, int sub) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
@@ -145,12 +156,13 @@ vec4 effectSpacy(vec2 uv, int sub) {
         }
     }
 
-    bool inv = mod(ri, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
+    // Depth-based color: near rows = fiery orange, far rows = deep gold
+    float depthBright = mix(0.6, 1.0, dc);
+    vec3 neonFg = textColor.rgb * hdrGlow * depthBright;
+    vec3 bg = lavaFloorBg(uv) + bgColor.rgb;
+    vec3 fc = mix(bg, neonFg, textHit);
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
+    if (transparentBg) { a = textHit; fc = neonFg; }
     return vec4(fc, a);
 }
 
