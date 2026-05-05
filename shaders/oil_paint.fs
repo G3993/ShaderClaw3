@@ -1,124 +1,129 @@
 /*{
-  "DESCRIPTION": "Oil paint effect — Kuwahara filter with relief lighting for painterly brush strokes",
-  "CREDIT": "ShaderClaw (Kuwahara approach inspired by flockaroo)",
-  "CATEGORIES": ["Effect"],
-  "INPUTS": [
-    { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "brushRadius", "LABEL": "Brush Size", "TYPE": "float", "DEFAULT": 4.0, "MIN": 1.0, "MAX": 12.0 },
-    { "NAME": "paintSpec", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "vignetteAmt", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
-  ],
-  "PASSES": [
-    { "TARGET": "paintBuf", "PERSISTENT": true },
-    {}
-  ]
+    "DESCRIPTION": "Sumi-e Ink Wash — converts input to Japanese ink painting with Sobel edge strokes and cinnabar seals",
+    "CREDIT": "ShaderClaw auto-improve v2",
+    "ISFVSN": "2",
+    "CATEGORIES": ["Effect"],
+    "INPUTS": [
+        {
+            "NAME": "inputImage",
+            "TYPE": "image"
+        },
+        {
+            "NAME": "inkStrength",
+            "TYPE": "float",
+            "DEFAULT": 2.2,
+            "MIN": 0.5,
+            "MAX": 5.0
+        },
+        {
+            "NAME": "washBlur",
+            "TYPE": "float",
+            "DEFAULT": 3.5,
+            "MIN": 1.0,
+            "MAX": 8.0
+        },
+        {
+            "NAME": "sealChance",
+            "TYPE": "float",
+            "DEFAULT": 0.5,
+            "MIN": 0.0,
+            "MAX": 1.0
+        },
+        {
+            "NAME": "audioReact",
+            "TYPE": "float",
+            "DEFAULT": 0.6,
+            "MIN": 0.0,
+            "MAX": 2.0
+        }
+    ],
+    "PASSES": [
+        { "TARGET": "blurBuf" },
+        {}
+    ]
 }*/
 
-#define PI 3.1415927
+precision highp float;
 
-// Aspect-correct UV
-vec2 fitUV(vec2 pos) {
-    return (pos - 0.5 * RENDERSIZE) * min(IMG_SIZE_inputImage.y / RENDERSIZE.y, IMG_SIZE_inputImage.x / RENDERSIZE.x) / IMG_SIZE_inputImage + 0.5;
-}
-
-// Kuwahara filter: find the quadrant with lowest variance and use its mean color
-// This creates the flat-color brush stroke look of oil paintings
-vec3 kuwahara(vec2 uv, float radius) {
-    vec2 texel = 1.0 / RENDERSIZE;
-
-    vec3 mean[4];
-    vec3 var_acc[4];
-    float count[4];
-
-    // Initialize accumulators
-    for (int i = 0; i < 4; i++) {
-        mean[i] = vec3(0.0);
-        var_acc[i] = vec3(0.0);
-        count[i] = 0.0;
-    }
-
-    // Sample the 4 quadrants around the pixel
-    for (int j = -6; j <= 6; j++) {
-        for (int i = -6; i <= 6; i++) {
-            if (abs(float(i)) > radius || abs(float(j)) > radius) continue;
-
-            vec3 c = texture2D(inputImage, fitUV((uv * RENDERSIZE) + vec2(float(i), float(j)))).rgb;
-
-            // Determine which quadrant(s) this sample belongs to
-            // Quadrant 0: top-right, 1: top-left, 2: bottom-left, 3: bottom-right
-            // Use loop to assign to correct quadrant (WebGL requires const/loop index)
-            int qi = (i >= 0) ? 0 : 1;
-            int qj = (j >= 0) ? 0 : 2;
-            int q = qi + qj;
-
-            for (int k = 0; k < 4; k++) {
-                if (k == q) {
-                    mean[k] += c;
-                    var_acc[k] += c * c;
-                    count[k] += 1.0;
-                }
-            }
-        }
-    }
-
-    // Find the quadrant with minimum variance
-    float minVar = 1e8;
-    vec3 result = vec3(0.0);
-
-    for (int q = 0; q < 4; q++) {
-        if (count[q] < 1.0) continue;
-        vec3 m = mean[q] / count[q];
-        vec3 v = var_acc[q] / count[q] - m * m;
-        float totalVar = v.r + v.g + v.b;
-        if (totalVar < minVar) {
-            minVar = totalVar;
-            result = m;
-        }
-    }
-
-    return result;
-}
+// ---- Palette ----
+const vec3 PAPER      = vec3(2.0,  1.85, 1.60);   // HDR warm paper
+const vec3 LIGHT_INK  = vec3(0.45, 0.40, 0.35);   // pale wash
+const vec3 DARK_INK   = vec3(0.03, 0.025,0.02);   // deep sumi
+const vec3 CINNABAR   = vec3(1.8,  0.05, 0.0);    // HDR red seal accent
 
 void main() {
-    vec2 pos = gl_FragCoord.xy;
-    vec2 uv = pos / RENDERSIZE;
+    vec2 uv = isf_FragNormCoord;
 
-    // ==== PASS 0: Kuwahara paint filter ====
-    if (PASSINDEX == 0) {
-        gl_FragColor = vec4(kuwahara(uv, brushRadius), 1.0);
-        return;
-    }
-
-    // ==== PASS 1: Relief lighting ====
+#if defined(PASSINDEX) && PASSINDEX == 0
+    // ---- Pass 0: 9x9 Gaussian blur of inputImage ----
     vec2 texel = 1.0 / RENDERSIZE;
-    float valC = dot(texture2D(paintBuf, uv).rgb, vec3(0.333));
-    float valR = dot(texture2D(paintBuf, uv + vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valL = dot(texture2D(paintBuf, uv - vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valU = dot(texture2D(paintBuf, uv + vec2(0.0, texel.y)).rgb, vec3(0.333));
-    float valD = dot(texture2D(paintBuf, uv - vec2(0.0, texel.y)).rgb, vec3(0.333));
+    float radius = washBlur;
 
-    vec3 norm = normalize(vec3(
-        (valR - valL) / texel.x,
-        (valU - valD) / texel.y,
-        150.0
-    ));
+    // Gaussian kernel weights for offsets -4..+4
+    float weights[9];
+    weights[0] = 0.0162;
+    weights[1] = 0.0540;
+    weights[2] = 0.1216;
+    weights[3] = 0.1945;
+    weights[4] = 0.2270;
+    weights[5] = 0.1945;
+    weights[6] = 0.1216;
+    weights[7] = 0.0540;
+    weights[8] = 0.0162;
 
-    vec3 light = normalize(vec3(-1.0, 1.0, 1.4));
-    float diff = clamp(dot(norm, light), 0.0, 1.0);
-    float spec = pow(clamp(dot(reflect(light, norm), vec3(0.0, 0.0, -1.0)), 0.0, 1.0), 12.0) * paintSpec;
+    vec4 blurred = vec4(0.0);
+    for (int i = 0; i < 9; i++) {
+        float offset = float(i - 4) * radius;
+        vec2 uvX = uv + vec2(offset * texel.x, 0.0);
+        vec2 uvY = uv + vec2(0.0, offset * texel.y);
+        blurred += IMG_NORM_PIXEL(inputImage, clamp(uvX, 0.0, 1.0)) * weights[i] * 0.5;
+        blurred += IMG_NORM_PIXEL(inputImage, clamp(uvY, 0.0, 1.0)) * weights[i] * 0.5;
+    }
+    gl_FragColor = blurred;
 
-    gl_FragColor = texture2D(paintBuf, uv) * mix(diff, 1.0, 0.9)
-                 + spec * vec4(0.85, 1.0, 1.15, 1.0);
+#else
+    // ---- Pass 1: Sumi-e tone mapping + Sobel edges + cinnabar seals ----
 
-    // Vignette
-    if (vignetteAmt > 0.0) {
-        vec2 scc = (pos - 0.5 * RENDERSIZE) / RENDERSIZE.x;
-        float vign = 1.1 - vignetteAmt * dot(scc, scc);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.x / RENDERSIZE.x * PI) * 40.0);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.y / RENDERSIZE.y * PI) * 20.0);
-        gl_FragColor.xyz *= vign;
+    // Audio modulator
+    float audio = 0.5 + 0.5 * audioBass * audioReact;
+
+    // Sample blurred buffer
+    vec4 blurred = IMG_NORM_PIXEL(blurBuf, uv);
+    float lum = dot(blurred.rgb, vec3(0.299, 0.587, 0.114));
+
+    // ---- Sobel edge detection on blurBuf (4-neighbor) ----
+    vec2 texel = 1.0 / RENDERSIZE;
+    float lumR  = dot(IMG_NORM_PIXEL(blurBuf, uv + vec2( texel.x, 0.0)).rgb, vec3(0.299, 0.587, 0.114));
+    float lumL  = dot(IMG_NORM_PIXEL(blurBuf, uv + vec2(-texel.x, 0.0)).rgb, vec3(0.299, 0.587, 0.114));
+    float lumU  = dot(IMG_NORM_PIXEL(blurBuf, uv + vec2(0.0,  texel.y)).rgb, vec3(0.299, 0.587, 0.114));
+    float lumD  = dot(IMG_NORM_PIXEL(blurBuf, uv + vec2(0.0, -texel.y)).rgb, vec3(0.299, 0.587, 0.114));
+    float gx = lumR - lumL;
+    float gy = lumU - lumD;
+    float edge = clamp(sqrt(gx * gx + gy * gy) * inkStrength * 3.0, 0.0, 1.0);
+
+    // ---- Ink tone mapping ----
+    float inkConc = pow(1.0 - lum, inkStrength * 0.5 * audio);
+    inkConc = clamp(inkConc, 0.0, 1.0);
+
+    vec3 tonedColor;
+    if (inkConc < 0.35) {
+        tonedColor = mix(PAPER, LIGHT_INK, inkConc / 0.35);
+    } else {
+        tonedColor = mix(LIGHT_INK, DARK_INK, (inkConc - 0.35) / 0.65);
     }
 
-    gl_FragColor.w = 1.0;
+    // ---- Stroke edges with dark ink ----
+    tonedColor = mix(tonedColor, DARK_INK, edge * 0.85 * inkStrength * 0.4);
+
+    // ---- Cinnabar seals: on brightest regions ----
+    // Use a simple pseudo-random pattern based on fragment position
+    vec2 seed = floor(gl_FragCoord.xy / 8.0);
+    float rand = fract(sin(dot(seed, vec2(127.1, 311.7))) * 43758.5453);
+    float sealMask = step(0.9, lum) * step(rand, sealChance * 0.35);
+    tonedColor = mix(tonedColor, CINNABAR, sealMask);
+
+    // Output LINEAR HDR — no clamp, no ACES, no gamma
+    gl_FragColor = vec4(tonedColor, 1.0);
+
+#endif
 }
