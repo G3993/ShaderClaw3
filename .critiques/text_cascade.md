@@ -18,3 +18,41 @@
 - audioMod input added
 **HDR peaks reached:** gold text * 2.2 = 2.2 direct; with audio 3.0+
 **Estimated rating:** 3.8★
+
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 3D volumetric — NEW ANGLE: 2D aurora cascade background → 3D bioluminescent cave tunnel
+**Critique:**
+1. Reference fidelity: Text cascade row rows replaced with a bioluminescent cave tunnel flythrough — completely different visual grammar.
+2. Compositional craft: Cylinder tunnel SDF creates strong radial composition; orbs scattered on walls provide depth cues; atmospheric mist creates focal vanishing point.
+3. Technical execution: Cylinder wall march; orb glow via exp(-d*5); 5-orb-per-cell scanning with angle/Z placement.
+4. Liveness: Camera flies forward (TIME*1.2); orb pulse; camera sway; audio boosts glow.
+5. Differentiation: 3D immersive tunnel vs 2D flat text rows; bioluminescent palette (teal/cyan/violet) vs aurora palette (violet/cyan/gold).
+**Changes:**
+- Full rewrite from 2D aurora text cascade to 3D bioluminescent cave tunnel
+- Cylinder SDF tunnel march + bioluminescent sphere orbs on walls
+- Per-colony color from bio-palette: bio-cyan, violet, deep teal
+- Depth fog (exp(-dist*0.08)) + atmospheric axis glow
+- Camera forward flight + subtle sway
+- Audio modulates glow intensity
+**HDR peaks reached:** orb glow exp(-d*5) * hdrPeak * audio = 3.0 * 1.6 = ~4.8 at orb center
+**Estimated rating:** 4.0★
+
+## 2026-05-05 (v4)
+**Prior rating:** 0.0★
+**Approach:** 2D Matrix Code Rain — NEW ANGLE: 2D aurora rows (v1) → 3D bioluminescent cave (v2) → 2D falling glyph column rain (v4 cyber aesthetic)
+**Critique:**
+1. Reference fidelity: Text cascade reinterpreted as falling digital glyph rain — Wachowski Matrix aesthetic; each column has independent fall speed and leader.
+2. Compositional craft: Dense grid of columns with bright white leader, fading green tail; void black creates absolute silhouette contrast against glowing green.
+3. Technical execution: Per-column leader position via fract(t*spd*0.14+ph); distance-from-leader drives brightness falloff; glyph presence via h21 hash; audio activates additional columns.
+4. Liveness: All columns fall at independent speeds; audio bass activates more columns; fallSpeed parameter.
+5. Differentiation: 2D column rain vs v2 3D tunnel; electric green vs bioluminescent teal/violet; falling vertical vs immersive forward motion.
+**Changes:**
+- Full rewrite from 3D cave to 2D glyph column rain
+- Per-column independent speed and phase from hash
+- White-hot leader (2.8,3.2,2.8) fading through G_HOT → G_MID → G_DIM
+- Glyph mask: rectangular cell within column (step boundaries)
+- Audio bass activates additional columns (step threshold)
+- Void black background — maximum contrast
+**HDR peaks reached:** W_LEAD 3.2 (green channel), G_HOT 2.8 at hdrBoost*audio peak
+**Estimated rating:** 4.5★
