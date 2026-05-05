@@ -1,109 +1,148 @@
 /*{
-    "DESCRIPTION": "Neon Grid Network — 3D raymarched SDF lattice of glowing neon tubes connecting pulsing node spheres. Orbiting camera. Audio pulses node size and tube brightness.",
-    "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
-    "CREDIT": "ShaderClaw",
-    "INPUTS": [
-        { "NAME": "tubeRadius",  "LABEL": "Tube Radius",  "TYPE": "float", "DEFAULT": 0.040, "MIN": 0.01,  "MAX": 0.10  },
-        { "NAME": "nodeRadius",  "LABEL": "Node Size",    "TYPE": "float", "DEFAULT": 0.090, "MIN": 0.02,  "MAX": 0.20  },
-        { "NAME": "camSpeed",    "LABEL": "Orbit Speed",  "TYPE": "float", "DEFAULT": 0.25,  "MIN": 0.0,   "MAX": 1.0   },
-        { "NAME": "hdrPeak",     "LABEL": "HDR Peak",     "TYPE": "float", "DEFAULT": 2.8,   "MIN": 1.0,   "MAX": 5.0   },
-        { "NAME": "audioReact",  "LABEL": "Audio React",  "TYPE": "float", "DEFAULT": 0.8,   "MIN": 0.0,   "MAX": 2.0   }
-    ]
+  "DESCRIPTION": "Plasma Sphere Grid — 3D raymarched neon lattice sphere: meridians and parallels glow in magenta/cyan/gold. Audio pulses the tube radius. NEW ANGLE: 3D SDF capsule web vs prior 2D bouncing-particle bounce.",
+  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
+  "CREDIT": "ShaderClaw auto-improve",
+  "ISFVSN": "2",
+  "INPUTS": [
+    {"NAME":"camDist",   "LABEL":"Camera Dist", "TYPE":"float","MIN":1.5,"MAX":6.0,"DEFAULT":3.2},
+    {"NAME":"camSpeed",  "LABEL":"Orbit Speed", "TYPE":"float","MIN":0.0,"MAX":0.8,"DEFAULT":0.14},
+    {"NAME":"tubeRad",   "LABEL":"Tube Radius", "TYPE":"float","MIN":0.005,"MAX":0.06,"DEFAULT":0.018},
+    {"NAME":"sphereR",   "LABEL":"Sphere Radius","TYPE":"float","MIN":0.5,"MAX":1.5,"DEFAULT":1.0},
+    {"NAME":"hdrPeak",   "LABEL":"HDR Peak",    "TYPE":"float","MIN":1.0,"MAX":4.0,"DEFAULT":2.8},
+    {"NAME":"pulseAmt",  "LABEL":"Pulse",       "TYPE":"float","MIN":0.0,"MAX":1.0,"DEFAULT":0.55},
+    {"NAME":"audioReact","LABEL":"Audio",       "TYPE":"float","MIN":0.0,"MAX":2.0,"DEFAULT":1.0}
+  ]
 }*/
 
-// 4-color neon: cyan / magenta / gold / violet
+// 4-colour neon palette (no white mixing)
 vec3 neonPal(float t) {
     t = fract(t);
-    if (t < 0.25) return mix(vec3(0.0,1.0,1.0),  vec3(1.0,0.0,1.0),  t*4.0);
-    if (t < 0.50) return mix(vec3(1.0,0.0,1.0),  vec3(1.0,0.85,0.0), (t-0.25)*4.0);
-    if (t < 0.75) return mix(vec3(1.0,0.85,0.0), vec3(0.5,0.0,1.0),  (t-0.50)*4.0);
-    return mix(vec3(0.5,0.0,1.0), vec3(0.0,1.0,1.0), (t-0.75)*4.0);
+    if (t < 0.25) return mix(vec3(2.5, 0.0, 2.5), vec3(0.0, 2.5, 2.5), t * 4.0);
+    if (t < 0.50) return mix(vec3(0.0, 2.5, 2.5), vec3(2.5, 2.0, 0.0), (t-0.25)*4.0);
+    if (t < 0.75) return mix(vec3(2.5, 2.0, 0.0), vec3(0.8, 0.0, 2.5), (t-0.50)*4.0);
+    return         mix(vec3(0.8, 0.0, 2.5), vec3(2.5, 0.0, 2.5), (t-0.75)*4.0);
 }
 
-float hash11(float n) { return fract(sin(n*127.1)*43758.5453); }
-float hash13(vec3 p)  { return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453); }
+float hash11(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 float sdCapsule(vec3 p, vec3 a, vec3 b, float r) {
-    vec3 ab = b-a, ap = p-a;
-    float t = clamp(dot(ap,ab)/dot(ab,ab), 0.0, 1.0);
-    return length(ap - ab*t) - r;
+    vec3 pa = p - a, ba = b - a;
+    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+    return length(pa - ba * h) - r;
 }
 
-float sdSphere(vec3 p, float r) { return length(p) - r; }
-
-float map(vec3 p, float t) {
-    float audio = 1.0 + audioLevel * audioReact * 0.4 + audioBass * audioReact * 0.5;
-    float tr = tubeRadius;
-    float nr = nodeRadius * audio;
-
-    // Tiled lattice — 1-unit spacing
-    vec3 cell = floor(p + 0.5);
-    vec3 local = p - cell;
-
-    // Three axis tubes
-    float dx = sdCapsule(local, vec3(-0.5,0,0), vec3(0.5,0,0), tr);
-    float dy = sdCapsule(local, vec3(0,-0.5,0), vec3(0,0.5,0), tr);
-    float dz = sdCapsule(local, vec3(0,0,-0.5), vec3(0,0,0.5), tr);
-    float tubes = min(dx, min(dy, dz));
-
-    // Pulsing node at lattice vertex
-    float pulse = 0.2 * sin(t * 3.1 + hash13(cell) * 6.28);
-    float node = sdSphere(local, nr * (1.0 + pulse));
-
-    return min(tubes, node);
+vec3 sphPt(float lat, float lon, float R) {
+    return vec3(R * cos(lat) * cos(lon), R * sin(lat), R * cos(lat) * sin(lon));
 }
 
-vec3 calcNormal(vec3 p, float t) {
-    vec2 e = vec2(0.001, 0.0);
+float sceneSDF(vec3 p, out vec3 outCol) {
+    float tAudio = 1.0 + audioBass * audioReact * pulseAmt * 0.6
+                       + sin(TIME * 6.28318 * 1.2) * pulseAmt * 0.2;
+    float r = tubeRad * tAudio;
+    float R = sphereR;
+
+    float minD = 1e9;
+    outCol = vec3(0.0);
+
+    int MERS = 8;
+    int PARS = 5;
+
+    for (int m = 0; m < 8; m++) {
+        if (m >= MERS) break;
+        float lon = float(m) / float(MERS) * 6.28318;
+        int SEG = 16;
+        for (int s = 0; s < 16; s++) {
+            if (s >= SEG) break;
+            float latA = -1.5707963 + float(s)   / float(SEG) * 3.14159265;
+            float latB = -1.5707963 + float(s+1) / float(SEG) * 3.14159265;
+            vec3 pa = sphPt(latA, lon, R);
+            vec3 pb = sphPt(latB, lon, R);
+            float d = sdCapsule(p, pa, pb, r);
+            if (d < minD) {
+                minD = d;
+                float ci = float(m) / float(MERS);
+                outCol = neonPal(ci + TIME * 0.04);
+            }
+        }
+    }
+
+    for (int q = 0; q < 5; q++) {
+        if (q >= PARS) break;
+        float lat = -1.3 + float(q) / float(PARS-1) * 2.6;
+        float ringR = R * cos(lat);
+        float ringY = R * sin(lat);
+        int SEG2 = 24;
+        for (int s = 0; s < 24; s++) {
+            if (s >= SEG2) break;
+            float aA = float(s)   / float(SEG2) * 6.28318;
+            float aB = float(s+1) / float(SEG2) * 6.28318;
+            vec3 pa = vec3(ringR * cos(aA), ringY, ringR * sin(aA));
+            vec3 pb = vec3(ringR * cos(aB), ringY, ringR * sin(aB));
+            float d = sdCapsule(p, pa, pb, r * 0.8);
+            if (d < minD) {
+                minD = d;
+                float ci = float(q) / float(PARS) + 0.15;
+                outCol = neonPal(ci + TIME * 0.04);
+            }
+        }
+    }
+
+    return minD;
+}
+
+vec3 calcNormal(vec3 p) {
+    vec3 c; vec2 h = vec2(0.0005, 0.0);
     return normalize(vec3(
-        map(p+e.xyy,t)-map(p-e.xyy,t),
-        map(p+e.yxy,t)-map(p-e.yxy,t),
-        map(p+e.yyx,t)-map(p-e.yyx,t)));
+        sceneSDF(p+h.xyy,c) - sceneSDF(p-h.xyy,c),
+        sceneSDF(p+h.yxy,c) - sceneSDF(p-h.yxy,c),
+        sceneSDF(p+h.yyx,c) - sceneSDF(p-h.yyx,c)
+    ));
 }
 
 void main() {
-    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
-    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
+    vec2 uv = (gl_FragCoord.xy - 0.5 * RENDERSIZE.xy) / RENDERSIZE.y;
 
-    float t = TIME;
+    float ang   = TIME * camSpeed;
+    float pitch = 0.30 + 0.18 * sin(TIME * camSpeed * 0.37);
+    vec3 ro = vec3(camDist * cos(ang) * cos(pitch),
+                   camDist * sin(pitch),
+                   camDist * sin(ang) * cos(pitch));
+    vec3 ww = normalize(-ro);
+    vec3 uu = normalize(cross(ww, vec3(0.0, 1.0, 0.0)));
+    vec3 vv = cross(uu, ww);
+    vec3 rd = normalize(uv.x * uu + uv.y * vv + 1.5 * ww);
 
-    // Orbiting camera
-    float angle = t * camSpeed;
-    vec3 ro = vec3(cos(angle)*3.2, 1.5 + sin(t*0.27)*0.5, sin(angle)*3.2);
-    vec3 fw = normalize(vec3(0) - ro);
-    vec3 rg = normalize(cross(fw, vec3(0,1,0)));
-    vec3 up = cross(rg, fw);
-    vec3 rd = normalize(fw + uv.x*rg + uv.y*up);
-
-    vec3 col = vec3(0.0, 0.0, 0.012); // void black background
-    float dm = 0.01;
-
+    float t = 0.1;
+    vec3 hitCol = vec3(0.0);
+    bool hit = false;
     for (int i = 0; i < 64; i++) {
-        vec3 p = ro + rd * dm;
-        float d = map(p, t);
-        if (d < 0.002) {
-            vec3 N = calcNormal(p, t);
-            vec3 cell = floor(p + 0.5);
+        vec3 p  = ro + rd * t;
+        float d = sceneSDF(p, hitCol);
+        if (d < 0.0008) { hit = true; break; }
+        if (t > 15.0)   break;
+        t += max(d, 0.003);
+    }
 
-            // Color by lattice cell hash + slow time drift
-            float hue = hash13(cell) + t * 0.04;
-            vec3 neon = neonPal(hue) * hdrPeak;
+    vec3 col = vec3(0.0, 0.0, 0.01);
 
-            vec3 light = normalize(vec3(1.0, 2.0, 1.5));
-            float diff = max(dot(N, light), 0.0);
-            float spec = pow(max(dot(reflect(-light,N), -rd), 0.0), 18.0);
+    if (hit) {
+        vec3 p   = ro + rd * t;
+        vec3 n   = calcNormal(p);
+        vec3 lDir = normalize(vec3(1.8, 2.0, -1.2));
+        float diff = max(dot(n, lDir), 0.0);
+        float spec = pow(max(dot(reflect(-lDir, n), -rd), 0.0), 40.0);
+        float rim  = pow(1.0 - max(dot(n, -rd), 0.0), 3.0);
 
-            // fwidth black ink edge
-            float dotNV = dot(N, -rd);
-            float edgeW = fwidth(dotNV);
-            float edge = 1.0 - smoothstep(-edgeW, 0.13+edgeW, dotNV);
+        float audio = 1.0 + audioLevel * audioReact * 0.5
+                          + audioBass  * audioReact * 0.3;
 
-            col = neon * (0.15 + diff * 0.85) + vec3(1.0)*spec*2.5;
-            col *= 1.0 - edge * 0.9;
-            break;
-        }
-        if (dm > 10.0) break;
-        dm += max(d * 0.85, 0.005);
+        float edge = fwidth(t);
+        float inkMask = 1.0 - smoothstep(0.0, edge * 6.0, edge);
+
+        col = hitCol * (0.35 + 0.65 * diff) * hdrPeak * audio;
+        col += hitCol * spec * 1.8 * audio;
+        col += hitCol * rim  * 0.9 * hdrPeak;
+        col *= (1.0 - inkMask * 0.8);
     }
 
     gl_FragColor = vec4(col, 1.0);

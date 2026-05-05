@@ -20,20 +20,20 @@
 
 ## 2026-05-05 (v2)
 **Prior rating:** 0.0★
-**Approach:** 3D raymarch — NEW ANGLE: SDF tube lattice vs prior 2D capsule particle system
+**Approach:** 3D raymarch — NEW ANGLE: neon sphere wireframe vs prior 2D particle bounce system.
 **Critique:**
-1. Reference fidelity: "Edges" of a geometric lattice — the concept of edges is now literally 3D tube edges of a cubic grid vs prior 2D bounce edges.
-2. Compositional craft: Orbiting camera reveals the infinite 3D lattice from multiple angles. Depth and perspective create strong composition vs prior flat 2D view.
-3. Technical execution: Modular tiling SDF (3 axis tubes + node sphere). 64-step march. Per-cell color via hash13(). fwidth() AA edge. Pulsing nodes via hash + sin(t).
-4. Liveness: Camera orbits at camSpeed. Node radius pulses per-cell with TIME. Hue slowly drifts with t*0.04. Audio modulates node size.
-5. Differentiation: 3D SDF lattice vs 2D particles; tube geometry vs capsule streaks; orbiting camera vs fixed view; cell-hash color vs per-particle random.
+1. Reference fidelity: Original was 2D bounce with LED-wall default (black output). Prior critique patched that. This goes full 3D.
+2. Compositional craft: Globe wireframe gives a clear focal SDF silhouette — 8 meridians + 5 parallels create recognisable sphere shape.
+3. Technical execution: 64-step SDF march, capsule segments per arc, orbiting camera + pitch oscillation, fwidth ink edges.
+4. Liveness: Orbiting camera + audioBass × pulseAmt on tube radius; palette shifts slowly via TIME.
+5. Differentiation: 3D SDF globe vs flat 2D particle field; colour palette is entirely different (meridian hue cycling vs random-jitter colorJitter).
 **Changes:**
-- Full rewrite: 3D raymarched SDF tube lattice
-- 4-color neon palette: cyan, magenta, gold, violet
-- Modular tiling with 3-axis capsule tubes + node spheres
-- Orbiting camera (3.2 units radius, height oscillation)
-- Per-node hash drives hue + pulse amplitude
-- fwidth() AA black ink silhouette edges
-- Audio modulates node radius (audioBass + audioLevel)
-**HDR peaks reached:** neonPal * 2.8 + spec 2.5 = ~3.2 at specular peaks on lit nodes
-**Estimated rating:** 4.2★
+- Full rewrite: 3D raymarched neon sphere wireframe
+- 8 meridians (16 capsule segs each) + 5 latitude rings (24 capsule segs)
+- Palette: magenta/cyan/gold/violet (no white, no LED quantize)
+- 64-step SDF march, orbiting camera with pitch oscillation
+- fwidth() ink silhouette on hit edges
+- Audio: audioBass × pulseAmt modulates tube radius
+- Added "3D" category
+**HDR peaks reached:** tube specular 4.6, rim glow 2.5, diffuse faces 2.8
+**Estimated rating:** 4.5★
