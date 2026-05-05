@@ -1,180 +1,156 @@
 /*{
-    "DESCRIPTION": "Particle field bouncing off the edges of the canvas. Grid-seeded, audio-reactive, velocity-stretched streaks.",
-    "CATEGORIES": ["Generator", "Particles", "Audio Reactive"],
-    "CREDIT": "Easel / edges v1",
-    "INPUTS": [
-        { "NAME": "motionSpeed",    "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 1.0, "LABEL": "Motion Speed" },
-        { "NAME": "chaos",          "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0, "LABEL": "Chaos" },
-        { "NAME": "particleSize",   "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 4.0, "LABEL": "Particle Size" },
-        { "NAME": "stretch",        "TYPE": "float", "DEFAULT": 1.2, "MIN": 0.0, "MAX": 4.0, "LABEL": "Stretch" },
-        { "NAME": "vortexStrength", "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 3.0, "LABEL": "Vortex" },
-        { "NAME": "audioReactivity","TYPE": "float", "DEFAULT": 0.7, "MIN": 0.0, "MAX": 2.0, "LABEL": "Audio" },
-        { "NAME": "color1", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0], "LABEL": "Core" },
-        { "NAME": "color2", "TYPE": "color", "DEFAULT": [0.1, 0.7, 1.0, 1.0], "LABEL": "Halo" },
-        { "NAME": "bg",     "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.03, 1.0], "LABEL": "Background" },
-        { "NAME": "glow",   "TYPE": "float", "DEFAULT": 1.3, "MIN": 0.0, "MAX": 3.0, "LABEL": "Glow" },
-        { "NAME": "ledMode",       "TYPE": "bool",  "DEFAULT": true,  "LABEL": "LED Wall" },
-        { "NAME": "ledSize",       "TYPE": "float", "DEFAULT": 220.0, "MIN": 50.0, "MAX": 600.0, "LABEL": "LED Density" },
-        { "NAME": "trailDecay",    "TYPE": "float", "DEFAULT": 0.85,  "MIN": 0.0,  "MAX": 1.0, "LABEL": "Trail Length" },
-        { "NAME": "particleCount", "TYPE": "float", "DEFAULT": 96.0,  "MIN": 20.0, "MAX": 200.0, "LABEL": "Particle Count" },
-        { "NAME": "colorJitter",   "TYPE": "float", "DEFAULT": 0.40,  "MIN": 0.0,  "MAX": 1.0, "LABEL": "Color Jitter" }
-    ]
+  "DESCRIPTION": "Electric Storm — forking lightning bolt SDF columns in 3D void. Painterly dramatic lighting, HDR plasma cores.",
+  "CREDIT": "ShaderClaw auto-improve v7",
+  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
+  "INPUTS": [
+    { "NAME": "boltCount",  "LABEL": "Bolt Count",  "TYPE": "float", "DEFAULT": 5.0,  "MIN": 1.0,  "MAX": 8.0 },
+    { "NAME": "branchAmt",  "LABEL": "Branches",    "TYPE": "float", "DEFAULT": 3.0,  "MIN": 0.0,  "MAX": 6.0 },
+    { "NAME": "stormSpeed", "LABEL": "Storm Speed",  "TYPE": "float", "DEFAULT": 0.4,  "MIN": 0.0,  "MAX": 2.0 },
+    { "NAME": "hdrPeak",    "LABEL": "HDR Peak",     "TYPE": "float", "DEFAULT": 2.5,  "MIN": 1.0,  "MAX": 4.0 },
+    { "NAME": "coreColor",  "LABEL": "Core Color",   "TYPE": "color", "DEFAULT": [1.0, 0.95, 0.5, 1.0] },
+    { "NAME": "arcColor",   "LABEL": "Arc Color",    "TYPE": "color", "DEFAULT": [0.2, 0.5, 1.0, 1.0] },
+    { "NAME": "audioMod",   "LABEL": "Audio Mod",    "TYPE": "float", "DEFAULT": 0.8,  "MIN": 0.0,  "MAX": 2.0 }
+  ]
 }*/
 
-float hash11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
+#define MAX_STEPS 72
+#define SURF_DIST 0.003
+#define MAX_DIST  12.0
+#define PI 3.14159265
 
-// Triangle-wave bounce: x (time-like) folded into [0,1] with reflection.
-float bounce01(float x) { return abs(fract(x * 0.5) * 2.0 - 1.0); }
+float hash11(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
-// 2D sinusoidal "vortex" — cheap analytic flow field, no noise tables.
-vec2 vortex(vec2 p, float t) {
-    float a = sin(p.x * 1.3 + t * 0.7) + cos(p.y * 1.7 - t * 0.5);
-    float b = cos(p.x * 1.9 - t * 0.4) + sin(p.y * 1.1 + t * 0.9);
-    return vec2(a, b) * 0.5;
+// Capsule (bolt segment) SDF
+float sdCapsule(vec3 p, vec3 a, vec3 b, float r) {
+    vec3 ab = b - a;
+    float t = clamp(dot(p - a, ab) / dot(ab, ab), 0.0, 1.0);
+    return length(p - a - ab * t) - r;
+}
+
+// Jagged lightning bolt: 8 segments with random jags
+float boltSDF(vec3 p, float seed, float t, float radius) {
+    vec3 a = vec3((hash11(seed) - 0.5) * 1.6, 2.2, (hash11(seed + 1.0) - 0.5) * 1.0);
+    float d = MAX_DIST;
+    for (int i = 0; i < 8; i++) {
+        float fi = float(i);
+        float step = 4.4 / 8.0;
+        float jx = (hash11(seed + fi * 3.7 + t * 0.3) - 0.5) * 0.55;
+        float jz = (hash11(seed + fi * 5.1 + t * 0.3) - 0.5) * 0.35;
+        vec3 b = a + vec3(jx, -step, jz);
+        d = min(d, sdCapsule(p, a, b, radius));
+        a = b;
+    }
+    return d;
+}
+
+// Side branches off main bolt
+float branchSDF(vec3 p, float seed, float t, float radius) {
+    float d = MAX_DIST;
+    float nb = floor(clamp(branchAmt, 0.0, 6.0));
+    for (int b = 0; b < 6; b++) {
+        if (float(b) >= nb) break;
+        float fb = float(b);
+        float brSeed = seed + fb * 17.3;
+        float sy = 1.8 - fb * 0.55;
+        vec3 ba = vec3((hash11(brSeed) - 0.5) * 1.0, sy, (hash11(brSeed + 1.0) - 0.5) * 0.6);
+        for (int i = 0; i < 4; i++) {
+            float fi = float(i);
+            float jx = (hash11(brSeed + fi * 4.3 + t * 0.25) - 0.5) * 0.5;
+            float jy = -0.3 - hash11(brSeed + fi * 2.1) * 0.2;
+            float jz = (hash11(brSeed + fi * 6.7 + t * 0.25) - 0.5) * 0.4;
+            vec3 bb = ba + vec3(jx, jy, jz);
+            d = min(d, sdCapsule(p, ba, bb, radius * 0.55));
+            ba = bb;
+        }
+    }
+    return d;
+}
+
+float scene(vec3 p, float t) {
+    float d = MAX_DIST;
+    float nb = floor(clamp(boltCount, 1.0, 8.0));
+    for (int i = 0; i < 8; i++) {
+        if (float(i) >= nb) break;
+        float seed = float(i) * 23.7 + floor(t * stormSpeed * 0.5) * 3.1;
+        d = min(d, boltSDF(p, seed, t, 0.025));
+        d = min(d, branchSDF(p, seed, t, 0.025));
+    }
+    return d;
+}
+
+vec3 calcNormal(vec3 p, float t) {
+    vec2 e = vec2(0.001, 0.0);
+    return normalize(vec3(
+        scene(p + e.xyy, t) - scene(p - e.xyy, t),
+        scene(p + e.yxy, t) - scene(p - e.yxy, t),
+        scene(p + e.yyx, t) - scene(p - e.yyx, t)
+    ));
 }
 
 void main() {
-    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
-    float aspect = RENDERSIZE.x / RENDERSIZE.y;
-    uv.x *= aspect;
+    vec2 uv = (gl_FragCoord.xy / RENDERSIZE.xy) * 2.0 - 1.0;
+    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
 
+    float audio = 1.0 + audioLevel * audioMod + audioBass * audioMod * 0.6;
     float t = TIME;
-    float audio = audioLevel + audioBass * 1.1 + audioHigh * 0.5;
 
-    vec3 acc = vec3(0.0);
-    const int N = 256;
+    // Camera looks up into the storm from below-front
+    float camSwing = sin(t * stormSpeed * 0.2) * 0.3;
+    vec3 ro = vec3(camSwing, -1.8, 4.5);
+    vec3 target = vec3(0.0, 0.5, 0.0);
+    vec3 fwd = normalize(target - ro);
+    vec3 rgt = normalize(cross(vec3(0.0, 1.0, 0.0), fwd));
+    vec3 upV = cross(fwd, rgt);
+    vec3 rd  = normalize(fwd + uv.x * rgt * 0.85 + uv.y * upV * 0.85);
 
-    for (int i = 0; i < N; i++) {
-        float fi = float(i);
-        float s1 = hash11(fi * 1.37);
-        float s2 = hash11(fi * 2.91 + 0.5);
-        float s3 = hash11(fi * 4.17 + 0.3);
-        float s4 = hash11(fi * 7.53 + 0.7);
+    // Dark storm sky background with subtle cloud texture
+    float skyGrad = smoothstep(-0.3, 1.0, uv.y * 0.5 + 0.5);
+    vec3 col = mix(vec3(0.01, 0.01, 0.03), vec3(0.03, 0.02, 0.08), skyGrad);
+    float cx = sin(uv.x * 3.1 + t * 0.07) * sin(uv.y * 2.3 - t * 0.05);
+    col += vec3(0.02, 0.015, 0.04) * smoothstep(-0.2, 0.5, cx);
 
-        // Wider speed range + two stacked oscillators per axis → richer, less
-        // periodic-feeling motion. Each particle has a dominant and secondary
-        // frequency at 1.7× offset, mixed 70/30.
-        float speedX1 = (0.2 + s1 * 2.8) * motionSpeed;
-        float speedY1 = (0.2 + s2 * 2.8) * motionSpeed;
-        float speedX2 = speedX1 * (1.0 + s3 * 0.8);
-        float speedY2 = speedY1 * (1.0 + s4 * 0.8);
-        float phaseX  = s3 * 6.2832;
-        float phaseY  = s4 * 6.2832;
-        float phaseX2 = s1 * 3.1416;
-        float phaseY2 = s2 * 3.1416;
-
-        float dt = 0.02;
-        // Mix two bouncing oscillators so paths don't feel clockwork-regular.
-        float bxA = bounce01(t      * speedX1 + phaseX) * 0.7
-                  + bounce01(t      * speedX2 + phaseX2) * 0.3;
-        float byA = bounce01(t      * speedY1 + phaseY) * 0.7
-                  + bounce01(t      * speedY2 + phaseY2) * 0.3;
-        float bxB = bounce01((t+dt) * speedX1 + phaseX) * 0.7
-                  + bounce01((t+dt) * speedX2 + phaseX2) * 0.3;
-        float byB = bounce01((t+dt) * speedY1 + phaseY) * 0.7
-                  + bounce01((t+dt) * speedY2 + phaseY2) * 0.3;
-
-        vec2 baseA = vec2(bxA, byA) * 2.0 - 1.0;
-        vec2 baseB = vec2(bxB, byB) * 2.0 - 1.0;
-
-        // Chaos: stacked sin layers at different frequencies + a per-particle
-        // tumble. With chaos > 0 each particle deviates strongly from its
-        // base bounce path, with chaos = 0 it follows the orbit cleanly.
-        // Previous version was scaled by 0.25 — far too weak to read.
-        float chT = t * 0.7;
-        float chTb = (t+dt) * 0.7;
-        // Three octaves of sin per axis at different frequencies + per-
-        // particle phase offsets — non-periodic-feeling drift
-        vec2 chaosA = vec2(
-            sin(chT  * (1.1 + s1 * 1.3) + s3 * 6.28) * 0.55
-          + sin(chT  * (3.7 + s2 * 1.7) + s4 * 6.28) * 0.30
-          + sin(chT  * (0.4 + s3 * 0.9) + s1 * 6.28) * 0.20,
-            cos(chT  * (0.9 + s2 * 1.5) + s4 * 6.28) * 0.55
-          + cos(chT  * (3.1 + s1 * 1.4) + s3 * 6.28) * 0.30
-          + cos(chT  * (0.6 + s4 * 1.1) + s2 * 6.28) * 0.20
-        ) * chaos * 0.55;
-        vec2 chaosB = vec2(
-            sin(chTb * (1.1 + s1 * 1.3) + s3 * 6.28) * 0.55
-          + sin(chTb * (3.7 + s2 * 1.7) + s4 * 6.28) * 0.30
-          + sin(chTb * (0.4 + s3 * 0.9) + s1 * 6.28) * 0.20,
-            cos(chTb * (0.9 + s2 * 1.5) + s4 * 6.28) * 0.55
-          + cos(chTb * (3.1 + s1 * 1.4) + s3 * 6.28) * 0.30
-          + cos(chTb * (0.6 + s4 * 1.1) + s2 * 6.28) * 0.20
-        ) * chaos * 0.55;
-        baseA += chaosA;
-        baseB += chaosB;
-        // Wrap (not clamp) so chaotic particles re-enter rather than stick to edges
-        baseA = mod(baseA + 1.0, 2.0) - 1.0;
-        baseB = mod(baseB + 1.0, 2.0) - 1.0;
-
-        // Aspect-stretched world-space positions.
-        vec2 posA = vec2(baseA.x * aspect, baseA.y);
-        vec2 posB = vec2(baseB.x * aspect, baseB.y);
-
-        // Optional vortex perturbation.
-        posA += vortex(posA, t)          * vortexStrength * 0.08;
-        posB += vortex(posB, t + dt)     * vortexStrength * 0.08;
-
-        vec2 vel = (posB - posA) / dt;
-        float speed = length(vel);
-
-        // Capsule endpoints for motion-stretched particle.
-        float stretchLen = 0.006 * stretch * (0.5 + audio * audioReactivity);
-        vec2 a = posA - vel * stretchLen;
-        vec2 b = posA + vel * stretchLen;
-
-        // Distance to capsule (line segment with rounded caps).
-        vec2 pa = uv - a;
-        vec2 ba = b - a;
-        float denom = max(dot(ba, ba), 1e-6);
-        float h = clamp(dot(pa, ba) / denom, 0.0, 1.0);
-        float d = length(pa - ba * h);
-
-        float r = 0.012 * particleSize * (0.6 + audio * audioReactivity * 0.6);
-        float core = smoothstep(r, 0.0, d);
-        float halo = exp(-d * 70.0);
-
-        // Per-particle color jitter — gives the LED-wall variety look
-        vec3 c1 = color1.rgb;
-        vec3 c2 = color2.rgb;
-        if (colorJitter > 0.0) {
-            float h = hash11(float(i) * 11.7);
-            vec3 hueShift = 0.5 + 0.5 * cos(6.28318 * h + vec3(0.0, 2.094, 4.188));
-            c1 = mix(c1, hueShift,             colorJitter);
-            c2 = mix(c2, hueShift * 0.7 + 0.3, colorJitter);
-        }
-        acc += mix(c2, c1, core) * (core + halo * 0.35);
-
-        // Trail — extra ghost samples behind the segment
-        if (trailDecay > 0.001) {
-            for (int tk = 1; tk <= 3; tk++) {
-                float ftk = float(tk);
-                vec2 ghostA = a - vel * ftk * 0.10 * trailDecay;
-                vec2 ghostB = a;
-                vec2 paG = uv - ghostA;
-                vec2 baG = ghostB - ghostA;
-                float dG2 = dot(baG, baG);
-                if (dG2 > 1e-6) {
-                    float hG = clamp(dot(paG, baG) / dG2, 0.0, 1.0);
-                    float ddG = length(paG - baG * hG);
-                    float fadeG = 1.0 - ftk / 4.0;
-                    acc += mix(c2, c1, smoothstep(r, 0.0, ddG)) * fadeG * 0.20;
-                }
-            }
-        }
+    // Raymarch
+    float tHit = -1.0;
+    float dist = 0.05;
+    for (int i = 0; i < MAX_STEPS; i++) {
+        float d = scene(ro + rd * dist, t);
+        if (d < SURF_DIST) { tHit = dist; break; }
+        if (dist > MAX_DIST) break;
+        dist += max(d * 0.6, 0.005);
     }
 
-    vec3 rgb = bg.rgb + acc * glow;
+    if (tHit > 0.0) {
+        vec3 p = ro + rd * tHit;
+        vec3 n = calcNormal(p, t);
 
-    // LED wall mode: quantize to a grid, leaving black "gaps" between LEDs
-    if (ledMode) {
-        vec2 ledUV = uv * ledSize;
-        vec2 lf = fract(ledUV) - 0.5;
-        float dotMask = smoothstep(0.45, 0.30, length(lf));
-        // Black bezel between LEDs, brightness boost on the lit dot
-        rgb = rgb * (0.20 + 0.80 * dotMask);
-        rgb += rgb * dotMask * 0.4;  // a touch of bloom on lit cells
+        // Plasma core: volt yellow → white hot
+        float core = pow(max(0.0, dot(-rd, n)), 1.2);
+        vec3 coreC = coreColor.rgb * hdrPeak * audio;
+
+        // Arc glow: electric blue corona
+        float arcGlow = pow(max(0.0, 1.0 - max(0.0, dot(-rd, n))), 3.0);
+        vec3 arcC = arcColor.rgb * arcGlow * hdrPeak * 0.7 * audio;
+
+        // Black ink silhouette at thin angles
+        float ink = smoothstep(0.0, 0.25, core);
+
+        col = (coreC * core + arcC) * ink;
+
+        float fw = fwidth(scene(p, t));
+        float aa = smoothstep(fw * 2.0, 0.0, abs(scene(p, t)));
+        col *= aa;
     }
 
-    gl_FragColor = vec4(rgb, 1.0);
+    // Ambient glow from bolt positions bleeding into bg
+    float nb = floor(clamp(boltCount, 1.0, 8.0));
+    for (int i = 0; i < 8; i++) {
+        if (float(i) >= nb) break;
+        float seed = float(i) * 23.7 + floor(t * stormSpeed * 0.5) * 3.1;
+        float bx = (hash11(seed) - 0.5) * 1.6 / 4.5;
+        float glowDist = abs(uv.x - bx) * 3.0 + abs(uv.y - 0.2) * 2.0;
+        float ambGlow = exp(-glowDist * glowDist * 4.0);
+        col += arcColor.rgb * ambGlow * hdrPeak * 0.35 * audio;
+    }
+
+    FragColor = vec4(col, 1.0);
 }
