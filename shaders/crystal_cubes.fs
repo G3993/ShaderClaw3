@@ -8,7 +8,7 @@
       "NAME": "baseColor",
       "LABEL": "Color",
       "TYPE": "color",
-      "DEFAULT": [1.0, 1.0, 1.0, 1.0]
+      "DEFAULT": [0.2, 0.4, 1.0, 1.0]
     },
     {
       "NAME": "inputTex",
@@ -157,33 +157,31 @@ void main() {
       col += texCol * (spec1 + spec2 * 0.5) * fresnel * 0.7;
       col += texCol * pow(1.0 - max(dot(n, v), 0.0), 3.0) * 0.25;
     } else {
-      // Procedural "demo" texture — colorful gradient + slow noise so
-      // the crystal's refraction has something rich to bend, instead of
-      // showing all-white when no inputTex is bound.
+      // Procedural "demo" texture — HDR neon gradient, peaks 2.5 linear
       vec2 procUV = texUV + n.xy * refractionStrength;
-      // Cosine-palette gradient
-      vec3 grad = 0.5 + 0.5 * cos(6.28318 *
+      // HDR cosine-palette: amplitude 1.5 gives peaks at 2.5 linear
+      vec3 grad = 1.0 + 1.5 * cos(6.28318 *
                   (procUV.x * 1.2 + procUV.y * 0.8 + TIME * 0.05) +
                   vec3(0.0, 2.094, 4.188));
       // Soft animated bands
       float band = sin(procUV.y * 14.0 + TIME * 0.3 + procUV.x * 4.0) * 0.5 + 0.5;
-      vec3 procCol = mix(grad, vec3(0.85, 0.92, 1.0), 0.3) * (0.7 + 0.3 * band);
+      vec3 procCol = mix(grad, vec3(0.6, 0.8, 2.5), 0.3) * (0.7 + 0.3 * band);
 
       col = procCol * (diff1 + diff2) * 0.5;
-      col += procCol * (spec1 + spec2 * 0.5) * fresnel * 0.9;
-      col += vec3(1.0) * spec1 * fresnel * 1.2;
+      col += procCol * (spec1 + spec2 * 0.5) * fresnel * 1.2;
+      // HDR specular hotspot — white-hot with electric-blue tint, peaks ~3.5
+      col += vec3(1.2, 1.5, 3.0) * spec1 * fresnel * 3.5;
       col += procCol * pow(1.0 - max(dot(n, v), 0.0), 3.0) * 0.35;
     }
 
-    // Subtle audio glow
-    col += smoothstep(0.0, 1.0, audioLevel) * vec3(0.05, 0.03, 0.02);
+    // Audio glow — electric-blue pulse on bass/mid hits
+    col += smoothstep(0.0, 1.0, audioLevel) * vec3(0.1, 0.2, 0.6) * (1.0 + audioBass * 0.8);
     alpha = 1.0;
   }
 
   col *= baseColor.rgb;
 
-  // Tone mapping
-  col = col * (2.51 * col + 0.03) / (col * (2.43 * col + 0.59) + 0.14);
+  // No tonemap — HDR linear output, let downstream bloom handle it
 
   if (!hit && transparentBg) {
     alpha = 0.0;
