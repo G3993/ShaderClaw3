@@ -9,12 +9,13 @@
         { "NAME": "wiggleAmp", "LABEL": "Wiggle Amp", "TYPE": "float", "DEFAULT": 45.0, "MIN": 0.0, "MAX": 100.0 },
         { "NAME": "freak", "LABEL": "Freak", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.5, "MAX": 10.0 },
         { "NAME": "freak2", "LABEL": "Freak 2", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.0 },
-        { "NAME": "arcCount",   "LABEL": "Arc Count",    "TYPE": "float", "DEFAULT": 3.0,  "MIN": 1.0, "MAX": 8.0 },
-        { "NAME": "branching",  "LABEL": "Branch Forks", "TYPE": "float", "DEFAULT": 0.40, "MIN": 0.0, "MAX": 1.0 },
+        { "NAME": "arcCount",   "LABEL": "Arc Count",    "TYPE": "float", "DEFAULT": 5.0,  "MIN": 1.0, "MAX": 8.0 },
+        { "NAME": "branching",  "LABEL": "Branch Forks", "TYPE": "float", "DEFAULT": 0.60, "MIN": 0.0, "MAX": 1.0 },
         { "NAME": "flicker",    "LABEL": "Flicker",      "TYPE": "float", "DEFAULT": 0.30, "MIN": 0.0, "MAX": 1.0 },
-        { "NAME": "hueShift",   "LABEL": "Hue Shift",    "TYPE": "float", "DEFAULT": 0.0,  "MIN": 0.0, "MAX": 1.0 },
+        { "NAME": "hueShift",   "LABEL": "Hue Shift",    "TYPE": "float", "DEFAULT": 0.3,  "MIN": 0.0, "MAX": 1.0 },
         { "NAME": "audioReact", "LABEL": "Audio React",  "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0, "MAX": 2.0 },
-        { "NAME": "arcColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.95, 0.95, 0.95, 1.0] }
+        { "NAME": "hdrBoost",   "LABEL": "HDR Boost",    "TYPE": "float", "DEFAULT": 2.0,  "MIN": 0.5, "MAX": 5.0 },
+        { "NAME": "arcColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.7, 0.0, 1.0, 1.0] }
     ]
 }*/
 
@@ -101,7 +102,7 @@ void main() {
         acc = acc * -g + acc;
         acc = acc * acc;
         acc = acc * acc;
-        col += acc;
+        col += acc * hdrBoost;
 
         // Branch forks — sparse perpendicular bolts shooting off the arc
         if (branching > 0.001) {
@@ -109,7 +110,7 @@ void main() {
             float branchTrig = step(0.94, fract(sin(floor(TIME * 6.0 + fai) * 17.3) * 43758.5453));
             float fork = smoothstep(0.05, 0.0, abs(centered.x - (branchPhase * 2.0 - 1.0)))
                        * smoothstep(0.5, 0.0, abs(centered.y - yOff));
-            col += arcCol * fork * branching * branchTrig * 1.5;
+            col += arcCol * fork * branching * branchTrig * 1.5 * hdrBoost;
         }
     }
 
