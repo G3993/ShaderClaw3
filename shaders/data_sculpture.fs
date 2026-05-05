@@ -1,6 +1,6 @@
 /*{
   "DESCRIPTION": "Data Sculpture — thousands of cubes form a fluid 3D landscape from input imagery",
-  "CATEGORIES": ["Radiant"],
+  "CATEGORIES": ["Radiant", "3D"],
   "INPUTS": [
     { "NAME": "baseColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.91, 0.25, 0.34, 1.0] },
     { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" },
@@ -271,15 +271,15 @@ void main() {
 
             // Height-reactive glow
             float heightGlow = smoothstep(0.0, waveHeight * 0.8, abs(g_h)) * baseGlow;
-            baseAlbedo += baseColor.rgb * heightGlow * 0.4;
+            baseAlbedo += baseColor.rgb * heightGlow * 1.8;
 
             // Audio shimmer
-            baseAlbedo += baseColor.rgb * audioBass * 0.15;
+            baseAlbedo += baseColor.rgb * audioBass * 0.6;
 
             col = baseAlbedo * (diff * 0.7 + 0.15);
-            col += spec * baseColor.rgb * 0.15;
-            col += fres * baseColor.rgb * 0.08;
-            col += baseColor.rgb * pow(fres, 2.0) * baseGlow * 0.5;
+            col += spec * baseColor.rgb * 0.6;
+            col += fres * baseColor.rgb * 0.4;
+            col += baseColor.rgb * pow(fres, 2.0) * baseGlow * 2.5;
 
         } else {
             // ---- Raised layer ----
@@ -307,10 +307,10 @@ void main() {
                 }
             }
 
-            col = albedo * (diff1 * sh + diff2 + 0.06) * ao;
-            col += spec * mix(vec3(1.0), albedo, 0.3) * 0.7 * sh;
-            col += fres * baseColor.rgb * 0.18;
-            col += albedo * (hn * hn * 0.18 + audioBass * 0.08);
+            col = albedo * (diff1 * sh + diff2 + 0.08) * ao;
+            col += spec * mix(vec3(2.0), albedo, 0.15) * 3.0 * sh;
+            col += fres * baseColor.rgb * 2.5;
+            col += albedo * (hn * hn * 0.6 + audioBass * 0.5);
         }
 
         // Fog
@@ -319,11 +319,8 @@ void main() {
         alpha = 1.0;
     }
 
-    // Glow
-    col += baseColor.rgb * glow * 0.015;
-
-    // Tone map
-    col = col * (2.51 * col + 0.03) / (col * (2.43 * col + 0.59) + 0.14);
+    // Glow — HDR volumetric light from SDF proximity
+    col += baseColor.rgb * glow * 2.5;
 
     if (!hit && transparentBg) {
         alpha = glow > 0.1 ? clamp(glow * 0.03, 0.0, 0.3) : 0.0;
@@ -340,7 +337,7 @@ void main() {
         float _y  = (_ph - 0.04) / 0.30;
         float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.34, 0.18, _ph);
         float _line = exp(-pow((_suv.y - _y) * 200.0, 2.0));
-        col += vec3(0.4, 1.0, 0.8) * _line * _f;
+        col += vec3(0.4, 3.0, 1.8) * _line * _f;
     }
 
     gl_FragColor = vec4(col, alpha);
