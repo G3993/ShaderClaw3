@@ -9,17 +9,18 @@
     { "NAME": "intensity", "LABEL": "Glitch", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Dissolve", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.0, 0.9, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.01, 0.03, 1.0] },
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.65, 0.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.15, 0.02, 0.0, 1.0] },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
-    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 0.5, "MAX": 5.0, "DEFAULT": 2.3 }
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "DEFAULT": 2.5, "MIN": 0.5, "MAX": 4.0 },
+    { "NAME": "audioMod", "LABEL": "Audio Mod", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0 }
   ]
 }*/
 
 const float PI = 3.14159265;
 const float TWO_PI = 6.28318530;
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
+// Atlas-only font engine (no bitmap fallback -- faster ANGLE compile)
 float charPixel(int ch, float col, float row) {
     if (ch < 0 || ch > 36) return 0.0;
     vec2 uv = vec2(col / 5.0, row / 7.0);
@@ -91,58 +92,44 @@ float sampleChar(int ch, vec2 uv) {
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
-// =======================================================================
-// BACKGROUND: TRON GRID — perspective wireframe floor + horizon glow
-// =======================================================================
-
-vec3 tronGridBg(vec2 uv) {
-    float aspect = RENDERSIZE.x / RENDERSIZE.y;
-    float t = TIME * 0.3;
-
-    // Perspective grid: floor plane receding to horizon at y=0.5
-    float horizon = 0.5;
-    vec3 col = vec3(0.0, 0.01, 0.03); // near-black deep space
-
-    if (uv.y < horizon) {
-        float dy = horizon - uv.y;
-        float dz = 1.0 / (dy + 0.01); // perspective depth
-
-        // Grid coordinates in 3D space
-        float gx = (uv.x - 0.5) * dz * 2.0 * aspect;
-        float gz = dz - t * 2.0; // scrolling toward viewer
-
-        // Grid lines
-        float lineX = abs(fract(gx * 0.5) - 0.5);
-        float lineZ = abs(fract(gz * 0.5) - 0.5);
-        float lineW = 0.04 * dy; // thinner at distance
-
-        float gridX = smoothstep(0.5 - lineW, 0.5 - lineW * 0.3, lineX);
-        float gridZ = smoothstep(0.5 - lineW, 0.5 - lineW * 0.3, lineZ);
-        float grid = max(gridX, gridZ);
-
-        // Fade at horizon and near edges
-        float fade = smoothstep(0.0, 0.08, dy) * smoothstep(horizon, horizon * 0.2, uv.y + 0.05);
-
-        vec3 gridColor = vec3(0.0, 0.7, 1.0) * 1.5; // electric blue HDR
-        col += gridColor * grid * fade;
-
-        // Horizon glow
-        float horizonGlow = exp(-abs(uv.y - horizon) * 30.0);
-        col += vec3(0.0, 0.3, 1.0) * horizonGlow * 0.8;
-    } else {
-        // Sky: gradient to dark
-        float skyFade = (uv.y - horizon) / (1.0 - horizon);
-        col = mix(vec3(0.0, 0.05, 0.15), vec3(0.0, 0.0, 0.02), skyFade);
-
-        // Distant horizon glow in sky
-        float horizonGlow = exp(-abs(uv.y - horizon) * 25.0);
-        col += vec3(0.0, 0.2, 0.8) * horizonGlow * 0.5;
+float sfbm(vec2 p) {
+    float v = 0.0, a = 0.5;
+    for (int i = 0; i < 5; i++) {
+        float h1 = fract(sin(dot(floor(p), vec2(127.1, 311.7))) * 43758.5453);
+        float h2 = fract(sin(dot(floor(p)+vec2(1,0), vec2(127.1, 311.7))) * 43758.5453);
+        float h3 = fract(sin(dot(floor(p)+vec2(0,1), vec2(127.1, 311.7))) * 43758.5453);
+        float h4 = fract(sin(dot(floor(p)+vec2(1,1), vec2(127.1, 311.7))) * 43758.5453);
+        vec2 f = fract(p); f = f*f*(3.0-2.0*f);
+        v += a * mix(mix(h1,h2,f.x), mix(h3,h4,f.x), f.y);
+        p = p * 2.1 + vec2(1.7, 3.1);
+        a *= 0.5;
     }
+    return v;
+}
 
-    // Subtle CRT-free vignette (NOT scanlines)
-    vec2 vc = uv - 0.5;
-    float vign = 1.0 - dot(vc, vc) * 0.8;
-    col *= vign;
+vec3 solarBg(vec2 uv) {
+    float t = TIME * 0.18;
+    float asp = RENDERSIZE.x / RENDERSIZE.y;
+    vec2 p = vec2(uv.x * asp, uv.y);
+
+    // Domain warp for solar granulation
+    vec2 q = vec2(sfbm(p * 3.0 + t * 0.4), sfbm(p * 3.0 + vec2(5.2, 1.3) + t * 0.3));
+    float f = sfbm(p * 2.5 + 1.8 * q + t * 0.15);
+
+    // Solar palette: deep crimson -> orange -> gold -> white-hot
+    vec3 dark   = vec3(0.18, 0.02, 0.0);   // deep solar dark
+    vec3 mid    = vec3(0.85, 0.22, 0.02);  // chromosphere orange
+    vec3 bright = vec3(1.0,  0.65, 0.05);  // photosphere gold
+    vec3 hot    = vec3(1.2,  1.0,  0.6);   // white-hot HDR
+
+    vec3 col;
+    if (f < 0.4) col = mix(dark, mid, f / 0.4);
+    else if (f < 0.7) col = mix(mid, bright, (f - 0.4) / 0.3);
+    else col = mix(bright, hot, (f - 0.7) / 0.3);
+
+    // Spicule streaks: thin bright lines radiating
+    float streak = smoothstep(0.48, 0.5, fract(sfbm(p * 8.0 + t * 0.5) * 3.0));
+    col += vec3(1.0, 0.85, 0.3) * streak * 0.8;
 
     return col;
 }
@@ -226,9 +213,11 @@ void main() {
     vec4 col = effectDigifade(uv, p);
 
     if (!transparentBg) {
-        vec3 bgPx = tronGridBg(uv);
-        vec3 textHDR = textColor.rgb * hdrGlow;
-        col = vec4(mix(bgPx, textHDR, col.a), 1.0);
+        float audio_m = 1.0 + audioLevel * audioMod;
+        vec3 bgSolar = solarBg(uv);
+        float txtA = smoothstep(0.3, 0.7, col.a);
+        vec3 txtHDR = textColor.rgb * hdrGlow * audio_m;
+        col = vec4(mix(bgSolar, txtHDR, txtA), 1.0);
     }
 
     if (_voiceGlitch > 0.01) {
