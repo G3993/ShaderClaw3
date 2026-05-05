@@ -1,185 +1,192 @@
 /*{
-  "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Bricks - grid with animated displacement",
+  "DESCRIPTION": "Neon Corridor — 3D raymarched architectural corridor with brick walls, floor, and ceiling. Neon strip lights run along wall joints. Camera dollies forward cinematically. Hot-pink and cyan HDR neon glow against dark brick.",
+  "CREDIT": "ShaderClaw auto-improve",
+  "ISFVSN": "2",
+  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
-    { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1,2], "LABELS": ["Bricks","Bricks Harlequin","Bricks Zebra"], "DEFAULT": 0 },
-    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
-    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
-    { "NAME": "intensity", "LABEL": "Displacement", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "density", "LABEL": "Grid Density", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    {"NAME":"speed",       "LABEL":"Speed",        "TYPE":"float","DEFAULT":0.4,"MIN":0.0,"MAX":2.0},
+    {"NAME":"brickDensity","LABEL":"Brick Density", "TYPE":"float","DEFAULT":4.0,"MIN":1.0,"MAX":10.0},
+    {"NAME":"hdrPeak",    "LABEL":"HDR Peak",     "TYPE":"float","DEFAULT":2.5,"MIN":1.0,"MAX":4.0},
+    {"NAME":"audioReact", "LABEL":"Audio React",  "TYPE":"float","DEFAULT":0.7,"MIN":0.0,"MAX":2.0},
+    {"NAME":"fov",        "LABEL":"FOV",          "TYPE":"float","DEFAULT":1.8,"MIN":0.5,"MAX":3.0}
   ]
 }*/
 
-const float PI = 3.14159265;
-const float TWO_PI = 6.28318530;
+// ── Palette ──────────────────────────────────────────────────────────────────
+const vec3 COL_NEON_PINK  = vec3(1.0, 0.0, 0.6);
+const vec3 COL_NEON_CYAN  = vec3(0.0, 1.0, 0.9);
+const vec3 COL_BRICK      = vec3(0.35, 0.1, 0.02);
+const vec3 COL_MORTAR     = vec3(0.05, 0.03, 0.05);
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
-float charPixel(int ch, float col, float row) {
-    if (ch < 0 || ch > 36) return 0.0;
-    vec2 uv = vec2(col / 5.0, row / 7.0);
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return smoothstep(0.1, 0.55, texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r);
+// ── SDF helpers ─────────────────────────────────────────────────────────────
+float sdPlane(vec3 p, vec3 n, float h) {
+    return dot(p, n) + h;
 }
 
-int getChar(int slot) {
-    if (slot == 0)  return int(msg_0);
-    if (slot == 1)  return int(msg_1);
-    if (slot == 2)  return int(msg_2);
-    if (slot == 3)  return int(msg_3);
-    if (slot == 4)  return int(msg_4);
-    if (slot == 5)  return int(msg_5);
-    if (slot == 6)  return int(msg_6);
-    if (slot == 7)  return int(msg_7);
-    if (slot == 8)  return int(msg_8);
-    if (slot == 9)  return int(msg_9);
-    if (slot == 10) return int(msg_10);
-    if (slot == 11) return int(msg_11);
-    if (slot == 12) return int(msg_12);
-    if (slot == 13) return int(msg_13);
-    if (slot == 14) return int(msg_14);
-    if (slot == 15) return int(msg_15);
-    if (slot == 16) return int(msg_16);
-    if (slot == 17) return int(msg_17);
-    if (slot == 18) return int(msg_18);
-    if (slot == 19) return int(msg_19);
-    if (slot == 20) return int(msg_20);
-    if (slot == 21) return int(msg_21);
-    if (slot == 22) return int(msg_22);
-    if (slot == 23) return int(msg_23);
-    if (slot == 24) return int(msg_24);
-    if (slot == 25) return int(msg_25);
-    if (slot == 26) return int(msg_26);
-    if (slot == 27) return int(msg_27);
-    if (slot == 28) return int(msg_28);
-    if (slot == 29) return int(msg_29);
-    if (slot == 30) return int(msg_30);
-    if (slot == 31) return int(msg_31);
-    if (slot == 32) return int(msg_32);
-    if (slot == 33) return int(msg_33);
-    if (slot == 34) return int(msg_34);
-    if (slot == 35) return int(msg_35);
-    if (slot == 36) return int(msg_36);
-    if (slot == 37) return int(msg_37);
-    if (slot == 38) return int(msg_38);
-    if (slot == 39) return int(msg_39);
-    if (slot == 40) return int(msg_40);
-    if (slot == 41) return int(msg_41);
-    if (slot == 42) return int(msg_42);
-    if (slot == 43) return int(msg_43);
-    if (slot == 44) return int(msg_44);
-    if (slot == 45) return int(msg_45);
-    if (slot == 46) return int(msg_46);
-    return int(msg_47);
+// Thin 2D slab strip (infinite in one axis): distance in Y and Z only
+float sdStrip(vec3 p, float cy, float cz, float ry, float rz) {
+    vec2 d = abs(vec2(p.y - cy, p.z - cz)) - vec2(ry, rz);
+    return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
 }
 
-int charCount() {
-    int n = int(msg_len);
-    return n > 0 ? n : 1;
+// ── Corridor SDF ─────────────────────────────────────────────────────────────
+// Returns vec2(dist, matID):
+// matID 0 = brick wall/floor/ceiling
+// matID 1 = neon strip pink  (floor joints)
+// matID 2 = neon strip cyan  (ceiling joints)
+vec2 sceneSDF(vec3 p) {
+    // Corridor bounding planes
+    float dLeft   =  p.x + 2.0;      // left wall  at x = -2
+    float dRight  = -(p.x - 2.0);    // right wall at x = +2
+    float dFloor  =  p.y + 1.5;      // floor      at y = -1.5
+    float dCeil   = -(p.y - 1.5);    // ceiling    at y = +1.5
+
+    float dWalls = min(min(dLeft, dRight), min(dFloor, dCeil));
+
+    // Pink neon: floor-left joint (x=-2, y=-1.5) and floor-right joint (x=+2, y=-1.5)
+    float dPinkL = length(vec2(p.x + 2.0, p.y + 1.5)) - 0.045;
+    float dPinkR = length(vec2(p.x - 2.0, p.y + 1.5)) - 0.045;
+    float stPink = min(dPinkL, dPinkR);
+
+    // Cyan neon: ceil-left joint (x=-2, y=+1.5) and ceil-right joint (x=+2, y=+1.5)
+    float dCyanL = length(vec2(p.x + 2.0, p.y - 1.5)) - 0.045;
+    float dCyanR = length(vec2(p.x - 2.0, p.y - 1.5)) - 0.045;
+    float stCyan = min(dCyanL, dCyanR);
+
+    // Select closest
+    if (stPink < dWalls && stPink < stCyan) return vec2(stPink, 1.0);
+    if (stCyan < dWalls)                    return vec2(stCyan, 2.0);
+    return vec2(dWalls, 0.0);
 }
 
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
+// ── Normal via finite differences ───────────────────────────────────────────
+vec3 calcNormal(vec3 p) {
+    vec2 e = vec2(0.001, 0.0);
+    return normalize(vec3(
+        sceneSDF(p + e.xyy).x - sceneSDF(p - e.xyy).x,
+        sceneSDF(p + e.yxy).x - sceneSDF(p - e.yxy).x,
+        sceneSDF(p + e.yyx).x - sceneSDF(p - e.yyx).x
+    ));
 }
 
-float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+// ── Brick pattern ────────────────────────────────────────────────────────────
+// Returns 1.0 on brick face, 0.0 in mortar joint
+float brickPattern(vec2 localUV, float density) {
+    float row   = floor(localUV.y * density);
+    float xOff  = mod(row, 2.0) * 0.5;
+    vec2 bUV    = vec2(mod(localUV.x * density * 1.6 + xOff, 1.0),
+                       mod(localUV.y * density, 1.0));
+    float mortarW = 0.08;
+    float mx = min(bUV.x, 1.0 - bUV.x);
+    float my = min(bUV.y, 1.0 - bUV.y);
+    // AA with fwidth
+    float fwx = fwidth(bUV.x);
+    float fwy = fwidth(bUV.y);
+    float brickX = smoothstep(mortarW - fwx, mortarW + fwx, mx);
+    float brickY = smoothstep(mortarW - fwy, mortarW + fwy, my);
+    return brickX * brickY;
+}
 
-// =======================================================================
-// EFFECT: BRICKS - grid with animated displacement
-// =======================================================================
+// ── Neon glow contribution at a surface point ─────────────────────────────
+vec3 neonGlow(vec3 p, float audioBst) {
+    float dFL = length(vec2(p.y + 1.5, p.x + 2.0));
+    float dFR = length(vec2(p.y + 1.5, p.x - 2.0));
+    float dCL = length(vec2(p.y - 1.5, p.x + 2.0));
+    float dCR = length(vec2(p.y - 1.5, p.x - 2.0));
 
-vec4 effectBricks(vec2 uv, int sub) {
-    float aspect = RENDERSIZE.x / RENDERSIZE.y;
-    int numChars = charCount();
-    float waveAmount = intensity;
-    float cols = floor(mix(5.0, 40.0, density));
+    vec3 glow = vec3(0.0);
+    glow += COL_NEON_PINK * exp(-dFL * 18.0) * audioBst;
+    glow += COL_NEON_PINK * exp(-dFR * 18.0) * audioBst;
+    glow += COL_NEON_CYAN * exp(-dCL * 18.0) * audioBst;
+    glow += COL_NEON_CYAN * exp(-dCR * 18.0) * audioBst;
+    return glow;
+}
 
-    float wX=0.0, wY=0.0, fX=3.0, fY=3.0, pm=0.0;
-    bool brick = false;
-    if (sub == 0) { wX=0.3; fX=2.5; brick=true; }
-    else if (sub == 1) { wX=0.6; wY=0.6; pm=2.0; }
-    else { wX=1.0; fX=4.0; pm=1.0; }
+// ── Main ─────────────────────────────────────────────────────────────────────
+void main() {
+    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
+    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
 
-    float rws = floor(cols*(7.0/5.0)/aspect);
-    float cellW = 1.0/cols, cellH = 1.0/rws;
+    // Camera: dolly forward along +Z, slight horizontal sway
+    float camZ  = -TIME * speed * 2.0;
+    float sway  = sin(TIME * 0.15) * 0.06;
+    vec3 ro     = vec3(sway, 0.0, camZ);
+    vec3 rd     = normalize(vec3(uv, fov));
 
-    float ci = clamp(floor(uv.x/cellW), 0.0, cols-1.0);
-    float ri = clamp(floor(uv.y/cellH), 0.0, rws-1.0);
-    float lx = fract(uv.x/cellW), ly = fract(uv.y/cellH);
+    float audioBst = 1.0 + audioLevel * audioReact;
 
-    if (brick && mod(ri, 2.0) > 0.5) {
-        float sx = uv.x + cellW*0.5;
-        ci = mod(floor(sx/cellW), cols);
-        lx = fract(sx/cellW);
+    // ── Raymarch ─────────────────────────────────────────────────────────────
+    float t     = 0.05;
+    float matID = -1.0;
+    vec3  p     = ro;
+    bool  hit   = false;
+
+    for (int i = 0; i < 64; i++) {
+        p = ro + rd * t;
+        vec2 res = sceneSDF(p);
+        float d  = res.x;
+        if (d < 0.002) { hit = true; matID = res.y; break; }
+        if (t > 50.0)  break;
+        t += max(d * 0.85, 0.01);
     }
 
-    float t = TIME*speed*2.5;
-    float phase = ci + ri;
-    if (pm > 0.5 && pm < 1.5) phase = ri;
-    else if (pm > 1.5) phase = (ci + ri)*PI;
+    vec3 col = vec3(0.0);
 
-    lx = fract(lx + sin(phase*fX+t)*waveAmount*wX*0.3);
-    ly = fract(ly + sin(phase*fY+t*1.1)*waveAmount*wY*0.3);
+    if (hit) {
+        vec3 n       = calcNormal(p);
+        vec3 viewDir = normalize(ro - p);
 
-    int charIdx = int(mod(ci + ri*cols, float(numChars)));
-    float cWR = 5.0/7.0;
-    float sX = textScale*cWR, sY = textScale;
-    float mX = (1.0-sX)*0.5, mY = (1.0-sY)*0.5;
+        // ── Brick walls / floor / ceiling ────────────────────────────────
+        if (matID < 0.5) {
+            vec2 localUV;
+            if (abs(n.x) > 0.5) {
+                // Side wall: depth + height
+                localUV = vec2(p.z * 0.05, p.y);
+            } else if (abs(n.y) > 0.5) {
+                // Floor or ceiling: width + depth
+                localUV = vec2(p.x, p.z * 0.05);
+            } else {
+                localUV = vec2(p.x, p.y);
+            }
 
-    float textHit = 0.0;
-    if (lx >= mX && lx < 1.0-mX && ly >= mY && ly < 1.0-mY) {
-        float gc = ((lx-mX)/sX)*5.0, gr = ((ly-mY)/sY)*7.0;
-        if (gc >= 0.0 && gc < 5.0 && gr >= 0.0 && gr < 7.0) {
-            int ci2 = int(mod(float(charIdx), float(numChars)));
-            int ch = getChar(ci2);
-            if (ch >= 0 && ch <= 36 && ch != 26) textHit = charPixel(ch, gc, gr);
+            float bk     = brickPattern(localUV, brickDensity);
+            vec3 surfCol = mix(COL_MORTAR, COL_BRICK, bk);
+
+            // Dim ambient + weak diffuse
+            float diff = max(dot(n, normalize(vec3(0.2, 1.0, -0.5))), 0.0);
+            col = surfCol * (0.05 + diff * 0.12);
+
+            // Neon bounce light on surface
+            col += neonGlow(p, audioBst) * 0.25 * (0.4 + 0.6 * bk);
+
+            // Neon specular highlight on bricks
+            vec3 halfV = normalize(normalize(vec3(0.0, -1.0, 0.3)) + viewDir);
+            float spec = pow(max(dot(n, halfV), 0.0), 32.0);
+            col += COL_NEON_PINK * spec * 0.3 * audioBst;
+        }
+        // ── Neon pink strip surfaces ─────────────────────────────────────
+        else if (matID < 1.5) {
+            col = COL_NEON_PINK * hdrPeak * audioBst;
+        }
+        // ── Neon cyan strip surfaces ─────────────────────────────────────
+        else {
+            col = COL_NEON_CYAN * hdrPeak * audioBst;
+        }
+
+        // Depth fog into the void
+        float fogT = 1.0 - exp(-t * 0.045);
+        col = mix(col, vec3(0.0), fogT * 0.75);
+    }
+
+    // ── Volumetric neon glow bleed along ray (additive) ──────────────────
+    for (int k = 0; k < 8; k++) {
+        float kt = 1.0 + float(k) * 4.0;
+        if (kt > t) break;
+        vec3 kp = ro + rd * kt;
+        if (abs(kp.x) < 2.0 && abs(kp.y) < 1.5) {
+            col += neonGlow(kp, audioBst) * 0.012;
         }
     }
 
-    bool inv = mod(ri, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
-    return vec4(fc, a);
-}
-
-void main() {
-    vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
-    int p = int(preset);
-    vec4 col = effectBricks(uv, p);
-
-    if (_voiceGlitch > 0.01) {
-        float g = _voiceGlitch;
-        float t = TIME * 17.0;
-        float band = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
-        float bandNoise = fract(sin(band * 91.7 + t) * 43758.5);
-        float bandActive = step(1.0 - g * 0.6, bandNoise);
-        float shift = (bandNoise - 0.5) * 0.08 * g * bandActive;
-        float chromaAmt = g * 0.015;
-        vec2 uvR = uv + vec2(shift + chromaAmt, 0.0);
-        vec2 uvB = uv + vec2(shift - chromaAmt, 0.0);
-        vec2 uvG = uv + vec2(shift, chromaAmt * 0.5);
-        vec4 cR = effectBricks(uvR, p);
-        vec4 cG = effectBricks(uvG, p);
-        vec4 cB = effectBricks(uvB, p);
-        vec4 glitched = vec4(cR.r, cG.g, cB.b, max(max(cR.a, cG.a), cB.a));
-        float scanline = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
-        float blockX = floor(uv.x * 6.0);
-        float blockY = floor(uv.y * 4.0);
-        float blockNoise = fract(sin((blockX + blockY * 7.0) * 113.1 + floor(t * 8.0)) * 43758.5);
-        float dropout = step(1.0 - g * 0.15, blockNoise);
-        glitched.rgb *= scanline;
-        glitched.rgb *= 1.0 - dropout;
-        col = mix(col, glitched, smoothstep(0.0, 0.3, g));
-    }
-
-    gl_FragColor = col;
+    gl_FragColor = vec4(col, 1.0);
 }
