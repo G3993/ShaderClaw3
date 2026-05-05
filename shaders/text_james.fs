@@ -12,9 +12,10 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.8, 0.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.0, 0.06, 1.0] },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.2 },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
@@ -96,6 +97,28 @@ float sampleAtlas(int ch, vec2 cellUV) {
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
+// Per-letter 4-hue neon cycle: gold, cyan, magenta, lime
+vec3 letterHue(int i) {
+    int ci = int(mod(float(i), 4.0));
+    if (ci == 0) return vec3(1.0, 0.8, 0.0);
+    if (ci == 1) return vec3(0.0, 1.0, 0.8);
+    if (ci == 2) return vec3(1.0, 0.0, 0.7);
+    return vec3(0.5, 1.0, 0.0);
+}
+
+// Lava-wave animated background (distinct from aurora/starfield/plasma)
+vec3 lavaWaveBg(vec2 uv) {
+    float t = TIME * 0.35;
+    float w1 = sin(uv.x * 8.1 + t * 1.1) * sin(uv.y * 5.3 - t * 0.8);
+    float w2 = sin((uv.x + uv.y) * 6.7 - t * 1.5) * 0.5;
+    float heat = clamp(w1 + w2 + 0.5, 0.0, 1.0);
+    vec3 c0 = bgColor.rgb;
+    vec3 c1 = vec3(0.4, 0.0, 0.0);   // deep red
+    vec3 c2 = vec3(0.8, 0.2, 0.0);   // ember orange
+    if (heat < 0.4) return mix(c0, c1, heat * 2.5) * 0.4;
+    return mix(c1, c2, (heat - 0.4) * 1.67) * 0.4;
+}
+
 // ═══════════════════════════════════════════════════════════════════════
 // Fill styles — cycling patterns within each letter
 // ═══════════════════════════════════════════════════════════════════════
@@ -121,7 +144,7 @@ vec4 effectEtherea(vec2 uv) {
     float _sp = max(speed, 0.01);
     float cycleSpd = mix(0.2, 5.0, density);
 
-    vec3 col = bgColor.rgb;
+    vec3 col = transparentBg ? bgColor.rgb : lavaWaveBg(uv);
     float alpha = transparentBg ? 0.0 : 1.0;
 
     // Aspect-correct coordinate
@@ -189,7 +212,7 @@ vec4 effectEtherea(vec2 uv) {
                 vec2 lp = fract(cellUV * vec2(5.0, 7.0));
                 float inten = fillStyle(style, lp);
 
-                textCol = max(textCol, textColor.rgb * inten * edgeAA);
+                textCol = max(textCol, letterHue(i) * hdrGlow * inten * edgeAA);
                 textMask = max(textMask, inten * edgeAA);
             }
         }
@@ -203,7 +226,7 @@ vec4 effectEtherea(vec2 uv) {
     }
 
     col = mix(col, textCol, clamp(textMask, 0.0, 1.0));
-    if (!transparentBg) col += textColor.rgb * glowAccum;
+    if (!transparentBg) col += textColor.rgb * glowAccum * hdrGlow;
     col *= 1.0 - 0.3 * length((uv - 0.5) * 1.5);
     if (transparentBg) alpha = clamp(textMask, 0.0, 1.0);
     return vec4(col, alpha);
