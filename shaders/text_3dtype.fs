@@ -147,17 +147,35 @@ void main() {
         if (hit > 0.5) {
             vec3 hsv = baseHSV;
             hsv.x = fract(hsv.x + t * hueSpread);
-            hsv.y = min(1.0, hsv.y + t * 0.2);
+            hsv.y = 1.0;                          // force full saturation on every layer
+            hsv.z = 1.0;
             vec3 layerColor = hsv2rgb(hsv);
+            float hdrBoost = mix(2.8, 0.4, t);    // front layer at 2.8×, deep layers dim
             float alpha = 0.3 + 0.7 * (1.0 - t);
-            finalColor = mix(finalColor, layerColor, alpha);
+            finalColor = mix(finalColor, layerColor * hdrBoost, alpha);
             finalAlpha = max(finalAlpha, alpha);
         }
     }
 
-    // Scanline
-    float scanline = 1.0 - 0.03 * step(0.5, fract(gl_FragCoord.y / 3.0));
-    finalColor *= scanline;
+    // Additive neon halo: front layer re-evaluated for glow bleed around text
+    {
+        float wX = sin(TIME * speed * 0.5) * 0.003;
+        float wY = cos(TIME * speed * 0.4) * 0.002;
+        vec2 glowUV = (uv - 0.5) + 0.5 + vec2(wX, wY);
+        // Sample 4 neighbours to build soft edge halo
+        float gHit = 0.0;
+        float gStep = 0.006 / max(aspect, 1.0);
+        gHit += textHit(vec2((glowUV.x - gStep - 0.5) * aspect + 0.5, glowUV.y), 1.0);
+        gHit += textHit(vec2((glowUV.x + gStep - 0.5) * aspect + 0.5, glowUV.y), 1.0);
+        gHit += textHit(vec2((glowUV.x - 0.5) * aspect + 0.5, glowUV.y - gStep * aspect), 1.0);
+        gHit += textHit(vec2((glowUV.x - 0.5) * aspect + 0.5, glowUV.y + gStep * aspect), 1.0);
+        if (gHit > 0.5) {
+            vec3 hsv = baseHSV;
+            hsv.y = 1.0;
+            finalColor += hsv2rgb(hsv) * 1.8 * (gHit / 4.0);
+            if (transparentBg) finalAlpha = max(finalAlpha, 0.9);
+        }
+    }
 
     gl_FragColor = vec4(finalColor, finalAlpha);
 }
