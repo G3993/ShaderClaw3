@@ -1,11 +1,11 @@
 /*{
-  "DESCRIPTION": "Vaporwave Hologram — Y2K vaporwave scene transmitted through a degrading holographic channel. Pass 0 renders the full vaporwave (sun, grid, Y2K swarm, katakana). Pass 1 layers hologram glitch on top: vertical tear, RGB shift, EMI bursts, hologram tint, scanlines.",
+  "DESCRIPTION": "Vaporwave Hologram — Synthwave Night Edition. Deep violet sky, neon teal grid, electric cyan sun, Y2K shapes in fully-saturated HDR. Pass 0 renders the night vaporwave scene. Pass 1 layers hologram glitch on top.",
   "CATEGORIES": ["Generator", "Glitch", "Audio Reactive"],
-  "CREDIT": "Easel — combines vaporwave_floral_shoppe + hologram_glitch",
+  "CREDIT": "ShaderClaw auto-improve — Synthwave Night Edition",
   "INPUTS": [
     { "NAME": "horizonY",         "LABEL": "Horizon",         "TYPE": "float", "MIN": 0.40, "MAX": 0.75, "DEFAULT": 0.55 },
-    { "NAME": "skyTopColor",      "LABEL": "Sky Top",         "TYPE": "color", "DEFAULT": [1.0, 0.42, 0.71, 1.0] },
-    { "NAME": "skyHorizonColor",  "LABEL": "Sky Horizon",     "TYPE": "color", "DEFAULT": [0.36, 0.85, 0.76, 1.0] },
+    { "NAME": "skyTopColor",      "LABEL": "Sky Top",         "TYPE": "color", "DEFAULT": [0.05, 0.0, 0.25, 1.0] },
+    { "NAME": "skyHorizonColor",  "LABEL": "Sky Horizon",     "TYPE": "color", "DEFAULT": [0.0, 0.5, 0.5, 1.0] },
     { "NAME": "sunSize",          "LABEL": "Sun Size",        "TYPE": "float", "MIN": 0.05, "MAX": 0.40, "DEFAULT": 0.22 },
     { "NAME": "sunBars",          "LABEL": "Sun Bars",        "TYPE": "float", "MIN": 0.0,  "MAX": 12.0, "DEFAULT": 6.0 },
     { "NAME": "gridDensity",      "LABEL": "Grid Density",    "TYPE": "float", "MIN": 4.0,  "MAX": 24.0, "DEFAULT": 12.0 },
@@ -21,8 +21,8 @@
     { "NAME": "holoScanFreq",     "LABEL": "Holo Scanlines",  "TYPE": "float", "MIN": 1.0,  "MAX": 4.0,  "DEFAULT": 2.0 },
     { "NAME": "holoTear",         "LABEL": "Tear Probability","TYPE": "float", "MIN": 0.0,  "MAX": 0.3,  "DEFAULT": 0.06 },
     { "NAME": "holoBreak",        "LABEL": "EMI Break",       "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.3 },
-    { "NAME": "holoGlow",         "LABEL": "Holo Glow",       "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.7 },
-    { "NAME": "holoTint",         "LABEL": "Hologram Tint",   "TYPE": "color", "DEFAULT": [0.55, 1.0, 0.95, 1.0] },
+    { "NAME": "holoGlow",         "LABEL": "Holo Glow",       "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.4 },
+    { "NAME": "holoTint",         "LABEL": "Hologram Tint",   "TYPE": "color", "DEFAULT": [0.0, 1.0, 0.9, 1.0] },
     { "NAME": "holoMix",          "LABEL": "Hologram Mix",    "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.85 },
     { "NAME": "audioReact",       "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
     { "NAME": "inputTex",         "LABEL": "Texture (optional GIF source)", "TYPE": "image" }
@@ -87,33 +87,35 @@ float sdSmiley(vec2 p, float r) {
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// PASS 0 — Render vaporwave scene to "vapor" buffer
+// PASS 0 — Render Synthwave Night scene to "vapor" buffer
 // ──────────────────────────────────────────────────────────────────────
 vec4 passVapor(vec2 fragCoord) {
     vec2 uv = fragCoord / RENDERSIZE.xy;
     float aspect = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
 
-    // Sky gradient
+    // Sky gradient — deep violet top to teal horizon
     vec3 sky = mix(skyHorizonColor.rgb, skyTopColor.rgb,
                    smoothstep(horizonY - 0.05, 1.0, uv.y));
     vec3 col = sky;
 
-    // Sun
+    // Electric cyan sun — HDR 2.5
     vec2 sc = vec2(0.5, horizonY);
     vec2 sd = uv - sc; sd.x *= aspect;
     float sr = sunSize * (1.0 + audioBass * audioReact * 0.06);
     if (length(sd) < sr) {
         float ty = clamp((sd.y / sr + 1.0) * 0.5, 0.0, 1.0);
-        vec3 sunC = mix(vec3(0.98, 0.45, 0.20), vec3(1.0, 0.20, 0.62), ty);
+        // Electric cyan to electric blue gradient — no warm colors
+        vec3 sunC = mix(vec3(0.0, 0.5, 1.0), vec3(0.0, 0.9, 1.0), ty) * 2.5;
         if (sunBars > 0.0) {
             float barY = sd.y / sr;
             float barMask = step(0.0, sin(barY * sunBars * 3.14159 + 0.4 + TIME * 0.5));
-            sunC = mix(sunC, sky, barMask * 0.55);
+            // Black bars for contrast
+            sunC = mix(sunC, vec3(0.0), barMask * 0.7);
         }
         col = sunC;
     }
 
-    // Perspective grid floor
+    // Perspective grid floor — neon teal HDR 2.0
     if (uv.y < horizonY) {
         float dh = max(horizonY - uv.y, 0.001);
         vec2 gridUV = vec2((uv.x - 0.5) / (dh * gridPersp + 0.05),
@@ -122,14 +124,17 @@ vec4 passVapor(vec2 fragCoord) {
         float gx = abs(fract(gridUV.x * gridDensity) - 0.5);
         float gy = abs(fract(gridUV.y) - 0.5);
         float lineW = 0.04 * dh;
-        float line = smoothstep(0.5 - lineW, 0.5, max(gx, gy));
-        vec3 floorBase = mix(vec3(0.10, 0.05, 0.18),
-                             vec3(0.55, 0.10, 0.45), uv.y / horizonY);
-        col = mix(floorBase, vec3(1.0, 0.42, 0.85), line);
+        float fw = fwidth(max(gx, gy));
+        float line = smoothstep(0.5 - lineW - fw, 0.5 - lineW + fw, max(gx, gy));
+        // Deep navy floor base
+        vec3 floorBase = mix(vec3(0.0, 0.0, 0.08),
+                             vec3(0.0, 0.15, 0.25), uv.y / horizonY);
+        // Neon teal grid lines at HDR 2.0
+        col = mix(floorBase, vec3(0.0, 1.0, 0.8) * 2.0, line);
         col = mix(col, sky, smoothstep(horizonY - 0.04, horizonY, uv.y));
     }
 
-    // Y2K chaos layer — bouncing primitives
+    // Y2K chaos layer — fully saturated HDR 2.2 shapes
     int N = int(clamp(y2kCount, 0.0, 20.0));
     for (int i = 0; i < 20; i++) {
         if (i >= N) break;

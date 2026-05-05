@@ -11,9 +11,10 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.85, 0.0, 1.0] },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.0 }
   ]
 }*/
 
@@ -93,6 +94,58 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
+// BACKGROUND: DIGITAL MATRIX RAIN — falling green code columns
+// =======================================================================
+
+vec3 matrixBg(vec2 uv) {
+    float cols = 40.0;
+    float colW = 1.0 / cols;
+
+    float col = floor(uv.x * cols);
+    float localX = fract(uv.x * cols);
+
+    // Per-column speed variance
+    float colHash = hash(col * 3.7 + 1.1);
+    float colSpeed = 0.4 + colHash * 1.2;
+    float colPhase = hash(col * 5.3 + 0.7);
+
+    // Head position falls from top, wraps
+    float headY = fract(TIME * colSpeed * 0.25 + colPhase);
+
+    // Distance from head along column — positive means below head (trail)
+    float distFromHead = uv.y - headY;
+    // Wrap: treat the column as a loop
+    if (distFromHead > 0.5) distFromHead -= 1.0;
+    if (distFromHead < -0.5) distFromHead += 1.0;
+
+    // Trail extends above head position in wrapped space (head falls downward = positive Y)
+    float trailLen = 0.18 + colHash * 0.12;
+    float trailFade = clamp(-distFromHead / trailLen, 0.0, 1.0);
+    float isHead = step(abs(distFromHead), 0.012);
+    float isTrail = step(distFromHead, 0.0) * step(-trailLen, distFromHead) * (1.0 - isHead);
+
+    // Column shimmer — flicker noise
+    float shimmer = hash(col * 2.1 + floor(TIME * 8.0 + colPhase * 10.0) * 0.1);
+    float shimmerMask = step(0.75, shimmer) * isTrail * 0.4;
+
+    // Assemble column color
+    vec3 headColor  = vec3(0.0, 2.5, 0.5);   // bright neon green HDR
+    vec3 trailColor = vec3(0.0, 0.6, 0.1);   // deep trail green
+    vec3 shimColor  = vec3(0.0, 1.2, 0.3);   // shimmer mid green
+
+    vec3 c = vec3(0.0);
+    c += headColor  * isHead;
+    c += trailColor * isTrail * trailFade;
+    c += shimColor  * shimmerMask;
+
+    // Narrow column — only light up the center strip, leave edges dark
+    float colMask = smoothstep(0.05, 0.25, localX) * smoothstep(0.95, 0.75, localX);
+    c *= colMask;
+
+    return c;
+}
+
+// =======================================================================
 // EFFECT: CASCADE - tiled rows with wave offsets
 // =======================================================================
 
@@ -131,12 +184,15 @@ vec4 effectCascade(vec2 uv) {
         }
     }
 
+    vec3 bg = transparentBg ? bgColor.rgb : matrixBg(uv);
+    vec3 boostedText = textColor.rgb * hdrGlow;
+
     bool inv = mod(rowIdx, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
+    vec3 fg = inv ? bg : boostedText;
+    vec3 bgc = inv ? boostedText : bg;
+    vec3 fc = mix(bgc, fg, textHit);
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
+    if (transparentBg) { a = textHit; fc = boostedText; }
     return vec4(fc, a);
 }
 

@@ -1,124 +1,171 @@
 /*{
-  "DESCRIPTION": "Oil paint effect — Kuwahara filter with relief lighting for painterly brush strokes",
-  "CREDIT": "ShaderClaw (Kuwahara approach inspired by flockaroo)",
-  "CATEGORIES": ["Effect"],
+  "DESCRIPTION": "Van Gogh Starry Night — swirling domain-warped night sky with HDR star halos and luminous brushstroke turbulence",
+  "CATEGORIES": ["Generator", "Art"],
+  "CREDIT": "ShaderClaw auto-improve",
   "INPUTS": [
-    { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "brushRadius", "LABEL": "Brush Size", "TYPE": "float", "DEFAULT": 4.0, "MIN": 1.0, "MAX": 12.0 },
-    { "NAME": "paintSpec", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "vignetteAmt", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
-  ],
-  "PASSES": [
-    { "TARGET": "paintBuf", "PERSISTENT": true },
-    {}
+    { "NAME": "swirlSpeed",  "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 2.0, "LABEL": "Swirl Speed" },
+    { "NAME": "starBright",  "TYPE": "float", "DEFAULT": 2.5, "MIN": 0.5, "MAX": 4.0, "LABEL": "Star HDR" },
+    { "NAME": "audioMod",    "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0, "LABEL": "Audio React" },
+    { "NAME": "skyColor",    "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.12, 1.0], "LABEL": "Sky Dark" },
+    { "NAME": "waveColor",   "TYPE": "color", "DEFAULT": [0.0, 0.35, 0.9, 1.0],   "LABEL": "Wave Blue" }
   ]
 }*/
 
-#define PI 3.1415927
-
-// Aspect-correct UV
-vec2 fitUV(vec2 pos) {
-    return (pos - 0.5 * RENDERSIZE) * min(IMG_SIZE_inputImage.y / RENDERSIZE.y, IMG_SIZE_inputImage.x / RENDERSIZE.x) / IMG_SIZE_inputImage + 0.5;
+// ---- Hash / Noise ----
+float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 }
 
-// Kuwahara filter: find the quadrant with lowest variance and use its mean color
-// This creates the flat-color brush stroke look of oil paintings
-vec3 kuwahara(vec2 uv, float radius) {
-    vec2 texel = 1.0 / RENDERSIZE;
+float noise2(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(
+        mix(hash(i),               hash(i + vec2(1.0, 0.0)), u.x),
+        mix(hash(i + vec2(0.0,1.0)), hash(i + vec2(1.0, 1.0)), u.x),
+        u.y);
+}
 
-    vec3 mean[4];
-    vec3 var_acc[4];
-    float count[4];
-
-    // Initialize accumulators
-    for (int i = 0; i < 4; i++) {
-        mean[i] = vec3(0.0);
-        var_acc[i] = vec3(0.0);
-        count[i] = 0.0;
+float fbm(vec2 p) {
+    float v = 0.0, a = 0.5;
+    for (int i = 0; i < 5; i++) {
+        v += a * noise2(p);
+        p = p * 2.03 + vec2(3.7, 1.9);
+        a *= 0.5;
     }
+    return v;
+}
 
-    // Sample the 4 quadrants around the pixel
-    for (int j = -6; j <= 6; j++) {
-        for (int i = -6; i <= 6; i++) {
-            if (abs(float(i)) > radius || abs(float(j)) > radius) continue;
+// ---- SDF helpers ----
+float sdCircle(vec2 p, float r) {
+    return length(p) - r;
+}
 
-            vec3 c = texture2D(inputImage, fitUV((uv * RENDERSIZE) + vec2(float(i), float(j)))).rgb;
-
-            // Determine which quadrant(s) this sample belongs to
-            // Quadrant 0: top-right, 1: top-left, 2: bottom-left, 3: bottom-right
-            // Use loop to assign to correct quadrant (WebGL requires const/loop index)
-            int qi = (i >= 0) ? 0 : 1;
-            int qj = (j >= 0) ? 0 : 2;
-            int q = qi + qj;
-
-            for (int k = 0; k < 4; k++) {
-                if (k == q) {
-                    mean[k] += c;
-                    var_acc[k] += c * c;
-                    count[k] += 1.0;
-                }
-            }
-        }
-    }
-
-    // Find the quadrant with minimum variance
-    float minVar = 1e8;
-    vec3 result = vec3(0.0);
-
-    for (int q = 0; q < 4; q++) {
-        if (count[q] < 1.0) continue;
-        vec3 m = mean[q] / count[q];
-        vec3 v = var_acc[q] / count[q] - m * m;
-        float totalVar = v.r + v.g + v.b;
-        if (totalVar < minVar) {
-            minVar = totalVar;
-            result = m;
-        }
-    }
-
-    return result;
+// Crescent moon: large circle minus smaller offset circle
+float sdCrescent(vec2 p, float r, float r2, vec2 offset) {
+    float outer = sdCircle(p, r);
+    float inner = sdCircle(p - offset, r2);
+    return max(outer, -inner);
 }
 
 void main() {
-    vec2 pos = gl_FragCoord.xy;
-    vec2 uv = pos / RENDERSIZE;
+    vec2 uv = isf_FragNormCoord.xy;
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    vec2 st = (uv - 0.5) * vec2(aspect, 1.0);   // aspect-corrected, centered
 
-    // ==== PASS 0: Kuwahara paint filter ====
-    if (PASSINDEX == 0) {
-        gl_FragColor = vec4(kuwahara(uv, brushRadius), 1.0);
-        return;
+    // Audio modulator (never a gate)
+    float audio = 1.0 + audioMod * 0.5;
+
+    // ---- Domain-warped FBM (Van Gogh swirling brushstrokes) ----
+    // Scale UV for swirl domain
+    vec2 swirlUV = uv * vec2(aspect, 1.0) * 3.0;
+    float t = TIME * swirlSpeed * 0.12;
+
+    vec2 q = vec2(
+        fbm(swirlUV),
+        fbm(swirlUV + vec2(5.2, 1.3))
+    );
+    vec2 r = vec2(
+        fbm(swirlUV + 3.0 * q + t + vec2(1.7, 9.2)),
+        fbm(swirlUV + 3.0 * q + vec2(8.3, 2.8))
+    );
+    float f = fbm(swirlUV + 3.5 * r);
+
+    // ---- Background: midnight sky with cobalt swirl ----
+    vec3 sky  = skyColor.rgb;   // deep midnight navy
+    vec3 wave = waveColor.rgb;  // cobalt blue wave
+    vec3 col = mix(sky, wave, f * f * 1.4);
+
+    // Add a warmer brushstroke band near swirl peaks
+    vec3 goldBand = vec3(0.55, 0.4, 0.05);
+    col += goldBand * smoothstep(0.6, 0.85, f) * 0.45;
+
+    // ---- Crescent moon (upper-right) ----
+    // Moon in normalised UV space
+    vec2 moonCenter = vec2(0.72 * aspect, 0.36) - vec2(0.5 * aspect, 0.5);
+    float moonR  = 0.072;
+    float moonR2 = 0.058;
+    vec2  moonOff = vec2(0.038, 0.0);
+    float dMoon = sdCrescent(st - moonCenter, moonR, moonR2, moonOff);
+    float fw0 = fwidth(dMoon);
+    float moonMask = 1.0 - smoothstep(-fw0, fw0, dMoon);
+    // Moon: electric gold HDR
+    vec3 moonCol = vec3(1.0, 0.85, 0.0) * 2.5;
+    // Black ink edge
+    float moonEdge = smoothstep(-fw0 * 3.0, -fw0, dMoon) * (1.0 - smoothstep(-fw0, fw0 * 2.0, dMoon));
+    col = mix(col, moonCol, moonMask);
+    col = mix(col, vec3(0.0), moonEdge * 0.9);
+
+    // Soft glow around moon
+    float moonGlow = exp(-max(0.0, dMoon) * 14.0) * 0.8;
+    col += vec3(0.9, 0.75, 0.0) * moonGlow * starBright * 0.35 * audio;
+
+    // ---- 8 Stars (hardcoded positions in UV [0..1] space) ----
+    // Each star is a circular HDR point with glow halo
+    vec2 starPos[8];
+    starPos[0] = vec2(0.15, 0.82);
+    starPos[1] = vec2(0.31, 0.91);
+    starPos[2] = vec2(0.52, 0.88);
+    starPos[3] = vec2(0.64, 0.78);
+    starPos[4] = vec2(0.43, 0.70);
+    starPos[5] = vec2(0.22, 0.65);
+    starPos[6] = vec2(0.08, 0.55);
+    starPos[7] = vec2(0.78, 0.85);
+
+    // Star color: white-hot core, electric gold halo
+    vec3 starCore = vec3(2.0, 2.0, 2.0);
+    vec3 starGold  = vec3(1.0, 0.85, 0.0) * 2.5;
+
+    for (int i = 0; i < 8; i++) {
+        // Convert to aspect-correct centered space
+        vec2 sp = (starPos[i] - 0.5) * vec2(aspect, 1.0);
+        float dist = length(st - sp);
+
+        // Flicker per-star with time
+        float flicker = 0.85 + 0.15 * sin(TIME * (2.3 + float(i) * 0.97) + float(i) * 1.7);
+
+        // Core: very tight HDR point
+        float core = max(0.0, 1.0 - dist * starBright * 28.0);
+        col += starCore * pow(core, 3.0) * starBright * audio * flicker;
+
+        // Gold halo
+        float halo = max(0.0, 1.0 - dist * starBright * 11.0);
+        col += starGold * pow(halo, 2.5) * audio * flicker * 0.7;
+
+        // Soft outer glow ring
+        float glow = exp(-dist * 18.0) * 0.4;
+        col += vec3(0.3, 0.5, 1.0) * glow * starBright * 0.3 * audio * flicker;
+
+        // Cross-shaped diffraction spike (horizontal + vertical)
+        float spike = max(0.0, 1.0 - abs(st.x - sp.x) * 90.0) *
+                      exp(-abs(st.y - sp.y) * 40.0) * 0.4;
+        spike      += max(0.0, 1.0 - abs(st.y - sp.y) * 90.0) *
+                      exp(-abs(st.x - sp.x) * 40.0) * 0.4;
+        col += starGold * spike * audio * flicker;
     }
 
-    // ==== PASS 1: Relief lighting ====
-    vec2 texel = 1.0 / RENDERSIZE;
-    float valC = dot(texture2D(paintBuf, uv).rgb, vec3(0.333));
-    float valR = dot(texture2D(paintBuf, uv + vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valL = dot(texture2D(paintBuf, uv - vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valU = dot(texture2D(paintBuf, uv + vec2(0.0, texel.y)).rgb, vec3(0.333));
-    float valD = dot(texture2D(paintBuf, uv - vec2(0.0, texel.y)).rgb, vec3(0.333));
+    // ---- Spiral arm highlight near center ----
+    // A broad swirl of electric cobalt running across the middle
+    float ang = atan(st.y, st.x);
+    float rad = length(st);
+    float spiralPhase = ang / (2.0 * 3.14159) + rad * 1.5 - TIME * swirlSpeed * 0.2;
+    float spiral = smoothstep(0.0, 0.3, sin(spiralPhase * 2.0 * 3.14159 * 3.0) * 0.5 + 0.5);
+    // Only in the lower half of the frame (the village area)
+    spiral *= smoothstep(0.1, 0.0, uv.y - 0.55);
+    col += vec3(0.0, 0.4, 1.0) * spiral * 0.35 * audio;
 
-    vec3 norm = normalize(vec3(
-        (valR - valL) / texel.x,
-        (valU - valD) / texel.y,
-        150.0
-    ));
+    // ---- Dark village silhouette at bottom ----
+    // Simple rectangular black band at the bottom 15% of frame
+    float villageY = 0.18;
+    float villageEdge = smoothstep(villageY, villageY - 0.02, uv.y);
+    col = mix(col, vec3(0.0), villageEdge);
 
-    vec3 light = normalize(vec3(-1.0, 1.0, 1.4));
-    float diff = clamp(dot(norm, light), 0.0, 1.0);
-    float spec = pow(clamp(dot(reflect(light, norm), vec3(0.0, 0.0, -1.0)), 0.0, 1.0), 12.0) * paintSpec;
+    // Cypress-tree-like spire: narrow dark triangle on left
+    float cx = abs(uv.x - 0.12) * aspect;
+    float cy = (uv.y - villageY) / 0.25;   // height in village band
+    float spire = smoothstep(0.03, 0.0, cx - cy * 0.04) * smoothstep(1.0, 0.0, cy);
+    spire *= step(villageY, uv.y) * step(uv.y, villageY + 0.30);
+    col = mix(col, vec3(0.0), spire);
 
-    gl_FragColor = texture2D(paintBuf, uv) * mix(diff, 1.0, 0.9)
-                 + spec * vec4(0.85, 1.0, 1.15, 1.0);
-
-    // Vignette
-    if (vignetteAmt > 0.0) {
-        vec2 scc = (pos - 0.5 * RENDERSIZE) / RENDERSIZE.x;
-        float vign = 1.1 - vignetteAmt * dot(scc, scc);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.x / RENDERSIZE.x * PI) * 40.0);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.y / RENDERSIZE.y * PI) * 20.0);
-        gl_FragColor.xyz *= vign;
-    }
-
-    gl_FragColor.w = 1.0;
+    gl_FragColor = vec4(col, 1.0);
 }

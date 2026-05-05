@@ -9,9 +9,10 @@
     { "NAME": "intensity", "LABEL": "Displacement", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Grid Density", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.0, 0.9, 1.0, 1.0] },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.2 }
   ]
 }*/
 
@@ -89,6 +90,86 @@ float sampleChar(int ch, vec2 uv) {
 }
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+
+// =======================================================================
+// BACKGROUND: FORGE FOUNDRY — hot metal plate
+// =======================================================================
+
+float fbm(vec2 p) {
+    float v = 0.0;
+    float a = 0.5;
+    vec2 shift = vec2(100.0);
+    for (int i = 0; i < 5; i++) {
+        v += a * (fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453) * 2.0 - 1.0);
+        p = p * 2.0 + shift + vec2(sin(float(i) * 1.7) * 3.7, cos(float(i) * 2.3) * 2.9);
+        a *= 0.5;
+    }
+    return v;
+}
+
+float fbmSmooth(vec2 p) {
+    float v = 0.0;
+    float a = 0.5;
+    for (int i = 0; i < 5; i++) {
+        float angle = float(i) * 0.7 + TIME * 0.01;
+        vec2 q = p + vec2(cos(angle) * float(i) * 1.3, sin(angle * 1.5) * float(i) * 0.9);
+        v += a * sin(q.x * 3.7 + sin(q.y * 2.3 + float(i))) * cos(q.y * 2.9 + cos(q.x * 1.7));
+        p *= 2.0;
+        a *= 0.5;
+    }
+    return v * 0.5 + 0.5;
+}
+
+vec3 forgeBg(vec2 uv) {
+    // Radiating heat glow from center
+    float heat = exp(-length(uv - 0.5) * 3.0);
+
+    // Slowly drifting hot metal surface noise
+    float metal = fbmSmooth(uv * 8.0 + TIME * 0.05);
+
+    // Combine heat and metal texture
+    float intensity = clamp(heat * 1.5 + metal * 0.4, 0.0, 1.0);
+
+    // Color ramp: black -> deep ember -> orange -> gold
+    vec3 col = vec3(0.0);
+    col = mix(col, vec3(0.6, 0.05, 0.0), smoothstep(0.0, 0.25, intensity));
+    col = mix(col, vec3(1.0, 0.4, 0.0), smoothstep(0.25, 0.6, intensity));
+    col = mix(col, vec3(1.0, 0.75, 0.1), smoothstep(0.6, 1.0, intensity));
+
+    // HDR push for center glow — gold peaks at 2.0
+    col *= 1.0 + heat * 1.0;
+
+    // Glowing cinder sparks — 12 scattered embers
+    vec2 sparkPositions[12];
+    sparkPositions[0]  = vec2(0.12, 0.78);
+    sparkPositions[1]  = vec2(0.85, 0.15);
+    sparkPositions[2]  = vec2(0.33, 0.92);
+    sparkPositions[3]  = vec2(0.67, 0.08);
+    sparkPositions[4]  = vec2(0.91, 0.61);
+    sparkPositions[5]  = vec2(0.08, 0.45);
+    sparkPositions[6]  = vec2(0.55, 0.88);
+    sparkPositions[7]  = vec2(0.22, 0.22);
+    sparkPositions[8]  = vec2(0.78, 0.77);
+    sparkPositions[9]  = vec2(0.44, 0.05);
+    sparkPositions[10] = vec2(0.06, 0.62);
+    sparkPositions[11] = vec2(0.96, 0.38);
+
+    for (int i = 0; i < 12; i++) {
+        // Sparks drift slowly using per-spark hash offsets
+        float phase = hash(float(i) * 7.3 + 1.1);
+        float spd   = hash(float(i) * 3.1 + 0.5) * 0.3 + 0.05;
+        vec2 drift  = vec2(sin(TIME * spd + phase * 6.28) * 0.03,
+                           cos(TIME * spd * 0.8 + phase * 5.1) * 0.04);
+        vec2 sPos   = fract(sparkPositions[i] + drift);
+        float d     = length(uv - sPos);
+        float spark = exp(-d * 150.0);
+        // Orange-to-white-hot spark color, HDR peak 2.5
+        col += spark * vec3(2.5, 1.2, 0.2);
+    }
+
+    return col;
+}
 
 // =======================================================================
 // EFFECT: BRICKS - grid with animated displacement
@@ -142,12 +223,15 @@ vec4 effectBricks(vec2 uv, int sub) {
         }
     }
 
+    vec3 bg = transparentBg ? bgColor.rgb : forgeBg(uv);
+    vec3 boostedText = textColor.rgb * hdrGlow;
+
     bool inv = mod(ri, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
+    vec3 fg = inv ? bg : boostedText;
+    vec3 bgc = inv ? boostedText : bg;
+    vec3 fc = mix(bgc, fg, textHit);
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
+    if (transparentBg) { a = textHit; fc = boostedText; }
     return vec4(fc, a);
 }
 
