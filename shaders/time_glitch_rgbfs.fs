@@ -1,457 +1,184 @@
 /*{
-  "DESCRIPTION": "Buffers 8 recent frames",
-  "CREDIT": "by VIDVOX",
-  "CATEGORIES": [
-    "Glitch"
-  ],
+  "DESCRIPTION": "Neon Aerial City — raymarched infinite city grid viewed from above, neon cyan windows on void black towers",
+  "CATEGORIES": ["Generator", "3D"],
   "INPUTS": [
-    {
-      "NAME": "inputImage",
-      "TYPE": "image"
-    },
-    {
-      "NAME": "inputDelay",
-      "LABEL": "Buffer",
-      "TYPE": "color",
-      "DEFAULT": [
-        0.25,
-        0.5,
-        0.75,
-        0.5
-      ]
-    },
-    {
-      "NAME": "inputRate",
-      "LABEL": "Buffer Lag",
-      "TYPE": "float",
-      "MIN": 1,
-      "MAX": 20,
-      "DEFAULT": 4
-    },
-    {
-      "NAME": "glitch_size",
-      "LABEL": "Size",
-      "TYPE": "float",
-      "MIN": 0,
-      "MAX": 0.5,
-      "DEFAULT": 0.1
-    },
-    {
-      "NAME": "glitch_horizontal",
-      "LABEL": "Horizontal Amount",
-      "TYPE": "float",
-      "MIN": 0,
-      "MAX": 1,
-      "DEFAULT": 0.2
-    },
-    {
-      "NAME": "glitch_vertical",
-      "LABEL": "Vertical Amount",
-      "TYPE": "float",
-      "MIN": 0,
-      "MAX": 1,
-      "DEFAULT": 0
-    },
-    {
-      "NAME": "randomize_size",
-      "LABEL": "Randomize Size",
-      "TYPE": "bool",
-      "DEFAULT": 1
-    },
-    {
-      "NAME": "randomize_position",
-      "LABEL": "Randomize Position",
-      "TYPE": "bool",
-      "DEFAULT": 0
-    },
-    {
-      "NAME": "randomize_zoom",
-      "LABEL": "Randomize Zoom",
-      "TYPE": "bool",
-      "DEFAULT": 0
-    }
-  ],
-  "PASSES": [
-    {
-      "TARGET": "lastRow",
-      "WIDTH:": 1,
-      "HEIGHT": 1,
-      "DESCRIPTION": "this buffer stores the last frame's odd / even state",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer8",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer7",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer6",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer5",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer4",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer3",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer2",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer1",
-      "persistent": true
-    },
-    {}
+    { "NAME": "camHeight",    "LABEL": "Cam Height",    "TYPE": "float", "MIN": 2.0,  "MAX": 12.0, "DEFAULT": 6.0 },
+    { "NAME": "camAngle",     "LABEL": "Cam Tilt",      "TYPE": "float", "MIN": 0.1,  "MAX": 0.9,  "DEFAULT": 0.45 },
+    { "NAME": "rotSpeed",     "LABEL": "Rotation",      "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.18 },
+    { "NAME": "towerScale",   "LABEL": "Block Size",    "TYPE": "float", "MIN": 0.5,  "MAX": 2.5,  "DEFAULT": 1.2 },
+    { "NAME": "maxHeight",    "LABEL": "Max Tower H",   "TYPE": "float", "MIN": 0.5,  "MAX": 4.0,  "DEFAULT": 2.2 },
+    { "NAME": "windowScale",  "LABEL": "Window Grid",   "TYPE": "float", "MIN": 2.0,  "MAX": 12.0, "DEFAULT": 5.0 },
+    { "NAME": "winBrightness","LABEL": "Window Glow",   "TYPE": "float", "MIN": 0.5,  "MAX": 3.0,  "DEFAULT": 2.0 },
+    { "NAME": "fogDensity",   "LABEL": "Fog",           "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.35 },
+    { "NAME": "audioMod",     "LABEL": "Audio Mod",     "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.8 }
   ]
 }*/
 
+const float PI  = 3.14159265;
+const float INF = 1e20;
 
-float rand(vec2 co){
-    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+float hash11(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+float hash21(vec2 p)  { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+
+// Tower height from city grid cell id
+float towerH(vec2 id) {
+    float h = hash21(id);
+    // occasional ground-floor gap (streets) — ~25% chance
+    return h < 0.25 ? 0.0 : h * maxHeight * (1.0 + audioBass * audioMod * 0.4);
 }
 
+// SDF: box centered at origin, half-extents b
+float sdBox(vec3 p, vec3 b) {
+    vec3 q = abs(p) - b;
+    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
+}
 
-void main()
-{
-	//	first pass: read the "buffer7" into "buffer8"
-	//	apply lag on each pass
-	//	if this is the first pass, i'm going to read the position from the "lastRow" image, and write a new position based on this and the hold variables
-	if (PASSINDEX == 0)	{
-		vec4		srcPixel = IMG_PIXEL(lastRow,vec2(0.5));
-		//	i'm only using the X and Y components, which are the X and Y offset (normalized) for the frame
-		if (inputRate == 0.0)	{
-			srcPixel.x = 0.0;
-			srcPixel.y = 0.0;
-		}
-		else if (inputRate <= 1.0)	{
-			srcPixel.x = (srcPixel.x) > 0.5 ? 0.0 : 1.0;
-			srcPixel.y = 0.0;
-		}
-		else {
-			srcPixel.x = srcPixel.x + 1.0 / inputRate + srcPixel.y;
-			if (srcPixel.x > 1.0)	{
-				srcPixel.y = mod(srcPixel.x, 1.0);
-				srcPixel.x = 0.0;
-			}
-		}
-		gl_FragColor = srcPixel;
-	}
-	if (PASSINDEX == 1)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer7);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer8);
-		}
-	}
-	else if (PASSINDEX == 2)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer6);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer7);
-		}
-	}
-	else if (PASSINDEX == 3)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer5);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer6);
-		}
-	}
-	else if (PASSINDEX == 4)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer4);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer5);
-		}
-	}
-	else if (PASSINDEX == 5)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer3);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer4);
-		}
-	}
-	else if (PASSINDEX == 6)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer2);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer3);
-		}
-	}
-	else if (PASSINDEX == 7)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer1);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer2);
-		}
-	}
-	else if (PASSINDEX == 8)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(inputImage);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer1);
-		}
-	}
-	else if (PASSINDEX == 9)	{
-		//	Figure out which section I'm in and draw the appropriate buffer there
-		vec2 tex = isf_FragNormCoord;
-		vec4 color = vec4(0.0);		
-		//	figure out the "input delay shift" for this pixel...
-		float randomDelayShift = 0.0;
-		
-		vec2 xy; 
-		xy.x = isf_FragNormCoord[0];
-		xy.y = isf_FragNormCoord[1];
-	
-		//	quantize the xy to the glitch_amount size
-		//xy = floor(xy / glitch_size) * glitch_size;
-		vec2 random;
+// City SDF — infinite tiled towers
+// Returns (dist, material): mat 0=ground, 1=tower wall, 2=tower top
+vec2 cityMap(vec3 pos) {
+    float grid = towerScale;
+    float streetW = 0.22 * grid;  // fraction of block that's street gap
+    float blockW  = grid - streetW;
 
-		float local_glitch_size = glitch_size;
-		float random_offset = 0.0;
-	
-		if (randomize_size)	{
-			random_offset = mod(rand(vec2(TIME,TIME)), 1.0);
-			local_glitch_size = random_offset * glitch_size;
-		}
-	
-		if (local_glitch_size > 0.0)	{
-			random.x = rand(vec2(floor(random_offset + xy.y / local_glitch_size) * local_glitch_size, TIME));
-			random.y = rand(vec2(floor(random_offset + xy.x / local_glitch_size) * local_glitch_size, TIME));
-		}
-		else	{
-			random.x = rand(vec2(xy.x, TIME));
-			random.y = rand(vec2(xy.y, TIME));
-		}
-	
-		//	if doing a horizontal glitch do a random shift
-		if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-			randomDelayShift = clamp(random.x + random.y, 0.0, 2.0);
-		}
-		else if (random.x < glitch_horizontal)	{
-			randomDelayShift = clamp(random.x + random.y, 0.0, 2.0);
-		}
-		else if (random.y < glitch_vertical)	{
-			randomDelayShift = clamp(random.x + random.y, 0.0, 2.0);
-		}
-		
-		vec4 pixelBuffer = randomDelayShift * inputDelay * 9.0;
-		
-		if (randomize_zoom)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				float level = (random.x + random.y) / 3.0 + 0.90;
-				tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-			}
-			else if (random.x < glitch_horizontal)	{
-				float level = (random.x) / 2.0 + 0.95;
-				tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-			}
-			else if (random.y < glitch_vertical)	{
-				float level = (random.y) / 2.0 + 0.95;
-				tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-			}
-		}
-		
-		if (randomize_position)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				tex.x = mod(tex.x + inputDelay.r * random.x, 1.0);
-				tex.y = mod(tex.y + inputDelay.r * random.y, 1.0);
-			}
-			else if (random.x < glitch_horizontal)	{
-				tex.y = mod(tex.y + inputDelay.r * random.x, 1.0);
-			}
-			else if (random.y < glitch_vertical)	{
-				tex.x = mod(tex.x + inputDelay.r * random.y, 1.0);
-			}
-			//	apply small random zoom too
-		}
-		
-		if (pixelBuffer.r < 1.0)	{
-			color.r = IMG_NORM_PIXEL(inputImage, tex).r;
-		}
-		else if (pixelBuffer.r < 2.0)	{
-			color.r = IMG_NORM_PIXEL(buffer1, tex).r;
-		}
-		else if (pixelBuffer.r < 3.0)	{
-			color.r = IMG_NORM_PIXEL(buffer2, tex).r;
-		}
-		else if (pixelBuffer.r < 4.0)	{
-			color.r = IMG_NORM_PIXEL(buffer3, tex).r;
-		}
-		else if (pixelBuffer.r < 5.0)	{
-			color.r = IMG_NORM_PIXEL(buffer4, tex).r;
-		}
-		else if (pixelBuffer.r < 6.0)	{
-			color.r = IMG_NORM_PIXEL(buffer5, tex).r;
-		}
-		else if (pixelBuffer.r < 7.0)	{
-			color.r = IMG_NORM_PIXEL(buffer6, tex).r;
-		}
-		else if (pixelBuffer.r < 8.0)	{
-			color.r = IMG_NORM_PIXEL(buffer7, tex).r;
-		}
-		else	{
-			color.r = IMG_NORM_PIXEL(buffer8, tex).r;
-		}
-		
-		if (randomize_position)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				tex.x = mod(tex.x + random.x * inputDelay.g, 1.0);
-				tex.y = mod(tex.y + random.y * inputDelay.g, 1.0);
-			}
-			else if (random.x < glitch_horizontal)	{
-				tex.y = mod(tex.y + random.x * inputDelay.g, 1.0);
-			}
-			else if (random.y < glitch_vertical)	{
-				tex.x = mod(tex.x + random.y * inputDelay.g, 1.0);
-			}
-			//	apply small random zoom too
-			//float level = inputDelay.g * random.x / 5.0 + 0.9;
-			//tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-		}
-		
-		if (pixelBuffer.g < 1.0)	{
-			color.g = IMG_NORM_PIXEL(inputImage, tex).g;
-		}
-		else if (pixelBuffer.g < 2.0)	{
-			color.g = IMG_NORM_PIXEL(buffer1, tex).g;
-		}
-		else if (pixelBuffer.g < 3.0)	{
-			color.g = IMG_NORM_PIXEL(buffer2, tex).g;
-		}
-		else if (pixelBuffer.g < 4.0)	{
-			color.g = IMG_NORM_PIXEL(buffer3, tex).g;
-		}
-		else if (pixelBuffer.g < 5.0)	{
-			color.g = IMG_NORM_PIXEL(buffer4, tex).g;
-		}
-		else if (pixelBuffer.g < 6.0)	{
-			color.g = IMG_NORM_PIXEL(buffer5, tex).g;
-		}
-		else if (pixelBuffer.g < 7.0)	{
-			color.g = IMG_NORM_PIXEL(buffer6, tex).g;
-		}
-		else if (pixelBuffer.g < 8.0)	{
-			color.g = IMG_NORM_PIXEL(buffer7, tex).g;
-		}
-		else	{
-			color.g = IMG_NORM_PIXEL(buffer8, tex).g;
-		}
-		
-		if (randomize_position)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				tex.x = mod(tex.x + random.x * inputDelay.b, 1.0);
-				tex.y = mod(tex.y + random.y * inputDelay.b, 1.0);
-			}
-			else if (random.x < glitch_horizontal)	{
-				tex.y = mod(tex.y + random.x * inputDelay.b, 1.0);
-			}
-			else if (random.y < glitch_vertical)	{
-				tex.x = mod(tex.x + random.y * inputDelay.b, 1.0);
-			}
-			//	apply small random zoom too
-			//float level = inputDelay.b * random.x / 5.0 + 0.9;
-			//tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-		}
-		
-		if (pixelBuffer.b < 1.0)	{
-			color.b = IMG_NORM_PIXEL(inputImage, tex).b;
-		}
-		else if (pixelBuffer.b < 2.0)	{
-			color.b = IMG_NORM_PIXEL(buffer1, tex).b;
-		}
-		else if (pixelBuffer.b < 3.0)	{
-			color.b = IMG_NORM_PIXEL(buffer2, tex).b;
-		}
-		else if (pixelBuffer.b < 4.0)	{
-			color.b = IMG_NORM_PIXEL(buffer3, tex).b;
-		}
-		else if (pixelBuffer.b < 5.0)	{
-			color.b = IMG_NORM_PIXEL(buffer4, tex).b;
-		}
-		else if (pixelBuffer.b < 6.0)	{
-			color.b = IMG_NORM_PIXEL(buffer5, tex).b;
-		}
-		else if (pixelBuffer.b < 7.0)	{
-			color.b = IMG_NORM_PIXEL(buffer6, tex).b;
-		}
-		else if (pixelBuffer.b < 8.0)	{
-			color.b = IMG_NORM_PIXEL(buffer7, tex).b;
-		}
-		else	{
-			color.b = IMG_NORM_PIXEL(buffer8, tex).b;
-		}
-		
-		if (randomize_position)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				tex.x = mod(tex.x + random.x * inputDelay.a, 1.0);
-				tex.y = mod(tex.y + random.y * inputDelay.a, 1.0);
-			}
-			else if (random.x < glitch_horizontal)	{
-				tex.y = mod(tex.y + random.x * inputDelay.a, 1.0);
-			}
-			else if (random.y < glitch_vertical)	{
-				tex.x = mod(tex.x + random.y * inputDelay.a, 1.0);
-			}
-			//	apply small random zoom too
-			//float level = inputDelay.a * random.x / 5.0 + 0.9;
-			//tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-		}
-		
-		if (pixelBuffer.a < 1.0)	{
-			color.a = IMG_NORM_PIXEL(inputImage, tex).a;
-		}
-		else if (pixelBuffer.a < 2.0)	{
-			color.a = IMG_NORM_PIXEL(buffer1, tex).a;
-		}
-		else if (pixelBuffer.a < 3.0)	{
-			color.a = IMG_NORM_PIXEL(buffer2, tex).a;
-		}
-		else if (pixelBuffer.a < 4.0)	{
-			color.a = IMG_NORM_PIXEL(buffer3, tex).a;
-		}
-		else if (pixelBuffer.a < 5.0)	{
-			color.a = IMG_NORM_PIXEL(buffer4, tex).a;
-		}
-		else if (pixelBuffer.a < 6.0)	{
-			color.a = IMG_NORM_PIXEL(buffer5, tex).a;
-		}
-		else if (pixelBuffer.a < 7.0)	{
-			color.a = IMG_NORM_PIXEL(buffer6, tex).a;
-		}
-		else if (pixelBuffer.a < 8.0)	{
-			color.a = IMG_NORM_PIXEL(buffer7, tex).a;
-		}
-		else	{
-			color.a = IMG_NORM_PIXEL(buffer8, tex).a;
-		}
+    // Snap to nearest grid cell
+    vec2 id = floor(pos.xz / grid);
+    vec2 off = (pos.xz / grid - id - 0.5) * grid; // offset within cell [-grid/2, grid/2]
 
-		gl_FragColor = color;
-	}
+    float h = towerH(id);
+    float hw = blockW * 0.5;
+
+    // Ground plane
+    float dGnd = pos.y;
+
+    if (h < 0.001) {
+        // street / no tower
+        return vec2(dGnd, 0.0);
+    }
+
+    // Tower box: half-extents (hw, h/2, hw), centered at (0, h/2, 0) in cell space
+    vec3 tp = vec3(off.x, pos.y - h * 0.5, off.y);
+    float dBox = sdBox(tp, vec3(hw, h * 0.5, hw));
+
+    float dMin = min(dGnd, dBox);
+    float mat  = dMin == dGnd ? 0.0 : 1.0;
+
+    // Slightly prefer ground at extreme distance to avoid precision issues
+    return vec2(dMin, mat);
+}
+
+// Window mask on a tower face — returns emission brightness
+float windowMask(vec3 p, vec3 normal) {
+    // Project position onto face plane
+    vec2 faceUV;
+    if (abs(normal.x) > 0.5) faceUV = vec2(p.z, p.y);
+    else                      faceUV = vec2(p.x, p.y);
+
+    vec2 wCell = floor(faceUV * windowScale);
+    float on = step(0.65, hash21(wCell));   // ~35% windows lit
+    // Blink slowly
+    float blink = step(0.85, sin(TIME * (0.5 + hash21(wCell + 7.3)) + hash21(wCell * 3.1) * 6.28) * 0.5 + 0.5);
+    return on * (1.0 - blink * 0.6);
+}
+
+// Normal via central differences
+vec3 cityNormal(vec3 p) {
+    const float eps = 0.002;
+    vec2 e = vec2(1.0, -1.0) * eps;
+    return normalize(
+        e.xyy * cityMap(p + e.xyy).x +
+        e.yyx * cityMap(p + e.yyx).x +
+        e.yxy * cityMap(p + e.yxy).x +
+        e.xxx * cityMap(p + e.xxx).x
+    );
+}
+
+void main() {
+    vec2 uv = (gl_FragCoord.xy / RENDERSIZE.xy) * 2.0 - 1.0;
+    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
+
+    float t = TIME;
+
+    // Camera: orbiting overhead, tilted down
+    float angle = t * rotSpeed * 0.7;
+    float tilt   = camAngle * PI * 0.5;  // 0=overhead, 0.5=horizon
+    float ch = camHeight * (1.0 + audioBass * audioMod * 0.08);
+
+    vec3 ro = vec3(cos(angle) * 0.5, ch, sin(angle) * 0.5)
+            + vec3(sin(t * 0.07) * 2.0, 0.0, cos(t * 0.11) * 2.0); // slow drift
+
+    // Look-at target slightly ahead of camera on floor
+    vec3 target = vec3(ro.x + cos(angle + 0.3) * 2.0, 0.0, ro.z + sin(angle + 0.3) * 2.0);
+    vec3 fwd = normalize(target - ro);
+    vec3 rgt = normalize(cross(vec3(0,1,0), fwd));
+    vec3 up  = cross(fwd, rgt);
+
+    // Ray direction
+    float fov = 0.8;
+    vec3 rd = normalize(fwd + uv.x * rgt * fov + uv.y * up * fov);
+
+    // Raymarching — 64 steps
+    float dist = 0.0;
+    float mat  = -1.0;
+    for (int i = 0; i < 64; i++) {
+        vec3 p  = ro + rd * dist;
+        vec2 res = cityMap(p);
+        if (res.x < 0.002) { mat = res.y; break; }
+        if (dist > 80.0)    { mat = -1.0; break; }
+        dist += res.x * 0.85;
+    }
+
+    // Palette
+    // window cyan HDR:        [0, 1, 1]  * winBrightness (2.0)
+    // edge orange:            [1, 0.4, 0] * 1.2
+    // roof top:               [0, 0.5, 0.4] * 0.6
+    // ground:                 [0, 0.04, 0.06]
+    // sky/miss:               [0, 0.02, 0.04]
+    // fog: deep night cyan    [0, 0.15, 0.2]
+
+    vec3 fogColor = vec3(0.0, 0.12, 0.18);
+    vec3 col;
+
+    if (mat < 0.0) {
+        // Sky — near black with faint cyan zenith
+        float zenith = max(0.0, dot(rd, vec3(0,1,0)));
+        col = mix(fogColor * 0.3, vec3(0.0, 0.04, 0.08), zenith);
+    } else {
+        vec3 hitPos = ro + rd * dist;
+        vec3 nor    = cityNormal(hitPos);
+
+        if (mat < 0.5) {
+            // Ground
+            vec2 gCell = floor(hitPos.xz * 3.0);
+            float gLine = min(fract(hitPos.x * 3.0), fract(hitPos.z * 3.0));
+            float grid  = smoothstep(0.04, 0.0, gLine) * 0.4;
+            col = vec3(0.0, 0.04, 0.06) + vec3(0.0, 0.2, 0.35) * grid;
+        } else {
+            // Tower wall — check if this face has windows
+            bool isTop = nor.y > 0.5;
+            if (isTop) {
+                // Roof: muted orange-red
+                col = vec3(0.8, 0.20, 0.0) * 0.35;
+            } else {
+                float win = windowMask(hitPos, nor);
+                // Base wall: very dark
+                vec3 wallCol = vec3(0.0, 0.02, 0.03);
+                // Window: cyan HDR
+                vec3 winCol  = vec3(0.0, 1.0, 1.0) * win * winBrightness
+                             * (1.0 + audioHigh * audioMod * 0.5);
+                // Corner edge glow: orange
+                float bevel = 1.0 - smoothstep(0.0, 0.015, abs(sdBox(hitPos - vec3(floor(hitPos.x/towerScale)*towerScale + towerScale*0.5, hitPos.y, floor(hitPos.z/towerScale)*towerScale + towerScale*0.5), vec3(towerScale*0.5 - 0.22*towerScale*0.5, 999.0, towerScale*0.5 - 0.22*towerScale*0.5))));
+                vec3 edgeCol = vec3(1.0, 0.4, 0.0) * bevel * 1.2;
+                col = wallCol + winCol + edgeCol;
+            }
+        }
+
+        // Distance fog — blends to deep night cyan
+        float fogAmt = 1.0 - exp(-dist * fogDensity * 0.06);
+        col = mix(col, fogColor, fogAmt);
+    }
+
+    // Audio: overall luminance pulse on bass
+    col *= 1.0 + audioBass * audioMod * 0.15;
+
+    gl_FragColor = vec4(col, 1.0);
 }
