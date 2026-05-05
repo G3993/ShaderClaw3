@@ -8,7 +8,7 @@
     { "NAME": "intensity", "LABEL": "Trail Length", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Columns", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.75 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 0.3 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.0, 1.0, 0.2, 1.0] },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
   ]
@@ -133,9 +133,17 @@ void main() {
         pixel = charPixel(ch, gc, gr);
     }
 
-    // Color
-    vec3 charCol = textColor.rgb * brightness;
-    charCol = mix(charCol, vec3(1.0), headGlow * 0.7);
+    // Per-column rainbow: each stream gets a distinct hue, multiplied by textColor
+    float colHue = fract(ci * 0.08);
+    vec4 _K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 _hp = abs(fract(colHue + _K.xyz) * 6.0 - _K.www);
+    vec3 colTint = clamp(_hp - _K.xxx, 0.0, 1.0);
+    vec3 baseRainbow = textColor.rgb * colTint;
+    // HDR trail: peak at 2.5× for bloom pipeline
+    vec3 charCol = baseRainbow * brightness * 2.5;
+    // HDR head burst: warm white spike at 3.5× to clearly mark the leading character
+    vec3 headFlash = mix(colTint, vec3(1.0), 0.3) * 3.5;
+    charCol = mix(charCol, headFlash, headGlow * 0.85);
 
     vec3 fc = transparentBg ? vec3(0.0) : bgColor.rgb;
     float alpha = transparentBg ? 0.0 : 1.0;
