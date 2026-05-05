@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Spacy - perspective tunnel rows",
+  "DESCRIPTION": "Spacy - perspective tunnel rows. Warp Drive background: hard white-blue velocity lines streaking from a vanishing point. NEW ANGLE: hard geometric warp vs prior soft starfield.",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Spacy","Spacy Bridge","Spacy Whitney","Spacy Recede"], "DEFAULT": 0 },
@@ -12,16 +12,17 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.4, 0.7, 1.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.02, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 2.0 },
+    { "NAME": "audioReact", "LABEL": "Audio", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
 const float PI = 3.14159265;
 const float TWO_PI = 6.28318530;
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
 float charPixel(int ch, float col, float row) {
     if (ch < 0 || ch > 36) return 0.0;
     vec2 uv = vec2(col / 5.0, row / 7.0);
@@ -93,9 +94,38 @@ float sampleChar(int ch, vec2 uv) {
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
-// =======================================================================
-// EFFECT: SPACY - perspective tunnel rows
-// =======================================================================
+vec3 warpDriveBg(vec2 uv) {
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    vec2 c = vec2(0.5, 0.5);
+    vec2 d = (uv - c) * vec2(aspect, 1.0);
+
+    float t = TIME * 0.55 + audioBass * audioReact * 0.1;
+
+    float r     = length(d);
+    float theta = atan(d.y, d.x);
+
+    float streakBands = 80.0;
+    float band  = floor(theta / (6.28318 / streakBands) + 0.5);
+    float bandT = fract(band * 0.618034 + 0.5);
+
+    float streakCycle = floor(bandT * 7.0 + t * 0.4 + band * 0.07);
+    float activeT     = fract(bandT * 7.0 + t * 0.4 + band * 0.07);
+
+    float streakBright = smoothstep(0.0, 0.2, activeT) * smoothstep(1.0, 0.3, activeT);
+    float front     = 0.02 + activeT * 0.55;
+    float streakLen = 0.15 + bandT * 0.25;
+    float tail      = smoothstep(front - streakLen, front, r) * smoothstep(front + 0.02, front, r);
+    float angWidth  = 0.5 + bandT * 1.5;
+    float angEdge   = fwidth(theta) * streakBands / (2.0 * 3.14159);
+    float angMask   = smoothstep(angWidth * angEdge, 0.0, abs(theta - band * 6.28318 / streakBands));
+
+    float streak    = streakBright * tail * angMask;
+
+    vec3 streakCol  = mix(vec3(0.0, 0.5, 2.8), vec3(2.8, 2.8, 2.8), streakBright);
+
+    float audio = 1.0 + audioBass * audioReact * 0.3;
+    return (bgColor.rgb + streakCol * streak * 2.5 * audio);
+}
 
 vec4 effectSpacy(vec2 uv, int sub) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
@@ -146,11 +176,11 @@ vec4 effectSpacy(vec2 uv, int sub) {
     }
 
     bool inv = mod(ri, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
+    vec3 fg = inv ? bgColor.rgb : textColor.rgb * hdrGlow;
+    vec3 bg = inv ? textColor.rgb * hdrGlow : warpDriveBg(uv);
     vec3 fc = mix(bg, fg, textHit);
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
+    if (transparentBg) { a = textHit; fc = textColor.rgb * hdrGlow; }
     return vec4(fc, a);
 }
 
