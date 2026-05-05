@@ -1,173 +1,113 @@
 /*{
-  "DESCRIPTION": "Vishes — cellular random walkers leaving hue-drifting color trails on a slow-fading grid",
-  "CREDIT": "ShaderClaw — cell-walker sketch translated to multi-pass ISF",
-  "CATEGORIES": ["Generator"],
+  "DESCRIPTION": "Volcanic Lava Lake — 3D aerial view of lava lake; black obsidian crust with glowing orange/gold/white-hot crack network; fully different from coral reef v2",
+  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
+  "CREDIT": "auto-improve v3",
   "INPUTS": [
-    { "NAME": "gridSize", "LABEL": "Grid Size", "TYPE": "float", "DEFAULT": 120.0, "MIN": 20.0, "MAX": 400.0 },
-    { "NAME": "walkers", "LABEL": "Walkers", "TYPE": "float", "DEFAULT": 6.0, "MIN": 1.0, "MAX": 16.0 },
-    { "NAME": "stepRate", "LABEL": "Step Rate", "TYPE": "float", "DEFAULT": 40.0, "MIN": 1.0, "MAX": 240.0 },
-    { "NAME": "hueDrift", "LABEL": "Hue Drift", "TYPE": "float", "DEFAULT": 0.015, "MIN": 0.0, "MAX": 0.1 },
-    { "NAME": "fadeRate", "LABEL": "Trail Fade", "TYPE": "float", "DEFAULT": 0.004, "MIN": 0.0, "MAX": 0.08 },
-    { "NAME": "saturation", "LABEL": "Saturation", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "brightness", "LABEL": "Brightness", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "bloom", "LABEL": "Bloom", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "pulse", "LABEL": "Audio Pulse", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "bounceEdges", "LABEL": "Bounce Edges", "TYPE": "bool", "DEFAULT": true },
-    { "NAME": "backgroundColor", "LABEL": "BG Color", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] }
-  ],
-  "PASSES": [
-    { "TARGET": "stateBuf", "PERSISTENT": true, "WIDTH": 16, "HEIGHT": 1 },
-    { "TARGET": "canvas", "PERSISTENT": true },
-    {}
+    {"NAME":"crackDensity","TYPE":"float","DEFAULT":1.0,"MIN":0.3,"MAX":2.5,"LABEL":"Crack Density"},
+    {"NAME":"glowPeak","TYPE":"float","DEFAULT":3.0,"MIN":1.0,"MAX":4.0,"LABEL":"HDR Glow"},
+    {"NAME":"flowSpeed","TYPE":"float","DEFAULT":0.3,"MIN":0.0,"MAX":1.5,"LABEL":"Flow Speed"},
+    {"NAME":"audioMod","TYPE":"float","DEFAULT":0.8,"MIN":0.0,"MAX":2.0,"LABEL":"Audio React"},
+    {"NAME":"camHeight","TYPE":"float","DEFAULT":2.5,"MIN":1.0,"MAX":5.0,"LABEL":"Camera Height"}
   ]
 }*/
 
-#define MAX_WALKERS 16
-#define TAU 6.28318530718
+float h11(float n){return fract(sin(n*127.1)*43758.5453);}
+float h21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 
-float hash11(float p) {
-    p = fract(p * 0.1031);
-    p *= p + 33.33;
-    p *= p + p;
-    return fract(p);
+float vnoise(vec2 p){
+    vec2 i=floor(p),f=fract(p);
+    f=f*f*(3.-2.*f);
+    return mix(mix(h21(i),h21(i+vec2(1.,0.)),f.x),
+               mix(h21(i+vec2(0.,1.)),h21(i+vec2(1.,1.)),f.x),f.y);
 }
 
-float hash12(vec2 p) {
-    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.x + p3.y) * p3.z);
+float fbm(vec2 p){
+    return vnoise(p)*.5+vnoise(p*2.1+vec2(5.3,1.7))*.25+vnoise(p*4.3+vec2(2.1,8.9))*.125;
 }
 
-vec3 hsv2rgb(vec3 c) {
-    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
-    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
-}
-
-vec2 neighborDir(int dir) {
-    if (dir == 0) return vec2(-1.0, -1.0);
-    if (dir == 1) return vec2( 0.0, -1.0);
-    if (dir == 2) return vec2( 1.0, -1.0);
-    if (dir == 3) return vec2(-1.0,  0.0);
-    if (dir == 4) return vec2( 1.0,  0.0);
-    if (dir == 5) return vec2(-1.0,  1.0);
-    if (dir == 6) return vec2( 0.0,  1.0);
-    return vec2( 1.0,  1.0);
-}
-
-vec4 readWalker(float id) {
-    return texture2D(stateBuf, vec2((id + 0.5) / 16.0, 0.5));
-}
-
-void main() {
-    vec2 Res = RENDERSIZE;
-    vec2 pos = gl_FragCoord.xy;
-    float cell = 1.0 / max(gridSize, 1.0);
-    float audio = 1.0 + audioLevel * pulse;
-
-    // =============================================================
-    // PASS 0: advance walker state buffer (16x1)
-    // state encoding: vec4(x_norm, y_norm, hue, stepAccumulator)
-    // =============================================================
-    if (PASSINDEX == 0) {
-        float id = floor(pos.x);
-        if (id >= walkers) {
-            gl_FragColor = vec4(0.0);
-            return;
+// Lava crack: Voronoi-based distance field
+vec2 voronoi(vec2 p){
+    vec2 i=floor(p),f=fract(p);
+    float md=8.;
+    vec2 mr=vec2(0.);
+    for(int y=-1;y<=1;y++){
+        for(int x=-1;x<=1;x++){
+            vec2 g=vec2(float(x),float(y));
+            vec2 o=vec2(h21(i+g),h21(i+g+vec2(3.7,1.9)));
+            o=.5+.5*sin(TIME*flowSpeed*.4+6.28*o);
+            vec2 r=g+o-f;
+            float d=dot(r,r);
+            if(d<md){md=d;mr=r;}
         }
-
-        // Seed the walker near center on first frames
-        if (FRAMEINDEX < 2) {
-            float jx = (hash11(id * 7.31 + 1.0) - 0.5) * 0.15;
-            float jy = (hash11(id * 3.19 + 2.0) - 0.5) * 0.15;
-            float h0 = hash11(id * 11.7 + 3.0);
-            gl_FragColor = vec4(0.5 + jx, 0.5 + jy, h0, 0.0);
-            return;
-        }
-
-        vec4 prev = readWalker(id);
-        vec2 p = prev.rg;
-        float h = prev.b;
-        float acc = prev.a + TIMEDELTA * stepRate * audio;
-
-        // Walk up to 6 discrete cell steps this frame
-        for (int s = 0; s < 6; s++) {
-            if (acc < 1.0) break;
-            acc -= 1.0;
-
-            float seed = TIME * 97.13 + id * 13.7 + float(s) * 3.31;
-            float r = hash12(vec2(seed, seed * 0.47));
-            int dir = int(floor(r * 8.0));
-            vec2 stepVec = neighborDir(dir) * cell;
-            p += stepVec;
-
-            if (bounceEdges) {
-                if (p.x < 0.0) p.x = -p.x;
-                if (p.x > 1.0) p.x = 2.0 - p.x;
-                if (p.y < 0.0) p.y = -p.y;
-                if (p.y > 1.0) p.y = 2.0 - p.y;
-            } else {
-                p = fract(p);
-            }
-
-            float dh = (hash12(vec2(seed + 7.7, id)) - 0.5) * 2.0 * hueDrift;
-            h = fract(h + dh + 1.0);
-        }
-
-        gl_FragColor = vec4(p, h, acc);
-        return;
     }
+    return vec2(sqrt(md),dot(mr,mr));
+}
 
-    // =============================================================
-    // PASS 1: update persistent canvas (fade + paint walker cells)
-    // =============================================================
-    if (PASSINDEX == 1) {
-        vec2 uv = pos / Res;
-        vec4 prev = texture2D(canvas, uv);
-        vec4 col = prev * (1.0 - fadeRate);
+// Crack network: Voronoi cell edges = obsidian; cell interior = dark rock
+float crackPattern(vec2 uv,float t){
+    float scale=3.*crackDensity;
+    // Domain warp for organic feel
+    vec2 warp=vec2(fbm(uv*2.+vec2(1.7,9.2)),fbm(uv*2.+vec2(8.3,2.8)))*0.15;
+    vec2 wu=uv+warp+vec2(t*.04,t*.02);
+    vec2 v=voronoi(wu*scale);
+    // Edge proximity (small value = near crack edge)
+    return v.x;
+}
 
-        // Aspect-correct grid so cells stay square
-        float aspect = Res.x / Res.y;
-        vec2 gridUV = vec2(uv.x * aspect, uv.y);
-        vec2 pxCell = floor(gridUV * gridSize);
+void main(){
+    vec2 uv=(gl_FragCoord.xy-RENDERSIZE*.5)/RENDERSIZE.y;
+    float t=TIME;
+    float audio=1.+audioLevel*audioMod+audioBass*audioMod*.7;
 
-        for (int i = 0; i < MAX_WALKERS; i++) {
-            if (float(i) >= walkers) break;
-            vec4 st = readWalker(float(i));
-            vec2 wGridUV = vec2(st.r * aspect, st.g);
-            vec2 wCell = floor(wGridUV * gridSize);
-            vec2 diff = abs(wCell - pxCell);
-            if (diff.x < 0.5 && diff.y < 0.5) {
-                vec3 rgb = hsv2rgb(vec3(st.b, saturation, brightness * audio));
-                col = vec4(rgb, 1.0);
-            }
-        }
+    // Top-down orthographic camera tilted slightly
+    float tiltX=.25;
+    vec3 ro=vec3(uv.x*2.5,camHeight,uv.y*2.5-camHeight*sin(tiltX));
+    vec3 rd=normalize(vec3(0.,0.,1.)*cos(tiltX)+vec3(0.,1.,0.)*sin(tiltX)*(-1.));
 
-        gl_FragColor = col;
-        return;
-    }
+    // We're doing a flat top-down view — the "3D" is from the perspective tilting + camera height varying crack parallax
+    // Cast ray onto a horizontal plane at y=0
+    float planeD=-ro.y/rd.y;
+    vec3 hitPos=ro+rd*planeD;
+    vec2 surfaceUV=hitPos.xz;
 
-    // =============================================================
-    // PASS 2: final display (bloom + background blend)
-    // =============================================================
-    vec2 uv = pos / Res;
-    vec3 c = texture2D(canvas, uv).rgb;
+    // Crack pattern at surface
+    float crack=crackPattern(surfaceUV,t);
+    float aa=fwidth(crack);
 
-    if (bloom > 0.001) {
-        vec3 sum = vec3(0.0);
-        float r = 2.5 / min(Res.x, Res.y);
-        for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {
-                vec2 off = vec2(float(x), float(y)) * r;
-                sum += texture2D(canvas, uv + off).rgb;
-            }
-        }
-        sum /= 25.0;
-        c += sum * bloom;
-    }
+    // Edge threshold: small crack value = bright lava; large = dark obsidian
+    float edgeW=.04+.02*sin(t*1.7+surfaceUV.x*3.); // breathing crack width
+    float lavaFraction=1.-smoothstep(edgeW*.5,edgeW*2.,crack);
 
-    float lum = max(c.r, max(c.g, c.b));
-    float alpha = clamp(lum * 8.0, 0.0, 1.0);
-    vec3 outRgb = mix(backgroundColor.rgb, c, alpha);
-    gl_FragColor = vec4(outRgb, 1.0);
+    // Secondary cracks at higher frequency
+    float crack2=crackPattern(surfaceUV*2.3+vec2(5.1,3.7),t*.7);
+    float lava2=1.-smoothstep(.025,.08,crack2);
+
+    // Palette: black obsidian → deep orange → gold → white-hot
+    vec3 obsidian=vec3(.02,.01,.005);
+    vec3 deepOrange=vec3(1.,.2,.0);
+    vec3 gold=vec3(1.,.65,.0);
+    vec3 whiteHot=vec3(1.,.95,.7);
+
+    // Temperature from crack proximity (innermost cracks = white-hot)
+    float lavaT=lavaFraction+lava2*.35;
+    vec3 lavaCol;
+    if(lavaT<.2)       lavaCol=obsidian;
+    else if(lavaT<.5)  lavaCol=mix(obsidian,deepOrange,(lavaT-.2)*3.33);
+    else if(lavaT<.8)  lavaCol=mix(deepOrange,gold,(lavaT-.5)*3.33);
+    else               lavaCol=mix(gold,whiteHot,(lavaT-.8)*5.);
+
+    // HDR boost on hot zones
+    vec3 col=lavaCol*glowPeak*audio*lavaT+obsidian*(1.-lavaT)*(.1+lavaT*.9);
+
+    // Subtle parallax: small height variation based on crack depth
+    float heightFactor=lavaFraction*.03;
+    vec2 parallaxUV=surfaceUV+rd.xz*heightFactor;
+    float crack_p=crackPattern(parallaxUV,t);
+    float lava_p=1.-smoothstep(edgeW*.5,edgeW*2.,crack_p);
+    col=mix(col,col*1.1,abs(lava_p-lavaFraction)*.2);
+
+    // Camera-based vignette
+    col*=1.-smoothstep(.5,.9,length(uv)*.85);
+
+    gl_FragColor=vec4(col,1.);
 }
