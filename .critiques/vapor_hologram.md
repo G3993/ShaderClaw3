@@ -19,3 +19,23 @@
 - holoGlow default: 0.7 → 1.4
 **HDR peaks reached:** sun 2.2, Y2K shapes 2.0, grid lines 2.0, katakana 2.5, holo spec 2.0+
 **Estimated rating:** 4.5★
+
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 3D raymarch — NEW ANGLE: Holographic torus in void space vs prior 2D vaporwave scene fix
+**Critique:**
+1. Reference fidelity: Hologram metaphor retained but expressed as actual 3D holographic object (torus) vs 2D flat vaporwave scene. The "holographic channel" becomes the object itself.
+2. Compositional craft: Single torus floating in void space with holographic grid background. Strong focal element, clean composition vs prior busy scene.
+3. Technical execution: Torus SDF + 64-step march + rotation matrix. Holographic interference fringes via dual sin() on surface coords. Scanline modulation. fwidth AA edge.
+4. Liveness: Torus rotates on two axes. Fringe interference animated by t*3.0. Camera stable. Audio modulates tube thickness + fringe frequency.
+5. Differentiation: 3D vs 2D; cold blue/cyan/teal vs warm pink/cyan vaporwave; torus vs flat scene; holographic fringe physics vs scanline overlay; void vs landscape.
+**Changes:**
+- Full rewrite: 3D SDF torus with holographic interference patterns
+- 4-color cold palette: teal, electric cyan, icy blue, violet (NO vaporwave pink)
+- Holographic fringe pattern: two orthogonal sin() interference
+- Background: holographic grid lines (faint) in deep space
+- Dual-axis torus rotation via mat3
+- Rim glow at silhouette (hologram boundary glow)
+- Audio modulates tube thickness + fringe frequency
+**HDR peaks reached:** holoPal * 2.8 + spec 3.0 + rim 2.5 = ~3.5 at rim+specular peaks
+**Estimated rating:** 4.2★
