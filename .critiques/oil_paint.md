@@ -38,3 +38,22 @@
 - TIME-animated warp evolution
 **HDR peaks reached:** specular ridge 2.2*0.8 = ~1.76; with audio boost to ~2.5
 **Estimated rating:** 4.0★
+
+## 2026-05-05 (v4)
+**Prior rating:** 0.0★
+**Approach:** 3D Metaball Paint Globs — NEW ANGLE: 3D lava plane (v1) → 2D Fauve brush strokes (v2) → 3D smooth-union metaballs (v4 impasto globs)
+**Critique:**
+1. Reference fidelity: Oil paint impasto — paint squeezed from tube in rounded blobs, capturing the physical material of oil paint.
+2. Compositional craft: 8 smooth-unioned spheroid blobs merging and separating; warm umber background with jewel-colored globs in foreground.
+3. Technical execution: smin(k=0.25) smooth union of all blobs; 64-step march; positional hash color assignment; Phong lighting with Fresnel-like edge darkening.
+4. Liveness: Blob positions driven by independent sin/cos oscillators (unique freq per blob); audio modulates radius.
+5. Differentiation: 3D spheroid metaballs vs v2 2D brush strokes; impasto blob palette (umber/cadmium/cobalt/yellow) vs v2 Fauvist stroke palette; organic merging vs directional brushwork.
+**Changes:**
+- Full rewrite from 2D Fauve strokes to 3D metaball smooth union
+- smin(0.25) for all blob pairs — organic merging
+- Palette: umber (1.9,0.55,0.10), crimson (2.4,0.08,0.04), cobalt (0.05,0.25,2.5), cadmium yellow (2.3,1.8,0.04)
+- 12 potential blobs, count controlled by parameter
+- Edge darkening via Fresnel (mix 1.0/0.55 at grazing angles)
+- Audio modulates blob radius
+**HDR peaks reached:** crimson 2.4, cobalt 2.5, cadmium yellow 2.3, specular 2.8+
+**Estimated rating:** 4.5★
