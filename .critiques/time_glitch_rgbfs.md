@@ -19,3 +19,23 @@
 - audioMod modulates displacement and brightness
 **HDR peaks reached:** per-channel hdrBoost * diffuse = 2.0; white spec adds ~2.5
 **Estimated rating:** 4.0★
+
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 2D neon weave — NEW ANGLE: 3D RGB data planes geometry → 2D interwoven neon scanline strips
+**Critique:**
+1. Reference fidelity: 8-frame delay buffer replaced with interwoven neon strip tapestry — completely different visual.
+2. Compositional craft: Horizontal + vertical strip weave creates textile-like pattern; over/under alternation adds woven depth illusion.
+3. Technical execution: fwidth AA on all strip edges; per-strip hash glitch displacement; 6-color cycling; big glitch bursts.
+4. Liveness: Color cycling (TIME*0.8); glitch displacement per-strip; big glitch step-function bursts; audio modulates brightness.
+5. Differentiation: 2D textile weave vs prior 3D scanline geometry; 6-color neon vs R/G/B planes; flatness-as-feature vs spatial depth.
+**Changes:**
+- Full rewrite from 3D RGB data planes to 2D neon woven strip pattern
+- Horizontal + vertical strip system with over/under weave
+- 6-color neon palette: magenta, data green, electric blue, signal red, gold, cyan
+- fwidth AA on all strip boundaries
+- Per-strip hash glitch displacement + rare big glitch bursts
+- Color cycling over time
+- Audio modulates brightness
+**HDR peaks reached:** strip center * 2.5 * centerBright = 2.5; with audio 3.5+
+**Estimated rating:** 4.0★
