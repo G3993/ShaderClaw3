@@ -1,177 +1,117 @@
 /*{
-  "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Cascade - tiled rows with wave offsets",
+  "DESCRIPTION": "Pyroclastic Column — 3D volcanic eruption: rising ember fragments, ash cloud, orange-white heat plume, black silhouette",
+  "CREDIT": "ShaderClaw auto-improve v9",
+  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
-    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
-    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
-    { "NAME": "intensity", "LABEL": "Wave Height", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "density", "LABEL": "Row Count", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
-    { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
-    { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    {"NAME":"emberCount","LABEL":"Ember Count","TYPE":"float","MIN":10.0,"MAX":60.0,"DEFAULT":30.0},
+    {"NAME":"plumeDensity","LABEL":"Plume Density","TYPE":"float","MIN":0.5,"MAX":3.0,"DEFAULT":1.5},
+    {"NAME":"lavaColor","LABEL":"Lava Color","TYPE":"color","DEFAULT":[1.0,0.38,0.02,1.0]},
+    {"NAME":"hdrPeak","LABEL":"HDR Peak","TYPE":"float","MIN":1.0,"MAX":4.0,"DEFAULT":2.5},
+    {"NAME":"audioReact","LABEL":"Audio React","TYPE":"float","MIN":0.0,"MAX":2.0,"DEFAULT":1.0}
   ]
 }*/
 
-const float PI = 3.14159265;
-const float TWO_PI = 6.28318530;
+float h11(float p){p=fract(p*.1031);p*=p+33.33;p*=p+p;return fract(p);}
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
-float charPixel(int ch, float col, float row) {
-    if (ch < 0 || ch > 36) return 0.0;
-    vec2 uv = vec2(col / 5.0, row / 7.0);
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return smoothstep(0.1, 0.55, texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r);
+float sdSphere(vec3 p,float r){return length(p)-r;}
+
+vec2 scene(vec3 p,float t){
+    // Lava vent mound at base
+    float cone=sdSphere(p-vec3(0,-0.85,0),0.38);
+    // Central column (cylinder-like chain of spheres)
+    float col_=1e9;
+    for(int i=0;i<5;i++){
+        float fi=float(i);
+        float y=-0.55+fi*.25;
+        float rad=0.14-fi*.018;
+        float s=sdSphere(p-vec3(sin(t*.4+fi*.8)*.03,y,cos(t*.3+fi*.7)*.03),max(rad,.04));
+        col_=min(col_,s);
+    }
+    float base=min(cone,col_);
+    float mat=base<col_?1.0:2.0; // cone or column
+    // Ground plane
+    float gnd=p.y+0.95;
+    if(gnd<base){base=gnd;mat=3.0;}
+    return vec2(base,mat);
 }
 
-int getChar(int slot) {
-    if (slot == 0)  return int(msg_0);
-    if (slot == 1)  return int(msg_1);
-    if (slot == 2)  return int(msg_2);
-    if (slot == 3)  return int(msg_3);
-    if (slot == 4)  return int(msg_4);
-    if (slot == 5)  return int(msg_5);
-    if (slot == 6)  return int(msg_6);
-    if (slot == 7)  return int(msg_7);
-    if (slot == 8)  return int(msg_8);
-    if (slot == 9)  return int(msg_9);
-    if (slot == 10) return int(msg_10);
-    if (slot == 11) return int(msg_11);
-    if (slot == 12) return int(msg_12);
-    if (slot == 13) return int(msg_13);
-    if (slot == 14) return int(msg_14);
-    if (slot == 15) return int(msg_15);
-    if (slot == 16) return int(msg_16);
-    if (slot == 17) return int(msg_17);
-    if (slot == 18) return int(msg_18);
-    if (slot == 19) return int(msg_19);
-    if (slot == 20) return int(msg_20);
-    if (slot == 21) return int(msg_21);
-    if (slot == 22) return int(msg_22);
-    if (slot == 23) return int(msg_23);
-    if (slot == 24) return int(msg_24);
-    if (slot == 25) return int(msg_25);
-    if (slot == 26) return int(msg_26);
-    if (slot == 27) return int(msg_27);
-    if (slot == 28) return int(msg_28);
-    if (slot == 29) return int(msg_29);
-    if (slot == 30) return int(msg_30);
-    if (slot == 31) return int(msg_31);
-    if (slot == 32) return int(msg_32);
-    if (slot == 33) return int(msg_33);
-    if (slot == 34) return int(msg_34);
-    if (slot == 35) return int(msg_35);
-    if (slot == 36) return int(msg_36);
-    if (slot == 37) return int(msg_37);
-    if (slot == 38) return int(msg_38);
-    if (slot == 39) return int(msg_39);
-    if (slot == 40) return int(msg_40);
-    if (slot == 41) return int(msg_41);
-    if (slot == 42) return int(msg_42);
-    if (slot == 43) return int(msg_43);
-    if (slot == 44) return int(msg_44);
-    if (slot == 45) return int(msg_45);
-    if (slot == 46) return int(msg_46);
-    return int(msg_47);
+vec3 calcN(vec3 p,float t){
+    vec2 e=vec2(.001,0);
+    return normalize(vec3(
+        scene(p+e.xyy,t).x-scene(p-e.xyy,t).x,
+        scene(p+e.yxy,t).x-scene(p-e.yxy,t).x,
+        scene(p+e.yyx,t).x-scene(p-e.yyx,t).x));
 }
 
-int charCount() {
-    int n = int(msg_len);
-    return n > 0 ? n : 1;
-}
+void main(){
+    vec2 uv=(gl_FragCoord.xy-RENDERSIZE*.5)/min(RENDERSIZE.x,RENDERSIZE.y);
+    float t=TIME;
+    float audio=1.0+audioBass*audioReact*.5;
 
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
-}
+    // Camera: slightly angled from front-low
+    vec3 ro=vec3(sin(t*.06)*.4,0.1,2.2);
+    vec3 fw=normalize(vec3(0,-0.15,0)-ro);
+    vec3 rt=normalize(cross(fw,vec3(0,1,0)));
+    vec3 up=cross(rt,fw);
+    vec3 rd=normalize(fw+uv.x*rt+uv.y*up);
 
-float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+    float tm=0.05; float mat=-1.0;
+    for(int i=0;i<64;i++){
+        vec2 h=scene(ro+rd*tm,t);
+        if(h.x<.001){mat=h.y;break;}
+        tm+=h.x;
+        if(tm>8.) break;
+    }
 
-// =======================================================================
-// EFFECT: CASCADE - tiled rows with wave offsets
-// =======================================================================
+    vec3 VOID  =vec3(0.0,0.0,0.0);
+    vec3 LAVA  =lavaColor.rgb;
+    vec3 ASH   =vec3(0.28,0.22,0.18);
+    vec3 WHTHT =vec3(1.5,1.1,0.7);
 
-vec4 effectCascade(vec2 uv) {
-    float aspect = RENDERSIZE.x / RENDERSIZE.y;
-    int numChars = charCount();
-    float waveAmount = intensity;
-    float rows = floor(mix(5.0, 30.0, density));
+    vec3 col=VOID;
 
-    float warpedY = uv.y + sin(uv.y * TWO_PI * 1.5 + TIME * speed * 1.5) * waveAmount * 0.06;
-    float rowH = 1.0 / rows;
-    float rowIdx = clamp(floor(warpedY / rowH), 0.0, rows - 1.0);
-    float localY = fract(warpedY / rowH);
+    if(mat>=0.0){
+        vec3 p=ro+rd*tm;
+        vec3 n=calcN(p,t);
+        vec3 light=normalize(vec3(0.3,1.5,.8));
+        float diff=max(dot(n,light),0.0);
+        float spec=pow(max(dot(reflect(-light,n),-rd),0.0),40.0);
 
-    float cH = rowH;
-    float cW = cH * (5.0/7.0) * (1.0/aspect) * textScale;
-    float gW = cW * 0.15;
-    float wordW = float(numChars) * (cW + gW);
-
-    float xOff = sin(rowIdx*0.6 + TIME*speed*2.0) * waveAmount * wordW * 1.5 + TIME*speed*0.08;
-    float px = mod(uv.x + xOff - 0.5 + wordW * 0.5, wordW);
-    if (px < 0.0) px += wordW;
-
-    float cs = cW + gW;
-    float csF = px / cs;
-    int slot = int(floor(csF));
-    float clx = fract(csF);
-    float cf = cW / cs;
-
-    float textHit = 0.0;
-    if (clx < cf && slot >= 0 && slot < numChars) {
-        float gc = (clx/cf) * 5.0, gr = localY * 7.0;
-        if (gc >= 0.0 && gc < 5.0 && gr >= 0.0 && gr < 7.0) {
-            int ch = getChar(slot);
-            if (ch >= 0 && ch <= 36 && ch != 26) textHit = charPixel(ch, gc, gr);
+        if(mat<1.5){
+            // Lava cone base: white-hot near top, darkening toward base
+            float heat=smoothstep(-0.85,-0.5,p.y);
+            col=mix(LAVA*.8,WHTHT*hdrPeak,heat*heat)*audio*(diff*.7+.3);
+        } else if(mat<2.5){
+            // Central column: vivid orange, glowing core
+            col=LAVA*(diff*.5+.6)*hdrPeak*audio;
+            col+=WHTHT*spec*2.0*hdrPeak;
+        } else {
+            // Ground: dark ash with red-orange ambient
+            col=ASH*(diff*.3+.1)+LAVA*exp(-length(p.xz)*length(p.xz)*.8)*.2*hdrPeak;
         }
     }
 
-    bool inv = mod(rowIdx, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
-    return vec4(fc, a);
-}
-
-// =======================================================================
-// MAIN
-// =======================================================================
-
-void main() {
-    vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
-    vec4 col = effectCascade(uv);
-
-    if (_voiceGlitch > 0.01) {
-        float g = _voiceGlitch;
-        float t = TIME * 17.0;
-        float band = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
-        float bandNoise = fract(sin(band * 91.7 + t) * 43758.5);
-        float bandActive = step(1.0 - g * 0.6, bandNoise);
-        float shift = (bandNoise - 0.5) * 0.08 * g * bandActive;
-        float chromaAmt = g * 0.015;
-        vec2 uvR = uv + vec2(shift + chromaAmt, 0.0);
-        vec2 uvB = uv + vec2(shift - chromaAmt, 0.0);
-        vec2 uvG = uv + vec2(shift, chromaAmt * 0.5);
-        vec4 cR = effectCascade(uvR);
-        vec4 cG = effectCascade(uvG);
-        vec4 cB = effectCascade(uvB);
-        vec4 glitched = vec4(cR.r, cG.g, cB.b, max(max(cR.a, cG.a), cB.a));
-        float scanline = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
-        float blockX = floor(uv.x * 6.0);
-        float blockY = floor(uv.y * 4.0);
-        float blockNoise = fract(sin((blockX + blockY * 7.0) * 113.1 + floor(t * 8.0)) * 43758.5);
-        float dropout = step(1.0 - g * 0.15, blockNoise);
-        glitched.rgb *= scanline;
-        glitched.rgb *= 1.0 - dropout;
-        col = mix(col, glitched, smoothstep(0.0, 0.3, g));
+    // Pyroclastic plume: additive rising sphere billboards
+    int NE=int(clamp(emberCount,10.0,60.0));
+    for(int i=0;i<60;i++){
+        if(i>=NE) break;
+        float fi=float(i);
+        float phase=h11(fi*7.31);
+        float speed=0.35+h11(fi*3.1)*.5;
+        float age=fract(t*speed+phase);
+        // Rising from vent
+        float spiralX=sin(age*3.14159*2.0+fi*2.3)*(0.15+h11(fi*9.1)*.2)*age*.8;
+        float spiralZ=cos(age*3.14159*1.7+fi*3.1)*(0.12+h11(fi*5.7)*.2)*age*.8;
+        vec2 screenPos=vec2(spiralX, age*1.0-0.6);
+        float d=length(uv-screenPos);
+        float sz=(0.02+h11(fi*17.3)*.04)*(1.0+age*.3)*audio;
+        // Ember color: white-hot when young, orange when older, ash when old
+        vec3 emberCol=mix(WHTHT,mix(LAVA,ASH*0.5,age*.6),age*.5);
+        col+=emberCol*exp(-d*d/(sz*sz))*hdrPeak*(1.0-age*.7)*plumeDensity;
     }
 
-    gl_FragColor = col;
+    // Volumetric heat shimmer at column base
+    col+=LAVA*exp(-length(uv-vec2(0.0,-0.15))*length(uv-vec2(0.0,-0.15))*4.0)*.2*hdrPeak*audio;
+
+    gl_FragColor=vec4(col,1.0);
 }
