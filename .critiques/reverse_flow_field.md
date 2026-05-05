@@ -1,3 +1,23 @@
+## 2026-05-05 (v7)
+**Prior rating:** 0.0★
+**Approach:** 3D volumetric — NEW ANGLE: polar aurora borealis sky (wide environmental, volumetric) vs prior 2D LIC flow field palette refine
+**Critique:**
+1. Reference fidelity: Prior kept the 2D LIC approach with a magma palette — different content, same 2D structure.
+2. Compositional craft: 2D flat plane → wide 3D polar night sky with ground horizon; entirely different spatial grammar.
+3. Technical execution: Altitude-slab ray march through curtain density functions; layered sin-wave position ripple.
+4. Liveness: TIME-driven curtain oscillation + star field + slow camera pan; all persistent without audio.
+5. Differentiation: Aurora is the antithesis of lava: cool, expansive, vertical vs horizontal, sky vs ground.
+**Changes:**
+- Full rewrite: "Aurora Volumetrica" — altitude-plane ray march through curtain density layers
+- 4-color palette (violet, cyan, gold, green) — all fully saturated
+- Curtain position and width ripple driven by sin(altitude + TIME) → realistic waving aurora
+- Star field with procedural hash + density parameter
+- Ground plane with reflected aurora glow (dark snow)
+- Camera at ground level looking up; slow horizontal pan
+- Audio modulates brightness + curtain intensity
+**HDR peaks reached:** aurora additive mix at brightness * audio ≈ 2.2–3.0; stars 1.0
+**Estimated rating:** 4.0★
+
 ## 2026-05-05
 **Prior rating:** 0.0★
 **Approach:** 2D refine (HDR palette replacement)
