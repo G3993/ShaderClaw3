@@ -175,7 +175,9 @@ void main() {
         vec2  gf = fract(g) - 0.5;
         float r  = (1.0 - lum) * dotMaxRadius
                  * (1.0 + audioMid * audioReact * 0.25);
-        float dot_ = step(length(gf), r);
+        float dotD = length(gf);
+        float dotFw = max(fwidth(dotD), 0.5 / dotDensity);
+        float dot_ = smoothstep(r + dotFw, r - dotFw, dotD);
         // Pick foreground colour from an extended pop palette using the
         // posterized luminance as the index.
         float levels = max(2.0, floor(posterizeLevels));
@@ -198,11 +200,13 @@ void main() {
 
         if (lum > 0.18 && lum < 0.55) {
             vec2  g = vec2(uv.x * aspect, uv.y) * dotDensity;
-            vec2  gf = fract(g) - 0.5;
-            float r  = (1.0 - lum) * dotMaxRadius
-                     * (1.0 + audioMid * audioReact * 0.25);
-            float dot_ = step(length(gf), r);
-            col = mix(LIK_WHITE, LIK_RED, dot_);
+            vec2  gf2 = fract(g) - 0.5;
+            float r2  = (1.0 - lum) * dotMaxRadius
+                      * (1.0 + audioMid * audioReact * 0.25);
+            float dotD2 = length(gf2);
+            float dotFw2 = max(fwidth(dotD2), 0.5 / dotDensity);
+            float dot2 = smoothstep(r2 + dotFw2, r2 - dotFw2, dotD2);
+            col = mix(LIK_WHITE, LIK_RED, dot2);
         }
     }
 
@@ -260,7 +264,7 @@ void main() {
         float _spike = 0.10 + 0.04 * cos(_ang * 12.0);
         float _star = smoothstep(_spike, _spike * 0.92, _r);
         float _outline = smoothstep(_spike + 0.012, _spike + 0.005, _r) * (1.0 - _star);
-        col = mix(col, vec3(1.0, 0.85, 0.15), _f * _star * 0.85);
+        col += vec3(1.0, 0.85, 0.15) * _f * _star * 1.5;
         col = mix(col, vec3(0.05),             _f * _outline);
     }
 
