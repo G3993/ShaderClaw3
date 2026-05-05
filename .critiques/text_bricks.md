@@ -18,3 +18,23 @@
 - Black mortar lines provide dark accent contrast
 **HDR peaks reached:** textColor * 1.8 glow = 1.8 direct, ~2.7 with audio boost
 **Estimated rating:** 3.8★
+
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 3D SDF — NEW ANGLE: 2D neon brick wall background → 3D raymarched gothic stone corridor
+**Critique:**
+1. Reference fidelity: Text-bricks grid effect replaced with architectural stone vault — completely different spatial grammar.
+2. Compositional craft: Camera walks forward through corridor; flickering torch gives warm focal point; arch columns provide strong vertical silhouette.
+3. Technical execution: 64-step march; box SDF + arch columns; finite-difference normals; torch attenuation + flicker.
+4. Liveness: Camera advances through corridor (TIME*0.5); torch flicker (sin*0.1 at 7.3 Hz); audio modulates brightness.
+5. Differentiation: 3D immersive corridor vs 2D flat brick wall; warm torchlight aesthetic vs neon colors; sandstone/mortar vs violet/cyan.
+**Changes:**
+- Full rewrite from 2D neon brick generator to 3D stone corridor SDF
+- Box SDF tunnel + arch column SDF + floor plane
+- Sandstone per-cell hash variation (warm ochre range)
+- Torch point light with flickering attenuation (1/(1+d*0.8))
+- Procedural mortar lines via fract pattern
+- Camera dolly forward through corridor
+- Audio modulates hdrPeak brightness
+**HDR peaks reached:** torchCol * hdrPeak * audio = 3.0* 2.5 * 1.6 = ~12 (torch flame specular)
+**Estimated rating:** 4.0★
