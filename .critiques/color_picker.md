@@ -1,45 +1,18 @@
-## 2026-05-04
-**Prior rating:** 0.0★
-**Approach:** 2D (initial HDR color tint pass)
-**Critique:**
-1. Reference fidelity: Color tinting utility requires inputImage — no standalone output.
-2. Compositional craft: No composition; pass-through effect.
-3. Technical execution: Correct but trivially simple; barely a shader.
-4. Liveness: No animation; completely static with default input.
-5. Differentiation: Most basic possible shader; zero visual identity.
-**Changes:** (v1) Attempted HDR boost on tint output
-
-## 2026-05-05
-**Prior rating:** 0.0★
-**Approach:** 3D raymarch — Neon Crystal Prism with rainbow caustics
-**Changes:** Replaced tint utility with standalone 3D prism generator
-
-## 2026-05-05 (v2)
-**Prior rating:** 0.0★
-**Approach:** 2D — Fauvism Color Fields (Matisse cut-outs)
-**Changes:** Flat 2D color field generator with bold shapes
-
-## 2026-05-05 (v3)
-**Prior rating:** 0.0★
-**Approach:** 3D — Stained Glass Cathedral (gothic rose window)
-**Changes:** Gothic interior with colored light beams
-
 ## 2026-05-05 (v7)
 **Prior rating:** 0.0★
-**Approach:** 3D raymarch — NEW ANGLE: Ferrofluid Spikes; metallic dark + neon iridescence vs prior prism/cathedral/Fauvist versions
+**Approach:** 2D standalone generator — NEW ANGLE: domain-warped acrylic pour fluid simulation (vs. Matisse cut-outs, Stained Glass, Prismatic prism, Chromatic Spheres — all different shapes/3D)
 **Critique:**
-1. Reference fidelity: Original color tint utility fully replaced with standalone generator; no inputImage dependency.
-2. Compositional craft: Grid of ferrofluid spikes as wave pattern — organic physics simulation feel; strong wave envelope composition.
-3. Technical execution: sdCone+sdSphere spike SDFs, per-spike height from Voronoi-wave function, oil-slick iridescence via view-angle-dependent hue.
-4. Liveness: Wave propagation across spike grid (concentric sin wave), audio modulates spike height amplitude; camera slow orbit.
-5. Differentiation: Metallic physics simulation (dark steel + neon oil-slick) vs glass/light (prism/cathedral); iron-black silhouette vs translucent; iridescent vs spectral.
+1. Reference fidelity: Acrylic pour painting is a distinct fine-art technique (Dutch pour, dirty pour) — convincingly simulated via double FBM domain warp.
+2. Compositional craft: Concentric warped bands with black ink veins create strong painterly layering; HDR center hotspot gives focal point.
+3. Technical execution: Double domain warp (q→r→f) produces non-repeating fluid topology; fwidth() AA on band boundaries eliminates aliasing.
+4. Liveness: pourSpeed/warpAmt drive TIME-continuous animation; audio modulates warp amount for reactive pulsing.
+5. Differentiation: Completely different concept from all prior versions — no 3D, no glass, no spheres; pure 2D fluid abstraction.
 **Changes:**
-- Full 3D rewrite as "Ferrofluid Spikes" — N×N grid of cone SDFs
-- Per-spike height: concentric sin wave with TIME-driven propagation
-- Material: very dark steel base + iridescent oil-film (view-angle-hue)
-- 4-color iridescence: teal/magenta/gold/violet — fully saturated
-- Ferrofluid ground-plane reflection (metallic dark)
-- fwidth() AA silhouette on spike edges
-- Audio modulates wave amplitude
-**HDR peaks reached:** iridescent specular 2.8 * audio, reflection highlights 2.0
+- Full standalone generator (no inputImage)
+- Double FBM domain warp (5-octave) simulating liquid pour flow
+- 5-color saturated acrylic palette: ultramarine, cadmium crimson, chrome yellow, sap green, titanium white
+- Black ink vein edges at band boundaries via fwidth() AA
+- HDR center hotspot for bloom catch
+- Audio modulates warp amplitude
+**HDR peaks reached:** band color * hdrPeak (2.8) + center boost = 3.0+
 **Estimated rating:** 4.0★
