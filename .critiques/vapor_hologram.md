@@ -1,3 +1,23 @@
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 2D retro pixel art — NEW ANGLE: CGA/EGA hard-blocked pixel vaporwave; v1 was smooth vaporwave with hologram glitch, v14 was smooth Blade Runner cyberpunk. This is hard-pixelated 80s PC aesthetic — different technology reference, different rendering mode (pixelated vs smooth).
+**Critique:**
+1. Reference fidelity: CGA palette (magenta/cyan/black/orange) is historically accurate to 80s PC graphics; pixel grid matches vaporwave's retro aesthetic.
+2. Compositional craft: Horizon division, pixelated sun with animation bands, perspective grid floor — all correct vaporwave composition elements but in blocky pixel art.
+3. Technical execution: UV quantization to pixel grid gives hard block look; hard-edge step() on grid lines; scanline modulation.
+4. Liveness: Animated sun bands (scrolling down), perspective grid scroll via t.
+5. Differentiation: Hard pixelation + CGA 5-color indexed palette is opposite of smooth hologram/gradient in all prior versions.
+**Changes:**
+- Full rewrite: 2D single-pass pixel art vaporwave (was multi-pass hologram)
+- UV quantized to pixelSize grid
+- 5-color indexed CGA palette: hot magenta, cyan, deep purple, chrome orange, black
+- Pixelated sun with animated bands
+- Hard-edge perspective grid: cyan/magenta alternating lines
+- HDR boost only on non-black pixels
+- Scanline modulation (2-row stripes)
+**HDR peaks reached:** grid lines cyan/magenta at hdrPeak*audio ≈ 2.5+; sun orange 2.2
+**Estimated rating:** 4.2★
+
 ## 2026-05-05
 **Prior rating:** 0.0★
 **Approach:** 2D refine (fix audio dependence, boost HDR)
