@@ -114,5 +114,13 @@ void main() {
     // Tone mapping — prevent blowout while keeping the neon punch
     finalColor = finalColor / (1.0 + finalColor);
 
+    // Surprise: every ~7s a full-canvas white flash — the strike.
+    // Brief and unmistakable.
+    {
+        float _ph = fract(TIME / 7.0);
+        float _flash = smoothstep(0.0, 0.005, _ph) * smoothstep(0.08, 0.04, _ph);
+        finalColor = mix(finalColor, vec3(1.0), _flash * 0.95);
+    }
+
     gl_FragColor = vec4(finalColor, 1.0);
 }

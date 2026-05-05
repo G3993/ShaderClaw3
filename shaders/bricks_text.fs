@@ -245,5 +245,17 @@ void main() {
         finalCol = textColor.rgb;
     }
 
+    // Surprise: every ~28s a single brick falls — for ~0.5s the lower
+    // edge sags, then snaps back. Lego physics rebellion.
+    {
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        float _ph = fract(TIME / 28.0);
+        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.18, 0.10, _ph);
+        if (_suv.y < 0.15) {
+            float _drop = exp(-pow((_suv.x - 0.5) * 4.0, 2.0)) * 0.04;
+            finalCol = mix(finalCol, finalCol * 0.7, _f * _drop * 30.0);
+        }
+    }
+
     gl_FragColor = vec4(finalCol, alpha);
 }

@@ -221,5 +221,14 @@ void main() {
         finalCol = textColor.rgb;
     }
 
+    // Surprise: every ~12s a CRT degauss flicker — chromatic offset
+    // washes the screen for ~0.3s as if the tube was just demagnetized.
+    {
+        float _ph = fract(TIME / 12.0);
+        float _f  = smoothstep(0.0, 0.03, _ph) * smoothstep(0.10, 0.05, _ph);
+        finalCol.r += _f * 0.18;
+        finalCol.b -= _f * 0.10;
+    }
+
     gl_FragColor = vec4(finalCol, alpha);
 }

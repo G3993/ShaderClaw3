@@ -143,9 +143,17 @@ class Renderer {
     const pw = parent ? parent.clientWidth : 0;
     const ph = parent ? parent.clientHeight : 0;
     // Fallback to window size if parent has no dimensions yet (mobile layout race)
-    const w = Math.round((pw || window.innerWidth) * dpr);
-    const h = Math.round((ph || window.innerHeight) * dpr);
+    let w = Math.round((pw || window.innerWidth) * dpr);
+    let h = Math.round((ph || window.innerHeight) * dpr);
     if (w < 1 || h < 1) return; // skip if still no dimensions
+    // Cap total pixels to prevent GPU overload on extreme displays (4K@3x DPR = 11M px)
+    const maxPixels = 8294400; // 3840x2160 (4K) — sweet spot for performance
+    const pixels = w * h;
+    if (pixels > maxPixels) {
+      const scale = Math.sqrt(maxPixels / pixels);
+      w = Math.round(w * scale);
+      h = Math.round(h * scale);
+    }
     this.canvas.width = w;
     this.canvas.height = h;
     this.gl.viewport(0, 0, w, h);
@@ -1038,6 +1046,17 @@ class Renderer {
       if (hpLoc) gl.uniform3f(hpLoc, mediaPipeMgr.handPos[0], mediaPipeMgr.handPos[1], mediaPipeMgr.handPos[2]);
       const hp2Loc = this._getLayerLoc(layer, 'mpHandPos2');
       if (hp2Loc) gl.uniform3f(hp2Loc, mediaPipeMgr.handPos2[0], mediaPipeMgr.handPos2[1], mediaPipeMgr.handPos2[2]);
+      // Pose-active flag: shaders use this to gate body-tracking effects without
+      // relying on stale pose texture contents when pose mode is off.
+      const paLoc = this._getLayerLoc(layer, 'mpPoseActive');
+      if (paLoc) {
+        const poseLive = !!(mediaPipeMgr.modes && mediaPipeMgr.modes.pose && mediaPipeMgr.poseTex && mediaPipeMgr._lastPoseLandmarks);
+        gl.uniform1f(paLoc, poseLive ? 1.0 : 0.0);
+      }
+    } else {
+      // Pose inactive when MediaPipe itself is off — still zero the uniform if used.
+      const paLoc = this._getLayerLoc(layer, 'mpPoseActive');
+      if (paLoc) gl.uniform1f(paLoc, 0.0);
     }
 
     return texUnit;

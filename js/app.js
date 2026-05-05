@@ -409,25 +409,29 @@
       loopBounds.push(Math.abs(hi - lo) + 1);
     }
 
-    // Count texture reads in the source
-    const texReads = (stripped.match(/\btexture2D\s*\(/g) || []).length;
-
-    // Track nesting: use brace depth to find which loops are nested inside others
-    // Build a stack of loop scopes
+    // Track nesting: use brace depth to find which loops are nested inside others,
+    // and count texture reads per nested group (not globally — unrelated reads in
+    // other passes shouldn't multiply a loop's op count).
     const lines = stripped.split('\n');
     let braceDepth = 0;
     let loopStack = []; // depths where loops start
     let maxNest = 0;
     let loopIdx = 0;
-    const nestedGroups = []; // arrays of loop bounds that are nested together
-    let currentGroup = [];
+    const nestedGroups = []; // { bounds: [iters], texReads: n }
+    let currentGroup = null;
 
     for (const line of lines) {
       if (/\bfor\s*\(/.test(line)) {
+        if (loopStack.length === 0) currentGroup = { bounds: [], texReads: 0 };
         loopStack.push(braceDepth);
-        currentGroup.push(loopBounds[loopIdx] || 10);
+        currentGroup.bounds.push(loopBounds[loopIdx] || 10);
         loopIdx++;
         maxNest = Math.max(maxNest, loopStack.length);
+      }
+      // Count texture reads that are inside an active loop scope
+      if (loopStack.length > 0 && currentGroup) {
+        const texOnLine = (line.match(/\btexture2D\s*\(/g) || []).length;
+        currentGroup.texReads += texOnLine;
       }
       for (const ch of line) {
         if (ch === '{') braceDepth++;
@@ -436,22 +440,23 @@
           // Check if a loop scope ended
           if (loopStack.length > 0 && braceDepth <= loopStack[loopStack.length - 1]) {
             loopStack.pop();
-            if (loopStack.length === 0 && currentGroup.length > 0) {
-              nestedGroups.push([...currentGroup]);
-              currentGroup = [];
+            if (loopStack.length === 0 && currentGroup && currentGroup.bounds.length > 0) {
+              nestedGroups.push(currentGroup);
+              currentGroup = null;
             }
           }
         }
       }
     }
-    if (currentGroup.length > 0) nestedGroups.push(currentGroup);
+    if (currentGroup && currentGroup.bounds.length > 0) nestedGroups.push(currentGroup);
 
-    // Worst-case ops: for each nested group, multiply the bounds together, then multiply by texture reads
+    // Worst-case ops: for each nested group, multiply the bounds together, then
+    // multiply by the texture reads *inside that group only*.
     let worstGroupOps = 0;
     for (const group of nestedGroups) {
       let ops = 1;
-      for (const bound of group) ops *= bound;
-      ops *= Math.max(texReads, 1);
+      for (const bound of group.bounds) ops *= bound;
+      ops *= Math.max(group.texReads, 1);
       worstGroupOps = Math.max(worstGroupOps, ops);
     }
 
@@ -2394,7 +2399,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   const FACE_JAWLINE = [10,338,297,332,284,251,389,356,454,323,361,288,397,365,379,378,400,377,152,148,176,149,150,136,172,58,132,93,234,127,162,21,54,103,67,109,10];
 
   function drawLandmarkOverlay(ctx, w, h) {
-    const _sx = (lm) => lm.x * w;
+    const _sx = (lm) => (1.0 - lm.x) * w; // mirror X to match selfie-view (shader uses 1.0-x too)
     const _sy = (lm) => (1.0 - lm.y) * h;
 
     // Hand skeleton
@@ -4188,7 +4193,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     propsResizeHandle.addEventListener('pointermove', (e) => {
       if (!propsResizing) return;
       const gap = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sc-panel-gap')) || 8;
-      const w = Math.max(200, Math.min(600, window.innerWidth - e.clientX - gap));
+      const maxW = Math.min(window.innerWidth * 0.4, Math.max(600, window.innerWidth * 0.2));
+      const w = Math.max(200, Math.min(maxW, window.innerWidth - e.clientX - gap));
       propsPanel.style.width = w + 'px';
     });
     propsResizeHandle.addEventListener('pointerup', () => {
@@ -4212,7 +4218,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   });
   resizeHandle.addEventListener('pointermove', (e) => {
     if (!resizing) return;
-    const w = Math.max(200, Math.min(600, window.innerWidth - e.clientX));
+    const maxW2 = Math.min(window.innerWidth * 0.4, Math.max(600, window.innerWidth * 0.2));
+    const w = Math.max(200, Math.min(maxW2, window.innerWidth - e.clientX));
     appEl.style.gridTemplateColumns = '1fr 5px ' + w + 'px';
   });
   resizeHandle.addEventListener('pointerup', () => {
@@ -7321,6 +7328,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // 5. Compositor pass to screen
     isfRenderer.renderCompositor(layers, sceneTexture, canvasBg);
+
+    // 5b. Per-layer export for multi-GPU projection mapping
+    if (window._layerExportUpdate) {
+      window._layerExportUpdate(gl, layers);
+    }
 
     // 6. Projection window mirror
     if (projectionCtx && projectionWindow && !projectionWindow.closed) {

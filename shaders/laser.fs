@@ -115,17 +115,19 @@ void main(void) {
    // Smooth sinusoidal drift — ease-in/ease-out parallax feel
    vec2 drift = 0.03 * vec2(sin(t * 0.17), cos(t * 0.23));
 
-   // First cluster: follows mouse (or primary hand via hand-as-mouse)
+   // Primary cluster — follows mouse (Easel doesn't expose MediaPipe
+   // hand-tracking; the original ShaderClaw3 build used mpHandCount /
+   // mpHandPos2 here, which made GLSL compilation fail under Easel
+   // because those uniforms are undeclared).
    vec3 d = laserCluster(p - toCenter(mousePos) + drift, t);
 
-   // Second cluster: when two hands are detected, mirror X for webcam flip
-   if (mpHandCount >= 2.0) {
-      vec2 hand2 = vec2(1.0 - mpHandPos2.x, mpHandPos2.y);
-      d += laserCluster(p - toCenter(hand2), t);
-   }
+   // Secondary cluster — slow opposing drift so the globe always has a
+   // second light source. Substitutes for the second-hand branch.
+   vec2 alt = vec2(1.0 - mousePos.x, mousePos.y);
+   d += laserCluster(p - toCenter(alt) - drift, t) * 0.6;
 
-   // Pinch boost: holding pinch ramps intensity up over time
-   float boost = 1.0 + pinchHold * 3.0 + audioBass * 5.0;
+   // Audio-driven boost (bass for kick-coupled flares).
+   float boost = 1.0 + audioBass * 5.0;
    d *= intensity * boost;
 
    gl_FragColor = vec4(d, 1.0);

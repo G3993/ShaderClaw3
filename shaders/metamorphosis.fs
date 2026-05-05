@@ -287,5 +287,15 @@ void main() {
   float vig = 1.0 - dot(uv, uv) * 0.25;
   col *= vig;
 
+  // Surprise: every ~52s a chrysalis moment — for ~3s the form sharpens
+  // toward a crisp silhouette (the in-between stops being in-between).
+  // Then dissolves back into transformation.
+  {
+      float _ph = fract(TIME / 52.0);
+      float _f  = smoothstep(0.0, 0.06, _ph) * smoothstep(0.25, 0.12, _ph);
+      // Posterize to 4 levels for the chrysalis snap
+      col = mix(col, floor(col * 4.0 + 0.5) / 4.0, _f * 0.75);
+  }
+
   gl_FragColor = vec4(clamp(col, 0.0, 1.0), alpha);
 }

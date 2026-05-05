@@ -349,11 +349,25 @@ void main() {
     col = adjust_balance(col, balance);
 
     float mask = 1.0 - col;
+    // Surprise: every ~17s a single bar briefly bursts to twice its mass
+    // and tints magenta — the runaway peak event you can't anticipate.
+    {
+        float _ph = fract(TIME / 17.0);
+        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.18, 0.10, _ph);
+        float _which = floor(fract(TIME / 17.0 + 0.5) * 32.0);
+        float _bx = (_which + 0.5) / 32.0;
+        float _bandX = exp(-pow((uv.x - _bx) * 80.0, 2.0));
+        mask += _bandX * _f * 0.9;
+    }
+
     bool hasTex = IMG_SIZE_inputTex.x > 0.0;
     if (hasTex) {
         vec4 tex = IMG_NORM_PIXEL(inputTex, uv);
         gl_FragColor = vec4(tex.rgb * mask, tex.a * mask);
     } else {
-        gl_FragColor = vec4(vec3(mask), 1.0);
+        // Magenta tint when the surprise is firing
+        float _ph = fract(TIME / 17.0);
+        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.18, 0.10, _ph);
+        gl_FragColor = vec4(mix(vec3(mask), vec3(1.0, 0.2, 0.8) * mask, _f * 0.5), 1.0);
     }
 }

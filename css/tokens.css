@@ -80,6 +80,7 @@
   --sc-topbar-h:      48px;
   --sc-toolbar-w:     54px;
   --sc-detail-w:      320px;
+  --sc-sources-w:     260px;
   --sc-panel-gap:     12px;
   --sc-panel-radius:  16px;
 
@@ -126,6 +127,38 @@
     --sc-font-size-lg: 15px;
     --sc-font-size-xl: 16px;
     --sc-slider-h: 8px;
+  }
+}
+
+/* Large screens (4K, ultrawide, TV): wider panels, larger text for distance viewing */
+@media (min-width: 2560px) {
+  :root {
+    --sc-detail-w: 400px;
+    --sc-sources-w: 320px;
+    --sc-toolbar-w: 64px;
+    --sc-font-size-xs: 12px;
+    --sc-font-size-sm: 13px;
+    --sc-font-size-base: 14px;
+    --sc-font-size-md: 15px;
+    --sc-font-size-lg: 17px;
+    --sc-font-size-xl: 20px;
+    --sc-slider-h: 6px;
+  }
+}
+@media (min-width: 3840px) {
+  :root {
+    --sc-detail-w: 480px;
+    --sc-sources-w: 380px;
+    --sc-toolbar-w: 72px;
+    --sc-font-size-xs: 14px;
+    --sc-font-size-sm: 15px;
+    --sc-font-size-base: 16px;
+    --sc-font-size-md: 18px;
+    --sc-font-size-lg: 20px;
+    --sc-font-size-xl: 24px;
+    --sc-slider-h: 8px;
+    --sc-topbar-h: 56px;
+    --sc-panel-gap: 16px;
   }
 }
 
