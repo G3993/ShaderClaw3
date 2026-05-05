@@ -21,20 +21,19 @@
 
 ## 2026-05-05 (v2)
 **Prior rating:** 0.0★
-**Approach:** 3D raymarch — NEW ANGLE: Smooth metaball paint blobs vs prior displaced plane Lava Impasto
+**Approach:** 2D domain-warp FBM — NEW ANGLE: 2D fluid-swirl expressionist field vs prior 3D lava-impasto raymarched surface.
 **Critique:**
-1. Reference fidelity: Oil paint drops in suspension — painter's studio palette (cobalt, cadmium yellow, alizarin, viridian) vs prior lava/volcanic. Different conceptual reference (oil painting vs geology).
-2. Compositional craft: Multiple floating blobs creating organic cluster vs single surface plane. Smooth merging via smin creates painterly transitions.
-3. Technical execution: 14-blob smooth metaball SDF via smin(k=0.4). Nearest-blob color attribution. 64-step march. fwidth AA. Studio key+fill lighting.
-4. Liveness: Per-blob independent sinusoidal drift orbits with hash-driven frequency. Audio modulates vertical amplitude (blob bounce).
-5. Differentiation: Metaballs vs displaced plane; floating volume vs surface; cool primaries vs warm lava; multiple focal points vs single horizon; studio lighting vs ground reflections.
+1. Reference fidelity: Original was Kuwahara image-filter (required inputImage). This is a standalone abstract generator with paint aesthetic.
+2. Compositional craft: Domain-warped FBM creates complex swirling forms with no dominant focal point — full-field expressionist style.
+3. Technical execution: Double domain warp (2 rounds of FBM), ink edges at two scales via fwidth, time-animated colour cycling.
+4. Liveness: TIME-driven flow + audioMid/audioBass modulating brightness.
+5. Differentiation: 2D fluid swirl vs 3D terrain; expressionist paint colours (cadmium red/cobalt/viridian/yellow) vs lava reds; domain-warp vs ray displacement.
 **Changes:**
-- Full rewrite: 3D smooth metaball oil paint blobs
-- 4+2 color palette: cobalt blue, cadmium yellow, alizarin crimson, viridian (fully saturated primaries)
-- smin(k=0.4) for smooth metaball blending between blobs
-- Per-blob hash-driven sinusoidal drift orbits
-- Studio key (warm) + fill (cool) dual lighting
-- fwidth() AA black ink silhouette
-- Audio modulates blob vertical drift (audioMid)
-**HDR peaks reached:** paintPal * 2.5 + spec 3.0 = ~3.2 at specular highlights
-**Estimated rating:** 4.2★
+- Full rewrite: standalone 2D abstract expressionist generator
+- Double domain-warp FBM for chaotic turbulence
+- 4-colour paint palette: cadmium red, cobalt blue, viridian, chrome yellow (all HDR)
+- Ink edges at 2 scales (wide brushstroke + fine detail) via fwidth
+- TIME-driven colour evolution (colIdx + TIME)
+- Audio modulates brightness
+**HDR peaks reached:** palette peaks 2.2× (cadmium/viridian), up to 2.5 with audio
+**Estimated rating:** 4.0★

@@ -1,139 +1,74 @@
 /*{
-    "DESCRIPTION": "Paint Suspension — 3D raymarched smooth metaball paint drops floating in liquid. Painter's primary palette: cobalt blue, cadmium yellow, alizarin crimson, viridian. Slow drifting motion. Cinematic lighting.",
-    "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
-    "CREDIT": "ShaderClaw",
-    "INPUTS": [
-        { "NAME": "blobCount",   "LABEL": "Blob Count",  "TYPE": "float", "DEFAULT": 8.0,  "MIN": 3.0,  "MAX": 14.0 },
-        { "NAME": "blobSize",    "LABEL": "Blob Size",   "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.1,  "MAX": 0.8  },
-        { "NAME": "hdrPeak",     "LABEL": "HDR Peak",    "TYPE": "float", "DEFAULT": 2.5,  "MIN": 1.0,  "MAX": 4.0  },
-        { "NAME": "driftSpeed",  "LABEL": "Drift Speed", "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0,  "MAX": 1.0  },
-        { "NAME": "audioReact",  "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0,  "MAX": 2.0  }
-    ]
+  "DESCRIPTION": "Abstract Turbulence — standalone 2D domain-warped FBM colour field in an expressionist paint style. 4-colour saturated palette. NEW ANGLE: 2D fluid swirl vs prior 3D lava-impasto surface.",
+  "CATEGORIES": ["Generator", "Abstract"],
+  "CREDIT": "ShaderClaw auto-improve",
+  "ISFVSN": "2",
+  "INPUTS": [
+    {"NAME":"flowSpeed",  "LABEL":"Flow Speed",  "TYPE":"float","MIN":0.0,"MAX":2.0,"DEFAULT":0.35},
+    {"NAME":"warpScale",  "LABEL":"Warp Scale",  "TYPE":"float","MIN":1.0,"MAX":8.0,"DEFAULT":3.5},
+    {"NAME":"warpDepth",  "LABEL":"Warp Depth",  "TYPE":"float","MIN":0.0,"MAX":2.0,"DEFAULT":0.8},
+    {"NAME":"hdrPeak",    "LABEL":"HDR Peak",    "TYPE":"float","MIN":1.0,"MAX":4.0,"DEFAULT":2.2},
+    {"NAME":"edgeInk",    "LABEL":"Ink Edges",   "TYPE":"float","MIN":0.0,"MAX":2.0,"DEFAULT":1.0},
+    {"NAME":"audioReact", "LABEL":"Audio",       "TYPE":"float","MIN":0.0,"MAX":2.0,"DEFAULT":1.0}
+  ]
 }*/
 
-// 4-color painter's primaries (fully saturated, no white mixing)
-vec3 paintPal(int idx) {
-    if (idx == 0) return vec3(0.0, 0.25, 0.85);  // cobalt blue
-    if (idx == 1) return vec3(1.0, 0.80, 0.0);   // cadmium yellow
-    if (idx == 2) return vec3(0.85, 0.04, 0.12); // alizarin crimson
-    if (idx == 3) return vec3(0.04, 0.55, 0.22); // viridian green
-    if (idx == 4) return vec3(0.80, 0.30, 0.0);  // burnt sienna (accent)
-    return vec3(0.5, 0.0, 0.8);                  // violet (accent)
+vec3 paintPal(float t) {
+    t = clamp(t, 0.0, 1.0);
+    vec3 c0 = vec3(2.2, 0.05, 0.0);   // cadmium red
+    vec3 c1 = vec3(0.0, 0.2,  2.4);   // cobalt blue
+    vec3 c2 = vec3(0.0, 1.8,  0.5);   // viridian
+    vec3 c3 = vec3(2.5, 2.0,  0.0);   // chrome yellow
+    float s = t * 4.0;
+    if (s < 1.0) return mix(c0, c1, s);
+    if (s < 2.0) return mix(c1, c2, s - 1.0);
+    if (s < 3.0) return mix(c2, c3, s - 2.0);
+    return         mix(c3, c0, s - 3.0);
 }
 
-float hash11(float n) { return fract(sin(n*127.1)*43758.5453); }
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
-// Smooth minimum (metaball blending)
-float smin(float a, float b, float k) {
-    float h = clamp(0.5 + 0.5*(b-a)/k, 0.0, 1.0);
-    return mix(b, a, h) - k*h*(1.0-h);
+float vnoise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i),           hash(i + vec2(1,0)), u.x),
+               mix(hash(i + vec2(0,1)), hash(i + vec2(1,1)), u.x), u.y);
 }
 
-// Blob center positions (animated)
-vec3 blobCenter(int idx, float t) {
-    float fi = float(idx);
-    float s1 = hash11(fi * 1.37);
-    float s2 = hash11(fi * 2.91);
-    float s3 = hash11(fi * 4.17);
-    float s4 = hash11(fi * 7.53);
-    float sp  = hash11(fi * 11.7);
-    float audio = 1.0 + audioBass * audioReact * 0.3;
-
-    float ox = (s1 - 0.5) * 3.0;
-    float oy = (s2 - 0.5) * 2.0;
-    float oz = (s3 - 0.5) * 2.0;
-
-    // Slow drift orbits
-    float freq = 0.3 + s4 * 0.4;
-    ox += sin(t * driftSpeed * freq + s1 * 6.28) * 0.5;
-    oy += cos(t * driftSpeed * freq * 0.73 + s2 * 6.28) * 0.4 * audio;
-    oz += sin(t * driftSpeed * freq * 0.57 + s3 * 6.28) * 0.4;
-
-    return vec3(ox, oy, oz);
+float fbm(vec2 p) {
+    float v = 0.0, a = 0.5;
+    for (int i = 0; i < 5; i++) { v += a * vnoise(p); p *= 2.03; a *= 0.52; }
+    return v;
 }
 
-float blobRadius(int idx, float t) {
-    float fi = float(idx);
-    float s = hash11(fi * 3.31);
-    float audio = 1.0 + audioMid * audioReact * 0.2;
-    return blobSize * (0.6 + s * 0.8) * audio;
-}
-
-float map(vec3 p, float t) {
-    int N = int(clamp(blobCount, 3.0, 14.0));
-    float d = 1e8;
-    for (int i = 0; i < 14; i++) {
-        if (i >= N) break;
-        vec3 center = blobCenter(i, t);
-        float r = blobRadius(i, t);
-        float di = length(p - center) - r;
-        d = smin(d, di, 0.4);
-    }
-    return d;
-}
-
-// Nearest blob for color attribution
-int nearestBlob(vec3 p, float t) {
-    int N = int(clamp(blobCount, 3.0, 14.0));
-    float dMin = 1e8;
-    int idx = 0;
-    for (int i = 0; i < 14; i++) {
-        if (i >= N) break;
-        float d = length(p - blobCenter(i, t)) - blobRadius(i, t);
-        if (d < dMin) { dMin = d; idx = i; }
-    }
-    return idx;
-}
-
-vec3 calcNormal(vec3 p, float t) {
-    vec2 e = vec2(0.003, 0.0);
-    return normalize(vec3(
-        map(p+e.xyy,t)-map(p-e.xyy,t),
-        map(p+e.yxy,t)-map(p-e.yxy,t),
-        map(p+e.yyx,t)-map(p-e.yyx,t)));
+vec2 curlWarp(vec2 p, float t) {
+    vec2 q = vec2(fbm(p + vec2(0.0, t)),
+                  fbm(p + vec2(5.2, t + 1.3)));
+    return vec2(fbm(p + warpDepth * q + vec2(1.7, 9.2) + t * 0.15),
+                fbm(p + warpDepth * q + vec2(8.3, 2.8) + t * 0.12));
 }
 
 void main() {
-    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
-    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
+    vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    vec2 p = vec2(uv.x * aspect, uv.y) * warpScale;
 
-    float t = TIME;
+    float t = TIME * flowSpeed;
+    float audio = 1.0 + audioLevel * audioReact * 0.3 + audioBass * audioReact * 0.25;
 
-    // Slow studio camera, gentle up-tilt
-    vec3 ro = vec3(0.0, 0.5, 5.0);
-    vec3 rd = normalize(vec3(uv * 0.45, -1.0));
+    vec2 w = curlWarp(p, t);
+    float field = fbm(p + w * 2.0 + t * 0.08);
 
-    // Liquid medium background (deep teal-black)
-    vec3 col = vec3(0.0, 0.02, 0.03);
-    float dm = 0.01;
+    float colIdx = field + TIME * 0.04 + audioMid * audioReact * 0.1;
+    vec3 col = paintPal(fract(colIdx)) * hdrPeak * audio;
 
-    for (int i = 0; i < 64; i++) {
-        vec3 p = ro + rd * dm;
-        float d = map(p, t);
-        if (d < 0.005) {
-            vec3 N = calcNormal(p, t);
-            int cidx = nearestBlob(p, t);
-            vec3 paint = paintPal(cidx % 6) * hdrPeak;
+    float fw = fwidth(field) * edgeInk * 22.0;
+    float inkMask = smoothstep(0.0, fw, abs(fract(field * 3.5) - 0.5) * 2.0 - 0.6);
+    col *= 0.08 + 0.92 * inkMask;
 
-            // Studio lighting: key (warm top-right) + fill (cool left)
-            vec3 key = normalize(vec3(0.8, 1.0, 0.5));
-            vec3 fill = normalize(vec3(-0.6, 0.2, 0.8));
-            float dKey  = max(dot(N, key), 0.0);
-            float dFill = max(dot(N, fill), 0.0);
-            float spec  = pow(max(dot(reflect(-key, N), -rd), 0.0), 24.0);
-
-            // fwidth ink edge
-            float dotNV = dot(N, -rd);
-            float edgeW = fwidth(dotNV);
-            float edge = 1.0 - smoothstep(-edgeW, 0.12+edgeW, dotNV);
-
-            col = paint * (0.1 + dKey*0.7 + dFill*0.2) + vec3(1.0)*spec*3.0;
-            col *= 1.0 - edge * 0.9;
-            break;
-        }
-        if (dm > 12.0) break;
-        dm += max(d * 0.85, 0.005);
-    }
+    float fw2 = fwidth(field) * edgeInk * 10.0;
+    float inkMask2 = smoothstep(0.0, fw2, abs(fract(field * 7.0) - 0.5) * 2.0 - 0.7);
+    col *= 0.3 + 0.7 * inkMask2;
 
     gl_FragColor = vec4(col, 1.0);
 }
