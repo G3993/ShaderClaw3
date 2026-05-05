@@ -1,20 +1,38 @@
+## 2026-05-05
+**Prior rating:** 0.0★
+**Approach:** 3D raymarch
+**Critique:**
+1. Reference fidelity: VIDVOX 8-frame buffer delay — requires inputImage; produces nothing standalone.
+2. Compositional craft: Frame buffering is purely an effect; no content without source.
+3. Technical execution: 9-pass persistent buffer architecture is complex and correct, but all passes output noise without input.
+4. Liveness: TIME-driven via random delay shift, but input-dependent.
+5. Differentiation: Interesting channel-split temporal effect; not a generator.
+**Changes:**
+- Full rewrite as "Signal Interference" — raymarched 3D RGB data planes with glitch geometry
+- Three independently marched color planes (R/G/B) at Y-offsets (planeOffset parameter)
+- Each plane: scanlines + column bars + glitch blocks as SDF geometry
+- Per-channel glitch: horizontal displacement driven by hash(floor(y * 8 + t * rate))
+- HDR: signal red, data green, electric blue — fully saturated
+- White-hot specular peak on hit surfaces
+- Camera slowly sweeps through the planes (sin(t * 0.13))
+- hdrBoost parameter (default 2.0)
+- audioMod modulates displacement and brightness
+**HDR peaks reached:** per-channel hdrBoost * diffuse = 2.0; white spec adds ~2.5
+**Estimated rating:** 4.0★
+
 ## 2026-05-05 (v3)
 **Prior rating:** 0★
-**Approach:** 2D standalone generator — NEW ANGLE: VHS Horror Playback (vs v1 audioReact hdrScale / v2 RGB data planes)
+**Approach:** 3D raymarch — NEW ANGLE: Architectural obsidian monolith (Kubrick reference) vs v1 three abstract data planes, v2 duplicate of v1
 **Critique:**
-1. Reference fidelity: Strong analog-horror aesthetic: coarse VHS grain (240-line resolution), tracking error displacement, ghost image, damage tear bands, dark figure silhouette emerging from static.
-2. Compositional craft: Dark humanoid figure as strong silhouette focal element (black against amber/red artifacts). Figure flickers in and out via sin() threshold.
-3. Technical execution: hash-based grain; tracking displacement per scanline band; ghost smear as 4 displaced dark rectangles; HDR white-hot spark layer.
-4. Liveness: All driven by TIME * degradeRate; figure sways slightly; tracking errors and tear bands shift with time.
-5. Differentiation: Horror/analog aesthetic (vs v2 data plane RGB grid, vs v1 simple boost). Figurative element (dark silhouette) vs. abstract glitch.
+1. Reference: Kubrick's 2001 monolith — single tall black object projected with circuit data
+2. Composition: Single centered sculptural object vs v1 three horizontal planes
+3. Technical: SDF box + UV face projection + 3 independent circuit trace channels with glitch displacement
+4. Liveness: Camera orbit + circuit pulses + row-glitch all TIME-driven; audio modulates glitch amount
+5. Differentiation: Architectural single-object vs v1/v2 abstract multiple-plane
 **Changes:**
-- Complete rewrite: standalone VHS horror generator (no inputImage)
-- Palette: blood red, amber burn, ghost white, deep black, static gray
-- Dark humanoid figure silhouette (head + body SDF) flickering in/out
-- VHS tracking error: horizontal scan displacement bands
-- Ghost layer: 4 displaced dark smear shapes in blood red
-- Amber tear bands + red damage channel
-- HDR white-hot static sparks (2.0+)
-- Audio modulates additively
-**HDR peaks reached:** ghost white spark 2.0×2.2=4.4 peak; amber tears 1.5×2.2=3.3; blood red damage 2.2×0.5×aud
+- Full rewrite from 9-pass buffer system to single-pass 3D monolith
+- SDF box + face UV projection for circuit trace pattern
+- 3 independent circuit channels (blue/violet/magenta) with row glitch displacement
+- Ink silhouette + fwidth AA on circuit traces
+**HDR peaks reached:** circuit traces × glowPeak (2.5) = 2.5; pulse adds 0.5×2.5 = 3.75 peak HDR
 **Estimated rating:** 4.0★

@@ -1,118 +1,105 @@
 /*{
-  "DESCRIPTION": "VHS Horror Playback — analog tape degradation nightmare: deep red/amber damage artifacts, tracking errors, image ghost burns, static grain forming dark figures",
-  "CATEGORIES": ["Generator", "Glitch", "Audio Reactive"],
-  "CREDIT": "Easel / ShaderClaw v3",
+  "DESCRIPTION": "Datamosh Monolith — raymarched SDF obsidian monolith with animated circuit trace glitch projection. Electric blue/violet/magenta palette",
+  "CREDIT": "ShaderClaw auto-improve v3",
+  "ISFVSN": "2",
+  "CATEGORIES": ["Generator", "3D", "Glitch"],
   "INPUTS": [
-    { "NAME": "degradeRate",  "LABEL": "Degrade Rate",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.8  },
-    { "NAME": "trackingErr",  "LABEL": "Tracking Error","TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5  },
-    { "NAME": "ghostBurn",    "LABEL": "Ghost Burn",    "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0  },
-    { "NAME": "hdrBoost",     "LABEL": "HDR Boost",     "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 2.2  },
-    { "NAME": "audioReact",   "LABEL": "Audio React",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0  }
+    { "NAME": "monW",      "TYPE": "float", "DEFAULT": 0.4,  "MIN": 0.1, "MAX": 1.0, "LABEL": "Monolith Width" },
+    { "NAME": "monH",      "TYPE": "float", "DEFAULT": 2.0,  "MIN": 0.5, "MAX": 3.5, "LABEL": "Monolith Height" },
+    { "NAME": "glitchAmt", "TYPE": "float", "DEFAULT": 0.6,  "MIN": 0.0, "MAX": 2.0, "LABEL": "Glitch Amount" },
+    { "NAME": "glowPeak",  "TYPE": "float", "DEFAULT": 2.5,  "MIN": 1.0, "MAX": 4.0, "LABEL": "Glow Peak" },
+    { "NAME": "audioMod",  "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0, "MAX": 2.0, "LABEL": "Audio React" }
   ]
 }*/
 
-precision highp float;
+#define STEPS 64
+#define MAXD  12.0
+#define EPS   0.003
 
-// ── Palette: VHS horror ───────────────────────────────────────────────────────
-const vec3 BLOOD_RED   = vec3(0.90, 0.00, 0.02);
-const vec3 AMBER_BURN  = vec3(1.00, 0.45, 0.00);
-const vec3 GHOST_WHITE = vec3(2.00, 1.80, 1.40);
-const vec3 DEEP_BLACK  = vec3(0.00, 0.00, 0.00);
-const vec3 STATIC_GRAY = vec3(0.30, 0.25, 0.20);
+const vec3 C_BLUE    = vec3(0.0,  0.5,  1.0);
+const vec3 C_VIOLET  = vec3(0.55, 0.0,  1.0);
+const vec3 C_MAGENTA = vec3(1.0,  0.0,  0.8);
 
-float hash(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
-float hash2(vec2 p)  { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float hashG(float n)  { return fract(sin(n*127.1)*43758.5); }
+float hashG2(vec2 p)  { return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5); }
 
-// VHS grain noise (coarse horizontal bands)
-float vhsGrain(vec2 uv, float t) {
-    float line = floor(uv.y * 240.0);
-    float frame = floor(t * degradeRate * 15.0);
-    return hash(line * 7.3 + frame * 19.1 + uv.x * 0.3);
+float sdBox(vec3 p, vec3 b) {
+    vec3 q = abs(p) - b;
+    return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
 }
 
-// Tracking error: horizontal scan displacement bands
-float trackingShift(float y, float t) {
-    float band = floor(y * 6.0 + t * degradeRate * 0.7);
-    float noise = hash(band * 3.7 + floor(t * 2.0) * 11.3);
-    float active = step(1.0 - trackingErr * 0.5, noise);
-    return (noise - 0.5) * 0.12 * active;
+float circuitTrace(vec2 uv, float channel, float t) {
+    float glitch = glitchAmt * (1.0 + audioLevel * audioMod * 0.3);
+    // Glitch displacement rows
+    float rowIdx = floor(uv.y * 16.0);
+    float rowNoise = hashG2(vec2(rowIdx, floor(t * (2.0 + channel))));
+    float disp = (rowNoise - 0.5) * glitch * 0.12 * step(0.7, rowNoise);
+    vec2 u = uv + vec2(disp, 0.0);
+    // Horizontal + vertical trace grid
+    float trH = smoothstep(0.04, 0.0, abs(fract(u.y*10.0+0.5)-0.5)-0.46);
+    float trV = smoothstep(0.04, 0.0, abs(fract(u.x*16.0+0.5)-0.5)-0.46);
+    // Animated data pulse
+    float pulse = step(0.95, sin((u.x*16.0 + channel*3.3) * 3.14159 - t * (6.0 + channel*2.0)));
+    return max(trH, trV) + pulse * 0.5;
 }
 
-// Ghost image: faint afterimage displaced left
-vec3 ghostLayer(vec2 uv, float t) {
-    float ghostX = uv.x - 0.04 * ghostBurn - hash(floor(uv.y * 30.0 + t)) * 0.01;
-    float ghostY = uv.y + (hash(floor(uv.y * 50.0)) - 0.5) * 0.003;
-    // Generate a "ghost signal" as dark vertical smear shapes
-    float smear = 0.0;
-    for (int i = 0; i < 4; i++) {
-        float cx = hash(float(i) * 3.7 + floor(t * degradeRate * 0.3) * 7.0);
-        float cy = hash(float(i) * 5.1 + floor(t * degradeRate * 0.2) * 9.0);
-        float w  = 0.02 + hash(float(i) * 2.3) * 0.05;
-        float h  = 0.15 + hash(float(i) * 4.1) * 0.35;
-        float bx = smoothstep(w, 0.0, abs(ghostX - cx));
-        float by = smoothstep(0.0, h, abs(ghostY - cy));
-        smear = max(smear, bx * (1.0 - by));
-    }
-    return BLOOD_RED * smear * ghostBurn;
+vec3 sdfMap(vec3 p) {
+    // Monolith centered at origin
+    float box = sdBox(p, vec3(monW, monH, monW*0.6));
+    return vec3(box, 0.0, 0.0);
 }
 
-// Damage artifact: bright horizontal band tears
-vec3 tearBand(vec2 uv, float t) {
-    float band = fract(uv.y * 3.0 + t * degradeRate * 0.15);
-    float tear = smoothstep(0.96, 1.0, band) * hash2(vec2(floor(t * degradeRate * 2.0), floor(uv.y * 3.0)));
-    return AMBER_BURN * tear * 1.5;
+vec3 calcN(vec3 p) {
+    const float e = 0.003;
+    return normalize(vec3(
+        sdfMap(p+vec3(e,0,0)).x-sdfMap(p-vec3(e,0,0)).x,
+        sdfMap(p+vec3(0,e,0)).x-sdfMap(p-vec3(0,e,0)).x,
+        sdfMap(p+vec3(0,0,e)).x-sdfMap(p-vec3(0,0,e)).x));
 }
 
 void main() {
-    vec2 uv = isf_FragNormCoord;
-    float t  = TIME;
-    float aud = 1.0 + (audioLevel + audioBass * 0.8) * audioReact * 0.5;
-
-    // Apply tracking error displacement
-    float xShift = trackingShift(uv.y, t);
-    vec2 uvD = vec2(uv.x + xShift, uv.y);
-
-    // Base: dark static grain
-    float grain = vhsGrain(uv, t);
-    vec3 col = DEEP_BLACK;
-
-    // Static grain color (amber-tinted static)
-    float staticMask = step(0.65, grain);
-    col += STATIC_GRAY * staticMask * 0.4 * (0.5 + 0.5 * hash2(uv * 200.0 + t));
-
-    // Scanline darkening (CRT-style)
-    float scanline = 0.85 + 0.15 * sin(uv.y * 480.0 * 3.14159);
-    col *= scanline;
-
-    // Dark shape silhouettes emerging from static (the "horror figure")
-    float figure = 0.0;
-    vec2 figPos = vec2(0.5 + 0.05 * sin(t * degradeRate * 0.1), 0.5);
-    // Head
-    float head = length((uv - figPos - vec2(0, 0.22)) / vec2(0.07, 0.09)) - 1.0;
-    figure = max(figure, smoothstep(0.05, -0.02, head));
-    // Body
-    float body = length((uv - figPos) / vec2(0.06, 0.20)) - 1.0;
-    figure = max(figure, smoothstep(0.05, -0.02, body));
-    // Flicker: figure fades in and out
-    float flicker = step(0.35, abs(sin(t * degradeRate * 1.7 + 0.3)));
-    col = mix(col, DEEP_BLACK, figure * flicker * 0.9);
-
-    // Blood red ghost layer
-    col += ghostLayer(uvD, t) * aud;
-
-    // Amber tear bands
-    col += tearBand(uvD, t) * aud;
-
-    // Red damage channel in corrupted zones
-    float damage = step(0.88, hash2(vec2(floor(uv.y * 48.0), floor(t * degradeRate * 3.0))));
-    col += BLOOD_RED * damage * 0.5 * aud;
-
-    // HDR boost
-    col *= hdrBoost;
-
-    // White-hot static sparks
-    float spark = step(0.997, hash2(uv * 300.0 + t));
-    col += GHOST_WHITE * spark * hdrBoost;
-
+    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
+    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
+    float t = TIME;
+    float amod = 1.0 + audioLevel * audioMod * 0.18;
+    // Camera orbits the monolith slowly
+    float camA = t * 0.15;
+    vec3 ro = vec3(cos(camA)*3.5, 0.5 + sin(t*0.07)*0.3, sin(camA)*3.5);
+    vec3 ta = vec3(0.0);
+    vec3 ww = normalize(ta - ro);
+    vec3 uu = normalize(cross(ww, vec3(0,1,0)));
+    vec3 vv = cross(uu, ww);
+    vec3 rd = normalize(uv.x*uu + uv.y*vv + 2.0*ww);
+    float d = 0.0;
+    bool hit = false;
+    for (int i = 0; i < STEPS; i++) {
+        float h = sdfMap(ro+rd*d).x;
+        if (h < EPS) { hit = true; break; }
+        if (d > MAXD) break;
+        d += max(h, EPS);
+    }
+    vec3 col = vec3(0.0, 0.0, 0.01);
+    if (hit) {
+        vec3 p = ro + rd * d;
+        vec3 n = calcN(p);
+        // Project UV onto face
+        vec2 faceUV;
+        vec3 an = abs(n);
+        if (an.z > an.x && an.z > an.y) faceUV = vec2(p.x/monW, p.y/monH)*0.5+0.5;
+        else if (an.x > an.y)            faceUV = vec2(p.z/(monW*0.6), p.y/monH)*0.5+0.5;
+        else                              faceUV = vec2(p.x/monW, p.z/(monW*0.6))*0.5+0.5;
+        // Three independent circuit channels
+        float cR = circuitTrace(faceUV, 0.0, t);
+        float cG = circuitTrace(faceUV + vec2(0.5,0.3), 1.0, t);
+        float cB = circuitTrace(faceUV + vec2(0.2,0.7), 2.0, t);
+        vec3 circuitCol = C_BLUE*cR + C_VIOLET*cG + C_MAGENTA*cB;
+        // Ink silhouette
+        float nv  = max(dot(n,-rd),0.0);
+        float ink = 1.0 - smoothstep(0.0, 0.2, nv);
+        // fwidth AA on circuit traces
+        float fw  = fwidth(cR + cG + cB);
+        float aa  = smoothstep(0.0, fw*2.0, cR+cG+cB+0.01);
+        col = mix(circuitCol * glowPeak * amod * aa, vec3(0.0), ink*0.9);
+    }
     gl_FragColor = vec4(col, 1.0);
 }
