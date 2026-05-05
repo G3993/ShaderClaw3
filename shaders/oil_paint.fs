@@ -1,124 +1,127 @@
 /*{
-  "DESCRIPTION": "Oil paint effect — Kuwahara filter with relief lighting for painterly brush strokes",
-  "CREDIT": "ShaderClaw (Kuwahara approach inspired by flockaroo)",
-  "CATEGORIES": ["Effect"],
-  "INPUTS": [
-    { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "brushRadius", "LABEL": "Brush Size", "TYPE": "float", "DEFAULT": 4.0, "MIN": 1.0, "MAX": 12.0 },
-    { "NAME": "paintSpec", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "vignetteAmt", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
-  ],
-  "PASSES": [
-    { "TARGET": "paintBuf", "PERSISTENT": true },
-    {}
-  ]
+    "DESCRIPTION": "Impasto Terrain — raymarched FBM-displaced plane rendered as thick Van Gogh brushwork. Prussian blue / cadmium yellow palette, strong directional painterly light. New angle: cool blue-yellow contrast vs prior warm lava.",
+    "CREDIT": "ShaderClaw",
+    "CATEGORIES": ["Generator", "3D", "Painterly"],
+    "INPUTS": [
+        { "NAME": "terrainScale", "LABEL": "Terrain Scale", "TYPE": "float", "DEFAULT": 2.2,  "MIN": 0.5,  "MAX": 6.0 },
+        { "NAME": "brushHeight",  "LABEL": "Brush Height",  "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.05, "MAX": 1.0 },
+        { "NAME": "flowSpeed",    "LABEL": "Flow Speed",    "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.0,  "MAX": 1.0 },
+        { "NAME": "hdrBoost",     "LABEL": "HDR Boost",     "TYPE": "float", "DEFAULT": 2.3,  "MIN": 1.0,  "MAX": 4.0 },
+        { "NAME": "audioReact",   "LABEL": "Audio React",   "TYPE": "float", "DEFAULT": 0.4,  "MIN": 0.0,  "MAX": 2.0 }
+    ]
 }*/
 
-#define PI 3.1415927
+// Value noise
+float hash21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
-// Aspect-correct UV
-vec2 fitUV(vec2 pos) {
-    return (pos - 0.5 * RENDERSIZE) * min(IMG_SIZE_inputImage.y / RENDERSIZE.y, IMG_SIZE_inputImage.x / RENDERSIZE.x) / IMG_SIZE_inputImage + 0.5;
+float vnoise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = hash21(i);
+    float b = hash21(i + vec2(1.0, 0.0));
+    float c = hash21(i + vec2(0.0, 1.0));
+    float d = hash21(i + vec2(1.0, 1.0));
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
 }
 
-// Kuwahara filter: find the quadrant with lowest variance and use its mean color
-// This creates the flat-color brush stroke look of oil paintings
-vec3 kuwahara(vec2 uv, float radius) {
-    vec2 texel = 1.0 / RENDERSIZE;
-
-    vec3 mean[4];
-    vec3 var_acc[4];
-    float count[4];
-
-    // Initialize accumulators
-    for (int i = 0; i < 4; i++) {
-        mean[i] = vec3(0.0);
-        var_acc[i] = vec3(0.0);
-        count[i] = 0.0;
+// Domain-warped FBM → thick brushwork
+float fbm(vec2 p) {
+    float v = 0.0, a = 0.5;
+    for (int i = 0; i < 5; i++) {
+        v += a * vnoise(p);
+        p  = p * 2.1 + vec2(1.7, 9.3);
+        a *= 0.5;
     }
+    return v;
+}
 
-    // Sample the 4 quadrants around the pixel
-    for (int j = -6; j <= 6; j++) {
-        for (int i = -6; i <= 6; i++) {
-            if (abs(float(i)) > radius || abs(float(j)) > radius) continue;
+float terrain(vec2 p, float t) {
+    // Domain warp for swirling brush strokes
+    vec2 q = vec2(fbm(p + vec2(0.0, 0.0) + t * flowSpeed),
+                  fbm(p + vec2(5.2, 1.3) + t * flowSpeed * 0.7));
+    vec2 r = vec2(fbm(p + q * 4.0 + vec2(1.7, 9.2) + t * flowSpeed * 0.5),
+                  fbm(p + q * 4.0 + vec2(8.3, 2.8) + t * flowSpeed * 0.3));
+    return fbm(p + r * 3.5);
+}
 
-            vec3 c = texture2D(inputImage, fitUV((uv * RENDERSIZE) + vec2(float(i), float(j)))).rgb;
+float scene(vec3 p, float t) {
+    float h = terrain(p.xz * terrainScale, t) * brushHeight;
+    return p.y - h;
+}
 
-            // Determine which quadrant(s) this sample belongs to
-            // Quadrant 0: top-right, 1: top-left, 2: bottom-left, 3: bottom-right
-            // Use loop to assign to correct quadrant (WebGL requires const/loop index)
-            int qi = (i >= 0) ? 0 : 1;
-            int qj = (j >= 0) ? 0 : 2;
-            int q = qi + qj;
-
-            for (int k = 0; k < 4; k++) {
-                if (k == q) {
-                    mean[k] += c;
-                    var_acc[k] += c * c;
-                    count[k] += 1.0;
-                }
-            }
-        }
-    }
-
-    // Find the quadrant with minimum variance
-    float minVar = 1e8;
-    vec3 result = vec3(0.0);
-
-    for (int q = 0; q < 4; q++) {
-        if (count[q] < 1.0) continue;
-        vec3 m = mean[q] / count[q];
-        vec3 v = var_acc[q] / count[q] - m * m;
-        float totalVar = v.r + v.g + v.b;
-        if (totalVar < minVar) {
-            minVar = totalVar;
-            result = m;
-        }
-    }
-
-    return result;
+vec3 calcNormal(vec3 p, float t) {
+    const vec2 e = vec2(0.002, 0.0);
+    return normalize(vec3(
+        scene(p + e.xyy, t) - scene(p - e.xyy, t),
+        scene(p + e.yxy, t) - scene(p - e.yxy, t),
+        scene(p + e.yyx, t) - scene(p - e.yyx, t)
+    ));
 }
 
 void main() {
-    vec2 pos = gl_FragCoord.xy;
-    vec2 uv = pos / RENDERSIZE;
+    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
+    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
 
-    // ==== PASS 0: Kuwahara paint filter ====
-    if (PASSINDEX == 0) {
-        gl_FragColor = vec4(kuwahara(uv, brushRadius), 1.0);
-        return;
+    float t     = TIME;
+    float audio = 1.0 + audioLevel * audioReact * 0.3;
+
+    // Camera: looking down at the terrain at an angle
+    vec3 ro = vec3(sin(t * 0.06) * 0.5, 1.2 + audio * 0.1, 0.8 + t * flowSpeed * 0.5);
+    vec3 target = ro + vec3(sin(t * 0.04) * 0.2, -0.7, -1.0);
+    vec3 fwd   = normalize(target - ro);
+    vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), fwd));
+    vec3 up    = cross(fwd, right);
+    vec3 rd    = normalize(fwd * 1.4 + uv.x * right + uv.y * up);
+
+    // March
+    float dt   = 0.0;
+    bool  hit  = false;
+    float dSurf = 1.0;
+    for (int i = 0; i < 64; i++) {
+        vec3 p = ro + rd * dt;
+        dSurf = scene(p, t);
+        if (dSurf < 0.002) { hit = true; break; }
+        if (dt > 10.0) break;
+        dt += max(abs(dSurf) * 0.5, 0.008);
     }
 
-    // ==== PASS 1: Relief lighting ====
-    vec2 texel = 1.0 / RENDERSIZE;
-    float valC = dot(texture2D(paintBuf, uv).rgb, vec3(0.333));
-    float valR = dot(texture2D(paintBuf, uv + vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valL = dot(texture2D(paintBuf, uv - vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valU = dot(texture2D(paintBuf, uv + vec2(0.0, texel.y)).rgb, vec3(0.333));
-    float valD = dot(texture2D(paintBuf, uv - vec2(0.0, texel.y)).rgb, vec3(0.333));
+    // Sky: deep Prussian blue gradient
+    float skyT = clamp(uv.y * 0.5 + 0.5, 0.0, 1.0);
+    vec3 col = mix(vec3(0.04, 0.08, 0.22), vec3(0.01, 0.03, 0.14), skyT);
 
-    vec3 norm = normalize(vec3(
-        (valR - valL) / texel.x,
-        (valU - valD) / texel.y,
-        150.0
-    ));
+    if (hit) {
+        vec3 p   = ro + rd * dt;
+        vec3 nor = calcNormal(p, t);
+        float h  = terrain(p.xz * terrainScale, t);
 
-    vec3 light = normalize(vec3(-1.0, 1.0, 1.4));
-    float diff = clamp(dot(norm, light), 0.0, 1.0);
-    float spec = pow(clamp(dot(reflect(light, norm), vec3(0.0, 0.0, -1.0)), 0.0, 1.0), 12.0) * paintSpec;
+        // Van Gogh palette: 4 colors
+        // Deep Prussian blue, cadmium yellow, viridian, white-hot ridge
+        vec3 blue    = vec3(0.05, 0.12, 0.50);
+        vec3 yellow  = vec3(1.00, 0.80, 0.05);
+        vec3 virid   = vec3(0.05, 0.45, 0.22);
+        vec3 whiteHot = vec3(1.00, 0.95, 0.80);
 
-    gl_FragColor = texture2D(paintBuf, uv) * mix(diff, 1.0, 0.9)
-                 + spec * vec4(0.85, 1.0, 1.15, 1.0);
+        // Height-based color blending
+        vec3 terrCol = mix(blue,   virid,  smoothstep(0.1, 0.4, h));
+        terrCol      = mix(terrCol, yellow, smoothstep(0.45, 0.75, h));
+        terrCol      = mix(terrCol, whiteHot, smoothstep(0.80, 1.0, h));
 
-    // Vignette
-    if (vignetteAmt > 0.0) {
-        vec2 scc = (pos - 0.5 * RENDERSIZE) / RENDERSIZE.x;
-        float vign = 1.1 - vignetteAmt * dot(scc, scc);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.x / RENDERSIZE.x * PI) * 40.0);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.y / RENDERSIZE.y * PI) * 20.0);
-        gl_FragColor.xyz *= vign;
+        // Painterly directional light (upper-right, warm)
+        vec3 sunDir = normalize(vec3(1.0, 1.8, 0.4));
+        float diff  = max(0.0, dot(nor, sunDir));
+        float spec  = pow(max(0.0, dot(reflect(-sunDir, nor), -rd)), 12.0);
+        float sss   = max(0.0, dot(-nor, sunDir)) * 0.25; // subsurface scatter on back faces
+
+        col  = terrCol * (diff * 0.8 + sss + 0.06);
+        col += whiteHot * spec * hdrBoost;
+        col += yellow   * diff * diff * hdrBoost * 0.4;    // HDR ridge gilding
+        col *= hdrBoost * 0.85;
+
+        // Black ink crevice via fwidth AA
+        float ew   = fwidth(dSurf) * 3.0;
+        float edge = smoothstep(0.0, ew, abs(dSurf));
+        col = mix(vec3(0.0), col, edge);
     }
 
-    gl_FragColor.w = 1.0;
+    gl_FragColor = vec4(col, 1.0);
 }
