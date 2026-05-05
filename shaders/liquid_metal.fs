@@ -5,8 +5,8 @@
   "INPUTS": [
     { "NAME": "fluidSpeed", "LABEL": "Fluid Speed", "TYPE": "float", "DEFAULT": 5.0, "MIN": 0.5, "MAX": 20.0 },
     { "NAME": "viscosity", "LABEL": "Viscosity", "TYPE": "float", "DEFAULT": 0.03, "MIN": 0.0, "MAX": 0.1 },
-    { "NAME": "metalColor", "LABEL": "Metal Tint", "TYPE": "color", "DEFAULT": [0.85, 0.88, 0.95, 1.0] },
-    { "NAME": "envBright", "LABEL": "Reflection", "TYPE": "float", "DEFAULT": 1.41, "MIN": 0.0, "MAX": 3.0 },
+    { "NAME": "metalColor", "LABEL": "Metal Tint", "TYPE": "color", "DEFAULT": [0.0, 0.8, 1.0, 1.0] },
+    { "NAME": "envBright", "LABEL": "Reflection", "TYPE": "float", "DEFAULT": 2.5, "MIN": 0.0, "MAX": 5.0 },
     { "NAME": "bumpHeight", "LABEL": "Bump Height", "TYPE": "float", "DEFAULT": 0.08, "MIN": 0.001, "MAX": 0.08 },
     { "NAME": "envShift", "LABEL": "Env Hue", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "crunch", "LABEL": "Surface Grain", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 0.01 },
@@ -220,10 +220,10 @@ void main() {
     float envAngle = atan(R.z, R.x) / PI2 + 0.5;
 
     // Rich gradient environment
-    vec3 skyHigh = hsv2rgb(vec3(0.6 + envShift, 0.3, 1.2));     // bright blue-white sky
-    vec3 skyLow = hsv2rgb(vec3(0.55 + envShift, 0.5, 0.8));     // deeper blue at horizon
-    vec3 ground = hsv2rgb(vec3(0.08 + envShift, 0.6, 0.15));    // warm dark ground
-    vec3 horizon = hsv2rgb(vec3(0.1 + envShift, 0.3, 0.9));     // bright warm horizon line
+    vec3 skyHigh = hsv2rgb(vec3(0.6 + envShift, 0.7, 1.8));     // HDR electric blue sky
+    vec3 skyLow = hsv2rgb(vec3(0.55 + envShift, 0.8, 1.2));     // deep saturated teal
+    vec3 ground = hsv2rgb(vec3(0.08 + envShift, 0.7, 0.12));    // warm dark ground
+    vec3 horizon = hsv2rgb(vec3(0.52 + envShift, 0.9, 1.6));    // HDR cyan horizon burst
 
     vec3 envColor;
     if (envY > 0.52) {
@@ -280,11 +280,12 @@ void main() {
     // Add specular highlight
     vec3 lightDir = normalize(vec3(0.5, 0.8, 1.0));
     vec3 halfVec = normalize(lightDir - viewDir);
-    float spec = pow(max(dot(n, halfVec), 0.0), 64.0) * 1.5;
-    finalCol += vec3(spec) * metalColor.rgb;
+    // HDR specular: white-hot core + metalColor tint, peaks ~3-4 linear
+    float spec = pow(max(dot(n, halfVec), 0.0), 64.0);
+    finalCol += mix(vec3(spec * 4.0), vec3(spec * 4.0) * metalColor.rgb, 0.5);
 
-    // Audio-reactive brightness pulse
-    finalCol += metalColor.rgb * audioBass * 0.1;
+    // Audio-reactive brightness pulse — strong bass kick
+    finalCol += metalColor.rgb * audioBass * 0.5;
 
     float alpha = 1.0;
     if (transparentBg) {
