@@ -1,124 +1,139 @@
 /*{
-  "DESCRIPTION": "Oil paint effect — Kuwahara filter with relief lighting for painterly brush strokes",
-  "CREDIT": "ShaderClaw (Kuwahara approach inspired by flockaroo)",
-  "CATEGORIES": ["Effect"],
-  "INPUTS": [
-    { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "brushRadius", "LABEL": "Brush Size", "TYPE": "float", "DEFAULT": 4.0, "MIN": 1.0, "MAX": 12.0 },
-    { "NAME": "paintSpec", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "vignetteAmt", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
-  ],
-  "PASSES": [
-    { "TARGET": "paintBuf", "PERSISTENT": true },
-    {}
-  ]
+    "DESCRIPTION": "Paint Suspension — 3D raymarched smooth metaball paint drops floating in liquid. Painter's primary palette: cobalt blue, cadmium yellow, alizarin crimson, viridian. Slow drifting motion. Cinematic lighting.",
+    "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
+    "CREDIT": "ShaderClaw",
+    "INPUTS": [
+        { "NAME": "blobCount",   "LABEL": "Blob Count",  "TYPE": "float", "DEFAULT": 8.0,  "MIN": 3.0,  "MAX": 14.0 },
+        { "NAME": "blobSize",    "LABEL": "Blob Size",   "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.1,  "MAX": 0.8  },
+        { "NAME": "hdrPeak",     "LABEL": "HDR Peak",    "TYPE": "float", "DEFAULT": 2.5,  "MIN": 1.0,  "MAX": 4.0  },
+        { "NAME": "driftSpeed",  "LABEL": "Drift Speed", "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0,  "MAX": 1.0  },
+        { "NAME": "audioReact",  "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0,  "MAX": 2.0  }
+    ]
 }*/
 
-#define PI 3.1415927
-
-// Aspect-correct UV
-vec2 fitUV(vec2 pos) {
-    return (pos - 0.5 * RENDERSIZE) * min(IMG_SIZE_inputImage.y / RENDERSIZE.y, IMG_SIZE_inputImage.x / RENDERSIZE.x) / IMG_SIZE_inputImage + 0.5;
+// 4-color painter's primaries (fully saturated, no white mixing)
+vec3 paintPal(int idx) {
+    if (idx == 0) return vec3(0.0, 0.25, 0.85);  // cobalt blue
+    if (idx == 1) return vec3(1.0, 0.80, 0.0);   // cadmium yellow
+    if (idx == 2) return vec3(0.85, 0.04, 0.12); // alizarin crimson
+    if (idx == 3) return vec3(0.04, 0.55, 0.22); // viridian green
+    if (idx == 4) return vec3(0.80, 0.30, 0.0);  // burnt sienna (accent)
+    return vec3(0.5, 0.0, 0.8);                  // violet (accent)
 }
 
-// Kuwahara filter: find the quadrant with lowest variance and use its mean color
-// This creates the flat-color brush stroke look of oil paintings
-vec3 kuwahara(vec2 uv, float radius) {
-    vec2 texel = 1.0 / RENDERSIZE;
+float hash11(float n) { return fract(sin(n*127.1)*43758.5453); }
 
-    vec3 mean[4];
-    vec3 var_acc[4];
-    float count[4];
+// Smooth minimum (metaball blending)
+float smin(float a, float b, float k) {
+    float h = clamp(0.5 + 0.5*(b-a)/k, 0.0, 1.0);
+    return mix(b, a, h) - k*h*(1.0-h);
+}
 
-    // Initialize accumulators
-    for (int i = 0; i < 4; i++) {
-        mean[i] = vec3(0.0);
-        var_acc[i] = vec3(0.0);
-        count[i] = 0.0;
+// Blob center positions (animated)
+vec3 blobCenter(int idx, float t) {
+    float fi = float(idx);
+    float s1 = hash11(fi * 1.37);
+    float s2 = hash11(fi * 2.91);
+    float s3 = hash11(fi * 4.17);
+    float s4 = hash11(fi * 7.53);
+    float sp  = hash11(fi * 11.7);
+    float audio = 1.0 + audioBass * audioReact * 0.3;
+
+    float ox = (s1 - 0.5) * 3.0;
+    float oy = (s2 - 0.5) * 2.0;
+    float oz = (s3 - 0.5) * 2.0;
+
+    // Slow drift orbits
+    float freq = 0.3 + s4 * 0.4;
+    ox += sin(t * driftSpeed * freq + s1 * 6.28) * 0.5;
+    oy += cos(t * driftSpeed * freq * 0.73 + s2 * 6.28) * 0.4 * audio;
+    oz += sin(t * driftSpeed * freq * 0.57 + s3 * 6.28) * 0.4;
+
+    return vec3(ox, oy, oz);
+}
+
+float blobRadius(int idx, float t) {
+    float fi = float(idx);
+    float s = hash11(fi * 3.31);
+    float audio = 1.0 + audioMid * audioReact * 0.2;
+    return blobSize * (0.6 + s * 0.8) * audio;
+}
+
+float map(vec3 p, float t) {
+    int N = int(clamp(blobCount, 3.0, 14.0));
+    float d = 1e8;
+    for (int i = 0; i < 14; i++) {
+        if (i >= N) break;
+        vec3 center = blobCenter(i, t);
+        float r = blobRadius(i, t);
+        float di = length(p - center) - r;
+        d = smin(d, di, 0.4);
     }
+    return d;
+}
 
-    // Sample the 4 quadrants around the pixel
-    for (int j = -6; j <= 6; j++) {
-        for (int i = -6; i <= 6; i++) {
-            if (abs(float(i)) > radius || abs(float(j)) > radius) continue;
-
-            vec3 c = texture2D(inputImage, fitUV((uv * RENDERSIZE) + vec2(float(i), float(j)))).rgb;
-
-            // Determine which quadrant(s) this sample belongs to
-            // Quadrant 0: top-right, 1: top-left, 2: bottom-left, 3: bottom-right
-            // Use loop to assign to correct quadrant (WebGL requires const/loop index)
-            int qi = (i >= 0) ? 0 : 1;
-            int qj = (j >= 0) ? 0 : 2;
-            int q = qi + qj;
-
-            for (int k = 0; k < 4; k++) {
-                if (k == q) {
-                    mean[k] += c;
-                    var_acc[k] += c * c;
-                    count[k] += 1.0;
-                }
-            }
-        }
+// Nearest blob for color attribution
+int nearestBlob(vec3 p, float t) {
+    int N = int(clamp(blobCount, 3.0, 14.0));
+    float dMin = 1e8;
+    int idx = 0;
+    for (int i = 0; i < 14; i++) {
+        if (i >= N) break;
+        float d = length(p - blobCenter(i, t)) - blobRadius(i, t);
+        if (d < dMin) { dMin = d; idx = i; }
     }
+    return idx;
+}
 
-    // Find the quadrant with minimum variance
-    float minVar = 1e8;
-    vec3 result = vec3(0.0);
-
-    for (int q = 0; q < 4; q++) {
-        if (count[q] < 1.0) continue;
-        vec3 m = mean[q] / count[q];
-        vec3 v = var_acc[q] / count[q] - m * m;
-        float totalVar = v.r + v.g + v.b;
-        if (totalVar < minVar) {
-            minVar = totalVar;
-            result = m;
-        }
-    }
-
-    return result;
+vec3 calcNormal(vec3 p, float t) {
+    vec2 e = vec2(0.003, 0.0);
+    return normalize(vec3(
+        map(p+e.xyy,t)-map(p-e.xyy,t),
+        map(p+e.yxy,t)-map(p-e.yxy,t),
+        map(p+e.yyx,t)-map(p-e.yyx,t)));
 }
 
 void main() {
-    vec2 pos = gl_FragCoord.xy;
-    vec2 uv = pos / RENDERSIZE;
+    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
+    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
 
-    // ==== PASS 0: Kuwahara paint filter ====
-    if (PASSINDEX == 0) {
-        gl_FragColor = vec4(kuwahara(uv, brushRadius), 1.0);
-        return;
+    float t = TIME;
+
+    // Slow studio camera, gentle up-tilt
+    vec3 ro = vec3(0.0, 0.5, 5.0);
+    vec3 rd = normalize(vec3(uv * 0.45, -1.0));
+
+    // Liquid medium background (deep teal-black)
+    vec3 col = vec3(0.0, 0.02, 0.03);
+    float dm = 0.01;
+
+    for (int i = 0; i < 64; i++) {
+        vec3 p = ro + rd * dm;
+        float d = map(p, t);
+        if (d < 0.005) {
+            vec3 N = calcNormal(p, t);
+            int cidx = nearestBlob(p, t);
+            vec3 paint = paintPal(cidx % 6) * hdrPeak;
+
+            // Studio lighting: key (warm top-right) + fill (cool left)
+            vec3 key = normalize(vec3(0.8, 1.0, 0.5));
+            vec3 fill = normalize(vec3(-0.6, 0.2, 0.8));
+            float dKey  = max(dot(N, key), 0.0);
+            float dFill = max(dot(N, fill), 0.0);
+            float spec  = pow(max(dot(reflect(-key, N), -rd), 0.0), 24.0);
+
+            // fwidth ink edge
+            float dotNV = dot(N, -rd);
+            float edgeW = fwidth(dotNV);
+            float edge = 1.0 - smoothstep(-edgeW, 0.12+edgeW, dotNV);
+
+            col = paint * (0.1 + dKey*0.7 + dFill*0.2) + vec3(1.0)*spec*3.0;
+            col *= 1.0 - edge * 0.9;
+            break;
+        }
+        if (dm > 12.0) break;
+        dm += max(d * 0.85, 0.005);
     }
 
-    // ==== PASS 1: Relief lighting ====
-    vec2 texel = 1.0 / RENDERSIZE;
-    float valC = dot(texture2D(paintBuf, uv).rgb, vec3(0.333));
-    float valR = dot(texture2D(paintBuf, uv + vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valL = dot(texture2D(paintBuf, uv - vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valU = dot(texture2D(paintBuf, uv + vec2(0.0, texel.y)).rgb, vec3(0.333));
-    float valD = dot(texture2D(paintBuf, uv - vec2(0.0, texel.y)).rgb, vec3(0.333));
-
-    vec3 norm = normalize(vec3(
-        (valR - valL) / texel.x,
-        (valU - valD) / texel.y,
-        150.0
-    ));
-
-    vec3 light = normalize(vec3(-1.0, 1.0, 1.4));
-    float diff = clamp(dot(norm, light), 0.0, 1.0);
-    float spec = pow(clamp(dot(reflect(light, norm), vec3(0.0, 0.0, -1.0)), 0.0, 1.0), 12.0) * paintSpec;
-
-    gl_FragColor = texture2D(paintBuf, uv) * mix(diff, 1.0, 0.9)
-                 + spec * vec4(0.85, 1.0, 1.15, 1.0);
-
-    // Vignette
-    if (vignetteAmt > 0.0) {
-        vec2 scc = (pos - 0.5 * RENDERSIZE) / RENDERSIZE.x;
-        float vign = 1.1 - vignetteAmt * dot(scc, scc);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.x / RENDERSIZE.x * PI) * 40.0);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.y / RENDERSIZE.y * PI) * 20.0);
-        gl_FragColor.xyz *= vign;
-    }
-
-    gl_FragColor.w = 1.0;
+    gl_FragColor = vec4(col, 1.0);
 }

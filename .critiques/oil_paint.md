@@ -18,3 +18,23 @@
 - Audio modulates pulse intensity
 **HDR peaks reached:** white-hot crack edges 3.0, gold flow 1.5–2.5, orange mid-tone 1.0
 **Estimated rating:** 4.5★
+
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 3D raymarch — NEW ANGLE: Smooth metaball paint blobs vs prior displaced plane Lava Impasto
+**Critique:**
+1. Reference fidelity: Oil paint drops in suspension — painter's studio palette (cobalt, cadmium yellow, alizarin, viridian) vs prior lava/volcanic. Different conceptual reference (oil painting vs geology).
+2. Compositional craft: Multiple floating blobs creating organic cluster vs single surface plane. Smooth merging via smin creates painterly transitions.
+3. Technical execution: 14-blob smooth metaball SDF via smin(k=0.4). Nearest-blob color attribution. 64-step march. fwidth AA. Studio key+fill lighting.
+4. Liveness: Per-blob independent sinusoidal drift orbits with hash-driven frequency. Audio modulates vertical amplitude (blob bounce).
+5. Differentiation: Metaballs vs displaced plane; floating volume vs surface; cool primaries vs warm lava; multiple focal points vs single horizon; studio lighting vs ground reflections.
+**Changes:**
+- Full rewrite: 3D smooth metaball oil paint blobs
+- 4+2 color palette: cobalt blue, cadmium yellow, alizarin crimson, viridian (fully saturated primaries)
+- smin(k=0.4) for smooth metaball blending between blobs
+- Per-blob hash-driven sinusoidal drift orbits
+- Studio key (warm) + fill (cool) dual lighting
+- fwidth() AA black ink silhouette
+- Audio modulates blob vertical drift (audioMid)
+**HDR peaks reached:** paintPal * 2.5 + spec 3.0 = ~3.2 at specular highlights
+**Estimated rating:** 4.2★
