@@ -1,20 +1,16 @@
-## 2026-05-05
-**Prior rating:** 0.0★
-**Approach:** 3D raymarch
+## 2026-05-05 (v2)
+**Prior rating:** 0★
+**Approach:** 2D refine — NEW ANGLE: Aurora Borealis curtains (2D) vs v1 3D plasma crystals/glitch
 **Critique:**
-1. Reference fidelity: VIDVOX "random_freeze" requires inputImage (freezes partial rect each frame) — produces nothing standalone.
-2. Compositional craft: No visual composition; purely a temporal frame-freeze utility.
-3. Technical execution: Correct but completely dependent on external source.
-4. Liveness: TIME-driven via random rect selection, but nothing to show without input.
-5. Differentiation: Functional as an effect but not a generator.
+- Composition: Wide horizontal environmental sky scene, dark land silhouette anchors base
+- Palette: 5 chosen polar hues — MIDNIGHT sky, teal/green/violet curtains, aqua highlight
+- Movement: Multiple curtains with independent sinusoidal wobble and vertical ripple
+- Focal element: Curtain bright peaks at 2.5 HDR create hard bloom contrast against black sky
+- HDR/bloom: ELEC_GREEN at 2.5, DEEP_VIOLET at 1.2, PALE_AQUA at 1.8 — all bloom-ready
 **Changes:**
-- Full rewrite as "Arctic Shard" — raymarched 3D ice crystal formation
-- N shards arranged in ring + 1 central crystal (all sdShard = stretched octahedra)
-- 64-step march, orbiting camera with pitch oscillation
-- Ice palette (4 colors): midnight navy, glacier blue, iceBlue (user-controlled), HDR white spec, HDR cyan spec
-- Refraction shimmer: TIME-driven dot product on position
-- Black silhouette edge via fwidth() AA
-- Audio modulates crystal scale
-- shardCount parameter (2–10)
-**HDR peaks reached:** white specular 2.0+, cyan specular 1.5, violet rim 2.0
-**Estimated rating:** 4.5★
+- Complete rewrite from 3D plasma/glitch to 2D aurora curtain system
+- Palette changed from cool neon/crystal to polar night palette
+- Added star field and dark land silhouette for environmental depth
+- Audio drives curtain intensity as modulator
+**HDR peaks reached:** 2.5 (electric green aurora), 1.8 (pale aqua highlight)
+**Estimated rating:** 3★
