@@ -1,3 +1,23 @@
+## 2026-05-05 (v7)
+**Prior rating:** 0.0★
+**Approach:** 3D raymarch — NEW ANGLE: text inside a 3D infinite corridor (literal bricks in 3D space) vs prior 2D flat neon brick background tile
+**Critique:**
+1. Reference fidelity: v1 added a flat 2D neon brick tile as background — "bricks" as wallpaper rather than architecture.
+2. Compositional craft: Flat 2D fill → infinite corridor perspective with vanishing point; dramatic depth.
+3. Technical execution: Box SDF corridor with Z-repeat, brick pattern per wall face, ceiling neon strip lights.
+4. Liveness: Camera fly-through at speed parameter; neon strip flicker via audioBass.
+5. Differentiation: 3D space, first-person perspective, architectural scale; text is now a literal glowing neon sign.
+**Changes:**
+- Full rewrite: "Neon Corridor" — box SDF corridor, 60-step raymarch, Z-repeat for infinite travel
+- Brick pattern on walls via mortar smoothstep in wall UV space
+- Ceiling neon strip lights (textColor) at hdrPeak intensity
+- Camera flies forward through corridor; speed parameter controls travel
+- Text rendered as 2D HDR neon sign overlay on corridor
+- textColor = sign color, wallColor = wall brick tint
+- Audio modulates neon strip brightness + sign glow
+**HDR peaks reached:** neon sign hdrPeak * audio ≈ 2.5, strip lights 2.5, wall diffuse 0.6
+**Estimated rating:** 3.8★
+
 ## 2026-05-05
 **Prior rating:** 0.0★
 **Approach:** 2D refine (background generator + HDR glow)
