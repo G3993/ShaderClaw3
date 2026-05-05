@@ -1,6 +1,6 @@
 /*{
-  "DESCRIPTION": "Reverse Flow Field — colored seeds streaked backward through an animated cellular flow field. Looks like wind-blown grass tips.",
-  "CREDIT": "Ported from Shadertoy X3BBD1 by webwarrior (Material Maker output)",
+  "DESCRIPTION": "Thermal Flow Field — lava-heat seeds traced backward through cellular flow. Volcanic topographic color scale.",
+  "CREDIT": "ShaderClaw v2 (thermal regrading of reverse flow field)",
   "CATEGORIES": ["Generator", "Flow"],
   "INPUTS": [
     { "NAME": "iterations",  "LABEL": "Trace Steps",     "TYPE": "float", "DEFAULT": 64.0, "MIN": 8.0,  "MAX": 128.0 },
@@ -10,7 +10,7 @@
     { "NAME": "octaves",     "LABEL": "Octaves",         "TYPE": "float", "DEFAULT": 4.0,  "MIN": 1.0,  "MAX": 6.0 },
     { "NAME": "persistence", "LABEL": "Persistence",     "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.1,  "MAX": 0.9 },
     { "NAME": "dotDensity",  "LABEL": "Seed Density",    "TYPE": "float", "DEFAULT": 0.1,  "MIN": 0.01, "MAX": 0.5 },
-    { "NAME": "intensity",   "LABEL": "Brightness",      "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.2,  "MAX": 3.0 }
+    { "NAME": "intensity",   "LABEL": "Brightness",      "TYPE": "float", "DEFAULT": 1.5,  "MIN": 0.2,  "MAX": 3.0 }
   ],
   "PASSES": [
     { "TARGET": "directions" },
@@ -91,13 +91,35 @@ vec4 passDirections(vec2 fragCoord) {
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// Buffer B — colored grass tip seeds (static gradient + dot mask)
+// Thermal gradient — 5-stop volcanic lava palette
+// black crust → deep crimson → lava orange → hot yellow → white-hot HDR
+// ──────────────────────────────────────────────────────────────────────
+vec4 thermalGradient(float x) {
+    if (x < 0.15) {
+        return vec4(0.0, 0.0, 0.0, x / 0.15);
+    } else if (x < 0.35) {
+        return vec4(mix(vec3(0.0), vec3(0.55, 0.0, 0.0), (x - 0.15) / 0.20), 1.0);
+    } else if (x < 0.55) {
+        return vec4(mix(vec3(0.55, 0.0, 0.0), vec3(1.0, 0.38, 0.0), (x - 0.35) / 0.20), 1.0);
+    } else if (x < 0.75) {
+        return vec4(mix(vec3(1.0, 0.38, 0.0), vec3(1.0, 0.88, 0.0), (x - 0.55) / 0.20), 1.0);
+    } else {
+        // white-hot HDR peak at 2.5
+        return vec4(mix(vec3(1.0, 0.88, 0.0), vec3(2.5, 2.2, 1.8), (x - 0.75) / 0.25), 1.0);
+    }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Buffer B — thermal lava seed colors (dot mask with thermal gradient)
 // ──────────────────────────────────────────────────────────────────────
 vec3 color_dots(vec2 uv, float size, float seed) {
     vec2 seed2 = rand2(vec2(seed, 1.0 - seed));
     uv /= size;
     vec2 point_pos = floor(uv) + vec2(0.5);
-    return rand3(seed2 + point_pos);
+    // Use thermalGradient to color seeds from rand3 brightness
+    vec3 r = rand3(seed2 + point_pos);
+    float brightness = dot(r, vec3(1.0)) / 3.0;
+    return thermalGradient(brightness).rgb;
 }
 
 float dots(vec2 uv, float size, float density, float seed) {
@@ -111,24 +133,11 @@ vec3 blend_darken(vec3 c1, vec3 c2, float opacity) {
     return opacity * min(c1, c2) + (1.0 - opacity) * c2;
 }
 
-vec4 grassGradient(float x) {
-    const float p0 = 0.363636, p1 = 0.592727, p2 = 0.804218, p3 = 0.907897;
-    const vec4 c0 = vec4(0.0,        0.0,        0.0,        1.0);
-    const vec4 c1 = vec4(0.05680800, 0.31962299, 0.15774099, 1.0);
-    const vec4 c2 = vec4(0.78224099, 0.78224099, 0.78224099, 1.0);
-    const vec4 c3 = vec4(1.0,        1.0,        1.0,        1.0);
-    if (x < p0) return c0;
-    if (x < p1) return mix(c0, c1, 0.5 - 0.5 * cos(3.14159265359 * (x - p0) / (p1 - p0)));
-    if (x < p2) return mix(c1, c2, 0.5 - 0.5 * cos(3.14159265359 * (x - p1) / (p2 - p1)));
-    if (x < p3) return mix(c2, c3, 0.5 - 0.5 * cos(3.14159265359 * (x - p2) / (p3 - p2)));
-    return c3;
-}
-
 vec4 passPositions(vec2 fragCoord) {
     float minSize = min(RENDERSIZE.x, RENDERSIZE.y);
     vec2 UV = vec2(0.0, 1.0) + vec2(1.0, -1.0) * (fragCoord - 0.5 * (RENDERSIZE - vec2(minSize))) / minSize;
     vec3 dotColor = color_dots(UV, 1.0 / 1024.0, 0.0);
-    vec4 grad     = grassGradient(dot(dotColor, vec3(1.0)) / 3.0);
+    vec4 grad     = thermalGradient(dot(dotColor, vec3(1.0)) / 3.0);
     float dotMask = dots(UV, 1.0 / 1024.0, dotDensity, 0.334808);
     vec3  blended = blend_darken(grad.rgb, vec3(dotMask), 1.0 * grad.a);
     float a = min(1.0, dotMask + grad.a);
@@ -184,6 +193,9 @@ vec3 traceIntensity(vec2 pos) {
 vec4 passImage(vec2 fragCoord) {
     float maxSize = max(RENDERSIZE.x, RENDERSIZE.y);
     vec2 UV = vec2(0.0, 1.0) + vec2(1.0, -1.0) * (fragCoord - 0.5 * (RENDERSIZE - vec2(maxSize))) / maxSize;
+    // HDR boost — white-hot tips reach 2.5 via traceIntensity * intensity
+    // traceIntensity already multiplies by intensity in passImage
+    // No other changes needed — passImage output is col already
     vec3 col = traceIntensity(UV) * intensity;
     return vec4(col, 1.0);
 }
