@@ -16,7 +16,7 @@
     { "NAME": "bloomRatio", "LABEL": "Glow Ratio", "TYPE": "float", "DEFAULT": 0.4, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "metallic", "LABEL": "Metallic", "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "audioDrive", "LABEL": "Audio Drive", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 5.0 },
-    { "NAME": "accentColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
+    { "NAME": "accentColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.2, 0.5, 1.0, 1.0] },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.04, 1.0] },
     { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
     { "NAME": "texMix", "LABEL": "Texture Mix", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
@@ -147,7 +147,7 @@ vec3 calcNormal(vec3 p, float count) {
 vec3 shadeSphere(vec3 p, vec3 n, vec3 rd, float id) {
     // Per-sphere color: accent color with per-ball hue/brightness variation
     vec3 h = hash3(id * 7.13);
-    float hueShift = (h.x - 0.5) * 0.3; // subtle hue spread around accent
+    float hueShift = (h.x - 0.5) * 1.0; // full hue spectrum spread per sphere
     vec3 baseCol = accentColor.rgb;
     // Rotate hue slightly per sphere via RGB approximation
     float angle = hueShift * 6.2832;
@@ -173,8 +173,8 @@ vec3 shadeSphere(vec3 p, vec3 n, vec3 rd, float id) {
     float fresnel = pow(1.0 - max(dot(n, -rd), 0.0), 3.0);
 
     vec3 col = baseCol * diff * (1.0 - metallic * 0.5);
-    col += (baseCol * metallic + vec3(1.0) * (1.0 - metallic)) * (spec * 0.8 + spec2 * 0.3);
-    col += fresnel * 0.3 * (baseCol * metallic + vec3(0.5));
+    col += (baseCol * metallic + vec3(2.5) * (1.0 - metallic)) * (spec * 3.0 + spec2 * 1.0);
+    col += fresnel * 2.0 * (baseCol * metallic + vec3(1.5));
 
     // Ambient
     col += baseCol * 0.08;
@@ -235,7 +235,7 @@ vec4 passScene(vec2 uv) {
 
         // Audio brightness boost for blooming spheres
         if (shouldBloom(hit.y)) {
-            col *= 1.0 + audioLevel * audioDrive * 0.5;
+            col *= 1.0 + audioLevel * audioDrive * 2.0;
         }
 
         // Encode bloom flag in alpha: 1.0 = bloom, 0.5 = no bloom
