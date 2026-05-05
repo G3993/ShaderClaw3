@@ -7,7 +7,7 @@
     { "NAME": "colorMode", "TYPE": "long", "VALUES": [0,1,2], "LABELS": ["Mono Green","Mono White","Rainbow"], "DEFAULT": 0 },
     { "NAME": "contrast", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6 },
     { "NAME": "density", "TYPE": "float", "MIN": 0.1, "MAX": 1.0, "DEFAULT": 0.27 },
-    { "NAME": "charColor", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
+    { "NAME": "charColor", "TYPE": "color", "DEFAULT": [0.0, 1.0, 0.2, 1.0] },
     { "NAME": "bgColor", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
     { "NAME": "transparentBg", "TYPE": "bool", "DEFAULT": false }
   ]
@@ -119,7 +119,7 @@ void main() {
             2.0 - abs(hue * 6.0 - 2.0),
             2.0 - abs(hue * 6.0 - 4.0)
         );
-        charCol = clamp(charCol, 0.0, 1.0);
+        charCol = clamp(charCol, 0.0, 1.0) * 2.0;  // rainbow: fully saturated, HDR
     }
 
     // Final color: character pixel * brightness * color
@@ -127,12 +127,14 @@ void main() {
     float finalAlpha = transparentBg ? 0.0 : 1.0;
     float mask = pixel * brightness;
 
-    // Brighten the leading edge characters
+    // Brighten the leading edge characters — HDR white-hot head
     float headGlow = smoothstep(0.8, 1.0, 1.0 - distFromHead) * colActive;
-    vec3 glowCol = mix(charCol, vec3(1.0), headGlow * 0.6);
+    vec3 glowCol = mix(charCol, vec3(3.5), headGlow * 0.85);
 
     finalCol = mix(finalCol, glowCol, clamp(mask, 0.0, 1.0));
-    if (transparentBg) finalAlpha = clamp(mask, 0.0, 1.0);
+    // Additive HDR burst at leading pixel
+    finalCol += charCol * headGlow * mask * 2.5;
+    if (transparentBg) finalAlpha = clamp(mask + headGlow * 0.5, 0.0, 1.0);
 
     gl_FragColor = vec4(finalCol, finalAlpha);
 }
