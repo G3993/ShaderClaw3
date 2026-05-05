@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Digifade - glitch dissolve",
+  "DESCRIPTION": "Digifade — glitch dissolve on a bioluminescent deep-sea background",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1], "LABELS": ["Digifade","Digifade Glitch"], "DEFAULT": 0 },
@@ -9,16 +9,16 @@
     { "NAME": "intensity", "LABEL": "Glitch", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Dissolve", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.0, 1.0, 0.5, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.02, 0.05, 1.0] },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.5 },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
 const float PI = 3.14159265;
 const float TWO_PI = 6.28318530;
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
 float charPixel(int ch, float col, float row) {
     if (ch < 0 || ch > 36) return 0.0;
     vec2 uv = vec2(col / 5.0, row / 7.0);
@@ -82,17 +82,33 @@ int charCount() {
     return n > 0 ? n : 1;
 }
 
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
-}
-
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
-// =======================================================================
-// EFFECT: DIGIFADE - glitch dissolve
-// =======================================================================
+// Bioluminescent deep-sea background — particle flashes in dark water (NOT CRT)
+vec3 biolumBg(vec2 uv) {
+    float t = TIME * 0.4;
+    vec3 col = bgColor.rgb;
+    // Slow undulating water current
+    float wave = sin(uv.x * 7.3 + t * 0.7) * 0.005 + sin(uv.y * 5.1 - t * 0.5) * 0.004;
+    vec2 wUV = uv + vec2(wave, wave * 0.5);
+    // Bioluminescent particle flashes
+    for (int i = 0; i < 12; i++) {
+        float fi = float(i);
+        float px = fract(sin(fi * 73.1 + t * 0.13) * 43758.5);
+        float py = fract(sin(fi * 31.7 + t * 0.09) * 12345.7);
+        float flash = sin(t * (1.2 + fi * 0.3) + fi * 2.7) * 0.5 + 0.5;
+        flash = pow(flash, 3.0);
+        float d = length(wUV - vec2(px, py));
+        // 3 saturated colors: cyan, magenta, lime
+        vec3 bc;
+        int ci = int(mod(fi, 3.0));
+        if (ci == 0) bc = vec3(0.0, 1.0, 0.8);
+        else if (ci == 1) bc = vec3(1.0, 0.0, 0.6);
+        else bc = vec3(0.4, 1.0, 0.0);
+        col += bc * flash * smoothstep(0.12, 0.0, d) * 0.18;
+    }
+    return col;
+}
 
 vec4 effectDigifade(vec2 uv, int sub) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
@@ -106,13 +122,11 @@ vec4 effectDigifade(vec2 uv, int sub) {
     float t = TIME * speed * sweepSpeed;
     vec2 p = vec2((uv.x - 0.5) * aspect + 0.5, uv.y);
 
-    // Single-line layout: all chars on one row, scale to fit width
     float cH = 0.18 * textScale;
     if (aspect < 1.0) cH *= aspect;
     float cW = cH * (5.0/7.0);
     float gW = cW * 0.2;
 
-    // Scale down if text is wider than screen
     float totalTextW = float(numChars) * cW + float(numChars - 1) * gW;
     float maxW = 0.9 * aspect;
     float fitScale = totalTextW > maxW ? maxW / totalTextW : 1.0;
@@ -153,15 +167,13 @@ vec4 effectDigifade(vec2 uv, int sub) {
         }
     }
 
-    vec3 fc = mix(bgColor.rgb, textColor.rgb, textHit);
+    vec3 neonText = textColor.rgb * hdrGlow;
+    vec3 bg = biolumBg(uv);
+    vec3 fc = mix(bg, neonText, textHit);
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
+    if (transparentBg) { a = textHit; fc = neonText; }
     return vec4(fc, a);
 }
-
-// =======================================================================
-// MAIN
-// =======================================================================
 
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
