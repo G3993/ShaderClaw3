@@ -1,197 +1,269 @@
 /*{
-  "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Digifade - glitch dissolve",
+  "DESCRIPTION": "Data Void — 3D raymarched floating data panels in deep black space. Each panel glows electric blue/violet at its edges and displays a flickering data-cell grid. Magenta HDR spikes. Camera drifts forward.",
+  "CREDIT": "ShaderClaw auto-improve",
+  "ISFVSN": "2",
+  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
-    { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1], "LABELS": ["Digifade","Digifade Glitch"], "DEFAULT": 0 },
-    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
-    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
-    { "NAME": "intensity", "LABEL": "Glitch", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "density", "LABEL": "Dissolve", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    {"NAME":"speed",       "LABEL":"Speed",        "TYPE":"float","DEFAULT":0.3, "MIN":0.0,"MAX":1.5},
+    {"NAME":"gridDensity", "LABEL":"Grid Density",  "TYPE":"float","DEFAULT":8.0, "MIN":4.0,"MAX":16.0},
+    {"NAME":"hdrPeak",    "LABEL":"HDR Peak",     "TYPE":"float","DEFAULT":2.5, "MIN":1.0,"MAX":4.0},
+    {"NAME":"audioReact", "LABEL":"Audio React",  "TYPE":"float","DEFAULT":0.6, "MIN":0.0,"MAX":2.0},
+    {"NAME":"panelCount", "LABEL":"Panel Count",  "TYPE":"float","DEFAULT":6.0, "MIN":3.0,"MAX":12.0}
   ]
 }*/
 
-const float PI = 3.14159265;
-const float TWO_PI = 6.28318530;
+// ── Palette ──────────────────────────────────────────────────────────────────
+const vec3 COL_VOID       = vec3(0.0, 0.0, 0.01);
+const vec3 COL_PANEL_FACE = vec3(0.0, 0.02, 0.05);
+const vec3 COL_DATA_BLUE  = vec3(0.0, 0.5, 1.0);   // * 2.0
+const vec3 COL_EDGE_VIOL  = vec3(0.2, 0.0, 1.0);   // * 2.5
+const vec3 COL_SPIKE_MAG  = vec3(1.0, 0.0, 0.8);   // * 3.0
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
-float charPixel(int ch, float col, float row) {
-    if (ch < 0 || ch > 36) return 0.0;
-    vec2 uv = vec2(col / 5.0, row / 7.0);
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return smoothstep(0.1, 0.55, texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r);
+// ── Hash helpers ─────────────────────────────────────────────────────────────
+float hash11(float n)  { return fract(sin(n * 127.1) * 43758.5453); }
+float hash12(vec2 p)   { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float hash13(vec3 p)   { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+
+// ── SDF helpers ──────────────────────────────────────────────────────────────
+float sdBox(vec3 p, vec3 b) {
+    vec3 d = abs(p) - b;
+    return length(max(d, 0.0)) + min(max(d.x, max(d.y, d.z)), 0.0);
 }
 
-int getChar(int slot) {
-    if (slot == 0)  return int(msg_0);
-    if (slot == 1)  return int(msg_1);
-    if (slot == 2)  return int(msg_2);
-    if (slot == 3)  return int(msg_3);
-    if (slot == 4)  return int(msg_4);
-    if (slot == 5)  return int(msg_5);
-    if (slot == 6)  return int(msg_6);
-    if (slot == 7)  return int(msg_7);
-    if (slot == 8)  return int(msg_8);
-    if (slot == 9)  return int(msg_9);
-    if (slot == 10) return int(msg_10);
-    if (slot == 11) return int(msg_11);
-    if (slot == 12) return int(msg_12);
-    if (slot == 13) return int(msg_13);
-    if (slot == 14) return int(msg_14);
-    if (slot == 15) return int(msg_15);
-    if (slot == 16) return int(msg_16);
-    if (slot == 17) return int(msg_17);
-    if (slot == 18) return int(msg_18);
-    if (slot == 19) return int(msg_19);
-    if (slot == 20) return int(msg_20);
-    if (slot == 21) return int(msg_21);
-    if (slot == 22) return int(msg_22);
-    if (slot == 23) return int(msg_23);
-    if (slot == 24) return int(msg_24);
-    if (slot == 25) return int(msg_25);
-    if (slot == 26) return int(msg_26);
-    if (slot == 27) return int(msg_27);
-    if (slot == 28) return int(msg_28);
-    if (slot == 29) return int(msg_29);
-    if (slot == 30) return int(msg_30);
-    if (slot == 31) return int(msg_31);
-    if (slot == 32) return int(msg_32);
-    if (slot == 33) return int(msg_33);
-    if (slot == 34) return int(msg_34);
-    if (slot == 35) return int(msg_35);
-    if (slot == 36) return int(msg_36);
-    if (slot == 37) return int(msg_37);
-    if (slot == 38) return int(msg_38);
-    if (slot == 39) return int(msg_39);
-    if (slot == 40) return int(msg_40);
-    if (slot == 41) return int(msg_41);
-    if (slot == 42) return int(msg_42);
-    if (slot == 43) return int(msg_43);
-    if (slot == 44) return int(msg_44);
-    if (slot == 45) return int(msg_45);
-    if (slot == 46) return int(msg_46);
-    return int(msg_47);
+// ── Rotation matrices ─────────────────────────────────────────────────────────
+mat3 rotX(float a) {
+    float s = sin(a), c = cos(a);
+    return mat3(1.0, 0.0, 0.0,  0.0, c, -s,  0.0, s, c);
+}
+mat3 rotY(float a) {
+    float s = sin(a), c = cos(a);
+    return mat3(c, 0.0, s,  0.0, 1.0, 0.0,  -s, 0.0, c);
+}
+mat3 rotZ(float a) {
+    float s = sin(a), c = cos(a);
+    return mat3(c, -s, 0.0,  s, c, 0.0,  0.0, 0.0, 1.0);
 }
 
-int charCount() {
-    int n = int(msg_len);
-    return n > 0 ? n : 1;
+// ── Panel geometry ─────────────────────────────────────────────────────────
+// Half-extents for each panel element
+const vec3 PANEL_SIZE = vec3(1.2, 0.8, 0.02);
+const vec3 GLOW_SIZE  = vec3(1.25, 0.85, 0.07);
+
+// ── Panel scene SDF + hit info ────────────────────────────────────────────────
+// Returns (dist, panelIndex * 10 + matID)
+// matID: 0 = face, 1 = edge glow region
+vec2 panelSDF(vec3 ro_p, int idx) {
+    float fi = float(idx);
+
+    // Each panel positioned on a sphere shell, orbit determined by index
+    float angle   = fi * 1.0472 + TIME * (0.03 + hash11(fi + 0.5) * 0.04); // spread + slow orbit
+    float radius  = 3.5 + hash11(fi * 1.3) * 2.5;
+    float elevation = (hash11(fi * 2.7) - 0.5) * 2.4;
+
+    vec3 panelPos = vec3(sin(angle) * radius, elevation, cos(angle) * radius);
+
+    // Panel rotation: varying pitch/yaw per panel
+    float pitch = hash11(fi * 3.1) * 1.5 - 0.75 + TIME * 0.012 * (hash11(fi * 4.3) - 0.5);
+    float yaw   = hash11(fi * 5.7) * 6.28318 + TIME * 0.018 * (hash11(fi * 6.9) - 0.5);
+    float roll  = hash11(fi * 7.3) * 0.8 - 0.4;
+
+    // Transform point into panel local space
+    vec3 lp = ro_p - panelPos;
+    lp = rotY(-yaw) * lp;
+    lp = rotX(-pitch) * lp;
+    lp = rotZ(-roll) * lp;
+
+    float dPanel = sdBox(lp, PANEL_SIZE);
+    float dGlow  = sdBox(lp, GLOW_SIZE);
+
+    // Edge region: between inner panel and outer glow box
+    float dEdge = max(dGlow, -dPanel + 0.01);   // shell around panel face
+
+    if (dPanel < dEdge) return vec2(dPanel, fi * 10.0 + 0.0);
+    return vec2(dEdge,  fi * 10.0 + 1.0);
 }
 
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
+// ── Full scene ────────────────────────────────────────────────────────────────
+vec2 sceneSDF(vec3 p) {
+    vec2 res = vec2(1e9, -1.0);
+    int n = int(clamp(panelCount, 3.0, 12.0));
+    for (int i = 0; i < 12; i++) {
+        if (i >= n) break;
+        vec2 pr = panelSDF(p, i);
+        if (pr.x < res.x) res = pr;
+    }
+    return res;
 }
 
-float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+// ── Normal via finite differences ─────────────────────────────────────────────
+vec3 calcNormal(vec3 p) {
+    vec2 e = vec2(0.001, 0.0);
+    return normalize(vec3(
+        sceneSDF(p + e.xyy).x - sceneSDF(p - e.xyy).x,
+        sceneSDF(p + e.yxy).x - sceneSDF(p - e.yxy).x,
+        sceneSDF(p + e.yyx).x - sceneSDF(p - e.yyx).x
+    ));
+}
 
-// =======================================================================
-// EFFECT: DIGIFADE - glitch dissolve
-// =======================================================================
+// ── Data grid pattern on panel face ─────────────────────────────────────────
+// p:       world hit point (needs to be in panel local space, supplied as localUV)
+// returns: vec3 color emitted by the panel face
+vec3 dataFaceColor(vec2 localUV, float panelIdx, float audioBst) {
+    // localUV in range [-1, 1] for the panel face
+    vec2 normUV = localUV * 0.5 + 0.5;   // [0, 1]
 
-vec4 effectDigifade(vec2 uv, int sub) {
-    float aspect = RENDERSIZE.x / RENDERSIZE.y;
-    int numChars = charCount();
-    float glitchAmount = intensity;
-    float sliceCount = mix(5.0, 100.0, density);
+    vec2 gridUV  = fract(normUV * gridDensity);
+    vec2 cellID  = floor(normUV * gridDensity);
 
-    float complexity = 1.0, sweepSpeed = 1.0, vertGlitch = 0.0, maxDisp = 0.3;
-    if (sub == 1) { complexity = 2.0; sweepSpeed = 1.3; maxDisp = 0.5; vertGlitch = 0.4; }
+    // Cell border (fwidth AA)
+    float border = 0.10;
+    float fwx    = fwidth(gridUV.x);
+    float fwy    = fwidth(gridUV.y);
+    float lineX  = smoothstep(border - fwx, border + fwx, gridUV.x) *
+                   smoothstep(border - fwx, border + fwx, 1.0 - gridUV.x);
+    float lineY  = smoothstep(border - fwy, border + fwy, gridUV.y) *
+                   smoothstep(border - fwy, border + fwy, 1.0 - gridUV.y);
+    float inCell = lineX * lineY;
 
-    float t = TIME * speed * sweepSpeed;
-    vec2 p = vec2((uv.x - 0.5) * aspect + 0.5, uv.y);
+    // Cell activity: hash by cellID + panel index, flicker at ~3 fps
+    float cellHash = hash12(cellID + vec2(panelIdx * 47.3, panelIdx * 31.1));
+    float timeSlot = floor(TIME * 3.0);
+    float flicker  = hash12(cellID + vec2(panelIdx + timeSlot * 13.7, timeSlot * 7.3));
+    float active   = step(0.55, flicker) * step(0.3, cellHash);
 
-    // Single-line layout: all chars on one row, scale to fit width
-    float cH = 0.18 * textScale;
-    if (aspect < 1.0) cH *= aspect;
-    float cW = cH * (5.0/7.0);
-    float gW = cW * 0.2;
+    // Hot-spike: every ~5 seconds a single cell blasts magenta
+    float spikeSlot  = floor(TIME * 0.2);
+    float spikeCellX = floor(hash11(panelIdx + spikeSlot * 53.1) * gridDensity);
+    float spikeCellY = floor(hash11(panelIdx + spikeSlot * 79.3) * gridDensity);
+    // Use abs distance < 0.5 to test float cell equality (both are floor() results)
+    float matchX     = step(abs(cellID.x - spikeCellX), 0.5);
+    float matchY     = step(abs(cellID.y - spikeCellY), 0.5);
+    float isSpike    = matchX * matchY;
+    // Smooth the spike in/out
+    float spikeFade  = sin(fract(TIME * 0.2) * 3.14159) * 0.8;
 
-    // Scale down if text is wider than screen
-    float totalTextW = float(numChars) * cW + float(numChars - 1) * gW;
-    float maxW = 0.9 * aspect;
-    float fitScale = totalTextW > maxW ? maxW / totalTextW : 1.0;
-    cH *= fitScale;
-    cW *= fitScale;
-    gW *= fitScale;
+    // Base cell color
+    vec3 cellCol = COL_DATA_BLUE * 2.0 * active * audioBst;
+    cellCol     += COL_SPIKE_MAG * 3.0 * isSpike * spikeFade * audioBst;
 
-    float rowW = float(numChars) * cW + float(numChars - 1) * gW;
-    float startX = 0.5 - rowW * 0.5;
-    float startY = 0.5 - cH * 0.5;
+    // Panel face base (dark)
+    vec3 face = COL_PANEL_FACE;
+    face += cellCol * inCell;
 
-    float si = floor(uv.y * sliceCount);
-    float n1 = hash(si + floor(t*2.0));
-    float n2 = hash(si*3.7 + floor(t*3.0));
+    return face;
+}
 
-    float textHit = 0.0;
+// ── Main ─────────────────────────────────────────────────────────────────────
+void main() {
+    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
+    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
 
-    float sw = sin(t*0.7)*0.5+0.5;
-    float ps = smoothstep(sw-0.15, sw+0.1, (p.x-startX)/max(rowW, 0.001));
+    // Camera: drift forward, gentle yaw
+    float camZ   = -TIME * speed * 1.5;
+    float camYaw = sin(TIME * 0.07) * 0.3;
+    vec3 ro = vec3(sin(camYaw) * 0.8, sin(TIME * 0.04) * 0.3, camZ);
+    vec3 fwd   = normalize(vec3(sin(camYaw) * 0.1, 0.0, 1.0));
+    vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), fwd));
+    vec3 up    = cross(fwd, right);
+    vec3 rd    = normalize(uv.x * right + uv.y * up + fwd * 1.7);
 
-    float dx = abs(ps*n1*glitchAmount*maxDisp + ps*sin(si*0.3*complexity+t)*glitchAmount*maxDisp*0.3);
-    float dy = vertGlitch > 0.01 ? ps*(n2-0.5)*vertGlitch*glitchAmount*0.06 : 0.0;
+    float audioBst = 1.0 + audioLevel * audioReact;
 
-    vec2 samp = vec2(p.x - dx, p.y - dy);
-    float rx = samp.x - startX, ry = samp.y - startY;
+    // ── Raymarch ─────────────────────────────────────────────────────────────
+    float t     = 0.1;
+    float matID = -1.0;
+    vec3  p     = ro;
+    bool  hit   = false;
 
-    if (rx >= 0.0 && rx <= rowW && ry >= 0.0 && ry <= cH) {
-        float cs = cW + gW;
-        float csF = rx / cs;
-        int slot = int(floor(csF));
-        float clx = fract(csF), cf = cW/cs;
-        if (clx < cf && slot >= 0 && slot < numChars) {
-            float gc = (clx/cf)*5.0, gr = (ry/cH)*7.0;
-            if (gc >= 0.0 && gc < 5.0 && gr >= 0.0 && gr < 7.0) {
-                int ch = getChar(slot);
-                if (ch >= 0 && ch <= 36 && ch != 26) textHit = max(textHit, charPixel(ch, gc, gr));
-            }
+    for (int i = 0; i < 64; i++) {
+        p = ro + rd * t;
+        vec2 res = sceneSDF(p);
+        float d  = res.x;
+        if (d < 0.003) { hit = true; matID = res.y; break; }
+        if (t > 40.0)  break;
+        t += max(d * 0.8, 0.01);
+    }
+
+    vec3 col = COL_VOID;
+
+    if (hit) {
+        float panelIdx = floor(matID / 10.0);
+        float surfID   = mod(matID, 10.0);
+
+        vec3 n = calcNormal(p);
+
+        // ── Panel face ───────────────────────────────────────────────────
+        if (surfID < 0.5) {
+            // Reconstruct panel local UV from normal and world position
+            // Use cross product of n to form local axes (approximate)
+            // Since panels are thin, n ≈ panel face normal in world space
+            // Project p onto plane perpendicular to n for local UV
+            vec3 right2 = normalize(cross(n, vec3(0.0, 1.0, 0.0)));
+            vec3 up2    = cross(right2, n);
+            // Reconstruct panel center (approx using panel radius + orbit)
+            float fi      = panelIdx;
+            float angle   = fi * 1.0472 + TIME * (0.03 + hash11(fi + 0.5) * 0.04);
+            float radius  = 3.5 + hash11(fi * 1.3) * 2.5;
+            float elev    = (hash11(fi * 2.7) - 0.5) * 2.4;
+            vec3 pCenter  = vec3(sin(angle) * radius, elev, cos(angle) * radius);
+            vec3 dp       = p - pCenter;
+            vec2 localUV  = vec2(dot(dp, right2), dot(dp, up2));
+            // Normalize to [-1, 1] over panel half-extents
+            localUV      /= vec2(1.2, 0.8);
+
+            col = dataFaceColor(localUV, panelIdx, audioBst);
+
+            // Subtle Fresnel rim from edges
+            float rim = 1.0 - abs(dot(n, normalize(ro - p)));
+            col += COL_EDGE_VIOL * 2.5 * pow(rim, 3.0) * 0.4 * audioBst;
+        }
+        // ── Edge glow region ─────────────────────────────────────────────
+        else {
+            // Glow based on distance from panel face SDF
+            float fi      = panelIdx;
+            float angle   = fi * 1.0472 + TIME * (0.03 + hash11(fi + 0.5) * 0.04);
+            float radius  = 3.5 + hash11(fi * 1.3) * 2.5;
+            float elev    = (hash11(fi * 2.7) - 0.5) * 2.4;
+            vec3 pCenter  = vec3(sin(angle) * radius, elev, cos(angle) * radius);
+
+            // Approx edge distance via SDF of inner box
+            float pitch = hash11(fi * 3.1) * 1.5 - 0.75 + TIME * 0.012 * (hash11(fi * 4.3) - 0.5);
+            float yaw   = hash11(fi * 5.7) * 6.28318 + TIME * 0.018 * (hash11(fi * 6.9) - 0.5);
+            float roll  = hash11(fi * 7.3) * 0.8 - 0.4;
+            vec3 lp2    = p - pCenter;
+            lp2 = rotY(-yaw) * lp2;
+            lp2 = rotX(-pitch) * lp2;
+            lp2 = rotZ(-roll) * lp2;
+            float innerD = sdBox(lp2, PANEL_SIZE);
+            // fwidth AA on glow falloff
+            float fw     = fwidth(innerD);
+            float glowF  = exp(-innerD * 25.0);
+            glowF        = smoothstep(fw, 0.0, innerD - 0.01) * 0.3 + glowF * 0.7;
+
+            col = COL_EDGE_VIOL * 2.5 * glowF * hdrPeak * audioBst;
+            // Mix in audio-reactive spike on edges
+            col += COL_DATA_BLUE * 2.0 * glowF * audioBass * audioReact * 0.4;
+        }
+
+        // Depth fade to void
+        float fogT = 1.0 - exp(-t * 0.03);
+        col = mix(col, COL_VOID, fogT * 0.85);
+    }
+
+    // ── Additive edge glow halos bleed into surrounding space ────────────────
+    // Sample a few ray points and accumulate panel proximity glow
+    int np = int(clamp(panelCount, 3.0, 12.0));
+    for (int k = 0; k < 6; k++) {
+        float kt = 0.5 + float(k) * 3.5;
+        if (kt > t) break;
+        vec3 kp = ro + rd * kt;
+        for (int idx = 0; idx < 12; idx++) {
+            if (idx >= np) break;
+            vec2 pr = panelSDF(kp, idx);
+            col += COL_EDGE_VIOL * 2.5 * exp(-pr.x * 12.0) * 0.008 * audioBst;
+            col += COL_DATA_BLUE * 2.0 * exp(-pr.x * 20.0) * 0.005 * audioBst;
         }
     }
 
-    vec3 fc = mix(bgColor.rgb, textColor.rgb, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
-    return vec4(fc, a);
-}
-
-// =======================================================================
-// MAIN
-// =======================================================================
-
-void main() {
-    vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
-    int p = int(preset);
-    vec4 col = effectDigifade(uv, p);
-
-    if (_voiceGlitch > 0.01) {
-        float g = _voiceGlitch;
-        float t = TIME * 17.0;
-        float band = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
-        float bandNoise = fract(sin(band * 91.7 + t) * 43758.5);
-        float bandActive = step(1.0 - g * 0.6, bandNoise);
-        float shift = (bandNoise - 0.5) * 0.08 * g * bandActive;
-        float chromaAmt = g * 0.015;
-        vec2 uvR = uv + vec2(shift + chromaAmt, 0.0);
-        vec2 uvB = uv + vec2(shift - chromaAmt, 0.0);
-        vec2 uvG = uv + vec2(shift, chromaAmt * 0.5);
-        vec4 cR = effectDigifade(uvR, p);
-        vec4 cG = effectDigifade(uvG, p);
-        vec4 cB = effectDigifade(uvB, p);
-        vec4 glitched = vec4(cR.r, cG.g, cB.b, max(max(cR.a, cG.a), cB.a));
-        float scanline = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
-        float blockX = floor(uv.x * 6.0);
-        float blockY = floor(uv.y * 4.0);
-        float blockNoise = fract(sin((blockX + blockY * 7.0) * 113.1 + floor(t * 8.0)) * 43758.5);
-        float dropout = step(1.0 - g * 0.15, blockNoise);
-        glitched.rgb *= scanline;
-        glitched.rgb *= 1.0 - dropout;
-        col = mix(col, glitched, smoothstep(0.0, 0.3, g));
-    }
-
-    gl_FragColor = col;
+    gl_FragColor = vec4(col, 1.0);
 }
