@@ -1,197 +1,134 @@
 /*{
-  "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Digifade - glitch dissolve",
+  "DESCRIPTION": "Holographic Data Sphere — 3D raymarched sphere with three orbiting torus rings, HDR chromatic shading and audio pulse",
+  "CREDIT": "ShaderClaw auto-improve",
+  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
-    { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1], "LABELS": ["Digifade","Digifade Glitch"], "DEFAULT": 0 },
-    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
-    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
-    { "NAME": "intensity", "LABEL": "Glitch", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "density", "LABEL": "Dissolve", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "sphereR",    "LABEL": "Sphere Size",  "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.2,  "MAX": 1.2  },
+    { "NAME": "torusR",     "LABEL": "Orbit Radius", "TYPE": "float", "DEFAULT": 1.35, "MIN": 0.8,  "MAX": 2.2  },
+    { "NAME": "hdrPeak",    "LABEL": "HDR Peak",     "TYPE": "float", "DEFAULT": 2.5,  "MIN": 1.0,  "MAX": 4.0  },
+    { "NAME": "ringSpeed",  "LABEL": "Ring Speed",   "TYPE": "float", "DEFAULT": 0.6,  "MIN": 0.0,  "MAX": 2.0  },
+    { "NAME": "audioPulse", "LABEL": "Audio Pulse",  "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 2.0  }
   ]
 }*/
 
-const float PI = 3.14159265;
-const float TWO_PI = 6.28318530;
+float hash1(float n) { return fract(sin(n * 127.1) * 43758.5); }
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
-float charPixel(int ch, float col, float row) {
-    if (ch < 0 || ch > 36) return 0.0;
-    vec2 uv = vec2(col / 5.0, row / 7.0);
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return smoothstep(0.1, 0.55, texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r);
+float sdSphere(vec3 p, float r) { return length(p) - r; }
+
+float sdTorus(vec3 p, float R, float r) {
+    vec2 q = vec2(length(p.xz) - R, p.y);
+    return length(q) - r;
 }
 
-int getChar(int slot) {
-    if (slot == 0)  return int(msg_0);
-    if (slot == 1)  return int(msg_1);
-    if (slot == 2)  return int(msg_2);
-    if (slot == 3)  return int(msg_3);
-    if (slot == 4)  return int(msg_4);
-    if (slot == 5)  return int(msg_5);
-    if (slot == 6)  return int(msg_6);
-    if (slot == 7)  return int(msg_7);
-    if (slot == 8)  return int(msg_8);
-    if (slot == 9)  return int(msg_9);
-    if (slot == 10) return int(msg_10);
-    if (slot == 11) return int(msg_11);
-    if (slot == 12) return int(msg_12);
-    if (slot == 13) return int(msg_13);
-    if (slot == 14) return int(msg_14);
-    if (slot == 15) return int(msg_15);
-    if (slot == 16) return int(msg_16);
-    if (slot == 17) return int(msg_17);
-    if (slot == 18) return int(msg_18);
-    if (slot == 19) return int(msg_19);
-    if (slot == 20) return int(msg_20);
-    if (slot == 21) return int(msg_21);
-    if (slot == 22) return int(msg_22);
-    if (slot == 23) return int(msg_23);
-    if (slot == 24) return int(msg_24);
-    if (slot == 25) return int(msg_25);
-    if (slot == 26) return int(msg_26);
-    if (slot == 27) return int(msg_27);
-    if (slot == 28) return int(msg_28);
-    if (slot == 29) return int(msg_29);
-    if (slot == 30) return int(msg_30);
-    if (slot == 31) return int(msg_31);
-    if (slot == 32) return int(msg_32);
-    if (slot == 33) return int(msg_33);
-    if (slot == 34) return int(msg_34);
-    if (slot == 35) return int(msg_35);
-    if (slot == 36) return int(msg_36);
-    if (slot == 37) return int(msg_37);
-    if (slot == 38) return int(msg_38);
-    if (slot == 39) return int(msg_39);
-    if (slot == 40) return int(msg_40);
-    if (slot == 41) return int(msg_41);
-    if (slot == 42) return int(msg_42);
-    if (slot == 43) return int(msg_43);
-    if (slot == 44) return int(msg_44);
-    if (slot == 45) return int(msg_45);
-    if (slot == 46) return int(msg_46);
-    return int(msg_47);
+// Torus rotated by angle on XY plane
+float sdTorusXY(vec3 p, float R, float r, float angle) {
+    float c = cos(angle), s = sin(angle);
+    vec3 q = vec3(p.x*c - p.y*s, p.x*s + p.y*c, p.z);
+    return sdTorus(q, R, r);
 }
 
-int charCount() {
-    int n = int(msg_len);
-    return n > 0 ? n : 1;
-}
+vec2 scene(vec3 p) {
+    float pulse = 1.0 + audioBass * audioPulse * 0.12;
+    float sr = sphereR * pulse;
+    float d = sdSphere(p, sr);
+    float matId = 0.0;
 
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
-}
+    // 3 tori: each orbiting at a different phase and tilt
+    for (int i = 0; i < 3; i++) {
+        float fi = float(i);
+        float orbitPhase = fi * 2.094 + TIME * ringSpeed * (0.7 + fi * 0.28);
+        float tiltAngle  = fi * 1.047;
+        float thickR = 0.04 + fi * 0.008;
 
-float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
-
-// =======================================================================
-// EFFECT: DIGIFADE - glitch dissolve
-// =======================================================================
-
-vec4 effectDigifade(vec2 uv, int sub) {
-    float aspect = RENDERSIZE.x / RENDERSIZE.y;
-    int numChars = charCount();
-    float glitchAmount = intensity;
-    float sliceCount = mix(5.0, 100.0, density);
-
-    float complexity = 1.0, sweepSpeed = 1.0, vertGlitch = 0.0, maxDisp = 0.3;
-    if (sub == 1) { complexity = 2.0; sweepSpeed = 1.3; maxDisp = 0.5; vertGlitch = 0.4; }
-
-    float t = TIME * speed * sweepSpeed;
-    vec2 p = vec2((uv.x - 0.5) * aspect + 0.5, uv.y);
-
-    // Single-line layout: all chars on one row, scale to fit width
-    float cH = 0.18 * textScale;
-    if (aspect < 1.0) cH *= aspect;
-    float cW = cH * (5.0/7.0);
-    float gW = cW * 0.2;
-
-    // Scale down if text is wider than screen
-    float totalTextW = float(numChars) * cW + float(numChars - 1) * gW;
-    float maxW = 0.9 * aspect;
-    float fitScale = totalTextW > maxW ? maxW / totalTextW : 1.0;
-    cH *= fitScale;
-    cW *= fitScale;
-    gW *= fitScale;
-
-    float rowW = float(numChars) * cW + float(numChars - 1) * gW;
-    float startX = 0.5 - rowW * 0.5;
-    float startY = 0.5 - cH * 0.5;
-
-    float si = floor(uv.y * sliceCount);
-    float n1 = hash(si + floor(t*2.0));
-    float n2 = hash(si*3.7 + floor(t*3.0));
-
-    float textHit = 0.0;
-
-    float sw = sin(t*0.7)*0.5+0.5;
-    float ps = smoothstep(sw-0.15, sw+0.1, (p.x-startX)/max(rowW, 0.001));
-
-    float dx = abs(ps*n1*glitchAmount*maxDisp + ps*sin(si*0.3*complexity+t)*glitchAmount*maxDisp*0.3);
-    float dy = vertGlitch > 0.01 ? ps*(n2-0.5)*vertGlitch*glitchAmount*0.06 : 0.0;
-
-    vec2 samp = vec2(p.x - dx, p.y - dy);
-    float rx = samp.x - startX, ry = samp.y - startY;
-
-    if (rx >= 0.0 && rx <= rowW && ry >= 0.0 && ry <= cH) {
-        float cs = cW + gW;
-        float csF = rx / cs;
-        int slot = int(floor(csF));
-        float clx = fract(csF), cf = cW/cs;
-        if (clx < cf && slot >= 0 && slot < numChars) {
-            float gc = (clx/cf)*5.0, gr = (ry/cH)*7.0;
-            if (gc >= 0.0 && gc < 5.0 && gr >= 0.0 && gr < 7.0) {
-                int ch = getChar(slot);
-                if (ch >= 0 && ch <= 36 && ch != 26) textHit = max(textHit, charPixel(ch, gc, gr));
-            }
-        }
+        // Orbit: rotate p around Y by orbitPhase, then tilt around Z by tiltAngle
+        float cO = cos(orbitPhase), sO = sin(orbitPhase);
+        vec3 rp = vec3(p.x*cO + p.z*sO, p.y, -p.x*sO + p.z*cO);
+        float cT = cos(tiltAngle), sT = sin(tiltAngle);
+        vec3 tp = vec3(rp.x, rp.y*cT - rp.z*sT, rp.y*sT + rp.z*cT);
+        float td = sdTorus(tp, torusR, thickR * (1.0 + audioHigh * audioPulse * 0.2));
+        if (td < d) { d = td; matId = fi + 1.0; }
     }
 
-    vec3 fc = mix(bgColor.rgb, textColor.rgb, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
-    return vec4(fc, a);
+    return vec2(d, matId);
 }
 
-// =======================================================================
-// MAIN
-// =======================================================================
+vec3 getNormal(vec3 p) {
+    vec2 e = vec2(0.003, 0.0);
+    return normalize(vec3(
+        scene(p+e.xyy).x - scene(p-e.xyy).x,
+        scene(p+e.yxy).x - scene(p-e.yxy).x,
+        scene(p+e.yyx).x - scene(p-e.yyx).x
+    ));
+}
+
+// 5-hue holographic palette
+vec3 holoColor(float id, vec3 p) {
+    int ci = int(mod(id, 5.0));
+    if (ci == 0) {
+        // Sphere: iridescent based on normal direction
+        float az = atan(p.z, p.x);
+        float po = p.y / sphereR;
+        float plasma = sin(az*3.0 + TIME*1.1)*0.4 + sin(po*4.0 + TIME*0.8)*0.4
+                     + sin(az*5.0 - po*2.0 + TIME*0.5)*0.2;
+        float t = plasma*0.5 + 0.5;
+        if (t < 0.25)       return mix(vec3(0.0, 0.9, 1.0), vec3(1.0, 0.0, 0.6), t*4.0);
+        else if (t < 0.5)   return mix(vec3(1.0, 0.0, 0.6), vec3(1.0, 0.75, 0.0), (t-0.25)*4.0);
+        else if (t < 0.75)  return mix(vec3(1.0, 0.75, 0.0), vec3(0.0, 1.0, 0.35), (t-0.5)*4.0);
+        else                return mix(vec3(0.0, 1.0, 0.35), vec3(0.7, 0.0, 1.0), (t-0.75)*4.0);
+    }
+    if (ci == 1) return vec3(0.0,  0.9,  1.0);   // cyan ring
+    if (ci == 2) return vec3(1.0,  0.0,  0.55);  // magenta ring
+               return vec3(1.0,  0.75, 0.0);   // gold ring
+}
 
 void main() {
-    vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
-    int p = int(preset);
-    vec4 col = effectDigifade(uv, p);
+    vec2 uv = (gl_FragCoord.xy - RENDERSIZE*0.5) / min(RENDERSIZE.x, RENDERSIZE.y);
 
-    if (_voiceGlitch > 0.01) {
-        float g = _voiceGlitch;
-        float t = TIME * 17.0;
-        float band = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
-        float bandNoise = fract(sin(band * 91.7 + t) * 43758.5);
-        float bandActive = step(1.0 - g * 0.6, bandNoise);
-        float shift = (bandNoise - 0.5) * 0.08 * g * bandActive;
-        float chromaAmt = g * 0.015;
-        vec2 uvR = uv + vec2(shift + chromaAmt, 0.0);
-        vec2 uvB = uv + vec2(shift - chromaAmt, 0.0);
-        vec2 uvG = uv + vec2(shift, chromaAmt * 0.5);
-        vec4 cR = effectDigifade(uvR, p);
-        vec4 cG = effectDigifade(uvG, p);
-        vec4 cB = effectDigifade(uvB, p);
-        vec4 glitched = vec4(cR.r, cG.g, cB.b, max(max(cR.a, cG.a), cB.a));
-        float scanline = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
-        float blockX = floor(uv.x * 6.0);
-        float blockY = floor(uv.y * 4.0);
-        float blockNoise = fract(sin((blockX + blockY * 7.0) * 113.1 + floor(t * 8.0)) * 43758.5);
-        float dropout = step(1.0 - g * 0.15, blockNoise);
-        glitched.rgb *= scanline;
-        glitched.rgb *= 1.0 - dropout;
-        col = mix(col, glitched, smoothstep(0.0, 0.3, g));
+    float camA = TIME * 0.09;
+    vec3 ro = vec3(sin(camA)*3.8, 0.9 + sin(TIME*0.13)*0.4, cos(camA)*3.8);
+    vec3 ta = vec3(0.0, 0.0, 0.0);
+    vec3 fw = normalize(ta - ro);
+    vec3 ri = normalize(cross(fw, vec3(0,1,0)));
+    vec3 up = cross(ri, fw);
+    vec3 rd = normalize(uv.x*ri + uv.y*up + 1.6*fw);
+
+    float bgH = dot(rd, vec3(0,1,0))*0.5 + 0.5;
+    vec3 bg = mix(vec3(0.0, 0.0, 0.012), vec3(0.0, 0.008, 0.03), bgH*bgH);
+
+    // Grid haze suggesting a holographic projector floor
+    float gridX = abs(fract(rd.x * 6.0 + 0.5) - 0.5);
+    float gridZ = abs(fract(rd.z * 6.0 + 0.5) - 0.5);
+    bg += vec3(0.0, 0.5, 1.0) * max(0.0, 0.03 - min(gridX, gridZ)) * 4.0 * (1.0 - bgH);
+
+    float t = 0.05; float mid = -99.0;
+    for (int i = 0; i < 80; i++) {
+        vec2 res = scene(ro + rd*t);
+        if (res.x < 0.003) { mid = res.y; break; }
+        if (t > 14.0) break;
+        t += res.x * 0.75;
     }
 
-    gl_FragColor = col;
+    vec3 col = bg;
+    if (mid >= 0.0) {
+        vec3 p  = ro + rd*t;
+        vec3 n  = getNormal(p);
+        vec3 L  = normalize(vec3(0.4, 1.3, 0.5));
+        vec3 L2 = normalize(vec3(-0.5, 0.3, -0.6));
+        vec3 basecol = holoColor(mid, p);
+        float diff = max(dot(n,L),0.0)*0.5 + max(dot(n,L2),0.0)*0.15 + 0.2;
+        float spec = pow(max(dot(reflect(-L,n),-rd),0.0), 48.0);
+        float rim  = pow(clamp(1.0-dot(n,-rd),0.0,1.0), 2.5);
+        float face = smoothstep(0.0, 0.2, dot(n,-rd));
+        col  = basecol * diff * hdrPeak * face;
+        col += basecol * rim  * hdrPeak * 1.6;
+        col += vec3(1.0) * spec * hdrPeak;
+        col += basecol * 0.3 * hdrPeak;  // holographic emission
+
+        // Scanline modulation (holographic effect — subtle)
+        float scan = 0.85 + 0.15 * sin(p.y * 18.0 + TIME * 4.0);
+        col *= scan;
+    }
+
+    col = mix(col, bg, clamp((t-6.0)/8.0, 0.0, 1.0)*0.5);
+    gl_FragColor = vec4(col, 1.0);
 }
