@@ -1,28 +1,25 @@
 /*{
-  "DESCRIPTION": "Vishes — cellular random walkers leaving hue-drifting color trails on a slow-fading grid",
-  "CREDIT": "ShaderClaw — cell-walker sketch translated to multi-pass ISF",
+  "DESCRIPTION": "Lissajous Ghosts — smooth Lissajous-curve walkers painting luminous trails on a persistent canvas",
+  "CREDIT": "ShaderClaw — Lissajous rework of vishes cell-walker",
   "CATEGORIES": ["Generator"],
   "INPUTS": [
-    { "NAME": "gridSize", "LABEL": "Grid Size", "TYPE": "float", "DEFAULT": 120.0, "MIN": 20.0, "MAX": 400.0 },
-    { "NAME": "walkers", "LABEL": "Walkers", "TYPE": "float", "DEFAULT": 6.0, "MIN": 1.0, "MAX": 16.0 },
-    { "NAME": "stepRate", "LABEL": "Step Rate", "TYPE": "float", "DEFAULT": 40.0, "MIN": 1.0, "MAX": 240.0 },
-    { "NAME": "hueDrift", "LABEL": "Hue Drift", "TYPE": "float", "DEFAULT": 0.015, "MIN": 0.0, "MAX": 0.1 },
-    { "NAME": "fadeRate", "LABEL": "Trail Fade", "TYPE": "float", "DEFAULT": 0.004, "MIN": 0.0, "MAX": 0.08 },
-    { "NAME": "saturation", "LABEL": "Saturation", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "brightness", "LABEL": "Brightness", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "bloom", "LABEL": "Bloom", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "pulse", "LABEL": "Audio Pulse", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "bounceEdges", "LABEL": "Bounce Edges", "TYPE": "bool", "DEFAULT": true },
-    { "NAME": "backgroundColor", "LABEL": "BG Color", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] }
+    { "NAME": "walkers",    "LABEL": "Walkers",    "TYPE": "float", "DEFAULT": 5.0,   "MIN": 1.0,  "MAX": 10.0 },
+    { "NAME": "baseFreq",   "LABEL": "Frequency",  "TYPE": "float", "DEFAULT": 0.28,  "MIN": 0.05, "MAX": 1.0 },
+    { "NAME": "paintRad",   "LABEL": "Brush Size", "TYPE": "float", "DEFAULT": 0.018, "MIN": 0.003,"MAX": 0.08 },
+    { "NAME": "fadeRate",   "LABEL": "Trail Fade", "TYPE": "float", "DEFAULT": 0.008, "MIN": 0.0,  "MAX": 0.05 },
+    { "NAME": "hdrPeak",    "LABEL": "HDR Peak",   "TYPE": "float", "DEFAULT": 2.5,   "MIN": 0.5,  "MAX": 4.0 },
+    { "NAME": "bloom",      "LABEL": "Bloom",      "TYPE": "float", "DEFAULT": 0.7,   "MIN": 0.0,  "MAX": 2.0 },
+    { "NAME": "hueDrift",   "LABEL": "Hue Drift",  "TYPE": "float", "DEFAULT": 0.03,  "MIN": 0.0,  "MAX": 0.2 },
+    { "NAME": "pulse",      "LABEL": "Audio Pulse","TYPE": "float", "DEFAULT": 0.7,   "MIN": 0.0,  "MAX": 2.0 },
+    { "NAME": "bgColor",    "LABEL": "BG Color",   "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.01, 1.0] }
   ],
   "PASSES": [
-    { "TARGET": "stateBuf", "PERSISTENT": true, "WIDTH": 16, "HEIGHT": 1 },
     { "TARGET": "canvas", "PERSISTENT": true },
     {}
   ]
 }*/
 
-#define MAX_WALKERS 16
+#define MAX_WALKERS 10
 #define TAU 6.28318530718
 
 float hash11(float p) {
@@ -32,130 +29,104 @@ float hash11(float p) {
     return fract(p);
 }
 
-float hash12(vec2 p) {
-    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.x + p3.y) * p3.z);
-}
-
 vec3 hsv2rgb(vec3 c) {
-    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
     vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
     return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 
-vec2 neighborDir(int dir) {
-    if (dir == 0) return vec2(-1.0, -1.0);
-    if (dir == 1) return vec2( 0.0, -1.0);
-    if (dir == 2) return vec2( 1.0, -1.0);
-    if (dir == 3) return vec2(-1.0,  0.0);
-    if (dir == 4) return vec2( 1.0,  0.0);
-    if (dir == 5) return vec2(-1.0,  1.0);
-    if (dir == 6) return vec2( 0.0,  1.0);
-    return vec2( 1.0,  1.0);
+// Chosen 5-color palette (fully saturated)
+// magenta, cyan, gold, lime, violet
+vec3 walkerColor(int i) {
+    if (i == 0) return vec3(1.0, 0.0, 1.0);    // magenta
+    if (i == 1) return vec3(0.0, 1.0, 1.0);    // cyan
+    if (i == 2) return vec3(1.0, 0.85, 0.0);   // gold
+    if (i == 3) return vec3(0.2, 1.0, 0.0);    // lime
+    return           vec3(0.6, 0.0, 1.0);       // violet
 }
 
-vec4 readWalker(float id) {
-    return texture2D(stateBuf, vec2((id + 0.5) / 16.0, 0.5));
+// Lissajous walker position at time t
+// a:b ratios: 1:2, 2:3, 3:4, 4:5, 5:6 — progressively complex patterns
+vec2 lissajousPos(int i, float t) {
+    float fi = float(i);
+    float a  = float(i + 1);
+    float b  = float(i + 2);
+    float phx = hash11(fi * 19.1) * TAU;
+    float phy = hash11(fi * 31.7) * TAU;
+    float freq = baseFreq * (0.7 + hash11(fi * 5.3) * 0.6);
+    float rx = 0.38 + hash11(fi * 7.1) * 0.08;  // radius variation
+    float ry = 0.38 + hash11(fi * 3.9) * 0.08;
+    // Center offset — each walker explores a slightly different quadrant
+    float cx = 0.5 + (hash11(fi * 41.3) - 0.5) * 0.12;
+    float cy = 0.5 + (hash11(fi * 53.7) - 0.5) * 0.12;
+    return vec2(cx + rx * sin(a * freq * t + phx),
+                cy + ry * sin(b * freq * t + phy));
 }
 
 void main() {
     vec2 Res = RENDERSIZE;
     vec2 pos = gl_FragCoord.xy;
-    float cell = 1.0 / max(gridSize, 1.0);
-    float audio = 1.0 + audioLevel * pulse;
+    float aspect = Res.x / Res.y;
+
+    int N = int(clamp(walkers, 1.0, float(MAX_WALKERS)));
 
     // =============================================================
-    // PASS 0: advance walker state buffer (16x1)
-    // state encoding: vec4(x_norm, y_norm, hue, stepAccumulator)
+    // PASS 0: update persistent canvas — fade + paint Lissajous curves
     // =============================================================
     if (PASSINDEX == 0) {
-        float id = floor(pos.x);
-        if (id >= walkers) {
-            gl_FragColor = vec4(0.0);
-            return;
-        }
-
-        // Seed the walker near center on first frames
-        if (FRAMEINDEX < 2) {
-            float jx = (hash11(id * 7.31 + 1.0) - 0.5) * 0.15;
-            float jy = (hash11(id * 3.19 + 2.0) - 0.5) * 0.15;
-            float h0 = hash11(id * 11.7 + 3.0);
-            gl_FragColor = vec4(0.5 + jx, 0.5 + jy, h0, 0.0);
-            return;
-        }
-
-        vec4 prev = readWalker(id);
-        vec2 p = prev.rg;
-        float h = prev.b;
-        float acc = prev.a + TIMEDELTA * stepRate * audio;
-
-        // Walk up to 6 discrete cell steps this frame
-        for (int s = 0; s < 6; s++) {
-            if (acc < 1.0) break;
-            acc -= 1.0;
-
-            float seed = TIME * 97.13 + id * 13.7 + float(s) * 3.31;
-            float r = hash12(vec2(seed, seed * 0.47));
-            int dir = int(floor(r * 8.0));
-            vec2 stepVec = neighborDir(dir) * cell;
-            p += stepVec;
-
-            if (bounceEdges) {
-                if (p.x < 0.0) p.x = -p.x;
-                if (p.x > 1.0) p.x = 2.0 - p.x;
-                if (p.y < 0.0) p.y = -p.y;
-                if (p.y > 1.0) p.y = 2.0 - p.y;
-            } else {
-                p = fract(p);
-            }
-
-            float dh = (hash12(vec2(seed + 7.7, id)) - 0.5) * 2.0 * hueDrift;
-            h = fract(h + dh + 1.0);
-        }
-
-        gl_FragColor = vec4(p, h, acc);
-        return;
-    }
-
-    // =============================================================
-    // PASS 1: update persistent canvas (fade + paint walker cells)
-    // =============================================================
-    if (PASSINDEX == 1) {
         vec2 uv = pos / Res;
         vec4 prev = texture2D(canvas, uv);
+        // Fade towards black
         vec4 col = prev * (1.0 - fadeRate);
 
-        // Aspect-correct grid so cells stay square
-        float aspect = Res.x / Res.y;
-        vec2 gridUV = vec2(uv.x * aspect, uv.y);
-        vec2 pxCell = floor(gridUV * gridSize);
+        float audioBoost = 1.0 + audioLevel * pulse + audioBass * pulse * 0.5;
 
+        // Paint each walker: smooth soft circle at current + recent positions
+        // Sample 4 time sub-steps to fill gaps in fast-moving curves
         for (int i = 0; i < MAX_WALKERS; i++) {
-            if (float(i) >= walkers) break;
-            vec4 st = readWalker(float(i));
-            vec2 wGridUV = vec2(st.r * aspect, st.g);
-            vec2 wCell = floor(wGridUV * gridSize);
-            vec2 diff = abs(wCell - pxCell);
-            if (diff.x < 0.5 && diff.y < 0.5) {
-                vec3 rgb = hsv2rgb(vec3(st.b, saturation, brightness * audio));
-                col = vec4(rgb, 1.0);
+            if (i >= N) break;
+
+            vec3 baseCol = walkerColor(i % 5);
+            // Hue drift over time
+            float hue0 = fract(float(i) / 5.0 + TIME * hueDrift);
+            vec3 walkerCol = hsv2rgb(vec3(hue0, 1.0, 1.0)) * hdrPeak * audioBoost;
+
+            // Sub-step integration to avoid gaps in high-freq curves
+            for (int s = 0; s < 4; s++) {
+                float dt = TIMEDELTA * float(s) / 4.0;
+                vec2 wPos = lissajousPos(i, TIME - dt);
+
+                // Aspect-correct distance
+                vec2 delta = vec2((uv.x - wPos.x) * aspect, uv.y - wPos.y);
+                float d = length(delta);
+
+                float softR = paintRad * (1.0 + audioBass * pulse * 0.4);
+                float paint = smoothstep(softR, softR * 0.2, d);
+
+                if (paint > 0.001) {
+                    col.rgb = max(col.rgb, walkerCol * paint);
+                    col.a = 1.0;
+                }
             }
         }
+
+        // Black ink at low-luminance edges (contrast enhancement)
+        float lum = dot(col.rgb, vec3(0.299, 0.587, 0.114));
+        col.rgb *= smoothstep(0.02, 0.08, lum);
 
         gl_FragColor = col;
         return;
     }
 
     // =============================================================
-    // PASS 2: final display (bloom + background blend)
+    // PASS 1: final display — bloom + background blend
     // =============================================================
     vec2 uv = pos / Res;
     vec3 c = texture2D(canvas, uv).rgb;
 
     if (bloom > 0.001) {
         vec3 sum = vec3(0.0);
-        float r = 2.5 / min(Res.x, Res.y);
+        float r = 3.0 / min(Res.x, Res.y);
         for (int x = -2; x <= 2; x++) {
             for (int y = -2; y <= 2; y++) {
                 vec2 off = vec2(float(x), float(y)) * r;
@@ -167,7 +138,7 @@ void main() {
     }
 
     float lum = max(c.r, max(c.g, c.b));
-    float alpha = clamp(lum * 8.0, 0.0, 1.0);
-    vec3 outRgb = mix(backgroundColor.rgb, c, alpha);
+    float alpha = clamp(lum * 5.0, 0.0, 1.0);
+    vec3 outRgb = mix(bgColor.rgb, c, alpha);
     gl_FragColor = vec4(outRgb, 1.0);
 }
