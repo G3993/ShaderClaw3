@@ -1,149 +1,91 @@
 /*{
-  "DESCRIPTION": "Neon Neural Network — 3D raymarched graph of glowing nodes connected by pulsing edge tubes, deep black void with HDR activation bursts",
-  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
-  "CREDIT": "Easel / ShaderClaw v3",
+  "DESCRIPTION": "Torus Knot Neon — raymarched (2,3) torus knot sculpture. Electric cyan/magenta/gold/violet on void black, ink silhouettes",
+  "CREDIT": "ShaderClaw auto-improve v3",
+  "ISFVSN": "2",
+  "CATEGORIES": ["Generator", "3D"],
   "INPUTS": [
-    { "NAME": "nodeCount",   "LABEL": "Nodes",        "TYPE": "float", "MIN": 3.0, "MAX": 12.0, "DEFAULT": 7.0  },
-    { "NAME": "cameraSpeed", "LABEL": "Camera Speed", "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.2  },
-    { "NAME": "pulseRate",   "LABEL": "Pulse Rate",   "TYPE": "float", "MIN": 0.0, "MAX": 3.0,  "DEFAULT": 1.2  },
-    { "NAME": "tubeRadius",  "LABEL": "Tube Radius",  "TYPE": "float", "MIN": 0.005,"MAX": 0.05, "DEFAULT": 0.018 },
-    { "NAME": "hdrBoost",    "LABEL": "HDR Boost",    "TYPE": "float", "MIN": 1.0, "MAX": 4.0,  "DEFAULT": 2.5  },
-    { "NAME": "audioReact",  "LABEL": "Audio React",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 1.0  }
+    { "NAME": "knotR",    "TYPE": "float", "DEFAULT": 0.8,  "MIN": 0.3, "MAX": 1.5, "LABEL": "Knot Radius" },
+    { "NAME": "tubeR",    "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.04,"MAX": 0.4, "LABEL": "Tube Radius" },
+    { "NAME": "rotSpeed", "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0, "MAX": 1.5, "LABEL": "Rotate Speed" },
+    { "NAME": "glowPeak", "TYPE": "float", "DEFAULT": 2.5,  "MIN": 1.0, "MAX": 4.0, "LABEL": "Glow Peak" },
+    { "NAME": "audioMod", "TYPE": "float", "DEFAULT": 0.6,  "MIN": 0.0, "MAX": 2.0, "LABEL": "Audio React" }
   ]
 }*/
 
-precision highp float;
+#define STEPS 64
+#define MAXD   8.0
+#define EPS    0.004
 
-// ── Palette: 4 neon colors ────────────────────────────────────────────────────
-const vec3 CYAN_NODE  = vec3(0.00, 1.00, 1.00);
-const vec3 MAGENTA_EDGE = vec3(1.00, 0.00, 0.80);
-const vec3 GOLD_BURST = vec3(1.00, 0.80, 0.00);
-const vec3 VIOLET_RIM = vec3(0.40, 0.00, 1.00);
-const vec3 VOID       = vec3(0.00, 0.00, 0.01);
+const vec3 C_CYAN    = vec3(0.0,  1.0,  1.0);
+const vec3 C_MAGENTA = vec3(1.0,  0.0,  0.9);
+const vec3 C_GOLD    = vec3(1.0,  0.8,  0.0);
+const vec3 C_VIOLET  = vec3(0.5,  0.0,  1.0);
 
-float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
-vec3 nodePos(float i, float N) {
-    float ang  = i / N * 6.28318530 + hash(i) * 1.2;
-    float elev = (hash(i + 0.5) - 0.5) * 2.2;
-    float rad  = 1.0 + hash(i + 0.3) * 0.8;
-    return vec3(cos(ang) * rad, elev, sin(ang) * rad);
-}
-
-// SDF: sphere
-float sdSphere(vec3 p, vec3 c, float r) { return length(p - c) - r; }
-
-// SDF: capsule (edge tube between two nodes)
-float sdCapsule(vec3 p, vec3 a, vec3 b, float r) {
-    vec3 ab = b - a, ap = p - a;
-    float t = clamp(dot(ap, ab) / dot(ab, ab), 0.0, 1.0);
-    return length(ap - ab * t) - r;
-}
-
-// Scene SDF — nodes + edges
-float sceneSDF(vec3 p, float N, float t) {
-    float d = 1e9;
-    float nodeR = 0.09 + 0.02 * sin(t * 2.1);
-    for (int i = 0; i < 12; i++) {
-        if (float(i) >= N) break;
-        vec3 pA = nodePos(float(i), N);
-        d = min(d, sdSphere(p, pA, nodeR));
-        // Edge to next node (ring topology + skip-one connections)
-        vec3 pB = nodePos(mod(float(i) + 1.0, N), N);
-        d = min(d, sdCapsule(p, pA, pB, tubeRadius));
-        if (float(i) < N - 2.0) {
-            vec3 pC = nodePos(mod(float(i) + 2.0, N), N);
-            d = min(d, sdCapsule(p, pA, pC, tubeRadius * 0.6));
-        }
+float sdKnot(vec3 p, float R, float r, float tr) {
+    float md = 1e5;
+    const int N = 32;
+    for (int i = 0; i < N; i++) {
+        float t0 = float(i)   / float(N) * 6.28318;
+        float t1 = float(i+1) / float(N) * 6.28318;
+        vec3 k0 = vec3((R+r*cos(3.0*t0))*cos(2.0*t0), r*sin(3.0*t0), (R+r*cos(3.0*t0))*sin(2.0*t0));
+        vec3 k1 = vec3((R+r*cos(3.0*t1))*cos(2.0*t1), r*sin(3.0*t1), (R+r*cos(3.0*t1))*sin(2.0*t1));
+        vec3 pa = p-k0, ba = k1-k0;
+        float h = clamp(dot(pa,ba)/max(dot(ba,ba),1e-6), 0.0, 1.0);
+        md = min(md, length(pa-ba*h));
     }
-    return d;
+    return md - tr;
 }
-
-// Estimate normal via central differences
-vec3 sceneNormal(vec3 p, float N, float t) {
-    const float e = 0.001;
+float sdf(vec3 p) {
+    return sdKnot(p, knotR, knotR*0.38, tubeR*(1.0+audioLevel*audioMod*0.15));
+}
+vec3 calcN(vec3 p) {
+    const float e = 0.003;
     return normalize(vec3(
-        sceneSDF(p + vec3(e,0,0), N, t) - sceneSDF(p - vec3(e,0,0), N, t),
-        sceneSDF(p + vec3(0,e,0), N, t) - sceneSDF(p - vec3(0,e,0), N, t),
-        sceneSDF(p + vec3(0,0,e), N, t) - sceneSDF(p - vec3(0,0,e), N, t)
-    ));
+        sdf(p+vec3(e,0,0))-sdf(p-vec3(e,0,0)),
+        sdf(p+vec3(0,e,0))-sdf(p-vec3(0,e,0)),
+        sdf(p+vec3(0,0,e))-sdf(p-vec3(0,0,e))));
 }
-
+vec3 pal(float t) {
+    t = fract(t);
+    if (t < 0.33) return mix(C_CYAN,    C_MAGENTA, t*3.0);
+    if (t < 0.66) return mix(C_MAGENTA, C_GOLD,    (t-0.33)*3.0);
+    return             mix(C_GOLD,    C_VIOLET,  (t-0.66)*3.0);
+}
 void main() {
     vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
     uv.x *= RENDERSIZE.x / RENDERSIZE.y;
-
-    float t   = TIME;
-    float aud = 1.0 + (audioLevel + audioBass * 0.7) * audioReact * 0.6;
-    float N   = nodeCount;
-
-    // Orbiting camera
-    float camAng = t * cameraSpeed;
-    float camElev = sin(t * cameraSpeed * 0.4) * 0.6;
-    vec3 camPos = vec3(cos(camAng) * 4.5, camElev + 0.5, sin(camAng) * 4.5);
-    vec3 target = vec3(0.0);
-    vec3 fwd = normalize(target - camPos);
-    vec3 right = normalize(cross(fwd, vec3(0,1,0)));
-    vec3 up = cross(right, fwd);
-    vec3 rd = normalize(fwd + uv.x * right * 0.8 + uv.y * up * 0.8);
-
-    // Raymarch
-    float dist = 0.0;
-    float hit  = 0.0;
-    for (int i = 0; i < 64; i++) {
-        vec3 p = camPos + rd * dist;
-        float d = sceneSDF(p, N, t);
-        if (d < 0.001) { hit = 1.0; break; }
-        if (dist > 20.0) break;
-        dist += d;
+    float t = TIME;
+    float camT = t * rotSpeed;
+    vec3 ro = vec3(cos(camT)*3.2, sin(camT*0.5)*1.0, sin(camT)*3.2);
+    vec3 ta = vec3(0.0);
+    vec3 ww = normalize(ta - ro);
+    vec3 uu = normalize(cross(ww, vec3(0,1,0)));
+    vec3 vv = cross(uu, ww);
+    vec3 rd = normalize(uv.x*uu + uv.y*vv + 2.0*ww);
+    float d = 0.0;
+    bool hit = false;
+    for (int i = 0; i < STEPS; i++) {
+        float h = sdf(ro + rd * d);
+        if (h < EPS) { hit = true; break; }
+        if (d > MAXD) break;
+        d += max(h, EPS);
     }
-
-    vec3 col = VOID;
-
-    if (hit > 0.5) {
-        vec3 p   = camPos + rd * dist;
-        vec3 nor = sceneNormal(p, N, t);
-
-        // Which element did we hit?
-        float nodeR = 0.09 + 0.02 * sin(t * 2.1);
-        bool isNode = false;
-        for (int i = 0; i < 12; i++) {
-            if (float(i) >= N) break;
-            if (sdSphere(p, nodePos(float(i), N), nodeR) < 0.003) { isNode = true; break; }
-        }
-
-        vec3 lightDir = normalize(vec3(1.2, 2.0, 0.8));
-        float diff = max(dot(nor, lightDir), 0.0);
-        float spec = pow(max(dot(reflect(-lightDir, nor), -rd), 0.0), 32.0);
-
-        // Pulse wave along edges
-        float pulse = 0.5 + 0.5 * sin(t * pulseRate * 3.0 - dot(p, vec3(1.0, 0.3, 0.7)) * 4.0);
-
-        if (isNode) {
-            // Cyan node with gold activation burst
-            float activation = 0.5 + 0.5 * sin(t * pulseRate * 2.0 + dot(p, vec3(0.5)));
-            col = (CYAN_NODE * (0.5 + diff * 0.5) + GOLD_BURST * activation * 0.8
-                   + vec3(1.0) * spec * 2.0) * hdrBoost * aud;
-        } else {
-            // Magenta tube with violet rim
-            col = (MAGENTA_EDGE * (0.3 + diff * 0.4 + pulse * 0.3)
-                   + VIOLET_RIM * spec * 1.5) * hdrBoost * aud;
-        }
+    vec3 col = vec3(0.0, 0.0, 0.008);
+    if (hit) {
+        vec3 p = ro + rd * d;
+        vec3 n = calcN(p);
+        float hue = fract(atan(p.z, p.x) / 6.28318 + t * 0.06);
+        vec3 bc = pal(hue);
+        vec3 kL = normalize(vec3(2.0, 2.5, -1.0));
+        float diff = max(dot(n, kL), 0.0);
+        float spec = pow(max(dot(reflect(-kL,n),-rd),0.0), 24.0);
+        float nv   = max(dot(n,-rd), 0.0);
+        float ink  = 1.0 - smoothstep(0.0, 0.2, nv);
+        col = mix(
+            bc*(diff*0.7+0.2)*glowPeak + C_GOLD*pow(1.0-nv,2.5)*glowPeak*0.5 + vec3(1.0)*spec*0.4*glowPeak,
+            vec3(0.0),
+            ink * 0.92
+        );
     }
-
-    // Additive node glow (unoccluded)
-    for (int i = 0; i < 12; i++) {
-        if (float(i) >= N) break;
-        vec3 pA = nodePos(float(i), N);
-        // Project node onto ray for glow halo
-        float tProj = dot(pA - camPos, rd);
-        if (tProj > 0.0 && tProj < dist - 0.1) {
-            vec3 closest = camPos + rd * tProj;
-            float dist2  = length(closest - pA);
-            float glow   = exp(-dist2 * dist2 * 14.0) * 0.4;
-            float pulse  = 0.7 + 0.3 * sin(t * pulseRate * 1.8 + float(i) * 1.3);
-            col += CYAN_NODE * glow * pulse * hdrBoost * aud;
-        }
-    }
-
     gl_FragColor = vec4(col, 1.0);
 }
