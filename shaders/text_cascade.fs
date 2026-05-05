@@ -11,11 +11,10 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.0, 1.0, 0.85, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.01, 0.06, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
-    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 2.3 },
-    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 2.2 },
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.0, 0.9, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.01, 0.08, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
@@ -94,27 +93,40 @@ float sampleChar(int ch, vec2 uv) {
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
-// ── Deep sea bioluminescent background ──────────────────────────────────────
-// Undulating water column with glowing plankton spots
-vec3 deepSeaBg(vec2 uv, float t) {
-    // Abyss base
-    vec3 col = vec3(0.00, 0.01, 0.06);
-    // Water caustic ripple bands
-    float wave1 = sin(uv.x * 9.0 + t * 0.7) * sin(uv.y * 5.0 - t * 0.4) * 0.5 + 0.5;
-    float wave2 = cos(uv.x * 13.0 - t * 0.5) * cos(uv.y * 7.0 + t * 0.6) * 0.5 + 0.5;
-    float caustic = wave1 * wave2;
-    col += vec3(0.0, 0.30, 0.55) * caustic * 0.08;
-    // Bioluminescent plankton sparkle
-    vec2 pCell = floor(uv * 90.0);
-    float spark = step(0.993, hash(pCell.x + pCell.y * 211.0 + floor(t * 6.0) * 37.0));
-    col += vec3(0.0, 1.0, 0.85) * spark * 0.5;
-    return col;
-}
+float hashR(float n) { return fract(sin(n * 17.3) * 43758.5); }
 
-// Row text colors: alternate bio-cyan vs bio-violet
-vec3 rowTextColor(float rowIdx, float t) {
-    if (mod(rowIdx, 2.0) < 1.0) return vec3(0.0,  1.0,  0.85); // bio-cyan
-    return                              vec3(0.7,  0.0,  1.00); // bio-violet
+vec3 rainCityBg(vec2 uv) {
+    vec3 NAVY = vec3(0.0, 0.01, 0.08);
+    vec3 col = NAVY;
+    float t = TIME;
+
+    // Rain streaks — vertical white-hot drops
+    const int NR = 24;
+    for (int i = 0; i < NR; i++) {
+        float fi = float(i);
+        float rx = hashR(fi * 1.37);
+        float rspeed = 0.4 + hashR(fi * 2.91) * 0.6;
+        float ry = fract(hashR(fi * 4.13) + t * rspeed);
+        float len = 0.04 + hashR(fi * 7.7) * 0.06;
+        float dx = abs(uv.x - rx);
+        float dy = uv.y - (1.0 - ry);
+        if (dx < 0.002 && dy > 0.0 && dy < len) {
+            float fade = 1.0 - dy / len;
+            col += vec3(2.5, 2.5, 3.0) * fade * smoothstep(0.002, 0.0, dx);
+        }
+    }
+
+    // Neon puddle reflections at bottom
+    float reflY = 1.0 - uv.y;
+    if (reflY < 0.35) {
+        float refl = (0.35 - reflY) / 0.35;
+        float wave = sin(uv.x * 40.0 + t * 3.0) * 0.003;
+        float magPool = smoothstep(0.3, 0.0, abs(uv.x - 0.3 + wave)) * refl;
+        float cyanPool = smoothstep(0.25, 0.0, abs(uv.x - 0.7 + wave*1.3)) * refl;
+        col += vec3(1.0, 0.0, 0.9) * magPool * 2.0;   // magenta HDR
+        col += vec3(0.0, 0.8, 1.0) * cyanPool * 2.0;  // cyan HDR
+    }
+    return col;
 }
 
 // =======================================================================
@@ -156,18 +168,16 @@ vec4 effectCascade(vec2 uv) {
         }
     }
 
-    float aud = 1.0 + (audioLevel + audioBass * 0.6) * audioReact * 0.4;
-
+    float a = 1.0;
+    vec3 fc;
     if (transparentBg) {
-        vec3 tCol = rowTextColor(rowIdx, TIME) * hdrGlow * aud;
-        return vec4(tCol, textHit);
+        a = textHit;
+        fc = textColor.rgb * hdrGlow;
+    } else {
+        vec3 bgPx = rainCityBg(uv);
+        fc = mix(bgPx, textColor.rgb * hdrGlow, textHit);
     }
-
-    // Opaque: deep sea background + bioluminescent row text
-    vec3 bg = deepSeaBg(uv, TIME);
-    vec3 tCol = rowTextColor(rowIdx, TIME) * hdrGlow * aud;
-    vec3 fc = mix(bg, tCol, textHit);
-    return vec4(fc, 1.0);
+    return vec4(fc, a);
 }
 
 // =======================================================================
