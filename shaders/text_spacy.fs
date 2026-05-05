@@ -1,27 +1,20 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Spacy - perspective tunnel rows",
+  "DESCRIPTION": "Aurora Tunnel — perspective text rows flying through curtains of aurora borealis",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
-    { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Spacy","Spacy Bridge","Spacy Whitney","Spacy Recede"], "DEFAULT": 0 },
     { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
-    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
-    { "NAME": "intensity", "LABEL": "Perspective", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "density", "LABEL": "Depth", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
-    { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
-    { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "speed",      "LABEL": "Speed",         "TYPE": "float", "MIN": 0.1, "MAX": 3.0,  "DEFAULT": 0.5 },
+    { "NAME": "intensity",  "LABEL": "Perspective",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.5 },
+    { "NAME": "density",    "LABEL": "Row Count",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.5 },
+    { "NAME": "textScale",  "LABEL": "Size",          "TYPE": "float", "MIN": 0.3, "MAX": 2.0,  "DEFAULT": 1.0 },
+    { "NAME": "hdrText",    "LABEL": "Text HDR",      "TYPE": "float", "MIN": 1.0, "MAX": 4.0,  "DEFAULT": 3.0 },
+    { "NAME": "hdrAurora",  "LABEL": "Aurora HDR",    "TYPE": "float", "MIN": 0.5, "MAX": 3.0,  "DEFAULT": 2.2 },
+    { "NAME": "curtainFreq","LABEL": "Curtain Freq",  "TYPE": "float", "MIN": 1.0, "MAX": 20.0, "DEFAULT": 7.0 },
+    { "NAME": "pulse",      "LABEL": "Audio Pulse",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 0.7 }
   ]
 }*/
 
-const float PI = 3.14159265;
-const float TWO_PI = 6.28318530;
-
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
 float charPixel(int ch, float col, float row) {
     if (ch < 0 || ch > 36) return 0.0;
     vec2 uv = vec2(col / 5.0, row / 7.0);
@@ -85,102 +78,128 @@ int charCount() {
     return n > 0 ? n : 1;
 }
 
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
+// =======================================================================
+// AURORA BACKGROUND — sinusoidal curtain bands cycling green/teal/violet/pink
+// Void-black gaps between curtains give strong ink contrast.
+// =======================================================================
+
+vec3 auroraHue(float phase) {
+    // Aurora palette: green → teal → violet → pink (stays in aurora range)
+    vec3 GREEN  = vec3(0.0,  1.0,  0.25);
+    vec3 TEAL   = vec3(0.0,  0.88, 1.0);
+    vec3 VIOLET = vec3(0.45, 0.0,  1.0);
+    vec3 PINK   = vec3(1.0,  0.08, 0.6);
+    float h = fract(phase);
+    vec3 c = GREEN;
+    c = mix(c, TEAL,   smoothstep(0.0,  0.33, h));
+    c = mix(c, VIOLET, smoothstep(0.33, 0.67, h));
+    c = mix(c, PINK,   smoothstep(0.67, 1.0,  h));
+    return c;
 }
 
-float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
-
-// =======================================================================
-// EFFECT: SPACY - perspective tunnel rows
-// =======================================================================
-
-vec4 effectSpacy(vec2 uv, int sub) {
+vec3 auroraBg(vec2 uv, float audio) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
-    int numChars = charCount();
+    float x = uv.x * aspect;
+    float y = uv.y;
+    float t = TIME * 0.12;
+
+    // Curtain undulation: x-position warps sinusoidally with y
+    float warp = sin(y * 4.7 + t * 0.9) * 0.18 + sin(y * 11.3 - t * 0.55) * 0.08;
+    float cx = x + warp;
+
+    // Band intensity: sharp sinusoidal curtains (void-black gaps between)
+    float b1 = pow(max(0.0, sin(cx * curtainFreq + t * 0.5)), 3.0);
+    float b2 = pow(max(0.0, sin(cx * curtainFreq * 1.6 - t * 0.4 + 2.1)), 2.5) * 0.65;
+    float b3 = pow(max(0.0, sin(cx * curtainFreq * 2.3 + t * 0.3 + 4.3)), 2.0) * 0.35;
+    float bands = (b1 + b2 + b3) / 2.0;
+
+    // Hue varies across x-position and drifts over time
+    float huePhase = cx * 0.2 + y * 0.08 + t * 0.06;
+    vec3 col = auroraHue(huePhase) * bands * hdrAurora * audio;
+
+    return col;
+}
+
+// =======================================================================
+// EFFECT: AURORA TUNNEL — perspective rows scrolling through aurora curtains
+// Text inherits aurora color at its screen position; void-black bg between rows.
+// =======================================================================
+
+vec4 effectAurora(vec2 uv) {
+    float aspect  = RENDERSIZE.x / RENDERSIZE.y;
+    int numChars  = charCount();
     float rws = floor(mix(3.0, 20.0, density));
-    float sR = mix(0.5, 1.5, intensity);
+    float sR  = mix(0.5, 1.5, intensity);
 
-    float minS=0.3, maxS=2.5, track=0.15, scM=1.0;
-    bool mirror = false;
+    float minS = 0.3 / sR, maxS = 2.5 * sR;
 
-    if (sub == 0) { minS=0.3/sR; maxS=2.5*sR; }
-    else if (sub == 1) { minS=0.2/sR; maxS=3.0*sR; track=0.05; scM=1.4; }
-    else if (sub == 2) { minS=0.4/sR; maxS=2.0*sR; track=0.2; scM=0.9; mirror=true; }
-    else { minS=0.15/sR; maxS=2.0*sR; track=0.12; }
+    float rH = 1.0 / rws;
+    float sY = mod(uv.y + TIME * speed, 1.0);
+    float ri = clamp(floor(sY / rH), 0.0, rws - 1.0);
+    float ly = fract(sY / rH);
 
-    float rH = 1.0/rws;
-    float sY = mod(uv.y + TIME*speed*scM, 1.0);
-    float ri = clamp(floor(sY/rH), 0.0, rws-1.0);
-    float ly = fract(sY/rH);
+    float rn = (ri + 0.5) / rws;
+    float dc = abs(rn - 0.5) * 2.0;
+    float rs = mix(minS, maxS, dc * dc) * textScale;
 
-    float rn = (ri+0.5)/rws;
-    float dc = abs(rn-0.5)*2.0;
-    float rs = mix(minS, maxS, dc*dc)*textScale;
+    float cH = rH * rs;
+    float cW = cH * (5.0 / 7.0) * (1.0 / aspect);
+    float gW = cW * 0.15;
+    float wordW = max(float(numChars) * (cW + gW), 0.001);
 
-    float cH = rH*rs;
-    float cW = cH*(5.0/7.0)*(1.0/aspect);
-    float gW = cW*track;
-    float wordW = max(float(numChars)*(cW+gW), 0.001);
-
-    float px = uv.x;
-    if (mirror && rn < 0.5) px = 1.0 - px;
-
-    float piw = mod(px - 0.5 + wordW * 0.5, wordW);
+    float piw = mod(uv.x - 0.5 + wordW * 0.5, wordW);
     if (piw < 0.0) piw += wordW;
-    float cs = cW+gW, csF = piw/cs;
+    float cs = cW + gW, csF = piw / cs;
     int slot = int(floor(csF));
-    float clx = fract(csF), cf = cW/cs;
-    float tsy = 0.5-rs*0.5;
-    float gy = (ly-tsy)/rs;
+    float clx = fract(csF), cf = cW / cs;
+    float tsy = 0.5 - rs * 0.5;
+    float gy  = (ly - tsy) / rs;
 
     float textHit = 0.0;
     if (clx < cf && slot >= 0 && slot < numChars && gy >= 0.0 && gy <= 1.0) {
-        float gc = (clx/cf)*5.0, gr = gy*7.0;
+        float gc = (clx / cf) * 5.0, gr = gy * 7.0;
         if (gc >= 0.0 && gc < 5.0 && gr >= 0.0 && gr < 7.0) {
             int ch = getChar(slot);
             if (ch >= 0 && ch <= 36 && ch != 26) textHit = charPixel(ch, gc, gr);
         }
     }
 
-    bool inv = mod(ri, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
-    return vec4(fc, a);
+    float audio = 1.0 + audioBass * pulse;
+    vec3 bg     = auroraBg(uv, audio);
+
+    // Text: aurora color at this row position boosted to white-hot HDR
+    // Row aurora hue matches surrounding curtain for immersion
+    float rowHue = uv.x * RENDERSIZE.x / RENDERSIZE.y * 0.2
+                 + mod(uv.y + TIME * speed, 1.0) * 0.08
+                 + TIME * 0.06 * 0.12;
+    vec3 textCol = auroraHue(rowHue) * hdrText * audio;
+
+    vec3 col = mix(bg, textCol, textHit);
+    return vec4(col, 1.0);
 }
 
 void main() {
-    vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
-    int p = int(preset);
-    vec4 col = effectSpacy(uv, p);
+    vec2 uv  = gl_FragCoord.xy / RENDERSIZE.xy;
+    vec4 col = effectAurora(uv);
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
         float t = TIME * 17.0;
-        float band = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
-        float bandNoise = fract(sin(band * 91.7 + t) * 43758.5);
+        float band       = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
+        float bandNoise  = fract(sin(band * 91.7 + t) * 43758.5);
         float bandActive = step(1.0 - g * 0.6, bandNoise);
-        float shift = (bandNoise - 0.5) * 0.08 * g * bandActive;
-        float chromaAmt = g * 0.015;
-        vec2 uvR = uv + vec2(shift + chromaAmt, 0.0);
-        vec2 uvB = uv + vec2(shift - chromaAmt, 0.0);
-        vec2 uvG = uv + vec2(shift, chromaAmt * 0.5);
-        vec4 cR = effectSpacy(uvR, p);
-        vec4 cG = effectSpacy(uvG, p);
-        vec4 cB = effectSpacy(uvB, p);
-        vec4 glitched = vec4(cR.r, cG.g, cB.b, max(max(cR.a, cG.a), cB.a));
-        float scanline = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
-        float blockX = floor(uv.x * 6.0);
-        float blockY = floor(uv.y * 4.0);
+        float shift      = (bandNoise - 0.5) * 0.08 * g * bandActive;
+        float chromaAmt  = g * 0.015;
+        vec4 cR = effectAurora(uv + vec2(shift + chromaAmt, 0.0));
+        vec4 cG = effectAurora(uv + vec2(shift, chromaAmt * 0.5));
+        vec4 cB = effectAurora(uv + vec2(shift - chromaAmt, 0.0));
+        vec4 glitched = vec4(cR.r, cG.g, cB.b, 1.0);
+        float scanline  = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
+        float blockX    = floor(uv.x * 6.0);
+        float blockY    = floor(uv.y * 4.0);
         float blockNoise = fract(sin((blockX + blockY * 7.0) * 113.1 + floor(t * 8.0)) * 43758.5);
-        float dropout = step(1.0 - g * 0.15, blockNoise);
-        glitched.rgb *= scanline;
-        glitched.rgb *= 1.0 - dropout;
+        float dropout   = step(1.0 - g * 0.15, blockNoise);
+        glitched.rgb   *= scanline * (1.0 - dropout);
         col = mix(col, glitched, smoothstep(0.0, 0.3, g));
     }
 
