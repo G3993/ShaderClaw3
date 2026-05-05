@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Coral Depths — bioluminescent underwater perspective text, aquatic palette",
+  "DESCRIPTION": "Spacy - perspective tunnel rows",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Spacy","Spacy Bridge","Spacy Whitney","Spacy Recede"], "DEFAULT": 0 },
@@ -12,7 +12,9 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "audioMod", "LABEL": "Audio Mod", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.6 }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.55, 0.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.06, 0.01, 0.0, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
@@ -90,9 +92,87 @@ float sampleChar(int ch, vec2 uv) {
 }
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+float hash21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
 // =======================================================================
-// EFFECT: CORAL DEPTHS — bioluminescent underwater perspective text
+// BACKGROUND: VOLCANIC PYROCLASTIC
+// Domain-warped FBM lava flow with rising ember particles
+// =======================================================================
+
+// Value noise for FBM
+float vnoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f); // smoothstep
+    float a = hash21(i);
+    float b = hash21(i + vec2(1.0, 0.0));
+    float c = hash21(i + vec2(0.0, 1.0));
+    float d = hash21(i + vec2(1.0, 1.0));
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
+float fbm(vec2 p) {
+    float val = 0.0;
+    float amp = 0.5;
+    float freq = 1.0;
+    for (int i = 0; i < 5; i++) {
+        val += amp * vnoise(p * freq);
+        freq *= 2.0;
+        amp *= 0.5;
+    }
+    return val;
+}
+
+vec3 volcanicBg(vec2 uv) {
+    // Domain-warped FBM lava flow
+    vec2 q = vec2(
+        fbm(uv * 3.0 + TIME * 0.08),
+        fbm(uv * 3.0 + vec2(5.2, 1.3) + TIME * 0.06)
+    );
+    float f = fbm(uv * 3.0 + 2.0 * q + TIME * 0.05);
+
+    // 5-zone volcanic color ramp
+    vec3 col;
+    if (f < 0.35) {
+        col = vec3(0.03, 0.01, 0.0);                                  // near-black cooled lava
+    } else if (f < 0.55) {
+        float t = (f - 0.35) / 0.20;
+        col = mix(vec3(0.03, 0.01, 0.0), vec3(0.6, 0.02, 0.0), t);   // deep crimson
+    } else if (f < 0.70) {
+        float t = (f - 0.55) / 0.15;
+        col = mix(vec3(0.6, 0.02, 0.0), vec3(1.0, 0.25, 0.0), t);    // flame orange
+    } else if (f < 0.85) {
+        float t = (f - 0.70) / 0.15;
+        col = mix(vec3(1.0, 0.25, 0.0), vec3(1.0, 0.8, 0.0), t);     // gold
+    } else {
+        float t = (f - 0.85) / 0.15;
+        col = mix(vec3(1.0, 0.8, 0.0), vec3(1.5, 1.3, 0.8), t);      // white-hot HDR
+    }
+
+    // 32 rising ember particles
+    for (float i = 0.0; i < 32.0; i += 1.0) {
+        float fi = i;
+        float ex = hash(fi * 1.17);
+        float riseSpeed = 0.15 + hash(fi * 3.41) * 0.25;
+        // Embers rise upward (decrease Y)
+        float ey = fract(1.0 - (hash(fi * 5.73) + TIME * riseSpeed));
+        // Horizontal drift
+        float drift = sin(ey * 6.0 + fi * 1.3 + TIME * 0.8) * 0.02;
+        ex = fract(ex + drift);
+
+        float dist = length(uv - vec2(ex, ey));
+        float ember = smoothstep(0.006, 0.0, dist);
+        // Alternate orange and gold
+        float isGold = step(0.5, hash(fi * 2.9));
+        vec3 emberColor = mix(vec3(1.0, 0.35, 0.0), vec3(1.0, 0.85, 0.0), isGold) * 2.0;
+        col += emberColor * ember;
+    }
+
+    return col;
+}
+
+// =======================================================================
+// EFFECT: SPACY - perspective tunnel rows
 // =======================================================================
 
 vec4 effectSpacy(vec2 uv, int sub) {
@@ -143,41 +223,23 @@ vec4 effectSpacy(vec2 uv, int sub) {
         }
     }
 
-    // ── Coral Depths: bioluminescent color logic ──────────────────────
+    vec3 fc;
+    float a = 1.0;
 
-    // Depth-based color: near rows (large rs) = bright cyan, far rows = magenta
-    float depth = clamp(rs / (maxS * textScale), 0.0, 1.0);  // 0=far, 1=near
-    vec3 nearColor = vec3(0.0, 2.5, 2.5);   // bio cyan (near/large)
-    vec3 farColor  = vec3(2.5, 0.0, 1.5);   // bio magenta (far/small)
-    vec3 rowColor  = mix(farColor, nearColor, depth);
+    if (transparentBg) {
+        a = textHit;
+        fc = textColor.rgb * 2.5;
+    } else {
+        vec3 bg = volcanicBg(uv);
+        // Rows alternate flame orange vs gold for the text color
+        bool isGoldRow = mod(ri, 2.0) < 1.0;
+        vec3 flameOrange = vec3(1.0, 0.55, 0.0) * 2.5;
+        vec3 goldColor   = vec3(1.0, 0.80, 0.0) * 2.5;
+        vec3 rowTextColor = isGoldRow ? goldColor : flameOrange;
+        fc = mix(bg, rowTextColor, textHit);
+    }
 
-    // Bioluminescent pulse: text brightness pulses with TIME per row
-    float pulse = 0.8 + 0.2 * sin(TIME * speed * 2.0 + ri * 0.9);
-
-    // Volumetric water scatter: faint blue-green glow between rows
-    vec3 bg = vec3(0.0, 0.0, 0.0);
-    float waterGlow = (1.0 - depth) * 0.04 * (sin(TIME * 0.3 + rn * PI) * 0.5 + 0.5);
-    bg += vec3(0.0, 0.04, 0.06) * waterGlow;
-
-    // Floating sparkle particles (bioluminescent plankton)
-    float sparkX = floor(uv.x * 40.0 + TIME * 0.15);
-    float sparkY = floor(uv.y * 25.0 + TIME * speed * 0.3);
-    float sparkSeed = hash(sparkX * 7.3 + sparkY * 13.1);
-    float sparkBright = step(0.97, sparkSeed) * (0.5 + 0.5 * sin(TIME * 3.0 + sparkSeed * TWO_PI));
-    bg += vec3(0.5, 2.5, 1.5) * sparkBright * 0.15;
-
-    // Slow current — gentle horizontal undulation in background
-    float currentPhase = sin(uv.y * 8.0 + TIME * 0.4) * 0.5 + 0.5;
-    bg += vec3(0.0, 0.02, 0.05) * currentPhase * (1.0 - depth) * 0.3;
-
-    // Audio: pulse modulates glow intensity (modulates, does not gate)
-    float audioBoost = 1.0 + audioLevel * audioMod * 0.35;
-
-    // Text glow + background
-    float glow = textHit * pulse * audioBoost;
-    vec3 fc = bg + rowColor * glow;
-
-    return vec4(fc, 1.0);
+    return vec4(fc, a);
 }
 
 void main() {
