@@ -39,3 +39,23 @@
 - Audio modulates hdrPeak
 **HDR peaks reached:** base * 2.5 + specular * 1.75 = ~3.0+ at cube faces
 **Estimated rating:** 4.0★
+
+## 2026-05-05 (v4)
+**Prior rating:** 0.0★
+**Approach:** 3D Tron Lightgrid Room — NEW ANGLE: 2D CRT (v1) → 3D dissolving cube grid (v2) → 3D first-person Tron grid corridor (v4)
+**Critique:**
+1. Reference fidelity: Digifade’s digital/cyber aesthetic reinterpreted as Tron-style electric grid room — neon floor lines receding to horizon with glowing junction nodes.
+2. Compositional craft: Floor grid lines converging to vanishing point create strong perspective depth; ceiling grid echoes above; electric blue horizon glow frames the scene.
+3. Technical execution: Analytic floor/ceiling plane intersection (t=-y/rd.y); fract-based grid lines; h21 hash pillar glow at intersections; fog via exp(-t*0.035).
+4. Liveness: Camera flies forward (TIME*speed*0.8); grid nodes glow procedurally; audio modulates brightness.
+5. Differentiation: 3D analytical plane projection vs v2 SDF cube march; Tron grid aesthetic vs scatter dissolution; electric blue/orange vs blue/crimson/gold.
+**Changes:**
+- Full rewrite from 3D cube scatter to 3D Tron lightgrid corridor
+- Analytic floor plane ray intersection (no sphere march needed)
+- fract-based X/Z grid lines with fog attenuation
+- ELEC_BLUE/NEON_ORG intersection crosshairs (WHITE_HOT node dots)
+- CYAN_GLOW pillar glow at hash-selected nodes
+- Ceiling grid for enclosure feeling
+- HDR horizon atmospheric glow
+**HDR peaks reached:** NEON_ORG 2.6, ELEC_BLUE 2.8, WHITE_HOT 3.0, CYAN_GLOW 2.5 — all at hdrBoost*audio
+**Estimated rating:** 4.5★
