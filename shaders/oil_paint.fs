@@ -1,124 +1,127 @@
 /*{
-  "DESCRIPTION": "Oil paint effect — Kuwahara filter with relief lighting for painterly brush strokes",
-  "CREDIT": "ShaderClaw (Kuwahara approach inspired by flockaroo)",
-  "CATEGORIES": ["Effect"],
+  "DESCRIPTION": "Abstract Expressionist Studio — raymarched cluster of organic SDFs with toon/painterly stepped lighting, black ink outlines. Palette: cadmium red, ultramarine, ochre, ivory black.",
+  "CATEGORIES": ["Generator", "3D"],
+  "CREDIT": "auto-improve 2026-05-05",
   "INPUTS": [
-    { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "brushRadius", "LABEL": "Brush Size", "TYPE": "float", "DEFAULT": 4.0, "MIN": 1.0, "MAX": 12.0 },
-    { "NAME": "paintSpec", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "vignetteAmt", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
-  ],
-  "PASSES": [
-    { "TARGET": "paintBuf", "PERSISTENT": true },
-    {}
+    { "NAME": "rotSpeed",    "LABEL": "Rotation",     "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.0,  "MAX": 1.0 },
+    { "NAME": "inkWidth",    "LABEL": "Ink Lines",    "TYPE": "float", "DEFAULT": 1.5,  "MIN": 0.0,  "MAX": 4.0 },
+    { "NAME": "toonSteps",   "LABEL": "Toon Steps",   "TYPE": "float", "DEFAULT": 4.0,  "MIN": 2.0,  "MAX": 8.0 },
+    { "NAME": "hdrPeak",     "LABEL": "Brightness",   "TYPE": "float", "DEFAULT": 2.2,  "MIN": 0.5,  "MAX": 4.0 },
+    { "NAME": "audioReact",  "LABEL": "Audio React",  "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0,  "MAX": 2.0 }
   ]
 }*/
 
-#define PI 3.1415927
+#define MAX_STEPS 64
+#define SURF_DIST 0.003
+#define MAX_DIST  10.0
+#define TAU       6.28318530718
 
-// Aspect-correct UV
-vec2 fitUV(vec2 pos) {
-    return (pos - 0.5 * RENDERSIZE) * min(IMG_SIZE_inputImage.y / RENDERSIZE.y, IMG_SIZE_inputImage.x / RENDERSIZE.x) / IMG_SIZE_inputImage + 0.5;
+mat2 rot2(float a) { float c=cos(a),s=sin(a); return mat2(c,-s,s,c); }
+
+vec3 PAL_RED   = vec3(0.87, 0.12, 0.05);
+vec3 PAL_BLUE  = vec3(0.08, 0.18, 0.78);
+vec3 PAL_OCHRE = vec3(0.92, 0.68, 0.12);
+vec3 PAL_WHITE = vec3(0.96, 0.94, 0.88);
+
+float smin(float a, float b, float k) {
+    float h = max(k - abs(a-b), 0.0) / k;
+    return min(a,b) - h*h*k*0.25;
 }
 
-// Kuwahara filter: find the quadrant with lowest variance and use its mean color
-// This creates the flat-color brush stroke look of oil paintings
-vec3 kuwahara(vec2 uv, float radius) {
-    vec2 texel = 1.0 / RENDERSIZE;
+struct Hit { float d; int id; };
 
-    vec3 mean[4];
-    vec3 var_acc[4];
-    float count[4];
+Hit map(vec3 p) {
+    float t  = TIME * rotSpeed;
+    float pulse = 1.0 + audioBass * audioReact * 0.1;
 
-    // Initialize accumulators
-    for (int i = 0; i < 4; i++) {
-        mean[i] = vec3(0.0);
-        var_acc[i] = vec3(0.0);
-        count[i] = 0.0;
-    }
+    p.xz = rot2(t * 0.7) * p.xz;
+    p.xy = rot2(t * 0.4) * p.xy;
 
-    // Sample the 4 quadrants around the pixel
-    for (int j = -6; j <= 6; j++) {
-        for (int i = -6; i <= 6; i++) {
-            if (abs(float(i)) > radius || abs(float(j)) > radius) continue;
+    vec2 q1 = vec2(length(p.xz) - 0.7, p.y);
+    float torus = length(q1) - 0.28 * pulse;
 
-            vec3 c = texture2D(inputImage, fitUV((uv * RENDERSIZE) + vec2(float(i), float(j)))).rgb;
+    float sphere1 = length(p - vec3(0.0, 0.0, 0.0)) - 0.5 * pulse;
+    float sphere2 = length(p - vec3(0.6, 0.4, 0.1)) - 0.22 * pulse;
+    float sphere3 = length(p - vec3(-0.5, -0.35, 0.2)) - 0.18 * pulse;
 
-            // Determine which quadrant(s) this sample belongs to
-            // Quadrant 0: top-right, 1: top-left, 2: bottom-left, 3: bottom-right
-            // Use loop to assign to correct quadrant (WebGL requires const/loop index)
-            int qi = (i >= 0) ? 0 : 1;
-            int qj = (j >= 0) ? 0 : 2;
-            int q = qi + qj;
+    float base = smin(torus, sphere1, 0.4);
+    float full = smin(smin(base, sphere2, 0.3), sphere3, 0.25);
 
-            for (int k = 0; k < 4; k++) {
-                if (k == q) {
-                    mean[k] += c;
-                    var_acc[k] += c * c;
-                    count[k] += 1.0;
-                }
-            }
-        }
-    }
+    int id = 0;
+    if (abs(torus - full) < 0.05) id = 0;
+    else if (abs(sphere1 - full) < 0.05) id = 1;
+    else if (abs(sphere2 - full) < 0.05) id = 2;
+    else id = 3;
 
-    // Find the quadrant with minimum variance
-    float minVar = 1e8;
-    vec3 result = vec3(0.0);
+    return Hit(full, id);
+}
 
-    for (int q = 0; q < 4; q++) {
-        if (count[q] < 1.0) continue;
-        vec3 m = mean[q] / count[q];
-        vec3 v = var_acc[q] / count[q] - m * m;
-        float totalVar = v.r + v.g + v.b;
-        if (totalVar < minVar) {
-            minVar = totalVar;
-            result = m;
-        }
-    }
+float mapD(vec3 p) { return map(p).d; }
 
-    return result;
+vec3 calcNormal(vec3 p) {
+    vec2 e = vec2(0.001, 0.0);
+    return normalize(vec3(
+        mapD(p+e.xyy)-mapD(p-e.xyy),
+        mapD(p+e.yxy)-mapD(p-e.yxy),
+        mapD(p+e.yyx)-mapD(p-e.yyx)));
+}
+
+float toon(float x) {
+    float s = toonSteps;
+    return floor(x * s + 0.5) / s;
 }
 
 void main() {
-    vec2 pos = gl_FragCoord.xy;
-    vec2 uv = pos / RENDERSIZE;
+    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
+    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
 
-    // ==== PASS 0: Kuwahara paint filter ====
-    if (PASSINDEX == 0) {
-        gl_FragColor = vec4(kuwahara(uv, brushRadius), 1.0);
-        return;
+    vec3 ro = vec3(0.0, 0.0, 3.0);
+    vec3 rd = normalize(vec3(uv, -2.2));
+
+    float d = 0.0;
+    int   hitId = -1;
+    for (int i = 0; i < MAX_STEPS; i++) {
+        Hit h = map(ro + rd * d);
+        if (h.d < SURF_DIST) { hitId = h.id; break; }
+        if (d > MAX_DIST) break;
+        d += h.d;
     }
 
-    // ==== PASS 1: Relief lighting ====
-    vec2 texel = 1.0 / RENDERSIZE;
-    float valC = dot(texture2D(paintBuf, uv).rgb, vec3(0.333));
-    float valR = dot(texture2D(paintBuf, uv + vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valL = dot(texture2D(paintBuf, uv - vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valU = dot(texture2D(paintBuf, uv + vec2(0.0, texel.y)).rgb, vec3(0.333));
-    float valD = dot(texture2D(paintBuf, uv - vec2(0.0, texel.y)).rgb, vec3(0.333));
+    vec3 canvas = vec3(0.95, 0.92, 0.84);
+    vec3 col    = canvas;
 
-    vec3 norm = normalize(vec3(
-        (valR - valL) / texel.x,
-        (valU - valD) / texel.y,
-        150.0
-    ));
+    if (hitId >= 0) {
+        vec3 p  = ro + rd * d;
+        vec3 n  = calcNormal(p);
 
-    vec3 light = normalize(vec3(-1.0, 1.0, 1.4));
-    float diff = clamp(dot(norm, light), 0.0, 1.0);
-    float spec = pow(clamp(dot(reflect(light, norm), vec3(0.0, 0.0, -1.0)), 0.0, 1.0), 12.0) * paintSpec;
+        vec3 L1 = normalize(vec3(0.5, 1.8, 1.5));
+        vec3 L2 = normalize(vec3(-1.5,-0.5, 1.0));
 
-    gl_FragColor = texture2D(paintBuf, uv) * mix(diff, 1.0, 0.9)
-                 + spec * vec4(0.85, 1.0, 1.15, 1.0);
+        float diff1 = max(dot(n, L1), 0.0);
+        float diff2 = max(dot(n, L2), 0.0) * 0.35;
+        float diffT = toon(diff1) + diff2;
 
-    // Vignette
-    if (vignetteAmt > 0.0) {
-        vec2 scc = (pos - 0.5 * RENDERSIZE) / RENDERSIZE.x;
-        float vign = 1.1 - vignetteAmt * dot(scc, scc);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.x / RENDERSIZE.x * PI) * 40.0);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.y / RENDERSIZE.y * PI) * 20.0);
-        gl_FragColor.xyz *= vign;
+        vec3  refl  = reflect(rd, n);
+        float spec  = pow(max(dot(refl, L1), 0.0), 12.0) * 0.4;
+        float specT = toon(spec);
+
+        vec3 matCol;
+        if      (hitId == 0) matCol = PAL_RED;
+        else if (hitId == 1) matCol = PAL_BLUE;
+        else if (hitId == 2) matCol = PAL_OCHRE;
+        else                 matCol = PAL_WHITE;
+
+        col = matCol * diffT + PAL_WHITE * specT * 1.5;
+
+        float fw  = fwidth(d) * inkWidth;
+        float edge = 1.0 - smoothstep(SURF_DIST, SURF_DIST + fw * 0.04, abs(dot(n, -rd)));
+        col = mix(col, vec3(0.04, 0.02, 0.01), edge);
+
+        col *= hdrPeak;
     }
 
-    gl_FragColor.w = 1.0;
+    float vign = 1.0 - dot(uv * 0.55, uv * 0.55);
+    col = mix(col, canvas, 1.0 - clamp(vign * 1.2, 0.0, 1.0));
+
+    gl_FragColor = vec4(col, 1.0);
 }
