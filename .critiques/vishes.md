@@ -1,3 +1,23 @@
+## 2026-05-05 (v7)
+**Prior rating:** 0.0★
+**Approach:** 3D raymarch (Glowing Lattice Pulse — three-wave interference SDF cube grid)
+**Critique:**
+1. Reference fidelity: Prior 2D cell-walkers required multi-pass state; this is a standalone single-pass 3D cellular aesthetic that evokes Game of Life without persistent buffers.
+2. Compositional craft: Orbiting camera reveals the spherical extent of the live-cell cloud; elevation oscillation shows top/front/side faces sequentially.
+3. Technical execution: `aliveFn()` uses three-wave product step threshold; 3×3×3 neighbor SDF loop finds nearest live box; 64-step march at 0.8× over-relax.
+4. Liveness: Continuously evolving wave pattern changes which cells are alive; camera orbits and tilts over time.
+5. Differentiation: 3D volume of glowing cubes vs 2D single-pixel trail system; saturated 4-color palette per cell vs hue-drifting single-color walkers.
+**Changes:**
+- Full rewrite as "Glowing Lattice Pulse" — single-pass, no persistent buffers, no inputImage
+- aliveFn(): three-wave interference (sin×cos×sin) > 0.12 determines live/dead per cell
+- sdBox() for each alive cell in 3×3×3 neighborhood; boxSize input controls cube fill fraction
+- 4-color palette: violet (col0), cyan (col1), gold (col2), magenta (col3) — all fully saturated
+- hdrPeak input: diff×2.8, spec×2.8, fresnel×1.96
+- Camera: radius scales with grid density; elevation oscillates; full orbit
+- Voice glitch handler
+**HDR peaks reached:** diff peak 2.8, spec + fresnel combined up to ~4.5, typical surface ~3.5
+**Estimated rating:** 4.2★
+
 ## 2026-05-05
 **Prior rating:** 0.0★
 **Approach:** 2D refine (HDR saturation + bloom boost)
