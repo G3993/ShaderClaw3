@@ -9,9 +9,11 @@
     { "NAME": "intensity", "LABEL": "Glitch", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Dissolve", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.75, 0.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.04, 0.01, 0.0, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 2.6 },
+    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
@@ -90,6 +92,38 @@ float sampleChar(int ch, vec2 uv) {
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
+// ── Solar plasma surface background ──────────────────────────────────────────
+// Convection granules + magnetic filament lines
+vec3 solarPlasmaBg(vec2 uv, float t) {
+    // Granule cells: tiling domain warp
+    vec2 p = uv * 6.0 + vec2(t * 0.04, t * 0.03);
+    float gran1 = sin(p.x * 2.3 + sin(p.y * 1.7 + t * 0.2)) * 0.5 + 0.5;
+    float gran2 = sin(p.y * 2.7 + cos(p.x * 2.1 - t * 0.15)) * 0.5 + 0.5;
+    float granule = gran1 * gran2;
+
+    // Hot-spot flares (bright regions)
+    float flare = pow(granule, 2.5);
+
+    // Palette: void black → deep red → orange → cadmium yellow (no white)
+    vec3 cBlack  = vec3(0.04, 0.01, 0.00);
+    vec3 cRed    = vec3(0.80, 0.08, 0.00);
+    vec3 cOrange = vec3(1.00, 0.35, 0.00);
+    vec3 cYellow = vec3(1.00, 0.80, 0.00);
+
+    float lum = granule;
+    vec3 col;
+    if (lum < 0.33)      col = mix(cBlack,  cRed,    lum * 3.0);
+    else if (lum < 0.66) col = mix(cRed,    cOrange, (lum - 0.33) * 3.0);
+    else                 col = mix(cOrange, cYellow,  (lum - 0.66) * 3.0);
+
+    // Magnetic field line — dark filament streaks
+    float filX = uv.x * 12.0 + sin(uv.y * 8.0 + t * 0.3) * 0.4;
+    float fil = smoothstep(0.04, 0.0, abs(fract(filX) - 0.5) - 0.43);
+    col = mix(col, cBlack, fil * 0.6);
+
+    return col;
+}
+
 // =======================================================================
 // EFFECT: DIGIFADE - glitch dissolve
 // =======================================================================
@@ -153,10 +187,19 @@ vec4 effectDigifade(vec2 uv, int sub) {
         }
     }
 
-    vec3 fc = mix(bgColor.rgb, textColor.rgb, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
-    return vec4(fc, a);
+    float aud = 1.0 + (audioLevel + audioBass * 0.6) * audioReact * 0.4;
+
+    if (transparentBg) {
+        // HDR gold text (solar prominence color)
+        return vec4(textColor.rgb * hdrGlow * aud, textHit);
+    }
+
+    // Solar plasma background + white-hot HDR text glowing over it
+    vec3 bg = solarPlasmaBg(uv, TIME);
+    // Text is white-hot at core, gold at edges
+    vec3 textHDR = mix(textColor.rgb, vec3(1.2, 1.0, 0.6), textHit * 0.4) * hdrGlow * aud;
+    vec3 fc = mix(bg, textHDR, textHit);
+    return vec4(fc, 1.0);
 }
 
 // =======================================================================
