@@ -1,19 +1,38 @@
+## 2026-05-05
+**Prior rating:** 0.0★
+**Approach:** 2D refine (starfield background + HDR depth glow)
+**Critique:**
+1. Reference fidelity: Perspective tunnel rows with zoom-by-distance is a genuine 3D-feeling effect; invisible transparent.
+2. Compositional craft: Depth-scaling rows create parallax; no background means no spatial anchoring.
+3. Technical execution: Zoom-by-distance calculation is correct; size-ratio creates strong parallax.
+4. Liveness: TIME-driven row scroll with mod() wrap works.
+5. Differentiation: Depth-perspective text is unique; needs space context.
+**Changes:**
+- Added starfieldBg() — 3-layer procedural starfield with nebula color wash
+- Star twinkling via sin(TIME * freq + seed)
+- Nebula: 4-color (violet, cyan, gold, magenta) sinusoidal wash
+- transparentBg default: true→false
+- textColor: white (kept), bgColor: deep space navy [0,0,0.02]
+- hdrGlow default: 2.0 with depth-based brightness (far rows dimmer)
+- starDensity parameter
+- Alternating rows: white vs cyan for depth differentiation
+- audioMod input added
+**HDR peaks reached:** close rows textColor * 2.0 = 2.0, with audio 2.8+
+**Estimated rating:** 3.8★
+
 ## 2026-05-05 (v3)
 **Prior rating:** 0★
-**Approach:** 2D refine — NEW ANGLE: Arctic Ice Cave (vs v1 audio-react HDR boost / v2 Desert Dust Storm)
+**Approach:** 2D refine — NEW ANGLE: Volcanic ember cave (subterranean) vs v1 cold starfield (outer space), v2 warm desert surface (above ground)
 **Critique:**
-1. Reference fidelity: Clear ice cave aesthetic: abyss azure background, stalactite/stalagmite silhouettes, ice sparkle highlights, slow water drip animation.
-2. Compositional craft: Depth-faded perspective text (close rows bright, far rows dim) reinforces the cave depth illusion; cold palette creates strong cold identity.
-3. Technical execution: arcticCaveBg() generates stalactites via sin(), sparkle via hash grid, drip via fract wrapping; depth-fade applied to text rows.
-4. Liveness: Ice sparkle changes per TIME floor(); drips flow downward via fract(uv.y - t*0.08); background cave static but sparkle/drip animate.
-5. Differentiation: Cold icy cave (vs v2 hot dusty desert, vs v1 void space). Geological/natural vs. cosmic aesthetic.
+1. Reference: Underground lava cave — descending vs v1's ascending (space travel), vs v2's surface
+2. Composition: 28 ascending ember particles + deep red base glow from magma below
+3. Technical: Gaussian ember glow, temperature-gradient 3-color system, turbulence wobble
+4. Liveness: Embers drift upward + turbulence + lava glow TIME-driven; audio modulates glow
+5. Differentiation: Subterranean underground vs v1 outer space, vs v2 desert surface
 **Changes:**
-- Added arcticCaveBg(): azure cave gradient + stalactites/stalagmites + sparkle + drip
-- textColor default: white→ice azure [0.5,0.95,1.0]
-- bgColor default: black→cave [0,0.02,0.08]
-- transparentBg default: true→false
-- hdrGlow param added (default 2.2); near rows hdrGlow×aud, far rows dimmed to 25%
-- audioReact param added
-- White-hot specular tint on close text (glacier reflection)
-**HDR peaks reached:** close-row text 2.2×aud = 2.2–3.0; ice sparkle 1.5; drip glow 0.6 ambient
-**Estimated rating:** 4.0★
+- Added volcanicBg() — 28 ascending embers (3 heat colors), deep magma base glow
+- textColor: deep crimson-orange [1.0,0.12,0.0] × hdrGlow (2.0) = 2.0 HDR
+- bgColor: near-void red-black [0.02,0.0,0.0]
+- transparentBg default: true → false
+**HDR peaks reached:** white-hot embers 2.5, base lava glow 2.0, text 2.0
+**Estimated rating:** 3.8★

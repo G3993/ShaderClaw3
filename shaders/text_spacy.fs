@@ -12,11 +12,10 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.5, 0.95, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.02, 0.08, 1.0] },
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.12, 0.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.0, 0.0, 1.0] },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
-    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 2.2 },
-    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 2.0 }
   ]
 }*/
 
@@ -95,38 +94,45 @@ float sampleChar(int ch, vec2 uv) {
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
-// ── Arctic Ice Cave background ────────────────────────────────────────────────
-// Deep azure shadows + stalactite silhouettes + specular ice sparkle
-vec3 arcticCaveBg(vec2 uv, float t) {
-    // Deep cave gradient: near-black at center, azure at edges
-    float depth = length(uv - 0.5) * 1.8;
-    vec3 cAbyss  = vec3(0.00, 0.02, 0.08);
-    vec3 cIce    = vec3(0.10, 0.55, 0.90);
-    vec3 cGlacier = vec3(0.20, 0.80, 1.00);
-    vec3 col = mix(cAbyss, cIce, smoothstep(0.0, 1.0, depth * 0.6));
+// =======================================================================
+// VOLCANIC EMBER CAVE BACKGROUND
+// =======================================================================
 
-    // Stalactite silhouettes hanging from top
-    float stal = sin(uv.x * 18.0) * 0.5 + 0.5;
-    float stalHeight = 0.05 + stal * 0.12;
-    float stalMask = step(1.0 - stalHeight, uv.y);
-    col = mix(col, cAbyss * 0.2, stalMask * 0.8);
+float hashE(float n) { return fract(sin(n * 113.1) * 43758.5); }
 
-    // Stalagmites rising from bottom
-    float stam = cos(uv.x * 14.0 + 0.7) * 0.5 + 0.5;
-    float stamHeight = 0.04 + stam * 0.08;
-    float stamMask = step(uv.y, stamHeight);
-    col = mix(col, cAbyss * 0.2, stamMask * 0.8);
+vec3 volcanicBg(vec2 uv) {
+    vec3 VOID = vec3(0.02, 0.005, 0.0);
+    vec3 col = VOID;
+    float t = TIME;
 
-    // Ice sparkle (refraction highlights)
-    vec2 sparkCell = floor(uv * 55.0);
-    float sp = step(0.992, hash(sparkCell.x + sparkCell.y * 137.0 + floor(t * 4.0) * 29.0));
-    col += cGlacier * sp * 1.5;
+    // Deep magma glow from below — lava at the base
+    float lavaGlow = exp(-(uv.y * 4.0)) * 0.6;
+    col += vec3(1.0, 0.2, 0.0) * lavaGlow * 2.0;   // HDR red/orange base glow
 
-    // Drip effect: slow vertical streaks
-    float dripX = fract(uv.x * 22.0 + hash(floor(uv.x * 22.0)) * 3.0);
-    float dripT = fract(uv.y + hash(floor(uv.x * 22.0)) * 1.7 - t * 0.08);
-    float drip  = smoothstep(0.97, 1.0, dripT) * smoothstep(0.03, 0.0, abs(dripX - 0.5) - 0.008);
-    col += cGlacier * drip * 0.6;
+    // Floating ember particles ascending
+    const int NE = 28;
+    for (int i = 0; i < NE; i++) {
+        float fi = float(i);
+        float ex = hashE(fi * 1.37);
+        float ey0 = hashE(fi * 2.91);
+        float espeed = 0.06 + hashE(fi * 4.13) * 0.12;
+        float ey = fract(ey0 + t * espeed);
+        // Embers drift sideways with turbulence
+        float turbX = sin(t * (0.7 + hashE(fi*3.1)*0.5) + fi * 1.3) * 0.04;
+        vec2 epos = vec2(ex + turbX, ey);
+        float dist = length(uv - epos);
+        // Embers cool as they rise (lower = hotter)
+        float heat = 1.0 - ey; // 1 at bottom, 0 at top
+        float pulse = 0.6 + 0.4*sin(t*(3.0+fi*0.4)+fi);
+        float glow = exp(-dist * 60.0) * pulse * (0.3 + heat * 0.7);
+        // 3 ember temperatures: white-hot, orange, deep red
+        vec3 emberCol;
+        float temp = hashE(fi * 7.7) + heat * 0.3;
+        if      (temp > 0.85) emberCol = vec3(2.5, 1.8, 0.5);   // white-hot HDR
+        else if (temp > 0.55) emberCol = vec3(1.0, 0.45, 0.0);  // orange
+        else                  emberCol = vec3(0.8, 0.1, 0.0);   // deep red
+        col += emberCol * glow;
+    }
 
     return col;
 }
@@ -183,25 +189,16 @@ vec4 effectSpacy(vec2 uv, int sub) {
         }
     }
 
-    float aud = 1.0 + (audioLevel + audioBass * 0.6) * audioReact * 0.4;
-
+    float a = 1.0;
+    vec3 fc;
     if (transparentBg) {
-        // Depth-fade HDR: close rows bright, far rows dimmer
-        float depthFade = mix(1.0, 0.3, clamp(ri / 8.0, 0.0, 1.0));
-        return vec4(textColor.rgb * hdrGlow * aud * depthFade, textHit);
+        a = textHit;
+        fc = textColor.rgb * hdrGlow;
+    } else {
+        vec3 bgPx = volcanicBg(uv);
+        fc = mix(bgPx, textColor.rgb * hdrGlow, textHit);
     }
-
-    // Arctic ice cave background + icy HDR text
-    vec2 uvN = gl_FragCoord.xy / RENDERSIZE.xy;
-    vec3 bg = arcticCaveBg(uvN, TIME);
-
-    // Close rows: glacier white-hot; far rows: icy cyan dim
-    float depthFade = mix(1.0, 0.25, clamp(ri / 8.0, 0.0, 1.0));
-    // Add slight warm-white spec to close text (ice facet reflection)
-    vec3 tCol = mix(textColor.rgb, vec3(1.2, 1.3, 1.5), textHit * 0.15 * (1.0 - ri * 0.1));
-    tCol *= hdrGlow * aud * depthFade;
-    vec3 fc = mix(bg, tCol, textHit);
-    return vec4(fc, 1.0);
+    return vec4(fc, a);
 }
 
 void main() {
