@@ -1,177 +1,116 @@
 /*{
-  "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Cascade - tiled rows with wave offsets",
-  "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
-    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
-    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
-    { "NAME": "intensity", "LABEL": "Wave Height", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "density", "LABEL": "Row Count", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
-    { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
-    { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
-  ]
+    "DESCRIPTION": "Bioluminescent Tunnel — 3D raymarched dark cave tunnel with glowing bioluminescent orb formations on walls. Deep ocean palette: void black, bio-cyan, violet, deep teal.",
+    "CATEGORIES": ["Generator", "3D", "Bioluminescent", "Audio Reactive"],
+    "CREDIT": "ShaderClaw auto-improve",
+    "INPUTS": [
+        { "NAME": "tunnelRadius", "TYPE": "float", "DEFAULT": 1.2,  "MIN": 0.5, "MAX": 3.0,  "LABEL": "Tunnel Radius" },
+        { "NAME": "orbDensity",   "TYPE": "float", "DEFAULT": 12.0, "MIN": 2.0, "MAX": 24.0, "LABEL": "Orb Density" },
+        { "NAME": "hdrPeak",      "TYPE": "float", "DEFAULT": 3.0,  "MIN": 1.0, "MAX": 5.0,  "LABEL": "HDR Peak" },
+        { "NAME": "audioMod",     "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0, "MAX": 2.0,  "LABEL": "Audio Mod" }
+    ]
 }*/
 
-const float PI = 3.14159265;
-const float TWO_PI = 6.28318530;
+float hash11(float n)  { return fract(sin(n*127.1)*43758.5453); }
+float hash21(vec2 p)   { return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+vec3  hash31(float n)  { return fract(sin(n*vec3(127.1,311.7,74.7))*43758.5453); }
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
-float charPixel(int ch, float col, float row) {
-    if (ch < 0 || ch > 36) return 0.0;
-    vec2 uv = vec2(col / 5.0, row / 7.0);
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return smoothstep(0.1, 0.55, texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r);
+// Tunnel SDF: infinite cylinder along Z axis
+float sdTunnel(vec3 p) {
+    return tunnelRadius - length(p.xy); // inside = negative
 }
 
-int getChar(int slot) {
-    if (slot == 0)  return int(msg_0);
-    if (slot == 1)  return int(msg_1);
-    if (slot == 2)  return int(msg_2);
-    if (slot == 3)  return int(msg_3);
-    if (slot == 4)  return int(msg_4);
-    if (slot == 5)  return int(msg_5);
-    if (slot == 6)  return int(msg_6);
-    if (slot == 7)  return int(msg_7);
-    if (slot == 8)  return int(msg_8);
-    if (slot == 9)  return int(msg_9);
-    if (slot == 10) return int(msg_10);
-    if (slot == 11) return int(msg_11);
-    if (slot == 12) return int(msg_12);
-    if (slot == 13) return int(msg_13);
-    if (slot == 14) return int(msg_14);
-    if (slot == 15) return int(msg_15);
-    if (slot == 16) return int(msg_16);
-    if (slot == 17) return int(msg_17);
-    if (slot == 18) return int(msg_18);
-    if (slot == 19) return int(msg_19);
-    if (slot == 20) return int(msg_20);
-    if (slot == 21) return int(msg_21);
-    if (slot == 22) return int(msg_22);
-    if (slot == 23) return int(msg_23);
-    if (slot == 24) return int(msg_24);
-    if (slot == 25) return int(msg_25);
-    if (slot == 26) return int(msg_26);
-    if (slot == 27) return int(msg_27);
-    if (slot == 28) return int(msg_28);
-    if (slot == 29) return int(msg_29);
-    if (slot == 30) return int(msg_30);
-    if (slot == 31) return int(msg_31);
-    if (slot == 32) return int(msg_32);
-    if (slot == 33) return int(msg_33);
-    if (slot == 34) return int(msg_34);
-    if (slot == 35) return int(msg_35);
-    if (slot == 36) return int(msg_36);
-    if (slot == 37) return int(msg_37);
-    if (slot == 38) return int(msg_38);
-    if (slot == 39) return int(msg_39);
-    if (slot == 40) return int(msg_40);
-    if (slot == 41) return int(msg_41);
-    if (slot == 42) return int(msg_42);
-    if (slot == 43) return int(msg_43);
-    if (slot == 44) return int(msg_44);
-    if (slot == 45) return int(msg_45);
-    if (slot == 46) return int(msg_46);
-    return int(msg_47);
-}
-
-int charCount() {
-    int n = int(msg_len);
-    return n > 0 ? n : 1;
-}
-
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
-}
-
-float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
-
-// =======================================================================
-// EFFECT: CASCADE - tiled rows with wave offsets
-// =======================================================================
-
-vec4 effectCascade(vec2 uv) {
-    float aspect = RENDERSIZE.x / RENDERSIZE.y;
-    int numChars = charCount();
-    float waveAmount = intensity;
-    float rows = floor(mix(5.0, 30.0, density));
-
-    float warpedY = uv.y + sin(uv.y * TWO_PI * 1.5 + TIME * speed * 1.5) * waveAmount * 0.06;
-    float rowH = 1.0 / rows;
-    float rowIdx = clamp(floor(warpedY / rowH), 0.0, rows - 1.0);
-    float localY = fract(warpedY / rowH);
-
-    float cH = rowH;
-    float cW = cH * (5.0/7.0) * (1.0/aspect) * textScale;
-    float gW = cW * 0.15;
-    float wordW = float(numChars) * (cW + gW);
-
-    float xOff = sin(rowIdx*0.6 + TIME*speed*2.0) * waveAmount * wordW * 1.5 + TIME*speed*0.08;
-    float px = mod(uv.x + xOff - 0.5 + wordW * 0.5, wordW);
-    if (px < 0.0) px += wordW;
-
-    float cs = cW + gW;
-    float csF = px / cs;
-    int slot = int(floor(csF));
-    float clx = fract(csF);
-    float cf = cW / cs;
-
-    float textHit = 0.0;
-    if (clx < cf && slot >= 0 && slot < numChars) {
-        float gc = (clx/cf) * 5.0, gr = localY * 7.0;
-        if (gc >= 0.0 && gc < 5.0 && gr >= 0.0 && gr < 7.0) {
-            int ch = getChar(slot);
-            if (ch >= 0 && ch <= 36 && ch != 26) textHit = charPixel(ch, gc, gr);
+// Bioluminescent orbs on tunnel wall
+float orbGlow(vec3 p, float t, out vec3 orbCol) {
+    float minD = 1e6;
+    orbCol = vec3(0.0);
+    float pzCell = floor(p.z * orbDensity * 0.15);
+    // Check nearby cells
+    for (int k = -1; k <= 1; k++) {
+        float cz = pzCell + float(k);
+        for (int j = 0; j < 5; j++) {
+            float seed = cz * 17.3 + float(j) * 7.91;
+            // Place orb on tunnel wall: random angle + z position
+            float ang = hash11(seed * 1.31) * 6.2832;
+            float rOrb = tunnelRadius * 0.92; // surface of tunnel wall
+            float zOrb = (cz + hash11(seed * 2.17)) / (orbDensity * 0.15);
+            vec3 orbCenter = vec3(cos(ang) * rOrb, sin(ang) * rOrb, zOrb);
+            float d = length(p - orbCenter);
+            if (d < minD) {
+                minD = d;
+                vec3 hc = hash31(seed * 3.77);
+                // Bio palette: cyan, violet, teal — force saturation
+                if (hc.x < 0.33)      orbCol = vec3(0.0,  0.9,  1.0); // bio-cyan
+                else if (hc.x < 0.66) orbCol = vec3(0.55, 0.0,  1.0); // violet
+                else                   orbCol = vec3(0.0,  0.7,  0.5); // deep teal
+            }
         }
     }
-
-    bool inv = mod(rowIdx, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
-    return vec4(fc, a);
+    return minD;
 }
 
-// =======================================================================
-// MAIN
-// =======================================================================
+vec3 calcNormal(vec3 p) {
+    float R = tunnelRadius - length(p.xy);
+    return normalize(-vec3(p.xy, 0.0)); // outward from cylinder axis
+}
 
 void main() {
-    vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
-    vec4 col = effectCascade(uv);
+    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
+    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
+    float t = TIME;
+    float audio = 1.0 + audioLevel * audioMod + audioBass * audioMod * 0.5;
 
-    if (_voiceGlitch > 0.01) {
-        float g = _voiceGlitch;
-        float t = TIME * 17.0;
-        float band = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
-        float bandNoise = fract(sin(band * 91.7 + t) * 43758.5);
-        float bandActive = step(1.0 - g * 0.6, bandNoise);
-        float shift = (bandNoise - 0.5) * 0.08 * g * bandActive;
-        float chromaAmt = g * 0.015;
-        vec2 uvR = uv + vec2(shift + chromaAmt, 0.0);
-        vec2 uvB = uv + vec2(shift - chromaAmt, 0.0);
-        vec2 uvG = uv + vec2(shift, chromaAmt * 0.5);
-        vec4 cR = effectCascade(uvR);
-        vec4 cG = effectCascade(uvG);
-        vec4 cB = effectCascade(uvB);
-        vec4 glitched = vec4(cR.r, cG.g, cB.b, max(max(cR.a, cG.a), cB.a));
-        float scanline = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
-        float blockX = floor(uv.x * 6.0);
-        float blockY = floor(uv.y * 4.0);
-        float blockNoise = fract(sin((blockX + blockY * 7.0) * 113.1 + floor(t * 8.0)) * 43758.5);
-        float dropout = step(1.0 - g * 0.15, blockNoise);
-        glitched.rgb *= scanline;
-        glitched.rgb *= 1.0 - dropout;
-        col = mix(col, glitched, smoothstep(0.0, 0.3, g));
+    // Camera flying forward through tunnel
+    float camZ = t * 1.2;
+    vec3 ro = vec3(0.0, 0.0, camZ);
+    // Slight camera sway
+    ro.xy += vec2(sin(t*0.4)*0.08, cos(t*0.3)*0.06);
+    vec3 fw = vec3(0.0, 0.0, 1.0);
+    vec3 rgt = vec3(1.0, 0.0, 0.0);
+    vec3 up_ = vec3(0.0, 1.0, 0.0);
+    vec3 rd  = normalize(fw + uv.x * rgt * 0.6 + uv.y * up_ * 0.6);
+
+    // March to tunnel wall
+    float dist = 0.0;
+    bool hit = false;
+    for (int i = 0; i < 64; i++) {
+        vec3 p = ro + rd * dist;
+        float d = -sdTunnel(p); // inside tunnel, d is negative; use abs for wall
+        float wallD = abs(length(p.xy) - tunnelRadius);
+        if (wallD < 0.005) { hit = true; break; }
+        dist += max(wallD * 0.7, 0.01);
+        if (dist > 25.0) break;
     }
 
-    gl_FragColor = col;
+    vec3 col = vec3(0.0, 0.0, 0.01); // void black
+
+    if (hit) {
+        vec3 p = ro + rd * dist;
+        vec3 N = calcNormal(p);
+
+        // Cave wall: very dark teal stone
+        vec3 stoneCol = vec3(0.02, 0.06, 0.07);
+
+        // Bioluminescent orbs: glow contribution
+        vec3 orbCol;
+        float orbD = orbGlow(p, t, orbCol);
+
+        // Orb glow: exponential falloff, HDR
+        float glow = exp(-orbD * 5.0) * hdrPeak * audio;
+        float bloom = exp(-orbD * 1.5) * hdrPeak * 0.4 * audio;
+
+        // Pulse each orb slowly
+        float pulse = 0.85 + 0.15 * sin(t * 1.7 + orbD * 3.0);
+
+        col = stoneCol + orbCol * (glow + bloom) * pulse;
+
+        // Depth fog: far wall gets dimmer
+        float fog = exp(-dist * 0.08);
+        col *= fog;
+    }
+
+    // Atmospheric glow along tunnel axis (bio-cyan mist)
+    float axisGlow = exp(-length(uv) * 2.5) * 0.06;
+    col += vec3(0.0, 0.6, 0.5) * axisGlow;
+
+    gl_FragColor = vec4(col, 1.0);
 }
