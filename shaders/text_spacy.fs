@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Spacy - perspective tunnel rows",
+  "DESCRIPTION": "Spacy - perspective tunnel rows. Warp Drive background: hard white-blue velocity lines streaking from a vanishing point. NEW ANGLE: hard geometric warp vs prior soft starfield.",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Spacy","Spacy Bridge","Spacy Whitney","Spacy Recede"], "DEFAULT": 0 },
@@ -12,17 +12,17 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.08, 0.0, 0.12, 1.0] },
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.4, 0.7, 1.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.02, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
     { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 2.0 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
+    { "NAME": "audioReact", "LABEL": "Audio", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
 const float PI = 3.14159265;
 const float TWO_PI = 6.28318530;
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
 float charPixel(int ch, float col, float row) {
     if (ch < 0 || ch > 36) return 0.0;
     vec2 uv = vec2(col / 5.0, row / 7.0);
@@ -94,66 +94,38 @@ float sampleChar(int ch, vec2 uv) {
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
-// =======================================================================
-// BACKGROUND: NEON VAPORWAVE GRID — hot pink sky + cyan perspective floor
-// =======================================================================
+vec3 warpDriveBg(vec2 uv) {
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    vec2 c = vec2(0.5, 0.5);
+    vec2 d = (uv - c) * vec2(aspect, 1.0);
 
-// Neon vaporwave grid — hot pink sky + cyan perspective floor grid
-vec3 vaporGridBg(vec2 uv, float t) {
-    // Horizon at y=0.15 (uv.y in [0,1] range)
-    float horizonY = 0.15;
+    float t = TIME * 0.55 + audioBass * audioReact * 0.1;
 
-    // Sky: hot pink to deep magenta gradient
-    float skyT = clamp((uv.y - horizonY) / 0.8, 0.0, 1.0);
-    vec3 sky = mix(vec3(1.0, 0.15, 0.7), vec3(0.25, 0.0, 0.5), skyT);
-    // HDR sky top
-    sky *= 1.4;
+    float r     = length(d);
+    float theta = atan(d.y, d.x);
 
-    vec3 col;
+    float streakBands = 80.0;
+    float band  = floor(theta / (6.28318 / streakBands) + 0.5);
+    float bandT = fract(band * 0.618034 + 0.5);
 
-    if (uv.y < horizonY) {
-        // Perspective grid floor
-        float dh = max(horizonY - uv.y, 0.001);
-        float gridX = (uv.x - 0.5) / (dh * 2.0 + 0.05);
-        float gridY = 1.0 / dh - t * 0.4; // scrolling forward
+    float streakCycle = floor(bandT * 7.0 + t * 0.4 + band * 0.07);
+    float activeT     = fract(bandT * 7.0 + t * 0.4 + band * 0.07);
 
-        float gx = abs(fract(gridX * 5.0) - 0.5);
-        float gy = abs(fract(gridY) - 0.5);
-        float lineW = 0.04 * dh + 0.005;
-        float line = smoothstep(0.5 - lineW, 0.5, max(gx, gy));
+    float streakBright = smoothstep(0.0, 0.2, activeT) * smoothstep(1.0, 0.3, activeT);
+    float front     = 0.02 + activeT * 0.55;
+    float streakLen = 0.15 + bandT * 0.25;
+    float tail      = smoothstep(front - streakLen, front, r) * smoothstep(front + 0.02, front, r);
+    float angWidth  = 0.5 + bandT * 1.5;
+    float angEdge   = fwidth(theta) * streakBands / (2.0 * 3.14159);
+    float angMask   = smoothstep(angWidth * angEdge, 0.0, abs(theta - band * 6.28318 / streakBands));
 
-        // Floor base: dark magenta
-        vec3 floorBase = vec3(0.12, 0.0, 0.18);
-        // Grid lines: hot cyan HDR
-        vec3 gridColor = vec3(0.0, 1.0, 0.9) * 2.2; // HDR cyan
-        col = mix(floorBase, gridColor, line);
-        // Fade to horizon
-        col = mix(col, sky, smoothstep(horizonY - 0.06, horizonY, uv.y));
-    } else {
-        col = sky;
-        // Scan lines in sky (optional visual interest)
-        float scanY = sin(uv.y * 40.0 + t * 2.0) * 0.04;
-        col += vec3(1.0, 0.0, 0.5) * scanY;
-    }
+    float streak    = streakBright * tail * angMask;
 
-    // Sun: bright circle at horizon
-    float sunDist = length(vec2(uv.x - 0.5, uv.y - horizonY));
-    float sunR = 0.18;
-    if (sunDist < sunR) {
-        float ty = clamp((uv.y - (horizonY - sunR)) / (2.0 * sunR), 0.0, 1.0);
-        vec3 sunCol = mix(vec3(1.0, 0.3, 0.0), vec3(1.0, 0.05, 0.5), ty);
-        // Horizontal stripes through sun
-        float stripe = step(0.0, sin(uv.y * 30.0 + 0.5)) * 0.4;
-        sunCol = mix(sunCol, sky, stripe);
-        col = mix(col, sunCol * 2.5, smoothstep(0.0, -0.02, sunDist - sunR));
-    }
+    vec3 streakCol  = mix(vec3(0.0, 0.5, 2.8), vec3(2.8, 2.8, 2.8), streakBright);
 
-    return col;
+    float audio = 1.0 + audioBass * audioReact * 0.3;
+    return (bgColor.rgb + streakCol * streak * 2.5 * audio);
 }
-
-// =======================================================================
-// EFFECT: SPACY - perspective tunnel rows
-// =======================================================================
 
 vec4 effectSpacy(vec2 uv, int sub) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
@@ -204,11 +176,11 @@ vec4 effectSpacy(vec2 uv, int sub) {
     }
 
     bool inv = mod(ri, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
+    vec3 fg = inv ? bgColor.rgb : textColor.rgb * hdrGlow;
+    vec3 bg = inv ? textColor.rgb * hdrGlow : warpDriveBg(uv);
     vec3 fc = mix(bg, fg, textHit);
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
+    if (transparentBg) { a = textHit; fc = textColor.rgb * hdrGlow; }
     return vec4(fc, a);
 }
 
@@ -216,14 +188,6 @@ void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     int p = int(preset);
     vec4 col = effectSpacy(uv, p);
-
-    // Composite vaporwave grid background when not transparent
-    if (!transparentBg) {
-        vec3 bg = vaporGridBg(uv, TIME);
-        // Text layer: white text boosted by hdrGlow
-        vec3 textLayer = col.rgb * hdrGlow;
-        col = vec4(mix(bg, textLayer, col.a), 1.0);
-    }
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
