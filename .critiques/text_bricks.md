@@ -1,19 +1,38 @@
+## 2026-05-05
+**Prior rating:** 0.0★
+**Approach:** 2D refine (background generator + HDR glow)
+**Critique:**
+1. Reference fidelity: Grid displacement bricks effect is correct but invisible — defaults to transparent white text.
+2. Compositional craft: No background content; transparent mode + white-on-black = nothing to look at standalone.
+3. Technical execution: Font atlas system works, but transparentBg=true renders nothing without compositor.
+4. Liveness: Speed/displacement parameters work but background is void.
+5. Differentiation: Distinct effect lost to defaults producing transparent output.
+**Changes:**
+- Added neonBrickBg() — procedural neon brick wall with mortar glow lines
+- 4-color per-brick hue oscillation: violet↔cyan↔gold↔magenta cycling by TIME
+- transparentBg default: true→false
+- textColor default: white [1,1,1] → electric cyan [0,1,1]
+- bgColor default: black → deep violet [0.02,0,0.08]
+- hdrGlow parameter added (default 1.8) — boosts text into HDR range
+- audioMod parameter added
+- Black mortar lines provide dark accent contrast
+**HDR peaks reached:** textColor * 1.8 glow = 1.8 direct, ~2.7 with audio boost
+**Estimated rating:** 3.8★
+
 ## 2026-05-05 (v3)
 **Prior rating:** 0★
-**Approach:** 2D refine — NEW ANGLE: Prismatic Iridescent Holographic (vs v1 neon brick wall / v2 De Stijl Mondrian grid)
+**Approach:** 2D refine — NEW ANGLE: Circuit PCB trace background (tech/industrial) vs v1 neon brick wall, v2 De Stijl static grid
 **Critique:**
-1. Reference fidelity: Prismatic/holographic foil aesthetic — text shimmers through 4-color iridescent cycle (gold→magenta→cyan→violet) as cells animate.
-2. Compositional craft: Dark velvet background (near-black) gives strong contrast against HDR iridescent text characters.
-3. Technical execution: Per-cell hue computed from (ci*0.11 + ri*0.07 + TIME*0.05); 4-color mix palette; fwidth not needed (smooth interpolation handles AA via font atlas).
-4. Liveness: Hue cycles slowly with TIME; cell displacement continues from original speed/intensity params.
-5. Differentiation: Prismatic shifting hue (vs v1 neon fixed-color, vs v2 flat primary Mondrian blocks). No white-mixing — all 4 palette colors fully saturated.
+1. Reference: PCB circuit grid — strong geometric tech identity
+2. Composition: Grid of gold traces + node circles, animated green data pulse
+3. Technical: fwidth-style smoothstep on trace edges; hash-based node placement
+4. Liveness: TIME-driven data pulse along vertical traces
+5. Differentiation: PCB industrial vs v1 neon organic, vs v2 Mondrian art
 **Changes:**
-- Added prismColor() function: 4-color HDR palette cycling per cell
-- transparentBg default: true→false
-- textColor default: white→gold [1,0.8,0]
-- bgColor default: black→near-black [0,0,0.01] 
-- hdrGlow param added (default 2.4) — text output is prismatic * hdrGlow
-- audioReact param added
-- Dark iridescent bg tint: prism * 0.06 (not washed out)
-**HDR peaks reached:** prism * hdrGlow * aud = 2.4 direct; with audio peaks 3.2+
-**Estimated rating:** 4.0★
+- Added circuitBg() — gold trace grid, junction nodes, green data pulse on PCB green
+- textColor: electric yellow [1.0,0.85,0.0] × hdrGlow (1.8) = 1.8 HDR
+- transparentBg default: true → false
+- hdrGlow parameter added (default 1.8)
+- Node HDR peaks: 2.5 gold nodes; text 1.8 HDR; pulse 0.8 green add
+**HDR peaks reached:** text 1.8, nodes 2.5, trace glow adds ≈ 2.0 total
+**Estimated rating:** 3.5★

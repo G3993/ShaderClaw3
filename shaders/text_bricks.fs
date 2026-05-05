@@ -8,12 +8,11 @@
     { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
     { "NAME": "intensity", "LABEL": "Displacement", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Grid Density", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 1.8 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.8, 0.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.01, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
-    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 2.4 },
-    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.85, 0.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.02, 0.008, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
@@ -92,23 +91,25 @@ float sampleChar(int ch, vec2 uv) {
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
-// ── Prismatic iridescent background ──────────────────────────────────────────
-// 4 colors cycling by cell index + TIME: gold, magenta, cyan, violet
-vec3 prismColor(float ci, float ri, float t) {
-    float hue = fract((ci * 0.11 + ri * 0.07 + t * 0.05));
-    // Map to 4-color palette (no white-mixing)
-    // 0.0=gold, 0.25=magenta, 0.5=cyan, 0.75=violet
-    vec3 c0 = vec3(1.00, 0.80, 0.00); // gold
-    vec3 c1 = vec3(1.00, 0.00, 0.70); // magenta
-    vec3 c2 = vec3(0.00, 1.00, 0.90); // cyan
-    vec3 c3 = vec3(0.55, 0.00, 1.00); // violet
-    hue *= 4.0;
-    float fh = floor(hue);
-    float fr = fract(hue);
-    if (fh < 1.0) return mix(c0, c1, fr);
-    if (fh < 2.0) return mix(c1, c2, fr);
-    if (fh < 3.0) return mix(c2, c3, fr);
-    return mix(c3, c0, fr);
+float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5); }
+
+vec3 circuitBg(vec2 uv) {
+    vec3 BOARD = vec3(0.0, 0.018, 0.010);
+    // Gold trace grid
+    float trH = smoothstep(0.04, 0.0, abs(fract(uv.y * 12.0 + 0.5) - 0.5) - 0.46);
+    float trV = smoothstep(0.04, 0.0, abs(fract(uv.x * 20.0 + 0.5) - 0.5) - 0.46);
+    // Gold nodes at some intersections
+    vec2 cellI = vec2(floor(uv.x*20.0), floor(uv.y*12.0));
+    vec2 cellF = fract(vec2(uv.x*20.0, uv.y*12.0)) - 0.5;
+    float hasNode = step(0.55, hash2(cellI));
+    float nodeR = smoothstep(0.16, 0.07, length(cellF)) * hasNode;
+    // Animated data pulse
+    float pulse = step(0.985, sin(uv.x * 20.0 * 3.14159 - TIME * 8.0));
+    vec3 col = BOARD;
+    col += vec3(0.9, 0.65, 0.0) * max(trH, trV) * 1.5;   // HDR gold traces
+    col += vec3(1.0, 0.85, 0.0) * nodeR * 2.5;             // HDR gold nodes
+    col += vec3(0.3, 1.0, 0.1) * pulse * trV * 0.8;        // green pulse
+    return col;
 }
 
 // =======================================================================
@@ -163,22 +164,16 @@ vec4 effectBricks(vec2 uv, int sub) {
         }
     }
 
-    float aud = 1.0 + (audioLevel + audioBass * 0.5) * audioReact * 0.4;
-
+    float a = 1.0;
+    vec3 fc;
     if (transparentBg) {
-        // Transparent mode: prismatic text color
-        vec3 prism = prismColor(ci, ri, TIME * 0.8);
-        return vec4(prism * hdrGlow * aud, textHit);
+        a = textHit;
+        fc = textColor.rgb * hdrGlow;
+    } else {
+        vec3 bgPx = circuitBg(uv);
+        fc = mix(bgPx, textColor.rgb * hdrGlow, textHit);
     }
-
-    // Opaque mode: dark velvet background + prismatic text + subtle dark iridescent bg
-    vec3 prism = prismColor(ci, ri, TIME * 0.8);
-    // Background: very dim iridescent tint (not washed out — dark base)
-    vec3 bgPrism = prism * 0.06 + bgColor.rgb;
-    // Text: prismatic HDR
-    vec3 textPrism = prism * hdrGlow * aud;
-    vec3 fc = mix(bgPrism, textPrism, textHit);
-    return vec4(fc, 1.0);
+    return vec4(fc, a);
 }
 
 void main() {
