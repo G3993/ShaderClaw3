@@ -14,7 +14,8 @@
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
     { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true },
+    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
@@ -130,7 +131,9 @@ vec4 effectWave(vec2 uv) {
     float startY = 0.5;
     float rowStartX = 0.5 - totalTextW * 0.5;
 
+    float audioMod = 0.5 + 0.5 * audioLevel * audioReact;
     float mainHit = 0.0, shadowHit = 0.0;
+    float glowAccum = 0.0;
     vec2 so = vec2(0.005, -0.005);
 
     for (int i = 0; i < 48; i++) {
@@ -144,6 +147,11 @@ vec4 effectWave(vec2 uv) {
         float tilt = cos(phase) * amplitude * 3.0;
         float cellX = rowStartX + float(i) * cellStep;
         float cellY = startY;
+
+        // Glow halo — Gaussian radial decay from each character center
+        vec2 charCenter = vec2(cellX + cW * 0.5, cellY + yOff + cH * 0.5);
+        float gDist = length((p - charCenter) / max(vec2(cW, cH), 0.001));
+        glowAccum += exp(-gDist * gDist * 3.5) * 0.28;
 
         vec2 m = vec2((p.x - cellX) / cW, (p.y - (cellY + yOff)) / cH);
         m.x += (m.y - 0.5) * tilt;
@@ -160,6 +168,12 @@ vec4 effectWave(vec2 uv) {
     if (shadowHit > 0.5)
         result = vec4(mix(result.rgb, vec3(0.0), 0.3), result.a + 0.3*(1.0-result.a));
     if (mainHit > 0.5) result = vec4(textColor.rgb, textColor.a);
+
+    // HDR glow halo — peaks at 1.8×audioMod, fires bloom on LED wall
+    float glowHDR = glowAccum * audioMod * 1.8;
+    result.rgb += textColor.rgb * glowHDR;
+    if (transparentBg) result.a = max(result.a, min(glowHDR * 0.8, 1.0));
+
     return result;
 }
 
