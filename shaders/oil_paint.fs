@@ -1,124 +1,212 @@
 /*{
-  "DESCRIPTION": "Oil paint effect — Kuwahara filter with relief lighting for painterly brush strokes",
-  "CREDIT": "ShaderClaw (Kuwahara approach inspired by flockaroo)",
-  "CATEGORIES": ["Effect"],
-  "INPUTS": [
-    { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "brushRadius", "LABEL": "Brush Size", "TYPE": "float", "DEFAULT": 4.0, "MIN": 1.0, "MAX": 12.0 },
-    { "NAME": "paintSpec", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "vignetteAmt", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
-  ],
-  "PASSES": [
-    { "TARGET": "paintBuf", "PERSISTENT": true },
-    {}
-  ]
+    "DESCRIPTION": "Lacquerware Totem — three Japanese lacquerware objects (torus, sphere, tower) stacked on a dark platform, warm Blinn-Phong lighting",
+    "CREDIT": "ShaderClaw",
+    "ISFVSN": "2",
+    "CATEGORIES": ["Generator", "3D"],
+    "INPUTS": [
+        {
+            "NAME": "orbitSpeed",
+            "TYPE": "float",
+            "MIN": 0.0,
+            "MAX": 1.0,
+            "DEFAULT": 0.2,
+            "LABEL": "Orbit Speed"
+        },
+        {
+            "NAME": "spinSpeed",
+            "TYPE": "float",
+            "MIN": 0.0,
+            "MAX": 2.0,
+            "DEFAULT": 0.5,
+            "LABEL": "Spin Speed"
+        },
+        {
+            "NAME": "specPow",
+            "TYPE": "float",
+            "MIN": 8.0,
+            "MAX": 256.0,
+            "DEFAULT": 64.0,
+            "LABEL": "Specular Power"
+        },
+        {
+            "NAME": "lacquerColor",
+            "TYPE": "color",
+            "DEFAULT": [0.9, 0.02, 0.01, 1.0],
+            "LABEL": "Lacquer Color"
+        },
+        {
+            "NAME": "audioPulse",
+            "TYPE": "float",
+            "MIN": 0.0,
+            "MAX": 2.0,
+            "DEFAULT": 0.5,
+            "LABEL": "Audio Pulse"
+        }
+    ]
 }*/
 
-#define PI 3.1415927
-
-// Aspect-correct UV
-vec2 fitUV(vec2 pos) {
-    return (pos - 0.5 * RENDERSIZE) * min(IMG_SIZE_inputImage.y / RENDERSIZE.y, IMG_SIZE_inputImage.x / RENDERSIZE.x) / IMG_SIZE_inputImage + 0.5;
+// ---- Rotation helpers ----
+mat3 rotY(float a) {
+    float c = cos(a), s = sin(a);
+    return mat3( c, 0.0,  s,
+                 0.0, 1.0, 0.0,
+                -s, 0.0,  c);
+}
+mat3 rotX(float a) {
+    float c = cos(a), s = sin(a);
+    return mat3(1.0, 0.0, 0.0,
+                0.0,  c,  -s,
+                0.0,  s,   c);
 }
 
-// Kuwahara filter: find the quadrant with lowest variance and use its mean color
-// This creates the flat-color brush stroke look of oil paintings
-vec3 kuwahara(vec2 uv, float radius) {
-    vec2 texel = 1.0 / RENDERSIZE;
+// ---- SDF primitives ----
+float sdTorus(vec3 p, vec2 t) {
+    // t.x = major radius, t.y = tube radius
+    vec2 q = vec2(length(p.xz) - t.x, p.y);
+    return length(q) - t.y;
+}
 
-    vec3 mean[4];
-    vec3 var_acc[4];
-    float count[4];
+float sdSphere(vec3 p, float r) {
+    return length(p) - r;
+}
 
-    // Initialize accumulators
-    for (int i = 0; i < 4; i++) {
-        mean[i] = vec3(0.0);
-        var_acc[i] = vec3(0.0);
-        count[i] = 0.0;
-    }
+float sdBox(vec3 p, vec3 b) {
+    vec3 q = abs(p) - b;
+    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
+}
 
-    // Sample the 4 quadrants around the pixel
-    for (int j = -6; j <= 6; j++) {
-        for (int i = -6; i <= 6; i++) {
-            if (abs(float(i)) > radius || abs(float(j)) > radius) continue;
+// ---- Scene ----
+// MaterialIDs: 0=torus(lacquer), 1=sphere(jade), 2=tower(lacquer), 3=floor(platform)
+struct Hit {
+    float dist;
+    int   matID;
+};
 
-            vec3 c = texture2D(inputImage, fitUV((uv * RENDERSIZE) + vec2(float(i), float(j)))).rgb;
+Hit minHit(Hit a, Hit b) {
+    return (a.dist < b.dist) ? a : b;
+}
 
-            // Determine which quadrant(s) this sample belongs to
-            // Quadrant 0: top-right, 1: top-left, 2: bottom-left, 3: bottom-right
-            // Use loop to assign to correct quadrant (WebGL requires const/loop index)
-            int qi = (i >= 0) ? 0 : 1;
-            int qj = (j >= 0) ? 0 : 2;
-            int q = qi + qj;
+Hit mapScene(vec3 p) {
+    // Whole structure rotates (spin) and tilts (slow wobble)
+    mat3 ry   = rotY(TIME * spinSpeed);
+    mat3 rx   = rotX(sin(TIME * 0.3) * 0.12);
+    vec3 pRot = rx * ry * p;
 
-            for (int k = 0; k < 4; k++) {
-                if (k == q) {
-                    mean[k] += c;
-                    var_acc[k] += c * c;
-                    count[k] += 1.0;
-                }
-            }
-        }
-    }
+    // Floor plane at y = -0.4 (in world space, not rotated)
+    Hit hFloor;
+    hFloor.dist  = p.y + 0.4;
+    hFloor.matID = 3;
 
-    // Find the quadrant with minimum variance
-    float minVar = 1e8;
-    vec3 result = vec3(0.0);
+    // Torus at base — y=0 in rotated space, R=0.9, r=0.25
+    Hit hTorus;
+    hTorus.dist  = sdTorus(pRot - vec3(0.0, 0.0, 0.0), vec2(0.9, 0.25));
+    hTorus.matID = 0;
 
-    for (int q = 0; q < 4; q++) {
-        if (count[q] < 1.0) continue;
-        vec3 m = mean[q] / count[q];
-        vec3 v = var_acc[q] / count[q] - m * m;
-        float totalVar = v.r + v.g + v.b;
-        if (totalVar < minVar) {
-            minVar = totalVar;
-            result = m;
-        }
-    }
+    // Sphere — y=0.85 in rotated space, r=0.45
+    Hit hSphere;
+    hSphere.dist  = sdSphere(pRot - vec3(0.0, 0.85, 0.0), 0.45);
+    hSphere.matID = 1;
 
-    return result;
+    // Thin tower box — y=1.65 in rotated space, b=(0.15, 0.4, 0.15)
+    Hit hTower;
+    hTower.dist  = sdBox(pRot - vec3(0.0, 1.65, 0.0), vec3(0.15, 0.4, 0.15));
+    hTower.matID = 2;
+
+    return minHit(hFloor, minHit(hTorus, minHit(hSphere, hTower)));
+}
+
+vec3 calcNormal(vec3 p) {
+    vec2 e = vec2(0.0005, 0.0);
+    return normalize(vec3(
+        mapScene(p + e.xyy).dist - mapScene(p - e.xyy).dist,
+        mapScene(p + e.yxy).dist - mapScene(p - e.yxy).dist,
+        mapScene(p + e.yyx).dist - mapScene(p - e.yyx).dist
+    ));
 }
 
 void main() {
-    vec2 pos = gl_FragCoord.xy;
-    vec2 uv = pos / RENDERSIZE;
+    vec2 uv = (gl_FragCoord.xy / RENDERSIZE.xy) * 2.0 - 1.0;
+    uv.x   *= RENDERSIZE.x / RENDERSIZE.y;
 
-    // ==== PASS 0: Kuwahara paint filter ====
-    if (PASSINDEX == 0) {
-        gl_FragColor = vec4(kuwahara(uv, brushRadius), 1.0);
-        return;
+    // Orbiting camera — cinematic framing
+    vec3 ro  = vec3(sin(TIME * orbitSpeed) * 3.5, 1.5, cos(TIME * orbitSpeed) * 3.5);
+    vec3 ta  = vec3(0.0, 0.6, 0.0);
+    vec3 fwd = normalize(ta - ro);
+    vec3 rgt = normalize(cross(fwd, vec3(0.0, 1.0, 0.0)));
+    vec3 up  = cross(rgt, fwd);
+    vec3 rd  = normalize(fwd + uv.x * rgt + uv.y * up);
+
+    // Warm directional key light from above-right
+    vec3 keyLight  = normalize(vec3(2.0, 4.0, 1.0));
+    vec3 fillLight = normalize(vec3(-1.0, 0.5, -1.5));
+
+    // Palette — fully saturated HDR
+    // lacquerColor input scaled to HDR (user picks hue, we amplify)
+    vec3 lacquer   = lacquerColor.rgb * 2.5;   // HDR peak ~2.5
+    vec3 jade      = vec3(0.0, 2.0, 0.4);      // jade green HDR
+    vec3 goldSpec  = vec3(2.5, 1.8, 0.0);      // gold leaf HDR
+    vec3 specWhite = vec3(3.0, 2.8, 2.2);      // white-hot specular, HDR 3.0
+
+    // Audio modulates specular brightness — scales, never gates
+    float specBoost = 1.0 + audioLevel * audioPulse * 0.8;
+
+    // Raymarch — 96 steps
+    float tMarch = 0.0;
+    Hit   hit;
+    hit.matID = -1;
+    hit.dist  = 1e9;
+    vec3  hitP = ro;
+
+    for (int s = 0; s < 96; s++) {
+        hitP = ro + rd * tMarch;
+        hit  = mapScene(hitP);
+        if (hit.dist < 0.001) break;
+        if (tMarch > 30.0)   { hit.matID = -1; break; }
+        tMarch += hit.dist;
     }
 
-    // ==== PASS 1: Relief lighting ====
-    vec2 texel = 1.0 / RENDERSIZE;
-    float valC = dot(texture2D(paintBuf, uv).rgb, vec3(0.333));
-    float valR = dot(texture2D(paintBuf, uv + vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valL = dot(texture2D(paintBuf, uv - vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valU = dot(texture2D(paintBuf, uv + vec2(0.0, texel.y)).rgb, vec3(0.333));
-    float valD = dot(texture2D(paintBuf, uv - vec2(0.0, texel.y)).rgb, vec3(0.333));
+    // Void black background
+    vec3 col = vec3(0.0, 0.0, 0.01);
 
-    vec3 norm = normalize(vec3(
-        (valR - valL) / texel.x,
-        (valU - valD) / texel.y,
-        150.0
-    ));
+    if (hit.matID >= 0) {
+        vec3 n = calcNormal(hitP);
 
-    vec3 light = normalize(vec3(-1.0, 1.0, 1.4));
-    float diff = clamp(dot(norm, light), 0.0, 1.0);
-    float spec = pow(clamp(dot(reflect(light, norm), vec3(0.0, 0.0, -1.0)), 0.0, 1.0), 12.0) * paintSpec;
+        float diff    = max(dot(n, keyLight), 0.0);
+        float fill    = max(dot(n, fillLight), 0.0) * 0.25;
+        float ambient = 0.08;
 
-    gl_FragColor = texture2D(paintBuf, uv) * mix(diff, 1.0, 0.9)
-                 + spec * vec4(0.85, 1.0, 1.15, 1.0);
+        // Blinn-Phong half-vector specular
+        vec3  halfV = normalize(keyLight - rd);
+        float spec  = pow(max(dot(n, halfV), 0.0), specPow) * 2.5 * specBoost;
 
-    // Vignette
-    if (vignetteAmt > 0.0) {
-        vec2 scc = (pos - 0.5 * RENDERSIZE) / RENDERSIZE.x;
-        float vign = 1.1 - vignetteAmt * dot(scc, scc);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.x / RENDERSIZE.x * PI) * 40.0);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.y / RENDERSIZE.y * PI) * 20.0);
-        gl_FragColor.xyz *= vign;
+        vec3 baseCol;
+        vec3 specContrib;
+
+        if (hit.matID == 0) {
+            // Torus — lacquer red with gold specular
+            baseCol     = lacquer;
+            specContrib = goldSpec * spec;
+        } else if (hit.matID == 1) {
+            // Sphere — jade green with white-hot specular
+            baseCol     = jade;
+            specContrib = specWhite * spec;
+        } else if (hit.matID == 2) {
+            // Tower — lacquer red with gold specular
+            baseCol     = lacquer;
+            specContrib = goldSpec * spec;
+        } else {
+            // Floor platform — near-black, no specular
+            baseCol     = vec3(0.02, 0.01, 0.02);
+            specContrib = vec3(0.0);
+        }
+
+        col = baseCol * (diff + fill + ambient) + specContrib;
+
+        // fwidth() AA on iso-edge boundaries — smooth dark outline
+        float edgeD = abs(hit.dist);
+        float fw    = fwidth(edgeD);
+        col = mix(col, vec3(0.0, 0.0, 0.01), smoothstep(fw * 2.0, 0.0, edgeD));
     }
 
-    gl_FragColor.w = 1.0;
+    gl_FragColor = vec4(col, 1.0);
 }
