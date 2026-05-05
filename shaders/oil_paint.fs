@@ -1,124 +1,106 @@
 /*{
-  "DESCRIPTION": "Oil paint effect — Kuwahara filter with relief lighting for painterly brush strokes",
-  "CREDIT": "ShaderClaw (Kuwahara approach inspired by flockaroo)",
-  "CATEGORIES": ["Effect"],
+  "DESCRIPTION": "Fauvist Mediterranean — standalone scene generator: bold flat-color Fauvist landscape with cadmium sun, cerulean sea, and vermillion cliffs. No image input needed.",
+  "CATEGORIES": ["Generator", "Art"],
+  "CREDIT": "Easel / ShaderClaw v3",
   "INPUTS": [
-    { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "brushRadius", "LABEL": "Brush Size", "TYPE": "float", "DEFAULT": 4.0, "MIN": 1.0, "MAX": 12.0 },
-    { "NAME": "paintSpec", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "vignetteAmt", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
-  ],
-  "PASSES": [
-    { "TARGET": "paintBuf", "PERSISTENT": true },
-    {}
+    { "NAME": "waveSpeed",   "LABEL": "Wave Speed",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 0.5  },
+    { "NAME": "horizonY",    "LABEL": "Horizon",      "TYPE": "float", "MIN": 0.3, "MAX": 0.7,  "DEFAULT": 0.52 },
+    { "NAME": "hdrBoost",    "LABEL": "HDR Boost",    "TYPE": "float", "MIN": 1.0, "MAX": 3.0,  "DEFAULT": 2.0  },
+    { "NAME": "sunSize",     "LABEL": "Sun Size",     "TYPE": "float", "MIN": 0.04,"MAX": 0.25, "DEFAULT": 0.10 },
+    { "NAME": "audioReact",  "LABEL": "Audio React",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 1.0  }
   ]
 }*/
 
-#define PI 3.1415927
+precision highp float;
 
-// Aspect-correct UV
-vec2 fitUV(vec2 pos) {
-    return (pos - 0.5 * RENDERSIZE) * min(IMG_SIZE_inputImage.y / RENDERSIZE.y, IMG_SIZE_inputImage.x / RENDERSIZE.x) / IMG_SIZE_inputImage + 0.5;
-}
+// ── Palette: 5 Fauvist primaries (no white-mixing) ───────────────────────────
+const vec3 CADMIUM_YELLOW = vec3(1.00, 0.80, 0.00);
+const vec3 VERMILLION     = vec3(1.00, 0.15, 0.05);
+const vec3 CERULEAN       = vec3(0.00, 0.35, 1.00);
+const vec3 EMERALD        = vec3(0.00, 0.70, 0.15);
+const vec3 DEEP_INDIGO    = vec3(0.08, 0.00, 0.30);
 
-// Kuwahara filter: find the quadrant with lowest variance and use its mean color
-// This creates the flat-color brush stroke look of oil paintings
-vec3 kuwahara(vec2 uv, float radius) {
-    vec2 texel = 1.0 / RENDERSIZE;
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
-    vec3 mean[4];
-    vec3 var_acc[4];
-    float count[4];
-
-    // Initialize accumulators
+float fbm(vec2 p) {
+    float v = 0.0, a = 0.5;
     for (int i = 0; i < 4; i++) {
-        mean[i] = vec3(0.0);
-        var_acc[i] = vec3(0.0);
-        count[i] = 0.0;
+        v += a * (sin(p.x) * cos(p.y));
+        p = p * 2.1 + vec2(1.7, 2.3);
+        a *= 0.5;
     }
-
-    // Sample the 4 quadrants around the pixel
-    for (int j = -6; j <= 6; j++) {
-        for (int i = -6; i <= 6; i++) {
-            if (abs(float(i)) > radius || abs(float(j)) > radius) continue;
-
-            vec3 c = texture2D(inputImage, fitUV((uv * RENDERSIZE) + vec2(float(i), float(j)))).rgb;
-
-            // Determine which quadrant(s) this sample belongs to
-            // Quadrant 0: top-right, 1: top-left, 2: bottom-left, 3: bottom-right
-            // Use loop to assign to correct quadrant (WebGL requires const/loop index)
-            int qi = (i >= 0) ? 0 : 1;
-            int qj = (j >= 0) ? 0 : 2;
-            int q = qi + qj;
-
-            for (int k = 0; k < 4; k++) {
-                if (k == q) {
-                    mean[k] += c;
-                    var_acc[k] += c * c;
-                    count[k] += 1.0;
-                }
-            }
-        }
-    }
-
-    // Find the quadrant with minimum variance
-    float minVar = 1e8;
-    vec3 result = vec3(0.0);
-
-    for (int q = 0; q < 4; q++) {
-        if (count[q] < 1.0) continue;
-        vec3 m = mean[q] / count[q];
-        vec3 v = var_acc[q] / count[q] - m * m;
-        float totalVar = v.r + v.g + v.b;
-        if (totalVar < minVar) {
-            minVar = totalVar;
-            result = m;
-        }
-    }
-
-    return result;
+    return v;
 }
+
+// AA step (edge sharpness matching Fauvist black outlines)
+float edge(float d) { return smoothstep(fwidth(d) * 1.2, 0.0, d); }
 
 void main() {
-    vec2 pos = gl_FragCoord.xy;
-    vec2 uv = pos / RENDERSIZE;
+    vec2 uv = isf_FragNormCoord;
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    float t = TIME;
+    float aud = 1.0 + (audioLevel + audioBass * 0.5) * audioReact * 0.4;
 
-    // ==== PASS 0: Kuwahara paint filter ====
-    if (PASSINDEX == 0) {
-        gl_FragColor = vec4(kuwahara(uv, brushRadius), 1.0);
-        return;
+    float y = uv.y;
+    float x = uv.x;
+
+    // ── Sky ───────────────────────────────────────────────────────────────────
+    vec3 col = mix(DEEP_INDIGO, CERULEAN, smoothstep(horizonY, 1.0, y));
+    // Fauvist brushstroke pattern in sky (wavy horizontal bands)
+    float skyWave = 0.015 * sin((uv.x * 6.0 + t * 0.3) * 3.14159) * sin(uv.y * 8.0 + t * 0.2);
+    col = mix(col, col * 1.4, smoothstep(0.02, 0.0, abs(mod(y - skyWave + 0.05, 0.12) - 0.06) - 0.005));
+
+    // ── Sun ───────────────────────────────────────────────────────────────────
+    vec2 sunPos = vec2(0.5, horizonY + 0.18 + 0.04 * sin(t * 0.2));
+    float sunDist = length(uv - sunPos) - sunSize;
+    float sunGlow = exp(-max(sunDist, 0.0) * 18.0);
+    float sunBody = edge(-sunDist);
+    // Black outline
+    float sunOutline = smoothstep(0.0, fwidth(sunDist), -sunDist - sunSize * 0.08);
+    col = mix(col, CADMIUM_YELLOW * hdrBoost * 1.5 * aud, sunBody);
+    col = mix(col, vec3(0.0), sunOutline * (1.0 - sunBody) * 0.5);
+    col += CADMIUM_YELLOW * sunGlow * 0.6 * hdrBoost * aud;
+
+    // ── Sea (below horizon) ───────────────────────────────────────────────────
+    if (y < horizonY) {
+        // Fauvist flat sea with wave stripes
+        float seaWave = sin(uv.x * 14.0 + t * waveSpeed * 3.0) * 0.012
+                      + sin(uv.x * 7.5 - t * waveSpeed * 2.0) * 0.008;
+        float waveStripe = abs(mod(y - horizonY - seaWave, 0.05) - 0.025);
+        float waveEdge   = smoothstep(0.003, 0.001, waveStripe);
+        vec3 seaCol = mix(CERULEAN * 0.6, CERULEAN, smoothstep(0.0, horizonY, y));
+        seaCol = mix(seaCol, seaCol * 1.8, waveEdge);
+        // Sun reflection stripe
+        float refX = abs(uv.x - sunPos.x) * 4.0;
+        float refY = (horizonY - y) * 12.0;
+        float refGlow = exp(-refX * refX) * exp(-refY * 0.5);
+        seaCol += CADMIUM_YELLOW * refGlow * 0.8 * hdrBoost * aud;
+        col = seaCol;
     }
 
-    // ==== PASS 1: Relief lighting ====
-    vec2 texel = 1.0 / RENDERSIZE;
-    float valC = dot(texture2D(paintBuf, uv).rgb, vec3(0.333));
-    float valR = dot(texture2D(paintBuf, uv + vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valL = dot(texture2D(paintBuf, uv - vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valU = dot(texture2D(paintBuf, uv + vec2(0.0, texel.y)).rgb, vec3(0.333));
-    float valD = dot(texture2D(paintBuf, uv - vec2(0.0, texel.y)).rgb, vec3(0.333));
+    // ── Cliffs (left and right foreground) ───────────────────────────────────
+    float cliffL = step(0.0, -(x - 0.0) + (0.22 + 0.04 * fbm(vec2(y * 8.0, 1.0))));
+    float cliffR = step(0.0, (x - 1.0)  + (0.22 + 0.04 * fbm(vec2(y * 8.0 + 3.0, 2.0))));
+    float cliffY = smoothstep(0.0, horizonY * 0.6, y);
+    float cliffMask = max(cliffL, cliffR) * cliffY;
+    // Cliff: dark outline edge + vermillion body
+    float cliffEdgeL = step(0.0, -(x - 0.0) + (0.22 + 0.04 * fbm(vec2(y * 8.0, 1.0))) - 0.006);
+    float cliffEdgeR = step(0.0, (x - 1.0)  + (0.22 + 0.04 * fbm(vec2(y * 8.0 + 3.0, 2.0))) - 0.006);
+    float cliffEdge  = max(cliffEdgeL, cliffEdgeR) * cliffY;
+    vec3 cliffCol = VERMILLION * hdrBoost * aud;
+    col = mix(col, vec3(0.0), cliffMask - cliffEdge);      // black outline
+    col = mix(col, cliffCol, cliffEdge);
 
-    vec3 norm = normalize(vec3(
-        (valR - valL) / texel.x,
-        (valU - valD) / texel.y,
-        150.0
-    ));
+    // ── Foreground vegetation (bottom band) ───────────────────────────────────
+    float vegY = smoothstep(0.1, 0.0, y);
+    float vegWave = 0.5 + 0.5 * sin(uv.x * 22.0 + t * 0.8) * sin(uv.x * 13.0 - t * 0.5);
+    col = mix(col, EMERALD * hdrBoost * aud * vegWave, vegY * 0.9);
+    // Black outline at base
+    col = mix(col, vec3(0.0), smoothstep(0.01, 0.0, y) * 0.8);
 
-    vec3 light = normalize(vec3(-1.0, 1.0, 1.4));
-    float diff = clamp(dot(norm, light), 0.0, 1.0);
-    float spec = pow(clamp(dot(reflect(light, norm), vec3(0.0, 0.0, -1.0)), 0.0, 1.0), 12.0) * paintSpec;
+    // ── Horizon line (black) ──────────────────────────────────────────────────
+    float hLine = smoothstep(0.004, 0.0, abs(y - horizonY));
+    col = mix(col, vec3(0.0), hLine);
 
-    gl_FragColor = texture2D(paintBuf, uv) * mix(diff, 1.0, 0.9)
-                 + spec * vec4(0.85, 1.0, 1.15, 1.0);
-
-    // Vignette
-    if (vignetteAmt > 0.0) {
-        vec2 scc = (pos - 0.5 * RENDERSIZE) / RENDERSIZE.x;
-        float vign = 1.1 - vignetteAmt * dot(scc, scc);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.x / RENDERSIZE.x * PI) * 40.0);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.y / RENDERSIZE.y * PI) * 20.0);
-        gl_FragColor.xyz *= vign;
-    }
-
-    gl_FragColor.w = 1.0;
+    gl_FragColor = vec4(col, 1.0);
 }
