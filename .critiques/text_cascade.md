@@ -1,3 +1,23 @@
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 2D refine — NEW ANGLE: Tokyo Neon Rain (pure saturated primary-per-row color cycling + rain streaks + puddle reflection vs prior aurora background)
+**Critique:**
+1. Reference fidelity: Cascade rows now as neon sign colors — rows = different colored signs in rain. Strong urban visual identity.
+2. Compositional craft: 4-color primary cycling (red/green/blue/yellow) per row creates bold stripe pattern; rain + reflection adds depth.
+3. Technical execution: Hash-based rain streaks, reflection puddle strip at y<0.25, audio modulates neon brightness.
+4. Liveness: Rain scrolls with TIME*speed*4, row offsets still TIME-driven.
+5. Differentiation: Pure black bg with primary neon vs prior aurora (violet/cyan/gold sinusoidal waves on purple bg).
+**Changes:**
+- Row color: pure primary cycling (2.5,0.05,0.05)/(0,2.5,0.1)/(0.05,0.1,2.5)/(2.5,2.2,0) per mod(rowIdx,4)
+- Rain streaks: hash per column * TIME scroll
+- Reflection glow strip: uv.y < 0.25 puddle effect
+- audioMod input: neonColor *= 1.0 + audioLevel*audioMod*0.25
+- Background: pure black (0,0,0)
+- Removed transparentBg, bgColor, textColor inputs
+- _voiceGlitch + all font boilerplate preserved
+**HDR peaks reached:** neon text 2.5, yellow peak 2.5 (all 4 rows reach 2.5)
+**Estimated rating:** 3.8★
+
 ## 2026-05-05
 **Prior rating:** 0.0★
 **Approach:** 2D refine (aurora background + HDR glow)
