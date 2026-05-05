@@ -1,142 +1,127 @@
 /*{
-  "DESCRIPTION": "Torii Gate at Dusk — Japanese torii gate silhouette against layered gradient sky, floating paper lanterns, cherry blossom petals drifting",
-  "CATEGORIES": ["Generator", "Art", "Audio Reactive"],
-  "CREDIT": "Easel / ShaderClaw v3",
+  "DESCRIPTION": "Neon Cathedral — raymarched gothic arches with volumetric jewel-toned light shafts. Deep violet/gold/cyan/magenta palette",
+  "CREDIT": "ShaderClaw auto-improve v3",
+  "ISFVSN": "2",
+  "CATEGORIES": ["Generator", "3D"],
   "INPUTS": [
-    { "NAME": "skyShift",    "LABEL": "Sky Shift",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.3  },
-    { "NAME": "petalCount",  "LABEL": "Petal Count",  "TYPE": "float", "MIN": 5.0, "MAX": 30.0,"DEFAULT": 15.0 },
-    { "NAME": "lanterns",    "LABEL": "Lanterns",     "TYPE": "float", "MIN": 0.0, "MAX": 8.0, "DEFAULT": 5.0  },
-    { "NAME": "hdrBoost",    "LABEL": "HDR Boost",    "TYPE": "float", "MIN": 1.0, "MAX": 3.0, "DEFAULT": 2.0  },
-    { "NAME": "audioReact",  "LABEL": "Audio React",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0  }
+    { "NAME": "archScale",  "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.5, "MAX": 2.5, "LABEL": "Arch Scale" },
+    { "NAME": "shaftDens",  "TYPE": "float", "DEFAULT": 0.8,  "MIN": 0.0, "MAX": 2.0, "LABEL": "Light Shaft" },
+    { "NAME": "camSway",    "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 0.5, "LABEL": "Cam Sway" },
+    { "NAME": "glowPeak",   "TYPE": "float", "DEFAULT": 2.5,  "MIN": 1.0, "MAX": 4.0, "LABEL": "Glow Peak" },
+    { "NAME": "audioMod",   "TYPE": "float", "DEFAULT": 0.6,  "MIN": 0.0, "MAX": 2.0, "LABEL": "Audio React" }
   ]
 }*/
 
-precision highp float;
+#define STEPS 80
+#define MAXD  18.0
+#define EPS   0.004
 
-// ── Palette: Japanese dusk (4 colors + black silhouette) ─────────────────────
-const vec3 VERMILLION  = vec3(0.90, 0.15, 0.05);  // torii lacquer
-const vec3 GOLD_SKY    = vec3(1.00, 0.65, 0.10);  // horizon glow
-const vec3 DEEP_INDIGO = vec3(0.08, 0.05, 0.35);  // zenith sky
-const vec3 SAKURA_PINK = vec3(1.00, 0.50, 0.60);  // cherry blossom
-const vec3 INK_BLACK   = vec3(0.00, 0.00, 0.00);  // silhouette
+const vec3 C_VIOLET  = vec3(0.5,  0.0,  1.0);
+const vec3 C_GOLD    = vec3(1.0,  0.75, 0.0);
+const vec3 C_CYAN    = vec3(0.0,  0.85, 1.0);
+const vec3 C_MAGENTA = vec3(1.0,  0.0,  0.8);
 
-float hash(float n)  { return fract(sin(n * 12.9898) * 43758.5453); }
-float hash2(vec2 p)  { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-
-// ── Sky gradient ──────────────────────────────────────────────────────────────
-vec3 skyColor(float y, float t) {
-    float skyT = y + skyShift * 0.2 + sin(t * 0.05) * 0.03;
-    vec3 c0 = GOLD_SKY;           // horizon
-    vec3 c1 = mix(VERMILLION, DEEP_INDIGO, 0.4); // mid
-    vec3 c2 = DEEP_INDIGO;        // zenith
-    if (skyT < 0.45) return mix(c0, c1, skyT / 0.45);
-    return mix(c1, c2, (skyT - 0.45) / 0.55);
+float sdCylinder(vec3 p, float r, float h) {
+    vec2 d = abs(vec2(length(p.xz), p.y)) - vec2(r, h);
+    return min(max(d.x,d.y),0.0) + length(max(d,0.0));
+}
+float sdBox(vec3 p, vec3 b) {
+    vec3 q = abs(p)-b;
+    return length(max(q,0.0))+min(max(q.x,max(q.y,q.z)),0.0);
+}
+float sdArch(vec3 p, float W, float H, float thick) {
+    // Pointed gothic arch: two offset cylinders forming the arch shape
+    float r = W * 0.55;
+    float c1 = sdCylinder(p - vec3(-W*0.25, 0.0, 0.0), r, H);
+    float c2 = sdCylinder(p - vec3( W*0.25, 0.0, 0.0), r, H);
+    float arch = max(-c1, -c2); // intersection = arch void
+    // Arch frame: box minus arch void
+    float frame = sdBox(p, vec3(W*0.5+thick, H, thick*0.5));
+    return max(frame, -max(-c1,-c2) + thick);
 }
 
-// ── Torii gate SDF ────────────────────────────────────────────────────────────
-float sdBox(vec2 p, vec2 b) {
-    vec2 d = abs(p) - b;
-    return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
+float sdf(vec3 p) {
+    float s = archScale;
+    // Repeat arches along X axis
+    float rep = 2.8 * s;
+    vec3 pr = p;
+    pr.x = mod(pr.x + rep*0.5, rep) - rep*0.5;
+    float arch = sdArch(pr - vec3(0.0, 0.0*s, 0.0), 1.2*s, 2.5*s, 0.15*s);
+    // Floor
+    float floor_ = p.y + 0.5*s;
+    return min(arch, floor_);
 }
 
-float sdTorii(vec2 uv) {
-    // Aspect correction
-    float aspect = RENDERSIZE.x / RENDERSIZE.y;
-    vec2 p = (uv - vec2(0.5, 0.0)) * vec2(aspect, 1.0);
-
-    float d = 1e9;
-
-    // Left pillar
-    d = min(d, sdBox(p - vec2(-0.38, 0.28), vec2(0.04, 0.28)));
-    // Right pillar
-    d = min(d, sdBox(p - vec2( 0.38, 0.28), vec2(0.04, 0.28)));
-
-    // Top horizontal beam (kasagi) — slightly curved via abs
-    float kasagiY = 0.56 + abs(p.x) * 0.07;
-    d = min(d, sdBox(p - vec2(0.0, kasagiY), vec2(0.52, 0.035)));
-
-    // Lower horizontal beam (nuki)
-    d = min(d, sdBox(p - vec2(0.0, 0.44), vec2(0.42, 0.025)));
-
-    // Top cap overhangs (shimagi) — extends beyond kasagi
-    d = min(d, sdBox(p - vec2(0.0, 0.60), vec2(0.56, 0.018)));
-
-    // Komainu pedestals (small blocks at base of pillars)
-    d = min(d, sdBox(p - vec2(-0.38, 0.01), vec2(0.065, 0.012)));
-    d = min(d, sdBox(p - vec2( 0.38, 0.01), vec2(0.065, 0.012)));
-
-    return d;
+vec3 calcN(vec3 p) {
+    const float e = 0.003;
+    return normalize(vec3(
+        sdf(p+vec3(e,0,0))-sdf(p-vec3(e,0,0)),
+        sdf(p+vec3(0,e,0))-sdf(p-vec3(0,e,0)),
+        sdf(p+vec3(0,0,e))-sdf(p-vec3(0,0,e))));
 }
 
-// ── Paper lantern ─────────────────────────────────────────────────────────────
-float sdLantern(vec2 p, vec2 center, float scale) {
-    vec2 q = (p - center) / scale;
-    // Oval body
-    float body = length(q / vec2(0.5, 0.7)) - 1.0;
-    // Top + bottom caps
-    float capT = sdBox(q - vec2(0, 0.75), vec2(0.18, 0.1));
-    float capB = sdBox(q - vec2(0, -0.75), vec2(0.18, 0.1));
-    return min(body, min(capT, capB)) * scale;
+// Volumetric light shaft: samples along ray through colored pillars of light
+vec3 lightShafts(vec3 ro, vec3 rd, float hitD) {
+    vec3 shaftCol = vec3(0.0);
+    float stepD = min(hitD, MAXD) / 20.0;
+    for (int i = 0; i < 20; i++) {
+        float sd = stepD * (float(i) + 0.5);
+        vec3 sp = ro + rd * sd;
+        // Color per X position band
+        float rep = 2.8 * archScale;
+        float bx = mod(sp.x + rep*0.5, rep) / rep;
+        vec3 shCol;
+        if      (bx < 0.25) shCol = C_VIOLET;
+        else if (bx < 0.5)  shCol = C_GOLD;
+        else if (bx < 0.75) shCol = C_CYAN;
+        else                shCol = C_MAGENTA;
+        // Shaft fades with height (stronger high up) and distance from axis
+        float heightFade = smoothstep(-0.5*archScale, 2.0*archScale, sp.y);
+        float radial = exp(-abs(sp.x - rep*0.5) * 1.5 / archScale);
+        shaftCol += shCol * heightFade * radial * shaftDens * stepD * 0.15;
+    }
+    return shaftCol;
 }
 
 void main() {
-    vec2 uv = isf_FragNormCoord;
-    float t   = TIME;
-    float aud = 1.0 + (audioLevel + audioBass * 0.5) * audioReact * 0.4;
-
-    // Sky
-    vec3 col = skyColor(uv.y, t) * hdrBoost * aud;
-
-    // Horizon glow line
-    float horizon = smoothstep(0.04, 0.0, abs(uv.y - 0.14));
-    col += GOLD_SKY * horizon * 1.5 * hdrBoost * aud;
-
-    // Ground (dark earth / gravel path)
-    float groundMask = step(uv.y, 0.14);
-    col = mix(col, vec3(0.04, 0.02, 0.01), groundMask);
-
-    // Torii gate silhouette
-    float gateD  = sdTorii(uv);
-    float gateMask = smoothstep(fwidth(gateD) * 1.5, -fwidth(gateD) * 0.5, gateD);
-
-    // Gate: mostly black silhouette + vermillion lacquer tint where lit
-    vec3 gateCol = mix(INK_BLACK, VERMILLION * 0.3, 0.25);
-    col = mix(col, gateCol, gateMask);
-
-    // Lantern glow (warm amber behind gate opening)
-    for (int i = 0; i < 8; i++) {
-        if (float(i) >= lanterns) break;
-        float fi = float(i);
-        float lx = 0.2 + hash(fi * 3.7) * 0.6;
-        float ly = 0.18 + hash(fi * 5.1) * 0.4 + sin(t * 0.3 + fi) * 0.01;
-        float ls = 0.015 + hash(fi * 2.9) * 0.012;
-        float lDist = sdLantern(uv, vec2(lx, ly), ls);
-        float lGlow = exp(-max(lDist, 0.0) * 60.0);
-        float lBody = smoothstep(fwidth(lDist) * 1.5, -fwidth(lDist) * 0.5, lDist);
-        float pulse = 0.85 + 0.15 * sin(t * 1.8 + fi * 2.3);
-        col += GOLD_SKY * lGlow * pulse * 0.8 * hdrBoost * aud;
-        col = mix(col, INK_BLACK, lBody * 0.7);
+    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
+    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
+    float t = TIME;
+    float amod = 1.0 + audioLevel * audioMod * 0.2;
+    // Camera inside cathedral looking up/forward, gentle sway
+    vec3 ro = vec3(sin(t*camSway)*0.3, -0.3*archScale, -t*0.08);
+    vec3 ta = ro + vec3(0.0, 1.5, -1.0);
+    vec3 ww = normalize(ta - ro);
+    vec3 uu = normalize(cross(ww, vec3(0,1,0)));
+    vec3 vv = cross(uu, ww);
+    vec3 rd = normalize(uv.x*uu + uv.y*vv + 1.6*ww);
+    float d = 0.0;
+    bool hit = false;
+    for (int i = 0; i < STEPS; i++) {
+        float h = sdf(ro + rd * d);
+        if (h < EPS) { hit = true; break; }
+        if (d > MAXD) break;
+        d += max(h, EPS);
     }
-
-    // Cherry blossom petals (drifting)
-    for (int i = 0; i < 30; i++) {
-        if (float(i) >= petalCount) break;
-        float fi = float(i);
-        float px = fract(hash(fi * 1.7) + t * 0.04 * (0.5 + hash(fi * 3.1) * 0.5));
-        float py = fract(hash(fi * 2.3 + 0.5) - t * 0.06 * (0.3 + hash(fi * 4.7) * 0.4));
-        float pr = 0.006 + hash(fi * 5.9) * 0.006;
-        float pd = length(uv - vec2(px, py)) - pr;
-        float pMask = smoothstep(fwidth(pd) * 2.0, -fwidth(pd), pd);
-        col = mix(col, SAKURA_PINK * hdrBoost * aud * (0.8 + 0.2 * sin(t + fi)), pMask);
+    // Dark void with volumetric shafts
+    float hitD = hit ? d : MAXD;
+    vec3 col = lightShafts(ro, rd, hitD) * glowPeak * amod;
+    if (hit) {
+        vec3 p = ro + rd * d;
+        vec3 n = calcN(p);
+        // Color stone arch by band
+        float rep = 2.8 * archScale;
+        float bx = mod(p.x + rep*0.5, rep) / rep;
+        vec3 bc;
+        if      (bx < 0.25) bc = C_VIOLET;
+        else if (bx < 0.5)  bc = C_GOLD;
+        else if (bx < 0.75) bc = C_CYAN;
+        else                bc = C_MAGENTA;
+        // Ambient lit stone (no direct sun — stained glass colored ambient)
+        float diff = max(dot(n, normalize(vec3(0,1,-0.3))), 0.0) * 0.4 + 0.15;
+        float nv   = max(dot(n,-rd),0.0);
+        float ink  = 1.0 - smoothstep(0.0, 0.2, nv);
+        col += mix(bc*diff*glowPeak, vec3(0.0), ink*0.9);
     }
-
-    // Stars (faint dots in deep indigo sky)
-    if (uv.y > 0.5) {
-        vec2 starCell = floor(uv * 80.0);
-        float star = step(0.987, hash2(starCell));
-        float starFlicker = 0.7 + 0.3 * sin(t * 2.0 + hash2(starCell) * 6.28);
-        col += GOLD_SKY * star * starFlicker * 0.6 * hdrBoost;
-    }
-
     gl_FragColor = vec4(col, 1.0);
 }
