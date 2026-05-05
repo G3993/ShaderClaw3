@@ -1,251 +1,278 @@
 /*{
-  "DESCRIPTION": "Moonlit Desert — cool-toned night desert raymarched in 3D. Moonlit sand dunes, mountain silhouettes, bright moon with corona, scattered cacti. Single-pass.",
-  "CATEGORIES": ["Generator", "3D"],
+  "DESCRIPTION": "Cyberpunk Rainy Alley — dark rain-soaked alley with neon signs and wet reflections transmitted through a degrading holographic channel. Pass 0 renders the alley scene. Pass 1 layers hologram glitch on top: vertical tear, RGB shift, EMI bursts, hologram tint, scanlines.",
+  "CATEGORIES": ["Generator", "Glitch", "Audio Reactive"],
+  "CREDIT": "Easel — cyberpunk alley + hologram_glitch",
   "INPUTS": [
-    { "NAME": "moonSize",    "LABEL": "Moon Size",     "TYPE": "float", "MIN": 0.05, "MAX": 0.30, "DEFAULT": 0.15 },
-    { "NAME": "moonHeight",  "LABEL": "Moon Height",   "TYPE": "float", "MIN": 0.40, "MAX": 0.90, "DEFAULT": 0.72 },
-    { "NAME": "duneFreq",    "LABEL": "Dune Frequency","TYPE": "float", "MIN": 1.0,  "MAX": 8.0,  "DEFAULT": 3.0  },
-    { "NAME": "duneAmp",     "LABEL": "Dune Amplitude","TYPE": "float", "MIN": 0.05, "MAX": 0.40, "DEFAULT": 0.18 },
-    { "NAME": "cactusCount", "LABEL": "Cactus Count",  "TYPE": "float", "MIN": 0.0,  "MAX": 8.0,  "DEFAULT": 5.0  },
-    { "NAME": "starDensity", "LABEL": "Star Density",  "TYPE": "float", "MIN": 0.5,  "MAX": 3.0,  "DEFAULT": 1.5  },
-    { "NAME": "audioReact",  "LABEL": "Audio React",   "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.5  }
+    { "NAME": "horizonY",         "LABEL": "Horizon",         "TYPE": "float", "MIN": 0.40, "MAX": 0.75, "DEFAULT": 0.55 },
+    { "NAME": "skyTopColor",      "LABEL": "Sky Top",         "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.03, 1.0] },
+    { "NAME": "skyHorizonColor",  "LABEL": "Sky Horizon",     "TYPE": "color", "DEFAULT": [0.0, 0.02, 0.06, 1.0] },
+    { "NAME": "sunSize",          "LABEL": "Sun Size",        "TYPE": "float", "MIN": 0.05, "MAX": 0.40, "DEFAULT": 0.22 },
+    { "NAME": "sunBars",          "LABEL": "Sun Bars",        "TYPE": "float", "MIN": 0.0,  "MAX": 12.0, "DEFAULT": 6.0 },
+    { "NAME": "gridDensity",      "LABEL": "Grid Density",    "TYPE": "float", "MIN": 4.0,  "MAX": 24.0, "DEFAULT": 12.0 },
+    { "NAME": "gridPersp",        "LABEL": "Grid Perspective","TYPE": "float", "MIN": 0.5,  "MAX": 4.0,  "DEFAULT": 1.8 },
+    { "NAME": "gridSpeed",        "LABEL": "Grid Speed",      "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.25 },
+    { "NAME": "y2kCount",         "LABEL": "Rain Density",    "TYPE": "float", "MIN": 0.0,  "MAX": 20.0, "DEFAULT": 12.0 },
+    { "NAME": "y2kSpeed",         "LABEL": "Rain Speed",      "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.6 },
+    { "NAME": "y2kSize",          "LABEL": "Rain Width",      "TYPE": "float", "MIN": 0.02, "MAX": 0.20, "DEFAULT": 0.07 },
+    { "NAME": "y2kChaos",         "LABEL": "Chaos",           "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.7 },
+    { "NAME": "katakanaIntensity","LABEL": "Billboard",       "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.6 },
+    { "NAME": "vaporPosterize",   "LABEL": "Posterize",       "TYPE": "float", "MIN": 1.0,  "MAX": 32.0, "DEFAULT": 16.0 },
+    { "NAME": "holoChroma",       "LABEL": "Holo Chroma",     "TYPE": "float", "MIN": 0.0,  "MAX": 0.04, "DEFAULT": 0.012 },
+    { "NAME": "holoScanFreq",     "LABEL": "Holo Scanlines",  "TYPE": "float", "MIN": 1.0,  "MAX": 4.0,  "DEFAULT": 2.0 },
+    { "NAME": "holoTear",         "LABEL": "Tear Probability","TYPE": "float", "MIN": 0.0,  "MAX": 0.3,  "DEFAULT": 0.06 },
+    { "NAME": "holoBreak",        "LABEL": "EMI Break",       "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.3 },
+    { "NAME": "holoGlow",         "LABEL": "Holo Glow",       "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.7 },
+    { "NAME": "holoTint",         "LABEL": "Hologram Tint",   "TYPE": "color", "DEFAULT": [0.55, 1.0, 0.95, 1.0] },
+    { "NAME": "holoMix",          "LABEL": "Hologram Mix",    "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.85 },
+    { "NAME": "audioReact",       "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
+    { "NAME": "inputTex",         "LABEL": "Texture (optional GIF source)", "TYPE": "image" }
+  ],
+  "PASSES": [
+    { "TARGET": "vapor" },
+    {}
   ]
 }*/
 
-// ── Hashing ───────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────
+// Shared utilities
+// ──────────────────────────────────────────────────────────────────────
 float hash21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float hash11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
 
-// ── Dune height field ─────────────────────────────────────────────────────
-float duneHeight(vec2 xz) {
-    return ( sin(xz.x * duneFreq * 0.7) * cos(xz.z * duneFreq * 0.5)
-           + sin(xz.x * duneFreq * 1.3 + 0.7) * sin(xz.z * duneFreq * 0.9) )
-           * duneAmp;
+// Signed distance: rounded rectangle (2D)
+float sdRoundBox(vec2 p, vec2 b, float r) {
+    vec2 q = abs(p) - b + r;
+    return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
 }
 
-// ── Terrain march — sphere-trace height field ─────────────────────────────
-float terrainMarch(vec3 ro, vec3 rd) {
-    float t = 0.5;
-    for (int i = 0; i < 48; i++) {
-        vec3 p = ro + rd * t;
-        float h = duneHeight(p.xz) - p.y;  // positive = below ground
-        if (h > 0.0) return t;
-        t += max(abs(h) * 0.4, 0.02);
-        if (t > 20.0) break;
-    }
-    return -1.0;
-}
-
-// ── Terrain normal via finite diff ────────────────────────────────────────
-vec3 terrainNormal(vec3 p) {
-    float eps = 0.01;
-    float h0  = duneHeight(p.xz);
-    float hx  = duneHeight(p.xz + vec2(eps, 0.0));
-    float hz  = duneHeight(p.xz + vec2(0.0, eps));
-    return normalize(vec3(h0 - hx, eps, h0 - hz));
-}
-
-// ── Cactus SDF: trunk + two arms ─────────────────────────────────────────
-float sdCapsule2D(vec2 p, float halfH, float r) {
-    p.y = p.y - clamp(p.y, 0.0, halfH * 2.0);
-    return length(p) - r;
-}
-
-float sdCactus(vec3 p, float seed) {
-    float trunkH = 0.5 + hash11(seed) * 0.4;
-    // Restrict to above ground
-    if (p.y < -0.02 || p.y > trunkH + 0.25) return 1e9;
-
-    // Trunk: vertical cylinder approximated as capsule
-    float trunk = length(p.xz) - 0.04;
-    float trunkSDF = max(trunk, max(-p.y, p.y - trunkH));
-
-    // Arm 1: right side
-    float arm1y = 0.25 + hash11(seed * 2.1) * 0.15;
-    vec3 arm1p = p - vec3(0.0, arm1y, 0.0);
-    // arm goes +x then up
-    float arm1H = 0.12;
-    vec3 armA1 = vec3(0.0, arm1y, 0.0);
-    vec3 armA2 = vec3(0.15, arm1y, 0.0);
-    vec3 armA3 = vec3(0.15, arm1y + arm1H, 0.0);
-    // capsule A1->A2
-    vec3 ab = armA2 - armA1;
-    float tA = clamp(dot(p - armA1, ab) / dot(ab, ab), 0.0, 1.0);
-    float segH = length(p - armA1 - ab * tA) - 0.035;
-    // capsule A2->A3
-    vec3 ab2 = armA3 - armA2;
-    float tB = clamp(dot(p - armA2, ab2) / dot(ab2, ab2), 0.0, 1.0);
-    float segV = length(p - armA2 - ab2 * tB) - 0.035;
-    float arm1SDF = min(segH, segV);
-
-    // Arm 2: left side (mirrored)
-    vec3 brmA1 = vec3(0.0,  arm1y * 0.9, 0.0);
-    vec3 brmA2 = vec3(-0.15, arm1y * 0.9, 0.0);
-    vec3 brmA3 = vec3(-0.15, arm1y * 0.9 + arm1H * 0.9, 0.0);
-    vec3 cb = brmA2 - brmA1;
-    float tC = clamp(dot(p - brmA1, cb) / dot(cb, cb), 0.0, 1.0);
-    float segH2 = length(p - brmA1 - cb * tC) - 0.035;
-    vec3 db = brmA3 - brmA2;
-    float tD = clamp(dot(p - brmA2, db) / dot(db, db), 0.0, 1.0);
-    float segV2 = length(p - brmA2 - db * tD) - 0.035;
-    float arm2SDF = min(segH2, segV2);
-
-    return min(trunkSDF, min(arm1SDF, arm2SDF));
-}
-
-// ── Mountain silhouette (far background) ─────────────────────────────────
-float mountainProfile(float x) {
-    // Low-frequency bumpy silhouette
-    return 0.12 * (sin(x * 1.3) * 0.4 + sin(x * 2.7 + 1.0) * 0.3
-                 + sin(x * 5.1 + 2.4) * 0.15 + sin(x * 0.4 + 0.5) * 0.4);
-}
-
-// ── Star field ────────────────────────────────────────────────────────────
-float starField(vec2 rd2, float density) {
-    // Tile the sky into cells, place a star in each
-    vec2 cell = floor(rd2 * 200.0 * density);
-    vec2 frac = fract(rd2 * 200.0 * density);
-    float seed = hash21(cell);
-    // Place star offset within cell
-    vec2 starOff = vec2(hash21(cell + 0.1), hash21(cell + 0.2));
-    float dist = length(frac - starOff);
-    float size = 0.003 * density * (0.5 + 0.5 * hash21(cell + 0.3));
-    float twinkle = 0.7 + 0.3 * sin(TIME * (2.0 + hash21(cell + 0.4) * 4.0) + seed * 6.28);
-    return smoothstep(size * 1.5, size * 0.3, dist) * twinkle * step(0.7, seed);
-}
-
-void main() {
-    vec2 fragCoord = gl_FragCoord.xy;
+// ──────────────────────────────────────────────────────────────────────
+// PASS 0 — Render cyberpunk rainy alley to "vapor" buffer
+// ──────────────────────────────────────────────────────────────────────
+vec4 passAlley(vec2 fragCoord) {
     vec2 uv = fragCoord / RENDERSIZE.xy;
-    float aspect = RENDERSIZE.x / RENDERSIZE.y;
 
-    // Screen-space coordinate centered
-    vec2 sc = (uv * 2.0 - 1.0) * vec2(aspect, 1.0);
+    // ── Sky / void background ──────────────────────────────────
+    vec3 sky = mix(skyHorizonColor.rgb, skyTopColor.rgb,
+                   smoothstep(0.3, 1.0, uv.y));
+    vec3 col = sky;
 
-    // ── Camera — fixed position looking slightly downward ─────────────
-    vec3 ro = vec3(0.0, 0.5, -2.0);
-    vec3 target = vec3(0.0, 0.18, 0.0);
-    vec3 fwd   = normalize(target - ro);
-    vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), fwd));
-    vec3 up    = cross(fwd, right);
-    vec3 rd    = normalize(fwd + sc.x * right * 0.6 + sc.y * up * 0.6);
+    // ── Alley walls (left & right bands) ────────────────────────
+    vec3 wallColor = vec3(0.04, 0.04, 0.06);
+    float wallL = smoothstep(0.27, 0.22, uv.x);
+    float wallR = smoothstep(0.73, 0.78, uv.x);
+    col = mix(col, wallColor, wallL + wallR);
 
-    // ── Palette ───────────────────────────────────────────────────────
-    vec3 colNightSky  = vec3(0.0,   0.01,  0.04);
-    vec3 colStarSilv  = vec3(1.8,   2.0,   2.5);
-    vec3 colMoonCor   = vec3(2.5,   2.8,   3.0);
-    vec3 colMoonLitSd = vec3(0.6,   0.7,   0.9);
-    vec3 colDuneShadow= vec3(0.01,  0.02,  0.05);
-    vec3 colCactus    = vec3(0.0,   0.0,   0.0);
-
-    // ── Audio-reactive parameters ─────────────────────────────────────
-    float effMoonSize = moonSize * (1.0 + audioLevel * audioReact * 0.1);
-    float starBoost   = 1.0 + audioBass * audioReact * 0.2;
-
-    // ── Sky base color ────────────────────────────────────────────────
-    // Horizon is slightly lighter navy, zenith is deep black-blue
-    float skyT = clamp(uv.y * 1.4, 0.0, 1.0);
-    vec3 col = mix(vec3(0.0, 0.015, 0.06), colNightSky, skyT);
-
-    // ── Stars ─────────────────────────────────────────────────────────
-    // Project ray direction to 2D for star tiling
-    vec2 stUV = vec2(atan(rd.x, rd.z) / 6.28318 + 0.5, rd.y * 0.5 + 0.5);
-    float starV = starField(stUV, starDensity) * starBoost;
-    col += colStarSilv * starV * clamp(rd.y * 2.0, 0.0, 1.0);
-
-    // ── Moon ──────────────────────────────────────────────────────────
-    // Moon is placed in 2D screen space for simplicity
-    vec2 moonCenter = vec2(0.0, moonHeight * 2.0 - 1.0);
-    float moonD = length(sc - moonCenter) - effMoonSize;
-
-    // Anti-aliased moon edge
-    float fw = fwidth(moonD);
-    float moonMask = 1.0 - smoothstep(-fw, fw, moonD);
-
-    // Corona: soft glow ring outside moon
-    float coronaR = smoothstep(effMoonSize * 3.0, 0.0, abs(moonD)) * (1.0 - moonMask);
-    col += colMoonCor * coronaR * 0.7;
-
-    // Moon body: subtle horizontal band texture (like faint surface detail)
-    if (moonMask > 0.01) {
-        vec2 mLocal = (sc - moonCenter) / effMoonSize; // [-1,1] within moon
-        float bandTex = 0.92 + 0.08 * sin(mLocal.y * 8.0 + 0.3);
-        // Limb darkening: edges slightly dimmer
-        float limbD = 1.0 - dot(mLocal, mLocal);
-        vec3 moonCol = colMoonCor * bandTex * sqrt(max(limbD, 0.0));
-        col = mix(col, moonCol, moonMask);
-    }
-
-    // ── Distant mountain silhouettes ──────────────────────────────────
-    // Project to screen y vs a mountain height profile at a fixed "distance"
-    float mtProfile = mountainProfile(sc.x * 0.7 + 0.3);
-    float mtY = -0.55 + mtProfile;  // baseline just below horizon
-    // Mountains only visible in lower portion of sky
-    if (sc.y < mtY + 0.02 && sc.y > mtY - 0.12) {
-        float mtMask = smoothstep(mtY + 0.015, mtY - 0.005, sc.y);
-        col = mix(col, vec3(0.005, 0.008, 0.02), mtMask);
-    }
-
-    // ── Terrain raymarching ───────────────────────────────────────────
-    float tHit = terrainMarch(ro, rd);
-    bool onTerrain = tHit > 0.0;
-    bool cactusHit = false;
-
-    if (onTerrain) {
-        vec3 hitP = ro + rd * tHit;
-
-        // Dune normal for lighting
-        vec3 norm = terrainNormal(hitP);
-
-        // Moonlight direction (from upper-left where moon is)
-        vec3 moonDir = normalize(vec3(-0.3, 0.9, 0.5));
-        float diff = max(dot(norm, moonDir), 0.0);
-
-        // Moonlit sand color
-        vec3 sandLit  = colMoonLitSd * (0.15 + diff * 0.85);
-        vec3 sandShad = colDuneShadow;
-        vec3 sand = mix(sandShad, sandLit, diff * diff);
-
-        // Subtle secondary bounce light from opposite side
-        float fill = max(dot(norm, -moonDir * vec3(1,0,1)), 0.0) * 0.08;
-        sand += vec3(0.0, 0.02, 0.06) * fill;
-
-        col = sand;
-
-        // ── Cacti on terrain ─────────────────────────────────────────
-        int NC = int(clamp(cactusCount, 0.0, 8.0));
-        for (int ci = 0; ci < 8; ci++) {
-            if (ci >= NC) break;
-            float fi = float(ci);
-            // Place cacti at fixed random xz positions
-            float cx = (hash11(fi * 7.31) - 0.5) * 3.0;
-            float cz = hash11(fi * 3.17) * 4.0 + 0.5;
-            float cy = duneHeight(vec2(cx, cz));
-            vec3 cBase = vec3(cx, cy, cz);
-            // March along ray to find cactus
-            float tc = 0.2;
-            for (int si = 0; si < 32; si++) {
-                vec3 cp = ro + rd * tc;
-                vec3 lp = cp - cBase;
-                float dc = sdCactus(lp, fi);
-                if (dc < 0.005) {
-                    cactusHit = true;
-                    break;
-                }
-                tc += max(dc * 0.5, 0.01);
-                if (tc > 20.0) break;
-            }
-            if (cactusHit) break;
+    // Subtle brick texture on walls
+    if (uv.x < 0.27 || uv.x > 0.73) {
+        vec2 brickUV;
+        if (uv.x < 0.27) {
+            brickUV = vec2((0.25 - uv.x) * 10.0, uv.y * 12.0);
+        } else {
+            brickUV = vec2((uv.x - 0.75) * 10.0, uv.y * 12.0);
         }
-
-        if (cactusHit) col = colCactus;
+        float rowShift = floor(brickUV.y) * 0.5;
+        vec2 brickCell = floor(vec2(brickUV.x + rowShift, brickUV.y));
+        float mortar = smoothstep(0.05, 0.12, fract(brickUV.x + rowShift)) *
+                       smoothstep(0.05, 0.12, fract(brickUV.y));
+        col = mix(col, wallColor * 0.6, (1.0 - mortar) * (wallL + wallR));
     }
 
-    // ── Below terrain background fallback ─────────────────────────────
-    // If ray never hit terrain (pointing too steep), show deep ground color
-    if (!onTerrain && rd.y < 0.0) {
-        col = colDuneShadow * 0.5;
+    // ── Neon sign — LEFT WALL: hot magenta rectangle ─────────────────
+    {
+        float signFlicker = sin(TIME * 2.3 + 0.0) * 0.3 + 0.7;
+        // Sign region: x in [0.02,0.22], y in [0.50,0.65]
+        vec2 signCenter = vec2(0.12, 0.575);
+        vec2 signHalf   = vec2(0.09, 0.07);
+        float r = 0.008;
+        vec2  sp = uv - signCenter;
+        float outline = sdRoundBox(sp, signHalf, r);
+        // Outer glow
+        float glow = exp(-max(outline, 0.0) * 80.0);
+        // Inner bright edge
+        float edge = smoothstep(0.003, 0.0, abs(outline));
+        vec3  magenta = vec3(1.0, 0.0, 0.8) * 2.0 * signFlicker;
+        col += magenta * (edge * 1.8 + glow * 0.4) * wallL;
+
+        // Horizontal bars inside sign (fake text rows)
+        float inside = step(outline, 0.0);
+        float bars = step(0.5, sin((sp.y / signHalf.y * 3.0 + TIME * 1.5) * 6.28));
+        col = mix(col, vec3(0.04, 0.01, 0.03), inside * bars * wallL * 0.8);
     }
 
-    gl_FragColor = vec4(col, 1.0);
+    // ── Neon sign — RIGHT WALL: electric cyan rectangle ──────────────
+    {
+        float signFlicker = sin(TIME * 1.7 + 1.4) * 0.3 + 0.7;
+        vec2 signCenter = vec2(0.88, 0.525);
+        vec2 signHalf   = vec2(0.08, 0.065);
+        float r = 0.008;
+        vec2  sp = uv - signCenter;
+        float outline = sdRoundBox(sp, signHalf, r);
+        float glow = exp(-max(outline, 0.0) * 80.0);
+        float edge = smoothstep(0.003, 0.0, abs(outline));
+        vec3  cyan = vec3(0.0, 0.9, 1.0) * 2.0 * signFlicker;
+        col += cyan * (edge * 1.8 + glow * 0.4) * wallR;
+
+        float inside = step(outline, 0.0);
+        float bars = step(0.5, sin((sp.y / signHalf.y * 3.0 - TIME * 1.8) * 6.28));
+        col = mix(col, vec3(0.0, 0.02, 0.04), inside * bars * wallR * 0.8);
+    }
+
+    // ── Holographic ad billboard — upper center ────────────────────
+    {
+        // Billboard spans x=[0.28,0.72], y=[0.60,0.88]
+        float inBB = step(0.28, uv.x) * step(uv.x, 0.72) *
+                     step(0.60, uv.y) * step(uv.y, 0.88);
+        if (inBB > 0.5) {
+            vec2 bbUV = (uv - vec2(0.28, 0.60)) / vec2(0.44, 0.28);
+            // Horizontal scan bars of shifting cyan/violet
+            float scanLine = floor(bbUV.y * 14.0);
+            float phase = scanLine * 0.37 + TIME * 0.8;
+            float hue = fract(phase * 0.15);
+            // Alternate cyan and violet bands
+            vec3 bandCol;
+            if (mod(scanLine, 2.0) < 1.0) {
+                bandCol = vec3(0.0, 0.9, 1.0); // cyan
+            } else {
+                bandCol = vec3(0.6, 0.1, 1.0); // violet
+            }
+            bandCol *= 1.5 + 0.5 * sin(TIME * 3.0 + scanLine * 0.9);
+            // Fake character pattern inside each bar
+            float charX = fract(bbUV.x * 20.0 + floor(scanLine) * 0.5);
+            float charPat = step(0.4, charX) * step(charX, 0.85);
+            col = mix(col, bandCol * charPat, katakanaIntensity * 0.9 * inBB);
+            // Billboard frame glow
+            vec2 bbCenter = vec2(0.5, 0.5);
+            float frame = sdRoundBox(bbUV - bbCenter, vec2(0.5, 0.5), 0.02);
+            float frameGlow = exp(-max(frame, 0.0) * 30.0);
+            float frameEdge = smoothstep(0.004, 0.0, abs(frame));
+            col += vec3(0.0, 0.9, 1.0) * (frameEdge * 1.2 + frameGlow * 0.3) * inBB;
+        }
+    }
+
+    // ── 96 rain streaks ───────────────────────────────────────────────
+    // Three palette colors: hot magenta, electric cyan, amber
+    vec3 rainPalette[3];
+    rainPalette[0] = vec3(1.0, 0.0,  0.8);  // hot magenta
+    rainPalette[1] = vec3(0.0, 0.9,  1.0);  // electric cyan
+    rainPalette[2] = vec3(1.0, 0.6,  0.0);  // amber
+
+    for (int i = 0; i < 96; i++) {
+        float fi = float(i);
+        float speed = 0.4 + hash11(fi * 3.17) * 0.9
+                    + audioLevel * audioReact * 0.3;
+        float xPos  = hash11(fi * 7.13 + floor(TIME * speed * 0.1 + fi * 0.07));
+        float yOff  = fract(TIME * speed * 0.25 + hash11(fi * 11.3));
+        // y goes from 1 to 0 (top to bottom), reset via fract
+        float yCenter = 1.0 - yOff;
+        float length_  = 0.04 + hash11(fi * 5.71) * 0.06;
+        float width_   = 0.0015 + hash11(fi * 2.37) * 0.002;
+
+        // Capsule / vertical streak SDF
+        float dx = abs(uv.x - xPos);
+        float dy = uv.y - yCenter;
+        float streak = max(dx - width_, abs(dy - length_ * 0.5) - length_ * 0.5);
+        float alpha = smoothstep(0.002, 0.0, streak);
+
+        int palIdx = int(mod(fi, 3.0));
+        vec3 rainCol;
+        if (palIdx == 0) rainCol = rainPalette[0];
+        else if (palIdx == 1) rainCol = rainPalette[1];
+        else rainCol = rainPalette[2];
+
+        // Skip rain inside wall bands only slightly (let some bleed through for atmosphere)
+        float inAlley = smoothstep(0.20, 0.26, uv.x) * smoothstep(0.80, 0.74, uv.x);
+        col += rainCol * alpha * 2.5 * (0.3 + inAlley * 0.7);
+    }
+
+    // ── Wet ground reflections (bottom quarter) ──────────────────────
+    if (uv.y < 0.28) {
+        float reflY = uv.y / 0.28; // 0 at bottom, 1 at ground horizon
+
+        // Shimmer distortion
+        float shimmer = sin(uv.x * 60.0 + TIME * 4.0) * 0.01
+                      + sin(uv.x * 37.0 - TIME * 2.7) * 0.006;
+        vec2 reflUV = vec2(uv.x + shimmer, 0.28 + (0.28 - uv.y)); // flip above
+
+        // Sample reflected scene approximately with procedural colors
+        // Left neon magenta reflection
+        float reflMag = exp(-abs(uv.x - 0.12) * 12.0);
+        // Right neon cyan reflection
+        float reflCyan = exp(-abs(uv.x - 0.88) * 12.0);
+
+        float flickerM = sin(TIME * 2.3) * 0.3 + 0.7;
+        float flickerC = sin(TIME * 1.7 + 1.4) * 0.3 + 0.7;
+
+        vec3 reflMagCol  = vec3(1.0, 0.0, 0.8) * reflMag * flickerM;
+        vec3 reflCyanCol = vec3(0.0, 0.9, 1.0) * reflCyan * flickerC;
+
+        float puddleFade = reflY; // attenuate near bottom edge
+        col += (reflMagCol + reflCyanCol) * 1.8 * (1.0 - puddleFade * 0.7);
+
+        // Ground surface tint — very dark wet concrete
+        float groundMix = smoothstep(0.28, 0.0, uv.y) * 0.7;
+        col = mix(col, vec3(0.02, 0.02, 0.03), groundMix * 0.5);
+    }
+
+    // Optional input texture overlay
+    if (IMG_SIZE_inputTex.x > 0.0) {
+        vec3 src = texture2D(inputTex, fract(uv + vec2(sin(TIME * 0.3) * 0.05, 0.0))).rgb;
+        float sL = dot(src, vec3(0.299, 0.587, 0.114));
+        col = mix(col, src, smoothstep(0.20, 0.40, sL) * 0.6);
+    }
+
+    // Posterize (gives holo something quantized to glitch)
+    if (vaporPosterize > 1.0) col = floor(col * vaporPosterize) / vaporPosterize;
+
+    return vec4(col, 1.0);
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// PASS 1 — Hologram glitch over alley buffer
+// ──────────────────────────────────────────────────────────────────────
+vec4 passHologram(vec2 fragCoord) {
+    vec2 uv = fragCoord / RENDERSIZE.xy;
+
+    // Vertical tear — band-shifted bands of the buffer
+    float bandH = 0.04;
+    float bandY = floor(uv.y / bandH) * bandH;
+    float tearTrig = step(1.0 - holoTear * (1.0 + audioBass * audioReact),
+                          hash21(vec2(bandY, floor(TIME * 8.0))));
+    uv.x += tearTrig * (hash21(vec2(bandY, TIME)) - 0.5) * 0.15;
+
+    // RGB chromatic shift on the vapor buffer
+    float ch = holoChroma * (1.0 + audioHigh * audioReact);
+    float r = texture2D(vapor, clamp(uv + vec2( ch, 0.0), 0.0, 1.0)).r;
+    float g = texture2D(vapor, clamp(uv,                  0.0, 1.0)).g;
+    float b = texture2D(vapor, clamp(uv - vec2( ch, 0.0), 0.0, 1.0)).b;
+    vec3 holo = vec3(r, g, b) * holoTint.rgb;
+
+    // Scanlines (resolution-aware)
+    holo *= 0.85 + 0.15 * sin(gl_FragCoord.y * holoScanFreq * 0.5);
+
+    // EMI break: rare bursts replace fragments with hash noise
+    float breakTrig = step(0.9, hash21(vec2(floor(TIME * 4.0), 0.0)));
+    holo = mix(holo, vec3(hash21(uv * TIME)),
+               holoBreak * audioBass * audioReact * 0.4 * breakTrig);
+
+    // Mid-band flicker
+    float flicker = 0.92 + 0.08 * sin(TIME * 60.0
+                  + hash21(vec2(floor(TIME * 30.0))) * 6.28);
+    holo *= mix(1.0, flicker, audioMid * audioReact * 0.5);
+
+    // Edge bloom — bright pixels glow beyond their position
+    float lum = dot(holo, vec3(0.299, 0.587, 0.114));
+    holo += holoTint.rgb * pow(lum, 1.4) * holoGlow * 0.3;
+
+    // Transmission strength — low audio dims the hologram (signal weakens)
+    holo *= 0.5 + audioLevel * 0.6;
+
+    // Mix: 0 = pure alley, 1 = full hologram
+    vec3 alley = texture2D(vapor, fragCoord / RENDERSIZE.xy).rgb;
+    return vec4(mix(alley, holo, holoMix), 1.0);
+}
+
+// ──────────────────────────────────────────────────────────────────────
+void main() {
+    if (PASSINDEX == 0) gl_FragColor = passAlley(gl_FragCoord.xy);
+    else                gl_FragColor = passHologram(gl_FragCoord.xy);
 }
