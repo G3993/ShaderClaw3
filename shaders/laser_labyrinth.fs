@@ -1,41 +1,12 @@
 /*{
-  "CATEGORIES": [
-    "Radiant"
-  ],
-  "DESCRIPTION": "Volumetric light cones sweeping through fog - nightclub laser beams",
+  "CATEGORIES": ["Generator", "Radiant", "3D"],
+  "DESCRIPTION": "Laser Labyrinth — 6 volumetric light cones sweeping through layered fog from above. Nightclub laser aesthetic. HDR linear output.",
   "INPUTS": [
-    {
-      "NAME": "sweepSpeed",
-      "TYPE": "float",
-      "DEFAULT": 0.5,
-      "MIN": 0,
-      "MAX": 2,
-      "LABEL": "Sweep Speed"
-    },
-    {
-      "NAME": "beamIntensity",
-      "TYPE": "float",
-      "DEFAULT": 1,
-      "MIN": 0,
-      "MAX": 2,
-      "LABEL": "Beam Intensity"
-    },
-    {
-      "NAME": "baseColor",
-      "LABEL": "Color",
-      "TYPE": "color",
-      "DEFAULT": [
-        0.91,
-        0.25,
-        0.34,
-        1
-      ]
-    },
-    {
-      "NAME": "inputTex",
-      "LABEL": "Texture",
-      "TYPE": "image"
-    }
+    {"NAME":"sweepSpeed","TYPE":"float","DEFAULT":0.5,"MIN":0,"MAX":2,"LABEL":"Sweep Speed"},
+    {"NAME":"beamIntensity","TYPE":"float","DEFAULT":1.0,"MIN":0,"MAX":2,"LABEL":"Beam Intensity"},
+    {"NAME":"audioReact","TYPE":"float","DEFAULT":1.0,"MIN":0.0,"MAX":2.0,"LABEL":"Audio React"},
+    {"NAME":"baseColor","LABEL":"Tint","TYPE":"color","DEFAULT":[1.0,1.0,1.0,1.0]},
+    {"NAME":"inputTex","LABEL":"Texture","TYPE":"image"}
   ]
 }*/
 
@@ -78,7 +49,8 @@ vec3 coneColor(int idx, float hueShift) {
   vec3 axis1 = normalize(vec3(1.0, -1.0, 0.0));
   vec3 axis2 = normalize(vec3(0.5, 0.5, -1.0));
   float d1 = dot(diff, axis1); float d2 = dot(diff, axis2);
-  return clamp(grey + axis1 * (d1 * cosA - d2 * sinA) + axis2 * (d1 * sinA + d2 * cosA), 0.0, 1.0);
+  // No clamp — allow HDR colors; host applies ACES
+  return grey + axis1 * (d1 * cosA - d2 * sinA) + axis2 * (d1 * sinA + d2 * cosA);
 }
 
 void main() {
@@ -88,7 +60,9 @@ void main() {
   uv.x = (uv.x - 0.5) * aspect;
 
   float t = TIME * sweepSpeed;
-  float intensity = beamIntensity + audioLevel * 0.5;
+  // Audio as modulator (not gate): alive in silence, boosted by audio
+  float audioMod = 0.5 + 0.5 * audioLevel * audioReact;
+  float intensity = beamIntensity * audioMod;
 
   vec3 fogCoord = vec3(fragUV * 3.0, t * 0.08);
   fogCoord.y -= t * 0.03; fogCoord.x += t * 0.015;
@@ -100,7 +74,7 @@ void main() {
 
   vec3 col = vec3(0.0);
   float hueShift = sin(t * 0.07) * 0.2;
-  float globalBeat = pow(abs(sin(t * PI / 1.5)), 8.0) * 0.2 + audioBass * 0.3;
+  float globalBeat = pow(abs(sin(t * PI / 1.5)), 8.0) * 0.4 + audioBass * audioReact * 0.6;
 
   for (int i = 0; i < 3; i++) {
     float fi = float(i);
@@ -116,7 +90,8 @@ void main() {
     float inCone = exp(-perp * perp / (coneWidth * coneWidth * 0.55));
     inCone *= smoothstep(0.0, 0.08, along) * exp(-along * along * 0.15);
     float volumetric = inCone * (0.25 + fog * 0.75);
-    col += coneColor(i, hueShift + fi * 0.15) * volumetric * 0.35 * intensity * (1.0 + globalBeat);
+    // HDR beam cores — peak at ~1.5–2.5 so bloom catches them
+    col += coneColor(i, hueShift + fi * 0.15) * volumetric * 1.5 * intensity * (1.0 + globalBeat);
   }
 
   for (int i = 0; i < 3; i++) {
@@ -133,7 +108,7 @@ void main() {
     inCone += exp(-perp * perp / (coneWidth * coneWidth * 0.04)) * 0.4;
     inCone *= smoothstep(0.0, 0.06, along) * exp(-along * along * 0.1);
     float volumetric = inCone * (0.2 + fog * 0.8);
-    col += coneColor(i + 3, hueShift + fi * 0.15 + 0.5) * volumetric * 0.75 * intensity * (1.0 + globalBeat);
+    col += coneColor(i + 3, hueShift + fi * 0.15 + 0.5) * volumetric * 2.5 * intensity * (1.0 + globalBeat);
   }
 
   float brightness = dot(col, vec3(0.299, 0.587, 0.114));
@@ -143,12 +118,12 @@ void main() {
   col += col * groundHaze * 0.3;
   col += vec3(0.06, 0.03, 0.1) * groundHaze * fbm(vec3(fragUV.x * 4.0, fragUV.y * 2.0, t * 0.05 + 10.0)) * intensity;
 
-  col = 1.0 - exp(-col * 2.0);
-  col += hash(gl_FragCoord.xy + fract(TIME) * 100.0) * 0.04 - 0.02;
+  // Film grain — keep in linear; host ACES handles clipping
+  col += hash(gl_FragCoord.xy + fract(TIME) * 100.0) * 0.03 - 0.015;
 
+  // Soft vignette — no clamp (HDR output)
   vec2 vigUV = fragUV - 0.5;
-  col *= clamp(1.0 - dot(vigUV, vigUV) * 0.8, 0.0, 1.0);
-  col = clamp(col, 0.0, 1.0);
+  col *= max(0.0, 1.0 - dot(vigUV, vigUV) * 0.7);
 
   // Texture as source — shader VFX processes the input content
     vec2 texUV = gl_FragCoord.xy / RENDERSIZE.xy;
