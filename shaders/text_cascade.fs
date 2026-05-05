@@ -11,9 +11,11 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.0, 1.0, 0.85, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.01, 0.06, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 2.3 },
+    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
@@ -92,6 +94,29 @@ float sampleChar(int ch, vec2 uv) {
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
+// ── Deep sea bioluminescent background ──────────────────────────────────────
+// Undulating water column with glowing plankton spots
+vec3 deepSeaBg(vec2 uv, float t) {
+    // Abyss base
+    vec3 col = vec3(0.00, 0.01, 0.06);
+    // Water caustic ripple bands
+    float wave1 = sin(uv.x * 9.0 + t * 0.7) * sin(uv.y * 5.0 - t * 0.4) * 0.5 + 0.5;
+    float wave2 = cos(uv.x * 13.0 - t * 0.5) * cos(uv.y * 7.0 + t * 0.6) * 0.5 + 0.5;
+    float caustic = wave1 * wave2;
+    col += vec3(0.0, 0.30, 0.55) * caustic * 0.08;
+    // Bioluminescent plankton sparkle
+    vec2 pCell = floor(uv * 90.0);
+    float spark = step(0.993, hash(pCell.x + pCell.y * 211.0 + floor(t * 6.0) * 37.0));
+    col += vec3(0.0, 1.0, 0.85) * spark * 0.5;
+    return col;
+}
+
+// Row text colors: alternate bio-cyan vs bio-violet
+vec3 rowTextColor(float rowIdx, float t) {
+    if (mod(rowIdx, 2.0) < 1.0) return vec3(0.0,  1.0,  0.85); // bio-cyan
+    return                              vec3(0.7,  0.0,  1.00); // bio-violet
+}
+
 // =======================================================================
 // EFFECT: CASCADE - tiled rows with wave offsets
 // =======================================================================
@@ -131,13 +156,18 @@ vec4 effectCascade(vec2 uv) {
         }
     }
 
-    bool inv = mod(rowIdx, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
-    return vec4(fc, a);
+    float aud = 1.0 + (audioLevel + audioBass * 0.6) * audioReact * 0.4;
+
+    if (transparentBg) {
+        vec3 tCol = rowTextColor(rowIdx, TIME) * hdrGlow * aud;
+        return vec4(tCol, textHit);
+    }
+
+    // Opaque: deep sea background + bioluminescent row text
+    vec3 bg = deepSeaBg(uv, TIME);
+    vec3 tCol = rowTextColor(rowIdx, TIME) * hdrGlow * aud;
+    vec3 fc = mix(bg, tCol, textHit);
+    return vec4(fc, 1.0);
 }
 
 // =======================================================================
