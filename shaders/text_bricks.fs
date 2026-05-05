@@ -9,9 +9,11 @@
     { "NAME": "intensity", "LABEL": "Displacement", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Grid Density", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.95, 0.70, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.18, 0.06, 0.02, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "DEFAULT": 2.0, "MIN": 0.5, "MAX": 4.0 },
+    { "NAME": "audioMod", "LABEL": "Audio Mod", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 2.0 }
   ]
 }*/
 
@@ -90,6 +92,32 @@ float sampleChar(int ch, vec2 uv) {
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
+// Terracotta mosaic tile background
+vec3 mosaicBg(vec2 uv) {
+    float t = TIME * 0.15;
+    float asp = RENDERSIZE.x / RENDERSIZE.y;
+    float cols = 22.0;
+    float rows = floor(cols / asp);
+    vec2 tUV = vec2(uv.x * cols, uv.y * rows);
+    vec2 tI = floor(tUV);
+    vec2 tF = fract(tUV);
+    float gw = 0.07;
+    float inT = step(gw, tF.x) * step(gw, tF.y) * step(tF.x, 1.0-gw) * step(tF.y, 1.0-gw);
+    float h1 = fract(sin(dot(tI, vec2(127.1, 311.7))) * 43758.5453);
+    float h2 = fract(sin(dot(tI, vec2(269.5, 183.3))) * 43758.5453);
+    vec3 tileCol;
+    if (h1 < 0.55) tileCol = mix(vec3(0.72, 0.22, 0.06), vec3(0.60, 0.15, 0.04), h2);
+    else if (h1 < 0.82) tileCol = mix(vec3(0.75, 0.48, 0.12), vec3(0.55, 0.30, 0.05), h2);
+    else tileCol = mix(vec3(0.05, 0.15, 0.55), vec3(0.02, 0.08, 0.42), h2);
+    float shimmer = step(0.93, h1) * (0.5 + 0.5 * sin(t + h2 * 6.28318));
+    tileCol += vec3(1.0, 0.72, 0.15) * shimmer * 2.0;
+    vec3 grout = vec3(0.04, 0.015, 0.005);
+    vec3 c = mix(tileCol, grout, 1.0 - inT);
+    vec2 vc = uv - 0.5;
+    c *= 1.0 - 1.8 * dot(vc, vc);
+    return c;
+}
+
 // =======================================================================
 // EFFECT: BRICKS - grid with animated displacement
 // =======================================================================
@@ -155,6 +183,13 @@ void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     int p = int(preset);
     vec4 col = effectBricks(uv, p);
+
+    if (!transparentBg) {
+        float audio_m = 1.0 + audioLevel * audioMod;
+        vec3 bgM = mosaicBg(uv);
+        vec3 txtHDR = textColor.rgb * hdrGlow * audio_m;
+        col = vec4(mix(bgM, txtHDR, smoothstep(0.3, 0.7, col.a)), 1.0);
+    }
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;

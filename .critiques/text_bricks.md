@@ -1,3 +1,22 @@
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 2D mosaic background — NEW ANGLE: warm Mediterranean terracotta/cobalt/ochre mosaic; v1 was neon brick wall (cool violet/cyan), v13 was lava flow (hot volcanic). Completely different color temperature (warm earth) and cultural reference (Mediterranean tile).
+**Critique:**
+1. Reference fidelity: Terracotta/cobalt/ochre mosaic creates a rich material surface with authentic tile variation and grout contrast.
+2. Compositional craft: Grid tile arrangement echoes the brick text effect; gold shimmer on accent tiles adds depth.
+3. Technical execution: Per-tile hash for color variety; grout via threshold creates crisp grid lines; vignette frames composition.
+4. Liveness: Slow gold shimmer pulse on accent tiles via TIME.
+5. Differentiation: Warm earth palette (terracotta, cobalt, ochre) is opposite of neon brick (v1) and lava (v13).
+**Changes:**
+- Added mosaicBg(): 22×N grid of terracotta/cobalt/ochre tiles with grout
+- HDR gold shimmer on 7% of tiles (2.0 linear)
+- textColor default: white → warm ivory [1.0, 0.95, 0.70]
+- bgColor default: black → deep terracotta [0.18, 0.06, 0.02]
+- transparentBg default: true → false
+- Added hdrGlow (default 2.0) and audioMod inputs
+**HDR peaks reached:** gold shimmer 2.0, text at hdrGlow * audio ≈ 2.5
+**Estimated rating:** 4.0★
+
 ## 2026-05-05
 **Prior rating:** 0.0★
 **Approach:** 2D refine (background generator + HDR glow)
