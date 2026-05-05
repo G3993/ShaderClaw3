@@ -11,13 +11,41 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.04, 1.0] },
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.0, 1.0, 0.9, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.03, 1.0] },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.2 },
     { "NAME": "voiceSync", "LABEL": "Voice Sync", "TYPE": "bool", "DEFAULT": false },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
     { "NAME": "loop", "LABEL": "Loop", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
+
+// Neon rain streaks background (vertical drop lines — distinct from starfield/CRT/aurora)
+vec3 rainBg(vec2 uv) {
+    float t = TIME * 0.6;
+    vec3 col = bgColor.rgb;
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    for (int i = 0; i < 20; i++) {
+        float fi = float(i);
+        float x = fract(sin(fi * 73.1) * 43758.5);
+        float speed2 = 0.3 + fract(sin(fi * 31.7) * 12345.7) * 0.5;
+        float y = fract(-t * speed2 + sin(fi * 11.3) * 43758.5);
+        float len = 0.05 + fract(sin(fi * 19.1) * 9823.4) * 0.15;
+        float dx = abs(uv.x - x) * aspect;
+        float dy = uv.y - y;
+        if (dx < 0.004 && dy >= 0.0 && dy < len) {
+            float fade = 1.0 - dy / len;
+            // 3 saturated colors: cyan, magenta, lime
+            int ci = int(mod(fi, 3.0));
+            vec3 c;
+            if (ci == 0) c = vec3(0.0, 1.0, 0.9);
+            else if (ci == 1) c = vec3(1.0, 0.0, 0.7);
+            else c = vec3(0.4, 1.0, 0.0);
+            col += c * fade * 0.35;
+        }
+    }
+    return col;
+}
 
 float sampleChar(int ch, vec2 uv) {
     if (ch < 0 || ch > 36) return 0.0;
@@ -91,7 +119,7 @@ void main() {
     float sc = textScale > 0.01 ? textScale : 1.0;
     float kr = kerning > 0.01 ? kerning : 1.0;
 
-    vec3 col = bgColor.rgb;
+    vec3 col = transparentBg ? bgColor.rgb : rainBg(uv);
     float alpha = transparentBg ? 0.0 : 1.0;
 
     vec2 p = vec2((uv.x - 0.5) * aspect + 0.5, uv.y);
@@ -155,7 +183,7 @@ void main() {
             if (cellUV.x >= 0.0 && cellUV.x <= 1.0 && cellUV.y >= 0.0 && cellUV.y <= 1.0) {
                 float s = sampleChar(ch, cellUV);
                 if (s > 0.05) {
-                    textCol = textColor.rgb;
+                    textCol = textColor.rgb * hdrGlow;
                     textMask = max(textMask, smoothstep(0.1, 0.5, s));
                 }
             }
@@ -169,7 +197,7 @@ void main() {
     float cursorW = charW * 0.15;
     if (p.x >= lastX && p.x <= lastX + cursorW &&
         p.y >= originY && p.y <= originY + charH) {
-        textCol = textColor.rgb;
+        textCol = textColor.rgb * hdrGlow;
         textMask = max(textMask, cursorOn);
     }
 
