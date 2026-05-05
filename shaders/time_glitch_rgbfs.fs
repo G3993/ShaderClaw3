@@ -1,131 +1,124 @@
 /*{
-    "DESCRIPTION": "Voronoi Cell Organism — Haeckel radiolaria Voronoi cells pulsing with audio",
-    "CATEGORIES": ["Generator"],
-    "INPUTS": [
-        { "NAME": "audioReact",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.9 },
-        { "NAME": "cellScale",   "TYPE": "float", "MIN": 1.0, "MAX": 20.0, "DEFAULT": 6.0 },
-        { "NAME": "pulseSpeed",  "TYPE": "float", "MIN": 0.0, "MAX": 3.0,  "DEFAULT": 0.5 },
-        { "NAME": "inkWidth",    "TYPE": "float", "MIN": 0.003, "MAX": 0.04, "DEFAULT": 0.012 }
-    ]
+  "DESCRIPTION": "Voronoi Cell Organism — Haeckel radiolaria Voronoi cells pulsing with audio",
+  "CATEGORIES": ["Generator"],
+  "INPUTS": [
+    { "NAME": "audioReact",  "TYPE": "float", "MIN": 0.0,   "MAX": 2.0,  "DEFAULT": 0.9  },
+    { "NAME": "cellScale",   "TYPE": "float", "MIN": 1.0,   "MAX": 20.0, "DEFAULT": 6.0  },
+    { "NAME": "pulseSpeed",  "TYPE": "float", "MIN": 0.0,   "MAX": 3.0,  "DEFAULT": 0.5  },
+    { "NAME": "inkWidth",    "TYPE": "float", "MIN": 0.003, "MAX": 0.04, "DEFAULT": 0.012 }
+  ]
 }*/
 
 precision highp float;
 
-// ---------- palette ----------
-const vec3 AMBER    = vec3(0.7,  0.28, 0.0);
-const vec3 GOLD     = vec3(1.0,  0.72, 0.0);
-const vec3 HOT_GOLD = vec3(2.8,  1.8,  0.0);
-const vec3 IVORY    = vec3(1.8,  1.6,  1.0);
-const vec3 INK      = vec3(0.0,  0.0,  0.0);
+// ── Palette ──────────────────────────────────────────────────────────────────
+const vec3 AMBER    = vec3(0.70, 0.28, 0.00);
+const vec3 GOLD     = vec3(1.00, 0.72, 0.00);
+const vec3 HOT_GOLD = vec3(2.80, 1.80, 0.00);
+const vec3 IVORY    = vec3(1.80, 1.60, 1.00);
+const vec3 INK      = vec3(0.00, 0.00, 0.00);
 
-// ---------- hash utilities ----------
+// ── Hash helpers ─────────────────────────────────────────────────────────────
 float hash(float n) {
     return fract(sin(n) * 43758.5453123);
 }
 
 vec2 hash2(vec2 p) {
-    float x = hash(p.x * 127.1 + p.y * 311.7);
-    float y = hash(p.x * 269.5 + p.y * 183.3);
-    return vec2(x, y);
+    p = vec2(dot(p, vec2(127.1, 311.7)),
+             dot(p, vec2(269.5, 183.3)));
+    return fract(sin(p) * 43758.5453123);
 }
 
-// ---------- Voronoi ----------
-// Returns (dist1, dist2) — distance to nearest and 2nd-nearest cell centre.
-// nearestCell is set to the integer grid coords of the nearest cell.
-vec2 voronoi(vec2 p, out vec2 nearestCell, out vec2 nearestCentre) {
+// ── Voronoi ───────────────────────────────────────────────────────────────────
+// Returns (dist-to-nearest, dist-to-2nd-nearest) and writes nearestCell.
+vec2 voronoi(vec2 p, out vec2 nearestCell, float audio) {
     vec2 ip = floor(p);
     vec2 fp = fract(p);
 
-    float d1 = 8.0;
-    float d2 = 8.0;
-    vec2 nearest = vec2(0.0);
-    vec2 nCentre  = vec2(0.0);
-
-    float audio = 0.5 + 0.5 * audioBass * audioReact;
+    float d1 = 8.0, d2 = 8.0;
+    vec2  nearest = vec2(0.0);
 
     for (int x = -2; x <= 2; x++) {
         for (int y = -2; y <= 2; y++) {
             vec2 neighbor = vec2(float(x), float(y));
             vec2 cellId   = ip + neighbor;
 
-            vec2 jitter = (hash2(cellId) * 2.0 - 1.0) * 0.4;
-            float pulse = sin(TIME * pulseSpeed + hash(cellId.x + cellId.y * 100.0) * 6.28318) * 0.1;
+            vec2  jitter  = (hash2(cellId) * 2.0 - 1.0) * 0.4;
+            float pulse   = sin(TIME * pulseSpeed + hash(cellId.x + cellId.y * 100.0) * 6.28318) * 0.1;
             jitter *= (1.0 + pulse * audio);
 
-            vec2 cellCentre = neighbor + 0.5 + jitter;
-            float d = length(cellCentre - fp);
+            vec2  cellCenter = neighbor + 0.5 + jitter;
+            float d          = length(cellCenter - fp);
 
             if (d < d1) {
-                d2 = d1;
-                d1 = d;
-                nearest  = cellId;
-                nCentre  = cellCentre;
+                d2      = d1;
+                d1      = d;
+                nearest = cellId;
             } else if (d < d2) {
                 d2 = d;
             }
         }
     }
 
-    nearestCell   = nearest;
-    nearestCentre = nCentre;
+    nearestCell = nearest;
     return vec2(d1, d2);
 }
 
 void main() {
-    vec2 uv = isf_FragNormCoord;
-    float aspect = RENDERSIZE.x / RENDERSIZE.y;
-
     // Audio modulator
     float audio = 0.5 + 0.5 * audioBass * audioReact;
 
-    // Scale to Voronoi space
-    vec2 p = uv * vec2(aspect, 1.0) * cellScale;
+    // UV
+    vec2  uv     = isf_FragNormCoord;
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    vec2  p      = uv * vec2(aspect, 1.0) * cellScale;
 
-    vec2 nearestCell;
-    vec2 nearestCentre;
-    vec2 dists = voronoi(p, nearestCell, nearestCentre);
-    float d1 = dists.x;
-    float d2 = dists.y;
+    // Voronoi query
+    vec2  nearestCell;
+    vec2  dists = voronoi(p, nearestCell, audio);
+    float dist1 = dists.x;
+    float dist2 = dists.y;
 
-    // ---- cell interior colour ----
+    // ── Cell interior color ───────────────────────────────────────────────────
     float cellHash = hash(nearestCell.x * 7.3 + nearestCell.y * 13.7);
-    vec3 cellCol;
-    if (cellHash < 0.33) {
-        cellCol = AMBER;
-    } else if (cellHash < 0.66) {
-        cellCol = GOLD * 0.65;
+    vec3  interior;
+    if (cellHash < 0.4) {
+        interior = AMBER;
+    } else if (cellHash < 0.75) {
+        interior = GOLD * 0.85;
     } else {
-        cellCol = AMBER * 0.8 + GOLD * 0.2;
+        interior = mix(AMBER, GOLD, cellHash);
     }
-    // Subtle brightness variation driven by audio
-    cellCol *= (0.85 + 0.3 * audio * hash(nearestCell.x * 3.1 + nearestCell.y * 5.7));
+    // Subtle radial darkening toward edges (cytoplasm depth)
+    interior *= (0.6 + 0.4 * (1.0 - dist1));
+    // Audio-driven brightness boost
+    interior *= (1.0 + (audio - 0.5) * 0.4);
 
-    // ---- ink cell walls ----
-    // Edge strength: how close are we to the boundary between two cells?
-    float edgeDist = d2 - d1;
-    float inkMask = smoothstep(inkWidth, 0.0, edgeDist);
-    vec3 col = mix(cellCol, INK, inkMask);
+    // ── Cell edge — INK walls ─────────────────────────────────────────────────
+    float edgeMask = 1.0 - smoothstep(0.0, inkWidth, dist2 - dist1);
+    vec3  col      = mix(interior, INK, edgeMask);
 
-    // ---- cell-centre nuclei ----
-    // Distance to the nearest Voronoi centre in cell space
-    vec2 fp = fract(p);
-    float centDist = length(nearestCentre - fp);
-    float nucleusHash = hash(nearestCell.x * 11.3 + nearestCell.y * 17.1);
+    // ── Cell-center nuclei ────────────────────────────────────────────────────
+    // Find the jittered center for the nearest cell in cell-space
+    vec2  ip2        = floor(p);
+    vec2  fp2        = fract(p);
+    // Re-derive nearest center position (offset from fragment)
+    vec2  nJitter    = (hash2(nearestCell) * 2.0 - 1.0) * 0.4;
+    float nPulse     = sin(TIME * pulseSpeed + hash(nearestCell.x + nearestCell.y * 100.0) * 6.28318) * 0.1;
+    nJitter *= (1.0 + nPulse * audio);
+    vec2  centerOff  = nearestCell - ip2;          // integer offset of nearest cell
+    vec2  centerFrac = centerOff + 0.5 + nJitter;  // position of center in fract-space
+    float nucDist    = length(centerFrac - fp2);
 
-    // Two types: HOT_GOLD nucleus or IVORY nucleus
-    vec3 nucleusCol = (nucleusHash > 0.5) ? HOT_GOLD : IVORY;
-    // Exponential falloff glow from centre
-    float nucleusRadius = 0.06 + 0.04 * audio;
-    float nucleusGlow   = exp(-centDist * 18.0) * (1.5 + 0.8 * audio);
-    float nucleusMask   = smoothstep(nucleusRadius, 0.0, centDist);
+    // Nucleus glow — exponential falloff
+    float nucHash    = hash(nearestCell.x * 3.1 + nearestCell.y * 17.9);
+    vec3  nucColor   = (nucHash > 0.5) ? HOT_GOLD : IVORY;
+    float nucGlow    = exp(-nucDist * 18.0) * (1.2 + audio * 0.6);
+    col = mix(col, nucColor, clamp(nucGlow, 0.0, 1.0));
 
-    // Blend: nucleus hard disk first, then glow halo on top
-    col = mix(col, nucleusCol, nucleusMask);
-    col += nucleusCol * nucleusGlow * 0.4 * (1.0 - inkMask);
+    // ── Background fill (very dark amber for cells outside range) ─────────────
+    // Already handled by interior, but darken overall background via ambient
+    col = max(col, AMBER * 0.3 * (1.0 - dist1 * 0.5));
 
-    // ---- background (very dark amber, visible only in gaps) ----
-    col = mix(AMBER * 0.18, col, 1.0); // already fully covered but preserves dark floor
-
-    // ---- output LINEAR HDR — no clamp, no tonemapping ----
     gl_FragColor = vec4(col, 1.0);
 }
