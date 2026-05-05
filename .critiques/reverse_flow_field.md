@@ -16,3 +16,23 @@
 - HDR peak: magma top ramp → 3.0× white-hot on high-intensity seeds
 **HDR peaks reached:** white-hot seeds 3.0, gold 2.0, orange 1.3
 **Estimated rating:** 3.5★
+
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 3D volumetric — NEW ANGLE: 2D volcanic magma palette swap → 3D volumetric aurora curtains
+**Critique:**
+1. Reference fidelity: Wind-blown flow field replaced with atmospheric aurora phenomenon — volumetric ribbon curtains bending in magnetic field.
+2. Compositional craft: Wide upward camera + starfield background creates proper spatial scale; vertical ribbons give strong vertical hierarchy.
+3. Technical execution: 64-step volumetric transmittance march; FBM warp drives curtain shape; exponential transmittance accumulation.
+4. Liveness: Animated curtain warp + wave speed; drifting camera; twinkling stars; audio boosts density.
+5. Differentiation: 3D volumetric vs 2D LIC-style flow; aurora palette (cyan/violet/gold) vs volcanic magma; wide sky composition vs grass-tip close-up.
+**Changes:**
+- Full rewrite from 2D flow field to 3D volumetric aurora
+- Transmittance-based 64-step volume march
+- FBM ribbon density function with height envelope
+- Palette: electric cyan, violet, gold — cycling by horizontal phase
+- Deep navy background + procedural stars
+- Camera pointing up, slow drift
+- Audio modulates density*brightness
+**HDR peaks reached:** ribbon center density accumulation * 2.5 = 2.5+; with audio 3.0+
+**Estimated rating:** 4.5★
