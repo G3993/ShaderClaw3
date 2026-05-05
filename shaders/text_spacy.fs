@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Spacy - perspective tunnel rows",
+  "DESCRIPTION": "Spacy — perspective tunnel rows over a solar corona background: chromosphere, prominences, and ejection plumes. Deep orange/crimson/white-hot palette.",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Spacy","Spacy Bridge","Spacy Whitney","Spacy Recede"], "DEFAULT": 0 },
@@ -13,15 +13,18 @@
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
     { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.04, 0.0, 0.0, 1.0] },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.0 },
+    { "NAME": "coronaScale", "LABEL": "Corona Scale", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
+    { "NAME": "coronaSpeed", "LABEL": "Corona Speed", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.3 },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "audioMod", "LABEL": "Audio Mod", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
 const float PI = 3.14159265;
 const float TWO_PI = 6.28318530;
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
 float charPixel(int ch, float col, float row) {
     if (ch < 0 || ch > 36) return 0.0;
     vec2 uv = vec2(col / 5.0, row / 7.0);
@@ -85,19 +88,81 @@ int charCount() {
     return n > 0 ? n : 1;
 }
 
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
+float hash(float n)  { return fract(sin(n * 127.1) * 43758.5453); }
+float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+
+float noise(vec2 p){
+    vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
+    return mix(mix(hash2(i),hash2(i+vec2(1,0)),f.x),
+               mix(hash2(i+vec2(0,1)),hash2(i+vec2(1,1)),f.x),f.y);
+}
+float fbm(vec2 p){ float v=0.0,a=0.5; for(int i=0;i<4;i++){v+=a*noise(p);p*=2.1;a*=0.5;} return v; }
+
+// ──────────────────────────────────────────────────────────────────────
+// Solar corona background — chromosphere gradient + prominence arcs + ejection plumes
+// Deep orange / deep crimson / white-hot palette — fully saturated
+// ──────────────────────────────────────────────────────────────────────
+vec3 solarCoronaBg(vec2 uv){
+    float audio = 1.0 + (audioLevel + audioBass * 0.8) * audioMod;
+    float t = TIME * coronaSpeed;
+    vec2 center = vec2(0.5, 0.5);
+    vec2 rel = (uv - center) / coronaScale;
+    float r = length(rel);
+    float ang = atan(rel.y, rel.x);
+
+    // Solar disk
+    float diskR = 0.22;
+    float inDisk = step(r, diskR);
+
+    // Chromosphere gradient (deep orange to white-hot at core)
+    vec3 diskCol;
+    float diskT = clamp(1.0 - r / diskR, 0.0, 1.0);
+    if(diskT < 0.5) diskCol = mix(vec3(0.8, 0.2, 0.0), vec3(1.0, 0.55, 0.0), diskT*2.0);
+    else             diskCol = mix(vec3(1.0, 0.55, 0.0), vec3(1.0, 0.95, 0.7), (diskT-0.5)*2.0);
+    diskCol *= hdrGlow * audio * diskT;
+
+    // Corona glow halo
+    float corona = exp(-max(r - diskR, 0.0) * 4.0 / coronaScale);
+    vec3 coronaCol = mix(vec3(0.8, 0.3, 0.0), vec3(0.3, 0.0, 0.0), clamp(r - diskR, 0.0, 1.0));
+    coronaCol *= corona * hdrGlow * 0.8 * audio;
+
+    // Prominence arcs: 3 FBM-shaped arcs around disk edge
+    vec3 prom = vec3(0.0);
+    for(float pi2 = 0.0; pi2 < 3.0; pi2++){
+        float pAng = pi2 * TWO_PI / 3.0 + t * 0.2 + pi2 * 1.7;
+        float arcR = diskR + 0.06 + 0.03 * sin(t * 0.7 + pi2 * 2.3);
+        float arcW = 0.03;
+        // FBM wavy arc
+        float warp = fbm(rel * 5.0 + vec2(t * 0.3 + pi2 * 7.1, 0.0)) * 0.08;
+        float dArc = abs(r - arcR - warp);
+        float dAng = abs(mod(ang - pAng + PI, TWO_PI) - PI);
+        float arcMask = smoothstep(arcW, 0.0, dArc) * smoothstep(1.2, 0.0, dAng);
+        prom += vec3(1.0, 0.4, 0.0) * arcMask * hdrGlow * 0.7;
+    }
+
+    // Solar wind streaks (radial, faint)
+    float streakAng = fract((ang / TWO_PI + t * 0.03) * 24.0);
+    float streak = exp(-abs(streakAng - 0.5) * 20.0) * exp(-max(r - diskR - 0.02, 0.0) * 8.0);
+    vec3 windCol = vec3(0.9, 0.5, 0.1) * streak * hdrGlow * 0.3 * audio;
+
+    // Void bg
+    vec3 voidCol = bgColor.rgb;
+    float bgFade = exp(-r * 3.0) * 0.4;
+    voidCol += vec3(0.15, 0.02, 0.0) * bgFade;
+
+    vec3 result = voidCol;
+    result += coronaCol;
+    result += prom;
+    result += windCol;
+    result = mix(result, diskCol, inDisk);
+
+    return result;
 }
 
-float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
-
-// =======================================================================
-// EFFECT: SPACY - perspective tunnel rows
-// =======================================================================
-
-vec4 effectSpacy(vec2 uv, int sub) {
+// ──────────────────────────────────────────────────────────────────────
+// Spacy text effect
+// ──────────────────────────────────────────────────────────────────────
+float effectSpacyHit(vec2 uv, int sub) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
     int numChars = charCount();
     float rws = floor(mix(3.0, 20.0, density));
@@ -106,10 +171,10 @@ vec4 effectSpacy(vec2 uv, int sub) {
     float minS=0.3, maxS=2.5, track=0.15, scM=1.0;
     bool mirror = false;
 
-    if (sub == 0) { minS=0.3/sR; maxS=2.5*sR; }
+    if (sub == 0)      { minS=0.3/sR; maxS=2.5*sR; }
     else if (sub == 1) { minS=0.2/sR; maxS=3.0*sR; track=0.05; scM=1.4; }
     else if (sub == 2) { minS=0.4/sR; maxS=2.0*sR; track=0.2; scM=0.9; mirror=true; }
-    else { minS=0.15/sR; maxS=2.0*sR; track=0.12; }
+    else               { minS=0.15/sR; maxS=2.0*sR; track=0.12; }
 
     float rH = 1.0/rws;
     float sY = mod(uv.y + TIME*speed*scM, 1.0);
@@ -144,45 +209,40 @@ vec4 effectSpacy(vec2 uv, int sub) {
             if (ch >= 0 && ch <= 36 && ch != 26) textHit = charPixel(ch, gc, gr);
         }
     }
-
-    bool inv = mod(ri, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
-    return vec4(fc, a);
+    return textHit;
 }
 
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     int p = int(preset);
-    vec4 col = effectSpacy(uv, p);
+
+    float textHit = effectSpacyHit(uv, p);
+
+    vec3 bg = transparentBg ? bgColor.rgb : solarCoronaBg(uv);
+    float audio = 1.0 + audioLevel * audioMod * 0.4;
+    // Depth-based brightness: close rows brighter
+    float rowIdx = floor(uv.y * floor(mix(3.0, 20.0, density)));
+    float rowCenter = (rowIdx + 0.5) / floor(mix(3.0, 20.0, density));
+    float depthBright = 0.5 + abs(rowCenter - 0.5) * 2.0;
+    vec3 textCol = textColor.rgb * hdrGlow * audio * depthBright;
+
+    vec3 col = mix(bg, textCol, textHit);
+    float a = transparentBg ? textHit : 1.0;
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
-        float t = TIME * 17.0;
-        float band = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
-        float bandNoise = fract(sin(band * 91.7 + t) * 43758.5);
+        float t2 = TIME * 17.0;
+        float band = floor(uv.y * mix(8.0, 40.0, g) + t2 * 3.0);
+        float bandNoise = fract(sin(band * 91.7 + t2) * 43758.5);
         float bandActive = step(1.0 - g * 0.6, bandNoise);
         float shift = (bandNoise - 0.5) * 0.08 * g * bandActive;
         float chromaAmt = g * 0.015;
-        vec2 uvR = uv + vec2(shift + chromaAmt, 0.0);
-        vec2 uvB = uv + vec2(shift - chromaAmt, 0.0);
-        vec2 uvG = uv + vec2(shift, chromaAmt * 0.5);
-        vec4 cR = effectSpacy(uvR, p);
-        vec4 cG = effectSpacy(uvG, p);
-        vec4 cB = effectSpacy(uvB, p);
-        vec4 glitched = vec4(cR.r, cG.g, cB.b, max(max(cR.a, cG.a), cB.a));
-        float scanline = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
-        float blockX = floor(uv.x * 6.0);
-        float blockY = floor(uv.y * 4.0);
-        float blockNoise = fract(sin((blockX + blockY * 7.0) * 113.1 + floor(t * 8.0)) * 43758.5);
-        float dropout = step(1.0 - g * 0.15, blockNoise);
-        glitched.rgb *= scanline;
-        glitched.rgb *= 1.0 - dropout;
+        float tR = effectSpacyHit(uv + vec2(shift + chromaAmt, 0.0), p);
+        float tG = effectSpacyHit(uv + vec2(shift, chromaAmt * 0.5), p);
+        float tB = effectSpacyHit(uv + vec2(shift - chromaAmt, 0.0), p);
+        vec3 glitched = mix(bg, textCol, (tR + tG + tB) / 3.0);
         col = mix(col, glitched, smoothstep(0.0, 0.3, g));
     }
 
-    gl_FragColor = col;
+    gl_FragColor = vec4(col, a);
 }
