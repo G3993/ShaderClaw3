@@ -13,8 +13,9 @@
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
     { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.08, 0.0, 0.12, 1.0] },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 2.0 },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
@@ -94,6 +95,63 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
+// BACKGROUND: NEON VAPORWAVE GRID — hot pink sky + cyan perspective floor
+// =======================================================================
+
+// Neon vaporwave grid — hot pink sky + cyan perspective floor grid
+vec3 vaporGridBg(vec2 uv, float t) {
+    // Horizon at y=0.15 (uv.y in [0,1] range)
+    float horizonY = 0.15;
+
+    // Sky: hot pink to deep magenta gradient
+    float skyT = clamp((uv.y - horizonY) / 0.8, 0.0, 1.0);
+    vec3 sky = mix(vec3(1.0, 0.15, 0.7), vec3(0.25, 0.0, 0.5), skyT);
+    // HDR sky top
+    sky *= 1.4;
+
+    vec3 col;
+
+    if (uv.y < horizonY) {
+        // Perspective grid floor
+        float dh = max(horizonY - uv.y, 0.001);
+        float gridX = (uv.x - 0.5) / (dh * 2.0 + 0.05);
+        float gridY = 1.0 / dh - t * 0.4; // scrolling forward
+
+        float gx = abs(fract(gridX * 5.0) - 0.5);
+        float gy = abs(fract(gridY) - 0.5);
+        float lineW = 0.04 * dh + 0.005;
+        float line = smoothstep(0.5 - lineW, 0.5, max(gx, gy));
+
+        // Floor base: dark magenta
+        vec3 floorBase = vec3(0.12, 0.0, 0.18);
+        // Grid lines: hot cyan HDR
+        vec3 gridColor = vec3(0.0, 1.0, 0.9) * 2.2; // HDR cyan
+        col = mix(floorBase, gridColor, line);
+        // Fade to horizon
+        col = mix(col, sky, smoothstep(horizonY - 0.06, horizonY, uv.y));
+    } else {
+        col = sky;
+        // Scan lines in sky (optional visual interest)
+        float scanY = sin(uv.y * 40.0 + t * 2.0) * 0.04;
+        col += vec3(1.0, 0.0, 0.5) * scanY;
+    }
+
+    // Sun: bright circle at horizon
+    float sunDist = length(vec2(uv.x - 0.5, uv.y - horizonY));
+    float sunR = 0.18;
+    if (sunDist < sunR) {
+        float ty = clamp((uv.y - (horizonY - sunR)) / (2.0 * sunR), 0.0, 1.0);
+        vec3 sunCol = mix(vec3(1.0, 0.3, 0.0), vec3(1.0, 0.05, 0.5), ty);
+        // Horizontal stripes through sun
+        float stripe = step(0.0, sin(uv.y * 30.0 + 0.5)) * 0.4;
+        sunCol = mix(sunCol, sky, stripe);
+        col = mix(col, sunCol * 2.5, smoothstep(0.0, -0.02, sunDist - sunR));
+    }
+
+    return col;
+}
+
+// =======================================================================
 // EFFECT: SPACY - perspective tunnel rows
 // =======================================================================
 
@@ -158,6 +216,14 @@ void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     int p = int(preset);
     vec4 col = effectSpacy(uv, p);
+
+    // Composite vaporwave grid background when not transparent
+    if (!transparentBg) {
+        vec3 bg = vaporGridBg(uv, TIME);
+        // Text layer: white text boosted by hdrGlow
+        vec3 textLayer = col.rgb * hdrGlow;
+        col = vec4(mix(bg, textLayer, col.a), 1.0);
+    }
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
