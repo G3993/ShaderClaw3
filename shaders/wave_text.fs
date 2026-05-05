@@ -6,9 +6,10 @@
     { "NAME": "speed", "TYPE": "float", "MIN": 0.2, "MAX": 5.0, "DEFAULT": 1.5 },
     { "NAME": "amplitude", "TYPE": "float", "MIN": 0.0, "MAX": 0.15, "DEFAULT": 0.06 },
     { "NAME": "frequency", "TYPE": "float", "MIN": 0.5, "MAX": 5.0, "DEFAULT": 2.0 },
-    { "NAME": "textColor", "TYPE": "color", "DEFAULT": [1.0, 0.9, 0.3, 1.0] },
-    { "NAME": "bgColor", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
+    { "NAME": "textColor", "TYPE": "color", "DEFAULT": [1.0, 0.45, 0.0, 1.0] },
+    { "NAME": "bgColor", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.03, 1.0] },
     { "NAME": "textScale", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 2.5 },
     { "NAME": "transparentBg", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
@@ -43,6 +44,19 @@ vec2 charData(int ch) {
     if (ch == 24) return vec2(135300.0, 17962.0);
     if (ch == 25) return vec2(139807.0, 31778.0);
     return vec2(0.0, 0.0);
+}
+
+// Sinusoidal color field background — interference pattern (distinct palette)
+vec3 waveFieldBg(vec2 uv) {
+    float t = TIME * 0.3;
+    float f1 = sin(uv.x * 9.1 + t * 1.7) * sin(uv.y * 6.3 - t);
+    float f2 = sin(uv.x * 4.7 - t * 0.8) * sin(uv.y * 7.9 + t * 1.3);
+    float field = clamp(f1 + f2, -1.0, 1.0) * 0.5 + 0.5;
+    vec3 ca = vec3(1.0, 0.3, 0.0);   // orange
+    vec3 cb = vec3(0.7, 0.0, 0.0);   // crimson
+    vec3 cc = vec3(1.0, 0.7, 0.0);   // gold
+    vec3 c = field < 0.5 ? mix(ca, cb, field * 2.0) : mix(cb, cc, (field - 0.5) * 2.0);
+    return bgColor.rgb + c * 0.18;
 }
 
 float charPixel(int ch, float col, float row) {
@@ -175,7 +189,8 @@ void main() {
     if (transparentBg) {
         bg = vec4(0.0, 0.0, 0.0, 0.0);
     } else {
-        bg = bgColor;
+        vec2 uv2 = gl_FragCoord.xy / RENDERSIZE.xy;
+        bg = vec4(waveFieldBg(uv2), 1.0);
     }
 
     vec4 result = bg;
@@ -189,9 +204,9 @@ void main() {
         );
     }
 
-    // Main text layer on top
+    // Main text layer on top — HDR boosted
     if (mainHit > 0.5) {
-        result = vec4(textColor.rgb, textColor.a);
+        result = vec4(textColor.rgb * hdrGlow, textColor.a);
     }
 
     gl_FragColor = result;
