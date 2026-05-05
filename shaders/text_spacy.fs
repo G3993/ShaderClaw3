@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Spacy - perspective tunnel rows",
+  "DESCRIPTION": "Coral Depths — bioluminescent underwater perspective text, aquatic palette",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Spacy","Spacy Bridge","Spacy Whitney","Spacy Recede"], "DEFAULT": 0 },
@@ -12,9 +12,7 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "audioMod", "LABEL": "Audio Mod", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.6 }
   ]
 }*/
 
@@ -94,7 +92,7 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
-// EFFECT: SPACY - perspective tunnel rows
+// EFFECT: CORAL DEPTHS — bioluminescent underwater perspective text
 // =======================================================================
 
 vec4 effectSpacy(vec2 uv, int sub) {
@@ -145,13 +143,41 @@ vec4 effectSpacy(vec2 uv, int sub) {
         }
     }
 
-    bool inv = mod(ri, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
-    return vec4(fc, a);
+    // ── Coral Depths: bioluminescent color logic ──────────────────────
+
+    // Depth-based color: near rows (large rs) = bright cyan, far rows = magenta
+    float depth = clamp(rs / (maxS * textScale), 0.0, 1.0);  // 0=far, 1=near
+    vec3 nearColor = vec3(0.0, 2.5, 2.5);   // bio cyan (near/large)
+    vec3 farColor  = vec3(2.5, 0.0, 1.5);   // bio magenta (far/small)
+    vec3 rowColor  = mix(farColor, nearColor, depth);
+
+    // Bioluminescent pulse: text brightness pulses with TIME per row
+    float pulse = 0.8 + 0.2 * sin(TIME * speed * 2.0 + ri * 0.9);
+
+    // Volumetric water scatter: faint blue-green glow between rows
+    vec3 bg = vec3(0.0, 0.0, 0.0);
+    float waterGlow = (1.0 - depth) * 0.04 * (sin(TIME * 0.3 + rn * PI) * 0.5 + 0.5);
+    bg += vec3(0.0, 0.04, 0.06) * waterGlow;
+
+    // Floating sparkle particles (bioluminescent plankton)
+    float sparkX = floor(uv.x * 40.0 + TIME * 0.15);
+    float sparkY = floor(uv.y * 25.0 + TIME * speed * 0.3);
+    float sparkSeed = hash(sparkX * 7.3 + sparkY * 13.1);
+    float sparkBright = step(0.97, sparkSeed) * (0.5 + 0.5 * sin(TIME * 3.0 + sparkSeed * TWO_PI));
+    bg += vec3(0.5, 2.5, 1.5) * sparkBright * 0.15;
+
+    // Slow current — gentle horizontal undulation in background
+    float currentPhase = sin(uv.y * 8.0 + TIME * 0.4) * 0.5 + 0.5;
+    bg += vec3(0.0, 0.02, 0.05) * currentPhase * (1.0 - depth) * 0.3;
+
+    // Audio: pulse modulates glow intensity (modulates, does not gate)
+    float audioBoost = 1.0 + audioLevel * audioMod * 0.35;
+
+    // Text glow + background
+    float glow = textHit * pulse * audioBoost;
+    vec3 fc = bg + rowColor * glow;
+
+    return vec4(fc, 1.0);
 }
 
 void main() {
