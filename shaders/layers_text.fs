@@ -1,15 +1,17 @@
 /*{
 	"CATEGORIES": ["Generator", "Text"],
-	"DESCRIPTION": "Text repeated at multiple depth layers with parallax and scale",
+	"DESCRIPTION": "Text repeated at multiple depth layers with parallax — HDR front emission, neon depth palette, animated background",
 	"INPUTS": [
 		{ "NAME": "msg", "TYPE": "text", "DEFAULT": "ETHEREA", "MAX_LENGTH": 12 },
 		{ "NAME": "speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
 		{ "NAME": "layerCount", "TYPE": "float", "MIN": 2.0, "MAX": 6.0, "DEFAULT": 4.0 },
 		{ "NAME": "depthSpread", "TYPE": "float", "MIN": 0.1, "MAX": 1.0, "DEFAULT": 0.5 },
-		{ "NAME": "frontColor", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-		{ "NAME": "backColor", "TYPE": "color", "DEFAULT": [0.3, 0.3, 0.5, 1.0] },
-		{ "NAME": "bgColor", "TYPE": "color", "DEFAULT": [0.03, 0.03, 0.08, 1.0] },
+		{ "NAME": "frontColor", "TYPE": "color", "DEFAULT": [1.0, 0.5, 0.0, 1.0] },
+		{ "NAME": "backColor", "TYPE": "color", "DEFAULT": [0.05, 0.05, 0.4, 1.0] },
+		{ "NAME": "bgColor", "TYPE": "color", "DEFAULT": [0.0, 0.01, 0.05, 1.0] },
 		{ "NAME": "textScale", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 0.8 },
+		{ "NAME": "hdrPeak", "TYPE": "float", "MIN": 1.0, "MAX": 5.0, "DEFAULT": 2.5 },
+		{ "NAME": "audioReact", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.7 },
 		{ "NAME": "transparentBg", "TYPE": "bool", "DEFAULT": false }
 	]
 }*/
@@ -66,82 +68,78 @@ int getChar(int slot) {
 
 int charCount() { int n = int(msg_len); return n > 0 ? n : 1; }
 
-// ---- Main shader ----
-
 void main() {
 	vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
 	float aspect = RENDERSIZE.x / RENDERSIZE.y;
 
 	int numChars = charCount();
 
-	// Start with background color
-	vec3 col = bgColor.rgb;
+	// Audio-reactive HDR peak boost
+	float audio = 1.0 + (audioLevel + audioBass * 0.8) * audioReact;
+
+	// Animated neon background — slow diagonal gradient
+	vec3 bg = bgColor.rgb;
+	if (!transparentBg) {
+		float gx = sin(uv.x * 2.0 + TIME * 0.2) * 0.5 + 0.5;
+		float gy = cos(uv.y * 1.5 + TIME * 0.15) * 0.5 + 0.5;
+		bg += vec3(gx * 0.06, gy * 0.02, (1.0 - gx * gy) * 0.12);
+	}
+
+	vec3 col = bg;
 	float alpha = transparentBg ? 0.0 : 1.0;
 
 	// Render layers back to front
 	for (int L = 0; L < 6; L++) {
 		if (float(L) >= layerCount) break;
 
-		// Depth: 0.0 = back, 1.0 = front
 		float depth = float(L) / (layerCount - 1.0);
 
-		// Scale increases with depth (front layers are larger)
 		float layerScale = textScale * (0.5 + depth * 0.8);
 
-		// Parallax drift: back layers move slower, front layers faster
 		float drift = sin(TIME * speed * (0.3 + depth * 0.7) + depth * 2.0) * 0.1 * depthSpread;
 		float vDrift = cos(TIME * speed * (0.2 + depth * 0.5) + depth * 3.5) * 0.03 * depthSpread;
 
-		// Color interpolation from backColor to frontColor
+		// HDR color: back layers are dim saturated blue, front layers are bright neon
 		vec3 layerCol = mix(backColor.rgb, frontColor.rgb, depth);
+		// Front layers get HDR multiplier; back layers stay dim
+		float layerHDR = mix(0.25, hdrPeak * audio, depth * depth);
+		layerCol *= layerHDR;
 
-		// Opacity: back layers more transparent, front more opaque
+		// Back layers more transparent, front fully opaque
 		float layerAlpha = 0.3 + depth * 0.7;
 
-		// Character dimensions in UV space
 		float charW = 0.09 * layerScale;
 		float charH = charW * 1.5;
 		float gap = charW * 0.25;
 
-		// Total width of the text string
 		float totalW = float(numChars) * charW + float(numChars - 1) * gap;
 
-		// Aspect-corrected position
 		vec2 p = vec2((uv.x - 0.5) * aspect + 0.5, uv.y);
 
-		// Apply drift
 		p.x -= drift;
 		p.y -= vDrift;
 
-		// Center the text block horizontally and vertically
 		float startX = 0.5 - totalW * 0.5;
 		float startY = 0.5 - charH * 0.5;
 
-		// Check each character
 		for (int i = 0; i < 12; i++) {
 			if (i >= numChars) break;
 
 			int ch = getChar(i);
-
-			// Skip spaces (space = 26)
 			if (ch == 26) continue;
 
-			// Character bounding box
 			float cx = startX + float(i) * (charW + gap);
 			float cy = startY;
 
-			// Map pixel position into character grid (5 columns x 7 rows)
 			float localX = (p.x - cx) / charW;
 			float localY = (p.y - cy) / charH;
 
-			// Check if within character bounds
 			if (localX >= 0.0 && localX < 1.0 && localY >= 0.0 && localY < 1.0) {
 				float gridCol = localX * 5.0;
 				float gridRow = localY * 7.0;
 
 				float filled = charPixel(ch, gridCol, gridRow);
 
-				// Alpha-blend this layer onto the result
 				col = mix(col, layerCol, filled * layerAlpha);
 				alpha = mix(alpha, 1.0, filled * layerAlpha);
 			}
