@@ -1,21 +1,19 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Digifade - glitch dissolve",
+  "DESCRIPTION": "Uranium Stencil — radioactive hazard glow sweep, industrial concrete-blue backdrop, chemical palette",
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
-    { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1], "LABELS": ["Digifade","Digifade Glitch"], "DEFAULT": 0 },
-    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
-    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
-    { "NAME": "intensity", "LABEL": "Glitch", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "density", "LABEL": "Dissolve", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "msg",        "TYPE": "text",  "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
+    { "NAME": "preset",     "LABEL": "Style",   "TYPE": "long", "VALUES": [0,1], "LABELS": ["Stencil","Stencil Glitch"], "DEFAULT": 0 },
+    { "NAME": "fontFamily", "LABEL": "Font",    "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
+    { "NAME": "speed",      "LABEL": "Speed",   "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
+    { "NAME": "intensity",  "LABEL": "Glitch",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
+    { "NAME": "density",    "LABEL": "Dissolve","TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
+    { "NAME": "textScale",  "LABEL": "Size",    "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
+    { "NAME": "audioMod",   "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.6 }
   ]
 }*/
 
-const float PI = 3.14159265;
+const float PI     = 3.14159265;
 const float TWO_PI = 6.28318530;
 
 // Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
@@ -91,20 +89,20 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
-// EFFECT: DIGIFADE - glitch dissolve
+// EFFECT: URANIUM STENCIL — radioactive hazard glow, industrial concrete bg
 // =======================================================================
 
 vec4 effectDigifade(vec2 uv, int sub) {
-    float aspect = RENDERSIZE.x / RENDERSIZE.y;
-    int numChars = charCount();
+    float aspect     = RENDERSIZE.x / RENDERSIZE.y;
+    int   numChars   = charCount();
     float glitchAmount = intensity;
-    float sliceCount = mix(5.0, 100.0, density);
+    float sliceCount   = mix(5.0, 100.0, density);
 
     float complexity = 1.0, sweepSpeed = 1.0, vertGlitch = 0.0, maxDisp = 0.3;
     if (sub == 1) { complexity = 2.0; sweepSpeed = 1.3; maxDisp = 0.5; vertGlitch = 0.4; }
 
     float t = TIME * speed * sweepSpeed;
-    vec2 p = vec2((uv.x - 0.5) * aspect + 0.5, uv.y);
+    vec2 p  = vec2((uv.x - 0.5) * aspect + 0.5, uv.y);
 
     // Single-line layout: all chars on one row, scale to fit width
     float cH = 0.18 * textScale;
@@ -112,40 +110,40 @@ vec4 effectDigifade(vec2 uv, int sub) {
     float cW = cH * (5.0/7.0);
     float gW = cW * 0.2;
 
-    // Scale down if text is wider than screen
     float totalTextW = float(numChars) * cW + float(numChars - 1) * gW;
-    float maxW = 0.9 * aspect;
-    float fitScale = totalTextW > maxW ? maxW / totalTextW : 1.0;
+    float maxW       = 0.9 * aspect;
+    float fitScale   = totalTextW > maxW ? maxW / totalTextW : 1.0;
     cH *= fitScale;
     cW *= fitScale;
     gW *= fitScale;
 
-    float rowW = float(numChars) * cW + float(numChars - 1) * gW;
-    float startX = 0.5 - rowW * 0.5;
-    float startY = 0.5 - cH * 0.5;
+    float rowW   = float(numChars) * cW + float(numChars - 1) * gW;
+    float startX = 0.5 - rowW  * 0.5;
+    float startY = 0.5 - cH   * 0.5;
 
     float si = floor(uv.y * sliceCount);
-    float n1 = hash(si + floor(t*2.0));
-    float n2 = hash(si*3.7 + floor(t*3.0));
+    float n1 = hash(si + floor(t * 2.0));
+    float n2 = hash(si * 3.7 + floor(t * 3.0));
+
+    float sw = sin(t * 0.7) * 0.5 + 0.5;
+    float ps = smoothstep(sw - 0.15, sw + 0.1, (p.x - startX) / max(rowW, 0.001));
+
+    float dx = abs(ps * n1 * glitchAmount * maxDisp
+              + ps * sin(si * 0.3 * complexity + t) * glitchAmount * maxDisp * 0.3);
+    float dy = vertGlitch > 0.01 ? ps * (n2 - 0.5) * vertGlitch * glitchAmount * 0.06 : 0.0;
+
+    vec2  samp = vec2(p.x - dx, p.y - dy);
+    float rx   = samp.x - startX;
+    float ry   = samp.y - startY;
 
     float textHit = 0.0;
-
-    float sw = sin(t*0.7)*0.5+0.5;
-    float ps = smoothstep(sw-0.15, sw+0.1, (p.x-startX)/max(rowW, 0.001));
-
-    float dx = abs(ps*n1*glitchAmount*maxDisp + ps*sin(si*0.3*complexity+t)*glitchAmount*maxDisp*0.3);
-    float dy = vertGlitch > 0.01 ? ps*(n2-0.5)*vertGlitch*glitchAmount*0.06 : 0.0;
-
-    vec2 samp = vec2(p.x - dx, p.y - dy);
-    float rx = samp.x - startX, ry = samp.y - startY;
-
     if (rx >= 0.0 && rx <= rowW && ry >= 0.0 && ry <= cH) {
-        float cs = cW + gW;
+        float cs  = cW + gW;
         float csF = rx / cs;
-        int slot = int(floor(csF));
-        float clx = fract(csF), cf = cW/cs;
+        int   slot = int(floor(csF));
+        float clx = fract(csF), cf = cW / cs;
         if (clx < cf && slot >= 0 && slot < numChars) {
-            float gc = (clx/cf)*5.0, gr = (ry/cH)*7.0;
+            float gc = (clx / cf) * 5.0, gr = (ry / cH) * 7.0;
             if (gc >= 0.0 && gc < 5.0 && gr >= 0.0 && gr < 7.0) {
                 int ch = getChar(slot);
                 if (ch >= 0 && ch <= 36 && ch != 26) textHit = max(textHit, charPixel(ch, gc, gr));
@@ -153,10 +151,32 @@ vec4 effectDigifade(vec2 uv, int sub) {
         }
     }
 
-    vec3 fc = mix(bgColor.rgb, textColor.rgb, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
-    return vec4(fc, a);
+    // ---- Concrete background with subtle noise texture ----
+    float bgNoise = hash(floor(uv.x * 80.0) + floor(uv.y * 50.0) * 100.0
+                       + floor(TIME * 0.5) * 10000.0);
+    vec3 bg = vec3(0.04, 0.05, 0.1) + bgNoise * 0.01;
+
+    // ---- Uranium glow: inner hotspot blends to outer bleed ----
+    float glow    = textHit;
+    float hotspot = textHit * textHit;  // intensified centre of strokes
+    vec3 uraniumColor = mix(vec3(1.5, 2.2, 0.0), vec3(2.5, 2.5, 0.05), hotspot);
+
+    // Audio: uranium glow brightens with signal (modulate, not gate)
+    float audioBoost = 1.0 + audioLevel * audioMod * 0.4;
+    uraniumColor *= audioBoost;
+
+    // ---- Rust bleed on displaced non-text areas ----
+    float rustMask = step(0.05, abs(dx)) * (1.0 - glow);
+    bg += vec3(1.5, 0.3, 0.0) * rustMask * 0.12 * glitchAmount;
+
+    // ---- Sweep halo: faint uranium wash just ahead of the text front ----
+    float sweepHalo = ps * (1.0 - glow) * 0.15;
+    bg += vec3(0.6, 0.9, 0.0) * sweepHalo;
+
+    // ---- Final composite ----
+    vec3 fc = bg + uraniumColor * glow;
+
+    return vec4(fc, 1.0);
 }
 
 // =======================================================================
@@ -164,18 +184,18 @@ vec4 effectDigifade(vec2 uv, int sub) {
 // =======================================================================
 
 void main() {
-    vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
-    int p = int(preset);
+    vec2 uv  = gl_FragCoord.xy / RENDERSIZE.xy;
+    int  p   = int(preset);
     vec4 col = effectDigifade(uv, p);
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
         float t = TIME * 17.0;
-        float band = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
-        float bandNoise = fract(sin(band * 91.7 + t) * 43758.5);
+        float band       = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
+        float bandNoise  = fract(sin(band * 91.7 + t) * 43758.5);
         float bandActive = step(1.0 - g * 0.6, bandNoise);
-        float shift = (bandNoise - 0.5) * 0.08 * g * bandActive;
-        float chromaAmt = g * 0.015;
+        float shift      = (bandNoise - 0.5) * 0.08 * g * bandActive;
+        float chromaAmt  = g * 0.015;
         vec2 uvR = uv + vec2(shift + chromaAmt, 0.0);
         vec2 uvB = uv + vec2(shift - chromaAmt, 0.0);
         vec2 uvG = uv + vec2(shift, chromaAmt * 0.5);
@@ -183,13 +203,13 @@ void main() {
         vec4 cG = effectDigifade(uvG, p);
         vec4 cB = effectDigifade(uvB, p);
         vec4 glitched = vec4(cR.r, cG.g, cB.b, max(max(cR.a, cG.a), cB.a));
-        float scanline = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
-        float blockX = floor(uv.x * 6.0);
-        float blockY = floor(uv.y * 4.0);
+        float scanline  = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
+        float blockX    = floor(uv.x * 6.0);
+        float blockY    = floor(uv.y * 4.0);
         float blockNoise = fract(sin((blockX + blockY * 7.0) * 113.1 + floor(t * 8.0)) * 43758.5);
-        float dropout = step(1.0 - g * 0.15, blockNoise);
-        glitched.rgb *= scanline;
-        glitched.rgb *= 1.0 - dropout;
+        float dropout   = step(1.0 - g * 0.15, blockNoise);
+        glitched.rgb   *= scanline;
+        glitched.rgb   *= 1.0 - dropout;
         col = mix(col, glitched, smoothstep(0.0, 0.3, g));
     }
 
