@@ -11,7 +11,9 @@
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
     { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.0 },
+    { "NAME": "audioMod", "LABEL": "Audio Mod", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
@@ -91,6 +93,79 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
+// BACKGROUND: LAVA FLOW
+// Domain-warped FBM lava channels — pure warm fire palette, no blue/purple
+// =======================================================================
+
+vec3 generateBackground(vec2 uv) {
+    // Slow time drift
+    float t = TIME * 0.05;
+
+    // Domain warp pass 1: offset uv by low-freq sin noise
+    vec2 q;
+    q.x = sin(uv.x * 3.1 + uv.y * 2.7 + t * 1.3) * 0.18
+        + sin(uv.x * 1.5 - uv.y * 3.9 + t * 0.9) * 0.12;
+    q.y = sin(uv.y * 2.8 + uv.x * 3.3 - t * 1.1) * 0.18
+        + sin(uv.y * 4.1 - uv.x * 1.7 + t * 0.7) * 0.10;
+
+    // Domain warp pass 2: offset again for richer channels
+    vec2 r;
+    r.x = sin((uv.x + q.x) * 4.2 + (uv.y + q.y) * 1.9 + t * 1.7) * 0.14
+        + sin((uv.x + q.x) * 2.1 - (uv.y + q.y) * 4.4 + t * 0.6) * 0.09;
+    r.y = sin((uv.y + q.y) * 3.7 + (uv.x + q.x) * 2.5 - t * 1.4) * 0.14
+        + sin((uv.y + q.y) * 1.8 - (uv.x + q.x) * 3.2 + t * 1.0) * 0.08;
+
+    // Warped sample position
+    vec2 wp = uv + q + r;
+
+    // 3-octave FBM lava field from sin-based noise
+    float lava = 0.0;
+    float amp = 1.0;
+    float freq = 1.0;
+    // Octave 1
+    lava += amp * (sin(wp.x * freq * 5.3 + wp.y * freq * 3.7 + t * 2.1) * 0.5 + 0.5);
+    amp *= 0.55; freq *= 2.1;
+    // Octave 2
+    lava += amp * (sin(wp.x * freq * 5.3 + wp.y * freq * 3.7 - t * 1.7 + 1.3) * 0.5 + 0.5);
+    amp *= 0.55; freq *= 2.1;
+    // Octave 3
+    lava += amp * (sin(wp.x * freq * 5.3 + wp.y * freq * 3.7 + t * 2.5 + 2.6) * 0.5 + 0.5);
+
+    // Normalize to 0..1
+    float total = 1.0 + 0.55 + 0.55 * 0.55;
+    lava /= total;
+
+    // Sharpen: create narrow bright channels (crevice = dark, flow = bright)
+    float channel = pow(lava, 2.2);
+
+    // Secondary crackling detail layer
+    float crack = sin(wp.x * 18.0 + t * 3.0) * sin(wp.y * 14.0 - t * 2.3);
+    crack = crack * 0.5 + 0.5;
+    crack = pow(crack, 4.0);
+
+    // Combine: base channel + hot crack highlights
+    float heat = clamp(channel + crack * 0.35, 0.0, 1.0);
+
+    // 3-stop color ramp: black crevice -> lava orange -> gold-white HDR peak
+    vec3 colBlack  = vec3(0.0, 0.0, 0.0);
+    vec3 colOrange = vec3(2.0, 0.5, 0.0);   // HDR lava orange
+    vec3 colGold   = vec3(2.5, 2.0, 0.2);   // HDR gold-white
+
+    vec3 bgCol;
+    if (heat < 0.45) {
+        bgCol = mix(colBlack, colOrange, heat / 0.45);
+    } else {
+        bgCol = mix(colOrange, colGold, (heat - 0.45) / 0.55);
+    }
+
+    // Subtle pulsing ember glow driven by TIME
+    float pulse = sin(TIME * 0.8 + lava * TWO_PI) * 0.5 + 0.5;
+    bgCol += colOrange * pulse * 0.15 * channel;
+
+    return bgCol;
+}
+
+// =======================================================================
 // EFFECT: BRICKS - grid with animated displacement
 // =======================================================================
 
@@ -154,6 +229,66 @@ vec4 effectBricks(vec2 uv, int sub) {
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     int p = int(preset);
+
+    if (!transparentBg) {
+        // Compute text hit by sampling effectBricks for alpha info
+        vec4 brickResult = effectBricks(uv, p);
+        // In opaque (non-transparent) mode effectBricks returns alpha=1 always,
+        // so we need to re-derive textHit. We do this by comparing result to pure bg.
+        // Instead, refactor: compute textHit directly then composite.
+        float aspect = RENDERSIZE.x / RENDERSIZE.y;
+        int numChars = charCount();
+        float waveAmount = intensity;
+        float cols = floor(mix(5.0, 40.0, density));
+
+        float wX=0.0, wY=0.0, fX=3.0, fY=3.0, pm=0.0;
+        bool brick = false;
+        if (p == 0) { wX=0.3; fX=2.5; brick=true; }
+        else if (p == 1) { wX=0.6; wY=0.6; pm=2.0; }
+        else { wX=1.0; fX=4.0; pm=1.0; }
+
+        float rws = floor(cols*(7.0/5.0)/aspect);
+        float cellW = 1.0/cols, cellH = 1.0/rws;
+
+        float ci = clamp(floor(uv.x/cellW), 0.0, cols-1.0);
+        float ri = clamp(floor(uv.y/cellH), 0.0, rws-1.0);
+        float lx = fract(uv.x/cellW), ly = fract(uv.y/cellH);
+
+        if (brick && mod(ri, 2.0) > 0.5) {
+            float sx = uv.x + cellW*0.5;
+            ci = mod(floor(sx/cellW), cols);
+            lx = fract(sx/cellW);
+        }
+
+        float t2 = TIME*speed*2.5;
+        float phase = ci + ri;
+        if (pm > 0.5 && pm < 1.5) phase = ri;
+        else if (pm > 1.5) phase = (ci + ri)*PI;
+
+        lx = fract(lx + sin(phase*fX+t2)*waveAmount*wX*0.3);
+        ly = fract(ly + sin(phase*fY+t2*1.1)*waveAmount*wY*0.3);
+
+        int charIdx = int(mod(ci + ri*cols, float(numChars)));
+        float cWR = 5.0/7.0;
+        float sX = textScale*cWR, sY = textScale;
+        float mX2 = (1.0-sX)*0.5, mY2 = (1.0-sY)*0.5;
+
+        float textHit = 0.0;
+        if (lx >= mX2 && lx < 1.0-mX2 && ly >= mY2 && ly < 1.0-mY2) {
+            float gc = ((lx-mX2)/sX)*5.0, gr = ((ly-mY2)/sY)*7.0;
+            if (gc >= 0.0 && gc < 5.0 && gr >= 0.0 && gr < 7.0) {
+                int ci2 = int(mod(float(charIdx), float(numChars)));
+                int ch = getChar(ci2);
+                if (ch >= 0 && ch <= 36 && ch != 26) textHit = charPixel(ch, gc, gr);
+            }
+        }
+
+        vec3 bg = generateBackground(uv);
+        vec3 finalColor = bg + textHit * textColor.rgb * hdrGlow * audioMod;
+        gl_FragColor = vec4(finalColor, 1.0);
+        return;
+    }
+
     vec4 col = effectBricks(uv, p);
 
     if (_voiceGlitch > 0.01) {
