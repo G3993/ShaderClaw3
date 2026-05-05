@@ -1,5 +1,5 @@
 /*{
-  "CATEGORIES": ["Effect", "Generator", "Audio Reactive"],
+  "CATEGORIES": ["Effect", "Generator", "Audio Reactive", "HDR"],
   "DESCRIPTION": "A signal trying to hold itself together — scanlines, RGB shift, vertical tear, EMI bursts. Image transmits rather than displays. Blade Runner 2049 + Nam June Paik.",
   "INPUTS": [
     {"NAME":"chroma","TYPE":"float","MIN":0.0,"MAX":0.04,"DEFAULT":0.008},
@@ -51,28 +51,32 @@ void main() {
     // Scanlines — pin frequency to gl_FragCoord.y so it scales with resolution.
     col *= 0.85 + 0.15 * sin(gl_FragCoord.y * scanFreq * 0.5);
 
-    // Signal break: every K seconds, replace fragments with hash noise.
+    // Signal break: every K seconds, flash bright hash noise (HDR burst)
     float breakTrig = step(0.9, hash(vec2(floor(TIME * 4.0), 0.0)));
-    col = mix(col, vec3(hash(uv * TIME)),
-              breakAmount * audioBass * audioReact * 0.4 * breakTrig);
+    float breakNoise = hash(uv * TIME) * 2.5;  // HDR noise burst
+    col = mix(col, hologramTint.rgb * breakNoise,
+              breakAmount * audioBass * audioReact * 0.6 * breakTrig);
 
     // Mid-band flicker — audioMid drives a subtle brightness wobble.
     float flicker = 0.92 + 0.08 * sin(TIME * 60.0 + hash(vec2(floor(TIME * 30.0))) * 6.28);
     col *= mix(1.0, flicker, audioMid * audioReact * 0.5);
 
-    // Edge bloom — high-luminance pixels glow beyond their actual position.
+    // Edge bloom — HDR peak glow on bright holographic edges
     float lum = dot(col, vec3(0.299, 0.587, 0.114));
-    col += hologramTint.rgb * pow(lum, 1.4) * glow * 0.3;
+    col += hologramTint.rgb * pow(lum, 1.1) * glow * 3.0;
 
-    // Transmission strength: low audio dims the hologram (signal is weak).
-    col *= 0.5 + audioLevel * 0.6;
+    // Transmission strength — keep baseline high; audio modulates on top
+    col *= 1.0 + audioLevel * 0.4;
 
     // Surprise: every ~9s the carrier wave drops out completely for
     // ~120ms — the receiver loses lock then re-syncs. A blink.
     {
         float _ph = fract(TIME / 9.0);
         float _drop = step(_ph, 0.06);
-        col = mix(col, vec3(0.02, 0.02, 0.03), _drop * 0.95);
+        // Total blackout on drop — then re-sync flash: spike HDR white then settle
+        float _resync = smoothstep(0.06, 0.10, _ph) * smoothstep(0.18, 0.10, _ph);
+        col = mix(col, vec3(0.0), _drop * 0.98);
+        col += hologramTint.rgb * _resync * 3.5;  // re-sync burst HDR
     }
 
     gl_FragColor = vec4(col, 1.0);
