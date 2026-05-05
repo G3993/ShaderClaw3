@@ -1,3 +1,23 @@
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 3D raymarch — NEW ANGLE: Moonlit Desert (cool night 3D scene vs prior warm 2D vaporwave); completely different reference, color grading, composition, and technique
+**Critique:**
+1. Reference fidelity: Prior vaporwave/hologram entirely replaced with 3D moonlit desert — opposite aesthetic (cool/night/natural vs warm/digital/hologram).
+2. Compositional craft: Dune terrain + moon focal element + cactus silhouettes + star field creates strong depth hierarchy.
+3. Technical execution: Sphere-traced height field for dunes, fwidth() moon edge AA, per-cactus SDF, Phong moonlit shading.
+4. Liveness: Moon size pulses with audioBass; stars twinkle; TIME-driven terrain scroll.
+5. Differentiation: Cool silver/navy palette vs prior pink/teal/magenta; natural landscape vs Y2K digital; single-pass vs two-pass.
+**Changes:**
+- Complete rewrite — single-pass 3D, no PASSES
+- Moon: fwidth()-AA disc with soft corona, horizontal stripes, moonSize input
+- Dune terrain: sphere-traced height field (sin/cos multi-freq)
+- Cacti: trunk+arms SDF shapes, pure black silhouettes
+- Star field: hash21 tiling, twinkle, starDensity input
+- Palette: moon vec3(2.5,2.8,3.0), sand vec3(0.6,0.7,0.9), night sky vec3(0,0.01,0.04)
+- No Y2K objects, no hologram, no vaporwave
+**HDR peaks reached:** moon corona 3.0, star silver 2.0, moonlit sand highlights 0.9
+**Estimated rating:** 4.5★
+
 ## 2026-05-05
 **Prior rating:** 0.0★
 **Approach:** 2D refine (fix audio dependence, boost HDR)
