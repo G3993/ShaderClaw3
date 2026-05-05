@@ -12,9 +12,11 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.0, 1.0, 0.85, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.01, 0.08, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "DEFAULT": 2.0, "MIN": 0.5, "MAX": 4.0 },
+    { "NAME": "audioMod", "LABEL": "Audio Mod", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 2.0 }
   ]
 }*/
 
@@ -154,10 +156,68 @@ vec4 effectSpacy(vec2 uv, int sub) {
     return vec4(fc, a);
 }
 
+float bn2(vec2 p) {
+    p = fract(p * vec2(127.1, 311.7)); p += dot(p, p + 33.31); return fract(p.x * p.y);
+}
+float bNoise(vec2 p) {
+    vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
+    return mix(mix(bn2(i),bn2(i+vec2(1,0)),f.x), mix(bn2(i+vec2(0,1)),bn2(i+vec2(1,1)),f.x), f.y);
+}
+
+vec3 bioAbyssBg(vec2 uv) {
+    float t = TIME * 0.25;
+    float asp = RENDERSIZE.x / RENDERSIZE.y;
+    vec2 pos = vec2(uv.x * asp, uv.y);
+
+    // Deep ocean darkness gradient
+    vec3 col = mix(vec3(0.0, 0.005, 0.04), vec3(0.0, 0.0, 0.01), uv.y);
+
+    // Bioluminescent creatures: 12 glowing blobs
+    for (int i = 0; i < 12; i++) {
+        float fi = float(i);
+        float h1 = fract(sin(fi * 127.1) * 43758.5);
+        float h2 = fract(sin(fi * 311.7) * 43758.5);
+        float h3 = fract(sin(fi * 91.3)  * 43758.5);
+
+        // Slow drift
+        vec2 center = vec2(h1 * asp, h2);
+        center += 0.04 * vec2(sin(t * (0.3 + h3 * 0.5) + h1 * 6.28),
+                              cos(t * (0.2 + h2 * 0.4) + h2 * 6.28));
+
+        float dist = length(pos - center);
+        float pulse = 0.5 + 0.5 * sin(t * (1.0 + h3 * 2.0) + fi * 2.094);
+
+        // Hue: cyan (0.5) -> teal (0.47) -> violet (0.75)
+        float hue = 0.47 + h3 * 0.28; // range 0.47-0.75
+        vec3 K = vec4(1.0,2.0/3.0,1.0/3.0,3.0).xyz;
+        vec3 bioCol = mix(K.xxx, clamp(abs(fract(hue+K)*6.0-K.www)-K.xxx,0.0,1.0), 1.0);
+
+        float glow = exp(-dist * (15.0 + h2 * 10.0)) * (0.5 + 0.5 * pulse) * 1.8;
+        col += bioCol * glow;
+
+        // Core bright spot
+        col += bioCol * exp(-dist * 60.0) * pulse * 2.5;
+    }
+
+    // Subtle water caustic shimmer
+    float caustic = bNoise(pos * 8.0 + t * 0.4) * bNoise(pos * 12.0 - t * 0.3) * 0.3;
+    col += vec3(0.0, 0.5, 0.8) * caustic;
+
+    return col;
+}
+
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     int p = int(preset);
     vec4 col = effectSpacy(uv, p);
+
+    if (!transparentBg) {
+        float audio_m = 1.0 + audioLevel * audioMod;
+        vec3 bgAbyss = bioAbyssBg(uv);
+        float txtA = smoothstep(0.3, 0.7, col.a);
+        vec3 txtHDR = textColor.rgb * hdrGlow * audio_m;
+        col = vec4(mix(bgAbyss, txtHDR, txtA), 1.0);
+    }
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
