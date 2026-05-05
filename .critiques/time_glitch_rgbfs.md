@@ -19,3 +19,24 @@
 - audioMod modulates displacement and brightness
 **HDR peaks reached:** per-channel hdrBoost * diffuse = 2.0; white spec adds ~2.5
 **Estimated rating:** 4.0★
+
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 3D raymarch — NEW ANGLE: 3D city skyline with neon-lit buildings vs prior three RGB data planes
+**Critique:**
+1. Reference fidelity: Cyber city interpretation of "time glitch" — data corruption expressed as visual urban decay. Different from RGB channel-split planes.
+2. Compositional craft: Street-level camera looking up at neon-lit skyline. Strong vertical silhouette. Night atmosphere with wet reflections.
+3. Technical execution: Tiled box SDF for buildings. Per-window hash for neon sign colors. 64-step march. Night sky gradient background. Audio pulses building heights via audioBass.
+4. Liveness: Camera moves forward + lateral pan. Building heights pulse with audio. Window flicker driven by time hash. Neon signs flicker.
+5. Differentiation: 3D box buildings vs flat XY planes; neon windows vs scanline bars; cityscape vs data visualization; street-level vs static camera.
+**Changes:**
+- Full rewrite: 3D SDF city grid with procedural neon windows
+- 4-color neon palette: hot pink, electric cyan, toxic yellow-green, violet
+- Per-building hash drives width, depth, height variation
+- Per-window hash drives neon color + flicker state
+- Wet asphalt ground with neon puddle reflection
+- Street-level camera with lateral pan + forward motion
+- Night sky gradient (deep indigo → black)
+- Audio pulses building heights
+**HDR peaks reached:** neonIntensity(3.0) on lit windows; building faces near-black (0.06)
+**Estimated rating:** 4.0★
