@@ -1,177 +1,192 @@
 /*{
-  "DESCRIPTION": "Neon Helix — a rotating DNA-like double-helix built from SDF capsule segments. Traveling beads on magenta and cyan strands connected by gold rungs. Single-pass 3D raymarcher.",
-  "CATEGORIES": ["Generator", "3D"],
+  "DESCRIPTION": "Vishes — street art graffiti walkers leaving bold color trails on a slow-fading grid",
+  "CREDIT": "ShaderClaw — cell-walker sketch translated to multi-pass ISF",
+  "CATEGORIES": ["Generator"],
   "INPUTS": [
-    { "NAME": "helixRadius", "LABEL": "Helix Radius", "TYPE": "float", "MIN": 0.2,  "MAX": 1.0,  "DEFAULT": 0.5  },
-    { "NAME": "helixPitch",  "LABEL": "Helix Pitch",  "TYPE": "float", "MIN": 0.3,  "MAX": 1.5,  "DEFAULT": 0.7  },
-    { "NAME": "helixTurns",  "LABEL": "Helix Turns",  "TYPE": "float", "MIN": 1.0,  "MAX": 5.0,  "DEFAULT": 3.0  },
-    { "NAME": "beadCount",   "LABEL": "Bead Count",   "TYPE": "float", "MIN": 4.0,  "MAX": 16.0, "DEFAULT": 10.0 },
-    { "NAME": "beadSpeed",   "LABEL": "Bead Speed",   "TYPE": "float", "MIN": 0.0,  "MAX": 3.0,  "DEFAULT": 0.8  },
-    { "NAME": "beadSize",    "LABEL": "Bead Size",    "TYPE": "float", "MIN": 0.03, "MAX": 0.15, "DEFAULT": 0.07 },
-    { "NAME": "rungOpacity", "LABEL": "Rung Opacity", "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.6  },
-    { "NAME": "audioPulse",  "LABEL": "Audio Pulse",  "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.7  }
+    { "NAME": "gridSize", "LABEL": "Grid Size", "TYPE": "float", "DEFAULT": 120.0, "MIN": 20.0, "MAX": 400.0 },
+    { "NAME": "walkers", "LABEL": "Walkers", "TYPE": "float", "DEFAULT": 10.0, "MIN": 1.0, "MAX": 16.0 },
+    { "NAME": "stepRate", "LABEL": "Step Rate", "TYPE": "float", "DEFAULT": 40.0, "MIN": 1.0, "MAX": 240.0 },
+    { "NAME": "hueDrift", "LABEL": "Hue Drift", "TYPE": "float", "DEFAULT": 0.015, "MIN": 0.0, "MAX": 0.1 },
+    { "NAME": "fadeRate", "LABEL": "Trail Fade", "TYPE": "float", "DEFAULT": 0.002, "MIN": 0.0, "MAX": 0.08 },
+    { "NAME": "saturation", "LABEL": "Saturation", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "brightness", "LABEL": "Brightness", "TYPE": "float", "DEFAULT": 2.8, "MIN": 0.0, "MAX": 4.0 },
+    { "NAME": "bloom", "LABEL": "Bloom", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 1.5 },
+    { "NAME": "pulse", "LABEL": "Audio Pulse", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0 },
+    { "NAME": "bounceEdges", "LABEL": "Bounce Edges", "TYPE": "bool", "DEFAULT": true },
+    { "NAME": "backgroundColor", "LABEL": "BG Color", "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.02, 1.0] }
+  ],
+  "PASSES": [
+    { "TARGET": "stateBuf", "PERSISTENT": true, "WIDTH": 16, "HEIGHT": 1 },
+    { "TARGET": "canvas", "PERSISTENT": true },
+    {}
   ]
 }*/
 
-// ── Hashing ───────────────────────────────────────────────────────────────
-float hash11(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+#define MAX_WALKERS 16
+#define TAU 6.28318530718
 
-// ── Rotation helpers ──────────────────────────────────────────────────────
-mat3 rotateY(float a) {
-    float c = cos(a), s = sin(a);
-    return mat3(c,0.0,s, 0.0,1.0,0.0, -s,0.0,c);
+float hash11(float p) {
+    p = fract(p * 0.1031);
+    p *= p + 33.33;
+    p *= p + p;
+    return fract(p);
 }
 
-// ── Capsule SDF ───────────────────────────────────────────────────────────
-float sdCapsule(vec3 p, vec3 a, vec3 b, float r) {
-    vec3 ab = b - a;
-    float t = clamp(dot(p - a, ab) / dot(ab, ab), 0.0, 1.0);
-    return length(p - a - ab * t) - r;
+float hash12(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
 }
 
-// ── Scene: double helix + beads ───────────────────────────────────────────
-// mat: 0=strandA(magenta), 1=strandB(cyan), 2=rung(gold), 3+ reserved
-struct Hit { float dist; int mat; };
-
-Hit map(vec3 p) {
-    Hit h;
-    h.dist = 1e9;
-    h.mat  = -1;
-
-    // Whole helix rotates slowly
-    p = rotateY(TIME * 0.15) * p;
-
-    float totalHeight = helixPitch * helixTurns;
-    int SEGS = 48;
-
-    for (int i = 0; i < 48; i++) {
-        float t0 = float(i)     / float(SEGS);
-        float t1 = float(i + 1) / float(SEGS);
-
-        float ang0 = t0 * helixTurns * 6.28318;
-        float ang1 = t1 * helixTurns * 6.28318;
-        float y0   = (t0 - 0.5) * totalHeight;
-        float y1   = (t1 - 0.5) * totalHeight;
-
-        // Strand A
-        vec3 aA0 = vec3(cos(ang0) * helixRadius, y0, sin(ang0) * helixRadius);
-        vec3 aA1 = vec3(cos(ang1) * helixRadius, y1, sin(ang1) * helixRadius);
-        // Strand B (180 degrees offset)
-        vec3 aB0 = vec3(cos(ang0 + 3.14159) * helixRadius, y0, sin(ang0 + 3.14159) * helixRadius);
-        vec3 aB1 = vec3(cos(ang1 + 3.14159) * helixRadius, y1, sin(ang1 + 3.14159) * helixRadius);
-
-        float dA = sdCapsule(p, aA0, aA1, 0.04);
-        float dB = sdCapsule(p, aB0, aB1, 0.04);
-
-        // Rungs every 6 segments
-        if (mod(float(i), 6.0) < 0.5) {
-            float dR = sdCapsule(p, aA0, aB0, 0.025);
-            if (dR < h.dist) { h.dist = dR; h.mat = 2; }
-        }
-
-        if (dA < h.dist) { h.dist = dA; h.mat = 0; }
-        if (dB < h.dist) { h.dist = dB; h.mat = 1; }
-    }
-
-    // Traveling beads along both strands
-    int NB = int(clamp(beadCount, 1.0, 16.0));
-    for (int i = 0; i < 16; i++) {
-        if (i >= NB) break;
-        float fi = float(i);
-        float tBead = fract(fi / float(NB) + TIME * beadSpeed * (0.5 + hash11(fi) * 0.5));
-        float ang = tBead * helixTurns * 6.28318;
-        float y   = (tBead - 0.5) * totalHeight;
-        int strand = int(mod(fi, 2.0));
-        float offset = (strand == 0) ? 0.0 : 3.14159;
-        vec3 beadPos = vec3(cos(ang + offset) * helixRadius, y, sin(ang + offset) * helixRadius);
-        float effBeadSize = beadSize * (1.0 + audioLevel * audioPulse * 0.2);
-        float dBead = length(p - beadPos) - effBeadSize;
-        if (dBead < h.dist) { h.dist = dBead; h.mat = strand; }
-    }
-
-    return h;
+vec3 hsv2rgb(vec3 c) {
+    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 
-vec3 calcNormal(vec3 p) {
-    // Note: normal must account for helix rotation — compute in rotated space
-    vec3 pr = rotateY(TIME * 0.15) * p;
-    vec2 e = vec2(1e-3, 0.0);
-    // Use map directly (it rotates internally)
-    return normalize(vec3(
-        map(p + e.xyy).dist - map(p - e.xyy).dist,
-        map(p + e.yxy).dist - map(p - e.yxy).dist,
-        map(p + e.yyx).dist - map(p - e.yyx).dist
-    ));
+vec2 neighborDir(int dir) {
+    if (dir == 0) return vec2(-1.0, -1.0);
+    if (dir == 1) return vec2( 0.0, -1.0);
+    if (dir == 2) return vec2( 1.0, -1.0);
+    if (dir == 3) return vec2(-1.0,  0.0);
+    if (dir == 4) return vec2( 1.0,  0.0);
+    if (dir == 5) return vec2(-1.0,  1.0);
+    if (dir == 6) return vec2( 0.0,  1.0);
+    return vec2( 1.0,  1.0);
+}
+
+vec4 readWalker(float id) {
+    return texture2D(stateBuf, vec2((id + 0.5) / 16.0, 0.5));
 }
 
 void main() {
-    vec2 uv = (gl_FragCoord.xy / RENDERSIZE.xy) * 2.0 - 1.0;
-    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
+    vec2 Res = RENDERSIZE;
+    vec2 pos = gl_FragCoord.xy;
+    float cell = 1.0 / max(gridSize, 1.0);
+    float audio = 1.0 + audioLevel * pulse;
 
-    // ── Camera orbiting helix ─────────────────────────────────────────────
-    vec3 ro = vec3(sin(TIME * 0.2) * 3.0,
-                   sin(TIME * 0.07) * 1.0,
-                   cos(TIME * 0.2) * 3.0);
-    vec3 target = vec3(0.0, 0.0, 0.0);
-    vec3 fwd    = normalize(target - ro);
-    vec3 right  = normalize(cross(vec3(0.0, 1.0, 0.0), fwd));
-    vec3 up     = cross(fwd, right);
-    vec3 rd     = normalize(fwd + uv.x * right + uv.y * up);
-
-    // ── Palette ───────────────────────────────────────────────────────────
-    vec3 colMagenta  = vec3(2.5, 0.0, 2.0);
-    vec3 colCyan     = vec3(0.0, 2.2, 2.5);
-    vec3 colGold     = vec3(2.5, 1.8, 0.0);
-    vec3 colSpecular = vec3(3.0, 3.0, 2.8);
-    vec3 colBg       = vec3(0.0, 0.0, 0.0);
-
-    // ── Raymarching ───────────────────────────────────────────────────────
-    vec3 col = colBg;
-    float t  = 0.1;
-    bool hitSomething = false;
-    int  hitMat = -1;
-    vec3 hitPos;
-
-    for (int i = 0; i < 64; i++) {
-        vec3 p = ro + rd * t;
-        Hit h  = map(p);
-        if (h.dist < 0.002) {
-            hitSomething = true;
-            hitMat = h.mat;
-            hitPos = p;
-            break;
+    // =============================================================
+    // PASS 0: advance walker state buffer (16x1)
+    // state encoding: vec4(x_norm, y_norm, hue, stepAccumulator)
+    // =============================================================
+    if (PASSINDEX == 0) {
+        float id = floor(pos.x);
+        if (id >= walkers) {
+            gl_FragColor = vec4(0.0);
+            return;
         }
-        t += max(h.dist, 0.005);
-        if (t > 20.0) break;
+
+        // Seed the walker near center on first frames
+        if (FRAMEINDEX < 2) {
+            float jx = (hash11(id * 7.31 + 1.0) - 0.5) * 0.15;
+            float jy = (hash11(id * 3.19 + 2.0) - 0.5) * 0.15;
+            float h0 = hash11(id * 11.7 + 3.0);
+            gl_FragColor = vec4(0.5 + jx, 0.5 + jy, h0, 0.0);
+            return;
+        }
+
+        vec4 prev = readWalker(id);
+        vec2 p = prev.rg;
+        float h = prev.b;
+        float acc = prev.a + TIMEDELTA * stepRate * audio;
+
+        // Walk up to 6 discrete cell steps this frame
+        for (int s = 0; s < 6; s++) {
+            if (acc < 1.0) break;
+            acc -= 1.0;
+
+            float seed = TIME * 97.13 + id * 13.7 + float(s) * 3.31;
+            float r = hash12(vec2(seed, seed * 0.47));
+            int dir = int(floor(r * 8.0));
+            vec2 stepVec = neighborDir(dir) * cell;
+            p += stepVec;
+
+            if (bounceEdges) {
+                if (p.x < 0.0) p.x = -p.x;
+                if (p.x > 1.0) p.x = 2.0 - p.x;
+                if (p.y < 0.0) p.y = -p.y;
+                if (p.y > 1.0) p.y = 2.0 - p.y;
+            } else {
+                p = fract(p);
+            }
+
+            float dh = (hash12(vec2(seed + 7.7, id)) - 0.5) * 2.0 * hueDrift;
+            h = fract(h + dh + 1.0);
+        }
+
+        gl_FragColor = vec4(p, h, acc);
+        return;
     }
 
-    if (hitSomething) {
-        vec3 n = calcNormal(hitPos);
+    // =============================================================
+    // PASS 1: update persistent canvas (fade + paint walker cells)
+    // =============================================================
+    if (PASSINDEX == 1) {
+        vec2 uv = pos / Res;
+        vec4 prev = texture2D(canvas, uv);
+        vec4 col = prev * (1.0 - fadeRate);
 
-        // Material color
-        vec3 matCol;
-        if      (hitMat == 0) matCol = colMagenta;
-        else if (hitMat == 1) matCol = colCyan;
-        else                  matCol = colGold * rungOpacity;
+        // Aspect-correct grid so cells stay square
+        float aspect = Res.x / Res.y;
+        vec2 gridUV = vec2(uv.x * aspect, uv.y);
+        vec2 pxCell = floor(gridUV * gridSize);
 
-        // Phong lighting
-        vec3 keyLight = normalize(vec3(2.0, 3.0, 1.0));
-        float diff    = max(dot(n, keyLight), 0.0);
-        vec3 hv       = normalize(keyLight - rd);
-        float spec    = pow(max(dot(n, hv), 0.0), 32.0) * 3.0;
+        for (int i = 0; i < MAX_WALKERS; i++) {
+            if (float(i) >= walkers) break;
+            float id = float(i);
+            vec4 st = readWalker(id);
+            vec2 wGridUV = vec2(st.r * aspect, st.g);
+            vec2 wCell = floor(wGridUV * gridSize);
 
-        col = matCol * (0.05 + diff * 0.95);
-        col += colSpecular * spec;
+            // Fixed 6-color graffiti palette by walker ID
+            float hueIdx = mod(id, 6.0);
+            vec3 rgb;
+            if (hueIdx < 1.0)      rgb = vec3(1.0, 0.02, 0.08);  // fire red
+            else if (hueIdx < 2.0) rgb = vec3(1.0, 0.55, 0.0);   // orange
+            else if (hueIdx < 3.0) rgb = vec3(1.0, 0.95, 0.0);   // yellow
+            else if (hueIdx < 4.0) rgb = vec3(0.05, 1.0, 0.1);   // neon green
+            else if (hueIdx < 5.0) rgb = vec3(0.0, 0.4, 1.0);    // electric blue
+            else                   rgb = vec3(0.8, 0.0, 1.0);     // violet
+            rgb *= brightness * audio;
 
-        // Rim lighting: subtle edge bloom
-        float rim = 1.0 - max(dot(n, -rd), 0.0);
-        col += matCol * pow(rim, 3.0) * 0.5;
+            // Paint walker + 2-cell neighborhood (thick graffiti strokes)
+            vec2 diff = abs(wCell - pxCell);
+            if (diff.x < 1.5 && diff.y < 1.5) {
+                float dist = length(diff);
+                float fadeN = 1.0 - dist * 0.4;
+                col = vec4(rgb * fadeN, 1.0);
+            }
+        }
 
-        // fwidth AA on silhouette edges
-        float fw = fwidth(map(hitPos).dist);
-        float aa = 1.0 - smoothstep(-fw * 0.5, fw * 2.0, map(hitPos).dist);
-        col = mix(colBg, col, aa);
+        gl_FragColor = col;
+        return;
     }
 
-    gl_FragColor = vec4(col, 1.0);
+    // =============================================================
+    // PASS 2: final display (bloom + ink edge darkening + background blend)
+    // =============================================================
+    vec2 uv = pos / Res;
+    vec3 c = texture2D(canvas, uv).rgb;
+
+    if (bloom > 0.001) {
+        vec3 sum = vec3(0.0);
+        float r = 2.5 / min(Res.x, Res.y);
+        for (int x = -2; x <= 2; x++) {
+            for (int y = -2; y <= 2; y++) {
+                vec2 off = vec2(float(x), float(y)) * r;
+                sum += texture2D(canvas, uv + off).rgb;
+            }
+        }
+        sum /= 25.0;
+        c += sum * bloom;
+    }
+
+    // Ink edge darkening: crush near-black to pure black
+    float lum = dot(c, vec3(0.299, 0.587, 0.114));
+    float inkEdge = smoothstep(0.05, 0.4, lum);
+    c *= inkEdge;
+
+    float alpha = clamp(lum * 8.0, 0.0, 1.0);
+    vec3 outRgb = mix(backgroundColor.rgb, c, alpha);
+    gl_FragColor = vec4(outRgb, 1.0);
 }
