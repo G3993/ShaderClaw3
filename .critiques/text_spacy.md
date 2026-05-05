@@ -19,3 +19,20 @@
 - audioMod input added
 **HDR peaks reached:** close rows textColor * 2.0 = 2.0, with audio 2.8+
 **Estimated rating:** 3.8★
+
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 2D refine — NEW ANGLE: "Wormhole Vortex" background (geometric singularity, violet/gold) vs prior v1 (starfield + nebula — scattered dots, multi-color).
+**Critique:**
+1. Reference fidelity: Spacy perspective row effect preserved; wormhole geometry reinforces the space-depth illusion.
+2. Compositional craft: Centered radial warp with twisted rings; strong focal point at center singularity (black void).
+3. Technical execution: r = length(uv-0.5); theta_warped = theta + TIME*0.4 + 1/r*0.3; ring pattern via fract(r*8 - TIME*0.5); fwidth for ring AA.
+4. Liveness: Rings contract toward center over TIME; warp rotation increases toward singularity.
+5. Differentiation: Geometric topology vs scattered dots, centered singularity vs nebula wash, violet/gold vs multi-color.
+**Changes:**
+- Added wormholeBg() — radial twist rings with singularity center
+- 3-color palette: black void center, deep violet(0.8,0.0,2.2) inner rings, gold(2.2,1.5,0.0) mid rings
+- fwidth()-based ring edge AA
+- transparentBg default: true→false; hdrGlow 2.0; audioMod added
+**HDR peaks reached:** violet ring edges 2.2, gold peaks 2.2, text * hdrGlow = 2.0
+**Estimated rating:** 4.0★
