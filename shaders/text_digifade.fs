@@ -11,7 +11,9 @@
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
     { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.0 },
+    { "NAME": "audioMod", "LABEL": "Audio Mod", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
@@ -91,6 +93,87 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
+// BACKGROUND: TOKYO NEON BILLBOARD
+// Dense grid of rectangular billboard panels with warm polychromatic neon.
+// Completely different from CRT/phosphor — warm multi-color billboards.
+// =======================================================================
+
+vec3 generateBackground(vec2 uv) {
+    // Grid layout: columns x rows of billboard panels
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    float gridCols = 7.0;
+    float gridRows = 5.0;
+
+    // Map uv to panel coordinates, accounting for aspect
+    vec2 gridUv = vec2(uv.x * gridCols, uv.y * gridRows);
+    vec2 panelId2 = floor(gridUv);
+    vec2 localUv  = fract(gridUv);
+
+    // Panel separator (window frame lines): narrow black borders
+    float borderW = 0.06;
+    float inPanel = step(borderW, localUv.x) * step(localUv.x, 1.0 - borderW)
+                  * step(borderW, localUv.y) * step(localUv.y, 1.0 - borderW);
+
+    // Unique panel ID scalar for random variation
+    float panelId = panelId2.x + panelId2.y * gridCols + 1.0;
+
+    // 4-color cycling palette: hot magenta, neon orange, electric yellow, crimson red
+    // All fully saturated HDR (>= 2.0)
+    vec3 col0 = vec3(2.4, 0.0, 1.8);    // hot magenta
+    vec3 col1 = vec3(2.5, 0.7, 0.0);    // neon orange
+    vec3 col2 = vec3(2.2, 2.0, 0.0);    // electric yellow
+    vec3 col3 = vec3(2.3, 0.05, 0.05);  // crimson red
+
+    // Each panel cycles through colors slowly, offset by panelId
+    float cycleSpeed = 0.18;
+    float t = TIME * cycleSpeed + hash(panelId) * TWO_PI;
+    float phase = fract(t / (TWO_PI));  // 0..1 cycle
+
+    // Select two adjacent colors and interpolate
+    float pf = phase * 4.0;
+    float pidx = floor(pf);
+    float pfrac = fract(pf);
+
+    vec3 panelColorA, panelColorB;
+    if (pidx < 0.5) {
+        panelColorA = col0; panelColorB = col1;
+    } else if (pidx < 1.5) {
+        panelColorA = col1; panelColorB = col2;
+    } else if (pidx < 2.5) {
+        panelColorA = col2; panelColorB = col3;
+    } else {
+        panelColorA = col3; panelColorB = col0;
+    }
+    vec3 panelColor = mix(panelColorA, panelColorB, smoothstep(0.0, 1.0, pfrac));
+
+    // Panel flicker: per-panel step noise on fast time
+    float flickerT = floor(TIME * 13.0 + hash(panelId) * 7.3);
+    float flickerNoise = hash(panelId * 3.7 + flickerT * 0.91);
+    // Most panels stay on (flicker threshold high), some blink
+    float flickerThresh = 0.85 + hash(panelId * 1.3) * 0.1;
+    float panelOn = step(flickerThresh, flickerNoise) > 0.5 ? 0.0 : 1.0;
+    // Some panels simply never flicker (stabilize with a second rand)
+    float stablePanel = step(0.7, hash(panelId * 2.9));
+    panelOn = mix(panelOn, 1.0, stablePanel);
+
+    // Inner panel glow gradient: brighter at center, dimmer at panel edges
+    vec2 innerUv = (localUv - 0.5) * 2.0;  // -1..1
+    float vignette = 1.0 - dot(innerUv * 0.5, innerUv * 0.5);
+    vignette = clamp(vignette, 0.0, 1.0);
+
+    // Panel color with vignette and flicker
+    vec3 panelOut = panelColor * vignette * panelOn;
+
+    // Near-black background behind panels / on borders
+    vec3 bgDark = vec3(0.01, 0.01, 0.015);
+
+    // Composite: dark bg everywhere, colored panel where inPanel
+    vec3 finalBg = mix(bgDark, panelOut, inPanel);
+
+    return finalBg;
+}
+
+// =======================================================================
 // EFFECT: DIGIFADE - glitch dissolve
 // =======================================================================
 
@@ -166,6 +249,71 @@ vec4 effectDigifade(vec2 uv, int sub) {
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     int p = int(preset);
+
+    if (!transparentBg) {
+        // Compute textHit directly for HDR composite
+        float aspect = RENDERSIZE.x / RENDERSIZE.y;
+        int numChars = charCount();
+        float glitchAmount = intensity;
+        float sliceCount = mix(5.0, 100.0, density);
+
+        float complexity = 1.0, sweepSpeed = 1.0, vertGlitch = 0.0, maxDisp = 0.3;
+        if (p == 1) { complexity = 2.0; sweepSpeed = 1.3; maxDisp = 0.5; vertGlitch = 0.4; }
+
+        float t = TIME * speed * sweepSpeed;
+        vec2 pp = vec2((uv.x - 0.5) * aspect + 0.5, uv.y);
+
+        float cH = 0.18 * textScale;
+        if (aspect < 1.0) cH *= aspect;
+        float cW = cH * (5.0/7.0);
+        float gW = cW * 0.2;
+
+        float totalTextW = float(numChars) * cW + float(numChars - 1) * gW;
+        float maxW = 0.9 * aspect;
+        float fitScale = totalTextW > maxW ? maxW / totalTextW : 1.0;
+        cH *= fitScale;
+        cW *= fitScale;
+        gW *= fitScale;
+
+        float rowW = float(numChars) * cW + float(numChars - 1) * gW;
+        float startX = 0.5 - rowW * 0.5;
+        float startY = 0.5 - cH * 0.5;
+
+        float si = floor(uv.y * sliceCount);
+        float n1 = hash(si + floor(t*2.0));
+        float n2 = hash(si*3.7 + floor(t*3.0));
+
+        float textHit = 0.0;
+
+        float sw = sin(t*0.7)*0.5+0.5;
+        float ps = smoothstep(sw-0.15, sw+0.1, (pp.x-startX)/max(rowW, 0.001));
+
+        float dx = abs(ps*n1*glitchAmount*maxDisp + ps*sin(si*0.3*complexity+t)*glitchAmount*maxDisp*0.3);
+        float dy = vertGlitch > 0.01 ? ps*(n2-0.5)*vertGlitch*glitchAmount*0.06 : 0.0;
+
+        vec2 samp = vec2(pp.x - dx, pp.y - dy);
+        float rx = samp.x - startX, ry = samp.y - startY;
+
+        if (rx >= 0.0 && rx <= rowW && ry >= 0.0 && ry <= cH) {
+            float cs = cW + gW;
+            float csF = rx / cs;
+            int slot = int(floor(csF));
+            float clx = fract(csF), cf = cW/cs;
+            if (clx < cf && slot >= 0 && slot < numChars) {
+                float gc = (clx/cf)*5.0, gr = (ry/cH)*7.0;
+                if (gc >= 0.0 && gc < 5.0 && gr >= 0.0 && gr < 7.0) {
+                    int ch = getChar(slot);
+                    if (ch >= 0 && ch <= 36 && ch != 26) textHit = max(textHit, charPixel(ch, gc, gr));
+                }
+            }
+        }
+
+        vec3 bg = generateBackground(uv);
+        vec3 finalColor = bg + textHit * textColor.rgb * hdrGlow * audioMod;
+        gl_FragColor = vec4(finalColor, 1.0);
+        return;
+    }
+
     vec4 col = effectDigifade(uv, p);
 
     if (_voiceGlitch > 0.01) {
