@@ -20,3 +20,21 @@
 - Bloom uses 5×5 kernel (unchanged, but larger radius relative to hdrPeak)
 **HDR peaks reached:** walker cells at hdrPeak * audio = 2.5–3.5; bloom spreads to ~1.5 surrounding cells
 **Estimated rating:** 3.8★
+
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 3D raymarch — NEW ANGLE: "Mycelium Network" — bioluminescent fungal tendrils in 3D. vs. prior v1 (2D HDR walker trails — grid walkers, hue-cycling palette).
+**Critique:**
+1. Reference fidelity: Cellular grid walkers abandoned; now 3D branching organic capsule network.
+2. Compositional craft: Branching hierarchy (level 1→2→3 tendrils) from central magenta hub; strong radial composition.
+3. Technical execution: Capsule SDFs for tendrils, sphere SDFs for nodes; dual-layer halo glow; fwidth() AA; two-light rig with Fresnel rim.
+4. Liveness: Radius breathes via sin(TIME * growthSpeed + seed); camera orbits; audio modulates radius and glow.
+5. Differentiation: 3D vs 2D, bioluminescent network vs grid walkers, single-frame 3D vs persistent multi-pass canvas.
+**Changes:**
+- Full rewrite: 3D raymarched capsule+sphere network, single-pass
+- Bioluminescent palette: cyan(0.1,2.5,2.2), lime(0.3,2.5,0.1), magenta(2.5,0.1,1.8), white core(2.5,2.5,2.5)
+- Branching hierarchy: level-1 tendrils → level-2 branches → optional level-3 filaments
+- 16-sample fringe halo probe; fwidth() silhouette AA
+- CATEGORIES: ["Generator", "3D"]
+**HDR peaks reached:** white core 2.5+, cyan/lime glow 2.5, magenta hub 2.5, halo fringe 1.5
+**Estimated rating:** 4.5★
