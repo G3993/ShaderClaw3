@@ -1,124 +1,103 @@
 /*{
-  "DESCRIPTION": "Oil paint effect — Kuwahara filter with relief lighting for painterly brush strokes",
-  "CREDIT": "ShaderClaw (Kuwahara approach inspired by flockaroo)",
-  "CATEGORIES": ["Effect"],
+  "DESCRIPTION": "Impressionist Fields — domain-warped FBM color patches evoking Monet/Matisse. Standalone generator, no input required.",
+  "CREDIT": "ShaderClaw auto-improve",
+  "CATEGORIES": ["Generator", "Abstract", "Painterly"],
   "INPUTS": [
-    { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "brushRadius", "LABEL": "Brush Size", "TYPE": "float", "DEFAULT": 4.0, "MIN": 1.0, "MAX": 12.0 },
-    { "NAME": "paintSpec", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "vignetteAmt", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
-  ],
-  "PASSES": [
-    { "TARGET": "paintBuf", "PERSISTENT": true },
-    {}
+    { "NAME": "flowSpeed",  "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.0, "MAX": 1.0,  "LABEL": "Flow Speed"    },
+    { "NAME": "brushScale", "TYPE": "float", "DEFAULT": 2.8,  "MIN": 0.5, "MAX": 8.0,  "LABEL": "Brush Scale"   },
+    { "NAME": "warpAmt",    "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.5,  "LABEL": "Warp Amount"   },
+    { "NAME": "hdrPeak",    "TYPE": "float", "DEFAULT": 2.4,  "MIN": 1.0, "MAX": 4.0,  "LABEL": "HDR Peak"      },
+    { "NAME": "contrast",   "TYPE": "float", "DEFAULT": 1.6,  "MIN": 0.5, "MAX": 4.0,  "LABEL": "Contrast"      },
+    { "NAME": "audioReact", "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0, "MAX": 2.0,  "LABEL": "Audio React"   }
   ]
 }*/
 
-#define PI 3.1415927
-
-// Aspect-correct UV
-vec2 fitUV(vec2 pos) {
-    return (pos - 0.5 * RENDERSIZE) * min(IMG_SIZE_inputImage.y / RENDERSIZE.y, IMG_SIZE_inputImage.x / RENDERSIZE.x) / IMG_SIZE_inputImage + 0.5;
+// 5-color fully saturated Impressionist palette (no white mixing in base stops)
+//   cadmium red / viridian / cobalt blue / aureolin gold / lilac
+vec3 paletteImpressionist(float t) {
+    t = fract(t);
+    const vec3 c0 = vec3(0.90, 0.05, 0.05);  // cadmium red
+    const vec3 c1 = vec3(0.0,  0.75, 0.25);  // viridian green
+    const vec3 c2 = vec3(0.05, 0.20, 0.95);  // cobalt blue
+    const vec3 c3 = vec3(1.0,  0.82, 0.0);   // aureolin gold
+    const vec3 c4 = vec3(0.55, 0.0,  0.90);  // deep lilac
+    float s = t * 5.0;
+    int i = int(s); float f = fract(s);
+    if (i == 0) return mix(c0, c1, f);
+    if (i == 1) return mix(c1, c2, f);
+    if (i == 2) return mix(c2, c3, f);
+    if (i == 3) return mix(c3, c4, f);
+    return mix(c4, c0, f);
 }
 
-// Kuwahara filter: find the quadrant with lowest variance and use its mean color
-// This creates the flat-color brush stroke look of oil paintings
-vec3 kuwahara(vec2 uv, float radius) {
-    vec2 texel = 1.0 / RENDERSIZE;
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5); }
 
-    vec3 mean[4];
-    vec3 var_acc[4];
-    float count[4];
+float noise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(
+        mix(hash(i), hash(i+vec2(1,0)), f.x),
+        mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), f.x), f.y);
+}
 
-    // Initialize accumulators
+// 4-octave FBM
+float fbm(vec2 p) {
+    float v = 0.0, a = 0.5;
+    mat2 rot = mat2(cos(0.5), sin(0.5), -sin(0.5), cos(0.5));
     for (int i = 0; i < 4; i++) {
-        mean[i] = vec3(0.0);
-        var_acc[i] = vec3(0.0);
-        count[i] = 0.0;
+        v += a * noise(p);
+        p  = rot * p * 2.1;
+        a *= 0.5;
     }
+    return v;
+}
 
-    // Sample the 4 quadrants around the pixel
-    for (int j = -6; j <= 6; j++) {
-        for (int i = -6; i <= 6; i++) {
-            if (abs(float(i)) > radius || abs(float(j)) > radius) continue;
-
-            vec3 c = texture2D(inputImage, fitUV((uv * RENDERSIZE) + vec2(float(i), float(j)))).rgb;
-
-            // Determine which quadrant(s) this sample belongs to
-            // Quadrant 0: top-right, 1: top-left, 2: bottom-left, 3: bottom-right
-            // Use loop to assign to correct quadrant (WebGL requires const/loop index)
-            int qi = (i >= 0) ? 0 : 1;
-            int qj = (j >= 0) ? 0 : 2;
-            int q = qi + qj;
-
-            for (int k = 0; k < 4; k++) {
-                if (k == q) {
-                    mean[k] += c;
-                    var_acc[k] += c * c;
-                    count[k] += 1.0;
-                }
-            }
-        }
-    }
-
-    // Find the quadrant with minimum variance
-    float minVar = 1e8;
-    vec3 result = vec3(0.0);
-
-    for (int q = 0; q < 4; q++) {
-        if (count[q] < 1.0) continue;
-        vec3 m = mean[q] / count[q];
-        vec3 v = var_acc[q] / count[q] - m * m;
-        float totalVar = v.r + v.g + v.b;
-        if (totalVar < minVar) {
-            minVar = totalVar;
-            result = m;
-        }
-    }
-
-    return result;
+// Domain-warped FBM (iq's technique): warp UV by two FBMs before sampling
+float warpedFbm(vec2 p, float warp, float t) {
+    vec2 q = vec2(fbm(p + vec2(0.0, 0.0) + t * 0.11),
+                  fbm(p + vec2(5.2, 1.3) + t * 0.09));
+    vec2 r = vec2(fbm(p + warp * q + vec2(1.7, 9.2) + t * 0.13),
+                  fbm(p + warp * q + vec2(8.3, 2.8) + t * 0.07));
+    return fbm(p + warp * r);
 }
 
 void main() {
-    vec2 pos = gl_FragCoord.xy;
-    vec2 uv = pos / RENDERSIZE;
+    vec2 uv  = (gl_FragCoord.xy / RENDERSIZE.xy);
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    uv.x *= aspect;
 
-    // ==== PASS 0: Kuwahara paint filter ====
-    if (PASSINDEX == 0) {
-        gl_FragColor = vec4(kuwahara(uv, brushRadius), 1.0);
-        return;
-    }
+    float audio = 1.0 + (audioLevel * 0.5 + audioBass * 0.5) * audioReact;
+    float t     = TIME * flowSpeed;
 
-    // ==== PASS 1: Relief lighting ====
-    vec2 texel = 1.0 / RENDERSIZE;
-    float valC = dot(texture2D(paintBuf, uv).rgb, vec3(0.333));
-    float valR = dot(texture2D(paintBuf, uv + vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valL = dot(texture2D(paintBuf, uv - vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valU = dot(texture2D(paintBuf, uv + vec2(0.0, texel.y)).rgb, vec3(0.333));
-    float valD = dot(texture2D(paintBuf, uv - vec2(0.0, texel.y)).rgb, vec3(0.333));
+    vec2 p = uv * brushScale;
 
-    vec3 norm = normalize(vec3(
-        (valR - valL) / texel.x,
-        (valU - valD) / texel.y,
-        150.0
-    ));
+    // Primary warp-field value
+    float v = warpedFbm(p, warpAmt, t);
 
-    vec3 light = normalize(vec3(-1.0, 1.0, 1.4));
-    float diff = clamp(dot(norm, light), 0.0, 1.0);
-    float spec = pow(clamp(dot(reflect(light, norm), vec3(0.0, 0.0, -1.0)), 0.0, 1.0), 12.0) * paintSpec;
+    // Edge field: derivative of v gives brush-stroke directionality
+    float vdx = warpedFbm(p + vec2(0.01, 0.0), warpAmt, t) - v;
+    float vdy = warpedFbm(p + vec2(0.0,  0.01), warpAmt, t) - v;
+    float edgeMag = length(vec2(vdx, vdy)) * 80.0;
 
-    gl_FragColor = texture2D(paintBuf, uv) * mix(diff, 1.0, 0.9)
-                 + spec * vec4(0.85, 1.0, 1.15, 1.0);
+    // Map v → color in the 5-stop palette
+    vec3 col = paletteImpressionist(v);
 
-    // Vignette
-    if (vignetteAmt > 0.0) {
-        vec2 scc = (pos - 0.5 * RENDERSIZE) / RENDERSIZE.x;
-        float vign = 1.1 - vignetteAmt * dot(scc, scc);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.x / RENDERSIZE.x * PI) * 40.0);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.y / RENDERSIZE.y * PI) * 20.0);
-        gl_FragColor.xyz *= vign;
-    }
+    // Contrast boost: push mid-tones toward saturated extremes
+    col = pow(col, vec3(1.0 / contrast));
 
-    gl_FragColor.w = 1.0;
+    // HDR peak: brightest regions in the warp field pop above 1.0
+    float brightness = smoothstep(0.3, 0.85, v);
+    col *= mix(0.5, hdrPeak, brightness) * audio;
+
+    // Black ink edges: high gradient magnitude = dark brush dividing lines
+    float aa = fwidth(v);
+    float ink = smoothstep(aa, 0.0, aa - edgeMag * aa * 0.6);
+    col = mix(vec3(0.0), col, ink + 0.15);
+
+    // Audio modulates saturation pop (brighter, more saturated on beat)
+    float lum = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(vec3(lum), col, 0.7 + audio * 0.3);
+
+    gl_FragColor = vec4(col, 1.0);
 }
