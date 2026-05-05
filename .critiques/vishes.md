@@ -1,3 +1,24 @@
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 3D raymarch — NEW ANGLE: Neon Helix (3D double-helix DNA sculpture vs prior 2D cell-walker grid trails); completely different technique and aesthetic
+**Critique:**
+1. Reference fidelity: Cell-walker concept replaced with DNA helix — walker "beads" travel the helix strands in 3D space.
+2. Compositional craft: Double helix is iconic and visually striking; traveling beads add motion; black void maximizes HDR neon contrast.
+3. Technical execution: 48 capsule segments per helix, 16 traveling beads, fwidth() AA, Phong + rim, gold rungs.
+4. Liveness: rotateY(TIME*0.15) full helix rotation; beads travel at beadSpeed; camera orbits; audio pulses bead size.
+5. Differentiation: 3D spatial structure vs prior 2D grid canvas; rotating sculpture vs static trail accumulation.
+**Changes:**
+- Complete rewrite — single-pass 3D, no PASSES, no persistent canvas
+- sdCapsule segments building double helix; gold rung capsules every 6 segments
+- Traveling beads on both strands using fract(fi/N + TIME*speed)
+- rotateY(TIME*0.15) full helix rotation before map()
+- Palette: strand A magenta(2.5,0,2.0), strand B cyan(0,2.2,2.5), rungs gold(2.5,1.8,0)
+- fwidth() AA on silhouette + per-bead edge
+- Audio: bead radius *= 1.0 + audioLevel*audioPulse*0.2
+- No state buffer, no persistent canvas, no walkers
+**HDR peaks reached:** specular 3.0, strand surfaces 2.5, gold rungs 2.5
+**Estimated rating:** 4.5★
+
 ## 2026-05-05
 **Prior rating:** 0.0★
 **Approach:** 2D refine (HDR saturation + bloom boost)
