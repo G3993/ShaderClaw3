@@ -10,8 +10,9 @@
     { "NAME": "density", "LABEL": "Dissolve", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
     { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.0, 0.04, 1.0] },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 2.0 },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
@@ -91,6 +92,41 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
+// BACKGROUND: PRISM SPECTRUM — rainbow light bands through crystal
+// =======================================================================
+
+// Prism spectrum — rainbow light bands through crystal
+vec3 prismBg(vec2 uv, float t) {
+    // Angled prismatic bands
+    float angle = 0.6; // band angle
+    float pos = uv.x * cos(angle) + uv.y * sin(angle);
+
+    // Multiple overlapping band systems at different frequencies
+    float band1 = sin(pos * 6.0 + t * 0.5) * 0.5 + 0.5;
+    float band2 = sin(pos * 10.0 - t * 0.3 + 1.2) * 0.5 + 0.5;
+    float band3 = sin(pos * 4.0 + t * 0.7 + 2.4) * 0.5 + 0.5;
+
+    // Map to hue (full saturation, full value)
+    float hue = fract(band1 * 0.6 + band2 * 0.3 + band3 * 0.1 + t * 0.04);
+
+    // HSV with sat=1, val varying with band intensity
+    vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
+    vec3 p = abs(fract(hue + K.xyz) * 6.0 - K.www);
+    float val = 0.5 + band1 * 0.5; // darker valleys, bright peaks
+    vec3 rainbow = val * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), 1.0);
+
+    // HDR peaks where bands constructively overlap
+    float overlap = band1 * band2 * band3;
+    rainbow += rainbow * overlap * 1.5; // HDR burst at constructive interference
+
+    // Subtle dispersion shimmer
+    float shimmer = sin(pos * 30.0 + t * 5.0) * 0.03;
+    rainbow += shimmer;
+
+    return rainbow;
+}
+
+// =======================================================================
 // EFFECT: DIGIFADE - glitch dissolve
 // =======================================================================
 
@@ -167,6 +203,14 @@ void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     int p = int(preset);
     vec4 col = effectDigifade(uv, p);
+
+    // Composite prism background when not transparent
+    if (!transparentBg) {
+        vec3 bg = prismBg(uv, TIME);
+        // Text layer: white text boosted by hdrGlow
+        vec3 textLayer = col.rgb * hdrGlow;
+        col = vec4(mix(bg, textLayer, col.a), 1.0);
+    }
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
