@@ -19,3 +19,18 @@
 - holoGlow default: 0.7 → 1.4
 **HDR peaks reached:** sun 2.2, Y2K shapes 2.0, grid lines 2.0, katakana 2.5, holo spec 2.0+
 **Estimated rating:** 4.5★
+
+## 2026-05-05 (v15)
+**Prior rating:** 0.0★
+**Approach:** 2D refine (complete redesign) — NEW ANGLE: synthwave cyberpunk cityscape (wide environmental night city with building silhouettes/neon signs/windows) vs prior vaporwave sun/grid/Y2K floating shapes; noir palette vs hot pink vaporwave; city composition vs abstract horizon
+**Critique:** 1. City silhouette is a radically different composition. 2. Neon signs give strong HDR focal points. 3. Window flickering creates organic life. 4. Wet pavement reflections add depth. 5. Differentiation: city vs abstract; noir vs retro; environmental vs floating.
+**Changes:**
+- Complete 2-pass redesign as "Synthwave Cityscape" — noir cyberpunk night city
+- 8-12 building silhouettes with flickering amber windows
+- Neon signs: magenta + cyan at HDR 2.0
+- Light pollution amber glow near horizon
+- Wet pavement reflection of neon
+- Atmospheric haze pass 1
+- Audio: bass pulses neon signs, mid flickers windows
+**HDR peaks reached:** neon signs 2.0, amber windows 1.5, reflection 1.0
+**Estimated rating:** 4.0★
