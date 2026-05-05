@@ -18,3 +18,21 @@
 - Audio modulates pulse intensity
 **HDR peaks reached:** white-hot crack edges 3.0, gold flow 1.5–2.5, orange mid-tone 1.0
 **Estimated rating:** 4.5★
+
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 3D raymarch — NEW ANGLE: "Mountain Impasto" — Fauvist mountainscape with FBM terrain. Sunny daylight, warm/cool opposition. vs. prior v1 (Lava Impasto — volcanic molten rock, dark/volcanic).
+**Critique:**
+1. Reference fidelity: Kuwahara filter abandoned; now 3D terrain inspired by Matisse Fauvism — vivid non-naturalistic color opposition.
+2. Compositional craft: FBM derivatives as brush-stroke normals give thick paint relief feel; elevation palette maps color zones cleanly.
+3. Technical execution: 6-octave FBM with analytical derivatives; two-light rig (warm key + cool fill); specular on peaks; ink-black contour at grazing angles.
+4. Liveness: Camera oscillates slowly; audio modulates wind/flow drift in FBM offset.
+5. Differentiation: Sunny daylight vs volcanic darkness, mountain landscape vs lava field, Fauvist warm/cool opposition vs monochromatic heat.
+**Changes:**
+- Full rewrite: 3D terrain FBM with brush-stroke normals (analytical derivative FBM)
+- 4-stop Fauvist palette: black → red-orange(2.1,0.4,0.1) → cyan-teal(0.1,1.8,2.0) → gold-white(2.5,2.2,0.5)
+- Two-light rig: warm key(2.2,1.8,0.9) + cool fill(0.2,0.5,1.4)
+- Ink-black contour: 1.0 - smoothstep(0.0, 0.25, dot(n, viewDir))
+- Fauvist sky: warm-gold horizon → cool-cyan zenith
+**HDR peaks reached:** peak specular 3.0+, gold peaks 2.5, teal mid 1.8
+**Estimated rating:** 4.5★
