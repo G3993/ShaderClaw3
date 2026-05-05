@@ -13,10 +13,10 @@
     { "NAME": "scrollY",   "LABEL": "Scroll Y",   "TYPE": "float", "DEFAULT": 0.0,  "MIN": -1.0,"MAX": 1.0 },
     { "NAME": "rotateGrid","LABEL": "Rotate Grid","TYPE": "float", "DEFAULT": 0.0,  "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "audioReact","LABEL": "Audio React","TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "specAmt", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 2.0 },
+    { "NAME": "specAmt", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 1.2, "MIN": 0.0, "MAX": 5.0 },
     { "NAME": "vignetteAmt", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "gapShade", "LABEL": "Gap Shade", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 0.5 },
-    { "NAME": "bgColor", "LABEL": "Gap Color", "TYPE": "color", "DEFAULT": [0.2, 0.3, 0.4, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Gap Color", "TYPE": "color", "DEFAULT": [0.0, 0.02, 0.15, 1.0] },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
   ],
   "PASSES": [
@@ -151,12 +151,16 @@ void main() {
     // Rectangular ambient darkening per tile
     col *= 0.5 + 0.5 * rectMask(0.2 * dot(col.xyz, vec3(0.333)), 0.7, duv);
 
-    // Specular edge highlight on dots
+    // HDR specular edge highlight on dots — peaks at specAmt * 3.0 linear
     float spec = clamp(
         circleMask(duv - 0.02, y, r1, r2) - circleMask(duv + 0.02, y, r1, r2),
         -0.4, 1.0
     );
-    col.xyz += specAmt * spec;
+    col.xyz += specAmt * spec * 3.0;
+
+    // Dot center HDR bloom — brightest at the heart of each LED
+    float dotCenter = circleMask(duv, y, r1 * 0.4, r2 * 0.4);
+    col.xyz += col.xyz * dotCenter * (0.8 + audioBass * audioReact * 0.6);
 
     // Vignette
     if (vignetteAmt > 0.0) {
