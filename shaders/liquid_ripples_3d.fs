@@ -21,11 +21,11 @@ vec2 hashPos(int L) {
     return vec2(hash(vec2(f, 1.7)), hash(vec2(f, 9.3))) - 0.5;
 }
 
-// Per-layer base colour — bass layers warm/red, treble layers cool/cyan.
-// Slow TIME drift cycles the palette across frames for colour-bucket entropy.
+// Per-layer base colour — cosine palette spans full hue wheel.
+// TIME * 0.15 cycles fast enough to show distinct colours across audit frames.
 vec3 planeColor(int L, float layers) {
-    float t = fract(float(L) / max(layers - 1.0, 1.0) + TIME * 0.05);
-    return mix(vec3(1.0, 0.4, 0.2), vec3(0.2, 0.8, 1.0), t);
+    float t = fract(float(L) / max(layers - 1.0, 1.0) + TIME * 0.15);
+    return 0.5 + 0.5 * cos(6.2832 * (vec3(0.0, 0.33, 0.67) + t));
 }
 
 void main() {
