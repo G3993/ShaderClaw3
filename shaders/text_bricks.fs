@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Bricks - grid with animated displacement",
+  "DESCRIPTION": "Bricks — grid displacement text over neon plasma rain background. Falling vertical spark columns, gold text.",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1,2], "LABELS": ["Bricks","Bricks Harlequin","Bricks Zebra"], "DEFAULT": 0 },
@@ -9,16 +9,19 @@
     { "NAME": "intensity", "LABEL": "Displacement", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Grid Density", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.82, 0.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.06, 1.0] },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.2 },
+    { "NAME": "rainSpeed", "LABEL": "Rain Speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 1.0 },
+    { "NAME": "rainDensity", "LABEL": "Rain Density", "TYPE": "float", "MIN": 4.0, "MAX": 40.0, "DEFAULT": 18.0 },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "audioMod", "LABEL": "Audio Mod", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
 const float PI = 3.14159265;
 const float TWO_PI = 6.28318530;
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
 float charPixel(int ch, float col, float row) {
     if (ch < 0 || ch > 36) return 0.0;
     vec2 uv = vec2(col / 5.0, row / 7.0);
@@ -82,18 +85,68 @@ int charCount() {
     return n > 0 ? n : 1;
 }
 
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
+float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+
+// ──────────────────────────────────────────────────────────────────────
+// Neon plasma rain background — falling vertical spark columns
+// 4 hues: violet, cyan, magenta, gold (no white mixing)
+// ──────────────────────────────────────────────────────────────────────
+vec3 plasmaRainBg(vec2 uv){
+    float audio = 1.0 + audioLevel * audioMod * 0.6;
+    float t = TIME * rainSpeed * audio;
+    vec3 col = bgColor.rgb;
+
+    // rainDensity columns
+    float cols = rainDensity;
+    float colW = 1.0 / cols;
+
+    for(float ci = 0.0; ci < 40.0; ci++){
+        if(ci >= cols) break;
+        float cx = (ci + 0.5) * colW;
+
+        // Per-column random hue from 4 choices
+        float ch = hash(ci * 7.13);
+        vec3 dropCol;
+        if(ch < 0.25)      dropCol = vec3(0.6, 0.0, 1.0);  // violet
+        else if(ch < 0.50) dropCol = vec3(0.0, 1.0, 1.0);  // cyan
+        else if(ch < 0.75) dropCol = vec3(1.0, 0.0, 0.8);  // magenta
+        else               dropCol = vec3(1.0, 0.8, 0.0);  // gold
+
+        // Column phase offset
+        float phase = hash(ci * 3.17) * 100.0;
+        float spd = 0.5 + hash(ci * 11.3) * 1.5;
+
+        // Multiple drops per column
+        for(float di = 0.0; di < 4.0; di++){
+            float dropPhase = phase + di * 27.4;
+            float dropY = fract((t * spd + dropPhase) * 0.1);  // falling 0→1
+            dropY = 1.0 - dropY;  // flip so it falls downward
+
+            // Horizontal proximity to column center
+            float dx = abs(uv.x - cx) / colW;
+            float xGlow = exp(-dx * dx * 50.0);
+
+            // Vertical proximity — spark core and tail
+            float dy = abs(uv.y - dropY);
+            float core = exp(-dy * dy * 800.0);
+            float tail = exp(-max(0.0, uv.y - dropY) * 30.0) * step(uv.y, dropY + 0.15);
+
+            float spark = (core + tail * 0.3) * xGlow;
+            col += dropCol * spark * hdrGlow;
+        }
+    }
+
+    // Faint horizontal plasma scan lines
+    float scanLine = 0.5 + 0.5 * sin(uv.y * 120.0 + t * 8.0);
+    col += bgColor.rgb * scanLine * 0.08;
+
+    return col;
 }
 
-float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
-
-// =======================================================================
-// EFFECT: BRICKS - grid with animated displacement
-// =======================================================================
-
+// ──────────────────────────────────────────────────────────────────────
+// Text brick effect (original)
+// ──────────────────────────────────────────────────────────────────────
 vec4 effectBricks(vec2 uv, int sub) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
     int numChars = charCount();
@@ -108,7 +161,6 @@ vec4 effectBricks(vec2 uv, int sub) {
 
     float rws = floor(cols*(7.0/5.0)/aspect);
     float cellW = 1.0/cols, cellH = 1.0/rws;
-
     float ci = clamp(floor(uv.x/cellW), 0.0, cols-1.0);
     float ri = clamp(floor(uv.y/cellH), 0.0, rws-1.0);
     float lx = fract(uv.x/cellW), ly = fract(uv.y/cellH);
@@ -141,20 +193,25 @@ vec4 effectBricks(vec2 uv, int sub) {
             if (ch >= 0 && ch <= 36 && ch != 26) textHit = charPixel(ch, gc, gr);
         }
     }
-
-    bool inv = mod(ri, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
-    return vec4(fc, a);
+    return vec4(textHit);
 }
 
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     int p = int(preset);
-    vec4 col = effectBricks(uv, p);
+
+    vec4 textResult = effectBricks(uv, p);
+    float textHit = textResult.r;
+
+    // Background: neon plasma rain
+    vec3 bg = transparentBg ? bgColor.rgb : plasmaRainBg(uv);
+
+    // Text with HDR glow
+    float audio = 1.0 + audioLevel * audioMod * 0.4;
+    vec3 textCol = textColor.rgb * hdrGlow * audio;
+
+    vec3 col = mix(bg, textCol, textHit);
+    float a = transparentBg ? textHit : 1.0;
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
@@ -164,22 +221,12 @@ void main() {
         float bandActive = step(1.0 - g * 0.6, bandNoise);
         float shift = (bandNoise - 0.5) * 0.08 * g * bandActive;
         float chromaAmt = g * 0.015;
-        vec2 uvR = uv + vec2(shift + chromaAmt, 0.0);
-        vec2 uvB = uv + vec2(shift - chromaAmt, 0.0);
-        vec2 uvG = uv + vec2(shift, chromaAmt * 0.5);
-        vec4 cR = effectBricks(uvR, p);
-        vec4 cG = effectBricks(uvG, p);
-        vec4 cB = effectBricks(uvB, p);
-        vec4 glitched = vec4(cR.r, cG.g, cB.b, max(max(cR.a, cG.a), cB.a));
-        float scanline = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
-        float blockX = floor(uv.x * 6.0);
-        float blockY = floor(uv.y * 4.0);
-        float blockNoise = fract(sin((blockX + blockY * 7.0) * 113.1 + floor(t * 8.0)) * 43758.5);
-        float dropout = step(1.0 - g * 0.15, blockNoise);
-        glitched.rgb *= scanline;
-        glitched.rgb *= 1.0 - dropout;
+        float tR = effectBricks(uv + vec2(shift + chromaAmt, 0.0), p).r;
+        float tG = effectBricks(uv + vec2(shift, chromaAmt * 0.5), p).r;
+        float tB = effectBricks(uv + vec2(shift - chromaAmt, 0.0), p).r;
+        vec3 glitched = mix(bg, textCol, vec3(tR, tG, tB));
         col = mix(col, glitched, smoothstep(0.0, 0.3, g));
     }
 
-    gl_FragColor = col;
+    gl_FragColor = vec4(col, a);
 }
