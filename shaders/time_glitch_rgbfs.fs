@@ -1,457 +1,118 @@
 /*{
-  "DESCRIPTION": "Buffers 8 recent frames",
-  "CREDIT": "by VIDVOX",
-  "CATEGORIES": [
-    "Glitch"
-  ],
+  "DESCRIPTION": "VHS Horror Playback — analog tape degradation nightmare: deep red/amber damage artifacts, tracking errors, image ghost burns, static grain forming dark figures",
+  "CATEGORIES": ["Generator", "Glitch", "Audio Reactive"],
+  "CREDIT": "Easel / ShaderClaw v3",
   "INPUTS": [
-    {
-      "NAME": "inputImage",
-      "TYPE": "image"
-    },
-    {
-      "NAME": "inputDelay",
-      "LABEL": "Buffer",
-      "TYPE": "color",
-      "DEFAULT": [
-        0.25,
-        0.5,
-        0.75,
-        0.5
-      ]
-    },
-    {
-      "NAME": "inputRate",
-      "LABEL": "Buffer Lag",
-      "TYPE": "float",
-      "MIN": 1,
-      "MAX": 20,
-      "DEFAULT": 4
-    },
-    {
-      "NAME": "glitch_size",
-      "LABEL": "Size",
-      "TYPE": "float",
-      "MIN": 0,
-      "MAX": 0.5,
-      "DEFAULT": 0.1
-    },
-    {
-      "NAME": "glitch_horizontal",
-      "LABEL": "Horizontal Amount",
-      "TYPE": "float",
-      "MIN": 0,
-      "MAX": 1,
-      "DEFAULT": 0.2
-    },
-    {
-      "NAME": "glitch_vertical",
-      "LABEL": "Vertical Amount",
-      "TYPE": "float",
-      "MIN": 0,
-      "MAX": 1,
-      "DEFAULT": 0
-    },
-    {
-      "NAME": "randomize_size",
-      "LABEL": "Randomize Size",
-      "TYPE": "bool",
-      "DEFAULT": 1
-    },
-    {
-      "NAME": "randomize_position",
-      "LABEL": "Randomize Position",
-      "TYPE": "bool",
-      "DEFAULT": 0
-    },
-    {
-      "NAME": "randomize_zoom",
-      "LABEL": "Randomize Zoom",
-      "TYPE": "bool",
-      "DEFAULT": 0
-    }
-  ],
-  "PASSES": [
-    {
-      "TARGET": "lastRow",
-      "WIDTH:": 1,
-      "HEIGHT": 1,
-      "DESCRIPTION": "this buffer stores the last frame's odd / even state",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer8",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer7",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer6",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer5",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer4",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer3",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer2",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer1",
-      "persistent": true
-    },
-    {}
+    { "NAME": "degradeRate",  "LABEL": "Degrade Rate",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.8  },
+    { "NAME": "trackingErr",  "LABEL": "Tracking Error","TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5  },
+    { "NAME": "ghostBurn",    "LABEL": "Ghost Burn",    "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0  },
+    { "NAME": "hdrBoost",     "LABEL": "HDR Boost",     "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 2.2  },
+    { "NAME": "audioReact",   "LABEL": "Audio React",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0  }
   ]
 }*/
 
+precision highp float;
 
-float rand(vec2 co){
-    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+// ── Palette: VHS horror ───────────────────────────────────────────────────────
+const vec3 BLOOD_RED   = vec3(0.90, 0.00, 0.02);
+const vec3 AMBER_BURN  = vec3(1.00, 0.45, 0.00);
+const vec3 GHOST_WHITE = vec3(2.00, 1.80, 1.40);
+const vec3 DEEP_BLACK  = vec3(0.00, 0.00, 0.00);
+const vec3 STATIC_GRAY = vec3(0.30, 0.25, 0.20);
+
+float hash(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
+float hash2(vec2 p)  { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+
+// VHS grain noise (coarse horizontal bands)
+float vhsGrain(vec2 uv, float t) {
+    float line = floor(uv.y * 240.0);
+    float frame = floor(t * degradeRate * 15.0);
+    return hash(line * 7.3 + frame * 19.1 + uv.x * 0.3);
 }
 
+// Tracking error: horizontal scan displacement bands
+float trackingShift(float y, float t) {
+    float band = floor(y * 6.0 + t * degradeRate * 0.7);
+    float noise = hash(band * 3.7 + floor(t * 2.0) * 11.3);
+    float active = step(1.0 - trackingErr * 0.5, noise);
+    return (noise - 0.5) * 0.12 * active;
+}
 
-void main()
-{
-	//	first pass: read the "buffer7" into "buffer8"
-	//	apply lag on each pass
-	//	if this is the first pass, i'm going to read the position from the "lastRow" image, and write a new position based on this and the hold variables
-	if (PASSINDEX == 0)	{
-		vec4		srcPixel = IMG_PIXEL(lastRow,vec2(0.5));
-		//	i'm only using the X and Y components, which are the X and Y offset (normalized) for the frame
-		if (inputRate == 0.0)	{
-			srcPixel.x = 0.0;
-			srcPixel.y = 0.0;
-		}
-		else if (inputRate <= 1.0)	{
-			srcPixel.x = (srcPixel.x) > 0.5 ? 0.0 : 1.0;
-			srcPixel.y = 0.0;
-		}
-		else {
-			srcPixel.x = srcPixel.x + 1.0 / inputRate + srcPixel.y;
-			if (srcPixel.x > 1.0)	{
-				srcPixel.y = mod(srcPixel.x, 1.0);
-				srcPixel.x = 0.0;
-			}
-		}
-		gl_FragColor = srcPixel;
-	}
-	if (PASSINDEX == 1)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer7);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer8);
-		}
-	}
-	else if (PASSINDEX == 2)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer6);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer7);
-		}
-	}
-	else if (PASSINDEX == 3)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer5);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer6);
-		}
-	}
-	else if (PASSINDEX == 4)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer4);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer5);
-		}
-	}
-	else if (PASSINDEX == 5)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer3);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer4);
-		}
-	}
-	else if (PASSINDEX == 6)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer2);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer3);
-		}
-	}
-	else if (PASSINDEX == 7)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer1);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer2);
-		}
-	}
-	else if (PASSINDEX == 8)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(inputImage);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer1);
-		}
-	}
-	else if (PASSINDEX == 9)	{
-		//	Figure out which section I'm in and draw the appropriate buffer there
-		vec2 tex = isf_FragNormCoord;
-		vec4 color = vec4(0.0);		
-		//	figure out the "input delay shift" for this pixel...
-		float randomDelayShift = 0.0;
-		
-		vec2 xy; 
-		xy.x = isf_FragNormCoord[0];
-		xy.y = isf_FragNormCoord[1];
-	
-		//	quantize the xy to the glitch_amount size
-		//xy = floor(xy / glitch_size) * glitch_size;
-		vec2 random;
+// Ghost image: faint afterimage displaced left
+vec3 ghostLayer(vec2 uv, float t) {
+    float ghostX = uv.x - 0.04 * ghostBurn - hash(floor(uv.y * 30.0 + t)) * 0.01;
+    float ghostY = uv.y + (hash(floor(uv.y * 50.0)) - 0.5) * 0.003;
+    // Generate a "ghost signal" as dark vertical smear shapes
+    float smear = 0.0;
+    for (int i = 0; i < 4; i++) {
+        float cx = hash(float(i) * 3.7 + floor(t * degradeRate * 0.3) * 7.0);
+        float cy = hash(float(i) * 5.1 + floor(t * degradeRate * 0.2) * 9.0);
+        float w  = 0.02 + hash(float(i) * 2.3) * 0.05;
+        float h  = 0.15 + hash(float(i) * 4.1) * 0.35;
+        float bx = smoothstep(w, 0.0, abs(ghostX - cx));
+        float by = smoothstep(0.0, h, abs(ghostY - cy));
+        smear = max(smear, bx * (1.0 - by));
+    }
+    return BLOOD_RED * smear * ghostBurn;
+}
 
-		float local_glitch_size = glitch_size;
-		float random_offset = 0.0;
-	
-		if (randomize_size)	{
-			random_offset = mod(rand(vec2(TIME,TIME)), 1.0);
-			local_glitch_size = random_offset * glitch_size;
-		}
-	
-		if (local_glitch_size > 0.0)	{
-			random.x = rand(vec2(floor(random_offset + xy.y / local_glitch_size) * local_glitch_size, TIME));
-			random.y = rand(vec2(floor(random_offset + xy.x / local_glitch_size) * local_glitch_size, TIME));
-		}
-		else	{
-			random.x = rand(vec2(xy.x, TIME));
-			random.y = rand(vec2(xy.y, TIME));
-		}
-	
-		//	if doing a horizontal glitch do a random shift
-		if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-			randomDelayShift = clamp(random.x + random.y, 0.0, 2.0);
-		}
-		else if (random.x < glitch_horizontal)	{
-			randomDelayShift = clamp(random.x + random.y, 0.0, 2.0);
-		}
-		else if (random.y < glitch_vertical)	{
-			randomDelayShift = clamp(random.x + random.y, 0.0, 2.0);
-		}
-		
-		vec4 pixelBuffer = randomDelayShift * inputDelay * 9.0;
-		
-		if (randomize_zoom)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				float level = (random.x + random.y) / 3.0 + 0.90;
-				tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-			}
-			else if (random.x < glitch_horizontal)	{
-				float level = (random.x) / 2.0 + 0.95;
-				tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-			}
-			else if (random.y < glitch_vertical)	{
-				float level = (random.y) / 2.0 + 0.95;
-				tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-			}
-		}
-		
-		if (randomize_position)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				tex.x = mod(tex.x + inputDelay.r * random.x, 1.0);
-				tex.y = mod(tex.y + inputDelay.r * random.y, 1.0);
-			}
-			else if (random.x < glitch_horizontal)	{
-				tex.y = mod(tex.y + inputDelay.r * random.x, 1.0);
-			}
-			else if (random.y < glitch_vertical)	{
-				tex.x = mod(tex.x + inputDelay.r * random.y, 1.0);
-			}
-			//	apply small random zoom too
-		}
-		
-		if (pixelBuffer.r < 1.0)	{
-			color.r = IMG_NORM_PIXEL(inputImage, tex).r;
-		}
-		else if (pixelBuffer.r < 2.0)	{
-			color.r = IMG_NORM_PIXEL(buffer1, tex).r;
-		}
-		else if (pixelBuffer.r < 3.0)	{
-			color.r = IMG_NORM_PIXEL(buffer2, tex).r;
-		}
-		else if (pixelBuffer.r < 4.0)	{
-			color.r = IMG_NORM_PIXEL(buffer3, tex).r;
-		}
-		else if (pixelBuffer.r < 5.0)	{
-			color.r = IMG_NORM_PIXEL(buffer4, tex).r;
-		}
-		else if (pixelBuffer.r < 6.0)	{
-			color.r = IMG_NORM_PIXEL(buffer5, tex).r;
-		}
-		else if (pixelBuffer.r < 7.0)	{
-			color.r = IMG_NORM_PIXEL(buffer6, tex).r;
-		}
-		else if (pixelBuffer.r < 8.0)	{
-			color.r = IMG_NORM_PIXEL(buffer7, tex).r;
-		}
-		else	{
-			color.r = IMG_NORM_PIXEL(buffer8, tex).r;
-		}
-		
-		if (randomize_position)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				tex.x = mod(tex.x + random.x * inputDelay.g, 1.0);
-				tex.y = mod(tex.y + random.y * inputDelay.g, 1.0);
-			}
-			else if (random.x < glitch_horizontal)	{
-				tex.y = mod(tex.y + random.x * inputDelay.g, 1.0);
-			}
-			else if (random.y < glitch_vertical)	{
-				tex.x = mod(tex.x + random.y * inputDelay.g, 1.0);
-			}
-			//	apply small random zoom too
-			//float level = inputDelay.g * random.x / 5.0 + 0.9;
-			//tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-		}
-		
-		if (pixelBuffer.g < 1.0)	{
-			color.g = IMG_NORM_PIXEL(inputImage, tex).g;
-		}
-		else if (pixelBuffer.g < 2.0)	{
-			color.g = IMG_NORM_PIXEL(buffer1, tex).g;
-		}
-		else if (pixelBuffer.g < 3.0)	{
-			color.g = IMG_NORM_PIXEL(buffer2, tex).g;
-		}
-		else if (pixelBuffer.g < 4.0)	{
-			color.g = IMG_NORM_PIXEL(buffer3, tex).g;
-		}
-		else if (pixelBuffer.g < 5.0)	{
-			color.g = IMG_NORM_PIXEL(buffer4, tex).g;
-		}
-		else if (pixelBuffer.g < 6.0)	{
-			color.g = IMG_NORM_PIXEL(buffer5, tex).g;
-		}
-		else if (pixelBuffer.g < 7.0)	{
-			color.g = IMG_NORM_PIXEL(buffer6, tex).g;
-		}
-		else if (pixelBuffer.g < 8.0)	{
-			color.g = IMG_NORM_PIXEL(buffer7, tex).g;
-		}
-		else	{
-			color.g = IMG_NORM_PIXEL(buffer8, tex).g;
-		}
-		
-		if (randomize_position)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				tex.x = mod(tex.x + random.x * inputDelay.b, 1.0);
-				tex.y = mod(tex.y + random.y * inputDelay.b, 1.0);
-			}
-			else if (random.x < glitch_horizontal)	{
-				tex.y = mod(tex.y + random.x * inputDelay.b, 1.0);
-			}
-			else if (random.y < glitch_vertical)	{
-				tex.x = mod(tex.x + random.y * inputDelay.b, 1.0);
-			}
-			//	apply small random zoom too
-			//float level = inputDelay.b * random.x / 5.0 + 0.9;
-			//tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-		}
-		
-		if (pixelBuffer.b < 1.0)	{
-			color.b = IMG_NORM_PIXEL(inputImage, tex).b;
-		}
-		else if (pixelBuffer.b < 2.0)	{
-			color.b = IMG_NORM_PIXEL(buffer1, tex).b;
-		}
-		else if (pixelBuffer.b < 3.0)	{
-			color.b = IMG_NORM_PIXEL(buffer2, tex).b;
-		}
-		else if (pixelBuffer.b < 4.0)	{
-			color.b = IMG_NORM_PIXEL(buffer3, tex).b;
-		}
-		else if (pixelBuffer.b < 5.0)	{
-			color.b = IMG_NORM_PIXEL(buffer4, tex).b;
-		}
-		else if (pixelBuffer.b < 6.0)	{
-			color.b = IMG_NORM_PIXEL(buffer5, tex).b;
-		}
-		else if (pixelBuffer.b < 7.0)	{
-			color.b = IMG_NORM_PIXEL(buffer6, tex).b;
-		}
-		else if (pixelBuffer.b < 8.0)	{
-			color.b = IMG_NORM_PIXEL(buffer7, tex).b;
-		}
-		else	{
-			color.b = IMG_NORM_PIXEL(buffer8, tex).b;
-		}
-		
-		if (randomize_position)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				tex.x = mod(tex.x + random.x * inputDelay.a, 1.0);
-				tex.y = mod(tex.y + random.y * inputDelay.a, 1.0);
-			}
-			else if (random.x < glitch_horizontal)	{
-				tex.y = mod(tex.y + random.x * inputDelay.a, 1.0);
-			}
-			else if (random.y < glitch_vertical)	{
-				tex.x = mod(tex.x + random.y * inputDelay.a, 1.0);
-			}
-			//	apply small random zoom too
-			//float level = inputDelay.a * random.x / 5.0 + 0.9;
-			//tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-		}
-		
-		if (pixelBuffer.a < 1.0)	{
-			color.a = IMG_NORM_PIXEL(inputImage, tex).a;
-		}
-		else if (pixelBuffer.a < 2.0)	{
-			color.a = IMG_NORM_PIXEL(buffer1, tex).a;
-		}
-		else if (pixelBuffer.a < 3.0)	{
-			color.a = IMG_NORM_PIXEL(buffer2, tex).a;
-		}
-		else if (pixelBuffer.a < 4.0)	{
-			color.a = IMG_NORM_PIXEL(buffer3, tex).a;
-		}
-		else if (pixelBuffer.a < 5.0)	{
-			color.a = IMG_NORM_PIXEL(buffer4, tex).a;
-		}
-		else if (pixelBuffer.a < 6.0)	{
-			color.a = IMG_NORM_PIXEL(buffer5, tex).a;
-		}
-		else if (pixelBuffer.a < 7.0)	{
-			color.a = IMG_NORM_PIXEL(buffer6, tex).a;
-		}
-		else if (pixelBuffer.a < 8.0)	{
-			color.a = IMG_NORM_PIXEL(buffer7, tex).a;
-		}
-		else	{
-			color.a = IMG_NORM_PIXEL(buffer8, tex).a;
-		}
+// Damage artifact: bright horizontal band tears
+vec3 tearBand(vec2 uv, float t) {
+    float band = fract(uv.y * 3.0 + t * degradeRate * 0.15);
+    float tear = smoothstep(0.96, 1.0, band) * hash2(vec2(floor(t * degradeRate * 2.0), floor(uv.y * 3.0)));
+    return AMBER_BURN * tear * 1.5;
+}
 
-		gl_FragColor = color;
-	}
+void main() {
+    vec2 uv = isf_FragNormCoord;
+    float t  = TIME;
+    float aud = 1.0 + (audioLevel + audioBass * 0.8) * audioReact * 0.5;
+
+    // Apply tracking error displacement
+    float xShift = trackingShift(uv.y, t);
+    vec2 uvD = vec2(uv.x + xShift, uv.y);
+
+    // Base: dark static grain
+    float grain = vhsGrain(uv, t);
+    vec3 col = DEEP_BLACK;
+
+    // Static grain color (amber-tinted static)
+    float staticMask = step(0.65, grain);
+    col += STATIC_GRAY * staticMask * 0.4 * (0.5 + 0.5 * hash2(uv * 200.0 + t));
+
+    // Scanline darkening (CRT-style)
+    float scanline = 0.85 + 0.15 * sin(uv.y * 480.0 * 3.14159);
+    col *= scanline;
+
+    // Dark shape silhouettes emerging from static (the "horror figure")
+    float figure = 0.0;
+    vec2 figPos = vec2(0.5 + 0.05 * sin(t * degradeRate * 0.1), 0.5);
+    // Head
+    float head = length((uv - figPos - vec2(0, 0.22)) / vec2(0.07, 0.09)) - 1.0;
+    figure = max(figure, smoothstep(0.05, -0.02, head));
+    // Body
+    float body = length((uv - figPos) / vec2(0.06, 0.20)) - 1.0;
+    figure = max(figure, smoothstep(0.05, -0.02, body));
+    // Flicker: figure fades in and out
+    float flicker = step(0.35, abs(sin(t * degradeRate * 1.7 + 0.3)));
+    col = mix(col, DEEP_BLACK, figure * flicker * 0.9);
+
+    // Blood red ghost layer
+    col += ghostLayer(uvD, t) * aud;
+
+    // Amber tear bands
+    col += tearBand(uvD, t) * aud;
+
+    // Red damage channel in corrupted zones
+    float damage = step(0.88, hash2(vec2(floor(uv.y * 48.0), floor(t * degradeRate * 3.0))));
+    col += BLOOD_RED * damage * 0.5 * aud;
+
+    // HDR boost
+    col *= hdrBoost;
+
+    // White-hot static sparks
+    float spark = step(0.997, hash2(uv * 300.0 + t));
+    col += GHOST_WHITE * spark * hdrBoost;
+
+    gl_FragColor = vec4(col, 1.0);
 }
