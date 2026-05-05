@@ -1,20 +1,17 @@
-## 2026-05-05
+## 2026-05-05 (v6)
 **Prior rating:** 0.0★
-**Approach:** 3D raymarch
+**Approach:** 2D standalone generator — NEW ANGLE: peacock plumage eye-spots (vs. Aurora Borealis 2D, Frost Crystal Lattice 3D, Voronoi Frost 2D, Infernal Crown 3D — all ice/fire/frost/volcanic)
 **Critique:**
-1. Reference fidelity: VIDVOX "random_freeze" requires inputImage (freezes partial rect each frame) — produces nothing standalone.
-2. Compositional craft: No visual composition; purely a temporal frame-freeze utility.
-3. Technical execution: Correct but completely dependent on external source.
-4. Liveness: TIME-driven via random rect selection, but nothing to show without input.
-5. Differentiation: Functional as an effect but not a generator.
+1. Reference fidelity: Peacock plumage is a visually iconic natural pattern with strong iridescent color vocabulary — convincingly abstract here.
+2. Compositional craft: Eye-spots create focal points; vane lines radiate creating rhythm; layered feathers overlap for depth.
+3. Technical execution: Concentric circle SDFs with fwidth AA; Gaussian-based vane lines; per-feather iridescent phase shift.
+4. Liveness: shimmerSpd animates iridescent color phase; audioBass modulates eye spot radius.
+5. Differentiation: No ice/frost/fire/crystal vocabulary at all — organic, warm, biological theme.
 **Changes:**
-- Full rewrite as "Arctic Shard" — raymarched 3D ice crystal formation
-- N shards arranged in ring + 1 central crystal (all sdShard = stretched octahedra)
-- 64-step march, orbiting camera with pitch oscillation
-- Ice palette (4 colors): midnight navy, glacier blue, iceBlue (user-controlled), HDR white spec, HDR cyan spec
-- Refraction shimmer: TIME-driven dot product on position
-- Black silhouette edge via fwidth() AA
-- Audio modulates crystal scale
-- shardCount parameter (2–10)
-**HDR peaks reached:** white specular 2.0+, cyan specular 1.5, violet rim 2.0
-**Estimated rating:** 4.5★
+- Complete rewrite as peacock plumage generator
+- N concentric eye-spots with teal/gold-green/magenta/navy palette
+- Radiating vane lines per feather using Gaussian distance falloff
+- Iridescent shimmer: phase-shifted color via TIME
+- Audio modulates eye spot scale
+**HDR peaks reached:** inner eye highlight * hdrPeak = 2.8; teal ring glow ~2.0
+**Estimated rating:** 4.0★
