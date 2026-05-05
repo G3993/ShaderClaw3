@@ -209,6 +209,9 @@ void main() {
         }
     }
 
+    float audioMod = 0.5 + 0.5 * audioLevel * audioReact;
+    float bassMod  = 0.5 + 0.5 * audioBass  * audioReact;
+
     // ──────────────────────────────────────────────────────────────────
     // Depth & paint dimensionality: simulate raised paint surface by
     // computing local "height" (average luminance neighbourhood) and
@@ -217,7 +220,7 @@ void main() {
     {
         // Sample 5 neighbours to compute a coarse height field.
         vec2 e = 1.0 / RENDERSIZE;
-        float hC = dot(texture(paintBuf, uv).rgb,                 vec3(0.299, 0.587, 0.114));
+        float hC = dot(texture(paintBuf, uv).rgb,                  vec3(0.299, 0.587, 0.114));
         float hL = dot(texture(paintBuf, uv - vec2(e.x, 0.0)).rgb, vec3(0.299, 0.587, 0.114));
         float hR = dot(texture(paintBuf, uv + vec2(e.x, 0.0)).rgb, vec3(0.299, 0.587, 0.114));
         float hD = dot(texture(paintBuf, uv - vec2(0.0, e.y)).rgb, vec3(0.299, 0.587, 0.114));
@@ -227,12 +230,14 @@ void main() {
         // Light from upper-left at 45° elevation
         vec2 lightDir = normalize(vec2(-0.6, 0.8));
         float diff = clamp(dot(normalize(vec2(grad.x, grad.y) * 8.0 + vec2(0.0, 0.0001)), lightDir), -1.0, 1.0);
-        float specBoost = pow(max(diff, 0.0), 8.0);
+        // Sharper specular (power 48) → tiny bright point on thick paint ridges
+        float specBoost = pow(max(diff, 0.0), 48.0);
         // Highlight on raised paint, shadow on the down-slope side
         col *= 1.0 + diff * 0.18;
-        col += vec3(1.0, 0.95, 0.85) * specBoost * 0.20;
-        // Wet paint glistening — small bright dots where paint is densest
-        col += vec3(0.9, 0.85, 0.75) * smoothstep(0.75, 1.0, hC) * 0.15;
+        // HDR specular: peaks at 1.8× audioMod — bloom-ready on loud signals
+        col += vec3(1.1, 1.05, 0.90) * specBoost * 1.8 * audioMod;
+        // Wet paint glistening — HDR peak lifted to 0.5× audioMod
+        col += vec3(0.95, 0.88, 0.72) * smoothstep(0.75, 1.0, hC) * 0.5 * audioMod;
     }
 
     // Multiple splatter scales — large drops + medium + fine spray
@@ -258,7 +263,12 @@ void main() {
     float goldPhase = fract(TIME / 14.0);
     float goldFlash = smoothstep(0.0, 0.10, goldPhase) * smoothstep(0.18, 0.10, goldPhase);
     float lum = dot(col, vec3(0.299, 0.587, 0.114));
-    col = mix(col, vec3(1.00, 0.85, 0.35), goldFlash * smoothstep(0.55, 0.85, lum) * 0.6);
+    // Additive HDR gold — bright splatters peak at 1.5× (bloom fires on LED wall)
+    col += vec3(1.0, 0.85, 0.35) * goldFlash * smoothstep(0.55, 0.85, lum) * 1.5;
 
+    // Bass-driven full-frame warm flash on kick transients
+    col += vec3(0.4, 0.22, 0.06) * max(0.0, bassMod - 0.8) * 1.5;
+
+    // Linear HDR output — host applies ACES; no clamp here
     gl_FragColor = vec4(col, 1.0);
 }
