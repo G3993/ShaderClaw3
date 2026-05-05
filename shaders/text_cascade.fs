@@ -1,26 +1,22 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Cascade - tiled rows with wave offsets",
+  "DESCRIPTION": "Magma Cascade — cascading text rows flowing over a FBM lava-flow background",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
-    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
-    { "NAME": "intensity", "LABEL": "Wave Height", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "density", "LABEL": "Row Count", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
-    { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
-    { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "speed",     "LABEL": "Speed",        "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
+    { "NAME": "intensity", "LABEL": "Wave Height",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
+    { "NAME": "density",   "LABEL": "Row Count",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
+    { "NAME": "textScale", "LABEL": "Size",         "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
+    { "NAME": "lavaScale", "LABEL": "Lava Scale",   "TYPE": "float", "MIN": 0.5, "MAX": 6.0, "DEFAULT": 3.0 },
+    { "NAME": "hdrText",   "LABEL": "Text HDR",     "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 3.0 },
+    { "NAME": "hdrLava",   "LABEL": "Lava HDR",     "TYPE": "float", "MIN": 0.5, "MAX": 3.0, "DEFAULT": 2.5 },
+    { "NAME": "pulse",     "LABEL": "Audio Pulse",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.7 }
   ]
 }*/
 
 const float PI = 3.14159265;
-const float TWO_PI = 6.28318530;
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
 float charPixel(int ch, float col, float row) {
     if (ch < 0 || ch > 36) return 0.0;
     vec2 uv = vec2(col / 5.0, row / 7.0);
@@ -84,92 +80,136 @@ int charCount() {
     return n > 0 ? n : 1;
 }
 
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
+float hash21(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
 }
 
-float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+float vnoise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(
+        mix(hash21(i),              hash21(i + vec2(1.0, 0.0)), f.x),
+        mix(hash21(i + vec2(0.0,1.0)), hash21(i + vec2(1.0,1.0)), f.x),
+        f.y
+    );
+}
 
 // =======================================================================
-// EFFECT: CASCADE - tiled rows with wave offsets
+// LAVA BACKGROUND — FBM heat ramp flowing downward
+// Palette: rock black → deep crimson → orange → gold → white-hot
 // =======================================================================
 
-vec4 effectCascade(vec2 uv) {
+vec3 magmaBg(vec2 uv, float audio) {
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    vec2 p = vec2(uv.x * aspect, uv.y) * lavaScale;
+    float tFlow = TIME * speed * 0.35;
+
+    // Downward flow + horizontal turbulence
+    p.y -= tFlow;
+    p.x += sin(p.y * 1.4 + tFlow * 0.6) * 0.25;
+
+    float v = 0.0, amp = 0.5;
+    for (int i = 0; i < 5; i++) {
+        v += amp * vnoise(p);
+        p = p * 2.1 + vec2(1.7, 9.2);
+        amp *= 0.48;
+    }
+    v = clamp(v * 2.1 - 0.35, 0.0, 1.0);
+
+    // Heat ramp — fully saturated palette, no white-mixing until peaks
+    vec3 ROCK    = vec3(0.04, 0.01, 0.0);
+    vec3 CRIMSON = vec3(0.65, 0.0,  0.0);
+    vec3 ORANGE  = vec3(1.0,  0.35, 0.0);
+    vec3 GOLD    = vec3(1.0,  0.80, 0.0);
+    vec3 WHITE   = vec3(1.0,  0.95, 0.80);
+
+    float b = hdrLava * audio;
+    vec3 col = ROCK;
+    col = mix(col, CRIMSON * b,        smoothstep(0.08, 0.28, v));
+    col = mix(col, ORANGE  * b * 1.1,  smoothstep(0.28, 0.58, v));
+    col = mix(col, GOLD    * b * 1.2,  smoothstep(0.58, 0.78, v));
+    col = mix(col, WHITE   * b * 1.5,  smoothstep(0.78, 1.0,  v));
+
+    return col;
+}
+
+// =======================================================================
+// EFFECT: MAGMA CASCADE — text rows riding lava waves
+// =======================================================================
+
+vec4 effectMagma(vec2 uv) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
     int numChars = charCount();
-    float waveAmount = intensity;
     float rows = floor(mix(5.0, 30.0, density));
+    float t = TIME * speed;
 
-    float warpedY = uv.y + sin(uv.y * TWO_PI * 1.5 + TIME * speed * 1.5) * waveAmount * 0.06;
-    float rowH = 1.0 / rows;
-    float rowIdx = clamp(floor(warpedY / rowH), 0.0, rows - 1.0);
-    float localY = fract(warpedY / rowH);
+    // Y warp — lava-like vertical undulation
+    float warpedY = uv.y + sin(uv.y * PI * 3.0 + t * 1.8) * intensity * 0.06;
+    float rowH    = 1.0 / rows;
+    float rowIdx  = clamp(floor(warpedY / rowH), 0.0, rows - 1.0);
+    float localY  = fract(warpedY / rowH);
 
-    float cH = rowH;
-    float cW = cH * (5.0/7.0) * (1.0/aspect) * textScale;
-    float gW = cW * 0.15;
+    float cH  = rowH;
+    float cW  = cH * (5.0 / 7.0) * (1.0 / aspect) * textScale;
+    float gW  = cW * 0.15;
     float wordW = float(numChars) * (cW + gW);
 
-    float xOff = sin(rowIdx*0.6 + TIME*speed*2.0) * waveAmount * wordW * 1.5 + TIME*speed*0.08;
+    // Cascade: each row flows at a lava-crawl pace, waves vary per row
+    float xOff = sin(rowIdx * 0.65 + t * 1.6) * intensity * wordW * 1.4
+               + t * 0.06;
     float px = mod(uv.x + xOff - 0.5 + wordW * 0.5, wordW);
     if (px < 0.0) px += wordW;
 
-    float cs = cW + gW;
+    float cs  = cW + gW;
     float csF = px / cs;
-    int slot = int(floor(csF));
+    int slot  = int(floor(csF));
     float clx = fract(csF);
-    float cf = cW / cs;
+    float cf  = cW / cs;
 
     float textHit = 0.0;
     if (clx < cf && slot >= 0 && slot < numChars) {
-        float gc = (clx/cf) * 5.0, gr = localY * 7.0;
+        float gc = (clx / cf) * 5.0;
+        float gr = localY * 7.0;
         if (gc >= 0.0 && gc < 5.0 && gr >= 0.0 && gr < 7.0) {
             int ch = getChar(slot);
-            if (ch >= 0 && ch <= 36 && ch != 26) textHit = charPixel(ch, gc, gr);
+            if (ch >= 0 && ch <= 36 && ch != 26)
+                textHit = charPixel(ch, gc, gr);
         }
     }
 
-    bool inv = mod(rowIdx, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
-    return vec4(fc, a);
-}
+    float audio = 1.0 + audioBass * pulse;
+    vec3 bg      = magmaBg(uv, audio);
+    // White-hot text — bright enough to read over any lava brightness
+    vec3 textCol = vec3(1.0, 0.95, 0.82) * hdrText * audio;
 
-// =======================================================================
-// MAIN
-// =======================================================================
+    vec3 col = mix(bg, textCol, textHit);
+    return vec4(col, 1.0);
+}
 
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
-    vec4 col = effectCascade(uv);
+    vec4 col = effectMagma(uv);
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
         float t = TIME * 17.0;
-        float band = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
+        float band      = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
         float bandNoise = fract(sin(band * 91.7 + t) * 43758.5);
         float bandActive = step(1.0 - g * 0.6, bandNoise);
-        float shift = (bandNoise - 0.5) * 0.08 * g * bandActive;
-        float chromaAmt = g * 0.015;
-        vec2 uvR = uv + vec2(shift + chromaAmt, 0.0);
-        vec2 uvB = uv + vec2(shift - chromaAmt, 0.0);
-        vec2 uvG = uv + vec2(shift, chromaAmt * 0.5);
-        vec4 cR = effectCascade(uvR);
-        vec4 cG = effectCascade(uvG);
-        vec4 cB = effectCascade(uvB);
-        vec4 glitched = vec4(cR.r, cG.g, cB.b, max(max(cR.a, cG.a), cB.a));
-        float scanline = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
-        float blockX = floor(uv.x * 6.0);
-        float blockY = floor(uv.y * 4.0);
+        float shift      = (bandNoise - 0.5) * 0.08 * g * bandActive;
+        float chromaAmt  = g * 0.015;
+        vec4 cR = effectMagma(uv + vec2(shift + chromaAmt, 0.0));
+        vec4 cG = effectMagma(uv + vec2(shift, chromaAmt * 0.5));
+        vec4 cB = effectMagma(uv + vec2(shift - chromaAmt, 0.0));
+        vec4 glitched = vec4(cR.r, cG.g, cB.b, 1.0);
+        float scanline  = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
+        float blockX    = floor(uv.x * 6.0);
+        float blockY    = floor(uv.y * 4.0);
         float blockNoise = fract(sin((blockX + blockY * 7.0) * 113.1 + floor(t * 8.0)) * 43758.5);
-        float dropout = step(1.0 - g * 0.15, blockNoise);
-        glitched.rgb *= scanline;
-        glitched.rgb *= 1.0 - dropout;
+        float dropout   = step(1.0 - g * 0.15, blockNoise);
+        glitched.rgb   *= scanline * (1.0 - dropout);
         col = mix(col, glitched, smoothstep(0.0, 0.3, g));
     }
 
