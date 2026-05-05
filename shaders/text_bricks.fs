@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Bricks - grid with animated displacement",
+  "DESCRIPTION": "Iron Brand — glowing hot-iron ingot grid with text burned in as black brand marks",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1,2], "LABELS": ["Bricks","Bricks Harlequin","Bricks Zebra"], "DEFAULT": 0 },
@@ -9,9 +9,8 @@
     { "NAME": "intensity", "LABEL": "Displacement", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Grid Density", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "hdrPeak", "LABEL": "Iron Brightness", "TYPE": "float", "MIN": 0.5, "MAX": 2.0, "DEFAULT": 1.0 },
+    { "NAME": "audioMod", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.6 }
   ]
 }*/
 
@@ -91,7 +90,7 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
-// EFFECT: BRICKS - grid with animated displacement
+// EFFECT: IRON BRAND — hot-iron ingot grid, text = black brand marks
 // =======================================================================
 
 vec4 effectBricks(vec2 uv, int sub) {
@@ -142,13 +141,24 @@ vec4 effectBricks(vec2 uv, int sub) {
         }
     }
 
-    bool inv = mod(ri, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
-    return vec4(fc, a);
+    // ---- Iron glow: hot yellow-orange, peaks at cell center ----
+    float cx = lx - 0.5, cy = ly - 0.5;
+    float cellDist = sqrt(cx*cx + cy*cy);
+    float ironHeat = 1.0 - smoothstep(0.0, 0.5, cellDist);
+    // Audio modulates heat (scale, not gate)
+    float audioHeat = 1.0 + audioLevel * audioMod * 0.3;
+    vec3 ironColor = mix(vec3(1.5, 0.2, 0.0), vec3(3.0, 2.2, 0.3), ironHeat);
+    ironColor *= hdrPeak * audioHeat;
+
+    // ---- Mortar gap: dark cool edges ----
+    float mortarMask = smoothstep(0.04, 0.08, lx) * smoothstep(0.04, 0.08, 1.0-lx)
+                     * smoothstep(0.04, 0.08, ly) * smoothstep(0.04, 0.08, 1.0-ly);
+    ironColor = mix(vec3(0.08, 0.06, 0.2), ironColor, mortarMask);
+
+    // ---- Text = brand = pure black cutout ----
+    vec3 fc = mix(ironColor, vec3(0.0), textHit);
+
+    return vec4(fc, 1.0);
 }
 
 void main() {
