@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Cascade - tiled rows with wave offsets",
+  "DESCRIPTION": "Cascade — tiled rows with wave offsets on a neon plasma lattice",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
@@ -11,16 +11,16 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.7, 0.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.0, 0.06, 1.0] },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.2 },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
 const float PI = 3.14159265;
 const float TWO_PI = 6.28318530;
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
 float charPixel(int ch, float col, float row) {
     if (ch < 0 || ch > 36) return 0.0;
     vec2 uv = vec2(col / 5.0, row / 7.0);
@@ -84,17 +84,33 @@ int charCount() {
     return n > 0 ? n : 1;
 }
 
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
-}
-
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
-// =======================================================================
-// EFFECT: CASCADE - tiled rows with wave offsets
-// =======================================================================
+// Neon plasma lattice background (4-hue sinusoidal field — NOT aurora)
+vec3 plasmaBg(vec2 uv) {
+    float t = TIME * 0.2;
+    float u = uv.x * 2.0 - 1.0;
+    float v = uv.y * 2.0 - 1.0;
+    float p1 = sin(u * 4.7 + t * 1.3) * sin(v * 3.3 - t * 0.9);
+    float p2 = sin(sqrt(max(u * u + v * v, 0.0)) * 6.1 - t * 1.7);
+    float plasma = clamp((p1 + p2) * 0.5 + 0.5, 0.0, 1.0);
+    vec3 c0 = vec3(0.5, 0.0, 1.0);
+    vec3 c1 = vec3(0.0, 0.8, 1.0);
+    vec3 c2 = vec3(1.0, 0.0, 0.7);
+    vec3 col;
+    if (plasma < 0.5) col = mix(c0, c1, plasma * 2.0);
+    else              col = mix(c1, c2, (plasma - 0.5) * 2.0);
+    return col * 0.14;
+}
+
+// 4-hue neon row colors: gold, cyan, magenta, lime
+vec3 rowNeon(float rowIdx) {
+    int i = int(mod(rowIdx, 4.0));
+    if (i == 0) return vec3(1.0, 0.7, 0.0);
+    if (i == 1) return vec3(0.0, 1.0, 0.9);
+    if (i == 2) return vec3(1.0, 0.0, 0.7);
+    return vec3(0.5, 1.0, 0.0);
+}
 
 vec4 effectCascade(vec2 uv) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
@@ -131,18 +147,13 @@ vec4 effectCascade(vec2 uv) {
         }
     }
 
-    bool inv = mod(rowIdx, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
+    vec3 neonFg = rowNeon(rowIdx) * hdrGlow;
+    vec3 bg = plasmaBg(uv) + bgColor.rgb;
+    vec3 fc = mix(bg, neonFg, textHit);
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
+    if (transparentBg) { a = textHit; fc = neonFg; }
     return vec4(fc, a);
 }
-
-// =======================================================================
-// MAIN
-// =======================================================================
 
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
