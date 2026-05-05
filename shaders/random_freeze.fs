@@ -1,86 +1,47 @@
 /*{
-    "DESCRIPTION": "Voronoi Frost — 2D procedural ice crystallization. Voronoi cells with crack edges, animated slow growth. Ice palette: glacier blue, deep navy, crystal teal, violet. fwidth AA on cracks.",
-    "CATEGORIES": ["Generator", "Abstract", "Audio Reactive"],
-    "CREDIT": "ShaderClaw auto-improve",
-    "INPUTS": [
-        { "NAME": "cellScale",  "TYPE": "float", "DEFAULT": 5.0,  "MIN": 1.0,  "MAX": 12.0, "LABEL": "Cell Scale" },
-        { "NAME": "crackWidth", "TYPE": "float", "DEFAULT": 0.025,"MIN": 0.005,"MAX": 0.1,  "LABEL": "Crack Width" },
-        { "NAME": "hdrPeak",    "TYPE": "float", "DEFAULT": 2.2,  "MIN": 1.0,  "MAX": 4.0,  "LABEL": "HDR Peak" },
-        { "NAME": "audioMod",   "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0,  "MAX": 2.0,  "LABEL": "Audio Mod" }
-    ]
+  "DESCRIPTION": "Snowflake Formation — 2D hexagonal snowflake with branching arms. Ice-blue HDR on void black. v4: 2D hex symmetry vs prior 2D Voronoi frost / 3D crystal shard ring.",
+  "CATEGORIES": ["Generator"],
+  "CREDIT": "ShaderClaw auto-improve v4",
+  "INPUTS": [
+    {"NAME":"branches","TYPE":"float","DEFAULT":4.0,"MIN":1.0,"MAX":6.0},
+    {"NAME":"rotSpd",  "TYPE":"float","DEFAULT":0.12,"MIN":0.0,"MAX":1.0},
+    {"NAME":"hdrBoost","TYPE":"float","DEFAULT":2.5,"MIN":1.0,"MAX":4.0},
+    {"NAME":"audioMod","TYPE":"float","DEFAULT":1.0,"MIN":0.0,"MAX":2.0}
+  ]
 }*/
-
-float hash11(float n) { return fract(sin(n * 127.1) * 43758.5453); }
-float hash21(vec2 p)  { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-vec2  hash22(vec2 p)  { return fract(sin(vec2(dot(p,vec2(127.1,311.7)), dot(p,vec2(269.5,183.3)))) * 43758.5453); }
-
-// Ice palette — 4 fully saturated cool hues
-vec3 iceColor(float t) {
-    t = fract(t);
-    if (t < 0.25) return mix(vec3(0.0,  0.35, 0.85), vec3(0.05, 0.12, 0.55), t * 4.0);    // glacier→navy
-    if (t < 0.50) return mix(vec3(0.05, 0.12, 0.55), vec3(0.0,  0.7,  0.75), (t-0.25)*4.0); // navy→teal
-    if (t < 0.75) return mix(vec3(0.0,  0.7,  0.75), vec3(0.45, 0.1,  0.85), (t-0.50)*4.0); // teal→violet
-    return             mix(vec3(0.45, 0.1,  0.85), vec3(0.0,  0.35, 0.85), (t-0.75)*4.0); // violet→glacier
-}
-
-// Voronoi: returns (nearest cell dist, 2nd nearest cell dist, cell ID)
-vec3 voronoi(vec2 p) {
-    vec2  ip = floor(p);
-    vec2  fp = fract(p);
-    float d1 = 8.0, d2 = 8.0;
-    float bestID = 0.0;
-    for (int y = -1; y <= 1; y++) {
-        for (int x = -1; x <= 1; x++) {
-            vec2 neighbor = vec2(float(x), float(y));
-            vec2 cell     = ip + neighbor;
-            vec2 jitter   = hash22(cell);
-            vec2 pt       = neighbor + jitter - fp;
-            float d       = dot(pt, pt);
-            if (d < d1) { d2 = d1; d1 = d; bestID = hash21(cell); }
-            else if (d < d2) { d2 = d; }
+mat2 rot2(float a){float c=cos(a),s=sin(a);return mat2(c,-s,s,c);}
+float sdSeg(vec2 p,vec2 a,vec2 b,float r){vec2 pa=p-a,ba=b-a;float h=clamp(dot(pa,ba)/dot(ba,ba),0,1);return length(pa-ba*h)-r;}
+float snowflake(vec2 p,float armLen,float brN,float rot){
+    float d=1e8;
+    for(int arm=0;arm<6;arm++){
+        float ang=float(arm)*1.0472+rot;
+        vec2 lp=rot2(ang)*p;
+        d=min(d,sdSeg(lp,vec2(0),vec2(armLen,0),0.011));
+        int nb=int(clamp(brN,1.0,6.0));
+        for(int b=1;b<=6;b++){
+            if(b>nb)break;
+            float fb=float(b); float pos2=armLen*(0.18+fb*0.12); float blen=armLen*0.18*(1.0-fb*0.1);
+            vec2 bp=lp-vec2(pos2,0);
+            d=min(d,sdSeg(bp,vec2(0),vec2(0,blen),0.007));
+            d=min(d,sdSeg(bp,vec2(0),vec2(0,-blen),0.007));
         }
     }
-    return vec3(sqrt(d1), sqrt(d2), bestID);
+    for(int h=0;h<6;h++){float a=float(h)*1.0472+rot; float a2=a+1.0472; d=min(d,sdSeg(p,0.06*vec2(cos(a),sin(a)),0.06*vec2(cos(a2),sin(a2)),0.009));}
+    return d;
 }
-
-void main() {
-    float asp = RENDERSIZE.x / RENDERSIZE.y;
-    vec2 uv = isf_FragNormCoord * vec2(asp, 1.0);
-    float t = TIME * 0.06;
-    float audio = 1.0 + audioLevel * audioMod + audioBass * audioMod * 0.5;
-
-    // Slow growth: scale pulses slightly
-    float growPulse = 1.0 + sin(t * 0.8) * 0.04;
-    vec2 p = uv * cellScale * growPulse;
-
-    // Slow crystallization drift
-    p += vec2(sin(t * 0.3) * 0.2, cos(t * 0.23) * 0.2);
-
-    vec3 vor = voronoi(p);
-    float d1 = vor.x;
-    float d2 = vor.y;
-    float cellID = vor.z;
-
-    // Crack distance = 2nd nearest - nearest (thin at boundary)
-    float crack = d2 - d1;
-
-    // fwidth AA on crack edges
-    float crackAA = fwidth(crack);
-    float crackMask = smoothstep(crackWidth + crackAA, crackWidth - crackAA, crack);
-
-    // Per-cell color
-    vec3 cellCol = iceColor(cellID + t * 0.04);
-
-    // Interior shimmer: brightness falloff from cell center
-    float shimmer = 1.0 - d1 * 0.5;
-    shimmer += sin(d1 * 18.0 - t * 1.5) * 0.08 * (1.0 - d1); // refraction rings
-
-    // HDR: crystal face highlights
-    float highlight = pow(max(0.0, 1.0 - d1 * 3.0), 4.0);
-
-    vec3 col = cellCol * shimmer * hdrPeak * audio;
-    col += vec3(0.85, 0.95, 1.0) * highlight * hdrPeak; // ice-white highlight
-    col  = mix(col, vec3(0.0, 0.0, 0.01), crackMask);   // black ink cracks
-
-    gl_FragColor = vec4(col, 1.0);
+void main(){
+    vec2 uv=isf_FragNormCoord*2.0-1.0; uv.x*=RENDERSIZE.x/RENDERSIZE.y;
+    float t=TIME*rotSpd; float audio=1.0+(audioLevel+audioBass*0.4)*audioMod*0.22;
+    vec3 ICE_BLUE=vec3(0.4,0.85,2.6)*hdrBoost*audio;
+    vec3 GLACIER=vec3(0.1,1.6,2.2)*hdrBoost*audio;
+    vec3 ICE_WHITE=vec3(2.0,2.2,2.8)*hdrBoost*audio;
+    vec3 VOID=vec3(0.005,0.010,0.042);
+    vec3 col=VOID;
+    for(int fi=0;fi<6;fi++){float ffi=float(fi);float a=ffi*1.0472;vec2 fp=uv-0.75*vec2(cos(a),sin(a));float d2=snowflake(fp*2.5,0.38,2.0,t*0.3+ffi*0.9);col+=GLACIER*0.25*exp(-max(d2,0.0)*18.0);}
+    float d=snowflake(uv,0.42,branches,t);
+    float fw=fwidth(d);
+    col=mix(col,ICE_BLUE,exp(-max(d,0.0)*10.0)*0.5);
+    col=mix(col,ICE_WHITE,smoothstep(fw,-fw,d));
+    col=mix(col,VOID*2.0,smoothstep(fw*3.0,0.0,abs(d))*0.35);
+    gl_FragColor=vec4(col,1.0);
 }

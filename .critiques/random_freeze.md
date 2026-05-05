@@ -38,3 +38,23 @@
 - Black ink crack lines
 **HDR peaks reached:** ice-white highlight * 2.2 = 2.2+; with audio 2.8+
 **Estimated rating:** 4.0★
+
+## 2026-05-05 (v4)
+**Prior rating:** 0.0★
+**Approach:** 2D Snowflake (6-fold hex symmetry) — NEW ANGLE: 3D ice crystal octahedra ring (v1) → 2D Voronoi frost (v2) → 2D explicit 6-fold snowflake SDF (v4)
+**Critique:**
+1. Reference fidelity: "random_freeze" → snowflake formation — 6-fold symmetric crystal arms with branching sub-arms, mathematically precise.
+2. Compositional craft: Central large snowflake + 6 smaller satellite flakes; ice-blue on void black gives maximum contrast; slow rotation adds liveness.
+3. Technical execution: sdSeg capsule arms iterated 6× with rot2; inner hexagon connecting ring; 6 satellite flakes at orbital positions; fwidth AA throughout.
+4. Liveness: Slow rotation (TIME*rotSpd); satellite snowflakes slowly orbit; audio modulates HDR brightness.
+5. Differentiation: 2D explicit hex SDF vs v2 Voronoi cellular; geometric precision vs organic cells; single focal element vs full-field pattern.
+**Changes:**
+- Full rewrite from 2D Voronoi frost to 2D explicit snowflake SDF
+- 6-fold symmetry via rot2(k*1.0472) arm loop
+- Branch sub-arms via perpendicular sdSeg capsules
+- Hexagonal inner ring connecting arm bases
+- 6 satellite snowflakes at radius 0.75 (slower orbit)
+- Palette: ice blue (0.4,0.85,2.6), glacier (0.1,1.6,2.2), ice white (2.0,2.2,2.8)
+- Black ink outline on snowflake arms
+**HDR peaks reached:** ice-white outline 2.8+, ice-blue arms 2.6, glacier satellites 2.2+
+**Estimated rating:** 4.5★
