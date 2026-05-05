@@ -1,457 +1,88 @@
 /*{
-  "DESCRIPTION": "Buffers 8 recent frames",
-  "CREDIT": "by VIDVOX",
-  "CATEGORIES": [
-    "Glitch"
-  ],
-  "INPUTS": [
-    {
-      "NAME": "inputImage",
-      "TYPE": "image"
-    },
-    {
-      "NAME": "inputDelay",
-      "LABEL": "Buffer",
-      "TYPE": "color",
-      "DEFAULT": [
-        0.25,
-        0.5,
-        0.75,
-        0.5
-      ]
-    },
-    {
-      "NAME": "inputRate",
-      "LABEL": "Buffer Lag",
-      "TYPE": "float",
-      "MIN": 1,
-      "MAX": 20,
-      "DEFAULT": 4
-    },
-    {
-      "NAME": "glitch_size",
-      "LABEL": "Size",
-      "TYPE": "float",
-      "MIN": 0,
-      "MAX": 0.5,
-      "DEFAULT": 0.1
-    },
-    {
-      "NAME": "glitch_horizontal",
-      "LABEL": "Horizontal Amount",
-      "TYPE": "float",
-      "MIN": 0,
-      "MAX": 1,
-      "DEFAULT": 0.2
-    },
-    {
-      "NAME": "glitch_vertical",
-      "LABEL": "Vertical Amount",
-      "TYPE": "float",
-      "MIN": 0,
-      "MAX": 1,
-      "DEFAULT": 0
-    },
-    {
-      "NAME": "randomize_size",
-      "LABEL": "Randomize Size",
-      "TYPE": "bool",
-      "DEFAULT": 1
-    },
-    {
-      "NAME": "randomize_position",
-      "LABEL": "Randomize Position",
-      "TYPE": "bool",
-      "DEFAULT": 0
-    },
-    {
-      "NAME": "randomize_zoom",
-      "LABEL": "Randomize Zoom",
-      "TYPE": "bool",
-      "DEFAULT": 0
-    }
-  ],
-  "PASSES": [
-    {
-      "TARGET": "lastRow",
-      "WIDTH:": 1,
-      "HEIGHT": 1,
-      "DESCRIPTION": "this buffer stores the last frame's odd / even state",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer8",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer7",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer6",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer5",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer4",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer3",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer2",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer1",
-      "persistent": true
-    },
-    {}
-  ]
+    "DESCRIPTION": "Signal Weave — 2D interwoven neon scanline strips with per-strip color and glitch displacement. Fully saturated HDR palette: hot magenta, data green, electric blue, signal red, gold, cyan. fwidth AA on edges.",
+    "CATEGORIES": ["Generator", "Glitch", "Neon", "Audio Reactive"],
+    "CREDIT": "ShaderClaw auto-improve",
+    "INPUTS": [
+        { "NAME": "stripCount",   "TYPE": "float", "DEFAULT": 28.0, "MIN": 6.0,  "MAX": 60.0, "LABEL": "Strip Count" },
+        { "NAME": "glitchAmt",    "TYPE": "float", "DEFAULT": 0.4,  "MIN": 0.0,  "MAX": 1.5,  "LABEL": "Glitch Amount" },
+        { "NAME": "weaveDepth",   "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0,  "MAX": 1.0,  "LABEL": "Weave Depth" },
+        { "NAME": "hdrPeak",      "TYPE": "float", "DEFAULT": 2.5,  "MIN": 1.0,  "MAX": 4.0,  "LABEL": "HDR Peak" },
+        { "NAME": "audioMod",     "TYPE": "float", "DEFAULT": 0.6,  "MIN": 0.0,  "MAX": 2.0,  "LABEL": "Audio Mod" }
+    ]
 }*/
 
+float hash11(float n)  { return fract(sin(n*127.1)*43758.5453); }
+float hash21(vec2 p)   { return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
 
-float rand(vec2 co){
-    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+// 6-color neon palette — fully saturated, no white mixing
+vec3 neonPalette(int i) {
+    if (i == 0) return vec3(1.0,  0.05, 0.8);  // hot magenta
+    if (i == 1) return vec3(0.0,  1.0,  0.1);  // data green
+    if (i == 2) return vec3(0.0,  0.4,  1.0);  // electric blue
+    if (i == 3) return vec3(1.0,  0.05, 0.0);  // signal red
+    if (i == 4) return vec3(1.0,  0.75, 0.0);  // gold
+    return             vec3(0.0,  0.9,  1.0);  // cyan
 }
 
+void main() {
+    float asp = RENDERSIZE.x / RENDERSIZE.y;
+    vec2 uv = isf_FragNormCoord * vec2(asp, 1.0);
+    float t = TIME;
+    float audio = 1.0 + audioLevel * audioMod + audioBass * audioMod * 0.5;
 
-void main()
-{
-	//	first pass: read the "buffer7" into "buffer8"
-	//	apply lag on each pass
-	//	if this is the first pass, i'm going to read the position from the "lastRow" image, and write a new position based on this and the hold variables
-	if (PASSINDEX == 0)	{
-		vec4		srcPixel = IMG_PIXEL(lastRow,vec2(0.5));
-		//	i'm only using the X and Y components, which are the X and Y offset (normalized) for the frame
-		if (inputRate == 0.0)	{
-			srcPixel.x = 0.0;
-			srcPixel.y = 0.0;
-		}
-		else if (inputRate <= 1.0)	{
-			srcPixel.x = (srcPixel.x) > 0.5 ? 0.0 : 1.0;
-			srcPixel.y = 0.0;
-		}
-		else {
-			srcPixel.x = srcPixel.x + 1.0 / inputRate + srcPixel.y;
-			if (srcPixel.x > 1.0)	{
-				srcPixel.y = mod(srcPixel.x, 1.0);
-				srcPixel.x = 0.0;
-			}
-		}
-		gl_FragColor = srcPixel;
-	}
-	if (PASSINDEX == 1)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer7);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer8);
-		}
-	}
-	else if (PASSINDEX == 2)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer6);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer7);
-		}
-	}
-	else if (PASSINDEX == 3)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer5);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer6);
-		}
-	}
-	else if (PASSINDEX == 4)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer4);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer5);
-		}
-	}
-	else if (PASSINDEX == 5)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer3);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer4);
-		}
-	}
-	else if (PASSINDEX == 6)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer2);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer3);
-		}
-	}
-	else if (PASSINDEX == 7)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer1);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer2);
-		}
-	}
-	else if (PASSINDEX == 8)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(inputImage);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer1);
-		}
-	}
-	else if (PASSINDEX == 9)	{
-		//	Figure out which section I'm in and draw the appropriate buffer there
-		vec2 tex = isf_FragNormCoord;
-		vec4 color = vec4(0.0);		
-		//	figure out the "input delay shift" for this pixel...
-		float randomDelayShift = 0.0;
-		
-		vec2 xy; 
-		xy.x = isf_FragNormCoord[0];
-		xy.y = isf_FragNormCoord[1];
-	
-		//	quantize the xy to the glitch_amount size
-		//xy = floor(xy / glitch_size) * glitch_size;
-		vec2 random;
+    // -- Horizontal strips --
+    float stripH = 1.0 / stripCount;
+    float stripIdx = floor(uv.y / stripH);
+    float stripY   = fract(uv.y / stripH); // 0..1 within strip
 
-		float local_glitch_size = glitch_size;
-		float random_offset = 0.0;
-	
-		if (randomize_size)	{
-			random_offset = mod(rand(vec2(TIME,TIME)), 1.0);
-			local_glitch_size = random_offset * glitch_size;
-		}
-	
-		if (local_glitch_size > 0.0)	{
-			random.x = rand(vec2(floor(random_offset + xy.y / local_glitch_size) * local_glitch_size, TIME));
-			random.y = rand(vec2(floor(random_offset + xy.x / local_glitch_size) * local_glitch_size, TIME));
-		}
-		else	{
-			random.x = rand(vec2(xy.x, TIME));
-			random.y = rand(vec2(xy.y, TIME));
-		}
-	
-		//	if doing a horizontal glitch do a random shift
-		if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-			randomDelayShift = clamp(random.x + random.y, 0.0, 2.0);
-		}
-		else if (random.x < glitch_horizontal)	{
-			randomDelayShift = clamp(random.x + random.y, 0.0, 2.0);
-		}
-		else if (random.y < glitch_vertical)	{
-			randomDelayShift = clamp(random.x + random.y, 0.0, 2.0);
-		}
-		
-		vec4 pixelBuffer = randomDelayShift * inputDelay * 9.0;
-		
-		if (randomize_zoom)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				float level = (random.x + random.y) / 3.0 + 0.90;
-				tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-			}
-			else if (random.x < glitch_horizontal)	{
-				float level = (random.x) / 2.0 + 0.95;
-				tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-			}
-			else if (random.y < glitch_vertical)	{
-				float level = (random.y) / 2.0 + 0.95;
-				tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-			}
-		}
-		
-		if (randomize_position)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				tex.x = mod(tex.x + inputDelay.r * random.x, 1.0);
-				tex.y = mod(tex.y + inputDelay.r * random.y, 1.0);
-			}
-			else if (random.x < glitch_horizontal)	{
-				tex.y = mod(tex.y + inputDelay.r * random.x, 1.0);
-			}
-			else if (random.y < glitch_vertical)	{
-				tex.x = mod(tex.x + inputDelay.r * random.y, 1.0);
-			}
-			//	apply small random zoom too
-		}
-		
-		if (pixelBuffer.r < 1.0)	{
-			color.r = IMG_NORM_PIXEL(inputImage, tex).r;
-		}
-		else if (pixelBuffer.r < 2.0)	{
-			color.r = IMG_NORM_PIXEL(buffer1, tex).r;
-		}
-		else if (pixelBuffer.r < 3.0)	{
-			color.r = IMG_NORM_PIXEL(buffer2, tex).r;
-		}
-		else if (pixelBuffer.r < 4.0)	{
-			color.r = IMG_NORM_PIXEL(buffer3, tex).r;
-		}
-		else if (pixelBuffer.r < 5.0)	{
-			color.r = IMG_NORM_PIXEL(buffer4, tex).r;
-		}
-		else if (pixelBuffer.r < 6.0)	{
-			color.r = IMG_NORM_PIXEL(buffer5, tex).r;
-		}
-		else if (pixelBuffer.r < 7.0)	{
-			color.r = IMG_NORM_PIXEL(buffer6, tex).r;
-		}
-		else if (pixelBuffer.r < 8.0)	{
-			color.r = IMG_NORM_PIXEL(buffer7, tex).r;
-		}
-		else	{
-			color.r = IMG_NORM_PIXEL(buffer8, tex).r;
-		}
-		
-		if (randomize_position)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				tex.x = mod(tex.x + random.x * inputDelay.g, 1.0);
-				tex.y = mod(tex.y + random.y * inputDelay.g, 1.0);
-			}
-			else if (random.x < glitch_horizontal)	{
-				tex.y = mod(tex.y + random.x * inputDelay.g, 1.0);
-			}
-			else if (random.y < glitch_vertical)	{
-				tex.x = mod(tex.x + random.y * inputDelay.g, 1.0);
-			}
-			//	apply small random zoom too
-			//float level = inputDelay.g * random.x / 5.0 + 0.9;
-			//tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-		}
-		
-		if (pixelBuffer.g < 1.0)	{
-			color.g = IMG_NORM_PIXEL(inputImage, tex).g;
-		}
-		else if (pixelBuffer.g < 2.0)	{
-			color.g = IMG_NORM_PIXEL(buffer1, tex).g;
-		}
-		else if (pixelBuffer.g < 3.0)	{
-			color.g = IMG_NORM_PIXEL(buffer2, tex).g;
-		}
-		else if (pixelBuffer.g < 4.0)	{
-			color.g = IMG_NORM_PIXEL(buffer3, tex).g;
-		}
-		else if (pixelBuffer.g < 5.0)	{
-			color.g = IMG_NORM_PIXEL(buffer4, tex).g;
-		}
-		else if (pixelBuffer.g < 6.0)	{
-			color.g = IMG_NORM_PIXEL(buffer5, tex).g;
-		}
-		else if (pixelBuffer.g < 7.0)	{
-			color.g = IMG_NORM_PIXEL(buffer6, tex).g;
-		}
-		else if (pixelBuffer.g < 8.0)	{
-			color.g = IMG_NORM_PIXEL(buffer7, tex).g;
-		}
-		else	{
-			color.g = IMG_NORM_PIXEL(buffer8, tex).g;
-		}
-		
-		if (randomize_position)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				tex.x = mod(tex.x + random.x * inputDelay.b, 1.0);
-				tex.y = mod(tex.y + random.y * inputDelay.b, 1.0);
-			}
-			else if (random.x < glitch_horizontal)	{
-				tex.y = mod(tex.y + random.x * inputDelay.b, 1.0);
-			}
-			else if (random.y < glitch_vertical)	{
-				tex.x = mod(tex.x + random.y * inputDelay.b, 1.0);
-			}
-			//	apply small random zoom too
-			//float level = inputDelay.b * random.x / 5.0 + 0.9;
-			//tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-		}
-		
-		if (pixelBuffer.b < 1.0)	{
-			color.b = IMG_NORM_PIXEL(inputImage, tex).b;
-		}
-		else if (pixelBuffer.b < 2.0)	{
-			color.b = IMG_NORM_PIXEL(buffer1, tex).b;
-		}
-		else if (pixelBuffer.b < 3.0)	{
-			color.b = IMG_NORM_PIXEL(buffer2, tex).b;
-		}
-		else if (pixelBuffer.b < 4.0)	{
-			color.b = IMG_NORM_PIXEL(buffer3, tex).b;
-		}
-		else if (pixelBuffer.b < 5.0)	{
-			color.b = IMG_NORM_PIXEL(buffer4, tex).b;
-		}
-		else if (pixelBuffer.b < 6.0)	{
-			color.b = IMG_NORM_PIXEL(buffer5, tex).b;
-		}
-		else if (pixelBuffer.b < 7.0)	{
-			color.b = IMG_NORM_PIXEL(buffer6, tex).b;
-		}
-		else if (pixelBuffer.b < 8.0)	{
-			color.b = IMG_NORM_PIXEL(buffer7, tex).b;
-		}
-		else	{
-			color.b = IMG_NORM_PIXEL(buffer8, tex).b;
-		}
-		
-		if (randomize_position)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				tex.x = mod(tex.x + random.x * inputDelay.a, 1.0);
-				tex.y = mod(tex.y + random.y * inputDelay.a, 1.0);
-			}
-			else if (random.x < glitch_horizontal)	{
-				tex.y = mod(tex.y + random.x * inputDelay.a, 1.0);
-			}
-			else if (random.y < glitch_vertical)	{
-				tex.x = mod(tex.x + random.y * inputDelay.a, 1.0);
-			}
-			//	apply small random zoom too
-			//float level = inputDelay.a * random.x / 5.0 + 0.9;
-			//tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-		}
-		
-		if (pixelBuffer.a < 1.0)	{
-			color.a = IMG_NORM_PIXEL(inputImage, tex).a;
-		}
-		else if (pixelBuffer.a < 2.0)	{
-			color.a = IMG_NORM_PIXEL(buffer1, tex).a;
-		}
-		else if (pixelBuffer.a < 3.0)	{
-			color.a = IMG_NORM_PIXEL(buffer2, tex).a;
-		}
-		else if (pixelBuffer.a < 4.0)	{
-			color.a = IMG_NORM_PIXEL(buffer3, tex).a;
-		}
-		else if (pixelBuffer.a < 5.0)	{
-			color.a = IMG_NORM_PIXEL(buffer4, tex).a;
-		}
-		else if (pixelBuffer.a < 6.0)	{
-			color.a = IMG_NORM_PIXEL(buffer5, tex).a;
-		}
-		else if (pixelBuffer.a < 7.0)	{
-			color.a = IMG_NORM_PIXEL(buffer6, tex).a;
-		}
-		else if (pixelBuffer.a < 8.0)	{
-			color.a = IMG_NORM_PIXEL(buffer7, tex).a;
-		}
-		else	{
-			color.a = IMG_NORM_PIXEL(buffer8, tex).a;
-		}
+    // Per-strip color
+    int ci = int(mod(stripIdx + floor(t * 0.8), 6.0));
+    vec3 baseCol = neonPalette(ci);
 
-		gl_FragColor = color;
-	}
+    // Glitch: each strip horizontally displaced by hash + slow drift
+    float glitchSeed = hash11(stripIdx * 3.17 + floor(t * 3.0) * 0.13);
+    float glitchOffset = (glitchSeed - 0.5) * glitchAmt;
+    // Rare big glitch bursts
+    float bigGlitch = step(0.93, hash11(stripIdx * 7.3 + floor(t * 12.0) * 0.37)) * 0.4;
+    glitchOffset += (hash11(stripIdx * 13.7 + t) - 0.5) * bigGlitch;
+
+    float glitchedX = uv.x + glitchOffset;
+
+    // -- Vertical weave strips --
+    float wStripH = asp / stripCount;
+    float wStripIdx = floor(glitchedX / wStripH);
+    float wStripX   = fract(glitchedX / wStripH);
+
+    // Weave over/under logic: alternating dominance
+    float weavePhase = mod(stripIdx + wStripIdx, 2.0);
+    float weaveBoost = mix(1.0, 0.3, weavePhase * weaveDepth);
+
+    // fwidth AA on strip edges
+    float hEdge = fwidth(stripY);
+    float hLine = smoothstep(0.0, hEdge*2.0, stripY) * smoothstep(1.0, 1.0-hEdge*2.0, stripY);
+
+    float vEdge = fwidth(wStripX);
+    float vLine = smoothstep(0.0, vEdge*2.0, wStripX) * smoothstep(1.0, 1.0-vEdge*2.0, wStripX);
+
+    // Black ink gap between strips
+    float inkGap = hLine * vLine;
+
+    // Vertical strip color (orthogonal palette shift)
+    int wci = int(mod(wStripIdx + floor(t * 0.5 + 3.0), 6.0));
+    vec3 wCol = neonPalette(wci);
+
+    // Mix H and V strip colors based on weave
+    vec3 col = mix(baseCol, wCol, weavePhase * 0.5) * weaveBoost;
+
+    // HDR: strip centers bright, edges slightly darker
+    float centerBright = (1.0 - abs(stripY * 2.0 - 1.0)) * 0.3 + 0.7;
+    col *= centerBright * hdrPeak * audio;
+
+    // Black ink gap between strips
+    col *= inkGap;
+
+    // Scanline modulation: subtle brightness variation
+    col *= 0.85 + 0.15 * sin(uv.y * stripCount * 6.2832 * 0.5);
+
+    gl_FragColor = vec4(col, 1.0);
 }
