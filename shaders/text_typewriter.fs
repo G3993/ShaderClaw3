@@ -15,7 +15,8 @@
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.04, 1.0] },
     { "NAME": "voiceSync", "LABEL": "Voice Sync", "TYPE": "bool", "DEFAULT": false },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true },
-    { "NAME": "loop", "LABEL": "Loop", "TYPE": "bool", "DEFAULT": false }
+    { "NAME": "loop", "LABEL": "Loop", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
@@ -140,6 +141,8 @@ void main() {
     float textMask = 0.0;
     vec3 textCol = vec3(0.0);
     float lastX = originX;
+    float glowAcc = 0.0;
+    float bassBoost = 0.5 + 0.5 * audioBass * audioReact;
 
     for (int i = 0; i < 64; i++) {
         if (i >= showCount) break;
@@ -147,34 +150,51 @@ void main() {
 
         int ch = getChar(i);
         float cx = originX + float(i) * cellStep;
-        // Oscillator: per-character Y offset
         float oscY = oscAmount * sin(TIME * oscSpeed * 6.2832 + float(i) * oscSpread * 3.14159);
 
         if (ch >= 0 && ch <= 36 && ch != 26) {
             vec2 cellUV = vec2((p.x - cx) / charW, (p.y - (originY + oscY)) / charH);
             if (cellUV.x >= 0.0 && cellUV.x <= 1.0 && cellUV.y >= 0.0 && cellUV.y <= 1.0) {
                 float s = sampleChar(ch, cellUV);
-                if (s > 0.05) {
+                if (s > 0.02) {
                     textCol = textColor.rgb;
-                    textMask = max(textMask, smoothstep(0.1, 0.5, s));
+                    // fwidth-based AA on glyph edge
+                    float fw = max(fwidth(s), 0.015);
+                    textMask = max(textMask, smoothstep(0.5 - fw, 0.5 + fw, s));
                 }
             }
         }
 
+        // Per-character bloom halo (gaussian from cell centre)
+        vec2 cc = vec2(cx + charW * 0.5, originY + charH * 0.5 + oscY);
+        float gd = length(p - cc);
+        float gr = max(charW * charW * 3.5, 1e-6);
+        glowAcc += exp(-gd*gd/gr) * (0.35 + bassBoost * 0.55);
+
         lastX = cx + cellStep;
     }
 
-    // Blinking cursor after last char
+    // Blinking cursor — smooth HDR flash
     float cursorOn = step(0.5, fract(TIME * cursorBlink));
     float cursorW = charW * 0.15;
     if (p.x >= lastX && p.x <= lastX + cursorW &&
         p.y >= originY && p.y <= originY + charH) {
         textCol = textColor.rgb;
-        textMask = max(textMask, cursorOn);
+        float cursorAA = fwidth(p.x - lastX);
+        textMask = max(textMask, cursorOn * smoothstep(0.0, cursorAA, p.x - lastX)
+                                           * smoothstep(cursorW + cursorAA, cursorW, p.x - lastX));
     }
 
-    col = mix(col, textCol, clamp(textMask, 0.0, 1.0));
-    if (transparentBg) alpha = clamp(textMask, 0.0, 1.0);
+    // Soft outer glow halo (HDR: adds > 1.0 lum at character centres)
+    float glowLayer = min(glowAcc, 2.5) * 0.18;
 
+    // HDR text: boost colour intensity above 1.0 for bloom pipeline
+    float textHDR = 1.0 + bassBoost * 0.35;
+    col = mix(col, textCol * textHDR, clamp(textMask, 0.0, 1.0));
+    col += textColor.rgb * glowLayer;
+
+    if (transparentBg) alpha = clamp(textMask + glowLayer * 0.5, 0.0, 1.0);
+
+    // Linear HDR output — host applies ACES + gamma
     gl_FragColor = vec4(col, alpha);
 }
