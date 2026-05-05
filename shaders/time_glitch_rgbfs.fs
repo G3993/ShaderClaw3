@@ -1,457 +1,172 @@
 /*{
-  "DESCRIPTION": "Buffers 8 recent frames",
-  "CREDIT": "by VIDVOX",
-  "CATEGORIES": [
-    "Glitch"
-  ],
+  "DESCRIPTION": "Bismuth Crystal Cavity — 3D SDF raymarched iridescent bismuth crystal steps inside a dark cave. Rainbow metallic surfaces, deep shadow silhouettes.",
+  "CREDIT": "ShaderClaw auto-improve v4",
+  "CATEGORIES": ["Generator", "3D"],
   "INPUTS": [
-    {
-      "NAME": "inputImage",
-      "TYPE": "image"
-    },
-    {
-      "NAME": "inputDelay",
-      "LABEL": "Buffer",
-      "TYPE": "color",
-      "DEFAULT": [
-        0.25,
-        0.5,
-        0.75,
-        0.5
-      ]
-    },
-    {
-      "NAME": "inputRate",
-      "LABEL": "Buffer Lag",
-      "TYPE": "float",
-      "MIN": 1,
-      "MAX": 20,
-      "DEFAULT": 4
-    },
-    {
-      "NAME": "glitch_size",
-      "LABEL": "Size",
-      "TYPE": "float",
-      "MIN": 0,
-      "MAX": 0.5,
-      "DEFAULT": 0.1
-    },
-    {
-      "NAME": "glitch_horizontal",
-      "LABEL": "Horizontal Amount",
-      "TYPE": "float",
-      "MIN": 0,
-      "MAX": 1,
-      "DEFAULT": 0.2
-    },
-    {
-      "NAME": "glitch_vertical",
-      "LABEL": "Vertical Amount",
-      "TYPE": "float",
-      "MIN": 0,
-      "MAX": 1,
-      "DEFAULT": 0
-    },
-    {
-      "NAME": "randomize_size",
-      "LABEL": "Randomize Size",
-      "TYPE": "bool",
-      "DEFAULT": 1
-    },
-    {
-      "NAME": "randomize_position",
-      "LABEL": "Randomize Position",
-      "TYPE": "bool",
-      "DEFAULT": 0
-    },
-    {
-      "NAME": "randomize_zoom",
-      "LABEL": "Randomize Zoom",
-      "TYPE": "bool",
-      "DEFAULT": 0
-    }
-  ],
-  "PASSES": [
-    {
-      "TARGET": "lastRow",
-      "WIDTH:": 1,
-      "HEIGHT": 1,
-      "DESCRIPTION": "this buffer stores the last frame's odd / even state",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer8",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer7",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer6",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer5",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer4",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer3",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer2",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer1",
-      "persistent": true
-    },
-    {}
+    { "NAME": "crystalCount", "LABEL": "Crystal Count", "TYPE": "float", "DEFAULT": 5.0, "MIN": 2.0, "MAX": 10.0 },
+    { "NAME": "rotSpeed",     "LABEL": "Orbit Speed",   "TYPE": "float", "DEFAULT": 0.12, "MIN": 0.0, "MAX": 0.5 },
+    { "NAME": "hdrPeak",      "LABEL": "HDR Peak",      "TYPE": "float", "DEFAULT": 2.5,  "MIN": 1.0, "MAX": 4.0 },
+    { "NAME": "audioReact",   "LABEL": "Audio",         "TYPE": "float", "DEFAULT": 0.8,  "MIN": 0.0, "MAX": 2.0 }
   ]
 }*/
 
+// ─────────────────────────────────────────────────────────
+// Utilities
+// ─────────────────────────────────────────────────────────
+float hash11(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
-float rand(vec2 co){
-    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+vec3 hsv2rgb(vec3 c) {
+    vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 
+// ─────────────────────────────────────────────────────────
+// SDF primitives
+// ─────────────────────────────────────────────────────────
+float sdBox(vec3 p, vec3 b) {
+    vec3 q = abs(p) - b;
+    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
+}
 
-void main()
-{
-	//	first pass: read the "buffer7" into "buffer8"
-	//	apply lag on each pass
-	//	if this is the first pass, i'm going to read the position from the "lastRow" image, and write a new position based on this and the hold variables
-	if (PASSINDEX == 0)	{
-		vec4		srcPixel = IMG_PIXEL(lastRow,vec2(0.5));
-		//	i'm only using the X and Y components, which are the X and Y offset (normalized) for the frame
-		if (inputRate == 0.0)	{
-			srcPixel.x = 0.0;
-			srcPixel.y = 0.0;
-		}
-		else if (inputRate <= 1.0)	{
-			srcPixel.x = (srcPixel.x) > 0.5 ? 0.0 : 1.0;
-			srcPixel.y = 0.0;
-		}
-		else {
-			srcPixel.x = srcPixel.x + 1.0 / inputRate + srcPixel.y;
-			if (srcPixel.x > 1.0)	{
-				srcPixel.y = mod(srcPixel.x, 1.0);
-				srcPixel.x = 0.0;
-			}
-		}
-		gl_FragColor = srcPixel;
-	}
-	if (PASSINDEX == 1)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer7);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer8);
-		}
-	}
-	else if (PASSINDEX == 2)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer6);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer7);
-		}
-	}
-	else if (PASSINDEX == 3)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer5);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer6);
-		}
-	}
-	else if (PASSINDEX == 4)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer4);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer5);
-		}
-	}
-	else if (PASSINDEX == 5)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer3);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer4);
-		}
-	}
-	else if (PASSINDEX == 6)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer2);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer3);
-		}
-	}
-	else if (PASSINDEX == 7)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer1);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer2);
-		}
-	}
-	else if (PASSINDEX == 8)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(inputImage);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer1);
-		}
-	}
-	else if (PASSINDEX == 9)	{
-		//	Figure out which section I'm in and draw the appropriate buffer there
-		vec2 tex = isf_FragNormCoord;
-		vec4 color = vec4(0.0);		
-		//	figure out the "input delay shift" for this pixel...
-		float randomDelayShift = 0.0;
-		
-		vec2 xy; 
-		xy.x = isf_FragNormCoord[0];
-		xy.y = isf_FragNormCoord[1];
-	
-		//	quantize the xy to the glitch_amount size
-		//xy = floor(xy / glitch_size) * glitch_size;
-		vec2 random;
+float sdSphere(vec3 p, float r) {
+    return length(p) - r;
+}
 
-		float local_glitch_size = glitch_size;
-		float random_offset = 0.0;
-	
-		if (randomize_size)	{
-			random_offset = mod(rand(vec2(TIME,TIME)), 1.0);
-			local_glitch_size = random_offset * glitch_size;
-		}
-	
-		if (local_glitch_size > 0.0)	{
-			random.x = rand(vec2(floor(random_offset + xy.y / local_glitch_size) * local_glitch_size, TIME));
-			random.y = rand(vec2(floor(random_offset + xy.x / local_glitch_size) * local_glitch_size, TIME));
-		}
-		else	{
-			random.x = rand(vec2(xy.x, TIME));
-			random.y = rand(vec2(xy.y, TIME));
-		}
-	
-		//	if doing a horizontal glitch do a random shift
-		if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-			randomDelayShift = clamp(random.x + random.y, 0.0, 2.0);
-		}
-		else if (random.x < glitch_horizontal)	{
-			randomDelayShift = clamp(random.x + random.y, 0.0, 2.0);
-		}
-		else if (random.y < glitch_vertical)	{
-			randomDelayShift = clamp(random.x + random.y, 0.0, 2.0);
-		}
-		
-		vec4 pixelBuffer = randomDelayShift * inputDelay * 9.0;
-		
-		if (randomize_zoom)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				float level = (random.x + random.y) / 3.0 + 0.90;
-				tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-			}
-			else if (random.x < glitch_horizontal)	{
-				float level = (random.x) / 2.0 + 0.95;
-				tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-			}
-			else if (random.y < glitch_vertical)	{
-				float level = (random.y) / 2.0 + 0.95;
-				tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-			}
-		}
-		
-		if (randomize_position)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				tex.x = mod(tex.x + inputDelay.r * random.x, 1.0);
-				tex.y = mod(tex.y + inputDelay.r * random.y, 1.0);
-			}
-			else if (random.x < glitch_horizontal)	{
-				tex.y = mod(tex.y + inputDelay.r * random.x, 1.0);
-			}
-			else if (random.y < glitch_vertical)	{
-				tex.x = mod(tex.x + inputDelay.r * random.y, 1.0);
-			}
-			//	apply small random zoom too
-		}
-		
-		if (pixelBuffer.r < 1.0)	{
-			color.r = IMG_NORM_PIXEL(inputImage, tex).r;
-		}
-		else if (pixelBuffer.r < 2.0)	{
-			color.r = IMG_NORM_PIXEL(buffer1, tex).r;
-		}
-		else if (pixelBuffer.r < 3.0)	{
-			color.r = IMG_NORM_PIXEL(buffer2, tex).r;
-		}
-		else if (pixelBuffer.r < 4.0)	{
-			color.r = IMG_NORM_PIXEL(buffer3, tex).r;
-		}
-		else if (pixelBuffer.r < 5.0)	{
-			color.r = IMG_NORM_PIXEL(buffer4, tex).r;
-		}
-		else if (pixelBuffer.r < 6.0)	{
-			color.r = IMG_NORM_PIXEL(buffer5, tex).r;
-		}
-		else if (pixelBuffer.r < 7.0)	{
-			color.r = IMG_NORM_PIXEL(buffer6, tex).r;
-		}
-		else if (pixelBuffer.r < 8.0)	{
-			color.r = IMG_NORM_PIXEL(buffer7, tex).r;
-		}
-		else	{
-			color.r = IMG_NORM_PIXEL(buffer8, tex).r;
-		}
-		
-		if (randomize_position)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				tex.x = mod(tex.x + random.x * inputDelay.g, 1.0);
-				tex.y = mod(tex.y + random.y * inputDelay.g, 1.0);
-			}
-			else if (random.x < glitch_horizontal)	{
-				tex.y = mod(tex.y + random.x * inputDelay.g, 1.0);
-			}
-			else if (random.y < glitch_vertical)	{
-				tex.x = mod(tex.x + random.y * inputDelay.g, 1.0);
-			}
-			//	apply small random zoom too
-			//float level = inputDelay.g * random.x / 5.0 + 0.9;
-			//tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-		}
-		
-		if (pixelBuffer.g < 1.0)	{
-			color.g = IMG_NORM_PIXEL(inputImage, tex).g;
-		}
-		else if (pixelBuffer.g < 2.0)	{
-			color.g = IMG_NORM_PIXEL(buffer1, tex).g;
-		}
-		else if (pixelBuffer.g < 3.0)	{
-			color.g = IMG_NORM_PIXEL(buffer2, tex).g;
-		}
-		else if (pixelBuffer.g < 4.0)	{
-			color.g = IMG_NORM_PIXEL(buffer3, tex).g;
-		}
-		else if (pixelBuffer.g < 5.0)	{
-			color.g = IMG_NORM_PIXEL(buffer4, tex).g;
-		}
-		else if (pixelBuffer.g < 6.0)	{
-			color.g = IMG_NORM_PIXEL(buffer5, tex).g;
-		}
-		else if (pixelBuffer.g < 7.0)	{
-			color.g = IMG_NORM_PIXEL(buffer6, tex).g;
-		}
-		else if (pixelBuffer.g < 8.0)	{
-			color.g = IMG_NORM_PIXEL(buffer7, tex).g;
-		}
-		else	{
-			color.g = IMG_NORM_PIXEL(buffer8, tex).g;
-		}
-		
-		if (randomize_position)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				tex.x = mod(tex.x + random.x * inputDelay.b, 1.0);
-				tex.y = mod(tex.y + random.y * inputDelay.b, 1.0);
-			}
-			else if (random.x < glitch_horizontal)	{
-				tex.y = mod(tex.y + random.x * inputDelay.b, 1.0);
-			}
-			else if (random.y < glitch_vertical)	{
-				tex.x = mod(tex.x + random.y * inputDelay.b, 1.0);
-			}
-			//	apply small random zoom too
-			//float level = inputDelay.b * random.x / 5.0 + 0.9;
-			//tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-		}
-		
-		if (pixelBuffer.b < 1.0)	{
-			color.b = IMG_NORM_PIXEL(inputImage, tex).b;
-		}
-		else if (pixelBuffer.b < 2.0)	{
-			color.b = IMG_NORM_PIXEL(buffer1, tex).b;
-		}
-		else if (pixelBuffer.b < 3.0)	{
-			color.b = IMG_NORM_PIXEL(buffer2, tex).b;
-		}
-		else if (pixelBuffer.b < 4.0)	{
-			color.b = IMG_NORM_PIXEL(buffer3, tex).b;
-		}
-		else if (pixelBuffer.b < 5.0)	{
-			color.b = IMG_NORM_PIXEL(buffer4, tex).b;
-		}
-		else if (pixelBuffer.b < 6.0)	{
-			color.b = IMG_NORM_PIXEL(buffer5, tex).b;
-		}
-		else if (pixelBuffer.b < 7.0)	{
-			color.b = IMG_NORM_PIXEL(buffer6, tex).b;
-		}
-		else if (pixelBuffer.b < 8.0)	{
-			color.b = IMG_NORM_PIXEL(buffer7, tex).b;
-		}
-		else	{
-			color.b = IMG_NORM_PIXEL(buffer8, tex).b;
-		}
-		
-		if (randomize_position)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				tex.x = mod(tex.x + random.x * inputDelay.a, 1.0);
-				tex.y = mod(tex.y + random.y * inputDelay.a, 1.0);
-			}
-			else if (random.x < glitch_horizontal)	{
-				tex.y = mod(tex.y + random.x * inputDelay.a, 1.0);
-			}
-			else if (random.y < glitch_vertical)	{
-				tex.x = mod(tex.x + random.y * inputDelay.a, 1.0);
-			}
-			//	apply small random zoom too
-			//float level = inputDelay.a * random.x / 5.0 + 0.9;
-			//tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-		}
-		
-		if (pixelBuffer.a < 1.0)	{
-			color.a = IMG_NORM_PIXEL(inputImage, tex).a;
-		}
-		else if (pixelBuffer.a < 2.0)	{
-			color.a = IMG_NORM_PIXEL(buffer1, tex).a;
-		}
-		else if (pixelBuffer.a < 3.0)	{
-			color.a = IMG_NORM_PIXEL(buffer2, tex).a;
-		}
-		else if (pixelBuffer.a < 4.0)	{
-			color.a = IMG_NORM_PIXEL(buffer3, tex).a;
-		}
-		else if (pixelBuffer.a < 5.0)	{
-			color.a = IMG_NORM_PIXEL(buffer4, tex).a;
-		}
-		else if (pixelBuffer.a < 6.0)	{
-			color.a = IMG_NORM_PIXEL(buffer5, tex).a;
-		}
-		else if (pixelBuffer.a < 7.0)	{
-			color.a = IMG_NORM_PIXEL(buffer6, tex).a;
-		}
-		else if (pixelBuffer.a < 8.0)	{
-			color.a = IMG_NORM_PIXEL(buffer7, tex).a;
-		}
-		else	{
-			color.a = IMG_NORM_PIXEL(buffer8, tex).a;
-		}
+// One bismuth crystal: 5 stair-stepped boxes, each narrower and higher
+float sdCrystal(vec3 p, float sz) {
+    float d = 1e9;
+    float stepH = 0.20;
+    for (int j = 0; j < 5; j++) {
+        float fj = float(j);
+        float scale = 1.0 - fj * 0.15;
+        vec3 boxSize = vec3(sz * scale, stepH * 0.5, sz * scale);
+        vec3 center  = vec3(0.0, fj * stepH, 0.0);
+        d = min(d, sdBox(p - center, boxSize));
+    }
+    return d;
+}
 
-		gl_FragColor = color;
-	}
+// ─────────────────────────────────────────────────────────
+// Scene — returns vec2(dist, materialID)   0=cave  1=crystal
+// ─────────────────────────────────────────────────────────
+vec2 sceneMap(vec3 pos, float t, float numCrystals, float audioScale) {
+    // Cave interior: large sphere negated (inside surface)
+    float cave = -sdSphere(pos, 4.5);
+
+    float crystalDist = 1e9;
+    float PI = 3.14159265;
+    for (int i = 0; i < 10; i++) {
+        if (float(i) >= numCrystals) break;
+        float fi    = float(i);
+        // Spread crystals in a ring on the cave floor
+        float angle  = fi / numCrystals * 2.0 * PI + t * 0.05;
+        float radius = 1.5 + hash11(fi * 3.71) * 0.9;
+        vec3 center  = vec3(sin(angle) * radius,
+                            -0.8 + hash11(fi * 7.13) * 0.5,
+                            cos(angle) * radius);
+        float sz = (0.20 + hash11(fi * 5.31) * 0.12) * audioScale;
+        // Per-crystal Y-axis rotation for variety
+        float cr   = fi * 1.1 + t * 0.07;
+        float ccos = cos(cr), csin = sin(cr);
+        vec3 lp    = pos - center;
+        lp.xz = vec2(ccos * lp.x - csin * lp.z, csin * lp.x + ccos * lp.z);
+        crystalDist = min(crystalDist, sdCrystal(lp, sz));
+    }
+
+    if (crystalDist < cave) {
+        return vec2(crystalDist, 1.0);
+    }
+    return vec2(cave, 0.0);
+}
+
+vec3 calcNormal(vec3 p, float t, float numCrystals, float audioScale) {
+    vec2 e = vec2(0.001, 0.0);
+    return normalize(vec3(
+        sceneMap(p + e.xyy, t, numCrystals, audioScale).x - sceneMap(p - e.xyy, t, numCrystals, audioScale).x,
+        sceneMap(p + e.yxy, t, numCrystals, audioScale).x - sceneMap(p - e.yxy, t, numCrystals, audioScale).x,
+        sceneMap(p + e.yyx, t, numCrystals, audioScale).x - sceneMap(p - e.yyx, t, numCrystals, audioScale).x
+    ));
+}
+
+// ─────────────────────────────────────────────────────────
+void main() {
+    vec2 uv = (gl_FragCoord.xy - RENDERSIZE.xy * 0.5) / min(RENDERSIZE.x, RENDERSIZE.y);
+
+    float t          = TIME;
+    float audioScale = 1.0 + (audioBass + audioMid) * audioReact * 0.25;
+    float numCrystals = clamp(crystalCount, 2.0, 10.0);
+
+    // Orbiting camera looking toward origin
+    float orbitT = TIME * rotSpeed * (1.0 + audioMid * audioReact * 0.2);
+    vec3 ro      = vec3(sin(orbitT) * 2.5, 0.5 + sin(orbitT * 0.37) * 0.3, cos(orbitT) * 2.5);
+    vec3 target  = vec3(0.0, -0.3, 0.0);
+    vec3 forward = normalize(target - ro);
+    vec3 right   = normalize(cross(forward, vec3(0.0, 1.0, 0.0)));
+    vec3 upV     = cross(right, forward);
+    vec3 rd      = normalize(forward + uv.x * right + uv.y * upV);
+
+    // 64-step raymarch
+    float dist  = 0.01;
+    float matID = -1.0;
+    vec3 hitPos = ro;
+    bool hit    = false;
+
+    for (int i = 0; i < 64; i++) {
+        vec3 p    = ro + rd * dist;
+        vec2 res  = sceneMap(p, t, numCrystals, audioScale);
+        float stp = res.x;
+        if (stp < 0.001) {
+            matID = res.y;
+            hitPos = p;
+            hit   = true;
+            break;
+        }
+        dist += stp * 0.75;
+        if (dist > 8.0) break;
+    }
+
+    vec3 col = vec3(0.0); // void black default
+
+    if (hit) {
+        vec3 N3    = calcNormal(hitPos, t, numCrystals, audioScale);
+        vec3 V     = -rd;
+        // Overhead point light
+        vec3 lightPos = vec3(0.0, 3.5, 0.0);
+        vec3 L     = normalize(lightPos - hitPos);
+        float diff = max(dot(N3, L), 0.0);
+
+        if (matID > 0.5) {
+            // ── Bismuth crystal: iridescent coloring ──
+            float hue   = dot(N3, vec3(1.0, 2.0, 3.0)) * 0.3
+                        + fract(hitPos.y * 2.0)
+                        + t * 0.1;
+            vec3 iriCol = hsv2rgb(vec3(fract(hue), 0.9, 1.0)) * hdrPeak;
+
+            // Diffuse shading on top of iridescence
+            col = iriCol * (0.25 + diff * 0.75);
+
+            // HDR specular peak 3.0
+            vec3  R    = reflect(-L, N3);
+            float spec = pow(max(dot(R, V), 0.0), 80.0);
+            col += vec3(1.0) * spec * 3.0;
+
+            // Coloured rim light to pop silhouette edges
+            float rim = pow(1.0 - max(dot(N3, V), 0.0), 3.0);
+            col += hsv2rgb(vec3(fract(hue + 0.5), 0.7, 1.0)) * rim * 0.9;
+
+            // Crush near-black steps to true black (ink contrast)
+            float shadow = clamp(diff * 2.5, 0.0, 1.0);
+            col *= mix(0.0, 1.0, shadow);
+        } else {
+            // ── Cave wall: near-black deep-purple ambient only ──
+            col = vec3(0.05, 0.03, 0.08) * 0.05 * (0.2 + diff * 0.8);
+        }
+
+        // Distance fog to pure black — enhances silhouette
+        float fog = exp(-dist * 0.20);
+        col *= fog;
+    }
+
+    gl_FragColor = vec4(col, 1.0);
 }
