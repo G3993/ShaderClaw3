@@ -10,6 +10,9 @@
     { "NAME": "roughness", "LABEL": "Roughness", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.01, "MAX": 1.0 },
     { "NAME": "blobSize", "LABEL": "Size", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.3, "MAX": 2.0 },
     { "NAME": "smoothness", "LABEL": "Melt", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.1, "MAX": 1.5 },
+    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 },
+    { "NAME": "camDist", "LABEL": "Cam Distance", "TYPE": "float", "DEFAULT": 3.8, "MIN": 1.5, "MAX": 8.0 },
+    { "NAME": "exposure", "LABEL": "Exposure", "TYPE": "float", "DEFAULT": 1.2, "MIN": 0.1, "MAX": 3.0 },
     { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
@@ -125,7 +128,7 @@ void main() {
       sin(speed * 0.6 + phase * 1.8) * 0.5 + cos(speed * 0.4 + phase * 2.1) * 0.2
     );
     float base = (0.45 + fi * 0.03) * blobSize;
-    float pulse = sin(speed * 1.2 + fi * 1.7) * 0.08 + sin(speed * 0.5 + fi * 3.1) * 0.05;
+    float pulse = sin(speed * 1.2 + fi * 1.7) * 0.08 + sin(speed * 0.5 + fi * 3.1) * 0.05 + aB * 0.15;
     float r = base + pulse;
     float sx = 1.0 + sin(speed * 0.9 + fi * 2.3) * 0.25;
     float sy = 1.0 + cos(speed * 0.7 + fi * 1.9) * 0.2;
@@ -151,7 +154,8 @@ void main() {
     }
   }
 
-  vec3 ro = vec3(0.0, 0.3, 3.8);
+  float aB = 0.5 + 0.5 * audioBass * audioReact;
+  vec3 ro = vec3(0.0, 0.3, camDist);
   vec3 target = vec3(0.0);
   vec3 fwd = normalize(target - ro);
   vec3 right = normalize(cross(fwd, vec3(0.0, 1.0, 0.0)));
@@ -265,8 +269,8 @@ void main() {
       col = diffuse + specular + envContrib + rimColor + sssColor;
       col *= ao;
 
-      // Top specular highlight
-      col += vec3(1.0, 0.98, 0.92) * pow(max(dot(n, h1), 0.0), 512.0) * shadow * 2.0;
+      // Top specular highlight — HDR peak for bloom pipeline
+      col += vec3(1.0, 0.98, 0.92) * pow(max(dot(n, h1), 0.0), 512.0) * shadow * (2.5 + aB * 1.5);
     }
 
     alpha = 1.0;
@@ -284,11 +288,7 @@ void main() {
     alpha = 1.0;
   }
 
-  // ACES tone mapping
-  col = col * (2.51 * col + 0.03) / (col * (2.43 * col + 0.59) + 0.14);
-  col = pow(col, vec3(0.95, 0.98, 1.04));
-
-  // Vignette
+  // Subtle vignette for depth framing
   float vig = 1.0 - dot(uv, uv) * 0.25;
   col *= vig;
 
@@ -302,5 +302,6 @@ void main() {
       col = mix(col, floor(col * 4.0 + 0.5) / 4.0, _f * 0.75);
   }
 
-  gl_FragColor = vec4(clamp(col, 0.0, 1.0), alpha);
+  // Output linear HDR — host applies ACES + gamma
+  gl_FragColor = vec4(col * exposure, alpha);
 }
