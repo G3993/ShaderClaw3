@@ -1,18 +1,37 @@
+## 2026-05-05
+**Prior rating:** 0.0★
+**Approach:** 3D raymarch
+**Critique:**
+1. Reference fidelity: VIDVOX "random_freeze" requires inputImage (freezes partial rect each frame) — produces nothing standalone.
+2. Compositional craft: No visual composition; purely a temporal frame-freeze utility.
+3. Technical execution: Correct but completely dependent on external source.
+4. Liveness: TIME-driven via random rect selection, but nothing to show without input.
+5. Differentiation: Functional as an effect but not a generator.
+**Changes:**
+- Full rewrite as "Arctic Shard" — raymarched 3D ice crystal formation
+- N shards arranged in ring + 1 central crystal (all sdShard = stretched octahedra)
+- 64-step march, orbiting camera with pitch oscillation
+- Ice palette (4 colors): midnight navy, glacier blue, iceBlue (user-controlled), HDR white spec, HDR cyan spec
+- Refraction shimmer: TIME-driven dot product on position
+- Black silhouette edge via fwidth() AA
+- Audio modulates crystal scale
+- shardCount parameter (2–10)
+**HDR peaks reached:** white specular 2.0+, cyan specular 1.5, violet rim 2.0
+**Estimated rating:** 4.5★
+
 ## 2026-05-05 (v3)
 **Prior rating:** 0★
-**Approach:** 3D raymarch — NEW ANGLE: Frost Crystal Lattice (vs v1 datamosh chromatic tears / v2 Aurora Borealis 2D)
+**Approach:** 3D raymarch — NEW ANGLE: Desert dune heatwave (warm) vs v1 3D ice crystal ring (cold), v2 2D aurora curtains (cool)
 **Critique:**
-1. Reference fidelity: Clear crystal/ice visual identity via stretched octahedra as shards; Voronoi-nucleus placement creates organic cluster.
-2. Compositional craft: Orbiting camera reveals 3D crystal cluster; cold blue palette creates strong cool identity vs. prior hot/glitch/aurora angles.
-3. Technical execution: 64-step march; octahedron SDF (|x|+|y|+|z|); normal-via-central-diff; two-light Blinn-Phong + rim; fwidth edge glow.
-4. Liveness: Crystal nuclei drift slowly (growthSpeed param) simulating formation; camera orbits; audio modulates hdrBoost.
-5. Differentiation: 3D geometry (vs v2 2D aurora), cold crystal (vs v1 glitch aesthetic), structural SDF (vs datamosh temporal effect).
+1. Reference: Sahara sand dunes with heat shimmer — complete warm/cold palette reversal from v1/v2
+2. Composition: Wide environmental landscape view vs v1 centered sculptural ring
+3. Technical: Analytic dune SDF (multi-sine), ray perturbation for heat shimmer, fwidth ink
+4. Liveness: Drifting camera + dune animation + heat shimmer all TIME-driven; audio modulates shimmer
+5. Differentiation: Warm landscape vs v1 cold 3D crystals, vs v2 cool 2D aurora
 **Changes:**
-- Full rewrite: 3D Voronoi crystal cluster with stretched-octahedron SDF
-- Palette: midnight navy, ice blue, glacier teal, arctic pale, white-hot HDR edges
-- 64-step march + fwidth edge-glow on crystal facets (WHITE_HOT at edges)
-- Orbit camera + slow crystal-nucleus drift animation
-- Two-light Blinn-Phong + rim light for cold specular highlights
-- Audio modulates hdrBoost multiplicatively
-**HDR peaks reached:** white-hot edge glow 2.2–3.0, arctic specular 2.2×1.5=3.3, glacier rim 2.2×1.2
-**Estimated rating:** 4.5★
+- Full rewrite from ice crystal SDF ring to desert dune displaced plane
+- Palette: ALL warm (ochre/gold/sienna/white-hot 2.5) — zero cool tones (opposite of v1/v2)
+- Heat shimmer: ray UV perturbation via sin oscillators
+- Sky: gold-to-amber gradient (no blue)
+**HDR peaks reached:** sky 1.5, dune crest 2.3, white-hot peak 2.5 = blooms hard
+**Estimated rating:** 4.0★
