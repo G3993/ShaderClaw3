@@ -18,3 +18,21 @@
 - shardCount parameter (2–10)
 **HDR peaks reached:** white specular 2.0+, cyan specular 1.5, violet rim 2.0
 **Estimated rating:** 4.5★
+
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 3D raymarch — NEW ANGLE: "Shatter Burst" — frozen mid-explosion, amber-crimson fire palette. vs. prior v1 (Arctic Shard — ice crystal ring, cool blue/white palette).
+**Critique:**
+1. Reference fidelity: Frame-freeze effect abandoned; now a frozen mid-explosion 3D scene.
+2. Compositional craft: White-hot central burst sphere provides strong focal point; shards radiate outward in Fibonacci sphere distribution for balanced composition.
+3. Technical execution: Per-shard orthonormal frame (shardDir/shardRight/shardUp); breathing oscillation via sin(TIME*0.3); 24-step additive heat-haze glow field.
+4. Liveness: Shards breathe slowly (frozen-frame illusion); camera orbits; audio modulates shard scale and burst glow.
+5. Differentiation: Explosion vs crystal growth, amber/crimson vs ice blue, outward divergence vs ring arrangement.
+**Changes:**
+- Full rewrite: Fibonacci sphere distributed sdBox shards + central burst sphere
+- Amber-crimson fire palette: BURST(3.0,2.5,1.0), OUTER(2.0,0.8,0.0), INNER(2.5,0.2,0.0), GLINT(3.0,1.5,0.1)
+- Inner face (facing burst) → crimson, outer → amber, edges → orange glint
+- 24-step heat-haze volumetric glow field around origin
+- CATEGORIES: ["Generator", "3D"]
+**HDR peaks reached:** white-hot burst 3.0, glint specular 3.0, amber faces 2.0
+**Estimated rating:** 4.5★
