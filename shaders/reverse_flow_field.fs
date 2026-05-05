@@ -1,111 +1,74 @@
 /*{
-  "DESCRIPTION": "Deep Ocean Current — 3D volumetric water column with bioluminescent streamlines tracing magnetic-like current paths through midnight blue abyss",
-  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
-  "CREDIT": "Easel / ShaderClaw v3",
+  "DESCRIPTION": "Neon River Delta — 3D aerial view of bioluminescent glowing channels on a void landscape. Electric blue/cyan/violet/gold palette",
+  "CREDIT": "ShaderClaw auto-improve v3",
+  "ISFVSN": "2",
+  "CATEGORIES": ["Generator", "3D"],
   "INPUTS": [
-    { "NAME": "currentSpeed",  "LABEL": "Current Speed", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.6  },
-    { "NAME": "streamCount",   "LABEL": "Stream Count",  "TYPE": "float", "MIN": 4.0, "MAX": 16.0,"DEFAULT": 10.0 },
-    { "NAME": "cameraSpeed",   "LABEL": "Camera Speed",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.15 },
-    { "NAME": "glowRadius",    "LABEL": "Glow Radius",   "TYPE": "float", "MIN": 0.01,"MAX": 0.2,  "DEFAULT": 0.06 },
-    { "NAME": "hdrBoost",      "LABEL": "HDR Boost",     "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 2.3  },
-    { "NAME": "audioReact",    "LABEL": "Audio React",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0  }
+    { "NAME": "channelW",  "TYPE": "float", "DEFAULT": 0.42, "MIN": 0.1, "MAX": 0.9, "LABEL": "Channel Width" },
+    { "NAME": "flowSpeed", "TYPE": "float", "DEFAULT": 0.3,  "MIN": 0.0, "MAX": 2.0, "LABEL": "Flow Speed" },
+    { "NAME": "altitude",  "TYPE": "float", "DEFAULT": 3.5,  "MIN": 1.0, "MAX": 7.0, "LABEL": "Altitude" },
+    { "NAME": "glowPeak",  "TYPE": "float", "DEFAULT": 2.5,  "MIN": 1.0, "MAX": 4.0, "LABEL": "Glow Peak" },
+    { "NAME": "audioMod",  "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0, "MAX": 2.0, "LABEL": "Audio React" }
   ]
 }*/
 
-precision highp float;
+const vec3 C_BLUE   = vec3(0.0,  0.3,  1.0);
+const vec3 C_CYAN   = vec3(0.0,  0.9,  1.0);
+const vec3 C_VIOLET = vec3(0.5,  0.0,  1.0);
+const vec3 C_GOLD   = vec3(1.0,  0.8,  0.0);
+const vec3 C_LAND   = vec3(0.01, 0.01, 0.02);
 
-// ── Palette: deep ocean bioluminescence ──────────────────────────────────────
-const vec3 ABYSS      = vec3(0.00, 0.00, 0.05);
-const vec3 DEEP_TEAL  = vec3(0.00, 0.45, 0.70);
-const vec3 BIO_CYAN   = vec3(0.00, 1.00, 0.85);
-const vec3 BIO_VIOLET = vec3(0.45, 0.00, 1.00);
-const vec3 WHITE_GLOW = vec3(2.00, 2.50, 3.00);
-
-float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
-
-// Domain-warped flow field giving organic current paths
-vec3 flowDir(vec3 p, float t) {
-    float s = currentSpeed;
-    float a = sin(p.x * 1.2 + p.z * 0.9 + t * s)
-            + cos(p.y * 0.8 + p.z * 1.4 - t * s * 0.7);
-    float b = cos(p.x * 0.9 - p.y * 1.3 + t * s * 0.5)
-            + sin(p.y * 1.1 + p.x * 0.7 + t * s * 0.6);
-    float c = sin(p.z * 1.4 - p.x * 0.8 + t * s * 0.8)
-            + cos(p.z * 0.6 + p.y * 1.2 - t * s * 0.4);
-    return normalize(vec3(a, b, c));
+float hash21(vec2 p) { return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5); }
+float noiseS(vec2 p) {
+    vec2 i=floor(p), f=fract(p);
+    f=f*f*(3.0-2.0*f);
+    return mix(mix(hash21(i),hash21(i+vec2(1,0)),f.x),
+               mix(hash21(i+vec2(0,1)),hash21(i+vec2(1,1)),f.x),f.y);
 }
 
-// Minimum distance from a point to a streamline (traced N steps forward)
-float streamDist(vec3 p, float seedID, float N, float t) {
-    float seed1 = hash(seedID);
-    float seed2 = hash(seedID + 7.3);
-    float seed3 = hash(seedID + 13.7);
-    vec3 q = vec3(seed1 * 3.0 - 1.5, seed2 * 3.0 - 1.5, seed3 * 3.0 - 1.5);
-    float minD = 1e9;
-    const int STEPS = 20;
-    for (int i = 0; i < STEPS; i++) {
-        vec3 dir = flowDir(q, t);
-        q += dir * 0.08;
-        minD = min(minD, length(p - q));
-    }
-    return minD;
+float channelGlow(vec2 xz) {
+    vec2 p = xz*0.75 + vec2(TIME*flowSpeed*0.1, TIME*flowSpeed*0.07);
+    float n1 = noiseS(p);
+    float n2 = noiseS(p*2.1+vec2(1.3,0.7));
+    float n3 = noiseS(p*4.3-vec2(0.5,1.1));
+    float combined = n1*0.5 + n2*0.3 + n3*0.2;
+    return 1.0 - smoothstep(channelW-0.1, channelW+0.1, combined);
 }
 
 void main() {
     vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
     uv.x *= RENDERSIZE.x / RENDERSIZE.y;
-
-    float t   = TIME;
-    float aud = 1.0 + (audioLevel + audioBass * 0.8) * audioReact * 0.5;
-    float N   = streamCount;
-
-    // Slow-drifting camera looking into the abyss (downward angle)
-    float camAng = t * cameraSpeed;
-    vec3 camPos  = vec3(cos(camAng) * 2.5, 1.5 + sin(camAng * 0.4) * 0.5, sin(camAng) * 2.5);
-    vec3 target  = vec3(0.0, -0.5, 0.0);
-    vec3 fwd     = normalize(target - camPos);
-    vec3 right   = normalize(cross(fwd, vec3(0, 1, 0)));
-    vec3 up      = cross(right, fwd);
-    vec3 rd      = normalize(fwd + uv.x * right * 0.75 + uv.y * up * 0.75);
-
-    // Volume-ray integration — march and accumulate glow from streams
-    vec3 col  = ABYSS;
-    vec3 accum = vec3(0.0);
-    float density = 0.0;
-    float stepSize = 0.15;
-
-    for (int step = 0; step < 40; step++) {
-        float d = stepSize * float(step) + 0.2;
-        if (d > 7.0) break;
-        vec3 p = camPos + rd * d;
-
-        // Sample each streamline's glow contribution
-        for (int si = 0; si < 16; si++) {
-            if (float(si) >= N) break;
-            float seedOffset = float(si) * 1.37 + floor(t * currentSpeed * 0.2);
-            float sd = streamDist(p, seedOffset, N, t);
-            if (sd < glowRadius * 1.5) {
-                float glow = exp(-sd * sd / (glowRadius * glowRadius));
-                float pulse = 0.6 + 0.4 * sin(t * 2.5 + float(si) * 1.9 + d * 2.0);
-                // Alternate colors by stream index
-                vec3 streamCol = (mod(float(si), 3.0) < 1.0) ? BIO_CYAN
-                               : (mod(float(si), 3.0) < 2.0) ? BIO_VIOLET
-                               : DEEP_TEAL;
-                accum += streamCol * glow * pulse * stepSize * 0.6 * hdrBoost * aud;
-                // White-hot core
-                float core = exp(-sd * sd / (glowRadius * glowRadius * 0.08));
-                accum += WHITE_GLOW * core * 0.08 * hdrBoost * aud;
-            }
+    float t = TIME;
+    float amod = 1.0 + audioLevel * audioMod * 0.2;
+    float driftX = sin(t*0.07)*0.6 + t*flowSpeed*0.09;
+    float driftZ = cos(t*0.05)*0.4 + t*flowSpeed*0.05;
+    vec3 ro = vec3(driftX, altitude, driftZ);
+    vec3 ta = ro + vec3(0.0, -altitude, -0.15);
+    vec3 ww = normalize(ta - ro);
+    vec3 uu = normalize(cross(ww, vec3(0,1,0)));
+    vec3 vv = cross(uu, ww);
+    vec3 rd = normalize(uv.x*uu + uv.y*vv + 2.5*ww);
+    vec3 col = vec3(0.0, 0.0, 0.005);
+    if (rd.y < 0.0) {
+        float gt = -ro.y / rd.y;
+        if (gt > 0.0) {
+            vec3 p = ro + rd * gt;
+            vec2 xz = p.xz;
+            float ch = channelGlow(xz);
+            float glow = ch * glowPeak * amod;
+            float pulseT = t * flowSpeed * 3.5;
+            float flow = 0.5 + 0.5*sin(xz.x*5.0 + xz.y*3.5 - pulseT);
+            float pulse = ch * flow;
+            // fwidth AA on channel edges
+            float fw = fwidth(ch);
+            float edgeAA = smoothstep(0.0, fw*6.0, ch) * (1.0-smoothstep(1.0-fw*6.0, 1.0, ch));
+            vec3 baseCol = mix(C_BLUE, C_CYAN, ch);
+            baseCol = mix(baseCol, C_VIOLET, noiseS(xz*1.8+vec2(t*0.02))*ch*0.5);
+            col = C_LAND;
+            col += baseCol * glow;
+            col += C_GOLD * pulse * glow * 0.5;
+            col += C_CYAN * edgeAA * glowPeak * 0.6;
         }
     }
-
-    // Depth fog fades to abyss
-    col = ABYSS + accum;
-
-    // Subtle bioluminescent particle sparkles (plankton)
-    vec2 puvI = floor(isf_FragNormCoord * 180.0);
-    float sparkle = step(0.994, hash(puvI.x + puvI.y * 317.1 + floor(t * 8.0) * 41.3));
-    col += BIO_CYAN * sparkle * 0.8 * hdrBoost;
-
     gl_FragColor = vec4(col, 1.0);
 }
