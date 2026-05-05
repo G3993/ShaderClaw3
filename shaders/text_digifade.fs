@@ -1,197 +1,144 @@
 /*{
-  "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Digifade - glitch dissolve",
-  "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
-    { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1], "LABELS": ["Digifade","Digifade Glitch"], "DEFAULT": 0 },
-    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
-    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
-    { "NAME": "intensity", "LABEL": "Glitch", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "density", "LABEL": "Dissolve", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
-  ]
+    "DESCRIPTION": "Data Cubes Dissolve — 3D grid of raymarched box SDFs that fragment and scatter over time. Deep void background. Fully saturated palette: electric blue, crimson, gold, violet. 64-step raymarch.",
+    "CATEGORIES": ["Generator", "3D", "Glitch", "Audio Reactive"],
+    "CREDIT": "ShaderClaw auto-improve",
+    "INPUTS": [
+        { "NAME": "gridSize",   "TYPE": "float", "DEFAULT": 4.0,  "MIN": 2.0, "MAX": 8.0,  "LABEL": "Grid Size" },
+        { "NAME": "dissolve",   "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0, "MAX": 1.0,  "LABEL": "Dissolve Wave" },
+        { "NAME": "hdrPeak",    "TYPE": "float", "DEFAULT": 2.5,  "MIN": 1.0, "MAX": 4.0,  "LABEL": "HDR Peak" },
+        { "NAME": "audioMod",   "TYPE": "float", "DEFAULT": 0.6,  "MIN": 0.0, "MAX": 2.0,  "LABEL": "Audio Mod" }
+    ]
 }*/
 
-const float PI = 3.14159265;
-const float TWO_PI = 6.28318530;
+float hash11(float n)  { return fract(sin(n*127.1)*43758.5453); }
+float hash21(vec2 p)   { return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
-float charPixel(int ch, float col, float row) {
-    if (ch < 0 || ch > 36) return 0.0;
-    vec2 uv = vec2(col / 5.0, row / 7.0);
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return smoothstep(0.1, 0.55, texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r);
+float sdBox(vec3 p, vec3 b) {
+    vec3 q = abs(p) - b;
+    return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
 }
 
-int getChar(int slot) {
-    if (slot == 0)  return int(msg_0);
-    if (slot == 1)  return int(msg_1);
-    if (slot == 2)  return int(msg_2);
-    if (slot == 3)  return int(msg_3);
-    if (slot == 4)  return int(msg_4);
-    if (slot == 5)  return int(msg_5);
-    if (slot == 6)  return int(msg_6);
-    if (slot == 7)  return int(msg_7);
-    if (slot == 8)  return int(msg_8);
-    if (slot == 9)  return int(msg_9);
-    if (slot == 10) return int(msg_10);
-    if (slot == 11) return int(msg_11);
-    if (slot == 12) return int(msg_12);
-    if (slot == 13) return int(msg_13);
-    if (slot == 14) return int(msg_14);
-    if (slot == 15) return int(msg_15);
-    if (slot == 16) return int(msg_16);
-    if (slot == 17) return int(msg_17);
-    if (slot == 18) return int(msg_18);
-    if (slot == 19) return int(msg_19);
-    if (slot == 20) return int(msg_20);
-    if (slot == 21) return int(msg_21);
-    if (slot == 22) return int(msg_22);
-    if (slot == 23) return int(msg_23);
-    if (slot == 24) return int(msg_24);
-    if (slot == 25) return int(msg_25);
-    if (slot == 26) return int(msg_26);
-    if (slot == 27) return int(msg_27);
-    if (slot == 28) return int(msg_28);
-    if (slot == 29) return int(msg_29);
-    if (slot == 30) return int(msg_30);
-    if (slot == 31) return int(msg_31);
-    if (slot == 32) return int(msg_32);
-    if (slot == 33) return int(msg_33);
-    if (slot == 34) return int(msg_34);
-    if (slot == 35) return int(msg_35);
-    if (slot == 36) return int(msg_36);
-    if (slot == 37) return int(msg_37);
-    if (slot == 38) return int(msg_38);
-    if (slot == 39) return int(msg_39);
-    if (slot == 40) return int(msg_40);
-    if (slot == 41) return int(msg_41);
-    if (slot == 42) return int(msg_42);
-    if (slot == 43) return int(msg_43);
-    if (slot == 44) return int(msg_44);
-    if (slot == 45) return int(msg_45);
-    if (slot == 46) return int(msg_46);
-    return int(msg_47);
+// Per-cube color from palette
+vec3 cubeColor(vec2 ci) {
+    float h = hash21(ci);
+    if (h < 0.25) return vec3(0.05, 0.25, 1.0);  // electric blue
+    if (h < 0.50) return vec3(0.95, 0.08, 0.05); // crimson
+    if (h < 0.75) return vec3(1.0,  0.72, 0.0);  // gold
+    return             vec3(0.6,  0.05, 1.0);    // violet
 }
 
-int charCount() {
-    int n = int(msg_len);
-    return n > 0 ? n : 1;
-}
+// Grid scene SDF
+float sceneSDF(vec3 p) {
+    float N = gridSize;
+    float halfN = N * 0.5;
+    float dmin = 1e6;
+    float wavePhase = TIME * 0.4;
 
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
-}
+    for (int ix = 0; ix < 8; ix++) {
+        if (float(ix) >= N) break;
+        for (int iy = 0; iy < 8; iy++) {
+            if (float(iy) >= N) break;
+            vec2 ci = vec2(float(ix), float(iy));
+            float seed = hash21(ci);
 
-float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+            // Cube position: dissolve wave scatters cubes outward
+            float dissolveT = fract(wavePhase + seed * 1.3) * dissolve;
+            float scatter = dissolveT * dissolveT;
+            vec3 offset = vec3(
+                sin(seed * 6.28 + wavePhase * 1.1) * scatter * 2.0,
+                cos(seed * 9.42 + wavePhase * 0.9) * scatter * 2.0,
+                sin(seed * 3.14 + wavePhase * 0.7) * scatter * 1.5
+            );
+            vec3 basePos = vec3(float(ix) - halfN + 0.5, float(iy) - halfN + 0.5, 0.0) * 0.55;
+            vec3 cubeCenter = basePos + offset;
 
-// =======================================================================
-// EFFECT: DIGIFADE - glitch dissolve
-// =======================================================================
+            // Scale: cubes shrink as they dissolve
+            float scale = max(0.01, 1.0 - scatter * 1.2);
+            float halfBox = 0.22 * scale;
 
-vec4 effectDigifade(vec2 uv, int sub) {
-    float aspect = RENDERSIZE.x / RENDERSIZE.y;
-    int numChars = charCount();
-    float glitchAmount = intensity;
-    float sliceCount = mix(5.0, 100.0, density);
-
-    float complexity = 1.0, sweepSpeed = 1.0, vertGlitch = 0.0, maxDisp = 0.3;
-    if (sub == 1) { complexity = 2.0; sweepSpeed = 1.3; maxDisp = 0.5; vertGlitch = 0.4; }
-
-    float t = TIME * speed * sweepSpeed;
-    vec2 p = vec2((uv.x - 0.5) * aspect + 0.5, uv.y);
-
-    // Single-line layout: all chars on one row, scale to fit width
-    float cH = 0.18 * textScale;
-    if (aspect < 1.0) cH *= aspect;
-    float cW = cH * (5.0/7.0);
-    float gW = cW * 0.2;
-
-    // Scale down if text is wider than screen
-    float totalTextW = float(numChars) * cW + float(numChars - 1) * gW;
-    float maxW = 0.9 * aspect;
-    float fitScale = totalTextW > maxW ? maxW / totalTextW : 1.0;
-    cH *= fitScale;
-    cW *= fitScale;
-    gW *= fitScale;
-
-    float rowW = float(numChars) * cW + float(numChars - 1) * gW;
-    float startX = 0.5 - rowW * 0.5;
-    float startY = 0.5 - cH * 0.5;
-
-    float si = floor(uv.y * sliceCount);
-    float n1 = hash(si + floor(t*2.0));
-    float n2 = hash(si*3.7 + floor(t*3.0));
-
-    float textHit = 0.0;
-
-    float sw = sin(t*0.7)*0.5+0.5;
-    float ps = smoothstep(sw-0.15, sw+0.1, (p.x-startX)/max(rowW, 0.001));
-
-    float dx = abs(ps*n1*glitchAmount*maxDisp + ps*sin(si*0.3*complexity+t)*glitchAmount*maxDisp*0.3);
-    float dy = vertGlitch > 0.01 ? ps*(n2-0.5)*vertGlitch*glitchAmount*0.06 : 0.0;
-
-    vec2 samp = vec2(p.x - dx, p.y - dy);
-    float rx = samp.x - startX, ry = samp.y - startY;
-
-    if (rx >= 0.0 && rx <= rowW && ry >= 0.0 && ry <= cH) {
-        float cs = cW + gW;
-        float csF = rx / cs;
-        int slot = int(floor(csF));
-        float clx = fract(csF), cf = cW/cs;
-        if (clx < cf && slot >= 0 && slot < numChars) {
-            float gc = (clx/cf)*5.0, gr = (ry/cH)*7.0;
-            if (gc >= 0.0 && gc < 5.0 && gr >= 0.0 && gr < 7.0) {
-                int ch = getChar(slot);
-                if (ch >= 0 && ch <= 36 && ch != 26) textHit = max(textHit, charPixel(ch, gc, gr));
-            }
+            dmin = min(dmin, sdBox(p - cubeCenter, vec3(halfBox)));
         }
     }
-
-    vec3 fc = mix(bgColor.rgb, textColor.rgb, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
-    return vec4(fc, a);
+    return dmin;
 }
 
-// =======================================================================
-// MAIN
-// =======================================================================
+vec3 calcNormal(vec3 p) {
+    vec2 e = vec2(0.001, 0.0);
+    return normalize(vec3(
+        sceneSDF(p+e.xyy)-sceneSDF(p-e.xyy),
+        sceneSDF(p+e.yxy)-sceneSDF(p-e.yxy),
+        sceneSDF(p+e.yyx)-sceneSDF(p-e.yyx)
+    ));
+}
+
+// ID: which cube was hit
+vec3 hitColor(vec3 p) {
+    float N = gridSize;
+    float halfN = N * 0.5;
+    float wavePhase = TIME * 0.4;
+    float dmin = 1e6;
+    vec3 bestCol = vec3(1.0);
+    for (int ix = 0; ix < 8; ix++) {
+        if (float(ix) >= N) break;
+        for (int iy = 0; iy < 8; iy++) {
+            if (float(iy) >= N) break;
+            vec2 ci = vec2(float(ix), float(iy));
+            float seed = hash21(ci);
+            float dissolveT = fract(wavePhase + seed * 1.3) * dissolve;
+            float scatter = dissolveT * dissolveT;
+            vec3 offset = vec3(
+                sin(seed*6.28 + wavePhase*1.1)*scatter*2.0,
+                cos(seed*9.42 + wavePhase*0.9)*scatter*2.0,
+                sin(seed*3.14 + wavePhase*0.7)*scatter*1.5
+            );
+            vec3 basePos = vec3(float(ix)-halfN+0.5, float(iy)-halfN+0.5, 0.0)*0.55;
+            float scale = max(0.01, 1.0 - scatter*1.2);
+            float d = sdBox(p-(basePos+offset), vec3(0.22*scale));
+            if (d < dmin) { dmin = d; bestCol = cubeColor(ci); }
+        }
+    }
+    return bestCol;
+}
 
 void main() {
-    vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
-    int p = int(preset);
-    vec4 col = effectDigifade(uv, p);
+    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
+    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
+    float audio = 1.0 + audioLevel * audioMod + audioBass * audioMod * 0.5;
 
-    if (_voiceGlitch > 0.01) {
-        float g = _voiceGlitch;
-        float t = TIME * 17.0;
-        float band = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
-        float bandNoise = fract(sin(band * 91.7 + t) * 43758.5);
-        float bandActive = step(1.0 - g * 0.6, bandNoise);
-        float shift = (bandNoise - 0.5) * 0.08 * g * bandActive;
-        float chromaAmt = g * 0.015;
-        vec2 uvR = uv + vec2(shift + chromaAmt, 0.0);
-        vec2 uvB = uv + vec2(shift - chromaAmt, 0.0);
-        vec2 uvG = uv + vec2(shift, chromaAmt * 0.5);
-        vec4 cR = effectDigifade(uvR, p);
-        vec4 cG = effectDigifade(uvG, p);
-        vec4 cB = effectDigifade(uvB, p);
-        vec4 glitched = vec4(cR.r, cG.g, cB.b, max(max(cR.a, cG.a), cB.a));
-        float scanline = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
-        float blockX = floor(uv.x * 6.0);
-        float blockY = floor(uv.y * 4.0);
-        float blockNoise = fract(sin((blockX + blockY * 7.0) * 113.1 + floor(t * 8.0)) * 43758.5);
-        float dropout = step(1.0 - g * 0.15, blockNoise);
-        glitched.rgb *= scanline;
-        glitched.rgb *= 1.0 - dropout;
-        col = mix(col, glitched, smoothstep(0.0, 0.3, g));
+    // Slow orbiting camera
+    float camT = TIME * 0.18;
+    vec3 ro = vec3(sin(camT)*3.5, cos(camT*0.7)*1.5, cos(camT)*3.5);
+    vec3 fw  = normalize(-ro);
+    vec3 rgt = normalize(cross(fw, vec3(0.0,1.0,0.0)));
+    vec3 up_ = cross(rgt, fw);
+    vec3 rd  = normalize(fw + uv.x*rgt*0.7 + uv.y*up_*0.7);
+
+    float dist = 0.0;
+    bool hit = false;
+    for (int i = 0; i < 64; i++) {
+        float d = sceneSDF(ro + rd * dist);
+        if (d < 0.003) { hit = true; break; }
+        dist += d;
+        if (dist > 12.0) break;
     }
 
-    gl_FragColor = col;
+    vec3 col = vec3(0.0, 0.0, 0.01);
+
+    if (hit) {
+        vec3 p    = ro + rd * dist;
+        vec3 N    = calcNormal(p);
+        vec3 base = hitColor(p);
+
+        vec3 key  = normalize(vec3(-0.6, 1.0, -0.8));
+        float kD  = max(dot(N, key), 0.0);
+        float sp  = pow(max(dot(reflect(-key,N),-rd),0.0), 32.0);
+
+        // fwidth edge darkening for cube silhouettes
+        float edgeAA = fwidth(sceneSDF(p));
+
+        col  = base * (kD + 0.1) * hdrPeak * audio;
+        col += vec3(1.0) * sp * hdrPeak * 0.7;
+    }
+
+    gl_FragColor = vec4(col, 1.0);
 }
