@@ -1,180 +1,186 @@
 /*{
-  "DESCRIPTION": "Sonoluminescence — glowing bubble in water with concentric ripples, glass vessel, and audio-reactive pulse",
-  "CREDIT": "ShaderClaw (inspired by TheNewPhysics sonoluminescence visualization)",
-  "CATEGORIES": ["Generator", "Nature"],
+  "DESCRIPTION": "Sonoluminescence 3D — raymarched glass beaker with plasma bubble core, underwater caustics, concentric ripples, audio-reactive pulse. Cinematic studio lighting. HDR linear output.",
+  "CREDIT": "ShaderClaw auto-improve 2026-05-05",
+  "CATEGORIES": ["Generator", "Nature", "3D"],
   "INPUTS": [
-    { "NAME": "rippleCount", "LABEL": "Ripples", "TYPE": "float", "DEFAULT": 8.0, "MIN": 3.0, "MAX": 20.0 },
-    { "NAME": "rippleSpeed", "LABEL": "Ripple Speed", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "glowIntensity", "LABEL": "Glow", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "waterLevel", "LABEL": "Water Level", "TYPE": "float", "DEFAULT": 0.42, "MIN": 0.2, "MAX": 0.7 },
-    { "NAME": "glassWidth", "LABEL": "Glass Width", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.15, "MAX": 0.5 },
-    { "NAME": "glassHeight", "LABEL": "Glass Height", "TYPE": "float", "DEFAULT": 0.7, "MIN": 0.3, "MAX": 0.9 },
-    { "NAME": "pulseRate", "LABEL": "Pulse Rate", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 4.0 },
-    { "NAME": "colorTemp", "LABEL": "Color Temp", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "transparency", "LABEL": "Glass Clarity", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 0.4 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
+    {"NAME":"rippleCount","LABEL":"Ripples","TYPE":"float","DEFAULT":8.0,"MIN":3.0,"MAX":20.0},
+    {"NAME":"rippleSpeed","LABEL":"Ripple Speed","TYPE":"float","DEFAULT":0.6,"MIN":0.0,"MAX":2.0},
+    {"NAME":"glowIntensity","LABEL":"Glow","TYPE":"float","DEFAULT":1.0,"MIN":0.0,"MAX":3.0},
+    {"NAME":"waterLevel","LABEL":"Water Level","TYPE":"float","DEFAULT":0.42,"MIN":0.2,"MAX":0.7},
+    {"NAME":"pulseRate","LABEL":"Pulse Rate","TYPE":"float","DEFAULT":1.0,"MIN":0.1,"MAX":4.0},
+    {"NAME":"colorTemp","LABEL":"Color Temp","TYPE":"float","DEFAULT":0.5,"MIN":0.0,"MAX":1.0},
+    {"NAME":"camOrbitSpeed","LABEL":"Orbit Speed","TYPE":"float","DEFAULT":0.18,"MIN":0.0,"MAX":1.0},
+    {"NAME":"audioReact","LABEL":"Audio React","TYPE":"float","DEFAULT":1.0,"MIN":0.0,"MAX":2.0}
   ]
 }*/
 
 #define PI 3.14159265
 
-// Smooth noise
-float hash(vec2 p) {
+float hash2(vec2 p) {
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
     p3 += dot(p3, p3.yzx + 33.33);
     return fract((p3.x + p3.y) * p3.z);
 }
 
 float vnoise(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
+    vec2 i = floor(p), f = fract(p);
     f = f * f * (3.0 - 2.0 * f);
-    return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x),
-               mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y);
+    return mix(mix(hash2(i),   hash2(i+vec2(1,0)), f.x),
+               mix(hash2(i+vec2(0,1)), hash2(i+vec2(1,1)), f.x), f.y);
 }
 
-// Signed distance to a rounded rectangle (glass cross-section)
-float sdRoundedRect(vec2 p, vec2 b, float r) {
-    vec2 d = abs(p) - b + r;
-    return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - r;
+float sdCylinder(vec3 p, float r, float h) {
+    vec2 d = abs(vec2(length(p.xz), p.y)) - vec2(r, h);
+    return min(max(d.x, d.y), 0.0) + length(max(d, 0.0));
+}
+
+// Concentric ripple height field at XZ position
+float rippleH(vec2 xz, float t, float aPulse) {
+    float rT = t * rippleSpeed;
+    float r  = length(xz);
+    float h  = 0.0;
+    for (float ri = 0.0; ri < 20.0; ri++) {
+        if (ri >= rippleCount) break;
+        float ph  = fract(rT * 0.3 + ri / rippleCount);
+        float rad = ph * 0.28;
+        float fade = (1.0 - ph) * (1.0 - ph);
+        h += smoothstep(0.007, 0.0, abs(r - rad)) * fade * 0.007 * (0.5 + 0.5 * aPulse);
+    }
+    return h;
 }
 
 void main() {
-    vec2 uv = gl_FragCoord.xy / RENDERSIZE;
-    float aspect = RENDERSIZE.x / RENDERSIZE.y;
-    vec2 p = (uv - 0.5) * vec2(aspect, 1.0);
+    vec2 uv = (gl_FragCoord.xy - 0.5 * RENDERSIZE.xy) / RENDERSIZE.y;
+    float t  = TIME;
 
-    float t = TIME * rippleSpeed;
+    float bass      = audioBass;
+    float pulse     = 0.5 + 0.5 * sin(t * pulseRate * PI * 2.0);
+    float audioPulse = mix(pulse, bass, step(0.01, bass)) * audioReact;
+    float audioMod  = 0.5 + 0.5 * audioPulse;
 
-    // Audio reactivity
-    float bass = audioBass;
-    float pulse = 0.5 + 0.5 * sin(TIME * pulseRate * PI * 2.0);
-    float audioPulse = mix(pulse, bass, step(0.01, bass));
+    // Palette (4–6 colors grounded in real sonoluminescence light)
+    vec3 waterDeep   = mix(vec3(0.00, 0.02, 0.08), vec3(0.00, 0.04, 0.14), colorTemp);
+    vec3 waterBright = mix(vec3(0.05, 0.20, 0.60), vec3(0.10, 0.40, 0.80), colorTemp);
+    vec3 glowCol     = mix(vec3(0.30, 0.60, 1.00), vec3(0.60, 0.85, 1.00), colorTemp);
+    vec3 specHDR     = mix(vec3(0.85, 0.95, 1.00), vec3(1.00, 0.90, 0.80), colorTemp);
 
-    // Color palette: deep blue to cyan based on colorTemp
-    vec3 waterDeep = mix(vec3(0.0, 0.02, 0.08), vec3(0.0, 0.04, 0.12), colorTemp);
-    vec3 waterBright = mix(vec3(0.05, 0.2, 0.6), vec3(0.1, 0.4, 0.8), colorTemp);
-    vec3 glowColor = mix(vec3(0.3, 0.6, 1.0), vec3(0.5, 0.8, 1.0), colorTemp);
-    vec3 bgColor = vec3(0.005, 0.008, 0.015);
+    float glassR = 0.30; float glassH = 0.40; float wallT = 0.013;
+    float waterY = -0.05 + (waterLevel - 0.42) * glassH * 2.2;
 
-    // ========== GLASS VESSEL ==========
-    vec2 glassCenter = vec2(0.0, 0.05);
-    float gw = glassWidth;
-    float gh = glassHeight * 0.5;
-    float wallThick = 0.012;
-    float cornerR = 0.02;
+    vec3 bubblePos = vec3(0.0, waterY - 0.10 + 0.008 * sin(t * 1.5), 0.0);
+    float bubbleR  = 0.013 * (0.7 + 0.3 * audioPulse);
 
-    // Outer glass shell
-    float dOuter = sdRoundedRect(p - glassCenter, vec2(gw, gh), cornerR);
-    // Inner glass (slightly smaller)
-    float dInner = sdRoundedRect(p - glassCenter, vec2(gw - wallThick, gh - wallThick * 0.5), cornerR * 0.5);
+    // Orbiting camera
+    float angle = t * camOrbitSpeed;
+    vec3 ro = vec3(sin(angle) * 0.82, 0.06, cos(angle) * 0.82);
+    vec3 ta = vec3(0.0, -0.02, 0.0);
+    vec3 ww = normalize(ta - ro);
+    vec3 uu = normalize(cross(vec3(0,1,0), ww));
+    vec3 vv = cross(ww, uu);
+    vec3 rd = normalize(uv.x * uu + uv.y * vv + 1.9 * ww);
+    vec3 key = normalize(vec3(0.4, 1.5, 0.3));
 
-    // Glass rim at top
-    float rimY = glassCenter.y + gh;
-    float rimDist = abs(p.y - rimY);
-    float rimMask = smoothstep(wallThick * 2.0, 0.0, rimDist) * smoothstep(gw + wallThick, gw - wallThick, abs(p.x - glassCenter.x));
+    vec3  col  = vec3(0.003, 0.005, 0.012);
+    float minT = 1e9;
 
-    // Glass wall mask
-    float glassMask = smoothstep(0.003, 0.0, dOuter) - smoothstep(0.003, 0.0, dInner);
-    // Glass edge highlight (thin bright line)
-    float edgeGlow = smoothstep(0.008, 0.0, abs(dOuter)) * 0.5;
-    edgeGlow += smoothstep(0.005, 0.0, abs(dOuter + wallThick * 0.5)) * 0.2;
-
-    // Inside glass mask
-    float insideMask = smoothstep(0.002, 0.0, dInner);
-
-    // ========== WATER SURFACE ==========
-    float waterY = glassCenter.y - gh + gh * 2.0 * waterLevel;
-    // Gentle surface wave
-    float surfaceWave = 0.003 * sin(p.x * 30.0 + t * 2.0) + 0.002 * sin(p.x * 50.0 - t * 3.0);
-    float waterSurf = waterY + surfaceWave;
-    float inWater = insideMask * smoothstep(waterSurf + 0.005, waterSurf - 0.005, p.y);
-
-    // Water surface highlight (meniscus)
-    float surfHighlight = smoothstep(0.015, 0.0, abs(p.y - waterSurf)) * insideMask;
-    // Meniscus curves up at glass walls
-    float wallProx = smoothstep(gw - wallThick, gw - wallThick - 0.04, abs(p.x - glassCenter.x));
-    surfHighlight *= (0.3 + 0.7 * wallProx);
-
-    // ========== BUBBLE / GLOW SOURCE ==========
-    vec2 bubblePos = vec2(glassCenter.x, waterY - 0.08);
-    // Subtle oscillation
-    bubblePos.y += 0.005 * sin(TIME * 1.5);
-    float distBubble = length(p - bubblePos);
-
-    // Core glow
-    float coreGlow = exp(-distBubble * 80.0) * glowIntensity * (0.7 + 0.3 * audioPulse);
-    // Soft halo
-    float haloGlow = exp(-distBubble * 20.0) * glowIntensity * 0.4 * (0.6 + 0.4 * audioPulse);
-    // Wide atmospheric glow
-    float atmosGlow = exp(-distBubble * 6.0) * glowIntensity * 0.08;
-
-    // ========== CONCENTRIC RIPPLES ==========
-    float ripples = 0.0;
-    // Ripples on the water surface, expanding from bubble position projected to surface
-    vec2 rippleCenter = vec2(bubblePos.x, waterSurf);
-    float distRipple = length(p - rippleCenter);
-
-    for (float i = 0.0; i < 20.0; i += 1.0) {
-        if (i >= rippleCount) break;
-        // Each ripple ring expands outward over time
-        float phase = fract(t * 0.3 + i / rippleCount);
-        float radius = phase * gw * 1.2;
-        float ringWidth = 0.003 + 0.002 * phase; // wider as they expand
-        float ring = smoothstep(ringWidth, 0.0, abs(distRipple - radius));
-        float fade = (1.0 - phase) * (1.0 - phase); // fade as they expand
-        // Only show ripples near water surface
-        float surfProx = exp(-abs(p.y - waterSurf) * 60.0);
-        ripples += ring * fade * surfProx * (0.6 + 0.4 * audioPulse);
+    // --- Bubble (analytic sphere intersection) ---
+    {
+        vec3  oc   = ro - bubblePos;
+        float bB   = dot(oc, rd);
+        float bC   = dot(oc, oc) - bubbleR * bubbleR;
+        float disc = bB * bB - bC;
+        if (disc > 0.0) {
+            float bt = -bB - sqrt(disc);
+            if (bt > 0.001 && bt < minT) {
+                minT = bt;
+                vec3 bP = ro + rd * bt;
+                vec3 bN = normalize(bP - bubblePos);
+                vec3 v  = normalize(-rd);
+                float spec = pow(max(dot(normalize(key + v), bN), 0.0), 64.0);
+                // HDR plasma core — peaks at ~5×
+                col  = glowCol * glowIntensity * (2.2 + audioPulse * 2.5);
+                col += specHDR * spec * 4.0;
+            }
+        }
     }
 
-    // ========== UNDERWATER CAUSTICS ==========
-    float caustics = 0.0;
-    if (inWater > 0.01) {
-        float cx = vnoise(p * 15.0 + t * vec2(0.3, 0.2)) * 0.5
-                 + vnoise(p * 30.0 - t * vec2(0.2, 0.4)) * 0.25;
-        caustics = pow(cx, 3.0) * 0.3 * inWater;
+    // --- Water surface ---
+    if (abs(rd.y) > 0.001) {
+        float tW = (waterY - ro.y) / rd.y;
+        if (tW > 0.001 && tW < minT) {
+            vec3 wP = ro + rd * tW;
+            if (length(wP.xz) < glassR - wallT) {
+                minT = tW;
+                float e2 = 0.006;
+                float h0 = rippleH(wP.xz,                   t, audioPulse);
+                float hL = rippleH(wP.xz - vec2(e2, 0.0),   t, audioPulse);
+                float hR = rippleH(wP.xz + vec2(e2, 0.0),   t, audioPulse);
+                float hD = rippleH(wP.xz - vec2(0.0, e2),   t, audioPulse);
+                float hU = rippleH(wP.xz + vec2(0.0, e2),   t, audioPulse);
+                vec3 wN = normalize(vec3(hL - hR, e2 * 4.0, hD - hU));
+
+                vec3  v    = normalize(-rd);
+                float diff = max(dot(wN, key), 0.0);
+                float spec = pow(max(dot(normalize(key + v), wN), 0.0), 128.0);
+                float fres = pow(1.0 - max(dot(wN, v), 0.0), 4.0);
+
+                // Bubble glow upwelling through water
+                float bGlow = exp(-length(wP.xz - bubblePos.xz) * 14.0) * glowIntensity * audioMod;
+
+                // fwidth AA on concentric ripple iso-rings
+                float cf = length(wP.xz) * 20.0;
+                float fw = fwidth(cf);
+                float contour = 1.0 - smoothstep(fw * 0.3, fw * 1.5, abs(fract(cf + 0.5) - 0.5) * 2.0);
+
+                // Caustic shimmer
+                float caust = pow(vnoise(wP.xz * 14.0 + t * 0.3), 3.0) * 0.4;
+
+                // Sky reflected in surface
+                vec3 refl = reflect(rd, wN);
+                vec3 sky  = mix(vec3(0.03, 0.06, 0.14), vec3(0.3, 0.55, 1.0), clamp(refl.y, 0.0, 1.0));
+
+                vec3 waterCol = mix(waterDeep, waterBright * 0.3, 0.3) + caust * waterBright * 0.5;
+                col  = waterCol * (0.15 + diff * 0.8) + sky * fres * 0.5;
+                col += glowCol * bGlow * 2.2;
+                // HDR specular peaks bloom-ready
+                col += specHDR * (spec * 2.0 + pow(spec, 4.0) * 1.5);
+                col += contour * specHDR * 0.4;
+            }
+        }
     }
 
-    // ========== COMPOSE ==========
-    vec3 col = bgColor;
+    // --- Glass vessel shell ---
+    {
+        float dist2 = 0.01;
+        for (int i = 0; i < 48; i++) {
+            vec3  p  = ro + rd * dist2;
+            float dO = sdCylinder(p, glassR + wallT, glassH);
+            float dI = sdCylinder(p, glassR,         glassH);
+            float dG = max(dO, -dI);
+            if (dG < 0.004 && dist2 < minT) {
+                float fresG = pow(1.0 - abs(dot(normalize(vec3(p.x, 0.0, p.z)), rd)), 3.0);
+                vec3 glassShade = vec3(0.06, 0.11, 0.18) * (0.4 + fresG * 0.6);
+                glassShade += specHDR * fresG * 0.5;
+                col = mix(col, glassShade, 0.45);
+                minT = dist2;
+                break;
+            }
+            if (dist2 > 3.0) break;
+            dist2 += max(dO * 0.8, 0.004);
+        }
+    }
 
-    // Water body
-    float waterDepth = smoothstep(waterSurf, waterSurf - gh, p.y);
-    vec3 waterCol = mix(waterDeep, waterBright * 0.3, waterDepth * 0.3);
-    waterCol += caustics * waterBright;
-    col = mix(col, waterCol, inWater);
+    // Volumetric bubble halo along ray (additive HDR)
+    {
+        vec3  oc      = ro - bubblePos;
+        float closest = length(oc - rd * clamp(dot(oc, rd), 0.0, 5.0));
+        float halo    = exp(-closest * closest * 280.0) * glowIntensity * audioMod;
+        col += glowCol * halo * 1.8;
+    }
 
-    // Ripples
-    col += ripples * glowColor * 0.8;
+    // Subtle vignette
+    col *= 1.0 - 0.45 * dot(uv, uv);
 
-    // Water surface highlight
-    col += surfHighlight * vec3(0.15, 0.3, 0.5) * 0.5;
-
-    // Bubble glow (rendered in water)
-    col += coreGlow * vec3(0.9, 0.95, 1.0) * inWater;
-    col += haloGlow * glowColor * inWater;
-    col += atmosGlow * waterBright;
-
-    // Glass walls
-    vec3 glassCol = vec3(0.08, 0.12, 0.18) * (0.5 + edgeGlow * 2.0);
-    glassCol += vec3(0.15, 0.2, 0.3) * edgeGlow;
-    col = mix(col, glassCol, glassMask * (0.3 + transparency));
-
-    // Glass edge highlight
-    col += edgeGlow * vec3(0.2, 0.25, 0.35);
-
-    // Glass rim
-    col += rimMask * vec3(0.15, 0.2, 0.3) * 0.5;
-
-    // Subtle reflection on glass (vertical gradient)
-    float reflStripe = smoothstep(0.008, 0.0, abs(abs(p.x - glassCenter.x) - gw + 0.005));
-    reflStripe *= smoothstep(glassCenter.y - gh * 0.5, glassCenter.y + gh * 0.8, p.y);
-    col += reflStripe * vec3(0.06, 0.08, 0.12) * 0.5;
-
-    // Vignette
-    float vign = 1.0 - 0.6 * dot(uv - 0.5, uv - 0.5) * 2.0;
-    col *= vign;
-
+    // Linear HDR output — host applies ACES
     gl_FragColor = vec4(col, 1.0);
 }
