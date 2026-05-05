@@ -19,3 +19,24 @@
 - holoGlow default: 0.7 → 1.4
 **HDR peaks reached:** sun 2.2, Y2K shapes 2.0, grid lines 2.0, katakana 2.5, holo spec 2.0+
 **Estimated rating:** 4.5★
+
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 3D SDF — NEW ANGLE: 2D vaporwave sky+grid HDR fix → 3D raymarched cyberpunk city rain
+**Critique:**
+1. Reference fidelity: Vaporwave 2D scene replaced with 3D cyberpunk city environment — fundamentally different dimension and aesthetic.
+2. Compositional craft: Low camera + building grid creates urban canyon; neon signs on building faces + wet ground reflections create nightlife atmosphere.
+3. Technical execution: Box SDF city grid with hash-varied building heights; wet ground ripple (sin pattern); rain streak capsules with fwidth.
+4. Liveness: Camera dolly forward (TIME*0.4); neon sign flicker (sin*0.3); rain streaks; audio modulates brightness.
+5. Differentiation: 3D navigable city vs 2D illustrated sky/grid; dark cyberpunk vs bright pastel vaporwave; rain/wet ground vs hologram scanlines.
+**Changes:**
+- Full rewrite from 2D vaporwave hologram to 3D cyberpunk rain city
+- Box SDF building grid with hash-varied height/width per cell
+- 3 neon colors per building (magenta/cyan/amber) hash-selected
+- Wet ground reflections + rain ripple pattern
+- Rain streaks via fwidth capsule lines
+- Forward-moving camera
+- Depth fog + night sky background
+- Audio modulates brightness + rain intensity
+**HDR peaks reached:** neon sign * hdrPeak * pulse * audio = 3.0 * 1.0 * 1.6 = ~4.8 at sign face
+**Estimated rating:** 4.5★
