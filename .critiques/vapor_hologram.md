@@ -20,7 +20,7 @@
 **HDR peaks reached:** sun 2.2, Y2K shapes 2.0, grid lines 2.0, katakana 2.5, holo spec 2.0+
 **Estimated rating:** 4.5★
 
-## 2026-05-05 (v3)
+## 2026-05-05 (v2)
 **Prior rating:** 0★
 **Approach:** 3D raymarch — NEW ANGLE: Gothic cathedral interior with volumetric light shafts vs v1 2D vaporwave sunset (audio fix), v2 duplicate of v1
 **Critique:**
@@ -36,3 +36,23 @@
 - 80-step march for interior detail; ink silhouette on stone
 **HDR peaks reached:** shaft volumes 2.5, arch stone 2.5, combined interior ≈ 3.0+
 **Estimated rating:** 4.2★
+
+## 2026-05-05 (v3)
+**Prior rating:** 0★
+**Approach:** 2D Vaporwave Portrait Bust — NEW ANGLE: 2D vaporwave sunset (v1) → 3D gothic cathedral (v2) → 2D figurative portrait bust on gradient (v3)
+**Critique:**
+1. Reference fidelity: Vaporwave’s link to Greco-Roman busts made explicit — classical statue silhouette as hot-pink glow on magenta/cyan gradient sky with Greek columns and checkerboard floor.
+2. Compositional craft: Strong vertical axis (bust head above columns above floor); gradient sky as HDR color field; scan-line modulation preserves vaporwave aesthetic.
+3. Technical execution: sdCircle + sdRect bust SDF; column SDFs iterated -2..+2; checkerboard floor transition via smoothstep; black ink fill + hot-pink outline glow.
+4. Liveness: Scan-line frequency; slow background oscillation (VIOLET shimmer); floor checker scrolls; audio modulates brightness.
+5. Differentiation: 2D flat figurative composition vs v2 3D immersive cathedral; vaporwave exterior vs interior architecture; human form vs geometric arches.
+**Changes:**
+- Full rewrite from 3D cathedral to 2D figurative vaporwave portrait
+- bustSDF() = head circle + neck rect + shoulder rect (min union)
+- Black ink fill on bust + hot-pink halo glow (exp(-d*25))
+- 5 Greek column shafts with capital rectangles
+- Checkerboard floor in lower third (scrolling with TIME)
+- Gradient sky: cyan bottom → hot-pink top with scan-line modulation
+- Palette: hot pink (2.4,0.06,1.2), electric cyan (0.05,2.4,2.2), deep magenta (2.2,0,0.9), violet (1.2,0,2.5)
+**HDR peaks reached:** hot-pink outline 2.4*audio, cyan background 2.4*0.5 peak, magenta columns 2.2
+**Estimated rating:** 4.5★
