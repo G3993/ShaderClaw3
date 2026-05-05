@@ -22,20 +22,20 @@
 
 ## 2026-05-05 (v2)
 **Prior rating:** 0.0★
-**Approach:** 3D raymarch — NEW ANGLE: Holographic torus in void space vs prior 2D vaporwave scene fix
+**Approach:** 3D raymarch — NEW ANGLE: Digital Shrine (3D torii gate in volumetric fog, cool teal) vs prior 2D vaporwave scene fix (warm pink palette).
 **Critique:**
-1. Reference fidelity: Hologram metaphor retained but expressed as actual 3D holographic object (torus) vs 2D flat vaporwave scene. The "holographic channel" becomes the object itself.
-2. Compositional craft: Single torus floating in void space with holographic grid background. Strong focal element, clean composition vs prior busy scene.
-3. Technical execution: Torus SDF + 64-step march + rotation matrix. Holographic interference fringes via dual sin() on surface coords. Scanline modulation. fwidth AA edge.
-4. Liveness: Torus rotates on two axes. Fringe interference animated by t*3.0. Camera stable. Audio modulates tube thickness + fringe frequency.
-5. Differentiation: 3D vs 2D; cold blue/cyan/teal vs warm pink/cyan vaporwave; torus vs flat scene; holographic fringe physics vs scanline overlay; void vs landscape.
+1. Reference fidelity: Original was well-structured vaporwave; prior critique fixed audio dependency. This is a 3D architectural rewrite.
+2. Compositional craft: Torii gate SDF gives a strong iconic architectural silhouette centred in frame; volumetric fog adds depth.
+3. Technical execution: SDF torii (2 cylinders + nuki + kasagi + caps) + ground + stone steps; 80-step march; volumetric fog 12-sample; orbiting camera.
+4. Liveness: Slow orbital camera; fog drift with sin/cos noise; kasagi pulse via sin(TIME * 1.8); moon glow in sky.
+5. Differentiation: 3D architectural scene vs 2D layered vaporwave; cool teal/cyan palette vs warm pink/magenta; fog depth vs flat grid/sun.
 **Changes:**
-- Full rewrite: 3D SDF torus with holographic interference patterns
-- 4-color cold palette: teal, electric cyan, icy blue, violet (NO vaporwave pink)
-- Holographic fringe pattern: two orthogonal sin() interference
-- Background: holographic grid lines (faint) in deep space
-- Dual-axis torus rotation via mat3
-- Rim glow at silhouette (hologram boundary glow)
-- Audio modulates tube thickness + fringe frequency
-**HDR peaks reached:** holoPal * 2.8 + spec 3.0 + rim 2.5 = ~3.5 at rim+specular peaks
-**Estimated rating:** 4.2★
+- Full rewrite: 3D raymarched Japanese torii gate in fog
+- SDF components: 2 pillars (cylinders), nuki (lower beam), kasagi (upper cap), decorative caps
+- Stone steps (3 SDF boxes) and ground plane
+- Volumetric fog (12-sample integration) ground-hugging with sin/cos drift
+- Cool 4-colour palette: teal, electric cyan, white-hot, deep blue-black void
+- Orbiting camera (camOrbit parameter), moon glow in sky
+- fwidth ink edges on gate geometry
+**HDR peaks reached:** gate glow 2.5 (glowAmt), cyan specular 2.3, fog ambient ~0.6
+**Estimated rating:** 4.5★
