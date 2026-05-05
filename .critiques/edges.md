@@ -36,3 +36,23 @@
 - Audio modulates hdrPeak brightness
 **HDR peaks reached:** base color * 2.5 + white specular * 2.25 = ~3.0+ at highlights
 **Estimated rating:** 4.0★
+
+## 2026-05-05 (v4)
+**Prior rating:** 0.0★
+**Approach:** 2D Expressionist Brushstorm — NEW ANGLE: 2D bounce particles (v1 patch) → 3D torus rings (v2) → 2D diagonal capsule brush strokes (v4 Kirchner Expressionism)
+**Critique:**
+1. Reference fidelity: "Edges" particle system replaced with Expressionist paint gesture — Ernst Ludwig Kirchner diagonal brushwork in hot Fauvist palette.
+2. Compositional craft: 120 capsule strokes distributed across canvas; yellow/crimson/cobalt tricolor gives maximum chromatic tension; black ink accumulation creates depth.
+3. Technical execution: Capsule SDF per stroke; fwidth AA on all edges; per-stroke color from 3-hue palette; black ink bleed via inkAcc accumulation.
+4. Liveness: Stroke centroids drift sinusoidally; angle slowly wobbles; audio modulates placement amplitude.
+5. Differentiation: 2D gestural brushwork vs v2 3D torus rings; Kirchner palette (yellow/crimson/cobalt) vs prior neon (magenta/cyan/gold); flat composition vs orbital 3D.
+**Changes:**
+- Full rewrite from 3D torus rings to 2D expressionist brush strokes
+- 120 capsule-SDF strokes with hash-distributed parameters
+- Palette: cadmium yellow (2.6,1.8,0), crimson (2.5,0.04,0.02), cobalt blue (0.05,0.2,2.6) — fully saturated
+- Stroke centroids drift with sin/cos TIME animation
+- Black ink accumulation for edge darkening (inkAcc * 0.65)
+- fwidth AA on all stroke edges
+- Audio modulates agitation and HDR boost
+**HDR peaks reached:** stroke surfaces up to 2.6 (yellow), crimson 2.5, cobalt 2.6
+**Estimated rating:** 4.2★
