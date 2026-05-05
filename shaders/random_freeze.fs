@@ -1,97 +1,119 @@
-/*
-{
-  "CATEGORIES" : [
-    "Glitch"
-  ],
-  "DESCRIPTION" : "Causes only part of an image to update",
-  "ISFVSN" : "2",
-  "INPUTS" : [
-    {
-      "NAME" : "inputImage",
-      "TYPE" : "image"
-    },
-    {
-      "NAME" : "maxUpdateSize",
-      "TYPE" : "float",
-      "MAX" : 1,
-      "DEFAULT" : 0.5,
-      "LABEL" : "Size",
-      "MIN" : 0
-    },
-    {
-      "NAME" : "maxBlendAmount",
-      "TYPE" : "float",
-      "MAX" : 1,
-      "DEFAULT" : 0,
-      "MIN" : 0
-    },
-    {
-      "NAME" : "resetImage",
-      "TYPE" : "event",
-      "LABEL" : "Reset Image"
+/*{
+    "DESCRIPTION": "Supernova Remnant — 3D raymarched shock-wave shell with turbulent ejecta filaments and star field",
+    "CATEGORIES": ["Generator", "3D"],
+    "CREDIT": "ShaderClaw / Supernova Remnant v1",
+    "INPUTS": [
+        { "NAME": "shellRadius",     "TYPE": "float", "DEFAULT": 0.70, "MIN": 0.20, "MAX": 1.20, "LABEL": "Shell Radius" },
+        { "NAME": "shellThick",      "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.05, "MAX": 0.40, "LABEL": "Shell Thickness" },
+        { "NAME": "rotSpeed",        "TYPE": "float", "DEFAULT": 0.06, "MIN": 0.00, "MAX": 0.50, "LABEL": "Rotation" },
+        { "NAME": "turbScale",       "TYPE": "float", "DEFAULT": 3.0,  "MIN": 1.0,  "MAX": 6.0,  "LABEL": "Turbulence" },
+        { "NAME": "hdrPeak",         "TYPE": "float", "DEFAULT": 3.5,  "MIN": 1.0,  "MAX": 6.0,  "LABEL": "HDR Peak" },
+        { "NAME": "pulse",           "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0,  "MAX": 2.0,  "LABEL": "Bass Pulse" },
+        { "NAME": "audioReactivity", "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0,  "MAX": 2.0,  "LABEL": "Audio" }
+    ]
+}*/
+
+float h31(vec3 p) {
+    p = fract(p * vec3(443.89, 397.29, 491.18));
+    p += dot(p, p.yzx + 19.27);
+    return fract(p.x * p.y * p.z);
+}
+
+float vnoise3(vec3 p) {
+    vec3 i = floor(p), f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(
+        mix(mix(h31(i),             h31(i+vec3(1,0,0)), f.x),
+            mix(h31(i+vec3(0,1,0)), h31(i+vec3(1,1,0)), f.x), f.y),
+        mix(mix(h31(i+vec3(0,0,1)), h31(i+vec3(1,0,1)), f.x),
+            mix(h31(i+vec3(0,1,1)), h31(i+vec3(1,1,1)), f.x), f.y),
+        f.z);
+}
+
+float fbm3(vec3 p) {
+    float v = 0.0, a = 0.5;
+    for (int i = 0; i < 5; i++) {
+        v += a * vnoise3(p);
+        p  = p * 2.07 + vec3(1.7, 9.2, 5.3);
+        a *= 0.48;
     }
-  ],
-  "PASSES" : [
+    return v;
+}
+
+void main() {
+    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    uv.x *= aspect;
+
+    float audio = audioLevel + audioBass * pulse * audioReactivity;
+
+    // Camera orbiting slowly around nebula
+    float ang = TIME * rotSpeed;
+    vec3 ro  = vec3(sin(ang) * 2.8, 0.18, cos(ang) * 2.8);
+    vec3 fw  = normalize(-ro);
+    vec3 rt  = normalize(cross(fw, vec3(0.0, 1.0, 0.0)));
+    vec3 upV = cross(rt, fw);
+    vec3 rd  = normalize(fw + uv.x * rt * 0.55 + uv.y * upV * 0.55);
+
+    // Star background — quantized celestial sphere grid
+    vec3 col = vec3(0.0);
     {
-      "TARGET" : "lastState",
-      "PERSISTENT" : true,
-      "DESCRIPTION" : ""
+        vec2 cellCoord = vec2(atan(rd.z, rd.x) * 8.0, rd.y * 14.0);
+        vec2 ci = floor(cellCoord);
+        vec2 cf = fract(cellCoord);
+        float sh  = fract(sin(dot(ci, vec2(127.1, 311.7))) * 43758.5);
+        float sh2 = fract(sin(dot(ci, vec2(269.5, 183.3))) * 43758.5);
+        if (sh > 0.980) {
+            vec2 starPos = vec2(sh2, fract(sh * 7.3));
+            float starB  = max(0.0, 1.0 - length(cf - starPos) * 5.0);
+            col += vec3(0.7, 0.82, 1.0) * pow(starB, 2.5) * 1.4;
+        }
     }
-  ],
-  "CREDIT" : "VIDVOX"
-}
-*/
 
-float rand(vec2 co){
-    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
-}
+    // Shell radius breathes with bass
+    float sR = shellRadius + audioBass * pulse * 0.06;
 
-vec4 rand4(vec4 co)	{
-	vec4	returnMe = vec4(0.0);
-	returnMe.r = rand(co.rg);
-	returnMe.g = rand(co.gb);
-	returnMe.b = rand(co.ba);
-	returnMe.a = rand(co.rb);
-	return returnMe;
-}
+    // Volumetric raymarch through the shell
+    float t = 0.5;
+    for (int i = 0; i < 72; i++) {
+        vec3 p = ro + rd * t;
+        float r = length(p);
 
-vec3 hsv2rgb(vec3 c)	{
-	vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-	vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
-	return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
-}
+        // Gaussian shell density centered on sR
+        float dr   = r - sR;
+        float dens = exp(-dr * dr / (shellThick * shellThick));
 
-const float pi = 3.14159265359;
+        if (dens > 0.002) {
+            // Domain-warped FBM for filamentary ejecta structure
+            vec3 wp = p * turbScale + TIME * 0.055;
+            vec3 q  = vec3(fbm3(wp),
+                           fbm3(wp + vec3(5.2, 1.3, 8.4)),
+                           fbm3(wp + vec3(2.9, 7.1, 3.6)));
+            float noise    = fbm3(wp + q * 0.9);
+            float filament = dens * pow(max(noise, 0.0), 1.6);
 
+            // Color ramp outer→inner: violet → crimson → orange → white-hot
+            float normR = clamp((dr + shellThick) / (2.0 * shellThick), 0.0, 1.0);
+            vec3 C0 = vec3(0.18, 0.04, 1.00) * hdrPeak * 0.60; // violet outer shock
+            vec3 C1 = vec3(1.00, 0.10, 0.18) * hdrPeak * 0.85; // crimson mid
+            vec3 C2 = vec3(1.00, 0.55, 0.08) * hdrPeak * 1.10; // orange inner
+            vec3 C3 = vec3(1.00, 0.92, 0.70) * hdrPeak * 1.25; // white-hot core
+            vec3 shellCol = mix(C0,
+                             mix(C1,
+                                 mix(C2, C3, smoothstep(0.60, 1.00, normR)),
+                                 smoothstep(0.30, 0.60, normR)),
+                             smoothstep(0.00, 0.30, normR));
 
-bool pointInRect(vec2 pt, vec4 r)
-{
-	bool	returnMe = false;
-	if ((pt.x >= r.x)&&(pt.y >= r.y)&&(pt.x <= r.x + r.z)&&(pt.y <= r.y + r.w))
-		returnMe = true;
-	return returnMe;
-}
+            col += shellCol * filament * 0.09 * (1.0 + audio * 0.35);
+        }
 
-void main()	{
-	vec2	loc = isf_FragNormCoord.xy;
-	bool	doReset = ((resetImage)||(FRAMEINDEX==0));
-	vec4	returnMe = (doReset) ? IMG_THIS_PIXEL(inputImage) : IMG_THIS_PIXEL(lastState);
-	vec4	seeds1 = TIME * vec4(0.2123,0.34517,0.53428,0.7431);
-	vec4	randCoords = rand4(seeds1);
-	randCoords.zw *= maxUpdateSize;
-	if (randCoords.x + randCoords.z > 1.0)
-		randCoords.z = 1.0 - randCoords.x;
-	if (randCoords.y + randCoords.w > 1.0)
-		randCoords.w = 1.0 - randCoords.y;
+        // Neutron star remnant glow at center
+        float core = exp(-r * r * 16.0);
+        col += vec3(1.0, 0.92, 0.8) * core * hdrPeak * 0.45;
 
-	bool	isInShape = pointInRect(loc,randCoords);
-	
-	if (isInShape)	{
-		float		mixAmount = maxBlendAmount * rand(vec2(TIME,0.32234));
-		vec4		newColor = IMG_THIS_PIXEL(inputImage);
-		newColor.a = 1.0;
-		returnMe = mix(newColor,returnMe,mixAmount);
-	}
-	
-	gl_FragColor = returnMe;
+        t += 0.055;
+        if (t > 6.0) break;
+    }
+
+    gl_FragColor = vec4(col, 1.0);
 }
