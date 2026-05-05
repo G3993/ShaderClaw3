@@ -1,3 +1,22 @@
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 3D raymarch — NEW ANGLE: Fractured Prism (octahedra cluster, magenta/lime/gold vs prior Signal Interference RGB planes); different 3D primitive vocabulary; different color grading
+**Critique:**
+1. Reference fidelity: VIDVOX buffer delay replaced; "Fractured Prism" captures the glitch/broken-signal spirit with shattered geometry.
+2. Compositional craft: 6 floating octahedra in ring pattern, each spinning independently; black void maximizes HDR contrast.
+3. Technical execution: sdOctahedron, per-shard rotX+rotY, Phong key+spec, silhouette darkening, fwidth() iso-edge AA.
+4. Liveness: Each shard spins at different speed (hash11 speed variation); camera orbits; audio scales shard size.
+5. Differentiation: Magenta/lime/gold palette vs prior red/green/blue; octahedra vs planes; spinning geometry vs sweeping camera.
+**Changes:**
+- sdOctahedron((p+y+z-s)*0.577) for each shard
+- Per-shard rotX(rot*0.7)*rotY(rot) per TIME*spinSpeed*hash
+- Material: id%3: 0→magenta(2.5,0,2.0), 1→lime(0.5,2.5,0), 2→gold(2.5,1.8,0)
+- Silhouette darkening: 1-dot(n,-rd)^2 * 0.6
+- fwidth() AA on silhouette iso-edge
+- No inputImage, no PASSES, no buffer delay
+**HDR peaks reached:** specular white 3.0, shard surfaces 2.5
+**Estimated rating:** 4.0★
+
 ## 2026-05-05
 **Prior rating:** 0.0★
 **Approach:** 3D raymarch
