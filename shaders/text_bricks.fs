@@ -12,6 +12,7 @@
     { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    ,{ "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 }
   ]
 }*/
 
@@ -144,10 +145,14 @@ vec4 effectBricks(vec2 uv, int sub) {
 
     bool inv = mod(ri, 2.0) < 1.0;
     vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
+    vec3 bg_ = inv ? textColor.rgb : bgColor.rgb;
+    // HDR peak: text cores lifted to 1.5× baseline + audio boost for bloom
+    float audioMod = 0.5 + 0.5 * audioBass * audioReact;
+    float hdrScale = 1.5 + audioMod * 0.5 + 0.08 * sin(TIME * 1.7 + ri * 0.4);
+    vec3 hdrFg = fg * hdrScale;
+    vec3 fc = mix(bg_, hdrFg, textHit);
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
+    if (transparentBg) { a = textHit; fc = hdrFg; }
     return vec4(fc, a);
 }
 
