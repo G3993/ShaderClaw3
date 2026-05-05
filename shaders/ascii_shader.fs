@@ -7,7 +7,7 @@
     { "NAME": "colorMode", "TYPE": "long", "VALUES": [0,1,2], "LABELS": ["Mono Green","Mono White","Rainbow"], "DEFAULT": 0 },
     { "NAME": "contrast", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6 },
     { "NAME": "density", "TYPE": "float", "MIN": 0.1, "MAX": 1.0, "DEFAULT": 0.27 },
-    { "NAME": "charColor", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
+    { "NAME": "charColor", "TYPE": "color", "DEFAULT": [0.0, 1.0, 0.4, 1.0] },
     { "NAME": "bgColor", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
     { "NAME": "transparentBg", "TYPE": "bool", "DEFAULT": false }
   ]
@@ -119,7 +119,7 @@ void main() {
             2.0 - abs(hue * 6.0 - 2.0),
             2.0 - abs(hue * 6.0 - 4.0)
         );
-        charCol = clamp(charCol, 0.0, 1.0);
+        charCol = max(charCol, vec3(0.0)) * 2.0;
     }
 
     // Final color: character pixel * brightness * color
@@ -129,7 +129,7 @@ void main() {
 
     // Brighten the leading edge characters
     float headGlow = smoothstep(0.8, 1.0, 1.0 - distFromHead) * colActive;
-    vec3 glowCol = mix(charCol, vec3(1.0), headGlow * 0.6);
+    vec3 glowCol = mix(charCol, vec3(0.4, 3.0, 1.4), headGlow * 0.9);
 
     finalCol = mix(finalCol, glowCol, clamp(mask, 0.0, 1.0));
     if (transparentBg) finalAlpha = clamp(mask, 0.0, 1.0);
