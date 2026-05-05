@@ -10,8 +10,9 @@
     { "NAME": "intensity", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
+    { "NAME": "textColor", "TYPE": "color", "DEFAULT": [1.0, 0.65, 0.0, 1.0] },
+    { "NAME": "bgColor", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.02, 1.0] },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 2.5 },
     { "NAME": "transparentBg", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
@@ -159,8 +160,8 @@ void main() {
             float diff = max(dot(wn, lightDir), 0.0);
             vec3 viewDir = normalize(-rd);
             vec3 h = normalize(lightDir + viewDir);
-            float spec = pow(max(dot(wn, h), 0.0), 32.0);
-            shade = 0.15 + diff * 0.7 + spec * 0.4;
+            float spec = pow(max(dot(wn, h), 0.0), 48.0);
+            shade = 0.12 + diff * 0.75 + spec * 1.0;  // spec boosted for HDR peak
             if (e > 0) {
                 float phase = float(slot) * 1.3 + TIME * speed * cycleSpeed;
                 int style = int(mod(floor(phase), 10.0));
@@ -171,7 +172,7 @@ void main() {
         } else {
             shade = mix(0.35, 0.7, depthFactor);
         }
-        finalColor = textColor.rgb * clamp(shade, 0.0, 1.0);
+        finalColor = textColor.rgb * shade * hdrGlow;  // HDR: no clamp on shade
         finalAlpha = 1.0;
     }
 
