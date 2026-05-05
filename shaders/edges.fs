@@ -1,180 +1,322 @@
 /*{
-    "DESCRIPTION": "Particle field bouncing off the edges of the canvas. Grid-seeded, audio-reactive, velocity-stretched streaks.",
-    "CATEGORIES": ["Generator", "Particles", "Audio Reactive"],
-    "CREDIT": "Easel / edges v1",
+    "DESCRIPTION": "Neon Grid City — 3D raymarched night cityscape of SDF boxes with glowing neon edge outlines, wet street reflections, and audio-reactive glow. Camera drifts forward through a street corridor.",
+    "CREDIT": "ShaderClaw3 / edges v2",
+    "ISFVSN": "2",
+    "CATEGORIES": ["Generator", "3D"],
     "INPUTS": [
-        { "NAME": "motionSpeed",    "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 1.0, "LABEL": "Motion Speed" },
-        { "NAME": "chaos",          "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0, "LABEL": "Chaos" },
-        { "NAME": "particleSize",   "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 4.0, "LABEL": "Particle Size" },
-        { "NAME": "stretch",        "TYPE": "float", "DEFAULT": 1.2, "MIN": 0.0, "MAX": 4.0, "LABEL": "Stretch" },
-        { "NAME": "vortexStrength", "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 3.0, "LABEL": "Vortex" },
-        { "NAME": "audioReactivity","TYPE": "float", "DEFAULT": 0.7, "MIN": 0.0, "MAX": 2.0, "LABEL": "Audio" },
-        { "NAME": "color1", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0], "LABEL": "Core" },
-        { "NAME": "color2", "TYPE": "color", "DEFAULT": [0.1, 0.7, 1.0, 1.0], "LABEL": "Halo" },
-        { "NAME": "bg",     "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.03, 1.0], "LABEL": "Background" },
-        { "NAME": "glow",   "TYPE": "float", "DEFAULT": 1.3, "MIN": 0.0, "MAX": 3.0, "LABEL": "Glow" },
-        { "NAME": "ledMode",       "TYPE": "bool",  "DEFAULT": true,  "LABEL": "LED Wall" },
-        { "NAME": "ledSize",       "TYPE": "float", "DEFAULT": 220.0, "MIN": 50.0, "MAX": 600.0, "LABEL": "LED Density" },
-        { "NAME": "trailDecay",    "TYPE": "float", "DEFAULT": 0.85,  "MIN": 0.0,  "MAX": 1.0, "LABEL": "Trail Length" },
-        { "NAME": "particleCount", "TYPE": "float", "DEFAULT": 96.0,  "MIN": 20.0, "MAX": 200.0, "LABEL": "Particle Count" },
-        { "NAME": "colorJitter",   "TYPE": "float", "DEFAULT": 0.40,  "MIN": 0.0,  "MAX": 1.0, "LABEL": "Color Jitter" }
+        {
+            "NAME": "driftSpeed",
+            "LABEL": "Drift Speed",
+            "TYPE": "float",
+            "DEFAULT": 0.35,
+            "MIN": 0.0,
+            "MAX": 2.0
+        },
+        {
+            "NAME": "neonBrightness",
+            "LABEL": "Neon Brightness",
+            "TYPE": "float",
+            "DEFAULT": 2.5,
+            "MIN": 0.0,
+            "MAX": 4.0
+        },
+        {
+            "NAME": "buildingDensity",
+            "LABEL": "Building Density",
+            "TYPE": "float",
+            "DEFAULT": 1.0,
+            "MIN": 0.3,
+            "MAX": 2.5
+        },
+        {
+            "NAME": "cameraHeight",
+            "LABEL": "Camera Height",
+            "TYPE": "float",
+            "DEFAULT": 0.55,
+            "MIN": 0.0,
+            "MAX": 3.0
+        },
+        {
+            "NAME": "audioMod",
+            "LABEL": "Audio Reactivity",
+            "TYPE": "float",
+            "DEFAULT": 0.7,
+            "MIN": 0.0,
+            "MAX": 2.0
+        }
     ]
 }*/
 
-float hash11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
+// ── Constants ─────────────────────────────────────────────────────────────────
+#define MAX_STEPS  64
+#define SURF_DIST  0.005
+#define MAX_DIST   60.0
+#define PI         3.14159265358979
 
-// Triangle-wave bounce: x (time-like) folded into [0,1] with reflection.
-float bounce01(float x) { return abs(fract(x * 0.5) * 2.0 - 1.0); }
+// ── Hash / random utilities ───────────────────────────────────────────────────
+float hash11(float n)       { return fract(sin(n * 127.1) * 43758.5453); }
+float hash21(vec2  p)       { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float hash12(float a, float b) { return hash21(vec2(a, b)); }
 
-// 2D sinusoidal "vortex" — cheap analytic flow field, no noise tables.
-vec2 vortex(vec2 p, float t) {
-    float a = sin(p.x * 1.3 + t * 0.7) + cos(p.y * 1.7 - t * 0.5);
-    float b = cos(p.x * 1.9 - t * 0.4) + sin(p.y * 1.1 + t * 0.9);
-    return vec2(a, b) * 0.5;
+// ── 5-color neon palette (fully saturated HDR) ────────────────────────────────
+// 0=cyan  1=magenta  2=lime  3=gold  4=violet
+vec3 neonColor(int idx) {
+    if (idx == 0) return vec3(0.10, 2.50, 2.20);   // electric cyan
+    if (idx == 1) return vec3(2.50, 0.10, 1.80);   // hot magenta
+    if (idx == 2) return vec3(0.30, 2.50, 0.10);   // lime green
+    if (idx == 3) return vec3(2.50, 1.80, 0.00);   // gold
+                  return vec3(1.50, 0.10, 2.50);   // deep violet
+}
+
+// Pick a neon color from grid position hash
+vec3 buildingNeon(vec2 gridID) {
+    float h = hash21(gridID);
+    int idx = int(h * 5.0) % 5;
+    return neonColor(idx);
+}
+
+// ── City SDF ──────────────────────────────────────────────────────────────────
+// Returns (distance, neonColor, materialID)
+// materialID: 0=sky, 1=building, 2=street
+
+struct HitInfo {
+    float dist;
+    vec3  neon;
+    int   matID;  // 1=building, 2=street
+};
+
+// SDF for a single box with half-extents e, centered at origin
+float sdBox(vec3 p, vec3 e) {
+    vec3 q = abs(p) - e;
+    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
+}
+
+// Flat infinite ground plane at y=0
+float sdGround(vec3 p) { return p.y; }
+
+// Building grid: buildings in a repeating XZ grid, varying heights by hash
+// Returns (sdf, neon) for the city block layer
+vec2 cityGrid(vec3 p, float density) {
+    // Cell size driven by density parameter
+    float cellW = 4.0 / density;
+    float gap   = 1.2 / density;   // street corridor half-width
+
+    // Tile XZ
+    vec2  cell  = floor(vec2(p.x, p.z) / cellW);
+    vec2  local = mod(vec2(p.x, p.z), cellW) - cellW * 0.5;
+
+    float bHalfW = (cellW * 0.5 - gap);  // building footprint half-size
+
+    // Building height from hash (varies per cell)
+    float h1 = hash21(cell);
+    float h2 = hash21(cell + vec2(7.3, 2.9));
+    float bHeight = 3.0 + h1 * 14.0;    // 3..17 units tall
+    float bDepth  = bHalfW * (0.5 + h2 * 0.5);  // varies depth
+
+    // Box SDF — building block
+    vec3  bCenter = vec3(0.0, bHeight * 0.5, 0.0);
+    vec3  bExt    = vec3(bHalfW, bHeight * 0.5, bDepth);
+    float bDist   = sdBox(p - vec3(local.x, 0.0, local.y) - bCenter, bExt);
+
+    // Adjacent cell to get the "other side" buildings (corridor)
+    vec2  cell2 = floor(vec2(p.x - cellW * 0.5, p.z) / cellW);
+    vec2  loc2  = mod(vec2(p.x - cellW * 0.5, p.z), cellW) - cellW * 0.5;
+    float h3    = hash21(cell2 + vec2(3.1, 8.7));
+    float h4    = hash21(cell2 + vec2(11.2, 5.4));
+    float bH2   = 3.0 + h3 * 14.0;
+    float bD2   = bHalfW * (0.5 + h4 * 0.5);
+    vec3  bC2   = vec3(0.0, bH2 * 0.5, 0.0);
+    vec3  bE2   = vec3(bHalfW, bH2 * 0.5, bD2);
+    float bD2F  = sdBox(p - vec3(loc2.x, 0.0, loc2.y) - bC2, bE2);
+
+    float best  = min(bDist, bD2F);
+    return vec2(best, 0.0);  // neon picked separately per cell
+}
+
+// Full scene SDF — returns (dist, matID)
+//   matID encoding: 0=miss, 1=building, 2=street
+vec2 sceneSDF(vec3 p, float density) {
+    // Street / ground
+    float gDist = sdGround(p);
+
+    // City buildings
+    vec2  city  = cityGrid(p, density);
+    float bDist = city.x;
+
+    if (bDist < gDist) return vec2(bDist, 1.0);
+    return vec2(gDist, 2.0);
+}
+
+// ── Normal ────────────────────────────────────────────────────────────────────
+vec3 calcNormal(vec3 p, float density) {
+    const vec2 e = vec2(0.002, 0.0);
+    return normalize(vec3(
+        sceneSDF(p + e.xyy, density).x - sceneSDF(p - e.xyy, density).x,
+        sceneSDF(p + e.yxy, density).x - sceneSDF(p - e.yxy, density).x,
+        sceneSDF(p + e.yyx, density).x - sceneSDF(p - e.yyx, density).x
+    ));
+}
+
+// ── Raymarcher — returns (dist, matID) ───────────────────────────────────────
+vec2 march(vec3 ro, vec3 rd, float density) {
+    float t = 0.1;
+    float mat = 0.0;
+    for (int i = 0; i < MAX_STEPS; i++) {
+        vec2  r = sceneSDF(ro + rd * t, density);
+        float d = r.x;
+        mat     = r.y;
+        if (d < SURF_DIST) return vec2(t, mat);
+        if (t > MAX_DIST)  return vec2(-1.0, 0.0);
+        t += d * 0.9;
+    }
+    return vec2(-1.0, 0.0);
+}
+
+// ── Neon edge glow on building surfaces ──────────────────────────────────────
+// Uses fwidth on the building SDF to detect edges, then assigns HDR neon color.
+vec3 buildingEdgeGlow(vec3 p, vec3 n, float density, float glowStr) {
+    // Local grid cell of this surface point
+    float cellW = 4.0 / density;
+    vec2  cell  = floor(vec2(p.x, p.z) / cellW);
+    vec3  neon  = buildingNeon(cell);
+
+    // Edge mask: the SDF gradient magnitude at the surface encodes edge proximity.
+    // We compute how curved the surface is (second derivative proxy) by comparing
+    // the normal at nearby points — sharp edges have rapidly changing normals.
+    vec2 e2 = vec2(0.08, 0.0);
+    vec3 n1 = calcNormal(p + e2.xyy, density);
+    vec3 n2 = calcNormal(p + e2.yxy, density);
+    float edginess = 1.0 - clamp(dot(n, n1) * dot(n, n2), 0.0, 1.0);
+
+    // Building body is pure black; edges get the neon color
+    return neon * pow(edginess, 0.6) * glowStr;
+}
+
+// ── Star field (sparse dots) ──────────────────────────────────────────────────
+float starField(vec3 rd) {
+    // Project ray direction to a 2D sky grid
+    vec2  sky  = vec2(atan(rd.x, rd.z), asin(clamp(rd.y, -1.0, 1.0)));
+    vec2  id   = floor(sky * 28.0);
+    float h    = hash21(id);
+    float h2   = hash21(id + vec2(5.3, 2.1));
+    // Only show stars in the upper hemisphere, sparse
+    float star = (h > 0.96 && rd.y > 0.05) ? pow(h2, 8.0) * 1.8 : 0.0;
+    return star;
 }
 
 void main() {
-    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
-    float aspect = RENDERSIZE.x / RENDERSIZE.y;
-    uv.x *= aspect;
+    // ── Pixel UV (centered, aspect-correct) ──────────────────────────────────
+    vec2 uv = (gl_FragCoord.xy - RENDERSIZE.xy * 0.5) / RENDERSIZE.y;
 
-    float t = TIME;
-    float audio = audioLevel + audioBass * 1.1 + audioHigh * 0.5;
+    // ── Audio: modulator pattern ──────────────────────────────────────────────
+    float aLvl  = max(0.0, audioLevel);
+    float aMult = 1.0 + aLvl * audioMod;
 
-    vec3 acc = vec3(0.0);
-    const int N = 256;
+    // ── Neon brightness (audio-modulated) ────────────────────────────────────
+    float glowStr = neonBrightness * aMult;
 
-    for (int i = 0; i < N; i++) {
-        float fi = float(i);
-        float s1 = hash11(fi * 1.37);
-        float s2 = hash11(fi * 2.91 + 0.5);
-        float s3 = hash11(fi * 4.17 + 0.3);
-        float s4 = hash11(fi * 7.53 + 0.7);
+    // ── Camera: street level, drifting forward along Z (TIME-driven) ─────────
+    float camZ  = TIME * driftSpeed;            // drift forward forever
+    vec3  ro    = vec3(0.0, cameraHeight, camZ);
+    // Slow sinusoidal sway left-right for cinematics
+    ro.x += sin(TIME * 0.18) * 0.4;
 
-        // Wider speed range + two stacked oscillators per axis → richer, less
-        // periodic-feeling motion. Each particle has a dominant and secondary
-        // frequency at 1.7× offset, mixed 70/30.
-        float speedX1 = (0.2 + s1 * 2.8) * motionSpeed;
-        float speedY1 = (0.2 + s2 * 2.8) * motionSpeed;
-        float speedX2 = speedX1 * (1.0 + s3 * 0.8);
-        float speedY2 = speedY1 * (1.0 + s4 * 0.8);
-        float phaseX  = s3 * 6.2832;
-        float phaseY  = s4 * 6.2832;
-        float phaseX2 = s1 * 3.1416;
-        float phaseY2 = s2 * 3.1416;
+    // Look slightly ahead and very slightly upward
+    vec3  target = vec3(sin(TIME * 0.09) * 0.3,
+                        cameraHeight * 0.85,
+                        camZ + 10.0);
+    vec3  fwd    = normalize(target - ro);
+    vec3  right  = normalize(cross(fwd, vec3(0.0, 1.0, 0.0)));
+    vec3  up     = cross(right, fwd);
+    vec3  rd     = normalize(fwd * 1.5 + right * uv.x + up * uv.y);
 
-        float dt = 0.02;
-        // Mix two bouncing oscillators so paths don't feel clockwork-regular.
-        float bxA = bounce01(t      * speedX1 + phaseX) * 0.7
-                  + bounce01(t      * speedX2 + phaseX2) * 0.3;
-        float byA = bounce01(t      * speedY1 + phaseY) * 0.7
-                  + bounce01(t      * speedY2 + phaseY2) * 0.3;
-        float bxB = bounce01((t+dt) * speedX1 + phaseX) * 0.7
-                  + bounce01((t+dt) * speedX2 + phaseX2) * 0.3;
-        float byB = bounce01((t+dt) * speedY1 + phaseY) * 0.7
-                  + bounce01((t+dt) * speedY2 + phaseY2) * 0.3;
+    // ── Primary ray march ─────────────────────────────────────────────────────
+    vec2  hitR   = march(ro, rd, buildingDensity);
+    float hitT   = hitR.x;
+    int   matID  = int(hitR.y + 0.5);
+    bool  hit    = (hitT > 0.0);
+    vec3  pHit   = ro + rd * hitT;
 
-        vec2 baseA = vec2(bxA, byA) * 2.0 - 1.0;
-        vec2 baseB = vec2(bxB, byB) * 2.0 - 1.0;
+    // ── Sky color: pure black with stars ─────────────────────────────────────
+    vec3 skyCol = vec3(starField(rd));
 
-        // Chaos: stacked sin layers at different frequencies + a per-particle
-        // tumble. With chaos > 0 each particle deviates strongly from its
-        // base bounce path, with chaos = 0 it follows the orbit cleanly.
-        // Previous version was scaled by 0.25 — far too weak to read.
-        float chT = t * 0.7;
-        float chTb = (t+dt) * 0.7;
-        // Three octaves of sin per axis at different frequencies + per-
-        // particle phase offsets — non-periodic-feeling drift
-        vec2 chaosA = vec2(
-            sin(chT  * (1.1 + s1 * 1.3) + s3 * 6.28) * 0.55
-          + sin(chT  * (3.7 + s2 * 1.7) + s4 * 6.28) * 0.30
-          + sin(chT  * (0.4 + s3 * 0.9) + s1 * 6.28) * 0.20,
-            cos(chT  * (0.9 + s2 * 1.5) + s4 * 6.28) * 0.55
-          + cos(chT  * (3.1 + s1 * 1.4) + s3 * 6.28) * 0.30
-          + cos(chT  * (0.6 + s4 * 1.1) + s2 * 6.28) * 0.20
-        ) * chaos * 0.55;
-        vec2 chaosB = vec2(
-            sin(chTb * (1.1 + s1 * 1.3) + s3 * 6.28) * 0.55
-          + sin(chTb * (3.7 + s2 * 1.7) + s4 * 6.28) * 0.30
-          + sin(chTb * (0.4 + s3 * 0.9) + s1 * 6.28) * 0.20,
-            cos(chTb * (0.9 + s2 * 1.5) + s4 * 6.28) * 0.55
-          + cos(chTb * (3.1 + s1 * 1.4) + s3 * 6.28) * 0.30
-          + cos(chTb * (0.6 + s4 * 1.1) + s2 * 6.28) * 0.20
-        ) * chaos * 0.55;
-        baseA += chaosA;
-        baseB += chaosB;
-        // Wrap (not clamp) so chaotic particles re-enter rather than stick to edges
-        baseA = mod(baseA + 1.0, 2.0) - 1.0;
-        baseB = mod(baseB + 1.0, 2.0) - 1.0;
+    // ── Surface shading ───────────────────────────────────────────────────────
+    vec3 surfCol = vec3(0.0);
+    if (hit) {
+        vec3 n = calcNormal(pHit, buildingDensity);
 
-        // Aspect-stretched world-space positions.
-        vec2 posA = vec2(baseA.x * aspect, baseA.y);
-        vec2 posB = vec2(baseB.x * aspect, baseB.y);
-
-        // Optional vortex perturbation.
-        posA += vortex(posA, t)          * vortexStrength * 0.08;
-        posB += vortex(posB, t + dt)     * vortexStrength * 0.08;
-
-        vec2 vel = (posB - posA) / dt;
-        float speed = length(vel);
-
-        // Capsule endpoints for motion-stretched particle.
-        float stretchLen = 0.006 * stretch * (0.5 + audio * audioReactivity);
-        vec2 a = posA - vel * stretchLen;
-        vec2 b = posA + vel * stretchLen;
-
-        // Distance to capsule (line segment with rounded caps).
-        vec2 pa = uv - a;
-        vec2 ba = b - a;
-        float denom = max(dot(ba, ba), 1e-6);
-        float h = clamp(dot(pa, ba) / denom, 0.0, 1.0);
-        float d = length(pa - ba * h);
-
-        float r = 0.012 * particleSize * (0.6 + audio * audioReactivity * 0.6);
-        float core = smoothstep(r, 0.0, d);
-        float halo = exp(-d * 70.0);
-
-        // Per-particle color jitter — gives the LED-wall variety look
-        vec3 c1 = color1.rgb;
-        vec3 c2 = color2.rgb;
-        if (colorJitter > 0.0) {
-            float h = hash11(float(i) * 11.7);
-            vec3 hueShift = 0.5 + 0.5 * cos(6.28318 * h + vec3(0.0, 2.094, 4.188));
-            c1 = mix(c1, hueShift,             colorJitter);
-            c2 = mix(c2, hueShift * 0.7 + 0.3, colorJitter);
-        }
-        acc += mix(c2, c1, core) * (core + halo * 0.35);
-
-        // Trail — extra ghost samples behind the segment
-        if (trailDecay > 0.001) {
-            for (int tk = 1; tk <= 3; tk++) {
-                float ftk = float(tk);
-                vec2 ghostA = a - vel * ftk * 0.10 * trailDecay;
-                vec2 ghostB = a;
-                vec2 paG = uv - ghostA;
-                vec2 baG = ghostB - ghostA;
-                float dG2 = dot(baG, baG);
-                if (dG2 > 1e-6) {
-                    float hG = clamp(dot(paG, baG) / dG2, 0.0, 1.0);
-                    float ddG = length(paG - baG * hG);
-                    float fadeG = 1.0 - ftk / 4.0;
-                    acc += mix(c2, c1, smoothstep(r, 0.0, ddG)) * fadeG * 0.20;
-                }
-            }
+        if (matID == 1) {
+            // Building: pure black body + neon edge glow
+            surfCol = buildingEdgeGlow(pHit, n, buildingDensity, glowStr);
+        } else {
+            // Street: dark wet asphalt
+            // Subtle grid lines (pavement)
+            vec2  pv  = fract(pHit.xz * 0.5) - 0.5;
+            float grid= smoothstep(0.48, 0.45, max(abs(pv.x), abs(pv.y)));
+            surfCol = vec3(0.02, 0.02, 0.025) * (0.5 + grid * 0.5);
         }
     }
 
-    vec3 rgb = bg.rgb + acc * glow;
+    // ── Wet street reflection ─────────────────────────────────────────────────
+    vec3 reflCol = vec3(0.0);
+    if (hit && matID == 2) {
+        // Reflect ray off ground (normal = (0,1,0) for flat street)
+        vec3 reflDir = reflect(rd, vec3(0.0, 1.0, 0.0));
+        vec2 reflR   = march(pHit + vec3(0.0, SURF_DIST * 3.0, 0.0), reflDir, buildingDensity);
+        float reflT  = reflR.x;
+        int   reflMat = int(reflR.y + 0.5);
 
-    // LED wall mode: quantize to a grid, leaving black "gaps" between LEDs
-    if (ledMode) {
-        vec2 ledUV = uv * ledSize;
-        vec2 lf = fract(ledUV) - 0.5;
-        float dotMask = smoothstep(0.45, 0.30, length(lf));
-        // Black bezel between LEDs, brightness boost on the lit dot
-        rgb = rgb * (0.20 + 0.80 * dotMask);
-        rgb += rgb * dotMask * 0.4;  // a touch of bloom on lit cells
+        if (reflT > 0.0 && reflMat == 1) {
+            vec3 rp  = pHit + reflDir * reflT;
+            vec3 rn  = calcNormal(rp, buildingDensity);
+            reflCol  = buildingEdgeGlow(rp, rn, buildingDensity, glowStr * 0.45);
+        } else {
+            // Star reflection on wet ground
+            reflCol = vec3(starField(reflDir)) * 0.3;
+        }
+        // Wet asphalt Fresnel: more reflective at glancing angles
+        float viewDot  = abs(dot(rd, vec3(0.0, 1.0, 0.0)));
+        float wetFresn = pow(1.0 - viewDot, 2.5) * 0.9 + 0.1;
+        surfCol = mix(surfCol, surfCol + reflCol * wetFresn, wetFresn);
     }
 
-    gl_FragColor = vec4(rgb, 1.0);
+    // ── Atmospheric neon glow in the air (volumetric scatter) ────────────────
+    // A cheap fog-like scattering: sample a few points along the ray and check
+    // proximity to building edges, accumulating colour. Gives the "neon bleed
+    // into foggy night air" look without full volumetrics.
+    vec3 airGlow = vec3(0.0);
+    {
+        float maxT  = hit ? min(hitT, 30.0) : 30.0;
+        int   NS    = 10;
+        for (int si = 0; si < NS; si++) {
+            float sT  = maxT * (float(si) + 0.5) / float(NS);
+            vec3  sp  = ro + rd * sT;
+
+            // Only compute near buildings (within ~1 unit of any building face)
+            vec2  sr  = sceneSDF(sp, buildingDensity);
+            float sd  = sr.x;
+            if (sd < 0.0 || sd > 1.5) continue;
+
+            // Which cell's neon bleeds here?
+            float cellW = 4.0 / buildingDensity;
+            vec2  cell  = floor(vec2(sp.x, sp.z) / cellW);
+            vec3  neon  = buildingNeon(cell);
+
+            // Glow falls off exponentially with distance from surface
+            float falloff = exp(-sd * 3.5) * (1.0 / float(NS));
+            airGlow += neon * falloff * glowStr * 0.18;
+        }
+    }
+
+    // ── Depth fog: deep black beyond ~20 units ────────────────────────────────
+    float fogAmt = hit ? clamp((hitT - 8.0) / 40.0, 0.0, 1.0) : 1.0;
+    vec3  fogCol = vec3(0.0);  // fog is black (night city darkness)
+
+    // ── Compose ───────────────────────────────────────────────────────────────
+    vec3 col = hit ? surfCol : skyCol;
+    col      = mix(col, fogCol, fogAmt * 0.75);   // depth fade
+    col     += airGlow;                            // additive neon air scatter
+
+    // Output linear HDR — NO tone-map, NO clamp, NO ACES
+    gl_FragColor = vec4(col, 1.0);
 }
