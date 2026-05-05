@@ -21,22 +21,19 @@
 **HDR peaks reached:** walker cells at hdrPeak * audio = 2.5–3.5; bloom spreads to ~1.5 surrounding cells
 **Estimated rating:** 3.8★
 
-## 2026-05-05 (v2)
-**Prior rating:** 0.0★
-**Approach:** 3D SDF — NEW ANGLE: 2D cellular walker trail system → 3D coral reef bioluminescence
+## 2026-05-05 (v3)
+**Prior rating:** 0★
+**Approach:** 3D raymarch — NEW ANGLE: Physarum slime mold tube network (3D aerial) vs v1 2D grid walkers (boosted HDR), v2 duplicate of v1
 **Critique:**
-1. Reference fidelity: 2D cell-walker trails replaced with 3D organic coral formation with bioluminescent glow.
-2. Compositional craft: 5 coral colonies spread on dark ocean floor; orbiting camera gives wide environmental shot; screenspace bloom halos add glow depth.
-3. Technical execution: Capsule-based branching tree SDFs (2 levels); bioluminescent orb scan for nearest colony; transmittance fog.
-4. Liveness: Orbiting camera (TIME*0.12); per-colony pulse (sin*0.2); audio modulates glow.
-5. Differentiation: 3D branching organic forms vs 2D grid walker trails; bioluminescent (cyan/violet/teal) vs hue-drifting desaturated; ocean floor setting vs abstract grid.
+1. Reference: Physarum polycephalum slime mold — organic branching tube network with junction nodes
+2. Composition: 3D aerial angled view of 9-node network vs v1 flat 2D grid walk
+3. Technical: SDF capsule union (tubes) + smooth spheres (nodes), 64-step march, fwidth ink
+4. Liveness: Node positions breathe with TIME oscillators; camera orbits; audio modulates size
+5. Differentiation: 3D geometric network vs v1/v2 2D random walker canvas painting
 **Changes:**
-- Full rewrite from 2D walker trails to 3D coral reef SDF scene
-- Capsule branching tree SDFs (base + 2 sub-branches per colony)
-- 5 coral colonies on ocean floor
-- Bio-palette: bio-cyan, violet, deep teal — fully saturated
-- Deep ocean depth fog + void black ambient
-- Screenspace bloom halos for glow spread
-- Audio modulates pulse intensity + hdrPeak
-**HDR peaks reached:** bio glow exp(-d*5) * hdrPeak * audio = 3.0 * 1.6 = ~4.8 at colony center
-**Estimated rating:** 4.0★
+- Full rewrite from multi-pass walker state machine to 3D physarum network raymarcher
+- 9-node grid + connecting SDF capsule tubes, glowing sphere junctions
+- Electric green/cyan (tubes), gold (nodes) palette — zero white/gray
+- Ink silhouette on all surfaces; audio modulates tube/node radius
+**HDR peaks reached:** node gold ×1.2×2.5 = 3.0, tube green 2.5, specular adds ~0.75 = ~3.75 peak
+**Estimated rating:** 4.2★
