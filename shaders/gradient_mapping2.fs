@@ -1,139 +1,111 @@
-
 /*{
-  "DESCRIPTION": "",
+  "DESCRIPTION": "Gradient Mapper — maps input luminosity through a 3-stop vivid cosine palette with TIME-driven hue drift and HDR highlights.",
   "CREDIT": "",
   "ISFVSN": "2",
-  "CATEGORIES": [
-    "XXX"
-  ],
+  "CATEGORIES": ["Effect", "Color"],
   "INPUTS": [
-    {
-      "NAME": "inputImage",
-      "TYPE": "image"
-    },
-    {
-      "NAME": "baseColor",
-      "TYPE": "color",
-      "DEFAULT": [
-        0.91,
-        0.25,
-        0.34,
-        1
-      ]
-    },
-    {
-      "NAME": "targetColor",
-      "TYPE": "color",
-      "DEFAULT": [
-        0.91,
-        0.25,
-        0.34,
-        1
-      ]
-    },
-    {
-      "NAME": "targetColorPoint",
-      "TYPE": "float",
-      "DEFAULT": 0.5
-    },
-    {
-      "NAME": "targetColorRange",
-      "TYPE": "float",
-      "DEFAULT": 0.3
-    },
-    {
-      "NAME": "showGradient",
-      "TYPE": "bool",
-      "DEFAULT": true
-    },
-    {
-      "NAME": "showSolarized",
-      "TYPE": "bool",
-      "DEFAULT": false
-    }
-  ],
-  "PASSES": [
-    {
-      "TARGET": "bufferVariableNameA",
-      "WIDTH": "$WIDTH/16.0",
-      "HEIGHT": "$HEIGHT/16.0"
-    },
-    {
-      "DESCRIPTION": "this empty pass is rendered at the same rez as whatever you are running the ISF filter at- the previous step rendered an image at one-sixteenth the res, so this step ensures that the output is full-size"
-    }
+    { "NAME": "inputImage",     "TYPE": "image" },
+    { "NAME": "baseColor",      "TYPE": "color",  "DEFAULT": [0.04, 0.02, 0.55, 1.0] },
+    { "NAME": "targetColor",    "TYPE": "color",  "DEFAULT": [1.0,  0.05, 0.35, 1.0] },
+    { "NAME": "highlightColor", "LABEL": "Highlight", "TYPE": "color", "DEFAULT": [1.0, 0.85, 0.10, 1.0] },
+    { "NAME": "hueDrift",       "LABEL": "Hue Drift",    "TYPE": "float", "DEFAULT": 0.08, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "contrast",       "LABEL": "Contrast",     "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0, "MAX": 3.0 },
+    { "NAME": "hdrBoost",       "LABEL": "HDR Boost",    "TYPE": "float", "DEFAULT": 1.5,  "MIN": 0.0, "MAX": 3.0 },
+    { "NAME": "audioReact",     "LABEL": "Audio React",  "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0, "MAX": 2.0 },
+    { "NAME": "showGradient",   "LABEL": "Show Preview", "TYPE": "bool",  "DEFAULT": true }
   ]
 }*/
-vec3 rgb2hsl( in vec3 c ){
-  float h = 0.0;
-	float s = 0.0;
-	float l = 0.0;
-	float r = c.r;
-	float g = c.g;
-	float b = c.b;
-	float cMin = min( r, min( g, b ) );
-	float cMax = max( r, max( g, b ) );
 
-	l = ( cMax + cMin ) / 2.0;
-	if ( cMax > cMin ) {
-		float cDelta = cMax - cMin;
-        
-        //s = l < .05 ? cDelta / ( cMax + cMin ) : cDelta / ( 2.0 - ( cMax + cMin ) ); Original
-		s = l < .0 ? cDelta / ( cMax + cMin ) : cDelta / ( 2.0 - ( cMax + cMin ) );
-        
-		if ( r == cMax ) {
-			h = ( g - b ) / cDelta;
-		} else if ( g == cMax ) {
-			h = 2.0 + ( b - r ) / cDelta;
-		} else {
-			h = 4.0 + ( r - g ) / cDelta;
-		}
+// ─── Gradient Mapper ──────────────────────────────────────────────────────────
+// Maps input luminosity to a 3-stop palette via cosine interpolation.
+// Shadows → baseColor, midtones → targetColor, highlights → highlightColor.
+// TIME-driven hue drift rotates the whole palette slowly.
+// HDR boost lifts bright areas above 1.0 for bloom pipeline.
+// ─────────────────────────────────────────────────────────────────────────────
 
-		if ( h < 0.0) {
-			h += 6.0;
-		}
-		h = h / 6.0;
-	}
-	return vec3( h, s, l );
+vec3 hsv2rgb(vec3 c) {
+    vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 
-
-
-vec3 hsl2rgb( in vec3 c )
-{
-    vec3 rgb = clamp( abs(mod(c.x*6.0+vec3(0.0,4.0,2.0),6.0)-3.0)-1.0, 0.0, 1.0 );
-
-    return c.z + c.y * (rgb-0.5)*(1.0-abs(2.0*c.z-1.0));
+vec3 rgb2hsv(vec3 c) {
+    vec4 K = vec4(0.0, -1.0/3.0, 2.0/3.0, -1.0);
+    vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+    vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+    float d = q.x - min(q.w, q.y);
+    return vec3(abs(q.z + (q.w - q.y) / (6.0*d + 1e-10)), d / (q.x + 1e-10), q.x);
 }
 
-float solarize(in float baseLuminosity,in float point,in float range){
-    float area=clamp(1.-abs(baseLuminosity-point)/range,0.,1.);
-    return area;
+// 3-stop gradient: 0=shadow (baseColor), 0.5=midtone (targetColor), 1=highlight (highlightColor)
+vec3 gradientMap(float t, float drift) {
+    // Apply hue drift to all three stops
+    vec3 c0 = rgb2hsv(baseColor.rgb);
+    vec3 c1 = rgb2hsv(targetColor.rgb);
+    vec3 c2 = rgb2hsv(highlightColor.rgb);
+    c0.x = fract(c0.x + drift);
+    c1.x = fract(c1.x + drift);
+    c2.x = fract(c2.x + drift);
+    // Force full saturation for vivid output
+    c0.y = max(c0.y, 0.85);
+    c1.y = max(c1.y, 0.85);
+    c2.y = max(c2.y, 0.85);
+
+    // Piecewise linear interpolation: shadow→mid, mid→highlight
+    vec3 col;
+    if (t < 0.5) {
+        col = mix(hsv2rgb(c0), hsv2rgb(c1), t * 2.0);
+    } else {
+        col = mix(hsv2rgb(c1), hsv2rgb(c2), (t - 0.5) * 2.0);
+    }
+    return col;
 }
 
-void main()	{
-	vec4		inputPixelColor;
-	//	both of these are the same
-	inputPixelColor = IMG_THIS_PIXEL(inputImage);
-// 	inputPixelColor = IMG_PIXEL(inputImage, gl_FragCoord.xy);
-	
-	//	both of these are also the same
-// 	inputPixelColor = IMG_NORM_PIXEL(inputImage, isf_FragNormCoord.xy);
-// 	inputPixelColor = IMG_THIS_NORM_PIXEL(inputImage);
-	
-    float l=(inputPixelColor.r+inputPixelColor.g+inputPixelColor.b)/3.;
-    
-    //gradientを表示する場合、上の方に表示する
-    float gradientColor=mix(l,isf_FragNormCoord.x,step(0.9,isf_FragNormCoord.y));
-    l=mix(l,gradientColor,float(showGradient));
-    
-	vec3 baseHsl=rgb2hsl(baseColor.rgb);
-	vec3 baseColored=hsl2rgb(vec3(baseHsl.xy,l));
-	vec3 targetHsl=rgb2hsl(targetColor.rgb);
-	vec3 targetColored=hsl2rgb(vec3(targetHsl.xy,l));
-	
-	float solarized=solarize(l,targetColorPoint,targetColorRange);
-	vec4 fullColor=vec4(mix(baseColored,targetColored,solarized),1.);
-	vec4 solarizedColor=vec4(solarized,solarized,solarized,1.);
-// 	gl_FragColor=vec4(baseColored,1.);
-	gl_FragColor=mix(fullColor,solarizedColor,float(showSolarized));
+void main() {
+    vec2 uv = isf_FragNormCoord;
+
+    // Show gradient preview strip at top 10% of frame
+    float isPreview = showGradient ? step(0.9, uv.y) : 0.0;
+    vec2 sampleUV = isPreview > 0.5 ? vec2(uv.x, 0.5) : uv;
+
+    vec4 src = IMG_NORM_PIXEL(inputImage, sampleUV);
+    float lum = isPreview > 0.5
+        ? uv.x  // gradient preview: sweep luminosity left→right
+        : dot(src.rgb, vec3(0.299, 0.587, 0.114));
+
+    // Contrast S-curve
+    float lumC = lum - 0.5;
+    lumC = lumC * (1.0 + contrast * 0.5) * (1.0 + abs(lumC) * contrast * 0.5);
+    lum = clamp(lumC + 0.5, 0.0, 1.0);
+
+    // Audio drives luminosity shift — bass lifts midtones
+    lum = clamp(lum + audioBass * audioReact * 0.08, 0.0, 1.0);
+
+    // TIME-driven hue drift
+    float drift = hueDrift * sin(TIME * 0.15) * 0.5;
+
+    vec3 col = gradientMap(lum, drift);
+
+    // HDR boost for highlights — bright areas punch above 1.0
+    float hiMask = smoothstep(0.6, 1.0, lum);
+    col += col * hiMask * hdrBoost * 1.5;   // highlights reach 2.5× at lum=1
+
+    // Audio-reactive shimmer on bright areas
+    col += col * hiMask * audioBass * audioReact * 0.4;
+
+    // Preview strip: add a white tick mark at the midpoint
+    if (isPreview > 0.5) {
+        float tick = smoothstep(0.008, 0.0, abs(uv.x - 0.5)) * 2.0;
+        col += vec3(2.0) * tick;
+    }
+
+    // Surprise: every ~17s gradient inverts for ~0.5s — solarize pop
+    {
+        float _ph = fract(TIME / 17.0);
+        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.20, 0.12, _ph);
+        vec3 inverted = gradientMap(1.0 - lum, drift + 0.5);
+        col = mix(col, inverted * 2.2, _f);
+    }
+
+    gl_FragColor = vec4(col, src.a);
 }
