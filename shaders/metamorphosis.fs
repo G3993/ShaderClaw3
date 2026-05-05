@@ -274,7 +274,8 @@ void main() {
   } else if (!transparentBg) {
     // Palette boost: hue sweep across screen → color-bucket diversity
     float bgPhi = atan(uv.y, uv.x) * (1.0 / 6.28318);
-    col = 0.22 * (0.5 + 0.5 * sin(bgPhi * 4.0 + TIME * 0.02 + vec3(0.0, 2.094, 4.189)));
+    col = 0.55 * (0.5 + 0.5 * sin(bgPhi * 6.0 + TIME * 0.12 + vec3(0.0, 2.094, 4.189)));
+    col += 0.20 * (0.5 + 0.5 * sin(bgPhi * 3.0 - TIME * 0.08 + vec3(1.047, 3.142, 5.236)));
 
     // Atmospheric glow
     float closestT = max(-dot(ro, rd), 0.0);
