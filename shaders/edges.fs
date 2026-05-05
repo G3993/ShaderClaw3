@@ -1,180 +1,126 @@
 /*{
-    "DESCRIPTION": "Particle field bouncing off the edges of the canvas. Grid-seeded, audio-reactive, velocity-stretched streaks.",
-    "CATEGORIES": ["Generator", "Particles", "Audio Reactive"],
-    "CREDIT": "Easel / edges v1",
-    "INPUTS": [
-        { "NAME": "motionSpeed",    "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 1.0, "LABEL": "Motion Speed" },
-        { "NAME": "chaos",          "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0, "LABEL": "Chaos" },
-        { "NAME": "particleSize",   "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 4.0, "LABEL": "Particle Size" },
-        { "NAME": "stretch",        "TYPE": "float", "DEFAULT": 1.2, "MIN": 0.0, "MAX": 4.0, "LABEL": "Stretch" },
-        { "NAME": "vortexStrength", "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 3.0, "LABEL": "Vortex" },
-        { "NAME": "audioReactivity","TYPE": "float", "DEFAULT": 0.7, "MIN": 0.0, "MAX": 2.0, "LABEL": "Audio" },
-        { "NAME": "color1", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0], "LABEL": "Core" },
-        { "NAME": "color2", "TYPE": "color", "DEFAULT": [0.1, 0.7, 1.0, 1.0], "LABEL": "Halo" },
-        { "NAME": "bg",     "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.03, 1.0], "LABEL": "Background" },
-        { "NAME": "glow",   "TYPE": "float", "DEFAULT": 1.3, "MIN": 0.0, "MAX": 3.0, "LABEL": "Glow" },
-        { "NAME": "ledMode",       "TYPE": "bool",  "DEFAULT": true,  "LABEL": "LED Wall" },
-        { "NAME": "ledSize",       "TYPE": "float", "DEFAULT": 220.0, "MIN": 50.0, "MAX": 600.0, "LABEL": "LED Density" },
-        { "NAME": "trailDecay",    "TYPE": "float", "DEFAULT": 0.85,  "MIN": 0.0,  "MAX": 1.0, "LABEL": "Trail Length" },
-        { "NAME": "particleCount", "TYPE": "float", "DEFAULT": 96.0,  "MIN": 20.0, "MAX": 200.0, "LABEL": "Particle Count" },
-        { "NAME": "colorJitter",   "TYPE": "float", "DEFAULT": 0.40,  "MIN": 0.0,  "MAX": 1.0, "LABEL": "Color Jitter" }
-    ]
+  "DESCRIPTION": "Bioluminescent Reef — 3D raymarched coral colony in abyssal void; teal/violet/cyan/magenta polyp glow on pitch-black ocean floor",
+  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
+  "CREDIT": "auto-improve v3",
+  "INPUTS": [
+    {"NAME":"coralScale","TYPE":"float","DEFAULT":1.0,"MIN":0.4,"MAX":2.0,"LABEL":"Scale"},
+    {"NAME":"glowPeak","TYPE":"float","DEFAULT":2.5,"MIN":1.0,"MAX":4.0,"LABEL":"HDR Glow"},
+    {"NAME":"pulseRate","TYPE":"float","DEFAULT":1.0,"MIN":0.2,"MAX":3.0,"LABEL":"Pulse Rate"},
+    {"NAME":"audioMod","TYPE":"float","DEFAULT":0.8,"MIN":0.0,"MAX":2.0,"LABEL":"Audio React"},
+    {"NAME":"camSpin","TYPE":"float","DEFAULT":0.04,"MIN":0.0,"MAX":0.2,"LABEL":"Orbit Speed"}
+  ]
 }*/
 
-float hash11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
+float h11(float n){return fract(sin(n*127.1)*43758.5453);}
 
-// Triangle-wave bounce: x (time-like) folded into [0,1] with reflection.
-float bounce01(float x) { return abs(fract(x * 0.5) * 2.0 - 1.0); }
-
-// 2D sinusoidal "vortex" — cheap analytic flow field, no noise tables.
-vec2 vortex(vec2 p, float t) {
-    float a = sin(p.x * 1.3 + t * 0.7) + cos(p.y * 1.7 - t * 0.5);
-    float b = cos(p.x * 1.9 - t * 0.4) + sin(p.y * 1.1 + t * 0.9);
-    return vec2(a, b) * 0.5;
+float sdCap(vec3 p,vec3 a,vec3 b,float r){
+    vec3 ab=b-a,ap=p-a;
+    return length(ap-ab*clamp(dot(ap,ab)/dot(ab,ab),0.,1.))-r;
+}
+float sdSph(vec3 p,float r){return length(p)-r;}
+float smin(float a,float b,float k){
+    float h=clamp(.5+.5*(b-a)/k,0.,1.);
+    return mix(b,a,h)-k*h*(1.-h);
 }
 
-void main() {
-    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
-    float aspect = RENDERSIZE.x / RENDERSIZE.y;
-    uv.x *= aspect;
+float sdCoralTree(vec3 p,float s){
+    float pulse=.007*sin(TIME*pulseRate+s*1.7);
+    vec3 A=vec3(0.);
+    vec3 B=vec3((h11(s)-.5)*.12,.58,(h11(s+1.)-.5)*.12);
+    float trunk=sdCap(p,A,B,.04);
+    vec3 C=B+vec3((h11(s+2.)-.5)*.24,.20,(h11(s+3.)-.5)*.18);
+    vec3 D=B+vec3((h11(s+4.)-.5)*.20,.17,(h11(s+5.)-.5)*.22);
+    float br=min(sdCap(p,B,C,.024),sdCap(p,B,D,.024));
+    float tips=min(sdSph(p-C,.040+pulse),sdSph(p-D,.036+pulse));
+    return smin(smin(trunk,br,.05),tips,.025);
+}
 
-    float t = TIME;
-    float audio = audioLevel + audioBass * 1.1 + audioHigh * 0.5;
+vec2 scene(vec3 p){
+    float gnd=p.y+.92;
+    vec2 res=vec2(gnd,0.);
+    float cs=coralScale;
+    float d;
+    d=sdCoralTree((p-vec3( 0.,-.92, 0.))/cs,1.3)*cs; if(d<res.x)res=vec2(d,1.);
+    d=sdCoralTree((p-vec3( .75,-.92,-.35))/cs,5.1)*cs; if(d<res.x)res=vec2(d,2.);
+    d=sdCoralTree((p-vec3(-.65,-.92, .55))/cs,8.7)*cs; if(d<res.x)res=vec2(d,3.);
+    d=sdCoralTree((p-vec3( .30,-.92, .90))/cs,12.4)*cs; if(d<res.x)res=vec2(d,4.);
+    return res;
+}
 
-    vec3 acc = vec3(0.0);
-    const int N = 256;
+vec3 calcNor(vec3 p){
+    vec2 e=vec2(.001,0.);
+    return normalize(vec3(
+        scene(p+e.xyy).x-scene(p-e.xyy).x,
+        scene(p+e.yxy).x-scene(p-e.yxy).x,
+        scene(p+e.yyx).x-scene(p-e.yyx).x
+    ));
+}
 
-    for (int i = 0; i < N; i++) {
-        float fi = float(i);
-        float s1 = hash11(fi * 1.37);
-        float s2 = hash11(fi * 2.91 + 0.5);
-        float s3 = hash11(fi * 4.17 + 0.3);
-        float s4 = hash11(fi * 7.53 + 0.7);
+vec3 coralCol(float id){
+    if(id<1.5) return vec3(0.,1.,.85);
+    if(id<2.5) return vec3(0.,.75,1.);
+    if(id<3.5) return vec3(.65,0.,1.);
+    return vec3(1.,.0,.65);
+}
 
-        // Wider speed range + two stacked oscillators per axis → richer, less
-        // periodic-feeling motion. Each particle has a dominant and secondary
-        // frequency at 1.7× offset, mixed 70/30.
-        float speedX1 = (0.2 + s1 * 2.8) * motionSpeed;
-        float speedY1 = (0.2 + s2 * 2.8) * motionSpeed;
-        float speedX2 = speedX1 * (1.0 + s3 * 0.8);
-        float speedY2 = speedY1 * (1.0 + s4 * 0.8);
-        float phaseX  = s3 * 6.2832;
-        float phaseY  = s4 * 6.2832;
-        float phaseX2 = s1 * 3.1416;
-        float phaseY2 = s2 * 3.1416;
+// Tip world positions for screen-space glow
+vec3 tipPos(int i){
+    float cs=coralScale;
+    if(i==0){ float s=1.3; return vec3(0.,-.92,0.)  +vec3((h11(s)-.5)*.12,.58,(h11(s+1.)-.5)*.12)*cs+vec3((h11(s+2.)-.5)*.24,.20,(h11(s+3.)-.5)*.18)*cs;}
+    if(i==1){ float s=5.1; return vec3(.75,-.92,-.35)+vec3((h11(s)-.5)*.12,.58,(h11(s+1.)-.5)*.12)*cs+vec3((h11(s+2.)-.5)*.24,.20,(h11(s+3.)-.5)*.18)*cs;}
+    if(i==2){ float s=8.7; return vec3(-.65,-.92,.55)+vec3((h11(s)-.5)*.12,.58,(h11(s+1.)-.5)*.12)*cs+vec3((h11(s+2.)-.5)*.24,.20,(h11(s+3.)-.5)*.18)*cs;}
+    float s=12.4; return vec3(.30,-.92,.90)+vec3((h11(s)-.5)*.12,.58,(h11(s+1.)-.5)*.12)*cs+vec3((h11(s+2.)-.5)*.24,.20,(h11(s+3.)-.5)*.18)*cs;
+}
 
-        float dt = 0.02;
-        // Mix two bouncing oscillators so paths don't feel clockwork-regular.
-        float bxA = bounce01(t      * speedX1 + phaseX) * 0.7
-                  + bounce01(t      * speedX2 + phaseX2) * 0.3;
-        float byA = bounce01(t      * speedY1 + phaseY) * 0.7
-                  + bounce01(t      * speedY2 + phaseY2) * 0.3;
-        float bxB = bounce01((t+dt) * speedX1 + phaseX) * 0.7
-                  + bounce01((t+dt) * speedX2 + phaseX2) * 0.3;
-        float byB = bounce01((t+dt) * speedY1 + phaseY) * 0.7
-                  + bounce01((t+dt) * speedY2 + phaseY2) * 0.3;
+void main(){
+    vec2 uv=(gl_FragCoord.xy-RENDERSIZE*.5)/RENDERSIZE.y;
+    float audio=1.+audioLevel*audioMod+audioBass*audioMod*.6;
 
-        vec2 baseA = vec2(bxA, byA) * 2.0 - 1.0;
-        vec2 baseB = vec2(bxB, byB) * 2.0 - 1.0;
+    float ang=TIME*camSpin;
+    vec3 ro=vec3(sin(ang)*2.2,.45,cos(ang)*2.2);
+    vec3 fwd=normalize(vec3(0.,-.35,0.)-ro);
+    vec3 right=normalize(cross(fwd,vec3(0.,1.,0.)));
+    vec3 up_=cross(right,fwd);
+    vec3 rd=normalize(fwd+uv.x*right+uv.y*up_);
 
-        // Chaos: stacked sin layers at different frequencies + a per-particle
-        // tumble. With chaos > 0 each particle deviates strongly from its
-        // base bounce path, with chaos = 0 it follows the orbit cleanly.
-        // Previous version was scaled by 0.25 — far too weak to read.
-        float chT = t * 0.7;
-        float chTb = (t+dt) * 0.7;
-        // Three octaves of sin per axis at different frequencies + per-
-        // particle phase offsets — non-periodic-feeling drift
-        vec2 chaosA = vec2(
-            sin(chT  * (1.1 + s1 * 1.3) + s3 * 6.28) * 0.55
-          + sin(chT  * (3.7 + s2 * 1.7) + s4 * 6.28) * 0.30
-          + sin(chT  * (0.4 + s3 * 0.9) + s1 * 6.28) * 0.20,
-            cos(chT  * (0.9 + s2 * 1.5) + s4 * 6.28) * 0.55
-          + cos(chT  * (3.1 + s1 * 1.4) + s3 * 6.28) * 0.30
-          + cos(chT  * (0.6 + s4 * 1.1) + s2 * 6.28) * 0.20
-        ) * chaos * 0.55;
-        vec2 chaosB = vec2(
-            sin(chTb * (1.1 + s1 * 1.3) + s3 * 6.28) * 0.55
-          + sin(chTb * (3.7 + s2 * 1.7) + s4 * 6.28) * 0.30
-          + sin(chTb * (0.4 + s3 * 0.9) + s1 * 6.28) * 0.20,
-            cos(chTb * (0.9 + s2 * 1.5) + s4 * 6.28) * 0.55
-          + cos(chTb * (3.1 + s1 * 1.4) + s3 * 6.28) * 0.30
-          + cos(chTb * (0.6 + s4 * 1.1) + s2 * 6.28) * 0.20
-        ) * chaos * 0.55;
-        baseA += chaosA;
-        baseB += chaosB;
-        // Wrap (not clamp) so chaotic particles re-enter rather than stick to edges
-        baseA = mod(baseA + 1.0, 2.0) - 1.0;
-        baseB = mod(baseB + 1.0, 2.0) - 1.0;
+    float d=.05; float matId=-1.;
+    for(int i=0;i<72;i++){
+        vec2 r=scene(ro+rd*d);
+        if(r.x<.0015){matId=r.y;break;}
+        if(d>12.)break;
+        d+=r.x;
+    }
 
-        // Aspect-stretched world-space positions.
-        vec2 posA = vec2(baseA.x * aspect, baseA.y);
-        vec2 posB = vec2(baseB.x * aspect, baseB.y);
+    vec3 col=vec3(0.,.0015,.005);
 
-        // Optional vortex perturbation.
-        posA += vortex(posA, t)          * vortexStrength * 0.08;
-        posB += vortex(posB, t + dt)     * vortexStrength * 0.08;
-
-        vec2 vel = (posB - posA) / dt;
-        float speed = length(vel);
-
-        // Capsule endpoints for motion-stretched particle.
-        float stretchLen = 0.006 * stretch * (0.5 + audio * audioReactivity);
-        vec2 a = posA - vel * stretchLen;
-        vec2 b = posA + vel * stretchLen;
-
-        // Distance to capsule (line segment with rounded caps).
-        vec2 pa = uv - a;
-        vec2 ba = b - a;
-        float denom = max(dot(ba, ba), 1e-6);
-        float h = clamp(dot(pa, ba) / denom, 0.0, 1.0);
-        float d = length(pa - ba * h);
-
-        float r = 0.012 * particleSize * (0.6 + audio * audioReactivity * 0.6);
-        float core = smoothstep(r, 0.0, d);
-        float halo = exp(-d * 70.0);
-
-        // Per-particle color jitter — gives the LED-wall variety look
-        vec3 c1 = color1.rgb;
-        vec3 c2 = color2.rgb;
-        if (colorJitter > 0.0) {
-            float h = hash11(float(i) * 11.7);
-            vec3 hueShift = 0.5 + 0.5 * cos(6.28318 * h + vec3(0.0, 2.094, 4.188));
-            c1 = mix(c1, hueShift,             colorJitter);
-            c2 = mix(c2, hueShift * 0.7 + 0.3, colorJitter);
-        }
-        acc += mix(c2, c1, core) * (core + halo * 0.35);
-
-        // Trail — extra ghost samples behind the segment
-        if (trailDecay > 0.001) {
-            for (int tk = 1; tk <= 3; tk++) {
-                float ftk = float(tk);
-                vec2 ghostA = a - vel * ftk * 0.10 * trailDecay;
-                vec2 ghostB = a;
-                vec2 paG = uv - ghostA;
-                vec2 baG = ghostB - ghostA;
-                float dG2 = dot(baG, baG);
-                if (dG2 > 1e-6) {
-                    float hG = clamp(dot(paG, baG) / dG2, 0.0, 1.0);
-                    float ddG = length(paG - baG * hG);
-                    float fadeG = 1.0 - ftk / 4.0;
-                    acc += mix(c2, c1, smoothstep(r, 0.0, ddG)) * fadeG * 0.20;
-                }
-            }
+    if(matId>=0.){
+        vec3 pos=ro+rd*d;
+        vec3 n=calcNor(pos);
+        if(matId<.5){
+            // ocean floor: almost black with faint teal ambient
+            col=vec3(.008,.014,.018)+vec3(0.,.025,.04)*(.5+.5*sin(pos.x*.9+pos.z*.7));
+        } else {
+            vec3 bc=coralCol(matId);
+            float diff=max(0.,dot(n,normalize(vec3(.2,1.,.3))))*.3;
+            float emit=.65;
+            col=bc*(emit+diff)*glowPeak*audio;
+            // fwidth edge darkening — black ink silhouette at coral boundary
+            float edge=fwidth(scene(pos).x);
+            col*=smoothstep(0.,edge*5.,scene(pos).x+.002);
         }
     }
 
-    vec3 rgb = bg.rgb + acc * glow;
-
-    // LED wall mode: quantize to a grid, leaving black "gaps" between LEDs
-    if (ledMode) {
-        vec2 ledUV = uv * ledSize;
-        vec2 lf = fract(ledUV) - 0.5;
-        float dotMask = smoothstep(0.45, 0.30, length(lf));
-        // Black bezel between LEDs, brightness boost on the lit dot
-        rgb = rgb * (0.20 + 0.80 * dotMask);
-        rgb += rgb * dotMask * 0.4;  // a touch of bloom on lit cells
+    // Additive screen-space polyp glow halos
+    vec3 gc0=vec3(0.,1.,.85); vec3 gc1=vec3(0.,.75,1.);
+    vec3 gc2=vec3(.65,0.,1.);  vec3 gc3=vec3(1.,0.,.65);
+    for(int i=0;i<4;i++){
+        vec3 tp=tipPos(i);
+        vec3 gc=(i==0)?gc0:(i==1)?gc1:(i==2)?gc2:gc3;
+        vec3 oc=ro-tp;
+        float b=dot(oc,rd); float cl2=max(0.,dot(oc,oc)-b*b);
+        col+=gc*exp(-cl2*35.)*glowPeak*.14*audio;
     }
 
-    gl_FragColor = vec4(rgb, 1.0);
+    col*=1.-smoothstep(.55,1.,length(uv));
+    gl_FragColor=vec4(col,1.);
 }
