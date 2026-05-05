@@ -1,185 +1,166 @@
 /*{
-  "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Bricks - grid with animated displacement",
+  "DESCRIPTION": "Gothic Cathedral Interior — 3D raymarched vaulted nave with stained glass light beams, stone arches, and colored illumination",
+  "CREDIT": "ShaderClaw auto-improve",
+  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
-    { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1,2], "LABELS": ["Bricks","Bricks Harlequin","Bricks Zebra"], "DEFAULT": 0 },
-    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
-    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
-    { "NAME": "intensity", "LABEL": "Displacement", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "density", "LABEL": "Grid Density", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "archCount",   "LABEL": "Arch Spans",   "TYPE": "float", "DEFAULT": 5.0,  "MIN": 2.0, "MAX": 8.0  },
+    { "NAME": "stoneColor",  "LABEL": "Stone Color",  "TYPE": "color", "DEFAULT": [0.08, 0.06, 0.1, 1.0]       },
+    { "NAME": "hdrPeak",     "LABEL": "HDR Peak",     "TYPE": "float", "DEFAULT": 2.5,  "MIN": 1.0, "MAX": 4.0  },
+    { "NAME": "audioPulse",  "LABEL": "Audio Pulse",  "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0, "MAX": 2.0  },
+    { "NAME": "walkSpeed",   "LABEL": "Walk Speed",   "TYPE": "float", "DEFAULT": 0.3,  "MIN": 0.0, "MAX": 1.0  }
   ]
 }*/
 
-const float PI = 3.14159265;
-const float TWO_PI = 6.28318530;
-
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
-float charPixel(int ch, float col, float row) {
-    if (ch < 0 || ch > 36) return 0.0;
-    vec2 uv = vec2(col / 5.0, row / 7.0);
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return smoothstep(0.1, 0.55, texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r);
+// Gothic arch SDF: tall pointed arch = two overlapping circles
+float sdGothicArch(vec2 p, float w, float h) {
+    // Two circles centered at ±w/2, radius r such that they meet at height h
+    float r = sqrt((w*0.5)*(w*0.5) + h*h) * 0.5 + w*0.15;
+    float d1 = length(p - vec2(-w*0.5, 0.0)) - r;
+    float d2 = length(p - vec2( w*0.5, 0.0)) - r;
+    // Interior of arch = intersection of two circle interiors + box below
+    float interior = max(d1, d2);    // inside both
+    float box = min(abs(p.x) - w*0.5, -p.y);  // below arch crown
+    return max(interior, -box);      // 2D arch opening
 }
 
-int getChar(int slot) {
-    if (slot == 0)  return int(msg_0);
-    if (slot == 1)  return int(msg_1);
-    if (slot == 2)  return int(msg_2);
-    if (slot == 3)  return int(msg_3);
-    if (slot == 4)  return int(msg_4);
-    if (slot == 5)  return int(msg_5);
-    if (slot == 6)  return int(msg_6);
-    if (slot == 7)  return int(msg_7);
-    if (slot == 8)  return int(msg_8);
-    if (slot == 9)  return int(msg_9);
-    if (slot == 10) return int(msg_10);
-    if (slot == 11) return int(msg_11);
-    if (slot == 12) return int(msg_12);
-    if (slot == 13) return int(msg_13);
-    if (slot == 14) return int(msg_14);
-    if (slot == 15) return int(msg_15);
-    if (slot == 16) return int(msg_16);
-    if (slot == 17) return int(msg_17);
-    if (slot == 18) return int(msg_18);
-    if (slot == 19) return int(msg_19);
-    if (slot == 20) return int(msg_20);
-    if (slot == 21) return int(msg_21);
-    if (slot == 22) return int(msg_22);
-    if (slot == 23) return int(msg_23);
-    if (slot == 24) return int(msg_24);
-    if (slot == 25) return int(msg_25);
-    if (slot == 26) return int(msg_26);
-    if (slot == 27) return int(msg_27);
-    if (slot == 28) return int(msg_28);
-    if (slot == 29) return int(msg_29);
-    if (slot == 30) return int(msg_30);
-    if (slot == 31) return int(msg_31);
-    if (slot == 32) return int(msg_32);
-    if (slot == 33) return int(msg_33);
-    if (slot == 34) return int(msg_34);
-    if (slot == 35) return int(msg_35);
-    if (slot == 36) return int(msg_36);
-    if (slot == 37) return int(msg_37);
-    if (slot == 38) return int(msg_38);
-    if (slot == 39) return int(msg_39);
-    if (slot == 40) return int(msg_40);
-    if (slot == 41) return int(msg_41);
-    if (slot == 42) return int(msg_42);
-    if (slot == 43) return int(msg_43);
-    if (slot == 44) return int(msg_44);
-    if (slot == 45) return int(msg_45);
-    if (slot == 46) return int(msg_46);
-    return int(msg_47);
+float sdBox3(vec3 p, vec3 b) {
+    vec3 q = abs(p) - b;
+    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
 }
 
-int charCount() {
-    int n = int(msg_len);
-    return n > 0 ? n : 1;
-}
+vec2 scene(vec3 p) {
+    // Walk down the nave
+    float walk = TIME * walkSpeed * 0.5;
+    float span  = 2.5;   // distance between arch pairs
+    float navW  = 1.8;   // half-width of nave
+    float navH  = 4.0;   // arch height
 
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
-}
+    // Tiled arch spans using mod
+    float sz = p.z - walk;
+    float cell = mod(sz, span) - span*0.5;
+    float cellZ = floor(sz / span);
 
-float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+    // Nave walls (box)
+    float wallL = abs(p.x + navW) - 0.25;
+    float wallR = abs(p.x - navW) - 0.25;
+    float walls = min(wallL, wallR);
 
-// =======================================================================
-// EFFECT: BRICKS - grid with animated displacement
-// =======================================================================
+    // Floor
+    float floor_ = p.y + 0.05;
 
-vec4 effectBricks(vec2 uv, int sub) {
-    float aspect = RENDERSIZE.x / RENDERSIZE.y;
-    int numChars = charCount();
-    float waveAmount = intensity;
-    float cols = floor(mix(5.0, 40.0, density));
+    // Vaulted ceiling arch (extruded in Z)
+    vec2 archP = vec2(p.x, p.y - 0.05);
+    float archD = -sdGothicArch(archP, navW*2.0, navH) - 0.25;
+    float ceiling = max(archD, 0.04 - abs(cell)); // only in arch slab
 
-    float wX=0.0, wY=0.0, fX=3.0, fY=3.0, pm=0.0;
-    bool brick = false;
-    if (sub == 0) { wX=0.3; fX=2.5; brick=true; }
-    else if (sub == 1) { wX=0.6; wY=0.6; pm=2.0; }
-    else { wX=1.0; fX=4.0; pm=1.0; }
+    float d = min(walls, min(floor_, max(-(navH - p.y), abs(p.x) - navW - 0.5)));
+    float matId = 0.0; // stone
 
-    float rws = floor(cols*(7.0/5.0)/aspect);
-    float cellW = 1.0/cols, cellH = 1.0/rws;
-
-    float ci = clamp(floor(uv.x/cellW), 0.0, cols-1.0);
-    float ri = clamp(floor(uv.y/cellH), 0.0, rws-1.0);
-    float lx = fract(uv.x/cellW), ly = fract(uv.y/cellH);
-
-    if (brick && mod(ri, 2.0) > 0.5) {
-        float sx = uv.x + cellW*0.5;
-        ci = mod(floor(sx/cellW), cols);
-        lx = fract(sx/cellW);
+    // Stained glass window openings in side walls (arched)
+    vec2 winP  = vec2(p.y - navH*0.55, cell);
+    float win  = sdGothicArch(winP, 0.7, 0.9) - 0.06;
+    float winD = min(abs(p.x + navW) - 0.02, abs(p.x - navW) - 0.02);
+    if (winD < 0.05) {
+        d = max(d, -win);
     }
 
-    float t = TIME*speed*2.5;
-    float phase = ci + ri;
-    if (pm > 0.5 && pm < 1.5) phase = ri;
-    else if (pm > 1.5) phase = (ci + ri)*PI;
+    return vec2(d, matId);
+}
 
-    lx = fract(lx + sin(phase*fX+t)*waveAmount*wX*0.3);
-    ly = fract(ly + sin(phase*fY+t*1.1)*waveAmount*wY*0.3);
+vec3 getNormal(vec3 p) {
+    vec2 e = vec2(0.004, 0.0);
+    return normalize(vec3(
+        scene(p+e.xyy).x - scene(p-e.xyy).x,
+        scene(p+e.yxy).x - scene(p-e.yxy).x,
+        scene(p+e.yyx).x - scene(p-e.yyx).x
+    ));
+}
 
-    int charIdx = int(mod(ci + ri*cols, float(numChars)));
-    float cWR = 5.0/7.0;
-    float sX = textScale*cWR, sY = textScale;
-    float mX = (1.0-sX)*0.5, mY = (1.0-sY)*0.5;
-
-    float textHit = 0.0;
-    if (lx >= mX && lx < 1.0-mX && ly >= mY && ly < 1.0-mY) {
-        float gc = ((lx-mX)/sX)*5.0, gr = ((ly-mY)/sY)*7.0;
-        if (gc >= 0.0 && gc < 5.0 && gr >= 0.0 && gr < 7.0) {
-            int ci2 = int(mod(float(charIdx), float(numChars)));
-            int ch = getChar(ci2);
-            if (ch >= 0 && ch <= 36 && ch != 26) textHit = charPixel(ch, gc, gr);
-        }
-    }
-
-    bool inv = mod(ri, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
-    return vec4(fc, a);
+// Window color: stained glass pattern based on position
+vec3 windowColor(vec3 dir, float t) {
+    // 5 color panels in each window
+    float panel = floor(dir.x * 4.0 + 2.0);
+    float hue = fract(panel * 0.19 + t * 0.05);
+    // Saturated colors cycling
+    if (int(mod(panel, 5.0)) == 0) return vec3(1.0, 0.0, 0.15);    // crimson
+    if (int(mod(panel, 5.0)) == 1) return vec3(0.0, 0.4, 1.0);     // royal blue
+    if (int(mod(panel, 5.0)) == 2) return vec3(0.0, 0.85, 0.2);    // emerald
+    if (int(mod(panel, 5.0)) == 3) return vec3(1.0, 0.65, 0.0);    // amber
+                                   return vec3(0.55, 0.0, 1.0);    // violet
 }
 
 void main() {
-    vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
-    int p = int(preset);
-    vec4 col = effectBricks(uv, p);
+    vec2 uv = (gl_FragCoord.xy - RENDERSIZE*0.5) / min(RENDERSIZE.x, RENDERSIZE.y);
 
-    if (_voiceGlitch > 0.01) {
-        float g = _voiceGlitch;
-        float t = TIME * 17.0;
-        float band = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
-        float bandNoise = fract(sin(band * 91.7 + t) * 43758.5);
-        float bandActive = step(1.0 - g * 0.6, bandNoise);
-        float shift = (bandNoise - 0.5) * 0.08 * g * bandActive;
-        float chromaAmt = g * 0.015;
-        vec2 uvR = uv + vec2(shift + chromaAmt, 0.0);
-        vec2 uvB = uv + vec2(shift - chromaAmt, 0.0);
-        vec2 uvG = uv + vec2(shift, chromaAmt * 0.5);
-        vec4 cR = effectBricks(uvR, p);
-        vec4 cG = effectBricks(uvG, p);
-        vec4 cB = effectBricks(uvB, p);
-        vec4 glitched = vec4(cR.r, cG.g, cB.b, max(max(cR.a, cG.a), cB.a));
-        float scanline = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
-        float blockX = floor(uv.x * 6.0);
-        float blockY = floor(uv.y * 4.0);
-        float blockNoise = fract(sin((blockX + blockY * 7.0) * 113.1 + floor(t * 8.0)) * 43758.5);
-        float dropout = step(1.0 - g * 0.15, blockNoise);
-        glitched.rgb *= scanline;
-        glitched.rgb *= 1.0 - dropout;
-        col = mix(col, glitched, smoothstep(0.0, 0.3, g));
+    // Walk down the nave, looking slightly upward
+    float walk = TIME * walkSpeed * 0.5;
+    vec3 ro = vec3(0.0, 1.4, walk);
+    vec3 ta = vec3(sin(TIME*0.12)*0.4, 2.2, walk + 5.0);
+    vec3 fw = normalize(ta - ro);
+    vec3 ri = normalize(cross(fw, vec3(0,1,0)));
+    vec3 up = cross(ri, fw);
+    vec3 rd = normalize(uv.x*ri + uv.y*up + 1.6*fw);
+
+    vec3 bg = vec3(0.0, 0.0, 0.005);
+
+    float t = 0.05; bool hit = false;
+    for (int i = 0; i < 96; i++) {
+        float d = scene(ro + rd*t).x;
+        if (d < 0.003) { hit = true; break; }
+        if (t > 30.0) break;
+        t += d * 0.7;
     }
 
-    gl_FragColor = col;
+    vec3 col = bg;
+    // Atmospheric light shafts from windows
+    float shaft = 0.0;
+    for (int i = 0; i < 5; i++) {
+        float fi = float(i);
+        float side = float(i % 2)*2.0 - 1.0;
+        float wz = floor((ro.z + fi*2.5) / 2.5) * 2.5 + fi*0.3;
+        vec3 src = vec3(side * 1.9, 2.8, wz + TIME * walkSpeed * 0.5);
+        vec3 dv  = src - ro;
+        float tcl = clamp(dot(rd, normalize(dv)), 0.0, 1.0);
+        float d2  = length(dv - normalize(dv) * dot(rd, normalize(dv)) * length(dv));
+        if (d2 < 0.3 && tcl > 0.1) {
+            float si = int(mod(fi, 5.0));
+            vec3 sc = (si == 0) ? vec3(1.0,0.2,0.05) :
+                      (si == 1) ? vec3(0.0,0.4,1.0) :
+                      (si == 2) ? vec3(0.0,0.85,0.2) :
+                      (si == 3) ? vec3(1.0,0.65,0.0) : vec3(0.55,0.0,1.0);
+            shaft += (0.3 - d2) * 4.0 * hdrPeak * (1.0 + audioBass * audioPulse * 0.4);
+            col += sc * shaft * 0.08;
+        }
+    }
+
+    if (hit) {
+        vec3 p  = ro + rd*t;
+        vec3 n  = getNormal(p);
+        vec3 L  = normalize(vec3(0.2, 1.0, 0.3));
+
+        // Stone diffuse
+        float diff = max(dot(n,L), 0.0)*0.5 + 0.15;
+        float spec = pow(max(dot(reflect(-L,n),-rd),0.0), 64.0) * 0.3;
+        vec3 stone = stoneColor.rgb;
+
+        col += stone * diff * hdrPeak * 0.5;
+        col += vec3(1.0) * spec * hdrPeak * 0.3;
+
+        // Colored light bleeding from windows onto stone
+        for (int i = 0; i < 5; i++) {
+            float fi = float(i);
+            float side = float(i%2)*2.0 - 1.0;
+            vec3 wdir = normalize(p - vec3(side*1.9, 2.8, p.z));
+            float wdiff = max(dot(n, -wdir), 0.0) * 0.6;
+            int si = int(mod(fi, 5.0));
+            vec3 sc = (si == 0) ? vec3(1.0,0.2,0.05) :
+                      (si == 1) ? vec3(0.0,0.4,1.0) :
+                      (si == 2) ? vec3(0.0,0.85,0.2) :
+                      (si == 3) ? vec3(1.0,0.65,0.0) : vec3(0.55,0.0,1.0);
+            col += sc * wdiff * hdrPeak * 0.35 * (1.0 + audioMid * audioPulse * 0.3);
+        }
+    }
+
+    col = mix(col, bg, clamp((t-15.0)/15.0, 0.0, 1.0)*0.8);
+    gl_FragColor = vec4(col, 1.0);
 }
