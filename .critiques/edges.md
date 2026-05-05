@@ -17,3 +17,23 @@
 - Stretch, particle size defaults tuned up for visibility
 **HDR peaks reached:** particle cores + halo accumulation → 2.5+ per cluster
 **Estimated rating:** 4.0★
+
+## 2026-05-05 (v2)
+**Prior rating:** 0.0★
+**Approach:** 2D Voronoi — NEW ANGLE: Voronoi cell edge distance field glow. v1 was particle bounce system, v13 was 3D neon city. This is 2D with entirely different geometry (Voronoi distance).
+**Critique:**
+1. Reference fidelity: Animated Voronoi cells create organic territorial boundaries; neon edge halos simulate plasma lightning discharge.
+2. Compositional craft: Black void interiors ensure maximum contrast; variable cell shapes create strong silhouettes.
+3. Technical execution: fwidth() on edge distance gives sub-pixel AA; per-cell hue from hash gives fully saturated neon variety.
+4. Liveness: Animated cell centers via sin(time*seed) creates shifting, morphing territorial boundaries.
+5. Differentiation: Completely different from particle bounce (v1) and 3D geometry (v2-v13); Voronoi edge field is a unique visual language.
+**Changes:**
+- Replaced particle system with animated 2D Voronoi cell edge glow
+- 5×5 neighbor search for nearest-2 cell centers
+- Animated centers: seed + 0.45*sin(t * rand * 2π)
+- Per-cell saturated HSV neon colors via hash
+- Black void (0.005,0,0.01) with neon edge accumulation
+- White-hot specular core at exact edge position
+- Audio modulates glow amplitude
+**HDR peaks reached:** edgeGlow * hdrBoost = 2.5 * 2.0 = 5.0 at core; glow falloff reaches 2.5 near edge
+**Estimated rating:** 4.3★
