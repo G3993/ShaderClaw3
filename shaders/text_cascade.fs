@@ -1,177 +1,132 @@
 /*{
-  "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Cascade - tiled rows with wave offsets",
-  "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
-    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
-    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
-    { "NAME": "intensity", "LABEL": "Wave Height", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "density", "LABEL": "Row Count", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
-    { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
-    { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
-  ]
+    "DESCRIPTION": "Copper Cascade — raymarched columns of falling molten copper spheres with metallic HDR reflections. Warm copper-gold-orange palette: contrasts prior cool aurora background.",
+    "CREDIT": "ShaderClaw",
+    "CATEGORIES": ["Generator", "3D", "Cinematic"],
+    "INPUTS": [
+        { "NAME": "columnCount", "LABEL": "Columns",     "TYPE": "float", "DEFAULT": 5.0,  "MIN": 2.0,  "MAX": 10.0 },
+        { "NAME": "dropSpeed",   "LABEL": "Drop Speed",  "TYPE": "float", "DEFAULT": 0.6,  "MIN": 0.0,  "MAX": 2.0 },
+        { "NAME": "dropSize",    "LABEL": "Drop Size",   "TYPE": "float", "DEFAULT": 0.12, "MIN": 0.03, "MAX": 0.4 },
+        { "NAME": "hdrBoost",    "LABEL": "HDR Boost",   "TYPE": "float", "DEFAULT": 2.5,  "MIN": 1.0,  "MAX": 4.0 },
+        { "NAME": "audioReact",  "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0,  "MAX": 2.0 }
+    ]
 }*/
 
-const float PI = 3.14159265;
-const float TWO_PI = 6.28318530;
+float hash11(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+float hash21(vec2 p)  { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
-float charPixel(int ch, float col, float row) {
-    if (ch < 0 || ch > 36) return 0.0;
-    vec2 uv = vec2(col / 5.0, row / 7.0);
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return smoothstep(0.1, 0.55, texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r);
-}
-
-int getChar(int slot) {
-    if (slot == 0)  return int(msg_0);
-    if (slot == 1)  return int(msg_1);
-    if (slot == 2)  return int(msg_2);
-    if (slot == 3)  return int(msg_3);
-    if (slot == 4)  return int(msg_4);
-    if (slot == 5)  return int(msg_5);
-    if (slot == 6)  return int(msg_6);
-    if (slot == 7)  return int(msg_7);
-    if (slot == 8)  return int(msg_8);
-    if (slot == 9)  return int(msg_9);
-    if (slot == 10) return int(msg_10);
-    if (slot == 11) return int(msg_11);
-    if (slot == 12) return int(msg_12);
-    if (slot == 13) return int(msg_13);
-    if (slot == 14) return int(msg_14);
-    if (slot == 15) return int(msg_15);
-    if (slot == 16) return int(msg_16);
-    if (slot == 17) return int(msg_17);
-    if (slot == 18) return int(msg_18);
-    if (slot == 19) return int(msg_19);
-    if (slot == 20) return int(msg_20);
-    if (slot == 21) return int(msg_21);
-    if (slot == 22) return int(msg_22);
-    if (slot == 23) return int(msg_23);
-    if (slot == 24) return int(msg_24);
-    if (slot == 25) return int(msg_25);
-    if (slot == 26) return int(msg_26);
-    if (slot == 27) return int(msg_27);
-    if (slot == 28) return int(msg_28);
-    if (slot == 29) return int(msg_29);
-    if (slot == 30) return int(msg_30);
-    if (slot == 31) return int(msg_31);
-    if (slot == 32) return int(msg_32);
-    if (slot == 33) return int(msg_33);
-    if (slot == 34) return int(msg_34);
-    if (slot == 35) return int(msg_35);
-    if (slot == 36) return int(msg_36);
-    if (slot == 37) return int(msg_37);
-    if (slot == 38) return int(msg_38);
-    if (slot == 39) return int(msg_39);
-    if (slot == 40) return int(msg_40);
-    if (slot == 41) return int(msg_41);
-    if (slot == 42) return int(msg_42);
-    if (slot == 43) return int(msg_43);
-    if (slot == 44) return int(msg_44);
-    if (slot == 45) return int(msg_45);
-    if (slot == 46) return int(msg_46);
-    return int(msg_47);
-}
-
-int charCount() {
-    int n = int(msg_len);
-    return n > 0 ? n : 1;
-}
-
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
-}
-
-float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
-
-// =======================================================================
-// EFFECT: CASCADE - tiled rows with wave offsets
-// =======================================================================
-
-vec4 effectCascade(vec2 uv) {
+float scene(vec3 p, float t, out float dropId) {
+    float audio = 1.0 + audioLevel * audioReact * 0.2;
+    float dRadius = dropSize * audio;
+    float N = columnCount;
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
-    int numChars = charCount();
-    float waveAmount = intensity;
-    float rows = floor(mix(5.0, 30.0, density));
 
-    float warpedY = uv.y + sin(uv.y * TWO_PI * 1.5 + TIME * speed * 1.5) * waveAmount * 0.06;
-    float rowH = 1.0 / rows;
-    float rowIdx = clamp(floor(warpedY / rowH), 0.0, rows - 1.0);
-    float localY = fract(warpedY / rowH);
+    float best = 1e8;
+    dropId = 0.0;
 
-    float cH = rowH;
-    float cW = cH * (5.0/7.0) * (1.0/aspect) * textScale;
-    float gW = cW * 0.15;
-    float wordW = float(numChars) * (cW + gW);
+    for (int ci = 0; ci < 10; ci++) {
+        if (float(ci) >= N) break;
+        float fi = float(ci);
+        // Column X position
+        float cx = (fi / (N - 1.0) - 0.5) * 2.0 * aspect * 0.65;
+        float colPhase = hash11(fi * 3.17) * 6.28;
 
-    float xOff = sin(rowIdx*0.6 + TIME*speed*2.0) * waveAmount * wordW * 1.5 + TIME*speed*0.08;
-    float px = mod(uv.x + xOff - 0.5 + wordW * 0.5, wordW);
-    if (px < 0.0) px += wordW;
+        // Multiple drops per column
+        for (int di = 0; di < 6; di++) {
+            float fdi = float(di);
+            float dropPhase = hash21(vec2(fi, fdi)) * 2.0;
+            float dropSpeed2 = dropSpeed * (0.6 + hash11(fi * 7.3 + fdi * 2.1) * 0.8);
+            float cy = mod(-(t * dropSpeed2 + dropPhase + fdi * 0.5), 2.8) - 1.4;
+            // Small X drift per drop
+            float dx = sin(t * 0.3 + colPhase + fdi * 1.1) * 0.04;
 
-    float cs = cW + gW;
-    float csF = px / cs;
-    int slot = int(floor(csF));
-    float clx = fract(csF);
-    float cf = cW / cs;
-
-    float textHit = 0.0;
-    if (clx < cf && slot >= 0 && slot < numChars) {
-        float gc = (clx/cf) * 5.0, gr = localY * 7.0;
-        if (gc >= 0.0 && gc < 5.0 && gr >= 0.0 && gr < 7.0) {
-            int ch = getChar(slot);
-            if (ch >= 0 && ch <= 36 && ch != 26) textHit = charPixel(ch, gc, gr);
+            float d = length(p - vec3(cx + dx, cy, 0.0)) - dRadius;
+            if (d < best) {
+                best   = d;
+                dropId = fi + fdi * 0.1;
+            }
         }
     }
-
-    bool inv = mod(rowIdx, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
-    return vec4(fc, a);
+    return best;
 }
 
-// =======================================================================
-// MAIN
-// =======================================================================
+vec3 calcNormal(vec3 p, float t) {
+    float di;
+    const vec2 e = vec2(0.002, 0.0);
+    return normalize(vec3(
+        scene(p + e.xyy, t, di) - scene(p - e.xyy, t, di),
+        scene(p + e.yxy, t, di) - scene(p - e.yxy, t, di),
+        scene(p + e.yyx, t, di) - scene(p - e.yyx, t, di)
+    ));
+}
 
 void main() {
-    vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
-    vec4 col = effectCascade(uv);
+    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
+    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
 
-    if (_voiceGlitch > 0.01) {
-        float g = _voiceGlitch;
-        float t = TIME * 17.0;
-        float band = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
-        float bandNoise = fract(sin(band * 91.7 + t) * 43758.5);
-        float bandActive = step(1.0 - g * 0.6, bandNoise);
-        float shift = (bandNoise - 0.5) * 0.08 * g * bandActive;
-        float chromaAmt = g * 0.015;
-        vec2 uvR = uv + vec2(shift + chromaAmt, 0.0);
-        vec2 uvB = uv + vec2(shift - chromaAmt, 0.0);
-        vec2 uvG = uv + vec2(shift, chromaAmt * 0.5);
-        vec4 cR = effectCascade(uvR);
-        vec4 cG = effectCascade(uvG);
-        vec4 cB = effectCascade(uvB);
-        vec4 glitched = vec4(cR.r, cG.g, cB.b, max(max(cR.a, cG.a), cB.a));
-        float scanline = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
-        float blockX = floor(uv.x * 6.0);
-        float blockY = floor(uv.y * 4.0);
-        float blockNoise = fract(sin((blockX + blockY * 7.0) * 113.1 + floor(t * 8.0)) * 43758.5);
-        float dropout = step(1.0 - g * 0.15, blockNoise);
-        glitched.rgb *= scanline;
-        glitched.rgb *= 1.0 - dropout;
-        col = mix(col, glitched, smoothstep(0.0, 0.3, g));
+    float t     = TIME;
+    float audio = 1.0 + audioLevel * audioReact;
+
+    // Fixed frontal camera
+    vec3 ro = vec3(0.0, 0.0, 2.5);
+    vec3 rd = normalize(vec3(uv, -1.5));
+
+    float dt   = 0.0;
+    bool  hit  = false;
+    float dSurf = 1.0;
+    float dropId = 0.0;
+
+    for (int i = 0; i < 80; i++) {
+        vec3 p = ro + rd * dt;
+        float di;
+        dSurf = scene(p, t, di);
+        if (dSurf < 0.001) {
+            hit    = true;
+            dropId = di;
+            break;
+        }
+        if (dt > 6.0) break;
+        dt += max(dSurf * 0.85, 0.005);
     }
 
-    gl_FragColor = col;
+    // Black void background
+    vec3 col = vec3(0.006, 0.003, 0.001);
+
+    if (hit) {
+        vec3 p   = ro + rd * dt;
+        vec3 nor = calcNormal(p, t);
+        vec3 vd  = -rd;
+
+        // 4-color metallic palette: copper, molten orange, gold, white-hot
+        vec3 copper   = vec3(0.72, 0.30, 0.07);
+        vec3 moltenOr = vec3(1.00, 0.38, 0.00);
+        vec3 gold     = vec3(1.00, 0.72, 0.10);
+        vec3 whiteHot = vec3(1.00, 0.95, 0.75);
+
+        // Blend by vertical position + drop identity
+        float heatFrac = fract(dropId * 0.31);
+        vec3 baseCol = mix(copper, moltenOr, heatFrac);
+        baseCol = mix(baseCol, gold, heatFrac * heatFrac);
+
+        // Key light: warm from upper-left
+        vec3 keyDir = normalize(vec3(-1.0, 2.0, 1.5));
+        float diff  = max(0.0, dot(nor, keyDir));
+        float spec  = pow(max(0.0, dot(reflect(-keyDir, nor), vd)), 48.0);
+
+        // Environment reflection (metallic IBL sim)
+        float envUp = max(0.0, nor.y);
+        float envDn = max(0.0, -nor.y);
+
+        col  = baseCol * (diff * 0.65 + envUp * 0.2 + 0.05);
+        col += gold     * envUp  * hdrBoost * 0.5;
+        col += moltenOr * envDn  * hdrBoost * 0.35;
+        col += whiteHot * spec   * hdrBoost;
+        col *= hdrBoost * 0.8;
+
+        // Black ink edge
+        float ew   = fwidth(dSurf) * 3.5;
+        float edge = smoothstep(0.0, ew, abs(dSurf));
+        col = mix(vec3(0.0), col, edge);
+    }
+
+    gl_FragColor = vec4(col, 1.0);
 }
