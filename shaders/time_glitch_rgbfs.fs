@@ -1,157 +1,103 @@
 /*{
-    "DESCRIPTION": "Cyber City — 3D raymarched SDF city skyline with neon-lit building grid. Procedural buildings with glowing window arrays and animated neon signs. Camera pans street-level. Audio pulses building heights.",
-    "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
-    "CREDIT": "ShaderClaw",
-    "INPUTS": [
-        { "NAME": "buildingDensity","LABEL": "Density",    "TYPE": "float", "DEFAULT": 0.8,  "MIN": 0.2,  "MAX": 2.0  },
-        { "NAME": "neonIntensity",  "LABEL": "Neon HDR",   "TYPE": "float", "DEFAULT": 3.0,  "MIN": 1.0,  "MAX": 5.0  },
-        { "NAME": "camSpeed",       "LABEL": "Cam Speed",  "TYPE": "float", "DEFAULT": 0.3,  "MIN": 0.0,  "MAX": 1.0  },
-        { "NAME": "audioReact",     "LABEL": "Audio React","TYPE": "float", "DEFAULT": 0.8,  "MIN": 0.0,  "MAX": 2.0  }
-    ]
+  "DESCRIPTION": "RGB Fault Lines — 2D Voronoi fault map with per-cell chromatic time offsets. Each cell replays a different moment. NEW ANGLE: 2D spatial mosaic vs prior 3D RGB channel-split data planes.",
+  "CATEGORIES": ["Generator", "Glitch", "Abstract"],
+  "CREDIT": "ShaderClaw auto-improve",
+  "ISFVSN": "2",
+  "INPUTS": [
+    {"NAME":"cellScale",  "LABEL":"Cell Scale",   "TYPE":"float","MIN":2.0,"MAX":20.0,"DEFAULT":7.0},
+    {"NAME":"timeShift",  "LABEL":"Time Shift",   "TYPE":"float","MIN":0.0,"MAX":3.0, "DEFAULT":1.2},
+    {"NAME":"chromaAmt",  "LABEL":"RGB Split",    "TYPE":"float","MIN":0.0,"MAX":0.08,"DEFAULT":0.025},
+    {"NAME":"hdrPeak",    "LABEL":"HDR Peak",     "TYPE":"float","MIN":1.0,"MAX":4.0, "DEFAULT":2.5},
+    {"NAME":"glitchRate", "LABEL":"Glitch Rate",  "TYPE":"float","MIN":0.0,"MAX":4.0, "DEFAULT":1.8},
+    {"NAME":"edgeGlow",   "LABEL":"Edge Glow",    "TYPE":"float","MIN":0.0,"MAX":3.0, "DEFAULT":1.4},
+    {"NAME":"audioReact", "LABEL":"Audio",        "TYPE":"float","MIN":0.0,"MAX":2.0, "DEFAULT":1.0}
+  ]
 }*/
 
-float hash11(float n) { return fract(sin(n*127.1)*43758.5453); }
-float hash21(vec2 p)  { return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
-
-// 4-color neon palette: hot pink / electric cyan / toxic yellow-green / violet
-vec3 neonSign(float t) {
+vec3 rgbFaultPal(float t) {
     t = fract(t);
-    if (t < 0.25) return vec3(1.0, 0.05, 0.6);   // hot pink
-    if (t < 0.50) return vec3(0.0, 1.0, 0.9);    // electric cyan
-    if (t < 0.75) return vec3(0.6, 1.0, 0.0);    // toxic yellow-green
-    return vec3(0.5, 0.1, 1.0);                   // violet
+    if (t < 0.25) return mix(vec3(2.5, 0.0, 0.0),  vec3(0.0, 0.0, 2.5),  t * 4.0);
+    if (t < 0.50) return mix(vec3(0.0, 0.0, 2.5),  vec3(0.0, 2.5, 0.0),  (t-0.25)*4.0);
+    if (t < 0.75) return mix(vec3(0.0, 2.5, 0.0),  vec3(2.5, 2.0, 0.0),  (t-0.50)*4.0);
+    return         mix(vec3(2.5, 2.0, 0.0),         vec3(2.5, 0.0, 0.0),  (t-0.75)*4.0);
 }
 
-float sdBox(vec3 p, vec3 b) {
-    vec3 q = abs(p) - b;
-    return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
+float hash11(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+float hash21(vec2 p)  { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+vec2  hash22(vec2 p)  {
+    return fract(sin(vec2(dot(p, vec2(127.1, 311.7)),
+                          dot(p, vec2(269.5, 183.3)))) * 43758.5453);
 }
 
-// Building SDF
-struct Building {
-    float dist;
-    vec2 cellId;
-    float height;
-};
-
-Building buildingMap(vec3 p, float t) {
-    float audio = 1.0 + audioBass * audioReact * 0.3;
-    float spacing = buildingDensity;
-
-    vec2 cellF = floor(p.xz / spacing);
-    vec2 localXZ = fract(p.xz / spacing) - 0.5;
-
-    float h11 = hash21(cellF);
-    float h12 = hash21(cellF + vec2(1,0));
-    float bWidth = 0.25 + h11 * 0.2;
-    float bDepth = 0.25 + h12 * 0.2;
-    float bHeight = (0.5 + h11 * 2.5) * audio;
-
-    // Building box
-    float d = sdBox(vec3(localXZ.x, p.y - bHeight, localXZ.y),
-                    vec3(bWidth, bHeight, bDepth));
-
-    Building b;
-    b.dist = d;
-    b.cellId = cellF;
-    b.height = bHeight;
-    return b;
+vec2 voronoi(vec2 p) {
+    vec2 ip = floor(p);
+    float minD = 1e9;
+    float minId = 0.0;
+    for (int iy = -1; iy <= 1; iy++) {
+        for (int ix = -1; ix <= 1; ix++) {
+            vec2 neighbor = vec2(float(ix), float(iy));
+            vec2 cell     = ip + neighbor;
+            vec2 jitter   = hash22(cell);
+            jitter = 0.5 + 0.5 * sin(TIME * 0.15 * glitchRate + jitter * 6.28318);
+            vec2 r  = neighbor + jitter - fract(p);
+            float d = dot(r, r);
+            if (d < minD) {
+                minD  = d;
+                minId = dot(cell, vec2(1.0, 37.0));
+            }
+        }
+    }
+    return vec2(sqrt(minD), minId);
 }
 
-float mapDist(vec3 p, float t) {
-    Building b = buildingMap(p, t);
-    float dFloor = p.y; // ground plane at y=0
-    return min(b.dist, dFloor);
-}
+vec3 cellColour(float cellId) {
+    float t = TIME * glitchRate;
+    float tOff = hash11(cellId) * timeShift;
 
-vec3 calcNormal(vec3 p, float t) {
-    vec2 e = vec2(0.002, 0.0);
-    return normalize(vec3(
-        mapDist(p+e.xyy,t)-mapDist(p-e.xyy,t),
-        mapDist(p+e.yxy,t)-mapDist(p-e.yxy,t),
-        mapDist(p+e.yyx,t)-mapDist(p-e.yyx,t)));
-}
+    float glitchCycle = floor(t * 0.4 + hash11(cellId * 3.7));
+    float glitchPhase = fract(t * 0.4 + hash11(cellId * 3.7));
+    float flickerActive = step(0.82, hash11(cellId + glitchCycle * 31.7));
+    float flicker = flickerActive * smoothstep(0.0, 0.12, glitchPhase)
+                                  * smoothstep(1.0, 0.45, glitchPhase);
 
-// Window glow: returns neon color if pixel is on a window
-vec3 windowGlow(vec3 p, vec2 cellId, float bHeight, float t) {
-    float spacing = buildingDensity;
-    vec2 localXZ = fract(p.xz / spacing) - 0.5;
+    float ci   = hash11(cellId * 0.017) + tOff * 0.08 + t * 0.02;
+    vec3  base = rgbFaultPal(ci) * hdrPeak;
+    vec3  flash = rgbFaultPal(ci + 0.5) * hdrPeak * 1.5;
 
-    float winX = fract(localXZ.x * 6.0);
-    float winY = fract(p.y * 2.5);
-    bool isWin = (winX > 0.15 && winX < 0.85) && (winY > 0.15 && winY < 0.75);
-
-    if (!isWin) return vec3(0.0);
-
-    // Per-window hue
-    vec2 winId = vec2(floor(localXZ.x * 6.0), floor(p.y * 2.5));
-    float h = hash21(cellId * 17.3 + winId);
-    float flickerSeed = hash21(cellId + winId + vec2(floor(t * 3.0 + h * 10.0)));
-    float lit = step(0.3, flickerSeed); // 70% windows lit
-
-    return neonSign(h) * lit * neonIntensity;
+    return mix(base, flash, flicker);
 }
 
 void main() {
-    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
-    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
+    vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
 
-    float t = TIME;
+    float audio = 1.0 + audioLevel * audioReact * 0.4
+                      + audioBass  * audioReact * 0.3;
 
-    // Street-level camera moving forward and slightly panning
-    float camZ = t * camSpeed;
-    float camX = sin(t * 0.13) * 0.5;
-    vec3 ro = vec3(camX, 0.8, camZ);
-    vec3 lookTarget = ro + vec3(sin(t * 0.07) * 0.3, 0.2, 1.0);
-    vec3 fw = normalize(lookTarget - ro);
-    vec3 rg = normalize(cross(fw, vec3(0,1,0)));
-    vec3 up = cross(rg, fw);
-    vec3 rd = normalize(fw + uv.x*rg + uv.y*up);
+    vec2 p = vec2(uv.x * aspect, uv.y) * cellScale;
 
-    // Night sky gradient (deep indigo → black)
-    float skyT = clamp(uv.y + 0.5, 0.0, 1.0);
-    vec3 col = mix(vec3(0.0), vec3(0.02, 0.02, 0.06), skyT);
+    float ca = chromaAmt * (1.0 + audioHigh * audioReact * 0.5);
+    vec2 pR = p + vec2( ca * cellScale,  0.0);
+    vec2 pG = p;
+    vec2 pB = p + vec2(-ca * cellScale,  0.0);
 
-    float dm = 0.01;
-    for (int i = 0; i < 64; i++) {
-        vec3 p = ro + rd * dm;
-        float d = mapDist(p, t);
-        if (d < 0.005) {
-            vec3 N = calcNormal(p, t);
+    vec2 vorR = voronoi(pR);
+    vec2 vorG = voronoi(pG);
+    vec2 vorB = voronoi(pB);
 
-            Building b = buildingMap(p, t);
-            bool isFloor = (p.y < 0.05);
+    vec3 cR = cellColour(vorR.y);
+    vec3 cG = cellColour(vorG.y);
+    vec3 cB = cellColour(vorB.y);
 
-            vec3 buildingColor;
-            if (isFloor) {
-                // Wet asphalt — dark, slight neon reflection
-                buildingColor = vec3(0.04, 0.04, 0.06);
-                // Reflective neon puddles
-                float reflH = hash21(p.xz * 3.7);
-                buildingColor += neonSign(reflH + t * 0.05) * 0.15;
-            } else {
-                // Building face — near-black concrete
-                buildingColor = vec3(0.06, 0.06, 0.08);
-                // Windows
-                vec3 wins = windowGlow(p, b.cellId, b.height, t);
-                buildingColor += wins;
-            }
+    vec3 col = vec3(cR.r, cG.g, cB.b) * audio;
 
-            // Key light (overhead cool-white streetlight)
-            vec3 keyLight = normalize(vec3(0.2, 1.0, 0.3));
-            float diff = max(dot(N, keyLight), 0.0) * 0.3;
-
-            // fwidth edge
-            float dotNV = dot(N, -rd);
-            float edgeW = fwidth(dotNV);
-            float edge = 1.0 - smoothstep(-edgeW, 0.10+edgeW, dotNV);
-
-            col = buildingColor * (0.1 + diff) * (1.0 - edge * 0.8);
-            break;
-        }
-        if (dm > 20.0) break;
-        dm += d * 0.85;
-    }
+    vec2 vorMain = voronoi(p);
+    float edgeDist = vorMain.x;
+    float edgeAA = fwidth(edgeDist);
+    float glowEdge = exp(-edgeDist * cellScale * 2.5) * edgeGlow;
+    col += vec3(2.8, 2.8, 2.8) * glowEdge;
+    float inkMask = smoothstep(edgeAA * 3.0, 0.0, edgeDist - 0.04 / cellScale);
+    col *= 1.0 - inkMask * 0.80;
 
     gl_FragColor = vec4(col, 1.0);
 }
