@@ -11,9 +11,10 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.05, 0.6, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.05, 0.05, 0.05, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true },
+    { "NAME": "hdrBoost", "LABEL": "Text HDR", "TYPE": "float", "DEFAULT": 2.2, "MIN": 1.0, "MAX": 4.0 }
   ]
 }*/
 
@@ -93,44 +94,6 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
-// BACKGROUND: LASER GRID
-// =======================================================================
-
-vec3 laserGridBg(vec2 uv) {
-    float t = TIME * 0.4;
-    float asp = RENDERSIZE.x / RENDERSIZE.y;
-    vec2 p = vec2(uv.x * asp, uv.y);
-
-    // Grid line frequency — animate slowly
-    float gX = 8.0 + sin(t * 0.3) * 1.5;
-    float gY = 5.0 + cos(t * 0.2) * 1.0;
-
-    // Grid line SDF
-    float lx = abs(fract(p.x * gX + t * 0.2) - 0.5);
-    float ly = abs(fract(p.y * gY - t * 0.15) - 0.5);
-    float grid = min(lx, ly);
-    float fw = fwidth(grid);
-    float lineMask = 1.0 - smoothstep(0.0, fw + 0.02, grid);
-
-    // Diagonal accent lines
-    float diag = abs(fract((p.x + p.y) * 4.0 + t * 0.1) - 0.5);
-    float fwD = fwidth(diag);
-    float diagMask = 1.0 - smoothstep(0.0, fwD + 0.01, diag);
-    diagMask *= 0.4;
-
-    // Colors: electric magenta grid, acid green diagonals
-    vec3 C_MAG = vec3(2.0, 0.0, 1.5);   // electric magenta
-    vec3 C_GRN = vec3(0.3, 2.5, 0.0);   // acid green
-    vec3 C_BG  = vec3(0.0, 0.0, 0.01);  // void black
-
-    // Soft glow halo around lines
-    float glow = exp(-grid * 30.0) * 0.8;
-    float glowD = exp(-diag * 20.0) * 0.3;
-
-    return C_BG + C_MAG * (lineMask + glow) + C_GRN * (diagMask + glowD);
-}
-
-// =======================================================================
 // EFFECT: CASCADE - tiled rows with wave offsets
 // =======================================================================
 
@@ -174,12 +137,45 @@ vec4 effectCascade(vec2 uv) {
     vec3 bg = inv ? textColor.rgb : bgColor.rgb;
     vec3 fc = mix(bg, fg, textHit);
     float a = 1.0;
-    if (transparentBg) { fc = textColor.rgb; a = textHit; }
-    else {
-        vec3 bgNew = laserGridBg(uv);
-        fc = mix(bgNew, textColor.rgb * 2.5, textHit);
-    }
+    if (transparentBg) { a = textHit; fc = textColor.rgb; }
     return vec4(fc, a);
+}
+
+// ── Acid Rain Concrete background ──────────────────────────────────────────────
+vec3 acidRainBg(vec2 uv) {
+    float t = TIME;
+    // Brutalist concrete base texture (grey with vertical streaks)
+    float concrete = 0.12 + 0.06 * sin(uv.x * 87.3) * sin(uv.y * 43.1 + 1.7);
+    concrete += 0.04 * sin(uv.x * 211.0 + 0.9) * sin(uv.y * 97.0);
+    vec3 concreteCol = vec3(0.07, 0.07, 0.07) + vec3(concrete);
+
+    // Acid rain streaks: fast-falling neon green drops
+    float rain = 0.0;
+    for (int i = 0; i < 8; i++) {
+        float fi   = float(i);
+        float dropX = fract(fi * 0.137 + 0.06);
+        float speed = 0.4 + fi * 0.09;
+        float dropY = fract(fi * 0.271 + t * speed);
+        float trail = smoothstep(0.08, 0.0, abs(uv.x - dropX) * RENDERSIZE.x / RENDERSIZE.y * 18.0)
+                    * smoothstep(0.12, 0.0, abs(uv.y - dropY));
+        rain += trail;
+    }
+    // Rain streaks also as vertical thin lines
+    for (int i = 0; i < 12; i++) {
+        float fi   = float(i);
+        float lx   = fract(fi * 0.083 + 0.04);
+        float speed = 0.5 + fi * 0.07;
+        float lt   = mod(t * speed + fi * 0.37, 1.0);
+        float lineA = 1.0 - smoothstep(lt * 0.7, lt, uv.y);
+        float lineB = smoothstep(lt * 0.7 - 0.02, lt * 0.7, uv.y);
+        float lineMask = smoothstep(0.004, 0.0, abs(uv.x - lx) * RENDERSIZE.x / RENDERSIZE.y)
+                       * lineA * lineB;
+        rain += lineMask * 0.5;
+    }
+    rain = min(rain, 1.0);
+
+    vec3 rainCol = vec3(0.0, 1.0, 0.2) * rain * 2.0;  // acid green HDR
+    return concreteCol + rainCol;
 }
 
 // =======================================================================
@@ -189,6 +185,11 @@ vec4 effectCascade(vec2 uv) {
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     vec4 col = effectCascade(uv);
+
+    // Composite text over acid rain concrete background
+    vec3 acidBg = acidRainBg(uv);
+    col.rgb = mix(acidBg, textColor.rgb * hdrBoost, col.a);
+    col.a   = 1.0;
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
