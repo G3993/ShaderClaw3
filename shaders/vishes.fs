@@ -1,19 +1,19 @@
 /*{
-  "DESCRIPTION": "Vishes — cellular random walkers leaving hue-drifting color trails on a slow-fading grid",
-  "CREDIT": "ShaderClaw — cell-walker sketch translated to multi-pass ISF",
+  "DESCRIPTION": "Vishes — cellular vortex walkers leaving sunset-palette trails on a slow-fading grid. Saturation locked to 1.0, HDR peaks, vortex-biased walk.",
+  "CREDIT": "ShaderClaw — cell-walker v2 (vortex + sunset palette)",
   "CATEGORIES": ["Generator"],
   "INPUTS": [
-    { "NAME": "gridSize", "LABEL": "Grid Size", "TYPE": "float", "DEFAULT": 120.0, "MIN": 20.0, "MAX": 400.0 },
-    { "NAME": "walkers", "LABEL": "Walkers", "TYPE": "float", "DEFAULT": 6.0, "MIN": 1.0, "MAX": 16.0 },
-    { "NAME": "stepRate", "LABEL": "Step Rate", "TYPE": "float", "DEFAULT": 40.0, "MIN": 1.0, "MAX": 240.0 },
-    { "NAME": "hueDrift", "LABEL": "Hue Drift", "TYPE": "float", "DEFAULT": 0.015, "MIN": 0.0, "MAX": 0.1 },
-    { "NAME": "fadeRate", "LABEL": "Trail Fade", "TYPE": "float", "DEFAULT": 0.004, "MIN": 0.0, "MAX": 0.08 },
-    { "NAME": "saturation", "LABEL": "Saturation", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "brightness", "LABEL": "Brightness", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "bloom", "LABEL": "Bloom", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "pulse", "LABEL": "Audio Pulse", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "bounceEdges", "LABEL": "Bounce Edges", "TYPE": "bool", "DEFAULT": true },
-    { "NAME": "backgroundColor", "LABEL": "BG Color", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] }
+    { "NAME": "gridSize",        "LABEL": "Grid Size",    "TYPE": "float", "DEFAULT": 120.0, "MIN": 20.0,  "MAX": 400.0 },
+    { "NAME": "walkers",         "LABEL": "Walkers",      "TYPE": "float", "DEFAULT": 10.0,  "MIN": 1.0,   "MAX": 16.0 },
+    { "NAME": "stepRate",        "LABEL": "Step Rate",    "TYPE": "float", "DEFAULT": 60.0,  "MIN": 1.0,   "MAX": 240.0 },
+    { "NAME": "hueDrift",        "LABEL": "Hue Drift",    "TYPE": "float", "DEFAULT": 0.012, "MIN": 0.0,   "MAX": 0.1 },
+    { "NAME": "fadeRate",        "LABEL": "Trail Fade",   "TYPE": "float", "DEFAULT": 0.003, "MIN": 0.0,   "MAX": 0.08 },
+    { "NAME": "hdrPeak",         "LABEL": "HDR Peak",     "TYPE": "float", "DEFAULT": 2.5,   "MIN": 0.5,   "MAX": 4.0 },
+    { "NAME": "bloom",           "LABEL": "Bloom",        "TYPE": "float", "DEFAULT": 0.9,   "MIN": 0.0,   "MAX": 1.5 },
+    { "NAME": "pulse",           "LABEL": "Audio Pulse",  "TYPE": "float", "DEFAULT": 0.6,   "MIN": 0.0,   "MAX": 2.0 },
+    { "NAME": "vortexStrength",  "LABEL": "Vortex Bias",  "TYPE": "float", "DEFAULT": 0.6,   "MIN": 0.0,   "MAX": 1.0 },
+    { "NAME": "bounceEdges",     "LABEL": "Bounce Edges", "TYPE": "bool",  "DEFAULT": true },
+    { "NAME": "backgroundColor", "LABEL": "BG Color",     "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.02, 1.0] }
   ],
   "PASSES": [
     { "TARGET": "stateBuf", "PERSISTENT": true, "WIDTH": 16, "HEIGHT": 1 },
@@ -42,6 +42,19 @@ vec3 hsv2rgb(vec3 c) {
     vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
     vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
     return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+// Sunset 4-color palette: deep orange, coral, gold, crimson. Fully saturated, no white mixing.
+vec3 sunsetColor(float hue) {
+    hue = fract(hue) * 4.0;
+    int i = int(hue);
+    float f = fract(hue);
+    vec3 cols[4];
+    cols[0] = vec3(1.0,  0.35, 0.0);  // deep orange
+    cols[1] = vec3(1.0,  0.12, 0.25); // coral/crimson
+    cols[2] = vec3(1.0,  0.75, 0.0);  // gold
+    cols[3] = vec3(0.75, 0.0,  0.10); // deep crimson
+    return mix(cols[i % 4], cols[(i + 1) % 4], f);
 }
 
 vec2 neighborDir(int dir) {
@@ -97,7 +110,23 @@ void main() {
 
             float seed = TIME * 97.13 + id * 13.7 + float(s) * 3.31;
             float r = hash12(vec2(seed, seed * 0.47));
+
+            // Vortex bias: blend random direction toward tangent of circle around center
             int dir = int(floor(r * 8.0));
+            vec2 toCenter = vec2(0.5) - p;
+            float dist = length(toCenter);
+            vec2 tangent = normalize(vec2(-toCenter.y, toCenter.x));
+            // Quantize tangent to nearest grid direction
+            float bestDot = -2.0;
+            int vortexDir = dir;
+            for (int d = 0; d < 8; d++) {
+                float dd = dot(normalize(neighborDir(d)), tangent);
+                if (dd > bestDot) { bestDot = dd; vortexDir = d; }
+            }
+            // Lerp: vortexStrength chance to pick vortex dir
+            float pick = hash12(vec2(seed * 1.73, seed * 2.11));
+            if (pick < vortexStrength) dir = vortexDir;
+
             vec2 stepVec = neighborDir(dir) * cell;
             p += stepVec;
 
@@ -138,7 +167,7 @@ void main() {
             vec2 wCell = floor(wGridUV * gridSize);
             vec2 diff = abs(wCell - pxCell);
             if (diff.x < 0.5 && diff.y < 0.5) {
-                vec3 rgb = hsv2rgb(vec3(st.b, saturation, brightness * audio));
+                vec3 rgb = sunsetColor(st.b) * hdrPeak * audio;
                 col = vec4(rgb, 1.0);
             }
         }
