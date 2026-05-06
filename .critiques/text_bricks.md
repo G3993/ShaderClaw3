@@ -18,3 +18,20 @@
 - Black mortar lines provide dark accent contrast
 **HDR peaks reached:** textColor * 1.8 glow = 1.8 direct, ~2.7 with audio boost
 **Estimated rating:** 3.8★
+
+## 2026-05-06
+**Prior rating:** 0.0★
+**Approach:** 2D refine — NEW ANGLE: Lava Cracks background (prior 2026-05-05 planned neon bricks bg, never committed)
+**Critique:**
+1. Reference fidelity: Lava crack FBM creates organic molten ground plane vs prior planned neon grid.
+2. Compositional craft: Orange text on animated lava cracks — high contrast, temperature-coherent palette.
+3. Technical execution: 4-octave FBM crack pattern, TIME-animated flow, text composited with HDR boost.
+4. Liveness: Lava bg flows with TIME; text at 2.2x HDR boost.
+5. Differentiation: Different bg generator (lava vs neon bricks); different palette (warm orange vs cool neon); different mood (elemental vs digital).
+**Changes:**
+- Added lavaCracksBg() — 4-octave FBM lava crack pattern, HDR orange/gold cracks on obsidian rock
+- transparentBg default: true→false
+- textColor default: white→orange-red [0.9,0.3,0.0,1.0], boosted 2.2x HDR in composite
+- Lava crack palette: obsidian rock, lava orange 2.5, fire gold 2.5
+**HDR peaks reached:** lava cracks 2.5 (orange), fire gold 2.5; text 2.2x orange
+**Estimated rating:** 3.8★
