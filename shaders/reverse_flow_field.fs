@@ -1,185 +1,198 @@
 /*{
-  "DESCRIPTION": "Plasma Flow Tubes 3D — 6 animated capsule plasma tubes in a flowing 3D network with volumetric emission glow",
-  "CREDIT": "ShaderClaw auto-improve 2026-05-06",
-  "ISFVSN": "2",
-  "CATEGORIES": ["Generator", "3D"],
+  "DESCRIPTION": "Reverse Flow Field — deep ocean bioluminescence: bio-cyan seeds streaked through a cellular flow field. Abyssal dark, glowing teal tips.",
+  "CREDIT": "Ported from Shadertoy X3BBD1 by webwarrior (Material Maker output)",
+  "CATEGORIES": ["Generator", "Flow"],
   "INPUTS": [
-    { "NAME": "speed",      "LABEL": "Speed",      "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 4.0  },
-    { "NAME": "tubeWidth",  "LABEL": "Tube Width", "TYPE": "float", "DEFAULT": 0.08, "MIN": 0.01, "MAX": 0.3  },
-    { "NAME": "hdrPeak",    "LABEL": "HDR Peak",   "TYPE": "float", "DEFAULT": 2.5,  "MIN": 1.0,  "MAX": 4.0  },
-    { "NAME": "audioReact", "LABEL": "Audio React","TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0,  "MAX": 1.0  }
+    { "NAME": "iterations",  "LABEL": "Trace Steps",     "TYPE": "float", "DEFAULT": 64.0, "MIN": 8.0,  "MAX": 128.0 },
+    { "NAME": "stepExp",     "LABEL": "Step Size (2^-x)","TYPE": "float", "DEFAULT": 10.0, "MIN": 6.0,  "MAX": 14.0 },
+    { "NAME": "flowScale",   "LABEL": "Flow Scale",      "TYPE": "float", "DEFAULT": 4.0,  "MIN": 1.0,  "MAX": 12.0 },
+    { "NAME": "flowSpeed",   "LABEL": "Flow Speed",      "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 4.0 },
+    { "NAME": "octaves",     "LABEL": "Octaves",         "TYPE": "float", "DEFAULT": 4.0,  "MIN": 1.0,  "MAX": 6.0 },
+    { "NAME": "persistence", "LABEL": "Persistence",     "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.1,  "MAX": 0.9 },
+    { "NAME": "dotDensity",  "LABEL": "Seed Density",    "TYPE": "float", "DEFAULT": 0.1,  "MIN": 0.01, "MAX": 0.5 },
+    { "NAME": "intensity",   "LABEL": "Brightness",      "TYPE": "float", "DEFAULT": 2.5,  "MIN": 0.2,  "MAX": 4.0 }
+  ],
+  "PASSES": [
+    { "TARGET": "directions" },
+    { "TARGET": "positions"  },
+    {}
   ]
 }*/
 
-// ── Palette ────────────────────────────────────────────────────────────────
-// Void:           vec3(0.0, 0.0, 0.01)  — near-black deep space
-// Electric cyan:  vec3(0.0, 2.5, 2.0)  — HDR cyan plasma
-// Violet:         vec3(0.8, 0.0, 2.5)  — HDR violet plasma
-// Lime green:     vec3(0.5, 2.5, 0.0)  — HDR lime plasma
-// Hot white core: vec3(2.5, 2.5, 2.0)  — HDR specular core
-
-const float PI = 3.14159265359;
-
-// ── Tube color by index (mod 3) ────────────────────────────────────────────
-vec3 tubeColor(int i) {
-    int ci = int(mod(float(i), 3.0));
-    if (ci == 0) return vec3(0.0, 2.5, 2.0);   // electric cyan
-    if (ci == 1) return vec3(0.8, 0.0, 2.5);   // violet
-    return vec3(0.5, 2.5, 0.0);                 // lime green
+// ──────────────────────────────────────────────────────────────────────
+// Shared hashes (used in both Buffer A and Buffer B in the original)
+// ──────────────────────────────────────────────────────────────────────
+float rand1(vec2 x) {
+    return fract(cos(mod(dot(x, vec2(13.9898, 8.141)), 3.14)) * 43758.5453);
+}
+vec2 rand2(vec2 x) {
+    return fract(cos(mod(vec2(dot(x, vec2(13.9898, 8.141)),
+                              dot(x, vec2(3.4562, 17.398))), vec2(3.14))) * 43758.5453);
+}
+vec3 rand3(vec2 x) {
+    return fract(cos(mod(vec3(dot(x, vec2(13.9898, 8.141)),
+                              dot(x, vec2(3.4562, 17.398)),
+                              dot(x, vec2(13.254, 5.867))), vec3(3.14))) * 43758.5453);
 }
 
-// ── Animated tube endpoints ────────────────────────────────────────────────
-vec3 tubeA(int i, float tm) {
-    float fi = float(i);
-    float ph = fi * 1.0472; // 60-degree spacing
-    return vec3(
-        cos(ph) * 1.5 + sin(tm * 0.3 + fi) * 0.4,
-        sin(fi * 0.7) * 1.0 + cos(tm * 0.2 + fi * 1.3) * 0.3,
-        sin(ph) * 1.5 + cos(tm * 0.25 + fi * 0.8) * 0.4
-    );
-}
-
-vec3 tubeB(int i, float tm) {
-    float fi = float(i);
-    float ph = fi * 1.0472 + PI;
-    return vec3(
-        cos(ph) * 1.8 + sin(tm * 0.28 + fi * 1.1) * 0.35,
-        sin(fi * 1.2) * 0.8 + cos(tm * 0.22 + fi * 0.9) * 0.25,
-        sin(ph) * 1.8 + cos(tm * 0.27 + fi * 1.4) * 0.35
-    );
-}
-
-// ── Capsule SDF ────────────────────────────────────────────────────────────
-float sdCapsule(vec3 p, vec3 a, vec3 b, float r) {
-    vec3 pa = p - a;
-    vec3 ba = b - a;
-    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
-    return length(pa - ba * h) - r;
-}
-
-// ── Scene SDF: min over all 6 tubes, also returns tube index ───────────────
-float mapTubes(vec3 p, float tm, float twidth, out int hitIdx) {
-    float d = 1e10;
-    hitIdx = 0;
-    for (int i = 0; i < 6; i++) {
-        vec3 a = tubeA(i, tm);
-        vec3 b = tubeB(i, tm);
-        float di = sdCapsule(p, a, b, twidth);
-        if (di < d) {
-            d = di;
-            hitIdx = i;
+// ──────────────────────────────────────────────────────────────────────
+// Buffer A — animated cellular FBM, encoded as a direction vector
+// ──────────────────────────────────────────────────────────────────────
+float cellular6_noise_2d(vec2 coord, vec2 size, float offset, float seed) {
+    vec2 o = floor(coord) + rand2(vec2(seed, 1.0 - seed)) + size;
+    vec2 f = fract(coord);
+    float min_dist1 = 2.0;
+    float min_dist2 = 2.0;
+    for (float x = -1.0; x <= 1.0; x++) {
+        for (float y = -1.0; y <= 1.0; y++) {
+            vec2 neighbor = vec2(x, y);
+            vec2 node = rand2(mod(o + vec2(x, y), size)) + vec2(x, y);
+            node = 0.5 + 0.25 * sin(offset * 6.28318530718 + 6.28318530718 * node);
+            vec2 diff = neighbor + node - f;
+            float dist = max(abs(diff.x), abs(diff.y));
+            if (min_dist1 > dist) {
+                min_dist2 = min_dist1;
+                min_dist1 = dist;
+            } else if (min_dist2 > dist) {
+                min_dist2 = dist;
+            }
         }
     }
-    return d;
+    return min_dist2 - min_dist1;
 }
 
-float mapScene(vec3 p, float tm, float twidth) {
-    int dummy;
-    return mapTubes(p, tm, twidth, dummy);
+float fbm_2d_cellular6(vec2 coord, vec2 size, int folds, int octaves_, float persistence_, float offset, float seed) {
+    float normalize_factor = 0.0;
+    float value = 0.0;
+    float scale = 1.0;
+    for (int i = 0; i < 8; i++) {
+        if (i >= octaves_) break;
+        float noise = cellular6_noise_2d(coord * size, size, offset, seed);
+        for (int f = 0; f < 4; ++f) {
+            if (f >= folds) break;
+            noise = abs(2.0 * noise - 1.0);
+        }
+        value += noise * scale;
+        normalize_factor += scale;
+        size *= 2.0;
+        scale *= persistence_;
+    }
+    return value / normalize_factor;
 }
 
-// ── Normal via central differences ────────────────────────────────────────
-vec3 calcNormal(vec3 p, float tm, float twidth) {
-    float eps = 0.001;
-    vec3 e = vec3(eps, 0.0, 0.0);
-    return normalize(vec3(
-        mapScene(p + e.xyy, tm, twidth) - mapScene(p - e.xyy, tm, twidth),
-        mapScene(p + e.yxy, tm, twidth) - mapScene(p - e.yxy, tm, twidth),
-        mapScene(p + e.yyx, tm, twidth) - mapScene(p - e.yyx, tm, twidth)
-    ));
+vec4 passDirections(vec2 fragCoord) {
+    float minSize = min(RENDERSIZE.x, RENDERSIZE.y);
+    vec2 UV = vec2(0.0, 1.0) + vec2(1.0, -1.0) * (fragCoord - 0.5 * (RENDERSIZE - vec2(minSize))) / minSize;
+    UV /= 4.0;
+    UV += TIME * flowSpeed / 24.0;
+    float field = fbm_2d_cellular6(UV, vec2(flowScale, flowScale), 0, int(octaves), persistence, 0.0, 0.0);
+    float theta = field * 6.28318530718;
+    return vec4(cos(theta) * 0.5 + 0.5, sin(theta) * 0.5 + 0.5, 0.0, 1.0);
 }
 
-// ── Hash for fwidth AA ────────────────────────────────────────────────────
-float hash11(float n) {
-    return fract(sin(n * 91.7) * 43758.5453);
+// ──────────────────────────────────────────────────────────────────────
+// Buffer B — colored grass tip seeds (static gradient + dot mask)
+// ──────────────────────────────────────────────────────────────────────
+vec3 color_dots(vec2 uv, float size, float seed) {
+    vec2 seed2 = rand2(vec2(seed, 1.0 - seed));
+    uv /= size;
+    vec2 point_pos = floor(uv) + vec2(0.5);
+    return rand3(seed2 + point_pos);
 }
 
+float dots(vec2 uv, float size, float density, float seed) {
+    vec2 seed2 = rand2(vec2(seed, 1.0 - seed));
+    uv /= size;
+    vec2 point_pos = floor(uv) + vec2(0.5);
+    return step(rand1(seed2 + point_pos), density);
+}
+
+vec3 blend_darken(vec3 c1, vec3 c2, float opacity) {
+    return opacity * min(c1, c2) + (1.0 - opacity) * c2;
+}
+
+// Deep ocean bioluminescence palette: void black → abyssal blue → bio-cyan → electric teal
+vec4 grassGradient(float x) {
+    const float p0 = 0.20, p1 = 0.50, p2 = 0.76, p3 = 0.93;
+    const vec4 c0 = vec4(0.0,  0.0,  0.02, 1.0);   // void black
+    const vec4 c1 = vec4(0.0,  0.25, 0.75, 1.0);   // abyssal blue
+    const vec4 c2 = vec4(0.0,  1.0,  0.85, 1.0);   // bio-cyan (HDR peak)
+    const vec4 c3 = vec4(0.4,  1.0,  1.0,  1.0);   // electric teal/white
+    if (x < p0) return c0;
+    if (x < p1) return mix(c0, c1, 0.5 - 0.5 * cos(3.14159265359 * (x - p0) / (p1 - p0)));
+    if (x < p2) return mix(c1, c2, 0.5 - 0.5 * cos(3.14159265359 * (x - p1) / (p2 - p1)));
+    if (x < p3) return mix(c2, c3, 0.5 - 0.5 * cos(3.14159265359 * (x - p2) / (p3 - p2)));
+    return c3;
+}
+
+vec4 passPositions(vec2 fragCoord) {
+    float minSize = min(RENDERSIZE.x, RENDERSIZE.y);
+    vec2 UV = vec2(0.0, 1.0) + vec2(1.0, -1.0) * (fragCoord - 0.5 * (RENDERSIZE - vec2(minSize))) / minSize;
+    vec3 dotColor = color_dots(UV, 1.0 / 1024.0, 0.0);
+    vec4 grad     = grassGradient(dot(dotColor, vec3(1.0)) / 3.0);
+    float dotMask = dots(UV, 1.0 / 1024.0, dotDensity, 0.334808);
+    vec3  blended = blend_darken(grad.rgb, vec3(dotMask), 1.0 * grad.a);
+    float a = min(1.0, dotMask + grad.a);
+    return vec4(blended, a);
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Image — backward trace through the flow field, weighted by a bezier curve
+// ──────────────────────────────────────────────────────────────────────
+float weightCurve(float x) {
+    // Bezier curve: (0,0) → (0.707,0.293) → (1,1), tangents per the Material Maker spec
+    const float p0x = 0.0,        p0y = 0.0,        p0rs = 0.0;
+    const float p1x = 0.707107,   p1y = 0.292893,   p1ls = 1.0, p1rs = 1.0;
+    const float p2x = 1.0,        p2y = 1.0,        p2ls = 4.0;
+    if (x <= p1x) {
+        float dx = x - p0x;
+        float d  = p1x - p0x;
+        float t  = dx / d;
+        float omt = 1.0 - t;
+        d /= 3.0;
+        float yac = p0y + d * p0rs;
+        float ybc = p1y - d * p1ls;
+        return p0y * omt*omt*omt + yac * omt*omt * t * 3.0 + ybc * omt * t*t * 3.0 + p1y * t*t*t;
+    }
+    float dx = x - p1x;
+    float d  = p2x - p1x;
+    float t  = dx / d;
+    float omt = 1.0 - t;
+    d /= 3.0;
+    float yac = p1y + d * p1rs;
+    float ybc = p2y - d * p2ls;
+    return p1y * omt*omt*omt + yac * omt*omt * t * 3.0 + ybc * omt * t*t * 3.0 + p2y * t*t*t;
+}
+
+vec3 traceIntensity(vec2 pos) {
+    float stepLen = pow(2.0, -stepExp);
+    vec3 color    = vec3(0.0);
+    float alpha   = 0.0;
+    vec2 p        = pos;
+    int N         = int(iterations);
+    for (int i = 0; i < 128; i++) {
+        if (i >= N) break;
+        vec4 sample_ = texture(positions, p);
+        float w = weightCurve((float(N - i)) / float(N));
+        alpha += sample_.a * w;
+        color += sample_.rgb * sample_.a * w;
+        vec3 dir = texture(directions, p).rgb;
+        p = p - (dir.xy - 0.5) * 2.0 * stepLen;
+    }
+    return color / (alpha + 1.0) * float(N) / 4.0;
+}
+
+vec4 passImage(vec2 fragCoord) {
+    float maxSize = max(RENDERSIZE.x, RENDERSIZE.y);
+    vec2 UV = vec2(0.0, 1.0) + vec2(1.0, -1.0) * (fragCoord - 0.5 * (RENDERSIZE - vec2(maxSize))) / maxSize;
+    vec3 col = traceIntensity(UV) * intensity;
+    return vec4(col, 1.0);
+}
+
+// ──────────────────────────────────────────────────────────────────────
 void main() {
-    float tm = TIME * speed;
-
-    // Audio modulation
-    float audioMod = 1.0 + audioReact * (audioBass * 0.4 + audioLevel * 0.2);
-    float twidth = tubeWidth * audioMod;
-    float glowScale = hdrPeak * audioMod;
-
-    // ── Camera orbit around tube cluster ──────────────────────────────────
-    float camAngle = tm * 0.18;
-    float camTilt  = sin(tm * 0.11) * 0.35;
-    vec3 ro = vec3(
-        cos(camAngle) * 5.5,
-        sin(camTilt) * 2.0,
-        sin(camAngle) * 5.5
-    );
-    vec3 target = vec3(0.0, 0.0, 0.0);
-    vec3 fwd = normalize(target - ro);
-    vec3 right = normalize(cross(fwd, vec3(0.0, 1.0, 0.0)));
-    vec3 up = cross(right, fwd);
-
-    // ── Ray direction ─────────────────────────────────────────────────────
-    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
-    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
-    vec3 rd = normalize(fwd + uv.x * right + uv.y * up);
-
-    // ── Raymarching (64 steps) ────────────────────────────────────────────
-    float t = 0.0;
-    float tmax = 12.0;
-    bool hit = false;
-    int hitTubeIdx = 0;
-    vec3 hitP = vec3(0.0);
-
-    for (int i = 0; i < 64; i++) {
-        vec3 p = ro + rd * t;
-        int idx;
-        float d = mapTubes(p, tm, twidth, idx);
-        if (d < 0.002) {
-            hit = true;
-            hitTubeIdx = idx;
-            hitP = p;
-            break;
-        }
-        t += d * 0.8;
-        if (t > tmax) break;
-    }
-
-    // ── Volumetric glow pass ─────────────────────────────────────────────
-    // March along ray accumulating exp(-dist/width) glow from each tube
-    vec3 glowAccum = vec3(0.0);
-    float glowT = 0.0;
-    float glowStep = tmax / 48.0;
-    for (int gi = 0; gi < 48; gi++) {
-        vec3 gp = ro + rd * glowT;
-        for (int ti = 0; ti < 6; ti++) {
-            vec3 a = tubeA(ti, tm);
-            vec3 b = tubeB(ti, tm);
-            float gd = sdCapsule(gp, a, b, twidth);
-            float falloff = exp(-max(gd, 0.0) / (twidth * 3.5));
-            glowAccum += tubeColor(ti) * falloff * glowStep * 0.7;
-        }
-        glowT += glowStep;
-    }
-
-    // ── Surface shading (emission only — plasma glow from inside) ─────────
-    vec3 col = vec3(0.0, 0.0, 0.01); // void background
-
-    if (hit) {
-        vec3 n = calcNormal(hitP, tm, twidth);
-        vec3 baseColor = tubeColor(hitTubeIdx);
-
-        // Edge factor: bright core, dimmer at grazing
-        float edgeFade = abs(dot(n, -rd));
-        // fwidth AA on tube SDF edge
-        float sdfEdge = mapScene(hitP, tm, twidth);
-        float aaWidth = fwidth(sdfEdge);
-        float edgeSmoother = smoothstep(0.0, aaWidth * 2.0, edgeFade);
-
-        // Core emission: hot white at center, colored at rim
-        vec3 coreColor = mix(baseColor, vec3(2.5, 2.5, 2.0), pow(edgeFade, 3.0));
-        col = coreColor * glowScale * edgeSmoother;
-    }
-
-    // Add volumetric glow halo (visible even where no surface hit)
-    col += glowAccum * glowScale * 0.5;
-
-    // HDR output — no clamp, no tonemapping, no ACES
-    gl_FragColor = vec4(col, 1.0);
+    vec2 fragCoord = gl_FragCoord.xy;
+    if      (PASSINDEX == 0) FragColor = passDirections(fragCoord);
+    else if (PASSINDEX == 1) FragColor = passPositions(fragCoord);
+    else                     FragColor = passImage(fragCoord);
 }

@@ -1,17 +1,16 @@
 ## 2026-05-06
 **Prior rating:** 0.0★
-**Approach:** 3D raymarch — NEW ANGLE: Plasma Flow Tubes 3D (prior 2026-05-05 was 2D palette swap on existing flow field, never committed)
+**Approach:** 2D palette replace — NEW ANGLE: Deep Ocean Bioluminescence (prior orphan attempt was volcanic magma palette; this is cool abyssal ocean — opposite temperature axis)
 **Critique:**
-1. Reference fidelity: Plasma tubes reference bioluminescent neural pathways — distinct from wind-blown grass tips.
-2. Compositional craft: 6 animated capsule tubes in 3D space create dynamic overlapping web.
-3. Technical execution: sdCapsule per tube, volumetric glow accumulation, fwidth() AA on tube surfaces.
-4. Liveness: All tube endpoints oscillate with TIME; audio modulates width and glow.
-5. Differentiation: 2D→3D axis change; different reference (plasma vs magma); different primitive (capsule tubes vs LIC seeds); different lighting (emission vs flow gradient).
+1. Reference fidelity: The LIC-style flow field algorithm creates organic streaks perfectly suited to simulate deep ocean bioluminescent currents.
+2. Compositional craft: High contrast maintained: void black background with bright bio-cyan streaks on top.
+3. Technical execution: 3-pass ISF preserved (directions buffer, positions buffer, trace pass); only grassGradient() and intensity default changed.
+4. Liveness: TIME-driven flow field animation unchanged; new intensity default (2.5) ensures HDR output.
+5. Differentiation: Prior orphan replaced grass with volcanic magma (warm); this replaces with deep ocean bioluminescence (cool). Temperature axis fully inverted. Palette: void black → abyssal blue → bio-cyan → electric teal/white.
 **Changes:**
-- Full rewrite from 2D backward LIC tracer to 3D plasma tube network
-- 6 animated sdCapsule tubes with phase-offset motion
-- Palette: cyan 2.5, violet 2.5, lime 2.5, hot-white core 2.5
-- Volumetric glow pass accumulated along eye ray
-- Audio modulates tube width and glow intensity
-**HDR peaks reached:** tube cores 2.5+, vol glow halos ~1.5-2.0
-**Estimated rating:** 4.5★
+- grassGradient() renamed conceptually to oceanGradient: black→abyssal blue→bio-cyan→electric teal
+- intensity default: 1.0 → 2.5 (HDR output)
+- DESCRIPTION updated to reflect ocean theme
+- All flow field mechanics unchanged (still 64-step backward trace, Bezier weight curve)
+**HDR peaks reached:** bio-cyan tip seeds at intensity * color = 2.5; teal highlights 2.0; blue mid-range 1.5
+**Estimated rating:** 3.5★
