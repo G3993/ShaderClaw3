@@ -25,9 +25,9 @@
 //   Tillmans / Kapoor / Judd / Cragg in conversation. Not a tutorial.
 // ════════════════════════════════════════════════════════════════════════
 
-#define MAX_STEPS 96
+#define MAX_STEPS 144
 #define MAX_DIST  40.0
-#define EPS       0.0009
+#define EPS       0.0007
 
 #define MAT_BACKDROP 0
 #define MAT_CHALK    1
@@ -119,17 +119,21 @@ vec3 calcNormal(vec3 p) {
     ));
 }
 
-// Hard contact shadow with a sharp k for studio-strobe edges
+// Soft contact shadow — penumbra grows with distance to occluder so
+// shadows fade from sharp at contact to soft at the cyc. Sharpness
+// (k) was 28 (studio-strobe hard); 10 gives a believable studio key
+// with falloff. Floor at 0.08 prevents pitch-black shadow patches —
+// the global ambient + fill compensate for the rest.
 float keyShadow(vec3 ro, vec3 rd) {
-    float res = 1.0, t = 0.02;
-    for (int i = 0; i < 28; i++) {
-        if (t > 6.0) break;
+    float res = 1.0, t = 0.04;
+    for (int i = 0; i < 32; i++) {
+        if (t > 8.0) break;
         float h = map(ro + rd * t).d;
-        if (h < 0.0008) return 0.0;
-        res = min(res, 28.0 * h / t);
-        t  += clamp(h, 0.012, 0.25);
+        if (h < 0.0008) { res = 0.0; break; }
+        res = min(res, 10.0 * h / t);
+        t  += clamp(h, 0.014, 0.3);
     }
-    return clamp(res, 0.0, 1.0);
+    return clamp(res, 0.08, 1.0);
 }
 
 float ao(vec3 p, vec3 n) {
@@ -185,10 +189,23 @@ vec3 shadeBackdrop(vec3 p, vec3 n) {
     vec3 base = backdropColor(p);
     vec3 L = keyDirVec();
     float ndl = max(dot(n, L), 0.0);
-    float sh  = keyShadow(p + n * 0.004, L);
+    // Bigger surface bias (0.012 vs 0.004) — eliminates self-shadow
+    // acne where the cyc and ground meet.
+    float sh  = keyShadow(p + n * 0.012, L);
     float fillTerm = max(dot(n, fillDirVec()), 0.0);
-    vec3 lit = base * (ambient + keyColor.rgb * ndl * sh + fillColor.rgb * fillTerm * 0.6);
-    lit *= mix(0.55, 1.0, ao(p, n));
+    // Hemispheric ambient pulled up so shadowed cyc isn't pitch black.
+    // The original ambient term was multiplied straight into base —
+    // any darker than ~0.18 of the base read as "void". Multi-source
+    // ambient (sky + ground bounce) keeps shadow regions tinted with
+    // the backdrop color rather than crushing to grey.
+    vec3 skyAmb    = backdropColor(p + vec3(0.0, 1.5, 0.0)) * 0.32;
+    vec3 groundAmb = backdropColor(p - vec3(0.0, 0.6, 0.0)) * 0.18;
+    float upWrap   = clamp(n.y * 0.5 + 0.5, 0.0, 1.0);
+    vec3 ambTerm   = mix(groundAmb, skyAmb, upWrap);
+    vec3 lit = base * (ambient + ambTerm
+                     + keyColor.rgb  * ndl * sh
+                     + fillColor.rgb * fillTerm * 0.6);
+    lit *= mix(0.62, 1.0, ao(p, n));
     return lit;
 }
 
@@ -309,7 +326,9 @@ vec4 traceScene(vec3 ro, vec3 rd) {
     for (int i = 0; i < MAX_STEPS; i++) {
         Hit s = map(ro + rd * dist);
         if (s.d < EPS) { hit = true; mat = s.mat; break; }
-        dist += s.d * 0.92;
+        // 0.78 (was 0.92) — under-step harder so grazing-angle cyc
+        // rays converge before MAX_STEPS instead of leaving step rings.
+        dist += s.d * 0.78;
         if (dist > MAX_DIST) break;
     }
     vec3 col = hit ? shade(ro + rd * dist, calcNormal(ro + rd * dist), -rd, mat)
