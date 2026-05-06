@@ -1,39 +1,40 @@
 /*{
-  "DESCRIPTION": "Stream — horizontal lanes of text flowing across the screen at different speeds, like a river of words. Each lane loops the message endlessly with a slight vertical sway, edge-fades at the L/R borders, and parallax-scaled brightness (closer lanes brighter). Audio bass nudges flow speed; treble adds sparkle on character edges. Pair with an Easel Background Layer for backdrop.",
+  "DESCRIPTION": "Stream — flowing ribbons of text drift like jellyfish tentacles. Many vertical character columns sway side-to-side at different frequencies and speeds, characters fall along each ribbon, tops & bottoms taper softly. Lots of text on screen at once. Bass deepens the sway, treble lights up individual character peaks. Bind a Background Layer for any backdrop.",
   "CREDIT": "ShaderClaw",
   "CATEGORIES": ["Generator", "Text", "Audio Reactive"],
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "STREAM OF CONSCIOUSNESS FLOWING ACROSS THE SCREEN", "MAX_LENGTH": 48 },
+    { "NAME": "msg", "TYPE": "text", "DEFAULT": "STREAM RIBBONS DRIFT THROUGH THE DEEP", "MAX_LENGTH": 48 },
     { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Inter","Times","Caslon","Outfit"] },
-    { "NAME": "laneCount", "LABEL": "Lanes", "TYPE": "long", "DEFAULT": 4, "VALUES": [1,2,3,4,5,6,7,8], "LABELS": ["1","2","3","4","5","6","7","8"] },
-    { "NAME": "flowSpeed", "LABEL": "Flow Speed", "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "direction", "LABEL": "Direction", "TYPE": "long", "DEFAULT": 0, "VALUES": [0,1,2], "LABELS": ["Left","Right","Alternate"] },
-    { "NAME": "speedSpread", "LABEL": "Speed Spread", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "swayAmp", "LABEL": "Sway", "TYPE": "float", "DEFAULT": 0.012, "MIN": 0.0, "MAX": 0.06 },
-    { "NAME": "swayFreq", "LABEL": "Sway Frequency", "TYPE": "float", "DEFAULT": 1.4, "MIN": 0.0, "MAX": 6.0 },
-    { "NAME": "textScale", "LABEL": "Text Size", "TYPE": "float", "DEFAULT": 0.075, "MIN": 0.025, "MAX": 0.18 },
-    { "NAME": "kerning", "LABEL": "Kerning", "TYPE": "float", "DEFAULT": 1.05, "MIN": 0.7, "MAX": 1.6 },
-    { "NAME": "edgeFade", "LABEL": "Edge Fade", "TYPE": "float", "DEFAULT": 0.10, "MIN": 0.0, "MAX": 0.4 },
-    { "NAME": "haloStrength", "LABEL": "Halo", "TYPE": "float", "DEFAULT": 0.4, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "hdrBoost", "LABEL": "HDR Boost", "TYPE": "float", "DEFAULT": 1.6, "MIN": 1.0, "MAX": 3.5 },
-    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 2.0 },
+    { "NAME": "ribbonCount", "LABEL": "Ribbons", "TYPE": "long", "DEFAULT": 11, "VALUES": [4,6,8,10,11,12,14,16,20,24], "LABELS": ["4","6","8","10","11","12","14","16","20","24"] },
+    { "NAME": "fallSpeed", "LABEL": "Fall Speed", "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 2.0 },
+    { "NAME": "swayAmp", "LABEL": "Sway Amplitude", "TYPE": "float", "DEFAULT": 0.06, "MIN": 0.0, "MAX": 0.18 },
+    { "NAME": "swayFreq", "LABEL": "Sway Frequency", "TYPE": "float", "DEFAULT": 1.7, "MIN": 0.0, "MAX": 8.0 },
+    { "NAME": "ribbonJitter", "LABEL": "Ribbon Variance", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 1.5 },
+    { "NAME": "textScale", "LABEL": "Text Size", "TYPE": "float", "DEFAULT": 0.05, "MIN": 0.02, "MAX": 0.12 },
+    { "NAME": "kerning", "LABEL": "Vertical Spacing", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.6, "MAX": 1.8 },
+    { "NAME": "ribbonThickness", "LABEL": "Ribbon Width", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.2, "MAX": 1.0 },
+    { "NAME": "tipFade", "LABEL": "Tip Fade", "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.0, "MAX": 0.5 },
+    { "NAME": "haloStrength", "LABEL": "Halo", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 2.0 },
+    { "NAME": "hdrBoost", "LABEL": "HDR Boost", "TYPE": "float", "DEFAULT": 1.8, "MIN": 1.0, "MAX": 3.5 },
+    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "inputTex", "LABEL": "Background Layer", "TYPE": "image" },
     { "NAME": "bgOpacity", "LABEL": "BG Layer Opacity", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.03, 0.06, 1.0] },
-    { "NAME": "textA", "LABEL": "Text Hot", "TYPE": "color", "DEFAULT": [0.20, 0.95, 1.00, 1.0] },
-    { "NAME": "textB", "LABEL": "Text Cool", "TYPE": "color", "DEFAULT": [0.95, 0.30, 0.85, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.01, 0.02, 0.05, 1.0] },
+    { "NAME": "textA", "LABEL": "Tip Color", "TYPE": "color", "DEFAULT": [1.00, 1.00, 1.00, 1.0] },
+    { "NAME": "textB", "LABEL": "Mid Color", "TYPE": "color", "DEFAULT": [0.20, 0.95, 1.00, 1.0] },
+    { "NAME": "textC", "LABEL": "Tail Color", "TYPE": "color", "DEFAULT": [0.60, 0.20, 1.00, 1.0] },
     { "NAME": "transparentBg", "LABEL": "Transparent BG", "TYPE": "bool", "DEFAULT": 0.0 }
   ]
 }*/
 
 // =====================================================================
-// Stream — multi-lane scrolling text. Each lane shows the message
-// repeating endlessly. Lanes scroll at different speeds (parallax),
-// alternate direction in mode 2, sway vertically, and edge-fade at
-// L/R borders. LINEAR HDR.
+// Stream — vertical text ribbons that sway like jellyfish tentacles.
+// Each ribbon is a column of characters falling along a sine-wave path.
+// The whole field sways with audio bass; individual characters flicker
+// with treble. Top + bottom taper softly. LINEAR HDR.
 // =====================================================================
 
-#define MAX_LANES 8
+#define MAX_RIBBONS 24
 
 // ─── Font atlas ─────────────────────────────────────────────────────
 float sampleChar(int ch, vec2 uv) {
@@ -103,6 +104,15 @@ int charCount() {
 
 float hash11(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
+// Vertical sine path of a ribbon: returns the x offset at this y.
+// Time-shifted + per-ribbon phase + a low-frequency wandering term so
+// ribbons don't all wave in lockstep.
+float ribbonX(float baseX, float y, float amp, float freq, float phase, float t) {
+    float w1 = sin(y * freq          + t * 0.9  + phase) * amp;
+    float w2 = sin(y * freq * 0.43   + t * 0.45 + phase * 1.7) * amp * 0.55;
+    return baseX + w1 + w2;
+}
+
 void main() {
     vec2 res = RENDERSIZE;
     vec2 uv  = gl_FragCoord.xy / res;
@@ -122,116 +132,125 @@ void main() {
     vec3 col = mix(bgColor.rgb, layerBG, bgOpacity);
 
     int total      = charCount();
-    int lanes      = int(laneCount);
-    if (lanes > MAX_LANES) lanes = MAX_LANES;
+    int ribbons    = int(ribbonCount);
+    if (ribbons > MAX_RIBBONS) ribbons = MAX_RIBBONS;
     float charH    = textScale;
     float charW    = charH * (5.0 / 7.0);
-    float kern     = charW * kerning;
+    float vStep    = charH * kerning;     // vertical char spacing
     float ftotal   = float(total);
-    int   dirMode  = int(direction);
 
-    // Lane layout: distribute lanes evenly across vertical space
-    // [0.15, 0.85] with one lane height of margin so chars don't
-    // touch the screen edges.
-    float laneTop    = 0.85;
-    float laneBottom = 0.15;
-    float laneSpan   = laneTop - laneBottom;
-    float laneStep   = (lanes > 1) ? laneSpan / float(lanes - 1) : 0.0;
+    // The ribbon field spans roughly [-aspect/2, aspect/2] horizontally.
+    // Ribbons are evenly distributed but jittered per-ribbon so they
+    // don't read as a perfect grid.
+    float ribbonSpread = aspect * 0.95;
 
     float textMask = 0.0;
     vec3  textCol  = vec3(0.0);
     float halo     = 0.0;
 
-    // Bass micro-boost on flow speed.
-    float effSpeed = flowSpeed * (1.0 + 0.4 * bass * audio);
+    // Bass deepens the global sway by stretching swayAmp.
+    float effSway = swayAmp * (1.0 + 0.6 * bass * audio);
 
-    for (int li = 0; li < MAX_LANES; li++) {
-        if (li >= lanes) break;
-        float fli = float(li);
-        // Each lane has its own deterministic seed for speed/direction.
-        float seed = hash11(fli * 7.13 + 0.5);
+    for (int ri = 0; ri < MAX_RIBBONS; ri++) {
+        if (ri >= ribbons) break;
+        float fri = float(ri);
 
-        // Speed varies per lane within ±speedSpread fraction.
-        float laneSpd = effSpeed * (1.0 + (seed - 0.5) * 2.0 * speedSpread);
-        // Direction: 0=left, 1=right, 2=alternate (even=left, odd=right).
-        float dir = (dirMode == 1) ? 1.0
-                  : (dirMode == 2) ? (mod(fli, 2.0) < 0.5 ? -1.0 : 1.0)
-                  : -1.0;
-        float scroll = TIME * laneSpd * dir;
+        // Per-ribbon randomness (deterministic seed).
+        float seed1 = hash11(fri * 13.7 + 0.1);
+        float seed2 = hash11(fri * 27.3 + 0.7);
+        float seed3 = hash11(fri * 41.9 + 1.3);
 
-        // Lane vertical center + sway.
-        float laneY = (lanes > 1)
-            ? laneBottom + laneStep * fli
-            : 0.5;
-        laneY += swayAmp * sin(TIME * swayFreq + fli * 1.7 + seed * 6.0);
+        // Distributed base x with small jitter so ribbons don't form
+        // straight columns.
+        float t01    = (ribbons > 1) ? fri / float(ribbons - 1) : 0.5;
+        float baseX  = mix(-ribbonSpread * 0.5, ribbonSpread * 0.5, t01)
+                     + (seed1 - 0.5) * ribbonSpread / float(ribbons) * ribbonJitter * 1.5;
 
-        // Skip if pixel is well outside this lane's vertical range.
-        float dy = p.y - laneY;
-        if (abs(dy) > charH * 0.9) continue;
+        // Per-ribbon sway amp and frequency variation.
+        float ampR   = effSway * (0.55 + 1.0 * seed2);
+        float freqR  = swayFreq * (0.7 + 0.7 * seed3);
+        float phaseR = seed1 * 6.2832;
+        // Per-ribbon vertical fall speed.
+        float spdR   = fallSpeed * (0.7 + 0.7 * seed2);
 
-        // World-x of the pixel relative to scroll. Each repeated copy of
-        // the message is cellTotal wide. Use mod() for seamless wrap.
-        float cellTotal = ftotal * kern;
-        float wx = p.x + scroll + aspect * 0.5;
-        float modX = mod(wx, cellTotal);
-        if (modX < 0.0) modX += cellTotal;
+        // Pixel x offset to ribbon center at this pixel's y.
+        float rx     = ribbonX(baseX, p.y, ampR, freqR, phaseR, TIME);
+        float dx     = p.x - rx;
 
-        // Char index in the message.
-        float colF   = modX / kern;
-        int   colIdx = int(floor(colF));
-        if (colIdx < 0 || colIdx >= total) continue;
+        // Ribbon thickness check — anything outside this band can't be
+        // text on this ribbon. Half-width = charW * 0.55 so ribbon
+        // thickness is roughly one char wide.
+        float bandHalf = charW * (0.55 + ribbonThickness * 0.15);
+        if (abs(dx) > bandHalf) continue;
 
-        int ch = getChar(colIdx);
-        // Cell-local UV.
+        // Vertical "cell coordinate" — characters stack at vStep along y,
+        // scrolling downward over time so the column reads like falling
+        // rain.
+        float scrolled = (1.0 - p.y) + TIME * spdR;
+        // Per-ribbon offset so messages don't all scroll in sync.
+        scrolled += seed3 * 7.31;
+        float cellF    = scrolled / vStep;
+        int   slot     = int(floor(mod(cellF, ftotal)));
+        if (slot < 0) slot += total;
+        int   ch       = getChar(slot);
+
+        // Cell-local UV: x within ribbon band → centered on char width.
+        // y within current cell.
         vec2 cellUV;
-        cellUV.x = fract(colF);
-        cellUV.y = (dy / charH) + 0.5;
+        cellUV.x = dx / charW + 0.5;
+        cellUV.y = fract(cellF);
+        if (cellUV.x < 0.0 || cellUV.x > 1.0) continue;
 
         float s = sampleChar(ch, cellUV);
         s = smoothstep(0.18, 0.55, s);
-        if (s < 0.001) continue;
 
-        // Edge fade — dissolve characters near L/R borders so they
-        // appear/disappear softly rather than popping at the screen edge.
-        float ux = uv.x;
-        float fadeL = smoothstep(0.0, edgeFade, ux);
-        float fadeR = 1.0 - smoothstep(1.0 - edgeFade, 1.0, ux);
-        float edge  = fadeL * fadeR;
+        // Tip + tail soft fade so ribbons don't hard-cut at edges.
+        float tipFadeT = smoothstep(0.0, tipFade, p.y) *
+                        (1.0 - smoothstep(1.0 - tipFade, 1.0, p.y));
+        // Bottom-up gradient: brighter at the leading edge ("head") of
+        // each character batch — adds a sense of head/tail like a comet.
+        float headBoost = smoothstep(0.55, 1.0, fract(cellF));
 
-        // Lane parallax: faster lanes (closer) read brighter; slower
-        // lanes recede.
-        float parallax = clamp(abs(laneSpd) / max(effSpeed, 0.001), 0.4, 1.4);
-        // Color: gradient between the two text colors based on the lane.
-        float tMix = (lanes > 1) ? fli / float(lanes - 1) : 0.5;
-        vec3  baseColor = mix(textA.rgb, textB.rgb, tMix);
-        // Treble shimmer adds a per-char sparkle.
-        float shimmer = 1.0 + 0.45 * treb * audio
-                      * smoothstep(0.6, 1.0, hash11(floor(modX * 13.0) + fli));
+        // Per-ribbon depth/parallax: ribbons that sway more (closer to
+        // viewer) read brighter.
+        float depthBoost = 0.65 + 0.55 * seed2;
 
-        float w = s * edge * parallax * shimmer;
+        // Treble shimmer per char — random sparkle when bright treble.
+        float sparkle = 1.0 + 0.45 * treb * audio
+                      * step(0.93 - 0.05 * treb * audio, hash11(slot * 11.7 + fri));
+
+        // 3-stop color along the ribbon (head → mid → tail). Gives the
+        // ribbon a depth-by-color feel like a tentacle gradient.
+        float headT = clamp(headBoost, 0.0, 1.0);
+        float tailT = clamp(1.0 - p.y - 0.1, 0.0, 1.0);
+        vec3  baseColor = mix(textC.rgb, textB.rgb, smoothstep(0.0, 0.6, p.y));
+        baseColor = mix(baseColor, textA.rgb, headT * 0.85);
+
+        float w = s * tipFadeT * depthBoost * sparkle;
+        if (w < 0.001) continue;
+
         textMask = max(textMask, w);
         textCol  = mix(textCol, baseColor, w);
 
-        // Soft halo around each char. Half-tone falloff.
-        float haloR = charW * 1.2;
-        float dlen  = length(vec2((cellUV.x - 0.5) * charW, dy));
-        halo += exp(-pow(dlen / haloR, 2.0)) * w * 0.25;
+        // Soft halo around each lit char.
+        float dlen = length(vec2(dx, (cellUV.y - 0.5) * charH));
+        halo += exp(-pow(dlen / (charW * 1.1), 2.0)) * w * 0.3;
     }
 
     halo = clamp(halo, 0.0, 4.0);
 
-    // Compose: background → halo glow → ink chars.
+    // Compose: backdrop → halo glow → ink chars on top.
     col += textCol * halo * haloStrength;
-    // HDR ring on bright halo zones.
+    // HDR ring for the bloom post-pass.
     float ring = clamp(halo - 0.4, 0.0, 1.5);
     col += textCol * pow(ring, 2.0) * hdrBoost * 0.4;
 
-    // Solid ink characters.
+    // Solid characters layered on top.
     col = mix(col, textCol, textMask);
 
     float alpha = 1.0;
     if (transparentBg) {
-        alpha = clamp(textMask + halo * 0.3, 0.0, 1.0);
+        alpha = clamp(textMask + halo * 0.25, 0.0, 1.0);
         col   = textCol;
     }
 
