@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Cascade - tiled rows with wave offsets",
+  "DESCRIPTION": "Cascade - tiled rows with wave offsets on a deep-sea bioluminescent background",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
@@ -11,16 +11,18 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Text Color", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.02, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "bioScale", "LABEL": "Bio Scale", "TYPE": "float", "MIN": 0.5, "MAX": 8.0, "DEFAULT": 2.5 },
+    { "NAME": "bioSpeed", "LABEL": "Bio Speed", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.25 },
+    { "NAME": "hdrPeak", "LABEL": "HDR Peak", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.5 },
+    { "NAME": "audioMod", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
 const float PI = 3.14159265;
 const float TWO_PI = 6.28318530;
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
 float charPixel(int ch, float col, float row) {
     if (ch < 0 || ch > 36) return 0.0;
     vec2 uv = vec2(col / 5.0, row / 7.0);
@@ -84,16 +86,60 @@ int charCount() {
     return n > 0 ? n : 1;
 }
 
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
+float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+float hash21b(vec2 p) {
+    p = fract(p * vec2(234.34, 435.346));
+    p += dot(p, p + 34.23);
+    return fract(p.x * p.y);
 }
 
-float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+// =======================================================================
+// DEEP-SEA BIOLUMINESCENT BACKGROUND
+// =======================================================================
+
+float smoothNoiseBio(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = hash21b(i);
+    float b = hash21b(i + vec2(1.0, 0.0));
+    float c = hash21b(i + vec2(0.0, 1.0));
+    float d = hash21b(i + vec2(1.0, 1.0));
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
+float fbmBio(vec2 p) {
+    float v = 0.0, a = 0.5;
+    for (int i = 0; i < 5; i++) {
+        v += a * smoothNoiseBio(p);
+        p = p * 2.1 + vec2(5.3, 2.71);
+        a *= 0.5;
+    }
+    return v;
+}
+
+vec3 bioBg(vec2 uv) {
+    float t = TIME * bioSpeed;
+    vec2 q = vec2(fbmBio(uv * bioScale + t * 0.09),
+                  fbmBio(uv * bioScale + vec2(3.1, 7.4) + t * 0.07));
+    float f = fbmBio(uv * bioScale + q * 1.8 + vec2(t * 0.06, -t * 0.04));
+
+    float audioBoost = 1.0 + audioLevel * audioMod * 0.6;
+    f = clamp(f * audioBoost, 0.0, 1.0);
+
+    float h = hdrPeak;
+    // Deep sea bioluminescent palette: near-black → deep teal → electric cyan → lime → white-hot
+    vec3 col;
+    if (f < 0.30)      col = mix(vec3(0.0, 0.005, 0.04),       vec3(0.0, 0.20, 0.28),              f / 0.30);
+    else if (f < 0.55) col = mix(vec3(0.0, 0.20, 0.28),        vec3(0.0, h * 0.38, h * 0.34),      (f - 0.30) / 0.25);
+    else if (f < 0.75) col = mix(vec3(0.0, h * 0.38, h * 0.34), vec3(h * 0.12, h, h * 0.18),      (f - 0.55) / 0.20);
+    else               col = mix(vec3(h * 0.12, h, h * 0.18),   vec3(h * 0.8, h, h * 0.9),         (f - 0.75) / 0.25);
+
+    return col;
+}
 
 // =======================================================================
-// EFFECT: CASCADE - tiled rows with wave offsets
+// EFFECT: CASCADE — returns textHit in alpha
 // =======================================================================
 
 vec4 effectCascade(vec2 uv) {
@@ -131,13 +177,7 @@ vec4 effectCascade(vec2 uv) {
         }
     }
 
-    bool inv = mod(rowIdx, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
-    return vec4(fc, a);
+    return vec4(textColor.rgb, textHit);
 }
 
 // =======================================================================
@@ -146,7 +186,30 @@ vec4 effectCascade(vec2 uv) {
 
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
-    vec4 col = effectCascade(uv);
+    vec4 textLayer = effectCascade(uv);
+
+    if (transparentBg) {
+        gl_FragColor = vec4(textLayer.rgb, textLayer.a);
+
+        if (_voiceGlitch > 0.01) {
+            float g = _voiceGlitch;
+            float t = TIME * 17.0;
+            float band = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
+            float bandNoise = fract(sin(band * 91.7 + t) * 43758.5);
+            float bandActive = step(1.0 - g * 0.6, bandNoise);
+            float shift = (bandNoise - 0.5) * 0.08 * g * bandActive;
+            float chromaAmt = g * 0.015;
+            vec4 cR = effectCascade(uv + vec2(shift + chromaAmt, 0.0));
+            vec4 cG = effectCascade(uv + vec2(shift, chromaAmt * 0.5));
+            vec4 cB = effectCascade(uv + vec2(shift - chromaAmt, 0.0));
+            gl_FragColor = vec4(cR.r, cG.g, cB.b, max(max(cR.a, cG.a), cB.a));
+        }
+        return;
+    }
+
+    // Bioluminescent composite: dark ink text over living deep-sea background
+    vec3 bio = bioBg(uv);
+    vec3 finalCol = mix(bio, textColor.rgb, textLayer.a);
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
@@ -156,22 +219,19 @@ void main() {
         float bandActive = step(1.0 - g * 0.6, bandNoise);
         float shift = (bandNoise - 0.5) * 0.08 * g * bandActive;
         float chromaAmt = g * 0.015;
-        vec2 uvR = uv + vec2(shift + chromaAmt, 0.0);
-        vec2 uvB = uv + vec2(shift - chromaAmt, 0.0);
-        vec2 uvG = uv + vec2(shift, chromaAmt * 0.5);
-        vec4 cR = effectCascade(uvR);
-        vec4 cG = effectCascade(uvG);
-        vec4 cB = effectCascade(uvB);
-        vec4 glitched = vec4(cR.r, cG.g, cB.b, max(max(cR.a, cG.a), cB.a));
+        vec3 bR = bioBg(uv + vec2(shift + chromaAmt, 0.0));
+        vec3 bG = bioBg(uv + vec2(shift, chromaAmt * 0.5));
+        vec3 bB = bioBg(uv + vec2(shift - chromaAmt, 0.0));
+        vec4 tR = effectCascade(uv + vec2(shift + chromaAmt, 0.0));
+        vec4 tG = effectCascade(uv + vec2(shift, chromaAmt * 0.5));
+        vec4 tB = effectCascade(uv + vec2(shift - chromaAmt, 0.0));
         float scanline = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
-        float blockX = floor(uv.x * 6.0);
-        float blockY = floor(uv.y * 4.0);
-        float blockNoise = fract(sin((blockX + blockY * 7.0) * 113.1 + floor(t * 8.0)) * 43758.5);
-        float dropout = step(1.0 - g * 0.15, blockNoise);
-        glitched.rgb *= scanline;
-        glitched.rgb *= 1.0 - dropout;
-        col = mix(col, glitched, smoothstep(0.0, 0.3, g));
+        finalCol = vec3(
+            mix(bR.r, textColor.r, tR.a),
+            mix(bG.g, textColor.g, tG.a),
+            mix(bB.b, textColor.b, tB.a)
+        ) * scanline;
     }
 
-    gl_FragColor = col;
+    gl_FragColor = vec4(finalCol, 1.0);
 }
