@@ -9,8 +9,9 @@
     { "NAME": "flowSpeed",   "LABEL": "Flow Speed",      "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 4.0 },
     { "NAME": "octaves",     "LABEL": "Octaves",         "TYPE": "float", "DEFAULT": 4.0,  "MIN": 1.0,  "MAX": 6.0 },
     { "NAME": "persistence", "LABEL": "Persistence",     "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.1,  "MAX": 0.9 },
-    { "NAME": "dotDensity",  "LABEL": "Seed Density",    "TYPE": "float", "DEFAULT": 0.1,  "MIN": 0.01, "MAX": 0.5 },
-    { "NAME": "intensity",   "LABEL": "Brightness",      "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.2,  "MAX": 3.0 }
+    { "NAME": "dotDensity",  "LABEL": "Seed Density",    "TYPE": "float", "DEFAULT": 0.12, "MIN": 0.01, "MAX": 0.5 },
+    { "NAME": "intensity",   "LABEL": "Brightness",      "TYPE": "float", "DEFAULT": 2.5,  "MIN": 0.2,  "MAX": 4.0 },
+    { "NAME": "audioMod",    "LABEL": "Audio React",     "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0,  "MAX": 2.0 }
   ],
   "PASSES": [
     { "TARGET": "directions" },
@@ -93,11 +94,15 @@ vec4 passDirections(vec2 fragCoord) {
 // ──────────────────────────────────────────────────────────────────────
 // Buffer B — colored grass tip seeds (static gradient + dot mask)
 // ──────────────────────────────────────────────────────────────────────
+// Seed dot colors: 3 thermal neon hues cycling by grid position (no white-mixing).
 vec3 color_dots(vec2 uv, float size, float seed) {
     vec2 seed2 = rand2(vec2(seed, 1.0 - seed));
     uv /= size;
     vec2 point_pos = floor(uv) + vec2(0.5);
-    return rand3(seed2 + point_pos);
+    float r = rand1(seed2 + point_pos);
+    if (r < 0.33) return vec3(0.25, 0.0, 0.85);  // deep violet
+    if (r < 0.66) return vec3(0.0,  0.55, 1.0);  // electric blue
+    return vec3(0.0, 1.0, 0.90);                  // electric cyan
 }
 
 float dots(vec2 uv, float size, float density, float seed) {
@@ -111,17 +116,21 @@ vec3 blend_darken(vec3 c1, vec3 c2, float opacity) {
     return opacity * min(c1, c2) + (1.0 - opacity) * c2;
 }
 
+// Neon thermal imaging palette:
+// black → deep violet → electric blue → cyan → white-hot HDR
+// Replaces desaturated grass (black→forest green→gray→white).
 vec4 grassGradient(float x) {
-    const float p0 = 0.363636, p1 = 0.592727, p2 = 0.804218, p3 = 0.907897;
-    const vec4 c0 = vec4(0.0,        0.0,        0.0,        1.0);
-    const vec4 c1 = vec4(0.05680800, 0.31962299, 0.15774099, 1.0);
-    const vec4 c2 = vec4(0.78224099, 0.78224099, 0.78224099, 1.0);
-    const vec4 c3 = vec4(1.0,        1.0,        1.0,        1.0);
+    const float p0 = 0.22, p1 = 0.48, p2 = 0.74, p3 = 0.90;
+    const vec4 c0 = vec4(0.0,   0.0,   0.0,   1.0); // void black
+    const vec4 c1 = vec4(0.25,  0.0,   0.85,  1.0); // deep violet
+    const vec4 c2 = vec4(0.0,   0.55,  1.0,   1.0); // electric blue
+    const vec4 c3 = vec4(0.0,   1.0,   0.90,  1.0); // electric cyan
+    const vec4 c4 = vec4(2.8,   2.6,   2.8,   1.0); // white-hot HDR
     if (x < p0) return c0;
     if (x < p1) return mix(c0, c1, 0.5 - 0.5 * cos(3.14159265359 * (x - p0) / (p1 - p0)));
     if (x < p2) return mix(c1, c2, 0.5 - 0.5 * cos(3.14159265359 * (x - p1) / (p2 - p1)));
     if (x < p3) return mix(c2, c3, 0.5 - 0.5 * cos(3.14159265359 * (x - p2) / (p3 - p2)));
-    return c3;
+    return mix(c3, c4, 0.5 - 0.5 * cos(3.14159265359 * (x - p3) / (1.0 - p3)));
 }
 
 vec4 passPositions(vec2 fragCoord) {
@@ -184,7 +193,8 @@ vec3 traceIntensity(vec2 pos) {
 vec4 passImage(vec2 fragCoord) {
     float maxSize = max(RENDERSIZE.x, RENDERSIZE.y);
     vec2 UV = vec2(0.0, 1.0) + vec2(1.0, -1.0) * (fragCoord - 0.5 * (RENDERSIZE - vec2(maxSize))) / maxSize;
-    vec3 col = traceIntensity(UV) * intensity;
+    float audioBoost = 1.0 + (audioLevel + audioBass * 0.5) * audioMod;
+    vec3 col = traceIntensity(UV) * intensity * audioBoost;
     return vec4(col, 1.0);
 }
 
