@@ -9,9 +9,12 @@
     { "NAME": "intensity", "LABEL": "Displacement", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Grid Density", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.9, 0.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.01, 0.005, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.2 },
+    { "NAME": "crackIntensity", "LABEL": "Crack Glow", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.5 },
+    { "NAME": "audioMod", "LABEL": "Audio Mod", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 }
   ]
 }*/
 
@@ -89,6 +92,121 @@ float sampleChar(int ch, vec2 uv) {
 }
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+
+// =======================================================================
+// LAVA CAVE BACKGROUND
+// =======================================================================
+
+// Value noise for FBM
+float vnoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    float a = hash2(i);
+    float b = hash2(i + vec2(1.0, 0.0));
+    float c = hash2(i + vec2(0.0, 1.0));
+    float d = hash2(i + vec2(1.0, 1.0));
+    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+
+// 3-octave FBM
+float fbm3(vec2 p) {
+    float v = 0.0;
+    float amp = 0.5;
+    float freq = 1.0;
+    for (int i = 0; i < 3; i++) {
+        v += amp * vnoise(p * freq);
+        amp *= 0.5;
+        freq *= 2.1;
+    }
+    return v;
+}
+
+// Domain-warped FBM for crack network
+float crackFbm(vec2 p) {
+    // Domain warp: offset p by fbm to get organic crack shapes
+    vec2 warp = vec2(fbm3(p + vec2(1.7, 9.2)), fbm3(p + vec2(8.3, 2.8)));
+    vec2 warped = p + 0.8 * warp;
+    return fbm3(warped);
+}
+
+// Lava cave background: dark basalt + glowing lava cracks
+vec3 lavaCaveBg(vec2 uv, float t) {
+    // Aspect correction for consistent look
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    vec2 p = uv * vec2(aspect, 1.0);
+
+    // --- Basalt texture: very dark, near-black with subtle variation ---
+    float basalt = fbm3(p * 4.0 + vec2(0.5, 0.3));
+    // Dark basalt base: near-black with slight brown tint
+    vec3 basaltColor = mix(
+        vec3(0.012, 0.007, 0.004),
+        vec3(0.035, 0.020, 0.010),
+        basalt * basalt
+    );
+
+    // --- Crack network via domain-warped FBM ---
+    // Slow upward lava flow within cracks
+    vec2 flowUV = p + vec2(0.0, -t * 0.04);
+
+    float crack = crackFbm(flowUV * 2.5 + vec2(3.1, 0.7));
+    float crack2 = crackFbm(flowUV * 3.8 + vec2(0.0, 1.4));
+
+    // Crack intensity = how close we are to a crack center
+    // Use absolute deviation from threshold to create thin crack lines
+    float crackThresh = 0.52;
+    float d1 = abs(crack - crackThresh);
+    float d2 = abs(crack2 - crackThresh);
+    float crackField = min(d1, d2);
+
+    // AA on crack edges using fwidth
+    float fw = fwidth(crackField);
+    float crackMask = 1.0 - smoothstep(0.0, fw + 0.025, crackField);
+
+    // Secondary thin hairline cracks
+    float hairCrack = crackFbm(flowUV * 6.0 + vec2(5.5, 2.2));
+    float dHair = abs(hairCrack - 0.50);
+    float fwHair = fwidth(dHair);
+    float hairMask = (1.0 - smoothstep(0.0, fwHair + 0.012, dHair)) * 0.5;
+
+    float totalCrack = clamp(crackMask + hairMask, 0.0, 1.0);
+
+    // --- Crack glow color: crimson -> orange -> gold gradient ---
+    // Bright inner core, dimmer outer glow
+    float innerCrack = smoothstep(0.0, fw + 0.008, crackField);
+    innerCrack = 1.0 - innerCrack;
+
+    // Outer glow: exponential falloff from crack center
+    float outerGlow = exp(-crackField * 18.0) * 0.6;
+
+    // Animate lava flow color within cracks: pulse crimson->orange->gold
+    float flowPulse = 0.5 + 0.5 * sin(p.y * 5.0 - t * 1.2 + crack * 6.0);
+    float flowPulse2 = 0.5 + 0.5 * sin(p.x * 3.0 + t * 0.8 + crack2 * 4.0);
+    float colorVar = flowPulse * 0.6 + flowPulse2 * 0.4;
+
+    // Crack core colors: deep crimson -> bright orange -> gold
+    vec3 crackCrimson = vec3(0.8, 0.05, 0.0);
+    vec3 crackOrange  = vec3(1.0, 0.35, 0.0);
+    vec3 crackGold    = vec3(1.0, 0.70, 0.0);
+    vec3 crackCore = mix(crackCrimson, crackOrange, colorVar);
+    crackCore = mix(crackCore, crackGold, colorVar * colorVar * 0.5);
+
+    // HDR intensity: crack centers go 2.5+ at crackIntensity=1.5
+    float effectiveCrackIntensity = crackIntensity * (1.0 + audioMod * 0.8);
+    float hdrPeak = effectiveCrackIntensity * 1.67; // at default 1.5 -> 2.5
+
+    // Inner crack: full HDR
+    vec3 crackColor = crackCore * innerCrack * hdrPeak;
+
+    // Outer glow: dimmer, more orange-red
+    vec3 glowColor = mix(crackCrimson * 0.3, crackOrange * 0.5, outerGlow) * outerGlow * effectiveCrackIntensity;
+
+    // Combine
+    vec3 result = basaltColor + crackColor + glowColor;
+
+    return result;
+}
 
 // =======================================================================
 // EFFECT: BRICKS - grid with animated displacement
@@ -142,12 +260,40 @@ vec4 effectBricks(vec2 uv, int sub) {
         }
     }
 
-    bool inv = mod(ri, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
+    // Lava cave background
+    float bgT = TIME * speed;
+    vec3 caveBg = lavaCaveBg(uv, bgT);
+
+    // Electric gold text with HDR glow
+    vec3 goldText = textColor.rgb * hdrGlow;
+
+    // Text glow halo: soft bloom around text edges
+    float glowRadius = textHit * (1.0 - textHit) * 4.0; // peaks at edges
+    float textGlow = textHit + glowRadius * 0.5;
+    vec3 glowHalo = textColor.rgb * textGlow * hdrGlow * 0.9;
+
+    // Compose: cave bg + text overlay
+    vec3 fc;
+    float a;
+    if (transparentBg) {
+        // Transparent: only text pixels output, with glow halo
+        fc = goldText + glowHalo * 0.3;
+        a = textHit;
+    } else {
+        // Opaque: cave background + text on top
+        bool inv = mod(ri, 2.0) < 1.0;
+        if (inv) {
+            // Standard: text on cave bg
+            fc = mix(caveBg, goldText, textHit);
+        } else {
+            // Inverted rows: bg color text on cave bg
+            fc = mix(caveBg, bgColor.rgb, textHit);
+        }
+        // Add subtle text glow halo into background
+        fc += glowHalo * (1.0 - textHit) * 0.15;
+        a = 1.0;
+    }
+
     return vec4(fc, a);
 }
 
