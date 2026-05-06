@@ -19,3 +19,20 @@
 - audioMod input added
 **HDR peaks reached:** close rows textColor * 2.0 = 2.0, with audio 2.8+
 **Estimated rating:** 3.8★
+
+## 2026-05-06
+**Prior rating:** 0.0★
+**Approach:** 2D refine — NEW ANGLE: Warp Vortex background, hyperspace radial lines (prior 2026-05-05 planned starfield bg, never committed)
+**Critique:**
+1. Reference fidelity: Hyperspace warp lines match the depth-perspective text rows of text_spacy — both suggest high-speed motion.
+2. Compositional craft: Radial lines create strong center focal point that depth-zooming text emerges from.
+3. Technical execution: Polar coordinates, fwidth() line AA, radial falloff, Gaussian center glow.
+4. Liveness: Lines rotate/drift with TIME; center glow pulses.
+5. Differentiation: Different bg (warp lines vs starfield); different palette (electric blue/orange vs white/cyan/gold); motion-forward vs ambient-floating mood.
+**Changes:**
+- Added warpVortexBg() — 24-line radial warp with polar coords, fwidth() AA, Gaussian center glow
+- transparentBg default: true→false
+- textColor default: white→orange [1,0.5,0,1], boosted 2.2x HDR
+- Warp palette: electric blue 2.5, cyan 2.0, void black
+**HDR peaks reached:** warp center 2.0+; line radials 2.5; text 2.2x orange
+**Estimated rating:** 3.8★

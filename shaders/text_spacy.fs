@@ -12,9 +12,9 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.5, 0.0, 1.0] },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
@@ -94,6 +94,48 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
+// BACKGROUND: WARP VORTEX
+// =======================================================================
+
+vec3 warpVortexBg(vec2 uv) {
+    float t = TIME * 0.5;
+    float asp = RENDERSIZE.x / RENDERSIZE.y;
+
+    // Polar coordinates from center
+    vec2 centered = uv * 2.0 - 1.0;
+    centered.x *= asp;
+    float r = length(centered);
+    float angle = atan(centered.y, centered.x);
+
+    // Warp speed lines: radial streaks from center
+    // Streak pattern: many thin lines radiating outward
+    float numLines = 24.0;
+    float lineWidth = 0.08;
+    float linePattern = fract(angle / (3.14159 * 2.0) * numLines + t * 0.8);
+    float lineMask = 1.0 - smoothstep(0.0, fwidth(linePattern) + lineWidth, linePattern);
+    lineMask += 1.0 - smoothstep(0.0, fwidth(linePattern) + lineWidth * 0.3, 1.0 - linePattern);
+    lineMask = clamp(lineMask, 0.0, 1.0);
+
+    // Radial falloff: bright center, dark edges
+    float radGlow = exp(-r * 1.5);
+    float radStreak = lineMask * (0.3 + 0.7 * exp(-r * 0.8));
+
+    // Speed lines get brighter toward center (motion toward viewer)
+    float speedFade = exp(-r * r * 3.0); // Gaussian center bright
+
+    // Colors: electric blue lines, cyan core
+    vec3 C_BLU  = vec3(0.0, 0.4, 2.5);  // electric blue HDR
+    vec3 C_CYAN = vec3(0.0, 2.0, 2.0);  // cyan center
+    vec3 C_BG   = vec3(0.0, 0.0, 0.01); // void black
+
+    vec3 col = C_BG;
+    col += C_BLU * radStreak * 2.5;
+    col += C_CYAN * radGlow * speedFade * 2.0;
+
+    return col;
+}
+
+// =======================================================================
 // EFFECT: SPACY - perspective tunnel rows
 // =======================================================================
 
@@ -151,6 +193,10 @@ vec4 effectSpacy(vec2 uv, int sub) {
     vec3 fc = mix(bg, fg, textHit);
     float a = 1.0;
     if (transparentBg) { a = textHit; fc = textColor.rgb; }
+    else {
+        vec3 bgNew = warpVortexBg(uv);
+        fc = mix(bgNew, textColor.rgb * 2.2, textHit);
+    }
     return vec4(fc, a);
 }
 
