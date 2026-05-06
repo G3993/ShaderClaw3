@@ -9,9 +9,9 @@
     { "NAME": "intensity", "LABEL": "Displacement", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Grid Density", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.9, 0.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.0, 0.06, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
@@ -91,6 +91,42 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
+// BACKGROUND: LIGHTNING STORM
+// =======================================================================
+
+vec3 lightningStormBg(vec2 uv) {
+    // Dark storm sky
+    vec3 sky = mix(vec3(0.02, 0.0, 0.06), vec3(0.06, 0.02, 0.15), uv.y);
+
+    // Cloud layer (billowing noise)
+    float ct = TIME * 0.08;
+    float cloud = 0.0;
+    vec2 cp = uv * vec2(3.0, 2.0) + vec2(ct, 0.0);
+    cloud += sin(cp.x * 2.1 + sin(cp.y * 1.7 + ct)) * 0.25 + 0.25;
+    cloud += sin(cp.x * 3.7 - sin(cp.y * 2.9 - ct * 1.3)) * 0.15 + 0.15;
+    cloud += sin(cp.x * 7.1 + cp.y * 5.3 + ct * 2.1) * 0.08;
+    cloud = clamp(cloud, 0.0, 1.0);
+    sky = mix(sky, vec3(0.05, 0.02, 0.12), cloud * 0.8);
+
+    // Lightning flash (rare bright burst)
+    float flashSeed = floor(TIME * 0.7);
+    float flashPhase = fract(TIME * 0.7);
+    float flashRand = fract(sin(flashSeed * 127.1) * 43758.5);
+    float flash = step(0.8, flashRand) * smoothstep(0.0, 0.05, flashPhase) * smoothstep(0.3, 0.1, flashPhase);
+    sky += flash * vec3(2.0, 1.8, 3.0); // HDR blue-white lightning
+
+    // Lightning arc (vertical bolt)
+    if (flash > 0.01) {
+        float boltX = fract(flashRand * 3.7) * 0.8 + 0.1;
+        float zigzag = sin(uv.y * 20.0 + flashSeed * 7.3) * 0.02;
+        float bolt = smoothstep(0.008, 0.0, abs(uv.x - boltX - zigzag));
+        sky += bolt * vec3(3.0, 2.5, 4.0) * flash; // HDR electric violet bolt
+    }
+
+    return sky;
+}
+
+// =======================================================================
 // EFFECT: BRICKS - grid with animated displacement
 // =======================================================================
 
@@ -155,6 +191,13 @@ void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     int p = int(preset);
     vec4 col = effectBricks(uv, p);
+
+    if (!transparentBg && col.a < 0.5) {
+        col.rgb = lightningStormBg(uv);
+        col.a = 1.0;
+    } else if (!transparentBg) {
+        col.rgb *= 2.2; // HDR text boost
+    }
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
