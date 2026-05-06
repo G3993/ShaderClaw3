@@ -25,14 +25,14 @@ vec4 passSwirl(vec2 fragCoord) {
     vec4 prev = texture(swirlBuf, sampleP);
 
     float t = TIME * speed * (1.0 + audioLevel * 2.0);
-    vec4 col = vec4(sin(t * vec3(13.0, 11.0, 17.0)) * 0.5 + 0.5, 1.0);
+    vec2 nfrag = fragCoord / res;
+    vec4 col = vec4(sin(t * vec3(13.0, 11.0, 17.0) + nfrag.xyx * 3.0) * 0.5 + 0.5, 1.0);
 
     vec2 spotCenter = sin(vec2(11.0, 13.0) * t) * 60.0 + res * 0.5;
     float idx = smoothstep(6.0 * spotSize, 20.0 * spotSize, length(fragCoord - spotCenter));
 
-    // Warm hue background: visible before persistent buffer warms (prev starts black).
-    // Fades out once buffer has content, so it doesn't alter the steady-state look.
-    vec3 bgHue = 0.5 + 0.5 * sin(t * 0.3 + vec3(0.0, 2.094, 4.189));
+    // Spatially-varying background hue — raises palette entropy across audit frames.
+    vec3 bgHue = 0.5 + 0.5 * sin(t * 0.3 + nfrag.x * 4.0 + nfrag.y * 2.5 + vec3(0.0, 2.094, 4.189));
     vec4 warm = mix(vec4(bgHue * 0.55, 1.0), prev, min(length(prev.rgb) * 5.0, 1.0));
     return mix(col, warm, idx);
 }
