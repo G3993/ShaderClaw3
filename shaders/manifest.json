@@ -1076,5 +1076,17 @@
       "Text"
     ],
     "file": "text_chat.fs"
+  },
+  {
+    "id": 507,
+    "title": "Stream",
+    "description": "Multi-lane horizontal scrolling text. Each lane shows the message repeating endlessly with parallax speeds, vertical sway, edge fade, and HDR halo. Bind a Background Layer to put the stream over any other shader.",
+    "type": "generator",
+    "categories": [
+      "Generator",
+      "Text",
+      "Audio Reactive"
+    ],
+    "file": "text_stream.fs"
   }
 ]
