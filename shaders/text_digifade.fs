@@ -10,8 +10,8 @@
     { "NAME": "density", "LABEL": "Dissolve", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
     { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.0, 0.05, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
@@ -91,6 +91,45 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
+// BACKGROUND: ACID WASH FLUID MARBLE
+// =======================================================================
+
+vec3 acidWashBg(vec2 uv) {
+    float t = TIME * 0.3;
+    // 3 layers of domain-warped marble
+    vec2 p1 = uv * 4.0 + vec2(t * 0.7, t * 0.5);
+    vec2 p2 = uv * 6.0 + vec2(-t * 0.5, t * 0.8);
+    vec2 p3 = uv * 9.0 + vec2(t * 0.3, -t * 0.6);
+
+    // Domain warp each layer
+    p1 += vec2(sin(p1.y * 2.1 + t), cos(p1.x * 1.7 - t)) * 0.3;
+    p2 += vec2(cos(p2.x * 3.1 + t * 1.3), sin(p2.y * 2.7 + t)) * 0.2;
+
+    float m1 = sin(p1.x + sin(p1.y + sin(p1.x * 0.7))) * 0.5 + 0.5;
+    float m2 = sin(p2.x * 1.3 + sin(p2.y * 0.9 + t)) * 0.5 + 0.5;
+    float m3 = sin(p3.x + p3.y + t * 0.7) * 0.5 + 0.5;
+
+    // 4-color marble: magenta, cyan, gold, deep violet
+    vec3 c1 = vec3(2.0, 0.0, 2.0); // magenta HDR
+    vec3 c2 = vec3(0.0, 2.0, 2.0); // cyan HDR
+    vec3 c3 = vec3(2.0, 1.6, 0.0); // gold HDR
+    vec3 c4 = vec3(0.4, 0.0, 2.0); // violet HDR
+
+    vec3 col = mix(c1, c2, m1);
+    col = mix(col, c3, m2 * 0.6);
+    col = mix(col, c4, m3 * 0.4);
+
+    // Dark marble veins (black ink contrast)
+    float vein = smoothstep(0.45, 0.55, m1) * smoothstep(0.55, 0.45, m1 + 0.05);
+    col *= 1.0 - vein * 0.9;
+
+    // Scale down to not wash out text (keep bg darker)
+    col *= 0.4;
+
+    return col;
+}
+
+// =======================================================================
 // EFFECT: DIGIFADE - glitch dissolve
 // =======================================================================
 
@@ -167,6 +206,17 @@ void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     int p = int(preset);
     vec4 col = effectDigifade(uv, p);
+
+    if (!transparentBg) {
+        vec3 bg = acidWashBg(uv);
+        if (col.a < 0.5) {
+            col.rgb = bg;
+        } else {
+            // White text gets HDR boost (3.0× peak) against acid wash
+            col.rgb = vec3(3.0, 3.0, 3.0);
+        }
+        col.a = 1.0;
+    }
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
