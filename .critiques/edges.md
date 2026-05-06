@@ -17,3 +17,24 @@
 - Stretch, particle size defaults tuned up for visibility
 **HDR peaks reached:** particle cores + halo accumulation → 2.5+ per cluster
 **Estimated rating:** 4.0★
+
+## 2026-05-06
+**Prior rating:** 0.0★
+**Approach:** 3D raymarch
+**Critique:**
+1. Reference fidelity: Prior v2 (LED particle fix) was 2D capsule particles; new angle is fully standalone 3D SDF with no input image dependency.
+2. Compositional craft: Concentric rings around a central sphere create strong circular symmetry; orbiting camera adds cinematic depth and parallax.
+3. Technical execution: 8 independent tori each with rotX(ph+t)*rotY(ph*1.618+t*r) golden-ratio phase separation. 64-step march. fwidth() AA on longitude-line surface decoration.
+4. Liveness: Rings spin at different rates per index; camera orbits in two axes; audio expands ring thickness.
+5. Differentiation: Armillary sphere with gyroscope rings is a completely new metaphor — no prior version used concentric orbital ring geometry.
+**Changes:**
+- Full rewrite as "Armillary Sphere" — 3D concentric gyroscope rings SDF
+- N tori (2–8 count) each tilted at golden-ratio-spaced angles, independently rotating
+- Gold rings vs deep navy inner sphere (material split by length(p))
+- HDR electric cyan rim glow: 3.2× at grazing angle
+- Longitude-line surface decoration with fwidth() AA
+- Deep navy starfield background
+- 64-step raymarcher, orbiting camera (two-axis)
+- audioMod modulates ring thickness
+**HDR peaks reached:** cyan rim 3.2, gold specular 3.0, ring diffuse 2.4
+**Estimated rating:** 4.5★
