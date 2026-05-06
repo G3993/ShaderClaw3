@@ -19,3 +19,23 @@
 - audioMod modulates displacement and brightness
 **HDR peaks reached:** per-channel hdrBoost * diffuse = 2.0; white spec adds ~2.5
 **Estimated rating:** 4.0★
+
+## 2026-05-06
+**Prior rating:** 0.0★
+**Approach:** 3D wireframe (perspective projection)
+**Critique:**
+1. Reference fidelity: Prior v2 (Signal Interference) used 3D RGB data planes; new angle uses projected box-frame corridor — completely different geometry and visual metaphor.
+2. Compositional craft: Infinite corridor of 14 nested wireframe frames creates strong depth illusion; depth-based cyan→violet color fade reinforces recession; pure black bg maximizes contrast.
+3. Technical execution: Box frames perspective-projected from Z-corridor; fwidth() AA applied to all 4 edge distances (edgeH, edgeV) per frame; exponential depth brightness decay; receding grid overlay.
+4. Liveness: Camera fly-through via mod(t*flySpeed, 1.8) continuous loop; audio widens wireWidth; frame spacing creates beat-sync potential.
+5. Differentiation: Wireframe infinite room corridor is completely new — no prior version used projected box-frame geometry, wireframe aesthetic, or corridor infinite-loop.
+**Changes:**
+- Full rewrite as "Recursive Wireframe Room" — 14 perspective-projected box frames
+- fwidth() AA on all 4 edge distances per frame (edgeH, edgeV)
+- Color ramp: HDR cyan (0.0, 2.8, 3.2) near → HDR violet (2.2, 0.0, 2.8) far
+- Exponential depth fade exp(-depth*2.2)
+- Subtle receding background grid with fwidth() AA
+- Pure black background for maximum wire contrast
+- audioMod modulates wireWidth
+**HDR peaks reached:** cyan near-frame 3.2, violet far-frame 2.8; grid accent 0.25
+**Estimated rating:** 4.5★
