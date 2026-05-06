@@ -1,124 +1,125 @@
 /*{
-  "DESCRIPTION": "Oil paint effect — Kuwahara filter with relief lighting for painterly brush strokes",
-  "CREDIT": "ShaderClaw (Kuwahara approach inspired by flockaroo)",
-  "CATEGORIES": ["Effect"],
+  "DESCRIPTION": "Moonlit Japanese Lacquerware — Rimpa-school inspired radial brushstroke arcs: gold and vermilion on black lacquer, with a silver moon disc focal element",
+  "CREDIT": "Easel auto-improve 2026-05-06",
+  "CATEGORIES": ["Generator"],
   "INPUTS": [
-    { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "brushRadius", "LABEL": "Brush Size", "TYPE": "float", "DEFAULT": 4.0, "MIN": 1.0, "MAX": 12.0 },
-    { "NAME": "paintSpec", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "vignetteAmt", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
-  ],
-  "PASSES": [
-    { "TARGET": "paintBuf", "PERSISTENT": true },
-    {}
+    { "NAME": "arcSpeed",  "LABEL": "Arc Speed",  "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.0, "MAX": 0.8 },
+    { "NAME": "arcCount",  "LABEL": "Arc Layers", "TYPE": "float", "DEFAULT": 6.0,  "MIN": 2.0, "MAX": 12.0 },
+    { "NAME": "hdrPeak",   "LABEL": "HDR Peak",   "TYPE": "float", "DEFAULT": 2.4,  "MIN": 1.0, "MAX": 5.0 },
+    { "NAME": "moonSize",  "LABEL": "Moon Size",  "TYPE": "float", "DEFAULT": 0.22, "MIN": 0.05,"MAX": 0.5 },
+    { "NAME": "audioReact","LABEL": "Audio React","TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0, "MAX": 2.0 }
   ]
 }*/
 
-#define PI 3.1415927
+#define PI 3.14159265359
+#define TAU 6.28318530718
 
-// Aspect-correct UV
-vec2 fitUV(vec2 pos) {
-    return (pos - 0.5 * RENDERSIZE) * min(IMG_SIZE_inputImage.y / RENDERSIZE.y, IMG_SIZE_inputImage.x / RENDERSIZE.x) / IMG_SIZE_inputImage + 0.5;
+float hash21(vec2 p) { return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+float hash11(float n) { return fract(sin(n*12.9898)*43758.5453); }
+
+// Smooth FBM for lacquer texture variation
+float noise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    f = f*f*(3.0-2.0*f);
+    return mix(mix(hash21(i),hash21(i+vec2(1,0)),f.x),
+               mix(hash21(i+vec2(0,1)),hash21(i+vec2(1,1)),f.x),f.y);
 }
-
-// Kuwahara filter: find the quadrant with lowest variance and use its mean color
-// This creates the flat-color brush stroke look of oil paintings
-vec3 kuwahara(vec2 uv, float radius) {
-    vec2 texel = 1.0 / RENDERSIZE;
-
-    vec3 mean[4];
-    vec3 var_acc[4];
-    float count[4];
-
-    // Initialize accumulators
-    for (int i = 0; i < 4; i++) {
-        mean[i] = vec3(0.0);
-        var_acc[i] = vec3(0.0);
-        count[i] = 0.0;
-    }
-
-    // Sample the 4 quadrants around the pixel
-    for (int j = -6; j <= 6; j++) {
-        for (int i = -6; i <= 6; i++) {
-            if (abs(float(i)) > radius || abs(float(j)) > radius) continue;
-
-            vec3 c = texture2D(inputImage, fitUV((uv * RENDERSIZE) + vec2(float(i), float(j)))).rgb;
-
-            // Determine which quadrant(s) this sample belongs to
-            // Quadrant 0: top-right, 1: top-left, 2: bottom-left, 3: bottom-right
-            // Use loop to assign to correct quadrant (WebGL requires const/loop index)
-            int qi = (i >= 0) ? 0 : 1;
-            int qj = (j >= 0) ? 0 : 2;
-            int q = qi + qj;
-
-            for (int k = 0; k < 4; k++) {
-                if (k == q) {
-                    mean[k] += c;
-                    var_acc[k] += c * c;
-                    count[k] += 1.0;
-                }
-            }
-        }
-    }
-
-    // Find the quadrant with minimum variance
-    float minVar = 1e8;
-    vec3 result = vec3(0.0);
-
-    for (int q = 0; q < 4; q++) {
-        if (count[q] < 1.0) continue;
-        vec3 m = mean[q] / count[q];
-        vec3 v = var_acc[q] / count[q] - m * m;
-        float totalVar = v.r + v.g + v.b;
-        if (totalVar < minVar) {
-            minVar = totalVar;
-            result = m;
-        }
-    }
-
-    return result;
+float fbm(vec2 p) {
+    float v=0.0,a=0.5;
+    for(int i=0;i<4;i++){v+=noise(p)*a;p*=2.0;a*=0.5;}
+    return v;
 }
 
 void main() {
-    vec2 pos = gl_FragCoord.xy;
-    vec2 uv = pos / RENDERSIZE;
+    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
+    float aspect = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
+    uv.x *= aspect;
 
-    // ==== PASS 0: Kuwahara paint filter ====
-    if (PASSINDEX == 0) {
-        gl_FragColor = vec4(kuwahara(uv, brushRadius), 1.0);
-        return;
+    float audio = 1.0 + audioLevel*audioReact*0.3 + audioBass*audioReact*0.15;
+
+    // Lacquer black background with subtle texture
+    float bgNoise = fbm(uv*3.0 + TIME*0.02);
+    vec3 col = vec3(0.018, 0.012, 0.008) + bgNoise*0.012;
+
+    // Silver moon disc — focal element, top-right quadrant
+    vec2 moonPos = vec2(aspect*0.35, 0.38);
+    float moonDist = length(uv - moonPos) - moonSize*(1.0+audioBass*audioReact*0.04);
+    float moonAA   = fwidth(moonDist);
+    float moonMask = 1.0 - smoothstep(-moonAA, moonAA, moonDist);
+    // Moon surface: cool silver with subtle craters
+    float craterN = fbm(uv*18.0)*0.5 + fbm(uv*42.0)*0.25;
+    vec3 moonCol  = vec3(0.72, 0.78, 0.85) * (0.75 + craterN*0.25);
+    moonCol      += vec3(0.3, 0.35, 0.45) * pow(max(1.0-length(uv-moonPos)/moonSize,0.0),3.0); // limb brightening
+    col = mix(col, moonCol * hdrPeak * 0.8 * audio, moonMask);
+
+    // Moon halo glow
+    float moonGlow = exp(-max(moonDist,0.0)*4.0);
+    col += vec3(0.4, 0.45, 0.6) * moonGlow * 0.6 * hdrPeak * audio;
+
+    // Rimpa brushstroke arcs — concentric radial arcs around the moon
+    int N = int(clamp(arcCount, 2.0, 12.0));
+    for (int i = 0; i < 12; i++) {
+        if (i >= N) break;
+        float fi = float(i);
+
+        // Each arc: a ring at radius r, spanning an arc from angle a0 to a1
+        float r0  = 0.28 + fi * 0.12 + sin(TIME * arcSpeed * (0.5 + fi*0.11) + fi*1.7) * 0.04;
+        float phaseOff = fi * (PI / float(N)) + TIME * arcSpeed * (0.1 + fi * 0.07);
+        float arcSpan  = PI * 0.45 + sin(TIME * arcSpeed * 0.3 + fi) * 0.1;
+
+        // Distance to the arc (ring segment in 2D)
+        // Compute polar coords relative to moon
+        vec2 d = uv - moonPos;
+        float r = length(d);
+        float ang = atan(d.y, d.x);
+
+        // Signed distance to arc
+        float rDist = abs(r - r0);
+        // Angle distance (angular segment)
+        float a0 = phaseOff;
+        float a1 = phaseOff + arcSpan;
+        // Wrap angle into arc range
+        float angW = ang - a0;
+        angW = mod(angW + TAU, TAU);
+        float arcLen = a1 - a0;
+        float angDist = min(angW, max(arcLen - angW, 0.0));
+        float arcDist = max(rDist, max(-angW, angW - arcLen) * r0) - 0.006;
+
+        // Stroke width modulated by FBM for brushstroke feel
+        float bw   = 0.018 + fbm(uv*5.0 + fi)*0.010;
+        float aa   = fwidth(arcDist);
+        float mask = 1.0 - smoothstep(-aa, aa, arcDist - bw);
+
+        // Alternate colors: gold, vermilion, crimson-gold
+        vec3 strokeCol;
+        int ci = int(mod(fi, 3.0));
+        if (ci == 0) strokeCol = vec3(1.0, 0.80, 0.0);    // gold
+        else if (ci == 1) strokeCol = vec3(0.95, 0.22, 0.05); // vermilion
+        else strokeCol = vec3(1.0, 0.55, 0.0);             // orange-gold
+
+        // Inner edge darkening (ink-like thick/thin)
+        float edgeDark = smoothstep(bw*0.3, bw*0.8, abs(arcDist));
+        strokeCol *= 0.4 + edgeDark * 0.6;
+
+        col = mix(col, strokeCol * hdrPeak * audio, mask);
+
+        // Glow halo
+        float haloD = max(arcDist - bw, 0.0);
+        col += strokeCol * exp(-haloD*60.0) * 0.5 * hdrPeak * audio;
     }
 
-    // ==== PASS 1: Relief lighting ====
-    vec2 texel = 1.0 / RENDERSIZE;
-    float valC = dot(texture2D(paintBuf, uv).rgb, vec3(0.333));
-    float valR = dot(texture2D(paintBuf, uv + vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valL = dot(texture2D(paintBuf, uv - vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valU = dot(texture2D(paintBuf, uv + vec2(0.0, texel.y)).rgb, vec3(0.333));
-    float valD = dot(texture2D(paintBuf, uv - vec2(0.0, texel.y)).rgb, vec3(0.333));
-
-    vec3 norm = normalize(vec3(
-        (valR - valL) / texel.x,
-        (valU - valD) / texel.y,
-        150.0
-    ));
-
-    vec3 light = normalize(vec3(-1.0, 1.0, 1.4));
-    float diff = clamp(dot(norm, light), 0.0, 1.0);
-    float spec = pow(clamp(dot(reflect(light, norm), vec3(0.0, 0.0, -1.0)), 0.0, 1.0), 12.0) * paintSpec;
-
-    gl_FragColor = texture2D(paintBuf, uv) * mix(diff, 1.0, 0.9)
-                 + spec * vec4(0.85, 1.0, 1.15, 1.0);
-
-    // Vignette
-    if (vignetteAmt > 0.0) {
-        vec2 scc = (pos - 0.5 * RENDERSIZE) / RENDERSIZE.x;
-        float vign = 1.1 - vignetteAmt * dot(scc, scc);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.x / RENDERSIZE.x * PI) * 40.0);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.y / RENDERSIZE.y * PI) * 20.0);
-        gl_FragColor.xyz *= vign;
+    // Fine gold dust scattered over the lacquer (kintsugi effect)
+    for (int j = 0; j < 40; j++) {
+        float fj = float(j);
+        vec2 dustPos = vec2(hash11(fj*1.31)*2.0-1.0, hash11(fj*2.71)*2.0-1.0);
+        dustPos.x *= aspect;
+        float dustR = 0.003 + hash11(fj*3.13)*0.008;
+        float dd = length(uv - dustPos) - dustR;
+        float daa = fwidth(dd);
+        float dmask = 1.0 - smoothstep(-daa, daa, dd);
+        float pulse = 0.6 + 0.4*sin(TIME*arcSpeed*2.0 + fj*1.7);
+        col += vec3(1.0, 0.88, 0.3) * dmask * pulse * hdrPeak * 0.7 * audio;
     }
 
-    gl_FragColor.w = 1.0;
+    gl_FragColor = vec4(col, 1.0);
 }
