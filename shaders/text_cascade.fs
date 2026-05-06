@@ -11,9 +11,13 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.95, 0.92, 0.88, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "dotScale",  "LABEL": "Dot Scale",  "TYPE": "float", "DEFAULT": 12.0, "MIN": 4.0, "MAX": 40.0 },
+    { "NAME": "dotMix",    "LABEL": "Dot Mix",    "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "hdrGlow",   "LABEL": "HDR Glow",   "TYPE": "float", "DEFAULT": 2.2,  "MIN": 1.0, "MAX": 4.0 },
+    { "NAME": "audioMod",  "LABEL": "Audio",      "TYPE": "float", "DEFAULT": 0.6,  "MIN": 0.0, "MAX": 2.0 }
   ]
 }*/
 
@@ -93,6 +97,62 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
+// BACKGROUND: Pop Art Halftone (CMY Ben-Day dots)
+// =======================================================================
+
+vec3 halftonePopBg(vec2 uv, float aspect, float t) {
+    float audio = 1.0 + audioLevel * audioMod * 0.25;
+
+    // Halftone dot grid — 3 rotated grids (CMY)
+    // Cyan dots at 15°
+    float angleC = 0.2618; // 15 degrees
+    vec2 uvC = vec2(uv.x*cos(angleC)-uv.y*sin(angleC),
+                    uv.x*sin(angleC)+uv.y*cos(angleC));
+    uvC *= dotScale;
+    vec2 cellC = fract(uvC) - 0.5;
+    float dotC = length(cellC);
+    float maskC = 1.0 - smoothstep(0.28, 0.35, dotC);
+
+    // Magenta dots at 75°
+    float angleM = 1.3090; // 75 degrees
+    vec2 uvM = vec2(uv.x*cos(angleM)-uv.y*sin(angleM),
+                    uv.x*sin(angleM)+uv.y*cos(angleM));
+    uvM *= dotScale;
+    vec2 cellM = fract(uvM) - 0.5;
+    float dotM = length(cellM);
+    float maskM = 1.0 - smoothstep(0.28, 0.35, dotM);
+
+    // Yellow dots at 45°
+    float angleY = 0.7854; // 45 degrees
+    vec2 uvY = vec2(uv.x*cos(angleY)-uv.y*sin(angleY),
+                    uv.x*sin(angleY)+uv.y*cos(angleY));
+    uvY *= (dotScale * 1.2);
+    vec2 cellY = fract(uvY) - 0.5;
+    float dotY = length(cellY);
+    float maskY = 1.0 - smoothstep(0.28, 0.35, dotY);
+
+    // Warm canvas white base
+    vec3 canvas = vec3(0.96, 0.93, 0.88);
+
+    // Apply CMY subtractive inks
+    vec3 cyanInk    = vec3(0.0,  0.78, 0.88);  // fully saturated cyan
+    vec3 magentaInk = vec3(0.92, 0.0,  0.55);  // fully saturated magenta
+    vec3 yellowInk  = vec3(0.98, 0.88, 0.0);   // fully saturated yellow
+
+    // Slow hue drift
+    float hDrift = sin(t * 0.15) * 0.08;
+    cyanInk    = mix(cyanInk,    vec3(0.0, 0.88, 0.6),  hDrift+0.5);
+    magentaInk = mix(magentaInk, vec3(0.85, 0.0, 0.9), abs(sin(t*0.1)));
+
+    vec3 bg = canvas;
+    bg = mix(bg, cyanInk,    maskC * dotMix * audio);
+    bg = mix(bg, magentaInk, maskM * dotMix * audio);
+    bg = mix(bg, yellowInk,  maskY * dotMix * 0.6 * audio);
+
+    return bg;
+}
+
+// =======================================================================
 // EFFECT: CASCADE - tiled rows with wave offsets
 // =======================================================================
 
@@ -132,9 +192,16 @@ vec4 effectCascade(vec2 uv) {
     }
 
     bool inv = mod(rowIdx, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
+
+    vec3 bg = transparentBg ? bgColor.rgb : halftonePopBg(uv, aspect, TIME);
+
+    vec3 fg = inv ? bg : textColor.rgb;
+    vec3 bgRow = inv ? textColor.rgb : bg;
+    vec3 fc = mix(bgRow, fg, textHit);
+
+    float audio = 1.0 + audioLevel * audioMod * 0.25;
+    fc += (vec3(1.0) - textColor.rgb) * textHit * hdrGlow * 0.3 * audio;
+
     float a = 1.0;
     if (transparentBg) { a = textHit; fc = textColor.rgb; }
     return vec4(fc, a);
