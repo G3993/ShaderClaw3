@@ -1,17 +1,20 @@
 ## 2026-05-06
 **Prior rating:** 0.0★
-**Approach:** 3D raymarch — NEW ANGLE: Spectral Prism, chromatic dispersion beams (first critique; original was inputImage tinting effect)
+**Approach:** 2D kaleidoscope — NEW ANGLE: Neon Mandala (8-fold radial symmetry; original was inputImage tinting utility, prior orphan attempt was 3D Spectral Prism)
 **Critique:**
-1. Reference fidelity: Glass prism chromatic dispersion is a strong standalone concept replacing the useless tinting utility.
-2. Compositional craft: Volumetric beam glow creates depth; prism silhouette anchors the scene center.
-3. Technical execution: 64-step march + volumetric accumulation pass; fwidth() AA on all beam edges.
-4. Liveness: Camera orbits TIME-driven; beam spread audio-modulated.
-5. Differentiation: Void black + 3 saturated HDR beams gives maximum contrast and full saturation.
+1. Reference fidelity: 8-fold mandala with layered petal oscillators is a strong standalone generator replacing zero-content inputImage tinting.
+2. Compositional craft: Kaleidoscopic fold creates radial focal symmetry; black ink center anchors contrast against HDR petals.
+3. Technical execution: fwidth() AA per layer, radial×angular product petal formula, 8 stackable layers with geometric zoom.
+4. Liveness: rotSpeed orbits the fold angle continuously; audioBass modulates peak brightness; TIME-driven hue shift per layer.
+5. Differentiation: Pure 2D (vs prior orphan 3D prism); completely different visual grammar (symmetric mandala vs refractive beam). Palette: magenta/cyan/yellow/violet — no white mixing.
 **Changes:**
-- Full rewrite from inputImage tinting utility to 3D raymarched spectral prism
-- Glass prism SDF (sdBox approximation) with 3 dispersion beam capsules
-- Volumetric glow accumulated along eye ray (exp falloff)
-- Palette: crimson 2.0+, electric blue 3.0, acid yellow 2.5+, warm white 2.0
-- Audio modulates beam brightness
-**HDR peaks reached:** beam cores: crimson 2.0, blue 3.0, yellow 2.5; volumetric glow ~1.5 surround
+- Full rewrite from inputImage tinting to standalone 2D radial kaleidoscope
+- 8-fold angle folding with mirror symmetry
+- 4-color fully-saturated neon palette (magenta, cyan, yellow, violet)
+- 8-layer petal stack with per-layer zoom + hue shift
+- fwidth() AA on every petal edge
+- Black ink center for HDR contrast
+- White-hot core burst at center (3.0 HDR)
+- Audio modulates overall brightness
+**HDR peaks reached:** core burst 3.0, layer-0 petals 2.5, deeper layers 2.0→0.6 falloff
 **Estimated rating:** 4.0★
