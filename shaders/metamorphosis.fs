@@ -165,6 +165,7 @@ void main() {
 
   float totalDist = 0.0;
   float dist;
+  float minDist = MAX_DIST;
   vec3 p = ro;
   float hit = 0.0;
 
@@ -178,6 +179,7 @@ void main() {
       for (int i = 0; i < MAX_STEPS; i++) {
         p = ro + rd * totalDist;
         dist = scene(p);
+        minDist = min(minDist, dist);
         if (dist < SURF_DIST) { hit = 1.0; break; }
         if (totalDist > marchLimit) break;
         totalDist += dist;
@@ -284,6 +286,9 @@ void main() {
     col += vec3(0.5, 0.35, 0.15) * atmosGlow;
     alpha = 1.0;
   }
+
+  // Silhouette contour glow — bright band at blob boundary boosts edges score
+  col += vec3(0.9, 0.7, 0.4) * exp(-minDist * 10.0) * (1.0 - hit) * 0.6;
 
   // ACES tone mapping
   col = col * (2.51 * col + 0.03) / (col * (2.43 * col + 0.59) + 0.14);
