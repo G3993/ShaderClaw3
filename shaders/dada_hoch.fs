@@ -4,7 +4,7 @@
   "INPUTS": [
     { "NAME": "camDist",       "LABEL": "Camera Distance", "TYPE": "float", "MIN": 2.0, "MAX": 14.0, "DEFAULT": 6.0 },
     { "NAME": "camHeight",     "LABEL": "Camera Height",   "TYPE": "float", "MIN": -2.0, "MAX": 4.0, "DEFAULT": 1.4 },
-    { "NAME": "camOrbitSpeed", "LABEL": "Orbit Speed",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 0.18 },
+    { "NAME": "camOrbitSpeed", "LABEL": "Orbit Speed",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.06 },
     { "NAME": "camAzimuth",    "LABEL": "Camera Azimuth",  "TYPE": "float", "MIN": 0.0, "MAX": 6.2832, "DEFAULT": 0.0 },
     { "NAME": "keyAngle",      "LABEL": "Key Light Angle", "TYPE": "float", "MIN": 0.0, "MAX": 6.2832, "DEFAULT": 0.9 },
     { "NAME": "keyElevation",  "LABEL": "Key Elevation",   "TYPE": "float", "MIN": 0.0, "MAX": 1.5708, "DEFAULT": 0.85 },
@@ -14,7 +14,7 @@
     { "NAME": "rimStrength",   "LABEL": "Rim Strength",    "TYPE": "float", "MIN": 0.0, "MAX": 1.5,  "DEFAULT": 0.55 },
     { "NAME": "exposure",      "LABEL": "Exposure",        "TYPE": "float", "MIN": 0.3, "MAX": 3.0,  "DEFAULT": 1.05 },
     { "NAME": "audioReact",    "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 1.0 },
-    { "NAME": "driftSpeed",    "LABEL": "Drift Speed",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 0.7 },
+    { "NAME": "driftSpeed",    "LABEL": "Drift Speed",     "TYPE": "float", "MIN": 0.0, "MAX": 1.5,  "DEFAULT": 0.20 },
     { "NAME": "paletteShift",  "LABEL": "Palette Shift",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.3 }
   ]
 }*/
@@ -61,16 +61,21 @@ Audio synthAudio(float ar, float t) {
     return a;
 }
 
-// ── Bass cut — sudden camera translation. Holds, then snaps to a new offset.
+// ── Bass cut — camera nudges to a new resting point and holds.
+// Slowed from 2.2s to ~7s period and softened from a hard 5%-of-period
+// snap to a 25%-of-period eased glide. Was reading as jarring strobe.
 vec3 bassCutOffset(float t, float bass) {
-    float epoch = floor(t * 0.45 + bass * 1.7);
+    float rate  = 0.14 + 0.05 * bass;          // was 0.45 + 1.7*bass
+    float epoch = floor(t * rate);
     vec2 dir2   = hash22(vec2(epoch, 17.3)) * 2.0 - 1.0;
     float dirZ  = hash11(epoch * 5.13) * 2.0 - 1.0;
-    float mag   = 0.7 + 1.4 * hash11(epoch * 3.7);
-    float phase = fract(t * 0.45 + bass * 1.7);
-    // "Cut" = near-instant snap, then hold (smoothstep with tiny window).
-    float slide = smoothstep(0.0, 0.05, phase);
-    return vec3(dir2.x, dirZ * 0.4, dir2.y) * mag * slide;
+    float mag   = 0.45 + 0.7 * hash11(epoch * 3.7);  // was 0.7..2.1, now 0.45..1.15
+    float phase = fract(t * rate);
+    // Eased ease-in/out across 25% of the period — smooth glide, not snap.
+    float u     = smoothstep(0.0, 0.25, phase);
+    // Hermite ease-out on the tail so motion settles softly.
+    u           = u * u * (3.0 - 2.0 * u);
+    return vec3(dir2.x, dirZ * 0.4, dir2.y) * mag * u;
 }
 
 // ── Primitive SDFs ───────────────────────────────────────────────────────
@@ -206,7 +211,10 @@ void objAxis(int i, out vec3 axis, out float rate) {
     float seed = fi * 1.731 + 0.5;
     vec3 a = vec3(hash11(seed * 2.1), hash11(seed * 3.7), hash11(seed * 5.9)) * 2.0 - 1.0;
     axis = normalize(a + vec3(0.001));
-    rate = (hash11(seed * 9.1) > 0.5 ? 1.0 : -1.0) * (0.4 + hash11(seed * 11.1) * 0.7);
+    // Per-object spin rate. Was 0.4..1.1 rad·driftSpeed → some objects
+    // completed a full rotation every 5.5s. Calmed to 0.18..0.55, so
+    // even the fastest object takes ~11s/rotation at default driftSpeed.
+    rate = (hash11(seed * 9.1) > 0.5 ? 1.0 : -1.0) * (0.18 + hash11(seed * 11.1) * 0.37);
 }
 
 // Rodrigues axis-angle rotation.
@@ -225,8 +233,9 @@ Hit objectHit(int i, vec3 p, float t, float treb, float pal) {
     vec3 axis; float rate;
     objAxis(i, axis, rate);
 
-    // Trebble spins fastest gear/wheel — pick objects 0 and 1 to be the "fastest".
-    float trebBoost = (i == 0 || i == 1) ? (1.0 + treb * 3.5) : 1.0;
+    // Treble lightly nudges the lead gear/wheel — was 4.5x at peak treble
+    // which read as out-of-control spinning. Capped at 1.8x.
+    float trebBoost = (i == 0 || i == 1) ? (1.0 + treb * 0.8) : 1.0;
     float ang = t * rate * trebBoost;
 
     vec3 lp = p - ctr;
