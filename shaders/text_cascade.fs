@@ -11,9 +11,9 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.92, 0.7, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.01, 0.005, 0.005, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
@@ -93,6 +93,45 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
+// BACKGROUND: CINEMATIC SPOTLIGHT
+// =======================================================================
+
+vec3 spotlightBg(vec2 uv) {
+    // Dark theater fog
+    vec3 col = vec3(0.01, 0.005, 0.005);
+
+    // Main spotlight beam from top-center
+    vec2 spotCenter = vec2(0.5 + sin(TIME * 0.15) * 0.08, 1.2); // moves slightly
+    vec2 dir = uv - spotCenter;
+    float beamAngle = atan(dir.x, -dir.y); // angle from beam axis
+    float beamDist = length(dir);
+    float spotCone = smoothstep(0.35, 0.0, abs(beamAngle)); // cone width
+    float beamFalloff = 1.0 / (1.0 + beamDist * beamDist * 2.0);
+    vec3 spotColor = vec3(2.0, 1.6, 0.8); // warm gold HDR
+    col += spotColor * spotCone * beamFalloff * (0.8 + audioLevel * 0.3);
+
+    // Fog particles (dust motes in beam)
+    float dust = 0.0;
+    for (int i = 0; i < 6; i++) {
+        float fi = float(i);
+        vec2 dp = vec2(fract(fi * 0.371 + sin(TIME * 0.2 + fi) * 0.1),
+                      fract(fi * 0.537 + TIME * 0.04 * (0.5 + fract(fi * 0.271))));
+        dp = dp - 0.5;
+        dp.x *= RENDERSIZE.x / RENDERSIZE.y;
+        float dd = length(uv - (dp + 0.5)) * 30.0;
+        dust += exp(-dd * dd) * spotCone * beamFalloff;
+    }
+    col += vec3(1.5, 1.2, 0.7) * dust * 0.4;
+
+    // Floor reflection at bottom
+    float floorY = 0.08;
+    float floorGlow = smoothstep(floorY + 0.15, floorY, uv.y) * spotCone;
+    col += vec3(1.8, 1.4, 0.6) * floorGlow * 0.5;
+
+    return col;
+}
+
+// =======================================================================
 // EFFECT: CASCADE - tiled rows with wave offsets
 // =======================================================================
 
@@ -147,6 +186,17 @@ vec4 effectCascade(vec2 uv) {
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     vec4 col = effectCascade(uv);
+
+    if (!transparentBg) {
+        vec3 bg = spotlightBg(uv);
+        if (col.a < 0.5) {
+            col.rgb = bg;
+        } else {
+            // Text gets spotlight warm glow + 2x HDR
+            col.rgb = mix(col.rgb * 2.2, col.rgb * 2.2 + bg * 0.3, 0.3);
+        }
+        col.a = 1.0;
+    }
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
