@@ -1,173 +1,214 @@
 /*{
-  "DESCRIPTION": "Vishes — cellular random walkers leaving hue-drifting color trails on a slow-fading grid",
-  "CREDIT": "ShaderClaw — cell-walker sketch translated to multi-pass ISF",
-  "CATEGORIES": ["Generator"],
+  "DESCRIPTION": "Bioluminescent Reef 3D — ocean-floor raymarcher with sdCapsule coral branches, brain coral, tube worms, emission-only bioluminescent glow. No external lighting.",
+  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
+  "CREDIT": "ShaderClaw — full rewrite to 3D bioluminescent reef raymarcher",
+  "ISFVSN": "2",
   "INPUTS": [
-    { "NAME": "gridSize", "LABEL": "Grid Size", "TYPE": "float", "DEFAULT": 120.0, "MIN": 20.0, "MAX": 400.0 },
-    { "NAME": "walkers", "LABEL": "Walkers", "TYPE": "float", "DEFAULT": 6.0, "MIN": 1.0, "MAX": 16.0 },
-    { "NAME": "stepRate", "LABEL": "Step Rate", "TYPE": "float", "DEFAULT": 40.0, "MIN": 1.0, "MAX": 240.0 },
-    { "NAME": "hueDrift", "LABEL": "Hue Drift", "TYPE": "float", "DEFAULT": 0.015, "MIN": 0.0, "MAX": 0.1 },
-    { "NAME": "fadeRate", "LABEL": "Trail Fade", "TYPE": "float", "DEFAULT": 0.004, "MIN": 0.0, "MAX": 0.08 },
-    { "NAME": "saturation", "LABEL": "Saturation", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "brightness", "LABEL": "Brightness", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "bloom", "LABEL": "Bloom", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "pulse", "LABEL": "Audio Pulse", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "bounceEdges", "LABEL": "Bounce Edges", "TYPE": "bool", "DEFAULT": true },
-    { "NAME": "backgroundColor", "LABEL": "BG Color", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] }
-  ],
-  "PASSES": [
-    { "TARGET": "stateBuf", "PERSISTENT": true, "WIDTH": 16, "HEIGHT": 1 },
-    { "TARGET": "canvas", "PERSISTENT": true },
-    {}
+    { "NAME": "speed",       "LABEL": "Sway Speed",   "TYPE": "float", "MIN": 0.0,  "MAX": 3.0,  "DEFAULT": 0.6 },
+    { "NAME": "reefDensity","LABEL": "Reef Density",  "TYPE": "float", "MIN": 0.3,  "MAX": 2.0,  "DEFAULT": 1.0 },
+    { "NAME": "hdrPeak",    "LABEL": "HDR Peak",      "TYPE": "float", "MIN": 1.0,  "MAX": 6.0,  "DEFAULT": 2.5 },
+    { "NAME": "audioReact", "LABEL": "Audio React",   "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.5 }
   ]
 }*/
 
-#define MAX_WALKERS 16
-#define TAU 6.28318530718
+// ── Hash helpers ──────────────────────────────────────────────────────────────
+float hash11(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
-float hash11(float p) {
-    p = fract(p * 0.1031);
-    p *= p + 33.33;
-    p *= p + p;
-    return fract(p);
+// ── SDF primitives ────────────────────────────────────────────────────────────
+float sdCapsule(vec3 p, vec3 a, vec3 b, float r) {
+    vec3 pa = p - a, ba = b - a;
+    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+    return length(pa - ba * h) - r;
 }
 
-float hash12(vec2 p) {
-    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.x + p3.y) * p3.z);
+float sdSphere(vec3 p, float r) { return length(p) - r; }
+
+// ── Coral geometry helpers ────────────────────────────────────────────────────
+void getCoralBranch(int i, float tm,
+                    out vec3 base, out vec3 tip, out float radius) {
+    float fi   = float(i);
+    float sway = sin(tm * speed * 0.5 + fi * 1.2) * 0.12;
+    base   = vec3(sin(fi * 2.4) * 1.8 * reefDensity,
+                  0.0,
+                  cos(fi * 1.9) * 1.5 * reefDensity);
+    tip    = base + vec3(sway,
+                         1.2 + 0.4 * sin(fi * 1.7),
+                         sway * 0.5);
+    radius = 0.055 + hash11(fi * 3.71) * 0.04;
 }
 
-vec3 hsv2rgb(vec3 c) {
-    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
-    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+void getTubeWorm(int i, float tm, out vec3 base, out vec3 tip) {
+    float fi   = float(i) + 10.0;
+    float sway = sin(tm * speed * 0.7 + fi * 2.3) * 0.06;
+    base = vec3(sin(fi * 3.1) * 1.3 * reefDensity,
+                0.0,
+                cos(fi * 2.7) * 1.2 * reefDensity);
+    tip  = base + vec3(sway, 1.6 + hash11(fi) * 0.6, sway * 0.3);
 }
 
-vec2 neighborDir(int dir) {
-    if (dir == 0) return vec2(-1.0, -1.0);
-    if (dir == 1) return vec2( 0.0, -1.0);
-    if (dir == 2) return vec2( 1.0, -1.0);
-    if (dir == 3) return vec2(-1.0,  0.0);
-    if (dir == 4) return vec2( 1.0,  0.0);
-    if (dir == 5) return vec2(-1.0,  1.0);
-    if (dir == 6) return vec2( 0.0,  1.0);
-    return vec2( 1.0,  1.0);
+vec3 brainCoralCenter(int i) {
+    float fi = float(i) + 20.0;
+    return vec3(sin(fi * 1.3) * 2.2 * reefDensity,
+                0.28,
+                cos(fi * 1.7) * 1.8 * reefDensity);
 }
 
-vec4 readWalker(float id) {
-    return texture2D(stateBuf, vec2((id + 0.5) / 16.0, 0.5));
+// ── Scene SDF ────────────────────────────────────────────────────────────────
+// matId: 1=floor, 2=coral_cyan, 3=coral_magenta, 4=worm_body, 5=worm_tip, 6=brain_coral
+vec2 sceneMap(vec3 p, float tm) {
+    vec2 best = vec2(p.y, 1.0);   // sea floor at y=0
+
+    // 8 coral branches
+    for (int i = 0; i < 8; i++) {
+        vec3 base, tip; float r;
+        getCoralBranch(i, tm, base, tip, r);
+        float d   = sdCapsule(p, base, tip, r);
+        float mat = (mod(float(i), 2.0) < 1.0) ? 2.0 : 3.0;
+        if (d < best.x) best = vec2(d, mat);
+    }
+
+    // 4 tube worms
+    for (int i = 0; i < 4; i++) {
+        vec3 base, tip;
+        getTubeWorm(i, tm, base, tip);
+        float db = sdCapsule(p, base, mix(base, tip, 0.85), 0.03);
+        if (db < best.x) best = vec2(db, 4.0);
+        float dt = sdSphere(p - tip, 0.07);
+        if (dt < best.x) best = vec2(dt, 5.0);
+    }
+
+    // 3 brain corals
+    for (int i = 0; i < 3; i++) {
+        vec3 ctr = brainCoralCenter(i);
+        float bs = sdSphere(p - ctr, 0.25 + hash11(float(i) * 7.3) * 0.1);
+        if (bs < best.x) best = vec2(bs, 6.0);
+    }
+
+    return best;
 }
 
+// ── Normal via central differences ───────────────────────────────────────────
+vec3 calcNormal(vec3 p, float tm) {
+    vec2 e = vec2(0.001, 0.0);
+    return normalize(vec3(
+        sceneMap(p + e.xyy, tm).x - sceneMap(p - e.xyy, tm).x,
+        sceneMap(p + e.yxy, tm).x - sceneMap(p - e.yxy, tm).x,
+        sceneMap(p + e.yyx, tm).x - sceneMap(p - e.yyx, tm).x
+    ));
+}
+
+// ── Emission colour by material ───────────────────────────────────────────────
+vec3 emitColor(float matId, vec3 hp, float pk, float audio) {
+    if (matId < 1.5)
+        return vec3(0.0, 0.008, 0.018) + vec3(0.0, 0.05, 0.2) * 0.12;
+    if (matId < 2.5)
+        return vec3(0.0, 3.0, 1.5) * pk * audio;          // coral cyan
+    if (matId < 3.5)
+        return vec3(2.0, 0.0, 1.2) * pk * audio;          // coral magenta
+    if (matId < 4.5)
+        return vec3(0.0, 0.05, 0.4) * pk;                 // worm body dim blue
+    if (matId < 5.5)
+        return vec3(0.0, 3.0, 1.5) * 1.5 * pk * audio;   // worm tip hyper-cyan
+    // brain coral: animated stripe mix
+    float stripe = 0.5 + 0.5 * sin(hp.x * 12.0 + hp.z * 10.0);
+    return mix(vec3(2.0, 0.0, 1.2), vec3(0.0, 3.0, 1.5), stripe) * pk * audio * 0.7;
+}
+
+// ── Volumetric water glow along ray ──────────────────────────────────────────
+vec3 volumeGlow(vec3 ro, vec3 rd, float tHit, float tm, float pk, float audio) {
+    vec3  glow = vec3(0.0);
+    float tEnd = min(tHit, 12.0);
+    float dt   = tEnd / 20.0;
+
+    for (int s = 0; s < 20; s++) {
+        vec3 p = ro + rd * ((float(s) + 0.5) * dt);
+
+        for (int i = 0; i < 8; i++) {
+            vec3 base, tip; float r;
+            getCoralBranch(i, tm, base, tip, r);
+            vec3  ba   = tip - base;
+            vec3  pa   = p - base;
+            float h    = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+            float dist = length(pa - ba * h);
+            float g    = exp(-dist * 5.0) * dt * 0.25;
+            vec3  c    = (mod(float(i), 2.0) < 1.0)
+                         ? vec3(0.0, 3.0, 1.5) : vec3(2.0, 0.0, 1.2);
+            glow += c * g * pk * audio;
+        }
+
+        for (int i = 0; i < 4; i++) {
+            vec3 base, tip;
+            getTubeWorm(i, tm, base, tip);
+            float dist = length(p - tip);
+            float g    = exp(-dist * 6.0) * dt * 0.35;
+            glow += vec3(0.0, 3.0, 1.5) * g * pk * audio;
+        }
+    }
+    return glow;
+}
+
+// ── Main ─────────────────────────────────────────────────────────────────────
 void main() {
-    vec2 Res = RENDERSIZE;
-    vec2 pos = gl_FragCoord.xy;
-    float cell = 1.0 / max(gridSize, 1.0);
-    float audio = 1.0 + audioLevel * pulse;
+    vec2 uv  = (gl_FragCoord.xy / RENDERSIZE.xy) * 2.0 - 1.0;
+    uv.x    *= RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
 
-    // =============================================================
-    // PASS 0: advance walker state buffer (16x1)
-    // state encoding: vec4(x_norm, y_norm, hue, stepAccumulator)
-    // =============================================================
-    if (PASSINDEX == 0) {
-        float id = floor(pos.x);
-        if (id >= walkers) {
-            gl_FragColor = vec4(0.0);
-            return;
+    float audio = 1.0 + (audioLevel * 0.3 + audioBass * 0.7) * audioReact;
+    float tm    = TIME;
+
+    // Camera: ocean-floor wide shot, looking down-forward at reef
+    float camSway = sin(tm * 0.23) * 0.12;
+    vec3  ro      = vec3(camSway, 3.0, -4.0);
+    vec3  target  = vec3(0.0, 0.5, 0.0);
+    vec3  forward = normalize(target - ro);
+    vec3  right   = normalize(cross(forward, vec3(0.0, 1.0, 0.0)));
+    vec3  up      = cross(right, forward);
+    vec3  rd      = normalize(forward + uv.x * right * 0.65 + uv.y * up * 0.65);
+
+    // ── Raymarching — 64 steps ──
+    float t    = 0.02;
+    float tMax = 18.0;
+    float matId = 0.0;
+    bool  hit  = false;
+
+    for (int i = 0; i < 64; i++) {
+        vec3  p   = ro + rd * t;
+        vec2  res = sceneMap(p, tm);
+        if (res.x < 0.001) {
+            matId = res.y;
+            hit   = true;
+            break;
         }
-
-        // Seed the walker near center on first frames
-        if (FRAMEINDEX < 2) {
-            float jx = (hash11(id * 7.31 + 1.0) - 0.5) * 0.15;
-            float jy = (hash11(id * 3.19 + 2.0) - 0.5) * 0.15;
-            float h0 = hash11(id * 11.7 + 3.0);
-            gl_FragColor = vec4(0.5 + jx, 0.5 + jy, h0, 0.0);
-            return;
-        }
-
-        vec4 prev = readWalker(id);
-        vec2 p = prev.rg;
-        float h = prev.b;
-        float acc = prev.a + TIMEDELTA * stepRate * audio;
-
-        // Walk up to 6 discrete cell steps this frame
-        for (int s = 0; s < 6; s++) {
-            if (acc < 1.0) break;
-            acc -= 1.0;
-
-            float seed = TIME * 97.13 + id * 13.7 + float(s) * 3.31;
-            float r = hash12(vec2(seed, seed * 0.47));
-            int dir = int(floor(r * 8.0));
-            vec2 stepVec = neighborDir(dir) * cell;
-            p += stepVec;
-
-            if (bounceEdges) {
-                if (p.x < 0.0) p.x = -p.x;
-                if (p.x > 1.0) p.x = 2.0 - p.x;
-                if (p.y < 0.0) p.y = -p.y;
-                if (p.y > 1.0) p.y = 2.0 - p.y;
-            } else {
-                p = fract(p);
-            }
-
-            float dh = (hash12(vec2(seed + 7.7, id)) - 0.5) * 2.0 * hueDrift;
-            h = fract(h + dh + 1.0);
-        }
-
-        gl_FragColor = vec4(p, h, acc);
-        return;
+        t += max(res.x * 0.85, 0.002);
+        if (t > tMax) break;
     }
 
-    // =============================================================
-    // PASS 1: update persistent canvas (fade + paint walker cells)
-    // =============================================================
-    if (PASSINDEX == 1) {
-        vec2 uv = pos / Res;
-        vec4 prev = texture2D(canvas, uv);
-        vec4 col = prev * (1.0 - fadeRate);
+    // Void ocean background with faint horizon blue
+    float horizGlow = exp(-max(abs(rd.y) - 0.05, 0.0) * 4.0);
+    vec3  col = vec3(0.0, 0.01, 0.03)
+              + vec3(0.0, 0.1, 1.5) * horizGlow * 0.08;
 
-        // Aspect-correct grid so cells stay square
-        float aspect = Res.x / Res.y;
-        vec2 gridUV = vec2(uv.x * aspect, uv.y);
-        vec2 pxCell = floor(gridUV * gridSize);
+    // Volumetric scatter glow
+    col += volumeGlow(ro, rd, hit ? t : tMax, tm, hdrPeak, audio);
 
-        for (int i = 0; i < MAX_WALKERS; i++) {
-            if (float(i) >= walkers) break;
-            vec4 st = readWalker(float(i));
-            vec2 wGridUV = vec2(st.r * aspect, st.g);
-            vec2 wCell = floor(wGridUV * gridSize);
-            vec2 diff = abs(wCell - pxCell);
-            if (diff.x < 0.5 && diff.y < 0.5) {
-                vec3 rgb = hsv2rgb(vec3(st.b, saturation, brightness * audio));
-                col = vec4(rgb, 1.0);
-            }
-        }
+    if (hit) {
+        vec3 hp = ro + rd * t;
 
-        gl_FragColor = col;
-        return;
+        vec3 emit = emitColor(matId, hp, hdrPeak, audio);
+
+        // fwidth AA on SDF boundary
+        vec2  res2    = sceneMap(hp, tm);
+        float fw      = fwidth(res2.x);
+        float edgeMask = smoothstep(fw * 2.0, 0.0, abs(res2.x));
+        emit *= (0.6 + 0.4 * edgeMask);
+
+        // Depth fog
+        float fog = exp(-t * 0.18);
+        col += emit * fog;
     }
 
-    // =============================================================
-    // PASS 2: final display (bloom + background blend)
-    // =============================================================
-    vec2 uv = pos / Res;
-    vec3 c = texture2D(canvas, uv).rgb;
+    // Cinematic vignette
+    float vig = 1.0 - 0.4 * dot(uv * 0.7, uv * 0.7);
+    col *= vig;
 
-    if (bloom > 0.001) {
-        vec3 sum = vec3(0.0);
-        float r = 2.5 / min(Res.x, Res.y);
-        for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {
-                vec2 off = vec2(float(x), float(y)) * r;
-                sum += texture2D(canvas, uv + off).rgb;
-            }
-        }
-        sum /= 25.0;
-        c += sum * bloom;
-    }
-
-    float lum = max(c.r, max(c.g, c.b));
-    float alpha = clamp(lum * 8.0, 0.0, 1.0);
-    vec3 outRgb = mix(backgroundColor.rgb, c, alpha);
-    gl_FragColor = vec4(outRgb, 1.0);
+    gl_FragColor = vec4(col, 1.0);
 }

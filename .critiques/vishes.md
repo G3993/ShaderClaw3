@@ -1,3 +1,21 @@
+## 2026-05-06
+**Prior rating:** 0.0★
+**Approach:** 3D raymarch — NEW ANGLE: Bioluminescent Reef 3D (prior 2026-05-05 was 2D walker trail saturation fix, never committed)
+**Critique:**
+1. Reference fidelity: Bioluminescent ocean reef is a completely different reference from generative cellular walkers — cinematic wide environment vs iterative abstract.
+2. Compositional craft: Camera looking down at reef creates environmental wide shot vs prior close-up cell-walkers.
+3. Technical execution: Multiple sdCapsule coral, sdSphere brain coral, volumetric water glow, fwidth() AA.
+4. Liveness: Reef sways with TIME; audio modulates sway speed and glow intensity.
+5. Differentiation: 2D→3D axis change; different reference (ocean vs abstract walkers); different lighting (emission bioluminescence vs bloom accumulation).
+**Changes:**
+- Full rewrite from 2D cellular walker system to 3D bioluminescent reef
+- Coral branch capsules + brain coral spheres + tube worms
+- Volumetric water glow accumulated along eye ray
+- Palette: void ocean, bio-cyan 3.0, electric magenta 2.0, deep blue 1.5
+- Reef sway with TIME, audio modulates intensity
+**HDR peaks reached:** coral tips 3.0+, magenta worm tips 2.0, vol glow halos ~1.5-2.0
+**Estimated rating:** 4.5★
+
 ## 2026-05-05
 **Prior rating:** 0.0★
 **Approach:** 2D refine (HDR saturation + bloom boost)
