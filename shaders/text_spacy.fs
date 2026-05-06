@@ -12,9 +12,9 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.8, 0.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.005, 0.0, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
@@ -94,6 +94,50 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
+// BACKGROUND: LAVA TUNNEL
+// =======================================================================
+
+vec3 lavaTunnelBg(vec2 uv) {
+    // Dark basalt rock
+    vec3 col = vec3(0.02, 0.005, 0.0);
+    float t = TIME * 0.2;
+
+    // Lava crack network — three layers of animated sinusoidal veins
+    vec2 p = uv;
+
+    // Layer 1: major cracks
+    float lava1 = abs(sin(p.x * 5.0 + sin(p.y * 3.0 + t) + t * 0.7));
+    float lava2 = abs(sin(p.y * 7.0 + sin(p.x * 4.0 - t * 0.8) + t * 0.5));
+    float lava3 = abs(sin((p.x + p.y) * 6.0 + t * 0.6));
+
+    float crack = min(lava1, min(lava2, lava3));
+    float glowCrack = smoothstep(0.25, 0.0, crack); // bright core
+    float wideCrack = smoothstep(0.5, 0.0, crack);  // wide glow
+
+    // Lava colors: deep crimson→orange→gold
+    vec3 crimson = vec3(2.0, 0.05, 0.0);
+    vec3 orange = vec3(2.5, 0.6, 0.0);
+    vec3 gold = vec3(3.0, 2.0, 0.0);
+
+    float tempBias = sin(p.x * 3.0 + p.y * 2.0 + t * 0.5) * 0.5 + 0.5;
+    vec3 lavaColor = mix(crimson, mix(orange, gold, tempBias), glowCrack);
+
+    col += lavaColor * wideCrack * (0.8 + audioMid * 0.3);
+    col += gold * glowCrack * 0.5 * (1.0 + sin(t * 3.0 + crack * 10.0) * 0.2);
+
+    // Rock texture (subtle variation)
+    float rock = sin(p.x * 23.0 + p.y * 17.0) * 0.02 + sin(p.x * 41.0 - p.y * 37.0) * 0.01;
+    col *= (1.0 + rock);
+
+    // Depth fade toward edges (tunnel vignette)
+    vec2 vc = uv - 0.5;
+    float vign = 1.0 - dot(vc, vc) * 1.5;
+    col *= max(vign, 0.0);
+
+    return col;
+}
+
+// =======================================================================
 // EFFECT: SPACY - perspective tunnel rows
 // =======================================================================
 
@@ -158,6 +202,18 @@ void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     int p = int(preset);
     vec4 col = effectSpacy(uv, p);
+
+    if (!transparentBg) {
+        vec3 bg = lavaTunnelBg(uv);
+        if (col.a < 0.5) {
+            col.rgb = bg;
+        } else {
+            // Text gets magma glow: gold HDR against dark rock
+            col.rgb *= 2.0;
+            col.rgb += bg * 0.15; // slight lava reflection on text
+        }
+        col.a = 1.0;
+    }
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
