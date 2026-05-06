@@ -1088,5 +1088,16 @@
       "Audio Reactive"
     ],
     "file": "text_stream.fs"
+  },
+  {
+    "id": 508,
+    "title": "Clusters",
+    "description": "Text-in-metaball-cells. Each chunk of the message lives in a circle; circles within a cluster fuse via smooth-min into organic blobs. New clusters keep spawning across the canvas, popping in and fading out so the composition keeps evolving. Two-color palette with auto contrast.",
+    "type": "generator",
+    "categories": [
+      "Generator",
+      "Text"
+    ],
+    "file": "text_clusters.fs"
   }
 ]
