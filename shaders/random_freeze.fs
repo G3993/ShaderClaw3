@@ -1,224 +1,118 @@
 /*{
-  "DESCRIPTION": "Amethyst Geode 3D — camera inside a hollow geode sphere looking at crystal formations",
-  "CREDIT": "ShaderClaw auto-improve 2026-05-06",
+  "DESCRIPTION": "Triple Torus Knot — 3D raymarched interlocking tori in three planes, iridescent neon palette",
+  "CREDIT": "ShaderClaw auto-improve",
   "ISFVSN": "2",
-  "CATEGORIES": ["Generator", "3D"],
+  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
   "INPUTS": [
-    { "NAME": "speed",        "LABEL": "Speed",         "TYPE": "float", "DEFAULT": 0.6,  "MIN": 0.0,  "MAX": 3.0  },
-    { "NAME": "crystalCount", "LABEL": "Crystal Count", "TYPE": "float", "DEFAULT": 8.0,  "MIN": 2.0,  "MAX": 12.0 },
-    { "NAME": "hdrPeak",      "LABEL": "HDR Peak",      "TYPE": "float", "DEFAULT": 2.5,  "MIN": 1.0,  "MAX": 4.0  },
-    { "NAME": "audioReact",   "LABEL": "Audio React",   "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0,  "MAX": 1.0  }
+    { "NAME": "ringScale",  "LABEL": "Ring Scale",   "TYPE": "float", "DEFAULT": 0.9,  "MIN": 0.3,  "MAX": 1.8 },
+    { "NAME": "spinSpeed",  "LABEL": "Spin Speed",   "TYPE": "float", "DEFAULT": 0.22, "MIN": 0.0,  "MAX": 1.0 },
+    { "NAME": "tubeRadius", "LABEL": "Tube Radius",  "TYPE": "float", "DEFAULT": 0.10, "MIN": 0.04, "MAX": 0.22 },
+    { "NAME": "hdrPeak",   "LABEL": "HDR Peak",     "TYPE": "float", "DEFAULT": 2.5,  "MIN": 1.0,  "MAX": 4.0 },
+    { "NAME": "audioReact","LABEL": "Audio React",   "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 2.0 }
   ]
 }*/
 
-// ── Palette ────────────────────────────────────────────────────────────────
-// Void/rock:      vec3(0.01, 0.0, 0.02)   — dark obsidian
-// Deep amethyst:  vec3(0.5, 0.0, 1.5)     — HDR purple
-// Rose gold:      vec3(2.0, 0.5, 0.2)     — HDR warm
-// Pale crystal:   vec3(1.2, 0.8, 2.0)     — HDR lavender
-// Specular white: vec3(2.5, 2.2, 2.0)
+const int   MAX_STEPS = 64;
+const float FAR       = 6.0;
+const float PI        = 3.14159265;
 
-// ── Hash / utility ─────────────────────────────────────────────────────────
-float hash1(float n) { return fract(sin(n) * 43758.5453123); }
-float hash1v(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.3))) * 43758.5453); }
-
-// ── Crystal colour from position hash ──────────────────────────────────────
-vec3 crystalColor(int idx, float pk) {
-    float fi = float(idx);
-    float h = hash1(fi * 17.3 + 3.7);
-    if (h < 0.34) return vec3(0.5, 0.0, 1.5) * pk;          // deep amethyst
-    if (h < 0.67) return vec3(2.0, 0.5, 0.2) * (pk * 0.8);  // rose gold
-    return vec3(1.2, 0.8, 2.0) * pk;                         // pale crystal
+float sdTorus(vec3 p, float R, float r) {
+    return length(vec2(length(p.xz) - R, p.y)) - r;
 }
 
-// ── SDF primitives ─────────────────────────────────────────────────────────
-// Capsule: ends a, b; radii ra (at a), rb (at b)
-float sdCapsuleTapered(vec3 p, vec3 a, vec3 b, float ra, float rb) {
-    vec3 pa = p - a, ba = b - a;
-    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
-    float r = mix(ra, rb, h);
-    return length(pa - ba * h) - r;
+// Rotate p around X axis by angle a
+vec3 rotX(vec3 p, float a) {
+    float c = cos(a), s = sin(a);
+    return vec3(p.x, c * p.y - s * p.z, s * p.y + c * p.z);
+}
+vec3 rotZ(vec3 p, float a) {
+    float c = cos(a), s = sin(a);
+    return vec3(c * p.x - s * p.y, s * p.x + c * p.y, p.z);
+}
+vec3 rotY(vec3 p, float a) {
+    float c = cos(a), s = sin(a);
+    return vec3(c * p.x + s * p.z, p.y, -s * p.x + c * p.z);
 }
 
-// Tilted box (for small faceted crystals)
-float sdBox(vec3 p, vec3 b) {
-    vec3 q = abs(p) - b;
-    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
+vec2 sceneSDF(vec3 p) {
+    float t   = TIME * spinSpeed;
+    float R   = ringScale;
+    float tr  = tubeRadius * (1.0 + audioBass * audioReact * 0.15);
+
+    // Torus 1: XZ plane, rotating around Y
+    float d1 = sdTorus(rotY(p, t), R, tr);
+    // Torus 2: YZ plane (tilted 90° in X), counter-rotating
+    float d2 = sdTorus(rotX(rotY(p, -t * 0.7), PI * 0.5), R * 0.85, tr);
+    // Torus 3: diagonal tilt, slower spin
+    float d3 = sdTorus(rotZ(rotX(p, PI * 0.25 + t * 0.4), t * 0.3), R * 0.95, tr);
+
+    if (d1 < d2 && d1 < d3) return vec2(d1, 1.0);
+    if (d2 < d3) return vec2(d2, 2.0);
+    return vec2(d3, 3.0);
 }
 
-// ── Geode scene map ────────────────────────────────────────────────────────
-// Returns: x = SDF distance, y = material id (0=rock/sphere, 1-8=crystal index+1)
-vec2 map(vec3 p, float tm, float nCrystals, float audioGlow) {
-    // Inner surface of hollow sphere (camera is inside → use negative SDF)
-    float sphere = -(length(p) - 4.5);
+float sceneD(vec3 p) { return sceneSDF(p).x; }
 
-    float crystals = 100.0;
-    float bestIdx = 0.0;
-
-    int N = int(clamp(nCrystals, 2.0, 12.0));
-
-    for (int i = 0; i < 12; i++) {
-        if (i >= N) break;
-        float fi = float(i);
-        // Fibonacci lattice on sphere surface
-        float theta = fi * 2.39996323;
-        float phi = acos(1.0 - 2.0 * (fi + 0.5) / float(N));
-
-        // Crystal tip on sphere surface (pointing inward)
-        vec3 tip = vec3(
-            sin(phi) * cos(theta),
-            cos(phi),
-            sin(phi) * sin(theta)
-        ) * 3.8;
-
-        // Crystal base (closer to center, slight sway)
-        vec3 base = tip * 0.4 + 0.15 * vec3(
-            cos(fi * 1.7 + tm * 0.2),
-            sin(fi * 2.3 + tm * 0.15),
-            cos(fi * 0.9 + tm * 0.25)
-        );
-
-        // Tapered capsule: wide at base, sharp at tip
-        float r0 = 0.15 + 0.08 * sin(fi * 2.7) + 0.04 * audioGlow;
-        float r1 = 0.02;
-        float dcr = sdCapsuleTapered(p, base, tip, r0, r1);
-
-        if (dcr < crystals) {
-            crystals = dcr;
-            bestIdx = fi + 1.0;
-        }
-    }
-
-    // Small faceted box crystals scattered around
-    float boxes = 100.0;
-    float bestBoxIdx = 0.0;
-    for (int i = 0; i < 6; i++) {
-        float fi = float(i);
-        float ang = fi * 1.047197551 + tm * 0.08; // slow rotation
-        vec3 cpos = vec3(cos(ang) * 2.8, sin(fi * 1.1) * 1.5, sin(ang) * 2.8);
-        // Rotate box slightly
-        float rot = fi * 0.7 + tm * 0.05;
-        float cr = cos(rot), sr = sin(rot);
-        vec3 lp = p - cpos;
-        lp = vec3(cr * lp.x - sr * lp.z, lp.y, sr * lp.x + cr * lp.z);
-        float s = 0.06 + 0.04 * hash1(fi * 5.3);
-        float db = sdBox(lp, vec3(s * 0.6, s * 1.8, s * 0.4));
-        if (db < boxes) {
-            boxes = db;
-            bestBoxIdx = fi + 13.0;
-        }
-    }
-
-    // Combine all
-    float d = sphere;
-    float matId = 0.0;
-
-    if (crystals < d) { d = crystals; matId = bestIdx; }
-    if (boxes < d)    { d = boxes;    matId = bestBoxIdx; }
-
-    return vec2(d, matId);
-}
-
-// ── Normal via central differences ─────────────────────────────────────────
-vec3 calcNormal(vec3 p, float tm, float nCrystals, float audioGlow) {
-    vec2 e = vec2(0.001, 0.0);
+vec3 sceneNormal(vec3 p) {
+    float e = 0.001;
     return normalize(vec3(
-        map(p + e.xyy, tm, nCrystals, audioGlow).x - map(p - e.xyy, tm, nCrystals, audioGlow).x,
-        map(p + e.yxy, tm, nCrystals, audioGlow).x - map(p - e.yxy, tm, nCrystals, audioGlow).x,
-        map(p + e.yyx, tm, nCrystals, audioGlow).x - map(p - e.yyx, tm, nCrystals, audioGlow).x
+        sceneD(p + vec3(e,0,0)) - sceneD(p - vec3(e,0,0)),
+        sceneD(p + vec3(0,e,0)) - sceneD(p - vec3(0,e,0)),
+        sceneD(p + vec3(0,0,e)) - sceneD(p - vec3(0,0,e))
     ));
 }
 
-// ── Main ────────────────────────────────────────────────────────────────────
+// Iridescent palette: each torus gets a distinct fully-saturated hue
+vec3 torusColor(float id, float position) {
+    float hue = mod(id * 0.33 + position * 0.05 + TIME * 0.03, 1.0) * 3.0;
+    // 3-color cycle: electric violet, hot magenta, acid gold
+    vec3 c0 = vec3(0.5, 0.0, 1.0);  // violet
+    vec3 c1 = vec3(1.0, 0.0, 0.7);  // magenta
+    vec3 c2 = vec3(1.0, 0.8, 0.0);  // gold
+    if (hue < 1.0) return mix(c0, c1, hue);
+    if (hue < 2.0) return mix(c1, c2, hue - 1.0);
+    return mix(c2, c0, hue - 2.0);
+}
+
 void main() {
-    float tm = TIME * speed;
-    float audioGlow = audioBass * audioReact * 2.0;
+    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
+    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
 
-    // Camera inside the geode — slowly rotating to look around
-    float camAngle = tm * 0.18;
-    float camTilt  = sin(tm * 0.11) * 0.35;
+    float audio = 1.0 + (audioLevel * 0.4 + audioBass * 0.7) * audioReact;
+    float ct    = TIME * spinSpeed * 0.3;
 
-    vec3 ro = vec3(0.0, 0.1, 0.0); // camera at near-center
+    vec3 ro = vec3(sin(ct) * 3.2, 0.9 + sin(TIME * 0.25) * 0.3, cos(ct) * 3.2);
+    vec3 fw = normalize(-ro);
+    vec3 rt = normalize(cross(fw, vec3(0,1,0)));
+    vec3 up = cross(rt, fw);
+    vec3 rd = normalize(fw + uv.x * rt + uv.y * up);
 
-    // Camera target: orbiting gaze direction
-    vec3 target = vec3(cos(camAngle) * 3.5, sin(camTilt) * 1.5, sin(camAngle) * 3.5);
-
-    vec3 fwd = normalize(target - ro);
-    vec3 right = normalize(cross(fwd, vec3(0.0, 1.0, 0.0)));
-    vec3 up    = cross(right, fwd);
-
-    // Screen-space ray
-    vec2 uv = (isf_FragNormCoord - 0.5) * vec2(RENDERSIZE.x / RENDERSIZE.y, 1.0);
-    vec3 rd = normalize(fwd + uv.x * right + uv.y * up);
-
-    // ── Raymarching (64 steps) ──────────────────────────────────────────────
-    float t = 0.001;
-    float matId = 0.0;
-    bool hit = false;
-
-    for (int i = 0; i < 64; i++) {
-        vec3 p = ro + rd * t;
-        vec2 res = map(p, tm, crystalCount, audioGlow);
-        float d = res.x;
-        if (d < 0.001) {
-            matId = res.y;
-            hit = true;
-            break;
-        }
-        t += d * 0.6; // conservative step inside concave geometry
-        if (t > 12.0) break;
+    float dist  = 0.0;
+    float hitId = 0.0;
+    for (int i = 0; i < MAX_STEPS; i++) {
+        vec2 h = sceneSDF(ro + rd * dist);
+        if (h.x < 0.0005 || dist > FAR) { hitId = h.y; break; }
+        dist += h.x * 0.65;
     }
 
-    // ── Shading ────────────────────────────────────────────────────────────
-    vec3 col = vec3(0.01, 0.0, 0.02); // void obsidian
+    vec3 col = vec3(0.0, 0.0, 0.01);
 
-    if (hit) {
-        vec3 p = ro + rd * t;
-        vec3 nor = calcNormal(p, tm, crystalCount, audioGlow);
+    if (dist < FAR) {
+        vec3 p  = ro + rd * dist;
+        vec3 n  = sceneNormal(p);
+        vec3 L  = normalize(vec3(1.2, 1.0, 0.6));
 
-        // Lighting: warm key from above, cool fill from below
-        vec3 keyDir  = normalize(vec3(0.4, 1.0, 0.3));
-        vec3 fillDir = normalize(vec3(-0.3, -1.0, -0.4));
+        float diff = clamp(dot(n, L), 0.05, 1.0);
+        float spec = pow(clamp(dot(reflect(-L, n), -rd), 0.0, 1.0), 20.0);
 
-        float keyDiff  = max(dot(nor, keyDir),  0.0);
-        float fillDiff = max(dot(nor, fillDir), 0.0);
+        float pos  = atan(p.z, p.x) / (2.0 * PI); // position on ring for iridescence
+        vec3  base = torusColor(hitId, pos);
 
-        vec3 keyColor  = vec3(2.0, 1.2, 0.5);  // warm orange
-        vec3 fillColor = vec3(0.2, 0.4, 1.0);  // cool blue
-
-        // Specular
-        vec3 halfVec = normalize(keyDir - rd);
-        float spec = pow(max(dot(nor, halfVec), 0.0), 48.0);
-        vec3 specColor = vec3(2.5, 2.2, 2.0);
-
-        // fwidth AA on SDF iso-edge (approximated from screen-space derivatives)
-        vec2 sdfSample = map(p, tm, crystalCount, audioGlow);
-        float fw = fwidth(sdfSample.x);
-        float edgeMask = smoothstep(0.0, fw * 2.0, abs(sdfSample.x));
-
-        // Material colour
-        vec3 baseCol;
-        if (matId < 0.5) {
-            // Rock / sphere interior wall — dark obsidian with faint purple veins
-            baseCol = vec3(0.01, 0.0, 0.02) + nor * vec3(0.04, 0.0, 0.08);
-        } else {
-            // Crystal (pillar or box) — pick colour by index
-            int idx = int(matId - 0.5);
-            float pk = hdrPeak * (1.0 + audioGlow * 0.3);
-            baseCol = crystalColor(idx, pk);
-        }
-
-        // Subsurface-like glow: crystal self-illumination
-        float selfGlow = 0.0;
-        if (matId > 0.5) {
-            // Glow pulsing with audio and time
-            selfGlow = 0.3 + 0.15 * sin(tm * 1.7 + matId * 2.3) + audioGlow * 0.25;
-        }
-
-        col  = baseCol * (keyDiff * keyColor + fillDiff * fillColor * 0.3);
-        col += specColor * spec * (matId > 0.5 ? 1.0 : 0.3);
-        col += baseCol * selfGlow;
-        col  = mix(baseCol * 0.05, col, edgeMask);
+        // fwidth edge darkening (black ink contrast on silhouette)
+        float fw = fwidth(diff);
+        float ink = smoothstep(fw * 2.0, 0.0, diff - 0.15);
+        col = base * diff * hdrPeak * audio * (1.0 - ink * 0.9);
+        col += vec3(3.0) * spec;
     }
 
     gl_FragColor = vec4(col, 1.0);
