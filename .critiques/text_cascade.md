@@ -18,3 +18,20 @@
 - audioMod input added
 **HDR peaks reached:** gold text * 2.2 = 2.2 direct; with audio 3.0+
 **Estimated rating:** 3.8★
+
+## 2026-05-06
+**Prior rating:** 0.0★
+**Approach:** 2D refine — NEW ANGLE: Laser Grid background (prior 2026-05-05 planned aurora bg, never committed)
+**Critique:**
+1. Reference fidelity: Laser grid creates a hard-edged digital environment vs soft organic aurora.
+2. Compositional craft: Grid lines provide strong directional structure; cascade text rows align with grid rhythm.
+3. Technical execution: fwidth() AA on grid lines, soft glow halo, diagonal accent lines.
+4. Liveness: Grid frequency oscillates with TIME; lines drift; text 2.5x HDR boost.
+5. Differentiation: Different bg (geometric grid vs organic aurora); different palette (magenta/green vs violet/cyan/gold); digital-hard vs natural-soft mood.
+**Changes:**
+- Added laserGridBg() — animated neon grid lines with bloom glow, diagonal accents
+- transparentBg default: true→false
+- textColor default: white→cyan [0,1,1,1], boosted 2.5x HDR
+- Grid palette: electric magenta 2.0, acid green 2.5, void black
+**HDR peaks reached:** grid lines 2.0 + glow; diagonal accents 2.5; text 2.5x cyan
+**Estimated rating:** 3.8★

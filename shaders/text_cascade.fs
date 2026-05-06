@@ -11,9 +11,9 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.0, 1.0, 1.0, 1.0] },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
@@ -93,6 +93,44 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
+// BACKGROUND: LASER GRID
+// =======================================================================
+
+vec3 laserGridBg(vec2 uv) {
+    float t = TIME * 0.4;
+    float asp = RENDERSIZE.x / RENDERSIZE.y;
+    vec2 p = vec2(uv.x * asp, uv.y);
+
+    // Grid line frequency — animate slowly
+    float gX = 8.0 + sin(t * 0.3) * 1.5;
+    float gY = 5.0 + cos(t * 0.2) * 1.0;
+
+    // Grid line SDF
+    float lx = abs(fract(p.x * gX + t * 0.2) - 0.5);
+    float ly = abs(fract(p.y * gY - t * 0.15) - 0.5);
+    float grid = min(lx, ly);
+    float fw = fwidth(grid);
+    float lineMask = 1.0 - smoothstep(0.0, fw + 0.02, grid);
+
+    // Diagonal accent lines
+    float diag = abs(fract((p.x + p.y) * 4.0 + t * 0.1) - 0.5);
+    float fwD = fwidth(diag);
+    float diagMask = 1.0 - smoothstep(0.0, fwD + 0.01, diag);
+    diagMask *= 0.4;
+
+    // Colors: electric magenta grid, acid green diagonals
+    vec3 C_MAG = vec3(2.0, 0.0, 1.5);   // electric magenta
+    vec3 C_GRN = vec3(0.3, 2.5, 0.0);   // acid green
+    vec3 C_BG  = vec3(0.0, 0.0, 0.01);  // void black
+
+    // Soft glow halo around lines
+    float glow = exp(-grid * 30.0) * 0.8;
+    float glowD = exp(-diag * 20.0) * 0.3;
+
+    return C_BG + C_MAG * (lineMask + glow) + C_GRN * (diagMask + glowD);
+}
+
+// =======================================================================
 // EFFECT: CASCADE - tiled rows with wave offsets
 // =======================================================================
 
@@ -136,7 +174,11 @@ vec4 effectCascade(vec2 uv) {
     vec3 bg = inv ? textColor.rgb : bgColor.rgb;
     vec3 fc = mix(bg, fg, textHit);
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
+    if (transparentBg) { fc = textColor.rgb; a = textHit; }
+    else {
+        vec3 bgNew = laserGridBg(uv);
+        fc = mix(bgNew, textColor.rgb * 2.5, textHit);
+    }
     return vec4(fc, a);
 }
 
