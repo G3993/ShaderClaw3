@@ -9,9 +9,9 @@
     { "NAME": "intensity", "LABEL": "Glitch", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Dissolve", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.5, 0.0, 1.0, 1.0] },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
@@ -91,6 +91,41 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
+// BACKGROUND: SPACE NEBULA
+// =======================================================================
+
+vec3 nebulaBg(vec2 uv) {
+    float t = TIME * 0.15;
+    vec2 p = uv * 3.0;
+
+    // Domain warp for nebula swirl
+    vec2 q = vec2(
+        sin(p.x * 1.2 + t) + sin(p.y * 0.9 - t * 0.7),
+        cos(p.x * 0.8 - t * 0.5) + cos(p.y * 1.4 + t * 0.3)
+    );
+    p += q * 0.5;
+
+    // Nebula density fields for each color layer
+    float n1 = sin(p.x * 2.1 + t) * sin(p.y * 1.7 - t * 0.8) * 0.5 + 0.5;
+    float n2 = sin(p.x * 0.9 - t * 0.3 + p.y * 1.3) * 0.5 + 0.5;
+    float n3 = cos(p.x * 1.5 + p.y * 2.1 + t * 0.6) * 0.5 + 0.5;
+
+    // Nebula colors: deep violet, electric blue, cosmic rose
+    vec3 C_VIO = vec3(0.3, 0.0, 1.5);   // deep violet HDR
+    vec3 C_BLU = vec3(0.0, 0.3, 2.5);   // electric blue HDR
+    vec3 C_ROS = vec3(1.5, 0.0, 0.8);   // cosmic rose HDR
+    vec3 C_BG  = vec3(0.0, 0.0, 0.02);  // void space
+
+    // Soft nebula accumulation
+    vec3 nebula = C_BG;
+    nebula += C_VIO * pow(n1, 3.0) * 1.5;
+    nebula += C_BLU * pow(n2, 2.5) * 1.2;
+    nebula += C_ROS * pow(n3, 4.0) * 2.0;
+
+    return nebula;
+}
+
+// =======================================================================
 // EFFECT: DIGIFADE - glitch dissolve
 // =======================================================================
 
@@ -156,6 +191,10 @@ vec4 effectDigifade(vec2 uv, int sub) {
     vec3 fc = mix(bgColor.rgb, textColor.rgb, textHit);
     float a = 1.0;
     if (transparentBg) { a = textHit; fc = textColor.rgb; }
+    else {
+        vec3 bg = nebulaBg(uv);
+        fc = mix(bg, textColor.rgb * 2.8, textHit);
+    }
     return vec4(fc, a);
 }
 
