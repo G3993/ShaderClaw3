@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Bricks - grid with animated displacement",
+  "DESCRIPTION": "Bricks - grid with animated displacement on a solar plasma background",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1,2], "LABELS": ["Bricks","Bricks Harlequin","Bricks Zebra"], "DEFAULT": 0 },
@@ -9,16 +9,18 @@
     { "NAME": "intensity", "LABEL": "Displacement", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Grid Density", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Text Color", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "plasmaScale", "LABEL": "Plasma Scale", "TYPE": "float", "MIN": 0.5, "MAX": 8.0, "DEFAULT": 3.0 },
+    { "NAME": "plasmaSpeed", "LABEL": "Plasma Speed", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.3 },
+    { "NAME": "hdrPeak", "LABEL": "HDR Peak", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.5 },
+    { "NAME": "audioMod", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
 const float PI = 3.14159265;
 const float TWO_PI = 6.28318530;
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
 float charPixel(int ch, float col, float row) {
     if (ch < 0 || ch > 36) return 0.0;
     vec2 uv = vec2(col / 5.0, row / 7.0);
@@ -82,16 +84,61 @@ int charCount() {
     return n > 0 ? n : 1;
 }
 
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
-}
-
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
-// EFFECT: BRICKS - grid with animated displacement
+// SOLAR PLASMA BACKGROUND
+// =======================================================================
+
+float hash21(vec2 p) {
+    p = fract(p * vec2(234.34, 435.346));
+    p += dot(p, p + 34.23);
+    return fract(p.x * p.y);
+}
+
+float smoothNoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = hash21(i);
+    float b = hash21(i + vec2(1.0, 0.0));
+    float c = hash21(i + vec2(0.0, 1.0));
+    float d = hash21(i + vec2(1.0, 1.0));
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
+float fbm(vec2 p) {
+    float v = 0.0, a = 0.5;
+    for (int i = 0; i < 5; i++) {
+        v += a * smoothNoise(p);
+        p = p * 2.1 + vec2(3.7, 1.53);
+        a *= 0.5;
+    }
+    return v;
+}
+
+vec3 solarPlasma(vec2 uv) {
+    float t = TIME * plasmaSpeed;
+    vec2 q = vec2(fbm(uv * plasmaScale + vec2(t * 0.31, t * 0.13)),
+                  fbm(uv * plasmaScale + vec2(t * 0.19, t * 0.43 + 5.2)));
+    float f = fbm(uv * plasmaScale + q * 2.1 + vec2(t * 0.11, -t * 0.17));
+
+    float audioBoost = 1.0 + audioLevel * audioMod * 0.5;
+    f = clamp(f * audioBoost, 0.0, 1.0);
+
+    // Solar palette: black → deep crimson → orange → gold → white-hot HDR
+    vec3 col;
+    float hot = hdrPeak;
+    if (f < 0.25)      col = mix(vec3(0.0),            vec3(0.9, 0.04, 0.0),            f / 0.25);
+    else if (f < 0.50) col = mix(vec3(0.9, 0.04, 0.0), vec3(hot * 0.7, hot * 0.25, 0.0), (f - 0.25) / 0.25);
+    else if (f < 0.75) col = mix(vec3(hot * 0.7, hot * 0.25, 0.0), vec3(hot, hot * 0.6, 0.0),  (f - 0.50) / 0.25);
+    else               col = mix(vec3(hot, hot * 0.6, 0.0),         vec3(hot, hot * 0.95, hot * 0.55), (f - 0.75) / 0.25);
+
+    return col;
+}
+
+// =======================================================================
+// EFFECT: BRICKS — returns textHit in alpha when plasmaBg active
 // =======================================================================
 
 vec4 effectBricks(vec2 uv, int sub) {
@@ -142,19 +189,41 @@ vec4 effectBricks(vec2 uv, int sub) {
         }
     }
 
-    bool inv = mod(ri, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
-    return vec4(fc, a);
+    if (transparentBg) {
+        return vec4(textColor.rgb, textHit);
+    }
+
+    // Solar plasma bg: text = user textColor, bg = plasma
+    return vec4(textColor.rgb, textHit);
 }
 
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     int p = int(preset);
-    vec4 col = effectBricks(uv, p);
+    vec4 textLayer = effectBricks(uv, p);
+
+    if (transparentBg) {
+        gl_FragColor = vec4(textLayer.rgb, textLayer.a);
+
+        if (_voiceGlitch > 0.01) {
+            float g = _voiceGlitch;
+            float t = TIME * 17.0;
+            float band = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
+            float bandNoise = fract(sin(band * 91.7 + t) * 43758.5);
+            float bandActive = step(1.0 - g * 0.6, bandNoise);
+            float shift = (bandNoise - 0.5) * 0.08 * g * bandActive;
+            float chromaAmt = g * 0.015;
+            vec4 cR = effectBricks(uv + vec2(shift + chromaAmt, 0.0), p);
+            vec4 cG = effectBricks(uv + vec2(shift, chromaAmt * 0.5), p);
+            vec4 cB = effectBricks(uv + vec2(shift - chromaAmt, 0.0), p);
+            gl_FragColor = vec4(cR.r, cG.g, cB.b, max(max(cR.a, cG.a), cB.a));
+        }
+        return;
+    }
+
+    // Solar plasma composite: text (black ink) over living plasma background
+    vec3 plasma = solarPlasma(uv);
+    vec3 finalCol = mix(plasma, textColor.rgb, textLayer.a);
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
@@ -164,22 +233,19 @@ void main() {
         float bandActive = step(1.0 - g * 0.6, bandNoise);
         float shift = (bandNoise - 0.5) * 0.08 * g * bandActive;
         float chromaAmt = g * 0.015;
-        vec2 uvR = uv + vec2(shift + chromaAmt, 0.0);
-        vec2 uvB = uv + vec2(shift - chromaAmt, 0.0);
-        vec2 uvG = uv + vec2(shift, chromaAmt * 0.5);
-        vec4 cR = effectBricks(uvR, p);
-        vec4 cG = effectBricks(uvG, p);
-        vec4 cB = effectBricks(uvB, p);
-        vec4 glitched = vec4(cR.r, cG.g, cB.b, max(max(cR.a, cG.a), cB.a));
+        vec3 pR = solarPlasma(uv + vec2(shift + chromaAmt, 0.0));
+        vec3 pG = solarPlasma(uv + vec2(shift, chromaAmt * 0.5));
+        vec3 pB = solarPlasma(uv + vec2(shift - chromaAmt, 0.0));
+        vec4 tR = effectBricks(uv + vec2(shift + chromaAmt, 0.0), p);
+        vec4 tG = effectBricks(uv + vec2(shift, chromaAmt * 0.5), p);
+        vec4 tB = effectBricks(uv + vec2(shift - chromaAmt, 0.0), p);
         float scanline = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
-        float blockX = floor(uv.x * 6.0);
-        float blockY = floor(uv.y * 4.0);
-        float blockNoise = fract(sin((blockX + blockY * 7.0) * 113.1 + floor(t * 8.0)) * 43758.5);
-        float dropout = step(1.0 - g * 0.15, blockNoise);
-        glitched.rgb *= scanline;
-        glitched.rgb *= 1.0 - dropout;
-        col = mix(col, glitched, smoothstep(0.0, 0.3, g));
+        finalCol = vec3(
+            mix(pR.r, textColor.r, tR.a),
+            mix(pG.g, textColor.g, tG.a),
+            mix(pB.b, textColor.b, tB.a)
+        ) * scanline;
     }
 
-    gl_FragColor = col;
+    gl_FragColor = vec4(finalCol, 1.0);
 }
