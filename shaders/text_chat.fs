@@ -15,6 +15,8 @@
     { "NAME": "cornerRadius", "LABEL": "Corner Radius", "TYPE": "float", "DEFAULT": 0.025, "MIN": 0.0, "MAX": 0.05 },
     { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "autoTextColor", "LABEL": "Auto Text Color", "TYPE": "bool", "DEFAULT": 1.0 },
+    { "NAME": "inputTex", "LABEL": "Background Layer", "TYPE": "image" },
+    { "NAME": "bgOpacity", "LABEL": "BG Layer Opacity", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.06, 0.07, 0.10, 1.0] },
     { "NAME": "color1", "LABEL": "Bubble 1", "TYPE": "color", "DEFAULT": [0.10, 0.55, 1.00, 1.0] },
     { "NAME": "color2", "LABEL": "Bubble 2", "TYPE": "color", "DEFAULT": [1.00, 0.20, 0.55, 1.0] },
@@ -152,7 +154,11 @@ void main() {
     if (chunkLen < 1) chunkLen = 1;
 
     // ─── Background ────────────────────────────────────────
-    vec3 col = bgColor.rgb;
+    // Optional bound layer (inputTex) renders as the chat backdrop.
+    // Falls back to bgColor when nothing is bound. bgOpacity blends
+    // the two so the user can dim the layer without a separate blur.
+    vec3 layerBG = IMG_NORM_PIXEL(inputTex, uv).rgb;
+    vec3 col = mix(bgColor.rgb, layerBG, bgOpacity);
     // Mild radial vignette so bubbles read well.
     vec2 vignP = vec2((uv.x - 0.5) * aspect, uv.y - 0.5);
     float vd = length(vignP);
@@ -163,14 +169,30 @@ void main() {
     float charMask    = 0.0;          // accumulated text mask
     vec3  charCol     = vec3(0.0);    // accumulated text color
 
+    // Pre-compute per-side lane counts so same-side bubbles are spaced
+    // by enough vertical phase to never overlap.
+    int rightLanes = (bubbles + 1) / 2;          // bubbles 0,2,4,...
+    int leftLanes  = bubbles / 2;                // bubbles 1,3,5,...
+
     for (int k = 0; k < MAX_BUBBLES; k++) {
         if (k >= bubbles) break;
         float fk = float(k);
+        bool senderSide = (mod(fk, 2.0) < 0.5);
+        // Per-side stagger index — 0,1,2,... within each side. Two
+        // bubbles on the same side are now spaced by exactly
+        // 1/<sameSideCount> in phase, which guarantees the box-size
+        // gap is the same regardless of total bubble count.
+        int sideIdx = k / 2;
+        int sideN   = senderSide ? rightLanes : leftLanes;
+        if (sideN < 1) sideN = 1;
 
-        // Phase in [0,1): 0 = just spawned, 1 = expired.
-        float age = mod(TIME * effSpawn + fk * 0.27, 1.0) * lifetime * effSpawn;
-        float phase = age / lifetime;
-        if (phase >= 1.0) continue;
+        // Phase in [0,1): 0 = just spawned at bottom, 1 = expired at top.
+        // Each bubble cycles every `lifetime` seconds; offset across the
+        // two sides by 0.5/sideN so left/right interleave neatly.
+        float sideOffset = senderSide ? 0.0 : 0.5 / float(sideN);
+        float phase = mod(TIME / lifetime
+                        + float(sideIdx) / float(sideN)
+                        + sideOffset, 1.0);
 
         // Pop-in: short scale-up at the start.
         float popIn  = smoothstep(0.0, 0.06, phase);
@@ -181,14 +203,11 @@ void main() {
 
         // Vertical position: rises from bottom (y=0.18) to top (y=0.92).
         float by = mix(0.18, 0.92, phase);
-        // Horizontal: sender on right, receiver on left, alternating per bubble.
-        bool senderSide = (mod(fk, 2.0) < 0.5);
-        float seed = hash11(fk * 11.31);
-        float wob  = wobble * 0.06 * (seed - 0.5) * 2.0
-                   + wobble * 0.04 * sin(TIME * 0.7 + fk * 1.7);
-        float bx;
-        if (senderSide) bx =  aspect * 0.25 + wob;
-        else            bx = -aspect * 0.25 + wob;
+        // Horizontal: locked sender/receiver columns. No x-wobble — that
+        // was the source of side-by-side overlap. Vertical micro-bob
+        // gives some life without colliding neighbours.
+        by += wobble * 0.012 * sin(TIME * 0.9 + fk * 1.7);
+        float bx = senderSide ? aspect * 0.25 : -aspect * 0.25;
 
         vec2 bubbleC = vec2(bx, by);
         vec2 d = p - bubbleC;
