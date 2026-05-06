@@ -1,124 +1,163 @@
 /*{
-  "DESCRIPTION": "Oil paint effect — Kuwahara filter with relief lighting for painterly brush strokes",
-  "CREDIT": "ShaderClaw (Kuwahara approach inspired by flockaroo)",
-  "CATEGORIES": ["Effect"],
+  "DESCRIPTION": "Jade Ring Sculpture — 5 raymarched nested tori in jade and glacier palette",
+  "CREDIT": "auto-improve",
+  "ISFVSN": "2",
+  "CATEGORIES": ["Generator", "3D", "Abstract"],
   "INPUTS": [
-    { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "brushRadius", "LABEL": "Brush Size", "TYPE": "float", "DEFAULT": 4.0, "MIN": 1.0, "MAX": 12.0 },
-    { "NAME": "paintSpec", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "vignetteAmt", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
-  ],
-  "PASSES": [
-    { "TARGET": "paintBuf", "PERSISTENT": true },
-    {}
+    { "NAME": "ringCount",  "LABEL": "Ring Count", "TYPE": "float", "DEFAULT": 5.0, "MIN": 2.0, "MAX": 8.0 },
+    { "NAME": "rotSpeed",   "LABEL": "Speed",      "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0, "MAX": 2.0 },
+    { "NAME": "hdrPeak",    "LABEL": "HDR Peak",   "TYPE": "float", "DEFAULT": 2.5, "MIN": 1.0, "MAX": 4.0 },
+    { "NAME": "audioReact", "LABEL": "Audio",      "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 2.0 }
   ]
 }*/
 
-#define PI 3.1415927
+// --- Rotation helpers ---
+mat2 rot2(float a) {
+    float c = cos(a), s = sin(a);
+    return mat2(c, -s, s, c);
+}
+vec3 rotY(vec3 p, float a) { p.xz = rot2(a) * p.xz; return p; }
+vec3 rotX(vec3 p, float a) { p.yz = rot2(a) * p.yz; return p; }
+vec3 rotZ(vec3 p, float a) { p.xy = rot2(a) * p.xy; return p; }
 
-// Aspect-correct UV
-vec2 fitUV(vec2 pos) {
-    return (pos - 0.5 * RENDERSIZE) * min(IMG_SIZE_inputImage.y / RENDERSIZE.y, IMG_SIZE_inputImage.x / RENDERSIZE.x) / IMG_SIZE_inputImage + 0.5;
+// --- Torus SDF ---
+float sdTorus(vec3 p, vec2 t) {
+    return length(vec2(length(p.xz) - t.x, p.y)) - t.y;
 }
 
-// Kuwahara filter: find the quadrant with lowest variance and use its mean color
-// This creates the flat-color brush stroke look of oil paintings
-vec3 kuwahara(vec2 uv, float radius) {
-    vec2 texel = 1.0 / RENDERSIZE;
+// --- Scene: nested tori at varying angles ---
+float scene(vec3 p) {
+    float tt  = TIME * rotSpeed;
+    float audio = 1.0 + audioLevel * audioReact * 0.35;
 
-    vec3 mean[4];
-    vec3 var_acc[4];
-    float count[4];
+    int N = int(clamp(ringCount, 2.0, 8.0));
+    float d = 1e10;
 
-    // Initialize accumulators
-    for (int i = 0; i < 4; i++) {
-        mean[i] = vec3(0.0);
-        var_acc[i] = vec3(0.0);
-        count[i] = 0.0;
+    for (int i = 0; i < 8; i++) {
+        if (i >= N) break;
+        float fi = float(i);
+
+        // Major radius grows, tube radius fixed, with audio pulse
+        float majorR = (0.55 + fi * 0.18) * audio;
+        float tubeR  = 0.06 + fi * 0.01;
+
+        // Each ring gets a unique rotation axis and phase
+        float phase = tt + fi * 0.65;
+        vec3 lp = p;
+
+        // Alternate axis: xz-plane, xy-plane, yz-plane with cross tilts
+        float tilt = fi * 0.42 + 0.2;
+        if      (i == 0) { lp = rotX(lp, phase); }
+        else if (i == 1) { lp = rotZ(lp, phase * 0.8); lp = rotX(lp, tilt); }
+        else if (i == 2) { lp = rotY(lp, phase * 1.1); lp = rotZ(lp, tilt); }
+        else if (i == 3) { lp = rotX(lp, tilt); lp = rotZ(lp, phase * 0.6); }
+        else if (i == 4) { lp = rotZ(lp, tilt * 0.5); lp = rotY(lp, phase * 1.3); }
+        else if (i == 5) { lp = rotX(lp, phase * 0.9 + tilt); }
+        else if (i == 6) { lp = rotY(lp, tilt * 1.2); lp = rotX(lp, phase * 0.7); }
+        else             { lp = rotZ(lp, phase * 1.1); lp = rotY(lp, tilt * 0.8); }
+
+        float dt = sdTorus(lp, vec2(majorR, tubeR));
+        d = min(d, dt);
     }
+    return d;
+}
 
-    // Sample the 4 quadrants around the pixel
-    for (int j = -6; j <= 6; j++) {
-        for (int i = -6; i <= 6; i++) {
-            if (abs(float(i)) > radius || abs(float(j)) > radius) continue;
+// --- Normal via finite differences ---
+vec3 calcNormal(vec3 p) {
+    float eps = 0.001;
+    return normalize(vec3(
+        scene(p + vec3(eps, 0.0, 0.0)) - scene(p - vec3(eps, 0.0, 0.0)),
+        scene(p + vec3(0.0, eps, 0.0)) - scene(p - vec3(0.0, eps, 0.0)),
+        scene(p + vec3(0.0, 0.0, eps)) - scene(p - vec3(0.0, 0.0, eps))
+    ));
+}
 
-            vec3 c = texture2D(inputImage, fitUV((uv * RENDERSIZE) + vec2(float(i), float(j)))).rgb;
+// --- Jade/glacier palette: fully saturated, no white-mixing ---
+// jade green, glacier teal, ice highlight
+vec3 ringColor(vec3 p, vec3 n, float tt) {
+    // Map normal direction to palette
+    float blend = 0.5 + 0.5 * sin(n.y * 3.0 + tt * 0.7 + p.x * 2.0);
 
-            // Determine which quadrant(s) this sample belongs to
-            // Quadrant 0: top-right, 1: top-left, 2: bottom-left, 3: bottom-right
-            // Use loop to assign to correct quadrant (WebGL requires const/loop index)
-            int qi = (i >= 0) ? 0 : 1;
-            int qj = (j >= 0) ? 0 : 2;
-            int q = qi + qj;
+    vec3 jade    = vec3(0.1, 0.8, 0.5);   // jade green
+    vec3 glacier = vec3(0.0, 0.7, 0.9);   // glacier teal
+    vec3 ice     = vec3(0.9, 1.0, 1.0);   // ice white — used only in HDR specular
 
-            for (int k = 0; k < 4; k++) {
-                if (k == q) {
-                    mean[k] += c;
-                    var_acc[k] += c * c;
-                    count[k] += 1.0;
-                }
-            }
-        }
-    }
-
-    // Find the quadrant with minimum variance
-    float minVar = 1e8;
-    vec3 result = vec3(0.0);
-
-    for (int q = 0; q < 4; q++) {
-        if (count[q] < 1.0) continue;
-        vec3 m = mean[q] / count[q];
-        vec3 v = var_acc[q] / count[q] - m * m;
-        float totalVar = v.r + v.g + v.b;
-        if (totalVar < minVar) {
-            minVar = totalVar;
-            result = m;
-        }
-    }
-
-    return result;
+    // Mix jade and glacier based on surface angle — no grey/white in diffuse
+    return mix(jade, glacier, blend);
 }
 
 void main() {
-    vec2 pos = gl_FragCoord.xy;
-    vec2 uv = pos / RENDERSIZE;
+    vec2 uv = isf_FragNormCoord.xy * 2.0 - 1.0;
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    uv.x *= aspect;
 
-    // ==== PASS 0: Kuwahara paint filter ====
-    if (PASSINDEX == 0) {
-        gl_FragColor = vec4(kuwahara(uv, brushRadius), 1.0);
-        return;
+    float audio = 1.0 + audioLevel * audioReact * 0.35;
+    float tt = TIME * rotSpeed;
+
+    // Orbiting camera — slow, slightly elevated
+    float camAngle = tt * 0.35;
+    float camElev  = 0.55 + sin(tt * 0.14) * 0.15;
+    float camDist  = 3.4;
+    vec3 ro = vec3(cos(camAngle) * camDist * cos(camElev),
+                   sin(camElev) * camDist,
+                   sin(camAngle) * camDist * cos(camElev));
+    vec3 forward = normalize(-ro);
+    vec3 right   = normalize(cross(vec3(0.0, 1.0, 0.0), forward));
+    vec3 up      = cross(forward, right);
+
+    float fov = 1.2;
+    vec3 rd = normalize(forward * fov + right * uv.x + up * uv.y);
+
+    // --- 64-step raymarch ---
+    float dist = 0.0;
+    float hit  = 0.0;
+    for (int i = 0; i < 64; i++) {
+        vec3 p = ro + rd * dist;
+        float d = scene(p);
+        if (d < 0.001) { hit = 1.0; break; }
+        if (dist > 12.0) break;
+        dist += d;
     }
 
-    // ==== PASS 1: Relief lighting ====
-    vec2 texel = 1.0 / RENDERSIZE;
-    float valC = dot(texture2D(paintBuf, uv).rgb, vec3(0.333));
-    float valR = dot(texture2D(paintBuf, uv + vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valL = dot(texture2D(paintBuf, uv - vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valU = dot(texture2D(paintBuf, uv + vec2(0.0, texel.y)).rgb, vec3(0.333));
-    float valD = dot(texture2D(paintBuf, uv - vec2(0.0, texel.y)).rgb, vec3(0.333));
+    // Black void background
+    vec3 col = vec3(0.005, 0.01, 0.008);
 
-    vec3 norm = normalize(vec3(
-        (valR - valL) / texel.x,
-        (valU - valD) / texel.y,
-        150.0
-    ));
+    if (hit > 0.5) {
+        vec3 p = ro + rd * dist;
+        vec3 n = calcNormal(p);
 
-    vec3 light = normalize(vec3(-1.0, 1.0, 1.4));
-    float diff = clamp(dot(norm, light), 0.0, 1.0);
-    float spec = pow(clamp(dot(reflect(light, norm), vec3(0.0, 0.0, -1.0)), 0.0, 1.0), 12.0) * paintSpec;
+        // Black silhouette edge
+        float edge = 1.0 - smoothstep(0.0, 0.2, abs(dot(n, -rd)));
 
-    gl_FragColor = texture2D(paintBuf, uv) * mix(diff, 1.0, 0.9)
-                 + spec * vec4(0.85, 1.0, 1.15, 1.0);
+        // Surface color: jade/glacier blend
+        vec3 baseCol = ringColor(p, n, tt) * hdrPeak;
 
-    // Vignette
-    if (vignetteAmt > 0.0) {
-        vec2 scc = (pos - 0.5 * RENDERSIZE) / RENDERSIZE.x;
-        float vign = 1.1 - vignetteAmt * dot(scc, scc);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.x / RENDERSIZE.x * PI) * 40.0);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.y / RENDERSIZE.y * PI) * 20.0);
-        gl_FragColor.xyz *= vign;
+        // Key light from upper-right-front
+        vec3 keyLight = normalize(vec3(1.5, 2.0, 1.0));
+        float diff = max(dot(n, keyLight), 0.0);
+
+        // Fill light from below — cold blue-green tint
+        vec3 fillLight = normalize(vec3(-1.0, -1.0, 0.5));
+        float fill = max(dot(n, fillLight), 0.0) * 0.25;
+
+        // Specular: ice-white highlight (peak 2.5+)
+        vec3 halfVec = normalize(keyLight - rd);
+        float spec   = pow(max(dot(n, halfVec), 0.0), 64.0);
+        // Ice white highlight — HDR peak value
+        vec3 specCol = vec3(0.9, 1.0, 1.0) * spec * hdrPeak * audio;
+
+        // Rim light — teal rim from camera-opposite side
+        float rim    = pow(1.0 - max(dot(n, -rd), 0.0), 3.0);
+        vec3 rimCol  = vec3(0.0, 0.7, 0.9) * rim * hdrPeak * 0.5;
+
+        // Subtle self-emission from jade core
+        vec3 ambient = vec3(0.1, 0.8, 0.5) * 0.12 * hdrPeak;
+
+        col = ambient + baseCol * (diff * 1.2 + fill) + specCol + rimCol;
+        // Black edge
+        col *= (1.0 - edge * 0.92);
     }
 
-    gl_FragColor.w = 1.0;
+    // No tone mapping — raw HDR output
+    gl_FragColor = vec4(col, 1.0);
 }
