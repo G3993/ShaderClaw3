@@ -9,9 +9,13 @@
     { "NAME": "intensity", "LABEL": "Glitch", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Dissolve", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 0.9, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.08, 0.06, 0.04, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "wallGrain",  "LABEL": "Wall Grain",  "TYPE": "float", "DEFAULT": 0.7, "MIN": 0.0, "MAX": 2.0 },
+    { "NAME": "sprayAmt",   "LABEL": "Spray Count", "TYPE": "float", "DEFAULT": 8.0, "MIN": 2.0, "MAX": 16.0 },
+    { "NAME": "hdrGlow",    "LABEL": "HDR Glow",    "TYPE": "float", "DEFAULT": 2.5, "MIN": 1.0, "MAX": 5.0 },
+    { "NAME": "audioMod",   "LABEL": "Audio",       "TYPE": "float", "DEFAULT": 0.7, "MIN": 0.0, "MAX": 2.0 }
   ]
 }*/
 
@@ -91,6 +95,79 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
+// GRAFFITI WALL BACKGROUND
+// =======================================================================
+
+float hash21(vec2 p) { return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+float hash11(float n) { return fract(sin(n*12.9898)*43758.5453); }
+
+float grainNoise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    f = f*f*(3.0-2.0*f);
+    return mix(mix(hash21(i),hash21(i+vec2(1,0)),f.x),
+               mix(hash21(i+vec2(0,1)),hash21(i+vec2(1,1)),f.x),f.y);
+}
+
+vec3 graffitiWallBg(vec2 uv, float aspect, float t) {
+    float audio = 1.0 + audioLevel * audioMod * 0.3;
+
+    // Concrete wall texture: dark gray with grain
+    float grain1 = grainNoise(uv * vec2(aspect, 1.0) * 18.0) * 0.5
+                 + grainNoise(uv * vec2(aspect, 1.0) * 45.0) * 0.25
+                 + grainNoise(uv * vec2(aspect, 1.0) * 90.0) * 0.125;
+    vec3 concrete = vec3(0.10, 0.08, 0.06) + grain1 * wallGrain * 0.06;
+
+    // Spray paint graffiti blobs (warm palette: orange, crimson, gold)
+    int N = int(clamp(sprayAmt, 2.0, 16.0));
+    vec3 col = concrete;
+    for (int i = 0; i < 16; i++) {
+        if (i >= N) break;
+        float fi = float(i);
+        // Slow drift of spray positions
+        vec2 center = vec2(hash11(fi*1.31+1.0), hash11(fi*2.17+2.0));
+        center.x *= aspect;
+        center += vec2(sin(t*0.05+fi*1.7), cos(t*0.04+fi*2.3)) * 0.02;
+
+        float radius = 0.05 + hash11(fi*3.11)*0.15;
+        float dist = length(uv * vec2(aspect, 1.0) - center);
+
+        // Spray blob: soft Gaussian core + rough edge (noise-displaced)
+        float sprayNoise = grainNoise(uv * 8.0 + fi) * 0.6;
+        float mask = smoothstep(radius + sprayNoise*0.05, radius*0.3, dist);
+
+        // Warm spray colors: crimson, orange, gold, amber
+        vec3 sprayColors[4];
+        sprayColors[0] = vec3(0.9, 0.1, 0.0);   // crimson
+        sprayColors[1] = vec3(1.0, 0.4, 0.0);   // orange
+        sprayColors[2] = vec3(1.0, 0.78, 0.0);  // gold
+        sprayColors[3] = vec3(0.85, 0.5, 0.0);  // amber
+        vec3 sc = sprayColors[int(mod(fi, 4.0))];
+
+        // Inner glow peak (HDR)
+        float innerGlow = smoothstep(radius*0.7, 0.0, dist);
+        col = mix(col, sc, mask * 0.85);
+        col += sc * innerGlow * hdrGlow * 0.5 * audio;
+    }
+
+    // Drip effect: vertical streaks from spray blobs
+    for (int i = 0; i < 6; i++) {
+        float fi = float(i);
+        float dripX = hash11(fi*7.31) * aspect;
+        float dripW = 0.004 + hash11(fi*5.13) * 0.006;
+        float dripY0 = hash11(fi*9.7) * 0.3 + 0.3;
+        float dripLen = hash11(fi*11.3) * 0.25 + 0.1;
+        vec2 p2 = uv * vec2(aspect, 1.0);
+        float dripDist = abs(p2.x - dripX) - dripW;
+        float dripRange = max(dripY0 - p2.y, 0.0) * step(p2.y, dripY0) * step(dripY0 - dripLen, p2.y);
+        float dripMask = (1.0 - smoothstep(0.0, dripW*2.0, dripDist)) * (dripRange > 0.0 ? 1.0 : 0.0);
+        vec3 dc = vec3(0.9, 0.25, 0.0); // orange drip
+        col = mix(col, dc, dripMask * 0.7);
+    }
+
+    return col;
+}
+
+// =======================================================================
 // EFFECT: DIGIFADE - glitch dissolve
 // =======================================================================
 
@@ -153,9 +230,11 @@ vec4 effectDigifade(vec2 uv, int sub) {
         }
     }
 
-    vec3 fc = mix(bgColor.rgb, textColor.rgb, textHit);
+    vec3 bg = transparentBg ? bgColor.rgb : graffitiWallBg(uv, aspect, TIME);
+    vec3 textHDR = textColor.rgb * hdrGlow;
+    vec3 fc = mix(bg, textHDR, textHit);
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
+    if (transparentBg) { a = textHit; fc = textHDR; }
     return vec4(fc, a);
 }
 
