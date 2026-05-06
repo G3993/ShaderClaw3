@@ -1,182 +1,169 @@
 /*{
-  "DESCRIPTION": "Vishes — cellular random walkers leaving hue-drifting color trails on a slow-fading grid",
-  "CREDIT": "ShaderClaw — cell-walker sketch translated to multi-pass ISF",
-  "CATEGORIES": ["Generator"],
+  "DESCRIPTION": "Bioluminescent Mycelium Network — 3D raymarched fungal thread network: teal-violet-white capsule tubes glowing in void black, slow pulsing bioluminescence",
+  "CREDIT": "Easel auto-improve 2026-05-06",
+  "CATEGORIES": ["Generator", "3D"],
   "INPUTS": [
-    { "NAME": "gridSize", "LABEL": "Grid Size", "TYPE": "float", "DEFAULT": 80.0, "MIN": 20.0, "MAX": 400.0 },
-    { "NAME": "walkers", "LABEL": "Walkers", "TYPE": "float", "DEFAULT": 8.0, "MIN": 1.0, "MAX": 16.0 },
-    { "NAME": "stepRate", "LABEL": "Step Rate", "TYPE": "float", "DEFAULT": 40.0, "MIN": 1.0, "MAX": 240.0 },
-    { "NAME": "hueDrift", "LABEL": "Hue Drift", "TYPE": "float", "DEFAULT": 0.015, "MIN": 0.0, "MAX": 0.1 },
-    { "NAME": "fadeRate", "LABEL": "Trail Fade", "TYPE": "float", "DEFAULT": 0.004, "MIN": 0.0, "MAX": 0.08 },
-    { "NAME": "saturation", "LABEL": "Saturation", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "brightness", "LABEL": "Brightness", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "bloom", "LABEL": "Bloom", "TYPE": "float", "DEFAULT": 1.2, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "hdrPeak", "LABEL": "HDR Peak", "TYPE": "float", "DEFAULT": 2.5, "MIN": 1.0, "MAX": 4.0 },
-    { "NAME": "pulse", "LABEL": "Audio Pulse", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "bounceEdges", "LABEL": "Bounce Edges", "TYPE": "bool", "DEFAULT": true },
-    { "NAME": "backgroundColor", "LABEL": "BG Color", "TYPE": "color", "DEFAULT": [0.01, 0.0, 0.02, 1.0] }
-  ],
-  "PASSES": [
-    { "TARGET": "stateBuf", "PERSISTENT": true, "WIDTH": 16, "HEIGHT": 1 },
-    { "TARGET": "canvas", "PERSISTENT": true },
-    {}
+    { "NAME": "nodeCount",  "LABEL": "Node Count",  "TYPE": "float", "DEFAULT": 12.0, "MIN": 4.0,  "MAX": 24.0 },
+    { "NAME": "netRadius",  "LABEL": "Net Radius",  "TYPE": "float", "DEFAULT": 1.2,  "MIN": 0.3,  "MAX": 2.5 },
+    { "NAME": "tubeRadius", "LABEL": "Tube Radius", "TYPE": "float", "DEFAULT": 0.025,"MIN": 0.005,"MAX": 0.1 },
+    { "NAME": "glowScale",  "LABEL": "Glow Scale",  "TYPE": "float", "DEFAULT": 2.4,  "MIN": 1.0,  "MAX": 5.0 },
+    { "NAME": "pulseSpeed", "LABEL": "Pulse Speed", "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0,  "MAX": 2.0 },
+    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 0.8,  "MIN": 0.0,  "MAX": 2.0 }
   ]
 }*/
 
-#define MAX_WALKERS 16
-#define TAU 6.28318530718
+#define MAX_MARCH 64
+#define MAX_DIST  10.0
+#define SURF_DIST 0.003
 
-float hash11(float p) {
-    p = fract(p * 0.1031);
-    p *= p + 33.33;
-    p *= p + p;
-    return fract(p);
+float hash11(float n) { return fract(sin(n*12.9898)*43758.5453); }
+float hash21(vec2 p)  { return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+
+// Reproducible node positions (Fibonacci-on-sphere, scaled)
+vec3 nodePos(int i, float t) {
+    float fi = float(i);
+    float golden = 2.39996322972865; // golden angle
+    float phi = acos(1.0 - 2.0*(fi+0.5)/nodeCount);
+    float theta = golden * fi;
+    // Slow drift: each node oscillates along its radial direction
+    float drift = sin(t * pulseSpeed * (0.3 + hash11(fi)*0.4) + fi*1.7) * 0.08;
+    return (netRadius + drift) * vec3(sin(phi)*cos(theta), cos(phi), sin(phi)*sin(theta));
 }
 
-float hash12(vec2 p) {
-    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.x + p3.y) * p3.z);
+// SDF of single capsule (connection between two nodes)
+float sdCapsule(vec3 p, vec3 a, vec3 b, float r) {
+    vec3 ab = b-a, ap = p-a;
+    float t = clamp(dot(ap,ab)/dot(ab,ab), 0.0, 1.0);
+    return length(ap - ab*t) - r;
 }
 
-vec3 hsv2rgb(vec3 c) {
-    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
-    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+// SDF of full mycelium network (nodes + connections)
+float mapMycelium(vec3 p) {
+    float d = MAX_DIST;
+    int N = int(clamp(nodeCount, 4.0, 24.0));
+    float t = TIME * pulseSpeed;
+
+    // Node spheres (junction points)
+    for (int i = 0; i < 24; i++) {
+        if (i >= N) break;
+        vec3 np = nodePos(i, TIME);
+        d = min(d, length(p - np) - tubeRadius*2.5); // junction sphere
+    }
+
+    // Connections: each node connects to 3 nearest neighbors
+    // (simplified: connect node i to nodes i+1, i+2, i+3 mod N)
+    for (int i = 0; i < 24; i++) {
+        if (i >= N) break;
+        vec3 a = nodePos(i, TIME);
+        for (int j = 1; j <= 3; j++) {
+            int k = int(mod(float(i+j), float(N)));
+            vec3 b = nodePos(k, TIME);
+            d = min(d, sdCapsule(p, a, b, tubeRadius));
+        }
+    }
+    return d;
 }
 
-vec2 neighborDir(int dir) {
-    if (dir == 0) return vec2(-1.0, -1.0);
-    if (dir == 1) return vec2( 0.0, -1.0);
-    if (dir == 2) return vec2( 1.0, -1.0);
-    if (dir == 3) return vec2(-1.0,  0.0);
-    if (dir == 4) return vec2( 1.0,  0.0);
-    if (dir == 5) return vec2(-1.0,  1.0);
-    if (dir == 6) return vec2( 0.0,  1.0);
-    return vec2( 1.0,  1.0);
+// Bioluminescent color per tube based on position (teal->violet->white-hot)
+vec3 myceliumColor(vec3 p, float nodeAmt) {
+    // Height-based color mapping
+    float ht = p.y / netRadius;
+    vec3 col;
+    float t3 = clamp(ht * 1.5 + 0.5, 0.0, 1.0) * 3.0;
+    vec3 c0 = vec3(0.0, 0.85, 0.7);  // teal
+    vec3 c1 = vec3(0.5, 0.1,  1.0);  // violet
+    vec3 c2 = vec3(0.8, 0.4,  1.0);  // bright violet
+    vec3 c3 = vec3(1.1, 1.0,  1.05); // white-hot HDR
+    if (t3<1.0) col = mix(c0,c1,t3);
+    else if (t3<2.0) col = mix(c1,c2,t3-1.0);
+    else col = mix(c2,c3,t3-2.0);
+    // Pulse brightness based on node proximity
+    col *= 0.6 + 0.4*nodeAmt;
+    return col;
 }
 
-vec4 readWalker(float id) {
-    return texture2D(stateBuf, vec2((id + 0.5) / 16.0, 0.5));
+vec3 calcNormal(vec3 p) {
+    vec2 e = vec2(0.001, 0.0);
+    return normalize(vec3(
+        mapMycelium(p+e.xyy)-mapMycelium(p-e.xyy),
+        mapMycelium(p+e.yxy)-mapMycelium(p-e.yxy),
+        mapMycelium(p+e.yyx)-mapMycelium(p-e.yyx)));
 }
 
 void main() {
-    vec2 Res = RENDERSIZE;
-    vec2 pos = gl_FragCoord.xy;
-    float cell = 1.0 / max(gridSize, 1.0);
-    float audio = 1.0 + audioLevel * pulse;
+    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
+    float aspect = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
+    uv.x *= aspect;
 
-    // =============================================================
-    // PASS 0: advance walker state buffer (16x1)
-    // state encoding: vec4(x_norm, y_norm, hue, stepAccumulator)
-    // =============================================================
-    if (PASSINDEX == 0) {
-        float id = floor(pos.x);
-        if (id >= walkers) {
-            gl_FragColor = vec4(0.0);
-            return;
-        }
+    float audio = 1.0 + audioLevel*audioReact*0.3 + audioBass*audioReact*0.25;
 
-        // Seed walkers on their assigned rings
-        if (FRAMEINDEX < 2) {
-            float ringIdx = floor(id / 2.0);
-            float ringR = 0.08 + ringIdx * 0.12;
-            float startAngle = (hash11(id * 7.31) * 6.28318);
-            gl_FragColor = vec4(0.5 + cos(startAngle)*ringR, 0.5 + sin(startAngle)*ringR, hash11(id*11.7+3.0), 0.0);
-            return;
-        }
+    // Close-up camera orbiting the mycelium network
+    float camT = TIME * pulseSpeed * 0.4;
+    float camR = netRadius * 2.8;
+    vec3 ro = vec3(sin(camT)*camR, sin(camT*0.37)*netRadius*0.5, cos(camT)*camR);
+    vec3 ta = vec3(0.0);
+    vec3 ww = normalize(ta - ro);
+    vec3 uu = normalize(cross(ww, vec3(0,1,0)));
+    vec3 vv = cross(uu, ww);
+    vec3 rd = normalize(uv.x*uu + uv.y*vv + 1.8*ww);
 
-        vec4 prev = readWalker(id);
-        vec2 p = prev.rg;
-        float h = prev.b;
-        float acc = prev.a + TIMEDELTA * stepRate * audio;
-
-        // Ring orbit constraint: each walker assigned to a specific ring
-        float ringIdx = floor(id / 2.0); // rings 0, 1, 2, 3 (2 walkers per ring)
-        float ringRadius = 0.08 + ringIdx * 0.12; // rings at 0.08, 0.20, 0.32, 0.44 (in UV space)
-        float ringHue = ringIdx / 4.0; // rings: 0.0 (red), 0.25 (yellow-green), 0.5 (cyan), 0.75 (blue-violet)
-
-        // Walk up to 6 discrete cell steps this frame
-        for (int s = 0; s < 6; s++) {
-            if (acc < 1.0) break;
-            acc -= 1.0;
-
-            // Current angle of this walker on its ring
-            vec2 center = vec2(0.5, 0.5);
-            vec2 wp = p - center;
-            float currentAngle = atan(wp.y, wp.x);
-
-            // Advance angle based on ring direction (alternate CW/CCW)
-            float dir = mod(id, 2.0) < 0.5 ? 1.0 : -1.0;
-            float angularStep = cell * dir * (1.0 + hash11(id * 3.7) * 0.3);
-            float newAngle = currentAngle + angularStep;
-
-            // Project back to ring with slight TIME-based radius oscillation
-            p = center + vec2(cos(newAngle), sin(newAngle)) * (ringRadius + sin(TIME * (1.0 + ringIdx * 0.3) + id * 1.7) * 0.02);
-
-            // Clamp to valid UV range
-            p = clamp(p, 0.0, 1.0);
-
-            // Subtle hue drift within ring hue zone
-            float seed = TIME * 97.13 + id * 13.7 + float(s) * 3.31;
-            float dh = (hash12(vec2(seed + 7.7, id)) - 0.5) * 2.0 * hueDrift * 0.3;
-            h = fract(ringHue + dh + 1.0);
-        }
-
-        gl_FragColor = vec4(p, h, acc);
-        return;
+    float dist = 0.0;
+    float hitT = MAX_DIST;
+    for (int i = 0; i < MAX_MARCH; i++) {
+        vec3 p = ro + rd*dist;
+        float d = mapMycelium(p);
+        if (d < SURF_DIST) { hitT = dist; break; }
+        dist += d * 0.7;
+        if (dist > MAX_DIST) break;
     }
 
-    // =============================================================
-    // PASS 1: update persistent canvas (fade + paint walker cells)
-    // =============================================================
-    if (PASSINDEX == 1) {
-        vec2 uv = pos / Res;
-        vec4 prev = texture2D(canvas, uv);
-        vec4 col = prev * (1.0 - fadeRate);
+    // Deep void background -- absolute black-blue
+    vec3 col = vec3(0.003, 0.004, 0.008);
 
-        // Aspect-correct grid so cells stay square
-        float aspect = Res.x / Res.y;
-        vec2 gridUV = vec2(uv.x * aspect, uv.y);
-        vec2 pxCell = floor(gridUV * gridSize);
+    if (hitT < MAX_DIST) {
+        vec3 p   = ro + rd*hitT;
+        vec3 n   = calcNormal(p);
 
-        for (int i = 0; i < MAX_WALKERS; i++) {
-            if (float(i) >= walkers) break;
-            vec4 st = readWalker(float(i));
-            vec2 wGridUV = vec2(st.r * aspect, st.g);
-            vec2 wCell = floor(wGridUV * gridSize);
-            vec2 diff = abs(wCell - pxCell);
-            if (diff.x < 0.5 && diff.y < 0.5) {
-                vec3 rgb = hsv2rgb(vec3(st.b, saturation, hdrPeak * audio));
-                col = vec4(rgb, 1.0);
-            }
+        // Find nearest node to determine junction proximity
+        float nodeProx = 0.0;
+        int N = int(clamp(nodeCount, 4.0, 24.0));
+        for (int i = 0; i < 24; i++) {
+            if (i >= N) break;
+            vec3 np = nodePos(i, TIME);
+            float nd = length(p - np);
+            nodeProx = max(nodeProx, exp(-nd * 5.0));
         }
 
-        gl_FragColor = col;
-        return;
+        vec3 baseCol = myceliumColor(p, nodeProx);
+        vec3 lDir = normalize(vec3(0.5, 1.0, 0.3));
+        float diff = 0.2 + 0.8*max(dot(n,lDir),0.0);
+        float spec = pow(max(dot(reflect(-lDir,n),-rd),0.0),32.0);
+        float rim  = pow(1.0-max(dot(n,-rd),0.0),4.0);
+
+        col = baseCol * diff * glowScale * audio;
+        col += vec3(1.0,0.9,1.0) * spec * glowScale * audio;        // white-hot spec
+        col += baseCol * rim * glowScale * 0.5 * audio;              // rim glow
+
+        // fwidth AA on tube silhouette
+        float tubeSdf = mapMycelium(p);
+        col *= 0.02 + smoothstep(0.0, fwidth(tubeSdf)*2.0, abs(tubeSdf)+SURF_DIST);
     }
 
-    // =============================================================
-    // PASS 2: final display (bloom + background blend)
-    // =============================================================
-    vec2 uv = pos / Res;
-    vec3 c = texture2D(canvas, uv).rgb;
-
-    if (bloom > 0.001) {
-        vec3 sum = vec3(0.0);
-        float r = 2.5 / min(Res.x, Res.y);
-        for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {
-                vec2 off = vec2(float(x), float(y)) * r;
-                sum += texture2D(canvas, uv + off).rgb;
-            }
-        }
-        sum /= 25.0;
-        c += sum * bloom;
+    // Volumetric bioluminescent glow (fog of tubes glowing in dark)
+    float vt = 0.0;
+    for (int i = 0; i < 48; i++) {
+        vec3 vp = ro + rd*vt;
+        float d = mapMycelium(vp);
+        vec3 vc = myceliumColor(vp, 0.5);
+        float contrib = exp(-max(d,0.0)*18.0) * 0.04;
+        col += vc * contrib * glowScale * audio;
+        vt += max(d*0.5, 0.05);
+        if (vt > MAX_DIST) break;
     }
 
-    float lum = max(c.r, max(c.g, c.b));
-    float alpha = clamp(lum * 8.0, 0.0, 1.0);
-    vec3 outRgb = mix(backgroundColor.rgb, c, alpha);
-    gl_FragColor = vec4(outRgb, 1.0);
+    // Bioluminescent pulse: slow sinusoidal brightness modulation
+    float pulse = 0.85 + 0.15*sin(TIME*pulseSpeed*2.3);
+    col *= pulse;
+
+    gl_FragColor = vec4(col, 1.0);
 }
