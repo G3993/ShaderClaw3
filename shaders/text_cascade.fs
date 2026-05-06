@@ -11,9 +11,10 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.05, 0.6, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.05, 0.05, 0.05, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true },
+    { "NAME": "hdrBoost", "LABEL": "Text HDR", "TYPE": "float", "DEFAULT": 2.2, "MIN": 1.0, "MAX": 4.0 }
   ]
 }*/
 
@@ -140,6 +141,43 @@ vec4 effectCascade(vec2 uv) {
     return vec4(fc, a);
 }
 
+// ── Acid Rain Concrete background ──────────────────────────────────────────────
+vec3 acidRainBg(vec2 uv) {
+    float t = TIME;
+    // Brutalist concrete base texture (grey with vertical streaks)
+    float concrete = 0.12 + 0.06 * sin(uv.x * 87.3) * sin(uv.y * 43.1 + 1.7);
+    concrete += 0.04 * sin(uv.x * 211.0 + 0.9) * sin(uv.y * 97.0);
+    vec3 concreteCol = vec3(0.07, 0.07, 0.07) + vec3(concrete);
+
+    // Acid rain streaks: fast-falling neon green drops
+    float rain = 0.0;
+    for (int i = 0; i < 8; i++) {
+        float fi   = float(i);
+        float dropX = fract(fi * 0.137 + 0.06);
+        float speed = 0.4 + fi * 0.09;
+        float dropY = fract(fi * 0.271 + t * speed);
+        float trail = smoothstep(0.08, 0.0, abs(uv.x - dropX) * RENDERSIZE.x / RENDERSIZE.y * 18.0)
+                    * smoothstep(0.12, 0.0, abs(uv.y - dropY));
+        rain += trail;
+    }
+    // Rain streaks also as vertical thin lines
+    for (int i = 0; i < 12; i++) {
+        float fi   = float(i);
+        float lx   = fract(fi * 0.083 + 0.04);
+        float speed = 0.5 + fi * 0.07;
+        float lt   = mod(t * speed + fi * 0.37, 1.0);
+        float lineA = 1.0 - smoothstep(lt * 0.7, lt, uv.y);
+        float lineB = smoothstep(lt * 0.7 - 0.02, lt * 0.7, uv.y);
+        float lineMask = smoothstep(0.004, 0.0, abs(uv.x - lx) * RENDERSIZE.x / RENDERSIZE.y)
+                       * lineA * lineB;
+        rain += lineMask * 0.5;
+    }
+    rain = min(rain, 1.0);
+
+    vec3 rainCol = vec3(0.0, 1.0, 0.2) * rain * 2.0;  // acid green HDR
+    return concreteCol + rainCol;
+}
+
 // =======================================================================
 // MAIN
 // =======================================================================
@@ -147,6 +185,11 @@ vec4 effectCascade(vec2 uv) {
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     vec4 col = effectCascade(uv);
+
+    // Composite text over acid rain concrete background
+    vec3 acidBg = acidRainBg(uv);
+    col.rgb = mix(acidBg, textColor.rgb * hdrBoost, col.a);
+    col.a   = 1.0;
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;

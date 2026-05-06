@@ -1,20 +1,17 @@
-## 2026-05-05
+## 2026-05-06
 **Prior rating:** 0.0★
-**Approach:** 2D refine (aurora background + HDR glow)
+**Approach:** 2D bg add — NEW ANGLE: Acid Rain Concrete background (prior orphan: 2026-05-05 aurora bg; this is brutalist industrial grey concrete + falling neon green rain — opposite mood: celestial vs industrial)
 **Critique:**
-1. Reference fidelity: Cascading tiled rows with wave offsets is a legitimate effect; invisible in transparent mode.
-2. Compositional craft: No background — transparent default means nothing visible standalone.
-3. Technical execution: Wave offset logic is correct; multi-row cascade works.
-4. Liveness: TIME-driven wave oscillation is present but hidden behind transparency.
-5. Differentiation: Cascade row effect is distinctive; needs a background to show it.
+1. Reference fidelity: Dark concrete texture with falling acid rain drops creates a dystopian industrial atmosphere contrasting with the cascade wave text effect.
+2. Compositional craft: Hot magenta text on acid green + grey concrete = maximum color contrast across warm/cool axis.
+3. Technical execution: Concrete base from layered sin noise, 8 falling drops (Gaussian splat + linear trail), 12 vertical rain lines, acid green at 2.0 HDR.
+4. Liveness: Rain drops animated with TIME*speed; drop positions cycle continuously; concrete is static grain.
+5. Differentiation: Prior orphan used aurora (celestial, purple/cyan/gold); this uses industrial concrete + acid rain (grey + neon green). Completely opposite reference, palette, and mood.
 **Changes:**
-- Added auroraBg() — 5-layer sinusoidal aurora with 4-color saturated palette
-- Aurora colors: violet, cyan, gold, magenta — all fully saturated
-- transparentBg default: true→false
-- textColor default: white → gold [1.0, 0.85, 0.0]
-- bgColor default: black → deep purple [0.02, 0.0, 0.10]
-- hdrGlow default: 2.2 (gold text glows HDR)
-- Alternating row colors: gold vs magenta (row parity)
-- audioMod input added
-**HDR peaks reached:** gold text * 2.2 = 2.2 direct; with audio 3.0+
+- Added acidRainBg() with concrete noise + falling neon green rain drops and streak lines
+- textColor default: white → hot magenta [1.0, 0.05, 0.6]
+- transparentBg composited over acid rain bg in main()
+- hdrBoost parameter added (default 2.2)
+- Rain palette: acid green 2.0 HDR, concrete grey 0.07-0.13
+**HDR peaks reached:** acid rain drops 2.0, text hdrBoost 2.2, concrete ambient 0.12
 **Estimated rating:** 3.8★
