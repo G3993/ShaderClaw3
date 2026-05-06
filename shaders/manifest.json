@@ -1065,5 +1065,16 @@
       "Audio Reactive"
     ],
     "file": "cymatic_oracle.fs"
+  },
+  {
+    "id": 506,
+    "title": "Chat",
+    "description": "Speech-bubble note taker. Splits the message into chunks and emits each chunk as a small chat bubble that floats up the screen, alternating sender/receiver sides. New bubble spawns at the bottom every interval; old bubbles drift up and fade.",
+    "type": "generator",
+    "categories": [
+      "Generator",
+      "Text"
+    ],
+    "file": "text_chat.fs"
   }
 ]

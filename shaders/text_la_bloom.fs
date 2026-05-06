@@ -1,53 +1,56 @@
 /*{
-  "DESCRIPTION": "La Bloom — a love letter on vintage paper. Ink reveals char by char, bleeds softly, lingers, fades. Aged parchment with grain and worn edges.",
+  "DESCRIPTION": "La Bloom — message characters arranged on a rose-curve flower silhouette that continuously blooms outward from the center. Multiple concurrent bloom waves spiral out at offset phases so a new flower is always opening while older ones fade at the edges. Saturated jewel palette, HDR petal peaks, ink-black character silhouettes against bloom haze.",
   "CREDIT": "ShaderClaw",
-  "CATEGORIES": ["Generator", "Text"],
+  "CATEGORIES": ["Generator", "Text", "Audio Reactive"],
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "MY DEAREST I HAVE LOVED YOU SINCE", "MAX_LENGTH": 48 },
-    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "DEFAULT": 2, "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"] },
-    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "DEFAULT": 2.5, "MIN": 0.5, "MAX": 20.0 },
-    { "NAME": "fadeTime", "LABEL": "Fade", "TYPE": "float", "DEFAULT": 5.0, "MIN": 1.0, "MAX": 10.0 },
-    { "NAME": "bloom", "LABEL": "Ink Bleed", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "wobble", "LABEL": "Wobble", "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "DEFAULT": 0.22, "MIN": 0.01, "MAX": 1.0 },
-    { "NAME": "kerning", "LABEL": "Spacing", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "paperGrain", "LABEL": "Paper Grain", "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "edgeBurn", "LABEL": "Edge Burn", "TYPE": "float", "DEFAULT": 0.4, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "foxing", "LABEL": "Foxing", "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
-    { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
-    { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Ink", "TYPE": "color", "DEFAULT": [0.14, 0.07, 0.04, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Paper", "TYPE": "color", "DEFAULT": [0.93, 0.88, 0.78, 1.0] },
+    { "NAME": "msg", "TYPE": "text", "DEFAULT": "BLOOM ", "MAX_LENGTH": 48 },
+    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "DEFAULT": 3, "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"] },
+    { "NAME": "petals", "LABEL": "Petals", "TYPE": "long", "DEFAULT": 6, "VALUES": [3,4,5,6,7,8,10,12], "LABELS": ["3","4","5","6","7","8","10","12"] },
+    { "NAME": "waveCount", "LABEL": "Bloom Waves", "TYPE": "long", "DEFAULT": 3, "VALUES": [1,2,3,4,5,6], "LABELS": ["1","2","3","4","5","6"] },
+    { "NAME": "bloomSpeed", "LABEL": "Bloom Speed", "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.02, "MAX": 1.0 },
+    { "NAME": "spin", "LABEL": "Spin", "TYPE": "float", "DEFAULT": 0.12, "MIN": -1.5, "MAX": 1.5 },
+    { "NAME": "maxRadius", "LABEL": "Max Radius", "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.15, "MAX": 0.7 },
+    { "NAME": "petalDepth", "LABEL": "Petal Depth", "TYPE": "float", "DEFAULT": 0.34, "MIN": 0.0, "MAX": 0.7 },
+    { "NAME": "textScale", "LABEL": "Text Size", "TYPE": "float", "DEFAULT": 0.07, "MIN": 0.02, "MAX": 0.18 },
+    { "NAME": "haloStrength", "LABEL": "Halo", "TYPE": "float", "DEFAULT": 1.6, "MIN": 0.0, "MAX": 4.0 },
+    { "NAME": "hdrBoost", "LABEL": "HDR Boost", "TYPE": "float", "DEFAULT": 2.4, "MIN": 1.0, "MAX": 4.0 },
+    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 },
+    { "NAME": "inkColor", "LABEL": "Ink", "TYPE": "color", "DEFAULT": [0.02, 0.01, 0.03, 1.0] },
+    { "NAME": "petalA", "LABEL": "Petal Hot", "TYPE": "color", "DEFAULT": [1.0, 0.32, 0.55, 1.0] },
+    { "NAME": "petalB", "LABEL": "Petal Cool", "TYPE": "color", "DEFAULT": [0.95, 0.78, 0.20, 1.0] },
+    { "NAME": "centerColor", "LABEL": "Pistil", "TYPE": "color", "DEFAULT": [1.0, 0.95, 0.55, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.04, 0.02, 0.08, 1.0] },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
   ]
 }*/
 
-// ==========================================
-// Font atlas sampling
-// ==========================================
+// =====================================================================
+// La Bloom — flower of text. Message characters orbit on a rose curve
+// whose radius blooms outward from the center, looping. Multiple waves
+// at offset phases keep at least one bloom always opening.
+// Output: LINEAR HDR.
+// =====================================================================
 
+#define TAU 6.2831853
+
+// ─── Font atlas sampling ────────────────────────────────────────────
 float sampleChar(int ch, vec2 uv) {
     if (ch < 0 || ch > 36) return 0.0;
     if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
     return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
 }
 
-// ==========================================
-// Character lookup (msg_0..msg_47)
-// ==========================================
-
 int getChar(int slot) {
-    if (slot == 0) return int(msg_0);
-    if (slot == 1) return int(msg_1);
-    if (slot == 2) return int(msg_2);
-    if (slot == 3) return int(msg_3);
-    if (slot == 4) return int(msg_4);
-    if (slot == 5) return int(msg_5);
-    if (slot == 6) return int(msg_6);
-    if (slot == 7) return int(msg_7);
-    if (slot == 8) return int(msg_8);
-    if (slot == 9) return int(msg_9);
+    if (slot ==  0) return int(msg_0);
+    if (slot ==  1) return int(msg_1);
+    if (slot ==  2) return int(msg_2);
+    if (slot ==  3) return int(msg_3);
+    if (slot ==  4) return int(msg_4);
+    if (slot ==  5) return int(msg_5);
+    if (slot ==  6) return int(msg_6);
+    if (slot ==  7) return int(msg_7);
+    if (slot ==  8) return int(msg_8);
+    if (slot ==  9) return int(msg_9);
     if (slot == 10) return int(msg_10);
     if (slot == 11) return int(msg_11);
     if (slot == 12) return int(msg_12);
@@ -91,254 +94,171 @@ int getChar(int slot) {
 
 int charCount() {
     int n = int(msg_len);
-    if (n <= 0) return 48;
+    if (n <= 0) return 6;
     if (n > 48) return 48;
     return n;
 }
 
-// ==========================================
-// Procedural noise for paper texture
-// ==========================================
-
-float hash(float n) {
-    return fract(sin(n * 127.1) * 43758.5453);
-}
-
-vec2 hash2(vec2 p) {
-    return fract(sin(vec2(
-        dot(p, vec2(127.1, 311.7)),
-        dot(p, vec2(269.5, 183.3))
-    )) * 43758.5453);
-}
-
-// Value noise
+// ─── Hash + noise ───────────────────────────────────────────────────
+float hash11(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 float vnoise(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    f = f * f * (3.0 - 2.0 * f); // smoothstep
-
-    float a = hash(dot(i, vec2(1.0, 157.0)));
-    float b = hash(dot(i + vec2(1.0, 0.0), vec2(1.0, 157.0)));
-    float c = hash(dot(i + vec2(0.0, 1.0), vec2(1.0, 157.0)));
-    float d = hash(dot(i + vec2(1.0, 1.0), vec2(1.0, 157.0)));
-
+    vec2 i = floor(p), f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = hash11(dot(i, vec2(1.0, 157.0)));
+    float b = hash11(dot(i + vec2(1.0, 0.0), vec2(1.0, 157.0)));
+    float c = hash11(dot(i + vec2(0.0, 1.0), vec2(1.0, 157.0)));
+    float d = hash11(dot(i + vec2(1.0, 1.0), vec2(1.0, 157.0)));
     return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
 }
 
-// Fractal Brownian motion — layered noise for organic texture
-float fbm(vec2 p) {
-    float v = 0.0;
-    float a = 0.5;
-    vec2 shift = vec2(100.0);
-    for (int i = 0; i < 4; i++) {
-        v += a * vnoise(p);
-        p = p * 2.0 + shift;
-        a *= 0.5;
-    }
-    return v;
+// Polar petal radius modulator: rose curve r(theta) = 1 + d*cos(k*theta)
+float petalShape(float theta, float k, float depth) {
+    return 1.0 + depth * cos(k * theta);
 }
 
-// ==========================================
-// Main
-// ==========================================
-
 void main() {
-    vec2 uv = gl_FragCoord.xy / RENDERSIZE;
-    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    vec2 res = RENDERSIZE;
+    vec2 uv = gl_FragCoord.xy / res;
+    float aspect = res.x / res.y;
 
-    // Aspect-corrected coordinates centered at 0.5
+    // Centered, aspect-corrected coords. Center of canvas = (0,0).
     vec2 p;
-    p.x = (uv.x - 0.5) * aspect + 0.5;
-    p.y = uv.y;
+    p.x = (uv.x - 0.5) * aspect;
+    p.y = uv.y - 0.5;
 
-    // ======================================
-    // PAPER BACKGROUND
-    // ======================================
+    float audio = clamp(audioReact, 0.0, 2.0);
+    float bass  = audioBass;
+    float treb  = audioHigh;
+    float pulse = 1.0 + 0.18 * bass * audio;
 
-    vec3 paper = bgColor.rgb;
+    // ─── 1) Background — deep gradient + soft pistil glow at center ──
+    vec3 col = bgColor.rgb;
+    // Subtle radial vignette to push focus to center.
+    float r = length(p);
+    float vig = 1.0 - smoothstep(0.55, 0.95, r);
+    col *= mix(0.55, 1.0, vig);
 
-    // Fine grain noise (paper fiber)
-    float grain = vnoise(uv * RENDERSIZE * 0.15);
-    float fineGrain = vnoise(uv * RENDERSIZE * 0.4);
-    grain = mix(grain, fineGrain, 0.3);
-    paper += (grain - 0.5) * 0.08 * paperGrain;
+    // Pistil — a soft warm core that pulses with bass, sits behind petals.
+    float pistilR  = 0.085 + 0.025 * bass * audio;
+    float pistil   = exp(-pow(r / pistilR, 2.0));
+    col += centerColor.rgb * pistil * 2.2 * pulse;
+    // Halo around pistil that the bloom waves rise out of.
+    float halo = exp(-pow(r / (pistilR * 4.5), 2.0));
+    col += centerColor.rgb * halo * 0.45;
 
-    // Larger mottled variation (aged paper discoloration)
-    float mottle = fbm(uv * 6.0 + 3.7);
-    paper -= mottle * 0.06 * paperGrain;
+    // ─── 2) Bloom waves ──────────────────────────────────────────────
+    int total      = charCount();
+    int petalsI    = int(petals);
+    int waves      = int(waveCount);
+    float fpetals  = float(petalsI);
+    float fwaves   = float(waves);
+    float ftotal   = float(total);
+    float charH    = textScale;
+    float charW    = charH * (5.0 / 7.0);
 
-    // Subtle warm-cool variation across the page
-    float warmShift = fbm(uv * 3.0 + 17.0);
-    paper.r += warmShift * 0.025 * paperGrain;
-    paper.b -= warmShift * 0.02 * paperGrain;
-
-    // Edge burn / vignette — darkened and yellowed edges
-    vec2 edgeUV = uv * 2.0 - 1.0;
-    float edgeDist = max(abs(edgeUV.x), abs(edgeUV.y));
-    float vignette = smoothstep(0.5, 1.1, edgeDist);
-    // Burnt edges are darker and slightly more amber
-    vec3 burnColor = bgColor.rgb * vec3(0.55, 0.42, 0.28);
-    paper = mix(paper, burnColor, vignette * edgeBurn);
-
-    // Corner wear — extra darkening at corners
-    float cornerDist = length(edgeUV);
-    float cornerBurn = smoothstep(0.9, 1.5, cornerDist);
-    paper = mix(paper, burnColor * 0.7, cornerBurn * edgeBurn * 0.5);
-
-    // Foxing — brown age spots scattered on paper
-    if (foxing > 0.001) {
-        for (int i = 0; i < 8; i++) {
-            vec2 spot = hash2(vec2(float(i) * 13.7, float(i) * 7.3));
-            spot = spot * 0.7 + 0.15; // keep spots within page
-            float d = length(uv - spot);
-            float radius = 0.015 + hash(float(i) * 31.1) * 0.025;
-            float spotMask = smoothstep(radius, radius * 0.3, d);
-            // Spots are brownish-amber
-            vec3 spotColor = vec3(0.65, 0.5, 0.3) * (0.7 + hash(float(i) * 51.3) * 0.3);
-            paper = mix(paper, spotColor, spotMask * foxing * 0.4);
-        }
-    }
-
-    // Faint horizontal ruled lines (like stationery)
-    float lineSpacing = 0.045;
-    float lineY = mod(uv.y + lineSpacing * 0.5, lineSpacing);
-    float lineMask = 1.0 - smoothstep(0.0005, 0.001, abs(lineY - lineSpacing * 0.5));
-    vec3 lineColor = bgColor.rgb * vec3(0.75, 0.78, 0.85);
-    paper = mix(paper, lineColor, lineMask * 0.15 * paperGrain);
-
-    // ======================================
-    // TEXT RENDERING
-    // ======================================
-
-    int total = charCount();
-    float ftotal = float(total);
-
-    // Character cell sizing — scale down on portrait so text fits width
-    float charH = 0.18 * textScale;
-    if (aspect < 1.0) charH *= aspect;
-    float charW = charH * (5.0 / 7.0);
-    float gap = charW * 0.25 * kerning;
-    float cellStep = charW + gap;
-
-    // Multi-line layout: how many chars fit per row
-    float maxW = aspect * 0.85;
-    int charsPerRow = int(maxW / cellStep);
-    if (charsPerRow < 1) charsPerRow = 1;
-    int numRows = (total + charsPerRow - 1) / charsPerRow;
-
-    // Total line height
-    float lineH = charH * 1.5;
-    float blockH = float(numRows) * lineH;
-
-    // Looping time — full cycle = reveal all + linger + dissolve
-    float revealDur = ftotal / speed;
-    float totalDur = revealDur + fadeTime + 2.5;
-    float t = mod(TIME, totalDur);
-
-    // Accumulate sharp + soft (ink bleed) masks
     float textMask = 0.0;
-    float bleedMask = 0.0;
+    float bloomGlow = 0.0;
+    float petalTint = 0.0;  // 0..1 mix between petalA and petalB
 
-    // Vertical centering
-    float blockTop = 0.5 + blockH * 0.5;
+    // Each wave has a phase in [0,1). At phase 0 the wave is at the
+    // center; at phase 1 it's at the rim. We staggers waves so a new
+    // bloom is always opening from the pistil while older ones fade.
+    for (int w = 0; w < 6; w++) {
+        if (w >= waves) break;
+        float fw      = float(w);
+        float phase   = mod(TIME * bloomSpeed + fw / fwaves, 1.0);
+        // Bell envelope: bloom is brightest when half-grown.
+        float env     = sin(phase * 3.14159);
+        // Mid-burst HDR push when treble spikes.
+        env = pow(env, 0.85) * (1.0 + 0.6 * treb * audio * (1.0 - phase));
+        if (env < 0.01) continue;
 
-    for (int i = 0; i < 64; i++) {
-        if (i >= total) break;
+        // Wave-specific spin so successive blooms aren't aligned.
+        float waveSpin = TIME * spin + fw * 0.45;
+        // Wave radius grows linearly outward.
+        float waveR = phase * maxRadius * pulse;
 
-        int ch = getChar(i);
-        if (ch < 0 || ch > 36) continue; // skip spaces
+        // Place each character on the petal silhouette at this wave's radius.
+        for (int j = 0; j < 64; j++) {
+            if (j >= total) break;
+            int ch = getChar(j);
+            if (ch < 0 || ch > 36) continue;
 
-        float fi = float(i);
-        int row = i / charsPerRow;
-        int col = i - row * charsPerRow;
+            float fj  = float(j);
+            // Spread characters evenly around the bloom; offset every
+            // wave so the same letter doesn't sit on the same petal.
+            float t   = fj / ftotal;
+            float ang = t * TAU + waveSpin;
+            // Rose-curve modulation gives petaled silhouette.
+            float rk  = petalShape(ang, fpetals, petalDepth);
+            float rad = waveR * rk;
 
-        // Chars in this row (last row may be partial)
-        int rowStart = row * charsPerRow;
-        int rowEnd = rowStart + charsPerRow;
-        if (rowEnd > total) rowEnd = total;
-        int rowLen = rowEnd - rowStart;
-        float rowW = float(rowLen) * cellStep - gap;
+            vec2 charCenter = vec2(cos(ang), sin(ang)) * rad;
 
-        // Position: centered per row, top-aligned block
-        float ox = 0.5 - rowW * 0.5 + float(col) * cellStep;
-        float oy = blockTop - float(row) * lineH - charH;
+            // Local frame: tangent rotates the character so it faces
+            // outward from center (bloom orientation).
+            vec2 outward = vec2(cos(ang), sin(ang));
+            vec2 tangent = vec2(-sin(ang), cos(ang));
 
-        // Per-char age
-        float age = t - fi / speed;
+            vec2 d   = p - charCenter;
+            // Rotate into char-local space.
+            float lx = dot(d, tangent);
+            float ly = dot(d, outward);
 
-        // Fade envelope: ink soaks in, lingers, fades
-        float fadeIn = smoothstep(0.0, 0.5, age);
-        float fadeOut = 1.0 - smoothstep(fadeTime, fadeTime + 2.0, age);
-        float env = fadeIn * fadeOut;
-        if (env <= 0.001) continue;
+            vec2 cellUV;
+            cellUV.x = lx / charW + 0.5;
+            cellUV.y = ly / charH + 0.5;
 
-        // Wobble: deterministic per-char baseline shift + size variation
-        float h = hash(fi * 3.17);
-        float baseShift = wobble * charH * 0.15 * (h - 0.5) * 2.0;
-        float sizeVar = 1.0 + wobble * 0.1 * (hash(fi * 7.31) - 0.5) * 2.0;
-        // Slight rotation feel via horizontal micro-offset
-        float hShift = wobble * charW * 0.05 * (hash(fi * 11.13) - 0.5) * 2.0;
+            float s = sampleChar(ch, cellUV);
+            s = smoothstep(0.15, 0.55, s);
+            textMask += s * env;
 
-        // Ink bleed on reveal (characters spread slightly as ink soaks in)
-        float revealSpread = 1.0 + (1.0 - smoothstep(0.0, 0.8, age)) * 0.1 * bloom;
+            // Soft halo around each char — pre-mult by env for HDR pop.
+            float dlen   = length(d);
+            float bloomR = charW * 1.6;
+            float bg     = exp(-pow(dlen / bloomR, 2.0));
+            bloomGlow   += bg * env * (0.6 + 0.4 * (1.0 - phase));
 
-        float finalScale = sizeVar * revealSpread;
-        float adjCharH = charH * finalScale;
-        float adjCharW = charW * finalScale;
-
-        // Per-character oscillation
-        float oscY = oscAmount * sin(TIME * oscSpeed * 6.2832 + fi * oscSpread * 3.14159);
-
-        // Cell UV for sharp sample
-        vec2 cellUV;
-        cellUV.x = (p.x - ox - hShift) / adjCharW;
-        cellUV.y = (p.y - oy - baseShift - oscY) / adjCharH;
-
-        float s = sampleChar(ch, cellUV);
-        s = smoothstep(0.1, 0.5, s);
-        textMask += s * env;
-
-        // Ink bleed: softer, slightly larger sample (ink soaking into paper fibers)
-        if (bloom > 0.001) {
-            float bleedScale = 1.25;
-            vec2 bleedUV;
-            bleedUV.x = (p.x - ox - hShift) / (adjCharW * bleedScale);
-            bleedUV.y = (p.y - oy - baseShift - oscY) / (adjCharH * bleedScale);
-            bleedUV += (1.0 - 1.0 / bleedScale) * 0.5;
-
-            float bs = sampleChar(ch, bleedUV);
-            bs = smoothstep(0.05, 0.35, bs);
-            // Modulate bleed with paper grain (ink bleeds more along fibers)
-            float bleedGrain = vnoise(gl_FragCoord.xy * 0.08 + fi * 7.0);
-            bs *= 0.7 + bleedGrain * 0.3;
-            bleedMask += bs * env;
+            // Petal tint blends along the radial position.
+            petalTint += bg * env * t;
         }
     }
 
-    // ======================================
-    // COMPOSITING
-    // ======================================
+    textMask  = clamp(textMask,  0.0, 4.0);
+    bloomGlow = clamp(bloomGlow, 0.0, 4.0);
 
-    // Combine sharp text + ink bleed
-    float combined = textMask + bleedMask * bloom * 0.4;
-    combined = clamp(combined, 0.0, 1.0);
+    // Petal color — radial gradient from hot to cool.
+    vec3 petalCol = mix(petalA.rgb, petalB.rgb, clamp(petalTint * 0.4, 0.0, 1.0));
 
-    // Ink color darkens the paper (subtractive, like real ink)
-    vec3 inkColor = textColor.rgb;
-    vec3 col = mix(paper, inkColor, combined);
+    // ─── 3) Compose: bloom haze first, then ink chars on top ─────────
+    // The bloom glow is the colored halo of light around the characters.
+    col += petalCol * bloomGlow * haloStrength * hdrBoost * 0.5;
+    // HDR peak ring: where bloom is brightest, push beyond 1.0 for the
+    // bloom post-pass to catch.
+    float ringPhase = clamp(bloomGlow - 0.5, 0.0, 1.5);
+    col += petalCol * pow(ringPhase, 2.0) * hdrBoost;
 
-    // Subtle ink bleed tint — slightly warmer/browner than base ink
-    float bleedAmount = bleedMask * bloom * 0.2;
-    vec3 bleedTint = inkColor * vec3(1.1, 0.9, 0.7); // warmer bleed
-    col = mix(col, bleedTint, bleedAmount * (1.0 - combined));
-    col = clamp(col, 0.0, 1.0);
+    // Ink characters — solid silhouette so the petals read as "made of
+    // text". Apply after the haze so the letters punch crisp negative
+    // space against the glow.
+    float charAlpha = clamp(textMask, 0.0, 1.0);
+    col = mix(col, inkColor.rgb, charAlpha);
 
+    // ─── 4) Outer-edge dust: small sparkles where waves dissolve ────
+    if (treb > 0.02 && audio > 0.0) {
+        float sparkN = vnoise(p * 22.0 + TIME * 0.3);
+        float sparkMask = step(0.94 - 0.04 * treb * audio, sparkN);
+        float edge = smoothstep(maxRadius * 0.7, maxRadius * 1.05, r);
+        col += centerColor.rgb * sparkMask * edge * 1.2;
+    }
+
+    // ─── 5) Output ──────────────────────────────────────────────────
     float alpha = 1.0;
     if (transparentBg) {
-        alpha = combined + bleedAmount;
-        alpha = clamp(alpha, 0.0, 1.0);
-        col = inkColor;
+        alpha = clamp(textMask + bloomGlow * 0.3, 0.0, 1.0);
+        // For transparent mode skip the bg gradient.
+        col = mix(petalCol * bloomGlow * haloStrength * hdrBoost * 0.5,
+                  inkColor.rgb, charAlpha);
     }
-
     gl_FragColor = vec4(col, alpha);
 }
