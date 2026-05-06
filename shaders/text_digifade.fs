@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Digifade - glitch dissolve",
+  "DESCRIPTION": "Digifade - glitch dissolve over iridescent holographic background",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1], "LABELS": ["Digifade","Digifade Glitch"], "DEFAULT": 0 },
@@ -9,16 +9,18 @@
     { "NAME": "intensity", "LABEL": "Glitch", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Dissolve", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Text Color", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "holoScale", "LABEL": "Holo Scale", "TYPE": "float", "MIN": 1.0, "MAX": 12.0, "DEFAULT": 5.0 },
+    { "NAME": "holoSpeed", "LABEL": "Holo Speed", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.35 },
+    { "NAME": "hdrPeak", "LABEL": "HDR Peak", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.5 },
+    { "NAME": "audioMod", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
 const float PI = 3.14159265;
 const float TWO_PI = 6.28318530;
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
 float charPixel(int ch, float col, float row) {
     if (ch < 0 || ch > 36) return 0.0;
     vec2 uv = vec2(col / 5.0, row / 7.0);
@@ -82,16 +84,44 @@ int charCount() {
     return n > 0 ? n : 1;
 }
 
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
-}
-
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
-// EFFECT: DIGIFADE - glitch dissolve
+// IRIDESCENT HOLOGRAPHIC BACKGROUND
+// Thin-film interference: overlapping angular + radial + linear sinusoidal bands
+// cycling through 4-color fully-saturated HDR palette
+// =======================================================================
+
+vec3 holoBg(vec2 uv) {
+    float t = TIME * holoSpeed;
+    vec2 c = uv - 0.5;
+    float r = length(c);
+    float a = atan(c.y, c.x);
+
+    // 4 overlapping interference patterns at different frequencies
+    float f1 = sin(a * 3.0 + r * holoScale * 1.6 - t * 0.9) * 0.5 + 0.5;
+    float f2 = sin(a * 5.0 - r * holoScale * 1.2 + t * 0.7) * 0.5 + 0.5;
+    float f3 = sin(uv.x * holoScale * 2.5 + uv.y * holoScale * 1.3 + t * 0.5) * 0.5 + 0.5;
+    float f4 = sin(uv.x * holoScale * 1.7 - uv.y * holoScale * 2.1 - t * 0.3) * 0.5 + 0.5;
+
+    float hue = fract(f1 * 0.35 + f2 * 0.30 + f3 * 0.20 + f4 * 0.15 + t * 0.04);
+
+    float h = hdrPeak;
+    // 4-color iridescent: magenta → cyan → gold → violet
+    vec3 col;
+    if (hue < 0.25)      col = mix(vec3(h, 0.0, h * 0.9),    vec3(0.0, h, h),           hue / 0.25);
+    else if (hue < 0.50) col = mix(vec3(0.0, h, h),           vec3(h, h * 0.6, 0.0),     (hue - 0.25) / 0.25);
+    else if (hue < 0.75) col = mix(vec3(h, h * 0.6, 0.0),     vec3(h * 0.4, 0.0, h),    (hue - 0.50) / 0.25);
+    else                 col = mix(vec3(h * 0.4, 0.0, h),      vec3(h, 0.0, h * 0.9),    (hue - 0.75) / 0.25);
+
+    float audioBoost = 1.0 + audioLevel * audioMod * 0.4;
+    col *= audioBoost;
+
+    return col;
+}
+
+// =======================================================================
+// EFFECT: DIGIFADE — returns textHit in alpha
 // =======================================================================
 
 vec4 effectDigifade(vec2 uv, int sub) {
@@ -106,19 +136,15 @@ vec4 effectDigifade(vec2 uv, int sub) {
     float t = TIME * speed * sweepSpeed;
     vec2 p = vec2((uv.x - 0.5) * aspect + 0.5, uv.y);
 
-    // Single-line layout: all chars on one row, scale to fit width
     float cH = 0.18 * textScale;
     if (aspect < 1.0) cH *= aspect;
     float cW = cH * (5.0/7.0);
     float gW = cW * 0.2;
 
-    // Scale down if text is wider than screen
     float totalTextW = float(numChars) * cW + float(numChars - 1) * gW;
     float maxW = 0.9 * aspect;
     float fitScale = totalTextW > maxW ? maxW / totalTextW : 1.0;
-    cH *= fitScale;
-    cW *= fitScale;
-    gW *= fitScale;
+    cH *= fitScale; cW *= fitScale; gW *= fitScale;
 
     float rowW = float(numChars) * cW + float(numChars - 1) * gW;
     float startX = 0.5 - rowW * 0.5;
@@ -129,10 +155,8 @@ vec4 effectDigifade(vec2 uv, int sub) {
     float n2 = hash(si*3.7 + floor(t*3.0));
 
     float textHit = 0.0;
-
     float sw = sin(t*0.7)*0.5+0.5;
     float ps = smoothstep(sw-0.15, sw+0.1, (p.x-startX)/max(rowW, 0.001));
-
     float dx = abs(ps*n1*glitchAmount*maxDisp + ps*sin(si*0.3*complexity+t)*glitchAmount*maxDisp*0.3);
     float dy = vertGlitch > 0.01 ? ps*(n2-0.5)*vertGlitch*glitchAmount*0.06 : 0.0;
 
@@ -153,10 +177,7 @@ vec4 effectDigifade(vec2 uv, int sub) {
         }
     }
 
-    vec3 fc = mix(bgColor.rgb, textColor.rgb, textHit);
-    float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
-    return vec4(fc, a);
+    return vec4(textColor.rgb, textHit);
 }
 
 // =======================================================================
@@ -166,7 +187,30 @@ vec4 effectDigifade(vec2 uv, int sub) {
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     int p = int(preset);
-    vec4 col = effectDigifade(uv, p);
+    vec4 textLayer = effectDigifade(uv, p);
+
+    if (transparentBg) {
+        gl_FragColor = vec4(textLayer.rgb, textLayer.a);
+
+        if (_voiceGlitch > 0.01) {
+            float g = _voiceGlitch;
+            float t = TIME * 17.0;
+            float band = floor(uv.y * mix(8.0, 40.0, g) + t * 3.0);
+            float bandNoise = fract(sin(band * 91.7 + t) * 43758.5);
+            float bandActive = step(1.0 - g * 0.6, bandNoise);
+            float shift = (bandNoise - 0.5) * 0.08 * g * bandActive;
+            float chromaAmt = g * 0.015;
+            vec4 cR = effectDigifade(uv + vec2(shift + chromaAmt, 0.0), p);
+            vec4 cG = effectDigifade(uv + vec2(shift, chromaAmt * 0.5), p);
+            vec4 cB = effectDigifade(uv + vec2(shift - chromaAmt, 0.0), p);
+            gl_FragColor = vec4(cR.r, cG.g, cB.b, max(max(cR.a, cG.a), cB.a));
+        }
+        return;
+    }
+
+    // Holographic composite: black ink text over iridescent interference field
+    vec3 holo = holoBg(uv);
+    vec3 finalCol = mix(holo, textColor.rgb, textLayer.a);
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
@@ -176,22 +220,19 @@ void main() {
         float bandActive = step(1.0 - g * 0.6, bandNoise);
         float shift = (bandNoise - 0.5) * 0.08 * g * bandActive;
         float chromaAmt = g * 0.015;
-        vec2 uvR = uv + vec2(shift + chromaAmt, 0.0);
-        vec2 uvB = uv + vec2(shift - chromaAmt, 0.0);
-        vec2 uvG = uv + vec2(shift, chromaAmt * 0.5);
-        vec4 cR = effectDigifade(uvR, p);
-        vec4 cG = effectDigifade(uvG, p);
-        vec4 cB = effectDigifade(uvB, p);
-        vec4 glitched = vec4(cR.r, cG.g, cB.b, max(max(cR.a, cG.a), cB.a));
+        vec3 hR = holoBg(uv + vec2(shift + chromaAmt, 0.0));
+        vec3 hG = holoBg(uv + vec2(shift, chromaAmt * 0.5));
+        vec3 hB = holoBg(uv + vec2(shift - chromaAmt, 0.0));
+        vec4 tR = effectDigifade(uv + vec2(shift + chromaAmt, 0.0), p);
+        vec4 tG = effectDigifade(uv + vec2(shift, chromaAmt * 0.5), p);
+        vec4 tB = effectDigifade(uv + vec2(shift - chromaAmt, 0.0), p);
         float scanline = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
-        float blockX = floor(uv.x * 6.0);
-        float blockY = floor(uv.y * 4.0);
-        float blockNoise = fract(sin((blockX + blockY * 7.0) * 113.1 + floor(t * 8.0)) * 43758.5);
-        float dropout = step(1.0 - g * 0.15, blockNoise);
-        glitched.rgb *= scanline;
-        glitched.rgb *= 1.0 - dropout;
-        col = mix(col, glitched, smoothstep(0.0, 0.3, g));
+        finalCol = vec3(
+            mix(hR.r, textColor.r, tR.a),
+            mix(hG.g, textColor.g, tG.a),
+            mix(hB.b, textColor.b, tB.a)
+        ) * scanline;
     }
 
-    gl_FragColor = col;
+    gl_FragColor = vec4(finalCol, 1.0);
 }
