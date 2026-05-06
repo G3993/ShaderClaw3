@@ -11,9 +11,9 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.8, 0.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.05, 0.0, 0.0, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
@@ -93,6 +93,46 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
+// BACKGROUND: MAGMA VORTEX — domain-warped radial lava swirl
+// =======================================================================
+
+vec3 magmaVortexBg(vec2 uv, float t) {
+    // Center UV on [−1,1] range
+    vec2 c = uv * 2.0 - 1.0;
+    float r = length(c);
+    float a = atan(c.y, c.x);
+
+    // Swirling domain warp
+    float warp1 = sin(a * 3.0 + r * 4.0 - t * 1.2) * 0.3;
+    float warp2 = cos(a * 2.0 - r * 3.0 + t * 0.8) * 0.2;
+    vec2 warped = c + vec2(warp1, warp2);
+
+    // Lava texture via sin products
+    float lava = sin(warped.x * 5.0 + t * 0.4) * sin(warped.y * 5.0 - t * 0.3);
+    lava += sin(warped.x * 3.0 - t * 0.7) * sin(warped.y * 3.0 + t * 0.5) * 0.5;
+    lava = lava * 0.5 + 0.5;
+
+    // Radial heat falloff from center
+    float heat = exp(-r * r * 0.8);
+    lava = lava * 0.6 + heat * 0.4;
+
+    // Color mapping: obsidian → crimson → orange → gold → white-hot
+    vec3 obsidian = vec3(0.02, 0.0, 0.0);
+    vec3 crimson   = vec3(1.8, 0.0, 0.0);
+    vec3 orange    = vec3(2.5, 0.7, 0.0);
+    vec3 gold      = vec3(2.8, 2.0, 0.0);
+    vec3 whiteHot  = vec3(3.5, 3.0, 1.5);
+
+    vec3 col = obsidian;
+    col = mix(col, crimson,  smoothstep(0.2, 0.4, lava));
+    col = mix(col, orange,   smoothstep(0.4, 0.6, lava));
+    col = mix(col, gold,     smoothstep(0.6, 0.8, lava));
+    col = mix(col, whiteHot, smoothstep(0.8, 1.0, lava));
+
+    return col;
+}
+
+// =======================================================================
 // EFFECT: CASCADE - tiled rows with wave offsets
 // =======================================================================
 
@@ -131,10 +171,17 @@ vec4 effectCascade(vec2 uv) {
         }
     }
 
+    // Magma vortex background
+    vec3 magmaBg = magmaVortexBg(uv, TIME * speed);
+
     bool inv = mod(rowIdx, 2.0) < 1.0;
     vec3 fg = inv ? bgColor.rgb : textColor.rgb;
     vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
+
+    // Blend bg layer: magma behind solid bgColor
+    vec3 bgBlend = mix(magmaBg, bg, 0.6);
+
+    vec3 fc = mix(bgBlend, fg, textHit);
     float a = 1.0;
     if (transparentBg) { a = textHit; fc = textColor.rgb; }
     return vec4(fc, a);
