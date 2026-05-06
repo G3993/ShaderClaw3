@@ -55,10 +55,10 @@ void main() {
         totalH += h * (1.0 - depth);  // front layers contribute more to refraction
 
         // Layer colour modulated by ripple height — encode height as luminance.
-        vec3 lc = planeColor(L, layers) * (0.5 + 0.5 * h) * (0.4 + amp * 1.6);
+        vec3 lc = planeColor(L, layers) * (0.5 + 0.5 * h) * (0.6 + amp * 2.4);
 
         // Depth fog — back planes fade toward fogColor.
-        lc = mix(lc, fogColor.rgb, depth * 0.7);
+        lc = mix(lc, fogColor.rgb, depth * 0.45);
 
         // Composite back-to-front with falling alpha per layer.
         col = mix(col, lc, 1.0 / max(layers, 1.0));
