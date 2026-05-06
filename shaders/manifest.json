@@ -598,18 +598,6 @@
     "file": "sound_temple_octagon.fs"
   },
   {
-    "id": 462,
-    "title": "Text 3D Aurora",
-    "description": "Volumetric typography haunted by audio-driven aurora ribbons that trail glyph silhouettes. Pipilotti Rist saturation meets the northern lights.",
-    "type": "generator",
-    "categories": [
-      "Generator",
-      "Text",
-      "Audio Reactive"
-    ],
-    "file": "text_3d_aurora.fs"
-  },
-  {
     "id": 467,
     "title": "Turrell Chroma",
     "description": "Breathing volume of pure colour-light \u2014 almost no motion, just slow chromatic drift. Architectural light, not screen content. Aten Reign / Skyspace.",
