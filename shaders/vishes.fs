@@ -3,17 +3,18 @@
   "CREDIT": "ShaderClaw — cell-walker sketch translated to multi-pass ISF",
   "CATEGORIES": ["Generator"],
   "INPUTS": [
-    { "NAME": "gridSize", "LABEL": "Grid Size", "TYPE": "float", "DEFAULT": 120.0, "MIN": 20.0, "MAX": 400.0 },
-    { "NAME": "walkers", "LABEL": "Walkers", "TYPE": "float", "DEFAULT": 6.0, "MIN": 1.0, "MAX": 16.0 },
+    { "NAME": "gridSize", "LABEL": "Grid Size", "TYPE": "float", "DEFAULT": 80.0, "MIN": 20.0, "MAX": 400.0 },
+    { "NAME": "walkers", "LABEL": "Walkers", "TYPE": "float", "DEFAULT": 8.0, "MIN": 1.0, "MAX": 16.0 },
     { "NAME": "stepRate", "LABEL": "Step Rate", "TYPE": "float", "DEFAULT": 40.0, "MIN": 1.0, "MAX": 240.0 },
     { "NAME": "hueDrift", "LABEL": "Hue Drift", "TYPE": "float", "DEFAULT": 0.015, "MIN": 0.0, "MAX": 0.1 },
     { "NAME": "fadeRate", "LABEL": "Trail Fade", "TYPE": "float", "DEFAULT": 0.004, "MIN": 0.0, "MAX": 0.08 },
     { "NAME": "saturation", "LABEL": "Saturation", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "brightness", "LABEL": "Brightness", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "bloom", "LABEL": "Bloom", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.5 },
+    { "NAME": "bloom", "LABEL": "Bloom", "TYPE": "float", "DEFAULT": 1.2, "MIN": 0.0, "MAX": 1.5 },
+    { "NAME": "hdrPeak", "LABEL": "HDR Peak", "TYPE": "float", "DEFAULT": 2.5, "MIN": 1.0, "MAX": 4.0 },
     { "NAME": "pulse", "LABEL": "Audio Pulse", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "bounceEdges", "LABEL": "Bounce Edges", "TYPE": "bool", "DEFAULT": true },
-    { "NAME": "backgroundColor", "LABEL": "BG Color", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] }
+    { "NAME": "backgroundColor", "LABEL": "BG Color", "TYPE": "color", "DEFAULT": [0.01, 0.0, 0.02, 1.0] }
   ],
   "PASSES": [
     { "TARGET": "stateBuf", "PERSISTENT": true, "WIDTH": 16, "HEIGHT": 1 },
@@ -76,12 +77,12 @@ void main() {
             return;
         }
 
-        // Seed the walker near center on first frames
+        // Seed walkers on their assigned rings
         if (FRAMEINDEX < 2) {
-            float jx = (hash11(id * 7.31 + 1.0) - 0.5) * 0.15;
-            float jy = (hash11(id * 3.19 + 2.0) - 0.5) * 0.15;
-            float h0 = hash11(id * 11.7 + 3.0);
-            gl_FragColor = vec4(0.5 + jx, 0.5 + jy, h0, 0.0);
+            float ringIdx = floor(id / 2.0);
+            float ringR = 0.08 + ringIdx * 0.12;
+            float startAngle = (hash11(id * 7.31) * 6.28318);
+            gl_FragColor = vec4(0.5 + cos(startAngle)*ringR, 0.5 + sin(startAngle)*ringR, hash11(id*11.7+3.0), 0.0);
             return;
         }
 
@@ -90,28 +91,36 @@ void main() {
         float h = prev.b;
         float acc = prev.a + TIMEDELTA * stepRate * audio;
 
+        // Ring orbit constraint: each walker assigned to a specific ring
+        float ringIdx = floor(id / 2.0); // rings 0, 1, 2, 3 (2 walkers per ring)
+        float ringRadius = 0.08 + ringIdx * 0.12; // rings at 0.08, 0.20, 0.32, 0.44 (in UV space)
+        float ringHue = ringIdx / 4.0; // rings: 0.0 (red), 0.25 (yellow-green), 0.5 (cyan), 0.75 (blue-violet)
+
         // Walk up to 6 discrete cell steps this frame
         for (int s = 0; s < 6; s++) {
             if (acc < 1.0) break;
             acc -= 1.0;
 
+            // Current angle of this walker on its ring
+            vec2 center = vec2(0.5, 0.5);
+            vec2 wp = p - center;
+            float currentAngle = atan(wp.y, wp.x);
+
+            // Advance angle based on ring direction (alternate CW/CCW)
+            float dir = mod(id, 2.0) < 0.5 ? 1.0 : -1.0;
+            float angularStep = cell * dir * (1.0 + hash11(id * 3.7) * 0.3);
+            float newAngle = currentAngle + angularStep;
+
+            // Project back to ring with slight TIME-based radius oscillation
+            p = center + vec2(cos(newAngle), sin(newAngle)) * (ringRadius + sin(TIME * (1.0 + ringIdx * 0.3) + id * 1.7) * 0.02);
+
+            // Clamp to valid UV range
+            p = clamp(p, 0.0, 1.0);
+
+            // Subtle hue drift within ring hue zone
             float seed = TIME * 97.13 + id * 13.7 + float(s) * 3.31;
-            float r = hash12(vec2(seed, seed * 0.47));
-            int dir = int(floor(r * 8.0));
-            vec2 stepVec = neighborDir(dir) * cell;
-            p += stepVec;
-
-            if (bounceEdges) {
-                if (p.x < 0.0) p.x = -p.x;
-                if (p.x > 1.0) p.x = 2.0 - p.x;
-                if (p.y < 0.0) p.y = -p.y;
-                if (p.y > 1.0) p.y = 2.0 - p.y;
-            } else {
-                p = fract(p);
-            }
-
-            float dh = (hash12(vec2(seed + 7.7, id)) - 0.5) * 2.0 * hueDrift;
-            h = fract(h + dh + 1.0);
+            float dh = (hash12(vec2(seed + 7.7, id)) - 0.5) * 2.0 * hueDrift * 0.3;
+            h = fract(ringHue + dh + 1.0);
         }
 
         gl_FragColor = vec4(p, h, acc);
@@ -138,7 +147,7 @@ void main() {
             vec2 wCell = floor(wGridUV * gridSize);
             vec2 diff = abs(wCell - pxCell);
             if (diff.x < 0.5 && diff.y < 0.5) {
-                vec3 rgb = hsv2rgb(vec3(st.b, saturation, brightness * audio));
+                vec3 rgb = hsv2rgb(vec3(st.b, saturation, hdrPeak * audio));
                 col = vec4(rgb, 1.0);
             }
         }
