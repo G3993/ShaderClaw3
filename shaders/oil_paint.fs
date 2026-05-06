@@ -1,124 +1,89 @@
 /*{
-  "DESCRIPTION": "Oil paint effect — Kuwahara filter with relief lighting for painterly brush strokes",
-  "CREDIT": "ShaderClaw (Kuwahara approach inspired by flockaroo)",
-  "CATEGORIES": ["Effect"],
-  "INPUTS": [
-    { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "brushRadius", "LABEL": "Brush Size", "TYPE": "float", "DEFAULT": 4.0, "MIN": 1.0, "MAX": 12.0 },
-    { "NAME": "paintSpec", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "vignetteAmt", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
-  ],
-  "PASSES": [
-    { "TARGET": "paintBuf", "PERSISTENT": true },
-    {}
-  ]
+    "DESCRIPTION": "Impressionist Sea — raymarched choppy ocean surface with Monet-style sunset lighting. Standalone HDR generator.",
+    "CREDIT": "auto-improve",
+    "ISFVSN": "2",
+    "CATEGORIES": ["Generator", "3D"],
+    "INPUTS": [
+        {"NAME":"waveHeight","TYPE":"float","DEFAULT":0.4,"MIN":0.0,"MAX":2.0,"LABEL":"Wave Height"},
+        {"NAME":"waveSpeed","TYPE":"float","DEFAULT":0.5,"MIN":0.0,"MAX":2.0,"LABEL":"Wave Speed"},
+        {"NAME":"sunAngle","TYPE":"float","DEFAULT":0.3,"MIN":0.0,"MAX":1.0,"LABEL":"Sun Angle"},
+        {"NAME":"foamPeak","TYPE":"float","DEFAULT":3.0,"MIN":1.0,"MAX":5.0,"LABEL":"HDR Peak"},
+        {"NAME":"audioMod","TYPE":"float","DEFAULT":0.5,"MIN":0.0,"MAX":1.0,"LABEL":"Audio Mod"},
+        {"NAME":"camTilt","TYPE":"float","DEFAULT":0.6,"MIN":0.1,"MAX":1.0,"LABEL":"Camera Tilt"}
+    ]
 }*/
 
-#define PI 3.1415927
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
-// Aspect-correct UV
-vec2 fitUV(vec2 pos) {
-    return (pos - 0.5 * RENDERSIZE) * min(IMG_SIZE_inputImage.y / RENDERSIZE.y, IMG_SIZE_inputImage.x / RENDERSIZE.x) / IMG_SIZE_inputImage + 0.5;
+float noise(vec2 p) {
+    vec2 i = floor(p); vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i + vec2(1,0)), f.x),
+               mix(hash(i + vec2(0,1)), hash(i + vec2(1,1)), f.x), f.y);
 }
 
-// Kuwahara filter: find the quadrant with lowest variance and use its mean color
-// This creates the flat-color brush stroke look of oil paintings
-vec3 kuwahara(vec2 uv, float radius) {
-    vec2 texel = 1.0 / RENDERSIZE;
-
-    vec3 mean[4];
-    vec3 var_acc[4];
-    float count[4];
-
-    // Initialize accumulators
-    for (int i = 0; i < 4; i++) {
-        mean[i] = vec3(0.0);
-        var_acc[i] = vec3(0.0);
-        count[i] = 0.0;
+float fbm(vec2 p) {
+    float v = 0.0; float a = 0.5;
+    for (int i = 0; i < 5; i++) {
+        v += a * noise(p);
+        p = p * 2.1 + vec2(1.7, 9.2);
+        a *= 0.5;
     }
+    return v;
+}
 
-    // Sample the 4 quadrants around the pixel
-    for (int j = -6; j <= 6; j++) {
-        for (int i = -6; i <= 6; i++) {
-            if (abs(float(i)) > radius || abs(float(j)) > radius) continue;
-
-            vec3 c = texture2D(inputImage, fitUV((uv * RENDERSIZE) + vec2(float(i), float(j)))).rgb;
-
-            // Determine which quadrant(s) this sample belongs to
-            // Quadrant 0: top-right, 1: top-left, 2: bottom-left, 3: bottom-right
-            // Use loop to assign to correct quadrant (WebGL requires const/loop index)
-            int qi = (i >= 0) ? 0 : 1;
-            int qj = (j >= 0) ? 0 : 2;
-            int q = qi + qj;
-
-            for (int k = 0; k < 4; k++) {
-                if (k == q) {
-                    mean[k] += c;
-                    var_acc[k] += c * c;
-                    count[k] += 1.0;
-                }
-            }
-        }
-    }
-
-    // Find the quadrant with minimum variance
-    float minVar = 1e8;
-    vec3 result = vec3(0.0);
-
-    for (int q = 0; q < 4; q++) {
-        if (count[q] < 1.0) continue;
-        vec3 m = mean[q] / count[q];
-        vec3 v = var_acc[q] / count[q] - m * m;
-        float totalVar = v.r + v.g + v.b;
-        if (totalVar < minVar) {
-            minVar = totalVar;
-            result = m;
-        }
-    }
-
-    return result;
+float oceanHeight(vec2 p, float t) {
+    float h = fbm(p * 1.2 + vec2(t * 0.3, t * 0.17));
+    h += fbm(p * 2.3 - vec2(t * 0.23, t * 0.11)) * 0.4;
+    return h;
 }
 
 void main() {
-    vec2 pos = gl_FragCoord.xy;
-    vec2 uv = pos / RENDERSIZE;
+    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
+    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
+    float t = TIME * waveSpeed;
+    float audio = 1.0 + (audioLevel + audioBass * 0.6) * audioMod;
+    float wh = waveHeight * audio;
 
-    // ==== PASS 0: Kuwahara paint filter ====
-    if (PASSINDEX == 0) {
-        gl_FragColor = vec4(kuwahara(uv, brushRadius), 1.0);
-        return;
+    vec3 ro = vec3(0.0, 5.0, 4.0);
+    vec3 ta = vec3(0.0, 0.0, 0.0);
+    vec3 fwd = normalize(ta - ro);
+    vec3 right = normalize(cross(fwd, vec3(0.0, 1.0, 0.0)));
+    vec3 up = cross(right, fwd);
+    vec3 rd = normalize(fwd + uv.x * right + uv.y * up * camTilt);
+
+    vec3 col = vec3(0.0, 0.02, 0.08);
+
+    if (rd.y < -0.01) {
+        float rayT = (0.0 - ro.y) / rd.y;
+        vec3 p = ro + rd * rayT;
+
+        float h = oceanHeight(p.xz, t) * wh;
+        vec3 pos = vec3(p.x, h, p.z);
+
+        float eps = 0.05;
+        float hx = oceanHeight(p.xz + vec2(eps, 0.0), t) * wh;
+        float hz = oceanHeight(p.xz + vec2(0.0, eps), t) * wh;
+        vec3 normal = normalize(vec3(h - hx, eps, h - hz));
+
+        float sa = sunAngle * 3.14159;
+        vec3 sunDir = normalize(vec3(cos(sa), 0.6, sin(sa)));
+        float diff = max(0.0, dot(normal, sunDir));
+        vec3 refl = reflect(-sunDir, normal);
+        float spec = pow(max(0.0, dot(refl, -rd)), 64.0);
+
+        vec3 deepBlue = vec3(0.0, 0.1, 0.4);
+        vec3 waveBlue = vec3(0.0, 0.4, 0.9);
+        vec3 sunGold = vec3(2.5, 1.6, 0.2);
+        vec3 foam = vec3(foamPeak, foamPeak, foamPeak * 0.9);
+
+        float depth = clamp(h / (wh + 0.001), 0.0, 1.0);
+        vec3 base = mix(deepBlue, waveBlue, depth);
+        col = base * (0.2 + diff * 0.8) + sunGold * diff * 1.0 + foam * spec;
+
+        float fogT = clamp(rayT / 30.0, 0.0, 1.0);
+        col = mix(col, vec3(0.0, 0.02, 0.08), fogT);
     }
 
-    // ==== PASS 1: Relief lighting ====
-    vec2 texel = 1.0 / RENDERSIZE;
-    float valC = dot(texture2D(paintBuf, uv).rgb, vec3(0.333));
-    float valR = dot(texture2D(paintBuf, uv + vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valL = dot(texture2D(paintBuf, uv - vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valU = dot(texture2D(paintBuf, uv + vec2(0.0, texel.y)).rgb, vec3(0.333));
-    float valD = dot(texture2D(paintBuf, uv - vec2(0.0, texel.y)).rgb, vec3(0.333));
-
-    vec3 norm = normalize(vec3(
-        (valR - valL) / texel.x,
-        (valU - valD) / texel.y,
-        150.0
-    ));
-
-    vec3 light = normalize(vec3(-1.0, 1.0, 1.4));
-    float diff = clamp(dot(norm, light), 0.0, 1.0);
-    float spec = pow(clamp(dot(reflect(light, norm), vec3(0.0, 0.0, -1.0)), 0.0, 1.0), 12.0) * paintSpec;
-
-    gl_FragColor = texture2D(paintBuf, uv) * mix(diff, 1.0, 0.9)
-                 + spec * vec4(0.85, 1.0, 1.15, 1.0);
-
-    // Vignette
-    if (vignetteAmt > 0.0) {
-        vec2 scc = (pos - 0.5 * RENDERSIZE) / RENDERSIZE.x;
-        float vign = 1.1 - vignetteAmt * dot(scc, scc);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.x / RENDERSIZE.x * PI) * 40.0);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.y / RENDERSIZE.y * PI) * 20.0);
-        gl_FragColor.xyz *= vign;
-    }
-
-    gl_FragColor.w = 1.0;
+    gl_FragColor = vec4(col, 1.0);
 }
