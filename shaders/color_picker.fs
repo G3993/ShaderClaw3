@@ -1,46 +1,17 @@
 /*{
-    "DESCRIPTION": "Spectral Prism 3D — glass triangular prism with chromatic dispersion beams",
+    "DESCRIPTION": "Spectral Prism 3D — glass triangular prism with chromatic dispersion beams, volumetric glow",
     "CREDIT": "ShaderClaw auto-improve 2026-05-06",
     "ISFVSN": "2",
     "CATEGORIES": ["Generator", "3D"],
     "INPUTS": [
-        {
-            "NAME": "speed",
-            "TYPE": "float",
-            "DEFAULT": 0.8,
-            "MIN": 0.0,
-            "MAX": 3.0,
-            "LABEL": "Camera Speed"
-        },
-        {
-            "NAME": "beamSpread",
-            "TYPE": "float",
-            "DEFAULT": 0.5,
-            "MIN": 0.0,
-            "MAX": 1.5,
-            "LABEL": "Beam Spread"
-        },
-        {
-            "NAME": "hdrPeak",
-            "TYPE": "float",
-            "DEFAULT": 2.5,
-            "MIN": 1.0,
-            "MAX": 5.0,
-            "LABEL": "HDR Peak"
-        },
-        {
-            "NAME": "audioReact",
-            "TYPE": "float",
-            "DEFAULT": 0.5,
-            "MIN": 0.0,
-            "MAX": 1.0,
-            "LABEL": "Audio React"
-        }
+        { "NAME": "speed",      "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 3.0,  "LABEL": "Speed" },
+        { "NAME": "beamSpread", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.0,  "LABEL": "Beam Spread" },
+        { "NAME": "hdrPeak",    "TYPE": "float", "DEFAULT": 2.5, "MIN": 1.0, "MAX": 5.0,  "LABEL": "HDR Peak" },
+        { "NAME": "audioReact", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 2.0,  "LABEL": "Audio React" }
     ]
 }*/
 
-// ── SDF helpers ──────────────────────────────────────────────────────────────
-
+// ---------- SDF helpers ----------
 float sdBox(vec3 p, vec3 b) {
     vec3 q = abs(p) - b;
     return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
@@ -49,143 +20,147 @@ float sdBox(vec3 p, vec3 b) {
 float distToSegment(vec3 p, vec3 a, vec3 b) {
     vec3 pa = p - a;
     vec3 ba = b - a;
-    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
-    return length(pa - ba * h);
+    float t = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+    return length(pa - ba * t);
 }
 
-// ── Scene SDF ────────────────────────────────────────────────────────────────
-
-float sceneSDF(vec3 p) {
-    // Glass prism (sdBox approximation for triangular prism)
+// ---------- Scene SDF ----------
+float mapScene(vec3 p) {
+    // Glass prism (box approximation)
     float prism = sdBox(p, vec3(0.22, 0.75, 0.20));
     return prism;
 }
 
-vec3 sceneNormal(vec3 p) {
-    float e = 0.001;
+// ---------- Normal via central differences ----------
+vec3 calcNormal(vec3 p) {
+    const float eps = 0.002;
     return normalize(vec3(
-        sceneSDF(p + vec3(e, 0.0, 0.0)) - sceneSDF(p - vec3(e, 0.0, 0.0)),
-        sceneSDF(p + vec3(0.0, e, 0.0)) - sceneSDF(p - vec3(0.0, e, 0.0)),
-        sceneSDF(p + vec3(0.0, 0.0, e)) - sceneSDF(p - vec3(0.0, 0.0, e))
+        mapScene(p + vec3(eps, 0.0, 0.0)) - mapScene(p - vec3(eps, 0.0, 0.0)),
+        mapScene(p + vec3(0.0, eps, 0.0)) - mapScene(p - vec3(0.0, eps, 0.0)),
+        mapScene(p + vec3(0.0, 0.0, eps)) - mapScene(p - vec3(0.0, 0.0, eps))
     ));
 }
 
-// ── Volumetric beam glow ─────────────────────────────────────────────────────
+// ---------- Beam segments ----------
+// Input beam: from left, going right, horizontally centered
+// Output beams: emerge from right face, spread at angles
 
-// Accumulate glow along a ray for a single beam (capsule from a to b, width w)
-float beamGlow(vec3 ro, vec3 rd, vec3 a, vec3 b, float w) {
-    float acc = 0.0;
-    float stepSize = 0.04;
-    for (int i = 0; i < 32; i++) {
-        float t = float(i) * stepSize;
-        vec3 p = ro + rd * t;
-        float d = distToSegment(p, a, b);
-        acc += exp(-d / w) * stepSize;
+struct Beam {
+    vec3 a;
+    vec3 b;
+    vec3 col;
+    float width;
+};
+
+Beam getBeam(int idx, float spread, float audio, float hdrPk) {
+    Beam bm;
+    // Input beam — warm white
+    if (idx == 0) {
+        bm.a = vec3(-2.8, 0.0, 0.0);
+        bm.b = vec3(-0.22, 0.0, 0.0);
+        bm.col = vec3(2.0, 1.8, 1.4) * audio * hdrPk * 0.55;
+        bm.width = 0.035;
     }
-    return acc;
+    // Crimson output — goes up-right
+    else if (idx == 1) {
+        bm.a = vec3(0.22, 0.0, 0.0);
+        bm.b = vec3(2.5,  1.4 * spread * 2.0, 0.0);
+        bm.col = vec3(2.0, 0.0, 0.05) * audio * hdrPk * 0.70;
+        bm.width = 0.040;
+    }
+    // Electric blue output — goes right-center
+    else if (idx == 2) {
+        bm.a = vec3(0.22, 0.0, 0.0);
+        bm.b = vec3(2.5,  0.0,  spread * 0.3);
+        bm.col = vec3(0.0, 0.5, 3.0) * audio * hdrPk * 0.75;
+        bm.width = 0.038;
+    }
+    // Acid yellow output — goes down-right
+    else {
+        bm.a = vec3(0.22, 0.0, 0.0);
+        bm.b = vec3(2.5, -1.4 * spread * 2.0, 0.0);
+        bm.col = vec3(2.5, 1.8, 0.0) * audio * hdrPk * 0.68;
+        bm.width = 0.040;
+    }
+    return bm;
 }
 
-// ── Main ─────────────────────────────────────────────────────────────────────
-
 void main() {
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
     vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
-    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
+    uv.x *= aspect;
 
-    // Audio modulator
     float audio = 1.0 + (audioLevel * 0.5 + audioBass * 0.5) * audioReact;
 
-    // Camera orbit around prism
-    float tm = TIME * speed * 0.12;
-    float camR = 3.5;
-    vec3 ro = vec3(sin(tm) * camR, 0.5 + sin(tm * 0.41) * 0.4, cos(tm) * camR);
+    // --- Camera orbit ---
+    float camAngle = TIME * speed * 0.12;
+    float camR = 5.5;
+    vec3 ro = vec3(sin(camAngle) * camR, 0.35 + sin(TIME * speed * 0.07) * 0.4, cos(camAngle) * camR);
     vec3 target = vec3(0.0, 0.0, 0.0);
-    vec3 forward = normalize(target - ro);
-    vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), forward));
-    vec3 up = cross(forward, right);
-    vec3 rd = normalize(forward + uv.x * right + uv.y * up);
+    vec3 fwd = normalize(target - ro);
+    vec3 right = normalize(cross(fwd, vec3(0.0, 1.0, 0.0)));
+    vec3 up = cross(right, fwd);
 
-    // ── Beam endpoints ────────────────────────────────────────────────────────
-    // Input white beam: enters from the left
-    vec3 beamInA = vec3(-3.5, 0.0, 0.0);
-    vec3 beamInB = vec3(-0.22, 0.0, 0.0);
+    float fov = 1.3;
+    vec3 rd = normalize(fwd + uv.x * right * fov * 0.5 + uv.y * up * fov * 0.5);
 
-    // Beam spread based on parameter
-    float spread = beamSpread * 0.5 + 0.1;
-
-    // Output beam: crimson — goes up-right
-    vec3 crimsonA = vec3(0.22, 0.0, 0.0);
-    vec3 crimsonB = vec3(3.0, 1.8 * spread, 0.0);
-
-    // Output beam: electric blue — goes right-center
-    vec3 blueA = vec3(0.22, 0.0, 0.0);
-    vec3 blueB = vec3(3.0, 0.0, 0.0);
-
-    // Output beam: acid yellow — goes down-right
-    vec3 yellowA = vec3(0.22, 0.0, 0.0);
-    vec3 yellowB = vec3(3.0, -1.8 * spread, 0.0);
-
-    // ── Raymarch ──────────────────────────────────────────────────────────────
-    float tMarch = 0.0;
-    bool hit = false;
+    // --- Raymarching (64 steps) ---
+    float t = 0.0;
+    float hitDist = -1.0;
     vec3 hitPos = vec3(0.0);
-
     for (int i = 0; i < 64; i++) {
-        vec3 p = ro + rd * tMarch;
-        float d = sceneSDF(p);
+        vec3 p = ro + rd * t;
+        float d = mapScene(p);
         if (d < 0.001) {
-            hit = true;
+            hitDist = t;
             hitPos = p;
             break;
         }
-        if (tMarch > 20.0) break;
-        tMarch += d;
+        t += d;
+        if (t > 20.0) break;
     }
 
-    // ── Volumetric beam accumulation ──────────────────────────────────────────
-    float bw = 0.07;  // beam width
+    // --- Prism shading ---
+    vec3 col = vec3(0.0);
+    if (hitDist > 0.0) {
+        vec3 n = calcNormal(hitPos);
+        // fwidth() AA on SDF iso-edge
+        float edge = fwidth(mapScene(hitPos));
+        float edgeMask = smoothstep(0.0, edge * 2.0, abs(mapScene(hitPos)));
 
-    float glowIn  = beamGlow(ro, rd, beamInA, beamInB, bw);
-    float glowCrimson = beamGlow(ro, rd, crimsonA, crimsonB, bw * 0.8);
-    float glowBlue    = beamGlow(ro, rd, blueA,    blueB,    bw * 0.8);
-    float glowYellow  = beamGlow(ro, rd, yellowA,  yellowB,  bw * 0.8);
-
-    // ── Color composition ─────────────────────────────────────────────────────
-
-    // HDR beam colors (fully saturated)
-    vec3 crimsonCol = vec3(2.0, 0.0, 0.05) * hdrPeak * 0.8;
-    vec3 blueCol    = vec3(0.0, 0.5, 3.0)  * hdrPeak * 0.8;
-    vec3 yellowCol  = vec3(2.5, 1.8, 0.0)  * hdrPeak * 0.8;
-    vec3 whiteCol   = vec3(2.0, 1.9, 1.7);
-
-    vec3 col = vec3(0.0);  // void black background
-
-    // Volumetric beam contributions
-    col += crimsonCol * glowCrimson * audio * 0.4;
-    col += blueCol    * glowBlue    * audio * 0.4;
-    col += yellowCol  * glowYellow  * audio * 0.4;
-    col += whiteCol   * glowIn      * audio * 0.25;
-
-    // Prism surface shading on hit
-    if (hit) {
-        vec3 n = sceneNormal(hitPos);
-        // Glass-like tint: prismatic sheen based on normal
-        vec3 refDir = reflect(rd, n);
-        float rim = pow(max(1.0 - dot(-rd, n), 0.0), 3.0);
-
-        // Prismatic color: blend between beam colors based on normal.y
-        float t = n.y * 0.5 + 0.5;
-        vec3 prismCol = mix(crimsonCol, mix(blueCol, yellowCol, t), t * 0.5);
-        prismCol = mix(prismCol, vec3(2.0, 2.0, 2.2), rim * 0.6);
-
-        float diff = max(dot(n, normalize(vec3(1.0, 1.0, 2.0))), 0.0);
-        col += prismCol * (0.3 + diff * 0.5) * 0.6;
-
-        // AA edge with fwidth
-        float edgeDist = abs(sceneSDF(hitPos));
-        float fw = fwidth(edgeDist);
-        float edgeMask = smoothstep(fw * 2.0, 0.0, edgeDist);
-        col += vec3(1.5, 1.8, 2.0) * edgeMask * 0.4;
+        // Glass-like: refract + specular
+        vec3 lightDir = normalize(vec3(-1.5, 2.0, 1.0));
+        float diff = max(dot(n, lightDir), 0.0);
+        vec3 viewDir = normalize(ro - hitPos);
+        float spec = pow(max(dot(reflect(-lightDir, n), viewDir), 0.0), 64.0);
+        // Ice-blue glass tint
+        vec3 glassTint = vec3(0.4, 0.7, 1.0) * 0.35 * diff;
+        vec3 specColor = vec3(2.2, 2.2, 2.4) * spec;
+        col = glassTint + specColor;
+        col *= (1.0 - edgeMask * 0.4);
     }
+
+    // --- Volumetric beam accumulation ---
+    vec3 volAcc = vec3(0.0);
+    float volStep = 0.08;
+    int volSteps = 50;
+    for (int vi = 0; vi < volSteps; vi++) {
+        float vt = float(vi) * volStep + 0.1;
+        vec3 vp = ro + rd * vt;
+
+        for (int bi = 0; bi < 4; bi++) {
+            Beam bm = getBeam(bi, beamSpread, audio, hdrPeak);
+            float dist = distToSegment(vp, bm.a, bm.b);
+            // AA on beam edge via fwidth approximation
+            float aaW = bm.width * 0.15;
+            float glow = exp(-dist / (bm.width + aaW));
+            // AA sharpening at iso edge
+            float innerEdge = smoothstep(bm.width, bm.width - aaW, dist);
+            volAcc += bm.col * (glow * 0.07 + innerEdge * 0.5) * volStep;
+        }
+    }
+
+    col += volAcc;
 
     gl_FragColor = vec4(col, 1.0);
 }
