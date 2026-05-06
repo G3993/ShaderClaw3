@@ -1,173 +1,127 @@
 /*{
-  "DESCRIPTION": "Vishes — cellular random walkers leaving hue-drifting color trails on a slow-fading grid",
-  "CREDIT": "ShaderClaw — cell-walker sketch translated to multi-pass ISF",
-  "CATEGORIES": ["Generator"],
-  "INPUTS": [
-    { "NAME": "gridSize", "LABEL": "Grid Size", "TYPE": "float", "DEFAULT": 120.0, "MIN": 20.0, "MAX": 400.0 },
-    { "NAME": "walkers", "LABEL": "Walkers", "TYPE": "float", "DEFAULT": 6.0, "MIN": 1.0, "MAX": 16.0 },
-    { "NAME": "stepRate", "LABEL": "Step Rate", "TYPE": "float", "DEFAULT": 40.0, "MIN": 1.0, "MAX": 240.0 },
-    { "NAME": "hueDrift", "LABEL": "Hue Drift", "TYPE": "float", "DEFAULT": 0.015, "MIN": 0.0, "MAX": 0.1 },
-    { "NAME": "fadeRate", "LABEL": "Trail Fade", "TYPE": "float", "DEFAULT": 0.004, "MIN": 0.0, "MAX": 0.08 },
-    { "NAME": "saturation", "LABEL": "Saturation", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "brightness", "LABEL": "Brightness", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "bloom", "LABEL": "Bloom", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "pulse", "LABEL": "Audio Pulse", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "bounceEdges", "LABEL": "Bounce Edges", "TYPE": "bool", "DEFAULT": true },
-    { "NAME": "backgroundColor", "LABEL": "BG Color", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] }
-  ],
-  "PASSES": [
-    { "TARGET": "stateBuf", "PERSISTENT": true, "WIDTH": 16, "HEIGHT": 1 },
-    { "TARGET": "canvas", "PERSISTENT": true },
-    {}
-  ]
+    "DESCRIPTION": "Crystal Lattice — raymarched 3D geometric crystal structure with jewel palette. Close-up mineral composition. Standalone HDR generator.",
+    "CREDIT": "auto-improve",
+    "ISFVSN": "2",
+    "CATEGORIES": ["Generator", "3D", "Abstract"],
+    "INPUTS": [
+        {"NAME":"rotSpeed","TYPE":"float","DEFAULT":0.2,"MIN":0.0,"MAX":1.0,"LABEL":"Rotation Speed"},
+        {"NAME":"crystalScale","TYPE":"float","DEFAULT":1.0,"MIN":0.2,"MAX":2.0,"LABEL":"Crystal Scale"},
+        {"NAME":"specPeak","TYPE":"float","DEFAULT":3.5,"MIN":1.0,"MAX":6.0,"LABEL":"HDR Peak"},
+        {"NAME":"hueShift","TYPE":"float","DEFAULT":0.0,"MIN":0.0,"MAX":1.0,"LABEL":"Hue Shift"},
+        {"NAME":"audioMod","TYPE":"float","DEFAULT":0.5,"MIN":0.0,"MAX":1.0,"LABEL":"Audio Mod"}
+    ]
 }*/
 
-#define MAX_WALKERS 16
-#define TAU 6.28318530718
-
-float hash11(float p) {
-    p = fract(p * 0.1031);
-    p *= p + 33.33;
-    p *= p + p;
-    return fract(p);
+float sdOctahedron(vec3 p, float s) {
+    p = abs(p);
+    return (p.x + p.y + p.z - s) * 0.57735027;
 }
 
-float hash12(vec2 p) {
-    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.x + p3.y) * p3.z);
+float sdCapsule(vec3 p, vec3 a, vec3 b, float r) {
+    vec3 ab = b - a; vec3 ap = p - a;
+    float t = clamp(dot(ap, ab) / dot(ab, ab), 0.0, 1.0);
+    return length(ap - ab * t) - r;
 }
 
-vec3 hsv2rgb(vec3 c) {
-    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
-    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+float sdBox(vec3 p, vec3 b) {
+    vec3 d = abs(p) - b;
+    return length(max(d, 0.0)) + min(max(d.x, max(d.y, d.z)), 0.0);
 }
 
-vec2 neighborDir(int dir) {
-    if (dir == 0) return vec2(-1.0, -1.0);
-    if (dir == 1) return vec2( 0.0, -1.0);
-    if (dir == 2) return vec2( 1.0, -1.0);
-    if (dir == 3) return vec2(-1.0,  0.0);
-    if (dir == 4) return vec2( 1.0,  0.0);
-    if (dir == 5) return vec2(-1.0,  1.0);
-    if (dir == 6) return vec2( 0.0,  1.0);
-    return vec2( 1.0,  1.0);
+vec2 map(vec3 p, float scale, float t) {
+    float bestD = 1e9;
+    float bestID = 0.0;
+
+    // Central crystal (large octahedron)
+    float central = sdOctahedron(p, 0.6 * scale);
+    if (central < bestD) { bestD = central; bestID = 1.0; }
+
+    // Satellite crystals arranged in two rings
+    for (float i = 0.0; i < 6.0; i++) {
+        float ang = i / 6.0 * 6.28318 + t * rotSpeed;
+        vec3 pos = vec3(cos(ang) * 1.2 * scale, sin(i * 1.1) * 0.3 * scale, sin(ang) * 1.2 * scale);
+        float satScale = (0.2 + sin(i * 3.7) * 0.05) * scale;
+        float sat = sdOctahedron(p - pos, satScale);
+        if (sat < bestD) { bestD = sat; bestID = 2.0 + i; }
+
+        // Bond capsule from center to satellite
+        float bond = sdCapsule(p, vec3(0.0), pos, 0.025 * scale);
+        if (bond < bestD) { bestD = bond; bestID = -1.0; }
+    }
+
+    // Top and bottom apex crystals
+    float top = sdOctahedron(p - vec3(0.0, 1.0 * scale, 0.0), 0.15 * scale);
+    float bot = sdOctahedron(p - vec3(0.0, -1.0 * scale, 0.0), 0.15 * scale);
+    if (top < bestD) { bestD = top; bestID = 8.0; }
+    if (bot < bestD) { bestD = bot; bestID = 9.0; }
+
+    return vec2(bestD, bestID);
 }
 
-vec4 readWalker(float id) {
-    return texture2D(stateBuf, vec2((id + 0.5) / 16.0, 0.5));
+vec3 calcNormal(vec3 p, float scale, float t) {
+    vec2 e = vec2(0.001, 0.0);
+    return normalize(vec3(
+        map(p + e.xyy, scale, t).x - map(p - e.xyy, scale, t).x,
+        map(p + e.yxy, scale, t).x - map(p - e.yxy, scale, t).x,
+        map(p + e.yyx, scale, t).x - map(p - e.yyx, scale, t).x
+    ));
 }
 
 void main() {
-    vec2 Res = RENDERSIZE;
-    vec2 pos = gl_FragCoord.xy;
-    float cell = 1.0 / max(gridSize, 1.0);
-    float audio = 1.0 + audioLevel * pulse;
+    vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
+    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
+    float t = TIME;
+    float audio = 1.0 + (audioLevel + audioBass * 0.6) * audioMod;
+    float scale = crystalScale * audio;
 
-    // =============================================================
-    // PASS 0: advance walker state buffer (16x1)
-    // state encoding: vec4(x_norm, y_norm, hue, stepAccumulator)
-    // =============================================================
-    if (PASSINDEX == 0) {
-        float id = floor(pos.x);
-        if (id >= walkers) {
-            gl_FragColor = vec4(0.0);
-            return;
+    float camAng = t * rotSpeed * 0.5;
+    vec3 ro = vec3(sin(camAng) * 3.0, 0.8 + sin(t * 0.23) * 0.3, cos(camAng) * 3.0);
+    vec3 ta = vec3(0.0, 0.2 * scale, 0.0);
+    vec3 fwd = normalize(ta - ro);
+    vec3 right = normalize(cross(fwd, vec3(0.0, 1.0, 0.0)));
+    vec3 up = cross(right, fwd);
+    vec3 rd = normalize(fwd + uv.x * right + uv.y * up);
+
+    vec3 col = vec3(0.0); // void black
+    float rayT = 0.01;
+
+    for (int i = 0; i < 64; i++) {
+        vec3 p = ro + rd * rayT;
+        vec2 res = map(p, scale, t);
+        float d = res.x;
+
+        if (d < 0.002) {
+            vec3 nor = calcNormal(p, scale, t);
+            vec3 lightDir = normalize(vec3(1.0, 2.0, 1.0));
+            float diff = max(0.0, dot(nor, lightDir));
+
+            float id = res.y;
+            vec3 sapphire = vec3(0.0, 0.3, 2.5 + hueShift);
+            vec3 cyan = vec3(0.0, 2.0, 2.5);
+            vec3 violet = vec3(0.8 + hueShift, 0.0, 2.5);
+            vec3 white = vec3(specPeak, specPeak, specPeak * 1.1);
+
+            vec3 baseCol;
+            if (id < 0.0) baseCol = cyan * 0.5; // bonds
+            else if (id < 1.5) baseCol = sapphire; // central
+            else if (id < 8.0) baseCol = mix(violet, cyan, fract(id * 0.3)); // satellites
+            else baseCol = white * 0.8; // apex
+
+            // Specular
+            vec3 refl = reflect(-lightDir, nor);
+            float spec = pow(max(0.0, dot(refl, -rd)), 32.0);
+            col = baseCol * (0.1 + diff * 0.7) + white * spec * specPeak;
+
+            // Edge emission (sharp edge glow from near-grazing angle)
+            float edge = 1.0 - abs(dot(nor, -rd));
+            edge = pow(edge, 3.0);
+            col += mix(cyan, violet, edge) * edge * specPeak * 0.8;
+
+            break;
         }
-
-        // Seed the walker near center on first frames
-        if (FRAMEINDEX < 2) {
-            float jx = (hash11(id * 7.31 + 1.0) - 0.5) * 0.15;
-            float jy = (hash11(id * 3.19 + 2.0) - 0.5) * 0.15;
-            float h0 = hash11(id * 11.7 + 3.0);
-            gl_FragColor = vec4(0.5 + jx, 0.5 + jy, h0, 0.0);
-            return;
-        }
-
-        vec4 prev = readWalker(id);
-        vec2 p = prev.rg;
-        float h = prev.b;
-        float acc = prev.a + TIMEDELTA * stepRate * audio;
-
-        // Walk up to 6 discrete cell steps this frame
-        for (int s = 0; s < 6; s++) {
-            if (acc < 1.0) break;
-            acc -= 1.0;
-
-            float seed = TIME * 97.13 + id * 13.7 + float(s) * 3.31;
-            float r = hash12(vec2(seed, seed * 0.47));
-            int dir = int(floor(r * 8.0));
-            vec2 stepVec = neighborDir(dir) * cell;
-            p += stepVec;
-
-            if (bounceEdges) {
-                if (p.x < 0.0) p.x = -p.x;
-                if (p.x > 1.0) p.x = 2.0 - p.x;
-                if (p.y < 0.0) p.y = -p.y;
-                if (p.y > 1.0) p.y = 2.0 - p.y;
-            } else {
-                p = fract(p);
-            }
-
-            float dh = (hash12(vec2(seed + 7.7, id)) - 0.5) * 2.0 * hueDrift;
-            h = fract(h + dh + 1.0);
-        }
-
-        gl_FragColor = vec4(p, h, acc);
-        return;
+        rayT += max(d * 0.7, 0.002);
+        if (rayT > 15.0) break;
     }
 
-    // =============================================================
-    // PASS 1: update persistent canvas (fade + paint walker cells)
-    // =============================================================
-    if (PASSINDEX == 1) {
-        vec2 uv = pos / Res;
-        vec4 prev = texture2D(canvas, uv);
-        vec4 col = prev * (1.0 - fadeRate);
-
-        // Aspect-correct grid so cells stay square
-        float aspect = Res.x / Res.y;
-        vec2 gridUV = vec2(uv.x * aspect, uv.y);
-        vec2 pxCell = floor(gridUV * gridSize);
-
-        for (int i = 0; i < MAX_WALKERS; i++) {
-            if (float(i) >= walkers) break;
-            vec4 st = readWalker(float(i));
-            vec2 wGridUV = vec2(st.r * aspect, st.g);
-            vec2 wCell = floor(wGridUV * gridSize);
-            vec2 diff = abs(wCell - pxCell);
-            if (diff.x < 0.5 && diff.y < 0.5) {
-                vec3 rgb = hsv2rgb(vec3(st.b, saturation, brightness * audio));
-                col = vec4(rgb, 1.0);
-            }
-        }
-
-        gl_FragColor = col;
-        return;
-    }
-
-    // =============================================================
-    // PASS 2: final display (bloom + background blend)
-    // =============================================================
-    vec2 uv = pos / Res;
-    vec3 c = texture2D(canvas, uv).rgb;
-
-    if (bloom > 0.001) {
-        vec3 sum = vec3(0.0);
-        float r = 2.5 / min(Res.x, Res.y);
-        for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {
-                vec2 off = vec2(float(x), float(y)) * r;
-                sum += texture2D(canvas, uv + off).rgb;
-            }
-        }
-        sum /= 25.0;
-        c += sum * bloom;
-    }
-
-    float lum = max(c.r, max(c.g, c.b));
-    float alpha = clamp(lum * 8.0, 0.0, 1.0);
-    vec3 outRgb = mix(backgroundColor.rgb, c, alpha);
-    gl_FragColor = vec4(outRgb, 1.0);
+    gl_FragColor = vec4(col, 1.0);
 }
