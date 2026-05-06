@@ -9,8 +9,9 @@
     { "NAME": "flowSpeed",   "LABEL": "Flow Speed",      "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 4.0 },
     { "NAME": "octaves",     "LABEL": "Octaves",         "TYPE": "float", "DEFAULT": 4.0,  "MIN": 1.0,  "MAX": 6.0 },
     { "NAME": "persistence", "LABEL": "Persistence",     "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.1,  "MAX": 0.9 },
-    { "NAME": "dotDensity",  "LABEL": "Seed Density",    "TYPE": "float", "DEFAULT": 0.1,  "MIN": 0.01, "MAX": 0.5 },
-    { "NAME": "intensity",   "LABEL": "Brightness",      "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.2,  "MAX": 3.0 }
+    { "NAME": "dotDensity",  "LABEL": "Seed Density",    "TYPE": "float", "DEFAULT": 0.12, "MIN": 0.01, "MAX": 0.5 },
+    { "NAME": "intensity",   "LABEL": "Brightness",      "TYPE": "float", "DEFAULT": 2.5,  "MIN": 0.2,  "MAX": 3.0 },
+    { "NAME": "audioMod",    "LABEL": "Audio Flow Mod",  "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0,  "MAX": 2.0 }
   ],
   "PASSES": [
     { "TARGET": "directions" },
@@ -84,7 +85,7 @@ vec4 passDirections(vec2 fragCoord) {
     float minSize = min(RENDERSIZE.x, RENDERSIZE.y);
     vec2 UV = vec2(0.0, 1.0) + vec2(1.0, -1.0) * (fragCoord - 0.5 * (RENDERSIZE - vec2(minSize))) / minSize;
     UV /= 4.0;
-    UV += TIME * flowSpeed / 24.0;
+    UV += TIME * (flowSpeed + audioBass * audioMod * 0.5) / 24.0;
     float field = fbm_2d_cellular6(UV, vec2(flowScale, flowScale), 0, int(octaves), persistence, 0.0, 0.0);
     float theta = field * 6.28318530718;
     return vec4(cos(theta) * 0.5 + 0.5, sin(theta) * 0.5 + 0.5, 0.0, 1.0);
@@ -111,12 +112,12 @@ vec3 blend_darken(vec3 c1, vec3 c2, float opacity) {
     return opacity * min(c1, c2) + (1.0 - opacity) * c2;
 }
 
-vec4 grassGradient(float x) {
+vec4 auroraGradient(float x) {
     const float p0 = 0.363636, p1 = 0.592727, p2 = 0.804218, p3 = 0.907897;
-    const vec4 c0 = vec4(0.0,        0.0,        0.0,        1.0);
-    const vec4 c1 = vec4(0.05680800, 0.31962299, 0.15774099, 1.0);
-    const vec4 c2 = vec4(0.78224099, 0.78224099, 0.78224099, 1.0);
-    const vec4 c3 = vec4(1.0,        1.0,        1.0,        1.0);
+    const vec4 c0 = vec4(0.0,  0.0,  0.0,  1.0); // black
+    const vec4 c1 = vec4(0.3,  0.0,  0.8,  1.0); // deep violet
+    const vec4 c2 = vec4(0.0,  0.9,  1.0,  1.0); // electric cyan
+    const vec4 c3 = vec4(0.0,  1.0,  0.5,  1.0); // bright emerald
     if (x < p0) return c0;
     if (x < p1) return mix(c0, c1, 0.5 - 0.5 * cos(3.14159265359 * (x - p0) / (p1 - p0)));
     if (x < p2) return mix(c1, c2, 0.5 - 0.5 * cos(3.14159265359 * (x - p1) / (p2 - p1)));
@@ -128,7 +129,7 @@ vec4 passPositions(vec2 fragCoord) {
     float minSize = min(RENDERSIZE.x, RENDERSIZE.y);
     vec2 UV = vec2(0.0, 1.0) + vec2(1.0, -1.0) * (fragCoord - 0.5 * (RENDERSIZE - vec2(minSize))) / minSize;
     vec3 dotColor = color_dots(UV, 1.0 / 1024.0, 0.0);
-    vec4 grad     = grassGradient(dot(dotColor, vec3(1.0)) / 3.0);
+    vec4 grad     = auroraGradient(dot(dotColor, vec3(1.0)) / 3.0);
     float dotMask = dots(UV, 1.0 / 1024.0, dotDensity, 0.334808);
     vec3  blended = blend_darken(grad.rgb, vec3(dotMask), 1.0 * grad.a);
     float a = min(1.0, dotMask + grad.a);
@@ -184,7 +185,7 @@ vec3 traceIntensity(vec2 pos) {
 vec4 passImage(vec2 fragCoord) {
     float maxSize = max(RENDERSIZE.x, RENDERSIZE.y);
     vec2 UV = vec2(0.0, 1.0) + vec2(1.0, -1.0) * (fragCoord - 0.5 * (RENDERSIZE - vec2(maxSize))) / maxSize;
-    vec3 col = traceIntensity(UV) * intensity;
+    vec3 col = traceIntensity(UV) * intensity * 2.0;
     return vec4(col, 1.0);
 }
 
