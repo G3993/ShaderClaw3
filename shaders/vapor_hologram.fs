@@ -1,11 +1,11 @@
 /*{
-  "DESCRIPTION": "Vaporwave Hologram — Y2K vaporwave scene transmitted through a degrading holographic channel. Pass 0 renders the full vaporwave (sun, grid, Y2K swarm, katakana). Pass 1 layers hologram glitch on top: vertical tear, RGB shift, EMI bursts, hologram tint, scanlines.",
+  "DESCRIPTION": "Cryogenic Hologram — cold deep-space ice scene (cobalt sky, white sun, electric cyan grid, ice-tinted Y2K swarm) transmitted through holographic glitch channel.",
   "CATEGORIES": ["Generator", "Glitch", "Audio Reactive"],
   "CREDIT": "Easel — combines vaporwave_floral_shoppe + hologram_glitch",
   "INPUTS": [
     { "NAME": "horizonY",         "LABEL": "Horizon",         "TYPE": "float", "MIN": 0.40, "MAX": 0.75, "DEFAULT": 0.55 },
-    { "NAME": "skyTopColor",      "LABEL": "Sky Top",         "TYPE": "color", "DEFAULT": [1.0, 0.42, 0.71, 1.0] },
-    { "NAME": "skyHorizonColor",  "LABEL": "Sky Horizon",     "TYPE": "color", "DEFAULT": [0.36, 0.85, 0.76, 1.0] },
+    { "NAME": "skyTopColor",      "LABEL": "Sky Top",         "TYPE": "color", "DEFAULT": [0.04, 0.06, 0.32, 1.0] },
+    { "NAME": "skyHorizonColor",  "LABEL": "Sky Horizon",     "TYPE": "color", "DEFAULT": [0.42, 0.82, 0.98, 1.0] },
     { "NAME": "sunSize",          "LABEL": "Sun Size",        "TYPE": "float", "MIN": 0.05, "MAX": 0.40, "DEFAULT": 0.22 },
     { "NAME": "sunBars",          "LABEL": "Sun Bars",        "TYPE": "float", "MIN": 0.0,  "MAX": 12.0, "DEFAULT": 6.0 },
     { "NAME": "gridDensity",      "LABEL": "Grid Density",    "TYPE": "float", "MIN": 4.0,  "MAX": 24.0, "DEFAULT": 12.0 },
@@ -22,7 +22,7 @@
     { "NAME": "holoTear",         "LABEL": "Tear Probability","TYPE": "float", "MIN": 0.0,  "MAX": 0.3,  "DEFAULT": 0.06 },
     { "NAME": "holoBreak",        "LABEL": "EMI Break",       "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.3 },
     { "NAME": "holoGlow",         "LABEL": "Holo Glow",       "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.7 },
-    { "NAME": "holoTint",         "LABEL": "Hologram Tint",   "TYPE": "color", "DEFAULT": [0.55, 1.0, 0.95, 1.0] },
+    { "NAME": "holoTint",         "LABEL": "Hologram Tint",   "TYPE": "color", "DEFAULT": [0.38, 0.90, 1.0, 1.0] },
     { "NAME": "holoMix",          "LABEL": "Hologram Mix",    "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.85 },
     { "NAME": "audioReact",       "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
     { "NAME": "inputTex",         "LABEL": "Texture (optional GIF source)", "TYPE": "image" }
@@ -104,7 +104,7 @@ vec4 passVapor(vec2 fragCoord) {
     float sr = sunSize * (1.0 + audioBass * audioReact * 0.06);
     if (length(sd) < sr) {
         float ty = clamp((sd.y / sr + 1.0) * 0.5, 0.0, 1.0);
-        vec3 sunC = mix(vec3(0.98, 0.45, 0.20), vec3(1.0, 0.20, 0.62), ty);
+        vec3 sunC = mix(vec3(0.55, 0.82, 1.0), vec3(0.90, 0.97, 1.0), ty);  // ice star: arctic blue → white-hot
         if (sunBars > 0.0) {
             float barY = sd.y / sr;
             float barMask = step(0.0, sin(barY * sunBars * 3.14159 + 0.4 + TIME * 0.5));
@@ -123,9 +123,9 @@ vec4 passVapor(vec2 fragCoord) {
         float gy = abs(fract(gridUV.y) - 0.5);
         float lineW = 0.04 * dh;
         float line = smoothstep(0.5 - lineW, 0.5, max(gx, gy));
-        vec3 floorBase = mix(vec3(0.10, 0.05, 0.18),
-                             vec3(0.55, 0.10, 0.45), uv.y / horizonY);
-        col = mix(floorBase, vec3(1.0, 0.42, 0.85), line);
+        vec3 floorBase = mix(vec3(0.01, 0.03, 0.18),
+                             vec3(0.02, 0.12, 0.42), uv.y / horizonY);
+        col = mix(floorBase, vec3(0.0, 0.88, 1.0), line);  // electric cyan grid
         col = mix(col, sky, smoothstep(horizonY - 0.04, horizonY, uv.y));
     }
 
@@ -148,7 +148,7 @@ vec4 passVapor(vec2 fragCoord) {
         float sz   = y2kSize * (0.6 + h1 * 0.8)
                    * (0.7 + 0.3 * sin(TIME * 4.0 + fi))
                    * (1.0 + audioBass * audioReact * 0.4);
-        float hue  = fract(h2 + TIME * 0.05);
+        float hue  = fract(0.50 + h2 * 0.32 + TIME * 0.03);  // locked to blue-cyan-violet band
         vec3 shapeCol = hsv2rgb(vec3(hue, 0.85, 0.95));
         float vis = smoothstep(0.0, 0.15, life) * smoothstep(1.0, 0.85, life);
         float rot = TIME * (0.5 + h3 * 2.0) + fi * 1.7;
@@ -187,7 +187,7 @@ vec4 passVapor(vec2 fragCoord) {
             float bar  = step(0.55, h) * step(h, 0.85) * step(0.40, fract(ld.y)) * step(fract(ld.y), 0.62);
             total = max(total, max(vert, bar));
         }
-        col = mix(col, vec3(0.7, 1.0, 0.85), total * katakanaIntensity);
+        col = mix(col, vec3(0.55, 0.92, 1.0), total * katakanaIntensity);
     }
 
     // VHS posterize before hologram (gives the holo something quantized to glitch)
@@ -233,8 +233,8 @@ vec4 passHologram(vec2 fragCoord) {
     float lum = dot(holo, vec3(0.299, 0.587, 0.114));
     holo += holoTint.rgb * pow(lum, 1.4) * holoGlow * 0.3;
 
-    // Transmission strength — low audio dims the hologram (signal weakens)
-    holo *= 0.5 + audioLevel * 0.6;
+    // Audio boost: audioLevel brightens transmission (no base dim when silent)
+    holo *= 0.9 + audioLevel * audioReact * 0.15;
 
     // Mix: 0 = pure vapor, 1 = full hologram
     vec3 vapor_ = texture(vapor, fragCoord / RENDERSIZE.xy).rgb;
