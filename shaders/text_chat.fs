@@ -15,8 +15,11 @@
     { "NAME": "cornerRadius", "LABEL": "Corner Radius", "TYPE": "float", "DEFAULT": 0.025, "MIN": 0.0, "MAX": 0.05 },
     { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "autoTextColor", "LABEL": "Auto Text Color", "TYPE": "bool", "DEFAULT": 1.0 },
-    { "NAME": "inputTex", "LABEL": "Background Layer", "TYPE": "image" },
-    { "NAME": "bgOpacity", "LABEL": "BG Layer Opacity", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "inputTex", "LABEL": "Layer Source", "TYPE": "image" },
+    { "NAME": "pageBgUsesLayer", "LABEL": "Page BG = Layer", "TYPE": "bool", "DEFAULT": 1.0 },
+    { "NAME": "bubbleFillMode", "LABEL": "Bubble Fill", "TYPE": "long", "DEFAULT": 0, "VALUES": [0,1,2], "LABELS": ["Solid Color","Layer Texture","Layer Tinted"] },
+    { "NAME": "bubbleTexTint", "LABEL": "Bubble Tint Mix", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "bgOpacity", "LABEL": "Page BG Opacity", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.06, 0.07, 0.10, 1.0] },
     { "NAME": "color1", "LABEL": "Bubble 1", "TYPE": "color", "DEFAULT": [0.10, 0.55, 1.00, 1.0] },
     { "NAME": "color2", "LABEL": "Bubble 2", "TYPE": "color", "DEFAULT": [1.00, 0.20, 0.55, 1.0] },
@@ -154,15 +157,22 @@ void main() {
     if (chunkLen < 1) chunkLen = 1;
 
     // ─── Background ────────────────────────────────────────
-    // Optional bound layer (inputTex) renders as the chat backdrop.
-    // Falls back to bgColor when nothing is bound. bgOpacity blends
-    // the two so the user can dim the layer without a separate blur.
-    vec3 layerBG = IMG_NORM_PIXEL(inputTex, uv).rgb;
-    vec3 col = mix(bgColor.rgb, layerBG, bgOpacity);
+    // Sample the bound layer once for both page-bg and bubble-fill
+    // modes. The page-bg toggle decides whether the chat lives on
+    // the layer (Page BG = Layer ON) or on a flat bg color. The
+    // bubble-fill enum independently lets each bubble be filled
+    // with the same layer (great for "speech bubbles cut into a
+    // shader").
+    vec3 layerSample = IMG_NORM_PIXEL(inputTex, uv).rgb;
+    vec3 col = pageBgUsesLayer
+        ? mix(bgColor.rgb, layerSample, bgOpacity)
+        : bgColor.rgb;
     // Mild radial vignette so bubbles read well.
     vec2 vignP = vec2((uv.x - 0.5) * aspect, uv.y - 0.5);
     float vd = length(vignP);
     col *= mix(1.0, 0.7, smoothstep(0.45, 0.95, vd));
+
+    int fillMode = int(bubbleFillMode);
 
     float bubbleAlpha = 0.0;          // accumulated bubble fill mask
     vec3  bubbleCol   = vec3(0.0);    // accumulated bubble color
@@ -232,17 +242,34 @@ void main() {
         float fill = 1.0 - smoothstep(-fw, fw, sdf);
         if (fill < 0.001) continue;
 
-        // Per-bubble color from the 6-slot palette. Cycle by index so
-        // consecutive bubbles never share a color.
+        // Per-bubble palette color (always computed — used directly in
+        // mode 0, used as tint in mode 2, used as text-contrast hint
+        // for the auto-text branch even in mode 1).
         int paletteIdx = int(mod(fk, 6.0));
-        vec3 bubColor = color1.rgb;
-        if (paletteIdx == 1) bubColor = color2.rgb;
-        else if (paletteIdx == 2) bubColor = color3.rgb;
-        else if (paletteIdx == 3) bubColor = color4.rgb;
-        else if (paletteIdx == 4) bubColor = color5.rgb;
-        else if (paletteIdx == 5) bubColor = color6.rgb;
+        vec3 paletteColor = color1.rgb;
+        if (paletteIdx == 1) paletteColor = color2.rgb;
+        else if (paletteIdx == 2) paletteColor = color3.rgb;
+        else if (paletteIdx == 3) paletteColor = color4.rgb;
+        else if (paletteIdx == 4) paletteColor = color5.rgb;
+        else if (paletteIdx == 5) paletteColor = color6.rgb;
 
-        // Vertical sheen for that glossy iMessage feel.
+        // Bubble fill — three modes:
+        //   0 Solid Color: pure palette
+        //   1 Layer Texture: sample bound layer at this pixel — bubbles
+        //     reveal the layer through their silhouette
+        //   2 Layer Tinted: layer × palette (mix controlled by tint slider)
+        vec3 bubColor;
+        if (fillMode == 1) {
+            bubColor = layerSample;
+        } else if (fillMode == 2) {
+            bubColor = mix(layerSample, layerSample * paletteColor * 1.5,
+                           bubbleTexTint);
+        } else {
+            bubColor = paletteColor;
+        }
+
+        // Vertical sheen for that glossy iMessage feel — applied to
+        // every fill mode so textured bubbles still have shape.
         float sheen = smoothstep(-halfBox.y, halfBox.y * 0.7, d.y);
         bubColor = mix(bubColor * 0.92, bubColor * 1.12, sheen);
         // Bass pulse on the freshest bubble (just spawned).
