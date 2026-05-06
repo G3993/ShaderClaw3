@@ -1,173 +1,109 @@
 /*{
-  "DESCRIPTION": "Vishes — cellular random walkers leaving hue-drifting color trails on a slow-fading grid",
-  "CREDIT": "ShaderClaw — cell-walker sketch translated to multi-pass ISF",
+  "DESCRIPTION": "Clifford Attractor Nebula — strange attractor painted as an additive HDR nebula with audio pulse and slow parameter morphing",
   "CATEGORIES": ["Generator"],
+  "CREDIT": "ShaderClaw — Clifford attractor chaos game in ISF persistent pass",
   "INPUTS": [
-    { "NAME": "gridSize", "LABEL": "Grid Size", "TYPE": "float", "DEFAULT": 120.0, "MIN": 20.0, "MAX": 400.0 },
-    { "NAME": "walkers", "LABEL": "Walkers", "TYPE": "float", "DEFAULT": 6.0, "MIN": 1.0, "MAX": 16.0 },
-    { "NAME": "stepRate", "LABEL": "Step Rate", "TYPE": "float", "DEFAULT": 40.0, "MIN": 1.0, "MAX": 240.0 },
-    { "NAME": "hueDrift", "LABEL": "Hue Drift", "TYPE": "float", "DEFAULT": 0.015, "MIN": 0.0, "MAX": 0.1 },
-    { "NAME": "fadeRate", "LABEL": "Trail Fade", "TYPE": "float", "DEFAULT": 0.004, "MIN": 0.0, "MAX": 0.08 },
-    { "NAME": "saturation", "LABEL": "Saturation", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "brightness", "LABEL": "Brightness", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "bloom", "LABEL": "Bloom", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "pulse", "LABEL": "Audio Pulse", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "bounceEdges", "LABEL": "Bounce Edges", "TYPE": "bool", "DEFAULT": true },
-    { "NAME": "backgroundColor", "LABEL": "BG Color", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] }
+    { "NAME": "speed",      "LABEL": "Speed",      "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0, "MAX": 4.0  },
+    { "NAME": "fadeRate",   "LABEL": "Trail Fade", "TYPE": "float", "DEFAULT": 0.001,"MIN": 0.0, "MAX": 0.02 },
+    { "NAME": "brightness", "LABEL": "Brightness", "TYPE": "float", "DEFAULT": 1.4,  "MIN": 0.3, "MAX": 4.0  },
+    { "NAME": "morphSpeed", "LABEL": "Morph",      "TYPE": "float", "DEFAULT": 0.06, "MIN": 0.0, "MAX": 0.5  }
   ],
   "PASSES": [
-    { "TARGET": "stateBuf", "PERSISTENT": true, "WIDTH": 16, "HEIGHT": 1 },
     { "TARGET": "canvas", "PERSISTENT": true },
     {}
   ]
 }*/
 
-#define MAX_WALKERS 16
-#define TAU 6.28318530718
-
-float hash11(float p) {
-    p = fract(p * 0.1031);
-    p *= p + 33.33;
-    p *= p + p;
-    return fract(p);
-}
-
-float hash12(vec2 p) {
-    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.x + p3.y) * p3.z);
-}
+float h1(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 vec3 hsv2rgb(vec3 c) {
-    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
     vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
     return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 
-vec2 neighborDir(int dir) {
-    if (dir == 0) return vec2(-1.0, -1.0);
-    if (dir == 1) return vec2( 0.0, -1.0);
-    if (dir == 2) return vec2( 1.0, -1.0);
-    if (dir == 3) return vec2(-1.0,  0.0);
-    if (dir == 4) return vec2( 1.0,  0.0);
-    if (dir == 5) return vec2(-1.0,  1.0);
-    if (dir == 6) return vec2( 0.0,  1.0);
-    return vec2( 1.0,  1.0);
-}
-
-vec4 readWalker(float id) {
-    return texture2D(stateBuf, vec2((id + 0.5) / 16.0, 0.5));
-}
-
 void main() {
-    vec2 Res = RENDERSIZE;
-    vec2 pos = gl_FragCoord.xy;
-    float cell = 1.0 / max(gridSize, 1.0);
-    float audio = 1.0 + audioLevel * pulse;
+    vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
 
-    // =============================================================
-    // PASS 0: advance walker state buffer (16x1)
-    // state encoding: vec4(x_norm, y_norm, hue, stepAccumulator)
-    // =============================================================
+    // Clifford attractor parameters — slow morph keeps it interesting
+    float mt = TIME * morphSpeed;
+    float a_p = -1.7 + sin(mt * 0.31) * 0.22;
+    float b_p =  1.8 + cos(mt * 0.27) * 0.22;
+    float c_p = -1.9 + sin(mt * 0.19) * 0.22;
+    float d_p = -0.4 + cos(mt * 0.23) * 0.22;
+
+    // ─────────────────────────────────────────────────────────
+    // PASS 0 — Accumulate attractor point density onto canvas
+    // Each pixel fires 4 independent trajectories and adds
+    // Gaussian splashes wherever the orbit passes nearby.
+    // ─────────────────────────────────────────────────────────
     if (PASSINDEX == 0) {
-        float id = floor(pos.x);
-        if (id >= walkers) {
-            gl_FragColor = vec4(0.0);
-            return;
-        }
+        // Pixel-space Gaussian: σ ≈ 2.5 pixels
+        float sigSq = 2.0 * 6.25;
 
-        // Seed the walker near center on first frames
-        if (FRAMEINDEX < 2) {
-            float jx = (hash11(id * 7.31 + 1.0) - 0.5) * 0.15;
-            float jy = (hash11(id * 3.19 + 2.0) - 0.5) * 0.15;
-            float h0 = hash11(id * 11.7 + 3.0);
-            gl_FragColor = vec4(0.5 + jx, 0.5 + jy, h0, 0.0);
-            return;
-        }
+        vec3 contrib = vec3(0.0);
 
-        vec4 prev = readWalker(id);
-        vec2 p = prev.rg;
-        float h = prev.b;
-        float acc = prev.a + TIMEDELTA * stepRate * audio;
+        for (int seed = 0; seed < 4; seed++) {
+            float fs = float(seed);
+            // New random starting point each frame (seeded by TIME + seed index)
+            float st = TIME * 2.91 + fs * 17.3;
+            vec2 p = vec2(h1(st) * 4.0 - 2.0, h1(st + 1.7) * 4.0 - 2.0);
 
-        // Walk up to 6 discrete cell steps this frame
-        for (int s = 0; s < 6; s++) {
-            if (acc < 1.0) break;
-            acc -= 1.0;
+            // Each seed carries a distinct hue, slowly rotating
+            float hue = fract(fs * 0.25 + TIME * 0.025);
 
-            float seed = TIME * 97.13 + id * 13.7 + float(s) * 3.31;
-            float r = hash12(vec2(seed, seed * 0.47));
-            int dir = int(floor(r * 8.0));
-            vec2 stepVec = neighborDir(dir) * cell;
-            p += stepVec;
+            for (int step = 0; step < 150; step++) {
+                // One Clifford map iteration
+                float xn = sin(a_p * p.y) + c_p * cos(a_p * p.x);
+                float yn = sin(b_p * p.x) + d_p * cos(b_p * p.y);
+                p = vec2(xn, yn);
 
-            if (bounceEdges) {
-                if (p.x < 0.0) p.x = -p.x;
-                if (p.x > 1.0) p.x = 2.0 - p.x;
-                if (p.y < 0.0) p.y = -p.y;
-                if (p.y > 1.0) p.y = 2.0 - p.y;
-            } else {
-                p = fract(p);
+                if (step < 25) continue;  // skip warmup (not yet on attractor)
+
+                // Map attractor coords to screen (height = full 0→1, centered in width)
+                // Attractor range ≈ [-3, 3]; divide by 6, then center
+                vec2 sc = vec2(0.5 + p.x / (6.0 * aspect), 0.5 + p.y / 6.0);
+
+                // Squared pixel-distance from this screen position to our pixel
+                vec2 delta = (uv - sc) * RENDERSIZE;
+                float dist2 = dot(delta, delta);
+
+                // Gaussian splash (contributes within ~6px radius)
+                float splash = exp(-dist2 / sigSq);
+                if (splash < 0.005) continue;
+
+                // Color: seed hue + small angular variation for natural gradients
+                float localHue = fract(hue + atan(p.y, p.x) * 0.04);
+                contrib += hsv2rgb(vec3(localHue, 1.0, 1.0)) * splash;
             }
-
-            float dh = (hash12(vec2(seed + 7.7, id)) - 0.5) * 2.0 * hueDrift;
-            h = fract(h + dh + 1.0);
         }
 
-        gl_FragColor = vec4(p, h, acc);
-        return;
-    }
+        // Scale contribution: target canvas ≈ 1.0 for average attractor density
+        float audioMod = 1.0 + audioBass * 0.45 + audioLevel * 0.15;
+        float scale = 0.025 * speed * audioMod;
 
-    // =============================================================
-    // PASS 1: update persistent canvas (fade + paint walker cells)
-    // =============================================================
-    if (PASSINDEX == 1) {
-        vec2 uv = pos / Res;
         vec4 prev = texture2D(canvas, uv);
-        vec4 col = prev * (1.0 - fadeRate);
-
-        // Aspect-correct grid so cells stay square
-        float aspect = Res.x / Res.y;
-        vec2 gridUV = vec2(uv.x * aspect, uv.y);
-        vec2 pxCell = floor(gridUV * gridSize);
-
-        for (int i = 0; i < MAX_WALKERS; i++) {
-            if (float(i) >= walkers) break;
-            vec4 st = readWalker(float(i));
-            vec2 wGridUV = vec2(st.r * aspect, st.g);
-            vec2 wCell = floor(wGridUV * gridSize);
-            vec2 diff = abs(wCell - pxCell);
-            if (diff.x < 0.5 && diff.y < 0.5) {
-                vec3 rgb = hsv2rgb(vec3(st.b, saturation, brightness * audio));
-                col = vec4(rgb, 1.0);
-            }
-        }
-
-        gl_FragColor = col;
+        gl_FragColor = prev * (1.0 - fadeRate) + vec4(contrib * scale, 0.0);
         return;
     }
 
-    // =============================================================
-    // PASS 2: final display (bloom + background blend)
-    // =============================================================
-    vec2 uv = pos / Res;
-    vec3 c = texture2D(canvas, uv).rgb;
+    // ─────────────────────────────────────────────────────────
+    // PASS 1 — HDR display: sqrt tone-curve + nebula background
+    // ─────────────────────────────────────────────────────────
+    vec3 nebula = texture2D(canvas, uv).rgb;
 
-    if (bloom > 0.001) {
-        vec3 sum = vec3(0.0);
-        float r = 2.5 / min(Res.x, Res.y);
-        for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {
-                vec2 off = vec2(float(x), float(y)) * r;
-                sum += texture2D(canvas, uv + off).rgb;
-            }
-        }
-        sum /= 25.0;
-        c += sum * bloom;
-    }
+    // sqrt tone curve: compresses wide HDR range into visible space
+    // Dense cores (canvas ≈ 60) → sqrt(60)*b ≈ 7.7b (white-hot HDR)
+    // Typical arms (canvas ≈ 1)  → sqrt(1)*b  ≈ b   (colored nebula)
+    // Faint wisps (canvas ≈ 0.05) → sqrt(0.05)*b ≈ 0.22b (faint glow)
+    vec3 col = sqrt(max(nebula, vec3(0.0))) * brightness;
 
-    float lum = max(c.r, max(c.g, c.b));
-    float alpha = clamp(lum * 8.0, 0.0, 1.0);
-    vec3 outRgb = mix(backgroundColor.rgb, c, alpha);
-    gl_FragColor = vec4(outRgb, 1.0);
+    // Deep-space background: near-black indigo void between arms
+    col += vec3(0.003, 0.001, 0.012) * (1.0 - min(length(col), 1.0));
+
+    // Audio: gentle global pulse
+    col *= 1.0 + audioLevel * 0.2;
+
+    gl_FragColor = vec4(col, 1.0);
 }
