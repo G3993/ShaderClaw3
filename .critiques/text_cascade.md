@@ -18,3 +18,23 @@
 - audioMod input added
 **HDR peaks reached:** gold text * 2.2 = 2.2 direct; with audio 3.0+
 **Estimated rating:** 3.8★
+
+## 2026-05-06
+**Prior rating:** 0.0★
+**Approach:** 2D refine (SMPTE color bars background + HDR broadcast palette)
+**Critique:**
+1. Reference fidelity: Cascade row wave effect fully retained; SMPTE test pattern provides maximally saturated geometric background entirely different from aurora or plasma.
+2. Compositional craft: 7-column bars create strong vertical rhythm; top/bottom strip division mirrors real broadcast layout; fwidth() AA on bar boundaries prevents pixel-crawl aliasing.
+3. Technical execution: Bar index from floor(uv.x*7.0) with GLSL-ES-1.0-safe per-case selection; bottom reverse strip (blue/magenta/cyan/white); transparentBg corrected.
+4. Liveness: Cascade wave animation unchanged; bars static (intentional — SMPTE is a reference pattern); audio boosts bar brightness uniformly.
+5. Differentiation: SMPTE broadcast test pattern is completely new — geometric, iconic, 7-saturated-color columns vs all prior organic/fluid/atmospheric backgrounds.
+**Changes:**
+- Added smpteBg() — 7-column SMPTE color bars (white/yellow/cyan/green/magenta/red/blue)
+- Bottom reverse strip: blue/black/magenta/black/cyan/black/white
+- fwidth() AA on bar boundary transitions
+- textColor default: white [1.0, 1.0, 1.0] (punches through all bars cleanly)
+- transparentBg default: true→false (confirmed)
+- hdrGlow default: 2.5 — text luminance above bar reference levels
+- audioMod modulates bar brightness
+**HDR peaks reached:** bar colors * hdrGlow = 2.5×; text overlay 2.5; audio adds 20%
+**Estimated rating:** 4.0★
