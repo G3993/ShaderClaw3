@@ -1,116 +1,127 @@
 /*{
-    "DESCRIPTION": "Electric Cage 3D — infinite repeating wireframe box lattice, camera flies through",
-    "CREDIT": "ShaderClaw auto-improve 2026-05-06",
-    "ISFVSN": "2",
-    "CATEGORIES": ["Generator", "3D"],
-    "INPUTS": [
-        { "NAME": "speed",      "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 4.0,  "LABEL": "Speed" },
-        { "NAME": "cageSize",   "TYPE": "float", "DEFAULT": 2.0, "MIN": 0.5, "MAX": 6.0,  "LABEL": "Cage Size" },
-        { "NAME": "edgeWidth",  "TYPE": "float", "DEFAULT": 0.05,"MIN": 0.01,"MAX": 0.25, "LABEL": "Edge Width" },
-        { "NAME": "hdrPeak",    "TYPE": "float", "DEFAULT": 2.5, "MIN": 1.0, "MAX": 5.0,  "LABEL": "HDR Peak" },
-        { "NAME": "audioReact", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 2.0,  "LABEL": "Audio React" }
-    ]
+  "DESCRIPTION": "Solar Magnetosphere — 3D raymarched star with looping magnetic dipole field lines, cinematic studio lighting",
+  "CREDIT": "ShaderClaw auto-improve",
+  "ISFVSN": "2",
+  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
+  "INPUTS": [
+    { "NAME": "fieldLines",  "LABEL": "Field Lines",  "TYPE": "float", "DEFAULT": 8.0,  "MIN": 3.0,  "MAX": 16.0 },
+    { "NAME": "orbitSpeed",  "LABEL": "Orbit Speed",  "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.0,  "MAX": 1.0 },
+    { "NAME": "fieldRadius", "LABEL": "Field Radius", "TYPE": "float", "DEFAULT": 1.1,  "MIN": 0.5,  "MAX": 2.0 },
+    { "NAME": "hdrPeak",     "LABEL": "HDR Peak",     "TYPE": "float", "DEFAULT": 2.5,  "MIN": 1.0,  "MAX": 4.0 },
+    { "NAME": "audioReact",  "LABEL": "Audio React",  "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 2.0 }
+  ]
 }*/
 
-// Wireframe box SDF
-float sdBoxFrame(vec3 p, vec3 b, float e) {
-    p = abs(p) - b;
-    vec3 q = abs(p + e) - e;
-    return min(min(
-        length(max(vec3(p.x, q.y, q.z), 0.0)) + min(max(p.x, max(q.y, q.z)), 0.0),
-        length(max(vec3(q.x, p.y, q.z), 0.0)) + min(max(q.x, max(p.y, q.z)), 0.0)),
-        length(max(vec3(q.x, q.y, p.z), 0.0)) + min(max(q.x, max(q.y, p.z)), 0.0));
+const float PI  = 3.14159265359;
+const float TAU = 6.28318530718;
+const int   MAX_STEPS = 64;
+const float FAR = 5.0;
+const float STAR_R = 0.28;
+
+float sdCapsule(vec3 p, vec3 a, vec3 b, float r) {
+    vec3 pa = p - a, ba = b - a;
+    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+    return length(pa - ba * h) - r;
 }
 
-// Per-cell color: cycles magenta/cyan/yellow via hash of cell ID
-vec3 cellColor(vec3 cellId, float tm) {
-    float h = fract(sin(dot(cellId, vec3(127.1, 311.7, 74.7))) * 43758.5453 + tm * 0.04);
-    vec3 A = vec3(2.0, 0.0, 1.5); // magenta
-    vec3 B = vec3(0.0, 2.0, 2.0); // cyan
-    vec3 C = vec3(2.5, 2.0, 0.0); // yellow
-    if (h < 0.333) return mix(A, B, h * 3.0);
-    if (h < 0.666) return mix(B, C, (h - 0.333) * 3.0);
-    return mix(C, A, (h - 0.666) * 3.0);
+// Dipole field line: parametric arc at azimuth phi, t in [0,1]
+vec3 flPoint(float phi, float t) {
+    float lat = (t - 0.5) * PI;
+    float r   = fieldRadius * cos(lat) * cos(lat);
+    float y   = fieldRadius * cos(lat) * sin(lat);
+    return vec3(r * cos(phi), y, r * sin(phi));
 }
 
-// Scene map: returns (distance, cellId)
-vec4 mapScene(vec3 p, float cs, float ew) {
-    // Infinite repetition via pMod
-    vec3 cellId = floor(p / cs + 0.5);
-    vec3 lp = p - cellId * cs; // local cell space
-    float d = sdBoxFrame(lp, vec3(cs * 0.48), ew);
-    return vec4(d, cellId);
+float sdFieldLines(vec3 p) {
+    float d    = FAR;
+    float capR = 0.009;
+    int   N    = int(clamp(fieldLines, 3.0, 16.0));
+    for (int i = 0; i < 16; i++) {
+        if (i >= N) break;
+        float phi = float(i) * TAU / float(N);
+        for (int s = 0; s < 8; s++) {
+            float ta = float(s)     / 8.0;
+            float tb = float(s + 1) / 8.0;
+            d = min(d, sdCapsule(p, flPoint(phi, ta), flPoint(phi, tb), capR));
+        }
+    }
+    return d;
+}
+
+float sdStar(vec3 p) {
+    float base = length(p) - STAR_R * (1.0 + audioBass * audioReact * 0.08);
+    float bump = 0.018 * sin(p.x * 17.0 + TIME * 3.1)
+                       * sin(p.y * 13.0 + TIME * 2.3)
+                       * sin(p.z * 11.0 + TIME * 1.7);
+    return base + bump;
+}
+
+vec2 sceneSDF(vec3 p) {
+    float dStar  = sdStar(p);
+    float dField = sdFieldLines(p);
+    return dField < dStar ? vec2(dField, 2.0) : vec2(dStar, 1.0);
+}
+
+vec3 starNormal(vec3 p) {
+    float e = 0.001;
+    return normalize(vec3(
+        sdStar(p + vec3(e,0,0)) - sdStar(p - vec3(e,0,0)),
+        sdStar(p + vec3(0,e,0)) - sdStar(p - vec3(0,e,0)),
+        sdStar(p + vec3(0,0,e)) - sdStar(p - vec3(0,0,e))
+    ));
 }
 
 void main() {
-    float aspect = RENDERSIZE.x / RENDERSIZE.y;
     vec2 uv = isf_FragNormCoord * 2.0 - 1.0;
-    uv.x *= aspect;
+    uv.x *= RENDERSIZE.x / RENDERSIZE.y;
 
-    float audio = 1.0 + (audioLevel * 0.5 + audioBass * 0.5) * audioReact;
-    float cs = cageSize;
-    float ew = edgeWidth * (0.8 + audioBass * audioReact * 0.5);
+    float audio = 1.0 + (audioLevel * 0.5 + audioBass * 0.7) * audioReact;
+    float ct    = TIME * orbitSpeed;
 
-    // Camera flies diagonally through lattice — z advances with TIME
-    float t = TIME * speed;
-    float camZ = t * cs * 0.38;
-    float camYaw = sin(t * 0.15) * 0.25;    // gentle yaw oscillation
-    float camPitch = sin(t * 0.11) * 0.12;   // gentle pitch
+    vec3 ro = vec3(sin(ct) * 2.5, 0.6 + sin(TIME * 0.22) * 0.25, cos(ct) * 2.5);
+    vec3 fw = normalize(-ro);
+    vec3 rt = normalize(cross(fw, vec3(0,1,0)));
+    vec3 up = cross(rt, fw);
+    vec3 rd = normalize(fw + uv.x * rt + uv.y * up);
 
-    vec3 ro = vec3(
-        sin(t * 0.09) * cs * 0.35,
-        sin(t * 0.07) * cs * 0.25,
-        camZ
-    );
-
-    // Build camera matrix
-    vec3 fwd = normalize(vec3(sin(camYaw), sin(camPitch), cos(camYaw)));
-    vec3 right = normalize(cross(fwd, vec3(0.0, 1.0, 0.0)));
-    vec3 up = cross(right, fwd);
-
-    float fov = 1.1;
-    vec3 rd = normalize(fwd + uv.x * right * fov * 0.5 + uv.y * up * fov * 0.5);
-
-    // Raymarch — 64 steps
-    float tMarch = 0.001;
-    float hitDist = -1.0;
-    vec3 hitCellId = vec3(0.0);
-    vec3 hitPos = vec3(0.0);
-
-    for (int i = 0; i < 64; i++) {
-        vec3 p = ro + rd * tMarch;
-        vec4 res = mapScene(p, cs, ew);
-        float d = res.x;
-        if (d < 0.002) {
-            hitDist = tMarch;
-            hitPos = p;
-            hitCellId = res.yzw;
-            break;
-        }
-        // Clamp step to avoid over-stepping near thin edges
-        tMarch += max(d * 0.85, 0.001);
-        if (tMarch > 60.0) break;
+    float dist  = 0.0;
+    float hitId = 0.0;
+    for (int i = 0; i < MAX_STEPS; i++) {
+        vec2 h = sceneSDF(ro + rd * dist);
+        if (h.x < 0.0005 || dist > FAR) { hitId = h.y; break; }
+        dist += h.x * 0.65;
     }
 
-    vec3 col = vec3(0.0); // void black background
+    vec3 col = vec3(0.0, 0.0, 0.015);
 
-    if (hitDist > 0.0) {
-        // Get base color for this cell
-        vec3 baseCol = cellColor(hitCellId, TIME * speed) * hdrPeak * audio;
+    if (dist < FAR) {
+        vec3 p = ro + rd * dist;
+        vec3 L = normalize(vec3(1.3, 0.9, 0.6));
 
-        // fwidth() AA on cage edge
-        vec4 res = mapScene(hitPos, cs, ew);
-        float edgeDist = res.x;
-        float fw = fwidth(edgeDist);
-        float edgeMask = 1.0 - smoothstep(0.0, fw * 2.0, edgeDist);
+        if (hitId > 1.5) {
+            // Field line: blue at poles, gold at equator
+            float fy  = clamp(p.y / fieldRadius + 0.5, 0.0, 1.0);
+            vec3  fc  = mix(vec3(0.0, 0.6, 1.0), vec3(1.0, 0.7, 0.0), fy * fy);
+            float ao  = clamp(length(p) / (STAR_R * 2.5), 0.0, 1.0);
+            col = fc * hdrPeak * audio * (0.4 + ao * 0.6);
+            col += vec3(2.5) * pow(max(0.0, dot(L, normalize(p))), 20.0);
+        } else {
+            // Star: orange-gold Lambertian + white-hot specular
+            vec3  n    = starNormal(p);
+            float diff = clamp(dot(n, L), 0.05, 1.0);
+            float spec = pow(clamp(dot(reflect(-L, n), -rd), 0.0, 1.0), 16.0);
+            vec3  base = mix(vec3(1.0, 0.35, 0.0), vec3(1.0, 0.8, 0.15), diff);
+            col = base * hdrPeak * diff * audio + vec3(3.0) * spec;
+        }
+    }
 
-        // Edge brightness: bright core fading out
-        float edgeFactor = exp(-max(edgeDist, 0.0) / (ew * 0.5 + 0.001));
-        col = baseCol * edgeFactor * edgeMask;
-
-        // Distance fog (slight falloff with depth)
-        float fog = exp(-hitDist * 0.04);
-        col *= fog;
+    // Volumetric corona
+    for (int i = 0; i < 40; i++) {
+        float s = float(i) * 0.07;
+        if (s > FAR) break;
+        vec3 p  = ro + rd * s;
+        float d = max(0.0, STAR_R * 2.6 - length(p));
+        col += vec3(1.0, 0.35, 0.05) * d * 0.045 * audio * hdrPeak;
     }
 
     gl_FragColor = vec4(col, 1.0);
