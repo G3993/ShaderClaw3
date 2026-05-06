@@ -1,183 +1,254 @@
 /*{
-  "CATEGORIES": ["Generator", "Art Movement", "Audio Reactive"],
-  "DESCRIPTION": "Futurism after Boccioni Dynamism of a Cyclist (1913) and Balla Dynamism of a Dog on a Leash (1912) — persistent frame-feedback motion-blur trails along an oscillating velocity vector, radiating force lines from a wandering origin, divisionist colour dabs streaking the trail. Speed as visual concept, all of it actually moving.",
+  "CATEGORIES": ["3D", "Generator", "Art Movement", "Audio Reactive"],
+  "DESCRIPTION": "Futurism after Boccioni — Dynamism of a Cyclist (1913) and Unique Forms of Continuity in Space (1913). A stylized humanoid SDF stutter-cloned along a velocity vector produces true forward-sweep motion phases (the Futurist 'lines of force'). Force rays burst from a wandering origin; divisionist colour dabs streak the wake; warm sienna/ochre palette; lateral camera pan reinforces forward motion. Single-pass 3D — no frame feedback. Returns LINEAR HDR; host applies ACES.",
   "INPUTS": [
-    { "NAME": "trailPersistence", "LABEL": "Trail Persistence", "TYPE": "float", "MIN": 0.85, "MAX": 0.998, "DEFAULT": 0.88 },
-    { "NAME": "velocityMag", "LABEL": "Velocity Magnitude", "TYPE": "float", "MIN": 0.0, "MAX": 0.10, "DEFAULT": 0.040 },
-    { "NAME": "velocityRotSpeed", "LABEL": "Velocity Rotation", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.15 },
-    { "NAME": "phantomCount", "LABEL": "Phantom Copies", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 5.0 },
-    { "NAME": "phantomSpread", "LABEL": "Phantom Spread", "TYPE": "float", "MIN": 0.0, "MAX": 0.20, "DEFAULT": 0.07 },
-    { "NAME": "forceRays", "LABEL": "Force Rays", "TYPE": "float", "MIN": 0.0, "MAX": 32.0, "DEFAULT": 16.0 },
-    { "NAME": "rayBrightness", "LABEL": "Ray Brightness", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.85 },
-    { "NAME": "rayOriginDrift", "LABEL": "Ray Origin Drift", "TYPE": "float", "MIN": 0.0, "MAX": 0.6, "DEFAULT": 0.25 },
-    { "NAME": "divisionistDots", "LABEL": "Divisionist Dots", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.45 },
-    { "NAME": "speedHueShift", "LABEL": "Speed Hue Shift", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.35 },
-    { "NAME": "warmth", "LABEL": "Warmth", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55 },
-    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "resetField", "LABEL": "Reset", "TYPE": "bool", "DEFAULT": false },
-    { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" }
-  ],
-  "PASSES": [
-    { "TARGET": "trailBuf", "PERSISTENT": true },
-    {}
+    { "NAME": "camDist",       "LABEL": "Camera Distance", "TYPE": "float", "MIN": 1.5, "MAX": 12.0, "DEFAULT": 4.5 },
+    { "NAME": "camHeight",     "LABEL": "Camera Height",   "TYPE": "float", "MIN": -3.0, "MAX": 4.0, "DEFAULT": 1.2 },
+    { "NAME": "camOrbitSpeed", "LABEL": "Orbit Speed",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 0.18 },
+    { "NAME": "camAzimuth",    "LABEL": "Camera Azimuth",  "TYPE": "float", "MIN": 0.0, "MAX": 6.2832, "DEFAULT": 0.0 },
+    { "NAME": "keyAngle",      "LABEL": "Key Light Angle", "TYPE": "float", "MIN": 0.0, "MAX": 6.2832, "DEFAULT": 0.785 },
+    { "NAME": "keyElevation",  "LABEL": "Key Elevation",   "TYPE": "float", "MIN": 0.0, "MAX": 1.5708, "DEFAULT": 0.7 },
+    { "NAME": "keyColor",      "LABEL": "Key Light",       "TYPE": "color", "DEFAULT": [1.0, 0.94, 0.82, 1.0] },
+    { "NAME": "fillColor",     "LABEL": "Fill Light",      "TYPE": "color", "DEFAULT": [0.55, 0.70, 1.0, 1.0] },
+    { "NAME": "ambient",       "LABEL": "Ambient",         "TYPE": "float", "MIN": 0.0, "MAX": 0.5,  "DEFAULT": 0.08 },
+    { "NAME": "rimStrength",   "LABEL": "Rim Strength",    "TYPE": "float", "MIN": 0.0, "MAX": 1.5,  "DEFAULT": 0.5 },
+    { "NAME": "exposure",      "LABEL": "Exposure",        "TYPE": "float", "MIN": 0.3, "MAX": 3.0,  "DEFAULT": 1.0 },
+    { "NAME": "phantomCount",     "LABEL": "Phantom Copies",   "TYPE": "long",  "DEFAULT": 7, "VALUES": [3,5,7,9,11,13], "LABELS": ["3","5","7","9","11","13"] },
+    { "NAME": "phantomSpread",    "LABEL": "Phantom Spread",   "TYPE": "float", "MIN": 0.05, "MAX": 0.6,  "DEFAULT": 0.22 },
+    { "NAME": "velocityMag",      "LABEL": "Sweep Speed",      "TYPE": "float", "MIN": 0.0,  "MAX": 1.5,  "DEFAULT": 0.55 },
+    { "NAME": "fragment",         "LABEL": "Fragmentation",    "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.55 },
+    { "NAME": "forceRays",        "LABEL": "Force Rays",       "TYPE": "long",  "DEFAULT": 16, "VALUES": [0,8,12,16,24,32], "LABELS": ["Off","8","12","16","24","32"] },
+    { "NAME": "rayBrightness",    "LABEL": "Ray Brightness",   "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.85 },
+    { "NAME": "forceRayBias",     "LABEL": "Ray Velocity Bias","TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.35 },
+    { "NAME": "divisionistDots",  "LABEL": "Divisionist Dabs", "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.55 },
+    { "NAME": "warmth",           "LABEL": "Warmth",           "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.65 },
+    { "NAME": "paletteWarmth",    "LABEL": "Palette Warmth",   "TYPE": "float", "MIN": -1.0, "MAX": 1.0,  "DEFAULT": 0.0 },
+    { "NAME": "paperGrain",       "LABEL": "Paper Grain",      "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.18 },
+    { "NAME": "speedHueShift",    "LABEL": "Speed Hue Shift",  "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.35 },
+    { "NAME": "audioReact",       "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 }
   ]
 }*/
 
-// Real motion-blur via persistent frame feedback: each frame, sample the
-// previous trailBuf at uv shifted opposite to velocity, fade slightly,
-// then composite the new input on top. Result is a true moving streak —
-// not a one-shot N-tap convolution. Force lines are computed in the
-// final pass so they don't get smeared into the trail.
+// ════════════════════════════════════════════════════════════════════════
+//  Futurism — Boccioni
+//  The cyclist is built as an SDF (head + torso + two arms + two legs in
+//  a forward hunch) and replicated N times along a velocity vector. At
+//  each raymarch sample we take the MIN over all clones; each clone
+//  fades in shading weight by index.
+// ════════════════════════════════════════════════════════════════════════
 
-float hash21(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+#define MAX_STEPS  72
+#define MAX_DIST   24.0
+#define EPS        0.0012
+
+// ─── prim helpers ─────────────────────────────────────────────────────
+float sdSphere (vec3 p, float r)  { return length(p) - r; }
+float sdCapsule(vec3 p, vec3 a, vec3 b, float r) {
+    vec3  pa = p - a, ba = b - a;
+    float h  = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+    return length(pa - ba * h) - r;
 }
-float hash11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
+float opSmoothUnion(float a, float b, float k) {
+    float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
+    return mix(b, a, h) - k * h * (1.0 - h);
+}
+float opSmoothSub(float a, float b, float k) {
+    float h = clamp(0.5 - 0.5 * (b + a) / k, 0.0, 1.0);
+    return mix(a, -b, h) + k * h * (1.0 - h);
+}
 
-// HSV utility for speed-based colour shifts.
-vec3 hsv2rgb(vec3 c) {
+// ─── hash / noise ─────────────────────────────────────────────────────
+float hash11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
+float hash21(vec2 p)  { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+vec3  hsv2rgb(vec3 c) {
     vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
     vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
     return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 
-vec3 fallbackBody(vec2 uv, vec2 vel) {
-    // Boccioni Dynamism of a Cyclist (1913) — discrete faceted wedge
-    // shards radiating from the moving centre, NOT a smooth blob.
-    // Cobalt + orange palette per the painting.
-    vec2 c = vec2(0.5) + vel * sin(TIME * 0.7) * 6.0;
-    vec2 d = uv - c;
-    float ang = atan(d.y, d.x);
-    float r   = length(d);
-    // 7-bladed faceted wedge silhouette — fractured cyclist forms.
-    float blade  = pow(abs(sin(ang * 3.5 + TIME * 0.4)), 0.6);
-    float bladeR = 0.18 + 0.10 * blade;
-    float wedge  = smoothstep(bladeR + 0.02, bladeR - 0.02, r);
-    vec3 sky    = vec3(0.10, 0.14, 0.30);
-    vec3 cobalt = vec3(0.08, 0.30, 0.78);
-    vec3 orange = vec3(0.98, 0.45, 0.10);
-    vec3 body   = mix(cobalt, orange, blade);
-    return mix(sky, body, wedge);
+// ─── the cyclist ──────────────────────────────────────────────────────
+float sdCyclist(vec3 p, float t, float frag) {
+    vec3  hPos = vec3(0.42, 0.78, 0.0);
+    float head = sdSphere(p - hPos, 0.18);
+    float torso = sdCapsule(p, vec3(0.0, 0.0, 0.0), vec3(0.34, 0.62, 0.0), 0.16);
+    float armL = sdCapsule(p, vec3(0.30, 0.55, -0.13), vec3(0.78, 0.40, -0.18), 0.06);
+    float armR = sdCapsule(p, vec3(0.30, 0.55,  0.13), vec3(0.78, 0.40,  0.18), 0.06);
+    float ph    = t * 6.0;
+    float pyL   = sin(ph)         * 0.18;
+    float pxL   = cos(ph)         * 0.18 + 0.05;
+    float pyR   = sin(ph + 3.1416) * 0.18;
+    float pxR   = cos(ph + 3.1416) * 0.18 + 0.05;
+    float legL  = sdCapsule(p, vec3(-0.04, -0.05, -0.10), vec3(pxL, -0.55 + pyL, -0.10), 0.075);
+    float legR  = sdCapsule(p, vec3(-0.04, -0.05,  0.10), vec3(pxR, -0.55 + pyR,  0.10), 0.075);
+    float body = head;
+    body = opSmoothUnion(body, torso, 0.10);
+    body = opSmoothUnion(body, armL,  0.07);
+    body = opSmoothUnion(body, armR,  0.07);
+    body = opSmoothUnion(body, legL,  0.08);
+    body = opSmoothUnion(body, legR,  0.08);
+    if (frag > 0.001) {
+        float slab1 = abs(dot(p, normalize(vec3( 0.7,  0.6,  0.4))) - 0.05) - 0.02 * frag;
+        float slab2 = abs(dot(p, normalize(vec3(-0.5,  0.7, -0.5))) - 0.18) - 0.02 * frag;
+        float slab3 = abs(dot(p, normalize(vec3( 0.2, -0.6,  0.7))) + 0.10) - 0.02 * frag;
+        body = opSmoothSub(body, slab1, 0.06 * frag);
+        body = opSmoothSub(body, slab2, 0.06 * frag);
+        body = opSmoothSub(body, slab3, 0.06 * frag);
+    }
+    return body;
 }
 
+float sdScene(vec3 p, float t, float frag, int copies, float spread,
+              float velMag, float audio, out float bestK) {
+    bestK = 0.0;
+    float d = 1e9;
+    for (int k = 0; k < 13; k++) {
+        if (k >= copies) break;
+        float kf  = float(k);
+        float ofs = -kf * spread * (1.0 + 0.4 * audio);
+        vec3 q = p - vec3(velMag * sin(t * 0.6 + ofs * 1.2) + ofs, 0.0, 0.0);
+        float a = -ofs * 0.08;
+        float c = cos(a), s = sin(a);
+        q.xz = mat2(c, -s, s, c) * q.xz;
+        float dk = sdCyclist(q, t + ofs * 0.5, frag);
+        if (dk < d) { d = dk; bestK = kf; }
+    }
+    return d;
+}
+
+// ─── normal via tetrahedron ───────────────────────────────────────────
+vec3 sceneNormal(vec3 p, float t, float frag, int copies, float spread,
+                 float velMag, float audio) {
+    const vec2 e = vec2(0.0012, -0.0012);
+    float dummy;
+    return normalize(
+        e.xyy * sdScene(p + e.xyy, t, frag, copies, spread, velMag, audio, dummy) +
+        e.yyx * sdScene(p + e.yyx, t, frag, copies, spread, velMag, audio, dummy) +
+        e.yxy * sdScene(p + e.yxy, t, frag, copies, spread, velMag, audio, dummy) +
+        e.xxx * sdScene(p + e.xxx, t, frag, copies, spread, velMag, audio, dummy));
+}
+
+// ─── force rays ───────────────────────────────────────────────────────
+float forceField(vec2 uv, float t, int rays, float audio, float bias) {
+    if (rays <= 0) return 0.0;
+    vec2  org = vec2(0.05 + 0.25 * sin(t * 0.41),
+                     0.10 + 0.18 * cos(t * 0.33));
+    vec2  d   = uv - org;
+    float ang = atan(d.y, d.x);
+    float r   = length(d);
+    float n   = float(rays);
+    float spokes = pow(0.5 + 0.5 * cos(ang * n + t * 0.6), 28.0);
+    // bias toward velocity direction (+x): brighter when ang near 0
+    float aim = 0.5 + 0.5 * cos(ang);
+    spokes *= mix(1.0, aim * 1.8, bias);
+    spokes *= exp(-r * (1.4 - 0.5 * audio));
+    return spokes;
+}
+
+// ─── divisionist colour dabs ──────────────────────────────────────────
+float divDabs(vec2 uv, float t, float strength, float velMag) {
+    if (strength < 0.001) return 0.0;
+    float acc = 0.0;
+    for (int i = 0; i < 14; i++) {
+        float fi   = float(i);
+        float seed = hash11(fi * 7.13);
+        float xph  = fract(seed + t * (0.10 + velMag * 0.4) + fi * 0.07);
+        vec2  c    = vec2(xph, 0.30 + 0.5 * hash11(fi * 1.7) + 0.05 * sin(t + fi));
+        float r    = mix(0.006, 0.018, hash11(fi * 5.7));
+        float d    = length((uv - c) * vec2(1.0, 1.4));
+        acc += smoothstep(r, 0.0, d) * (0.5 + 0.5 * hash11(fi * 9.3));
+    }
+    return acc * strength;
+}
+
+// ─── main ─────────────────────────────────────────────────────────────
 void main() {
-    vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
-    float aspect = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
+    vec2 uv  = isf_FragNormCoord.xy;
+    vec2 ndc = (uv * 2.0 - 1.0) * vec2(RENDERSIZE.x / RENDERSIZE.y, 1.0);
 
-    // Velocity vector — snakes through the canvas via two sine terms,
-    // with magnitude breathing on its own (no audio gate). Bass + level
-    // amplify on top.
-    float vAng = TIME * velocityRotSpeed
-               + sin(TIME * 0.13) * 0.6
-               + audioBass * audioReact * 0.4;
-    float vMag = velocityMag
-               * (0.5 + 0.5 * sin(TIME * 0.30))
-               * (1.0 + audioLevel * audioReact * 1.5);
-    vec2 vel = vec2(cos(vAng), sin(vAng)) * vMag;
+    float t      = TIME;
+    float audio  = clamp(audioReact, 0.0, 2.0);
+    float frag   = clamp(fragment, 0.0, 1.0) * (1.0 + 0.25 * audio);
+    int   copies = int(phantomCount + 0.5);
+    int   rays   = int(forceRays + 0.5);
 
-    // ============= PASS 0 — trail accumulation =============
-    if (PASSINDEX == 0) {
+    // ── Universal 3D camera ─────────────────────────────────────────
+    float az  = camAzimuth + camOrbitSpeed * t;
+    vec3  ro  = vec3(sin(az) * camDist, camHeight, cos(az) * camDist);
+    // lateral-pan flavor: small per-frame x bias driven by orbit speed
+    float panX = -0.4 * sin(t * max(camOrbitSpeed, 0.0001) * 1.0);
+    ro.x += panX;
+    vec3  ta  = vec3(panX + velocityMag * 0.6, camHeight * 0.15, 0.0);
+    vec3  fw  = normalize(ta - ro);
+    vec3  ri  = normalize(cross(vec3(0.0, 1.0, 0.0), fw));
+    vec3  up  = cross(fw, ri);
+    vec3  rd  = normalize(fw + ndc.x * ri + ndc.y * up);
 
-        if (FRAMEINDEX < 2 || resetField) {
-            // Init with the source so first-frame isn't black.
-            vec3 init = (IMG_SIZE_inputTex.x > 0.0)
-                      ? texture(inputTex, uv).rgb
-                      : fallbackBody(uv, vel);
-            gl_FragColor = vec4(init, 1.0);
-            return;
-        }
+    // Boccioni palette + global palette warmth shift
+    vec3 sienna = vec3(0.85, 0.45, 0.20);
+    vec3 umber  = vec3(0.18, 0.12, 0.10);
+    vec3 ochre  = vec3(0.95, 0.78, 0.42);
+    vec3 ground = vec3(0.35, 0.22, 0.14);
+    vec3 warmTint = vec3(1.0 + 0.18 * paletteWarmth,
+                         1.0,
+                         1.0 - 0.25 * paletteWarmth);
 
-        // Sample previous trail at uv shifted backward along velocity —
-        // the streak grows because each frame the previous content is
-        // pulled along the velocity vector. Fade slightly so the trail
-        // dies off after enough frames.
-        vec3 prev = texture(trailBuf, uv - vel).rgb;
-        prev *= trailPersistence;
+    float skyT  = clamp(rd.y, 0.0, 1.0);
+    vec3  bgSky = mix(mix(ground, ochre, 0.5), umber, skyT);
+    bgSky       = mix(bgSky, sienna * 0.7, (1.0 - skyT) * 0.5);
+    vec3  col   = bgSky * warmTint;
 
-        // New frame content. Phantom copies offset perpendicular to vel
-        // — Balla's dog with 20 leg positions.
-        vec2 vn = length(vel) > 1e-5 ? normalize(vel) : vec2(1.0, 0.0);
-        vec2 vp = vec2(-vn.y, vn.x);
-        // Max-blend phantoms — Boccioni Cyclist's discrete fractured
-        // copies, not a soft additive average. Each phantom remains a
-        // distinct overlapping plane, NOT a smoothed motion-blur.
-        vec3 newC = vec3(0.0);
-        int PC = int(clamp(phantomCount, 1.0, 10.0));
-        for (int i = 0; i < 10; i++) {
-            if (i >= PC) break;
-            float fi = float(i);
-            vec2 off = vp * (fi - float(PC) * 0.5)
-                     * phantomSpread * 0.18;
-            vec2 sUV = uv - off;
-            vec3 c = (IMG_SIZE_inputTex.x > 0.0)
-                   ? texture(inputTex, sUV).rgb
-                   : fallbackBody(sUV, vel);
-            // Per-phantom darkening so closer-to-head copies are brighter.
-            float w = 1.0 - fi / float(PC) * 0.6;
-            newC = max(newC, c * w);
-        }
-
-        // Composite new on top — but with low alpha so the trail dominates.
-        // Effective: prev decays, new gets stamped on each frame.
-        vec3 outC = max(prev, newC * (1.0 - trailPersistence) * 4.0);
-        outC = mix(prev, outC, 0.6);
-        gl_FragColor = vec4(outC, 1.0);
-        return;
+    // Raymarch
+    float d = 0.0;
+    float hitK = -1.0;
+    bool  hit  = false;
+    for (int i = 0; i < MAX_STEPS; i++) {
+        vec3  p = ro + rd * d;
+        float tmpK;
+        float ds = sdScene(p, t, frag, copies, phantomSpread, velocityMag, audio, tmpK);
+        if (ds < EPS) { hit = true; hitK = tmpK; break; }
+        if (d > MAX_DIST) break;
+        d += ds * 0.92;
     }
 
-    // ============= PASS 1 — output ============================================
+    if (hit) {
+        vec3 p = ro + rd * d;
+        vec3 n = sceneNormal(p, t, frag, copies, phantomSpread, velocityMag, audio);
 
-    vec3 col = texture(trailBuf, uv).rgb;
+        float phase = hitK / max(1.0, float(copies - 1));
+        float wgt   = exp(-phase * 1.6);
+        float hue   = mix(0.06, 0.62, phase * speedHueShift)
+                    + 0.04 * sin(t * 0.4 + phase * 6.0);
+        vec3  base  = mix(ochre, hsv2rgb(vec3(hue, 0.85, 1.0)), 0.55);
+        base        = mix(base, sienna, 1.0 - warmth);
+        base       *= warmTint;
 
-    // Speed-driven hue shift — fast trail bleeds toward Balla's electric
-    // blues; slow trail stays warm Boccioni red.
-    if (speedHueShift > 0.0) {
-        float L = dot(col, vec3(0.299, 0.587, 0.114));
-        float speed = length(vel) * 40.0
-                    + audioLevel * audioReact * 0.6;
-        vec3 hot   = vec3(1.10, 0.90, 0.65) * L;
-        vec3 cool  = vec3(0.70, 0.85, 1.20) * L;
-        vec3 hue   = mix(hot, cool, clamp(speed, 0.0, 1.0));
-        col = mix(col, hue, speedHueShift * 0.5);
+        // ── Universal lighting ─────────────────────────────────────
+        float ce = cos(keyElevation), se = sin(keyElevation);
+        vec3  keyDir = normalize(vec3(cos(keyAngle) * ce, se, sin(keyAngle) * ce));
+        float kd   = max(dot(n, keyDir), 0.0);
+        float fres = pow(1.0 - max(dot(n, -rd), 0.0), 3.0);
+        vec3  lit  = base * (ambient + 1.20 * kd) * keyColor.rgb * wgt
+                   + fillColor.rgb * fres * rimStrength * wgt;
+        lit       *= exposure;
+        col        = mix(col, lit, clamp(wgt + 0.25, 0.0, 1.0));
     }
 
-    // Force lines — radiating rays from a moving origin so the rays feel
-    // like vectors tearing through space.
-    if (forceRays > 0.0 && rayBrightness > 0.0) {
-        vec2 origin = vec2(0.5, 0.5)
-                    + vec2(sin(TIME * 0.83), cos(TIME * 0.59))
-                      * rayOriginDrift
-                    + vel * 0.5;
-        vec2 d = uv - origin; d.x *= aspect;
-        float th = atan(d.y, d.x);
-        float rays = pow(abs(sin(th * forceRays * 0.5)), 14.0);
-        rays *= smoothstep(0.7, 0.0, length(d));
-        col += rays * vec3(1.0, 0.4, 0.2)
-             * rayBrightness * (0.4 + audioMid * audioReact * 1.2);
-    }
+    // Force rays — composite over the whole frame (additive)
+    float ff = forceField(uv, t, rays, audio, forceRayBias);
+    col += vec3(1.00, 0.86, 0.55) * warmTint * ff * rayBrightness * exposure;
 
-    // Divisionist dots streaking the trail — small bright dabs of
-    // Severini-style colour particles, perpendicular to velocity vector.
-    if (divisionistDots > 0.0) {
-        vec2 vn = length(vel) > 1e-5 ? normalize(vel) : vec2(1.0, 0.0);
-        vec2 vp = vec2(-vn.y, vn.x);
-        vec2 dotG = vec2(dot(uv, vn) * 110.0,
-                         dot(uv, vp) * 60.0);
-        vec2 di = floor(dotG);
-        float dh = hash21(di + floor(TIME * 4.0));
-        if (dh > 0.92) {
-            float ds = step(length(fract(dotG) - 0.5), 0.20);
-            // Bright complementary palette for dabs
-            float hueRoll = hash21(di * 1.3);
-            vec3 dab = hsv2rgb(vec3(hueRoll, 0.85, 0.95));
-            col = mix(col, dab,
-                      ds * divisionistDots
-                       * (0.5 + audioHigh * audioReact * 0.8));
-        }
-    }
+    // Divisionist colour dabs
+    float dabs = divDabs(uv, t, divisionistDots, velocityMag);
+    col += vec3(0.95, 0.45, 0.32) * warmTint * dabs * 0.55;
+    col += vec3(0.45, 0.65, 0.95) * dabs * 0.25;
 
-    // Warm earth grade
-    col = mix(col, col * vec3(1.10, 0.95, 0.80), warmth);
+    // Vignette + paper grain
+    col *= 1.0 - 0.22 * dot(ndc * 0.5, ndc * 0.5);
+    float grain = (hash21(uv * RENDERSIZE.xy) - 0.5);
+    col += grain * (0.012 + 0.06 * paperGrain);
+    // paper-tooth: low-frequency multiplicative striations
+    float tooth = hash21(floor(uv * RENDERSIZE.xy * 0.15)) - 0.5;
+    col *= 1.0 - paperGrain * 0.12 * abs(tooth);
 
     gl_FragColor = vec4(col, 1.0);
 }

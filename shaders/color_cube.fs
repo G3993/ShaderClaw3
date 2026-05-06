@@ -144,13 +144,41 @@ void main() {
         d += df;
     }
 
+    // Soft AA mask: pixel-width edge feathering for object silhouette.
+    // fwidth on ray-march distance gives a screen-space derivative; smoothstep
+    // collapses it to a 0..1 coverage so cube/torus outlines feel resolved
+    // rather than aliased.
+    float pixW = fwidth(df);
+    float hitMask = 1.0 - smoothstep(0.0, max(pixW * 1.5, 0.002), df);
+
     if (disp == 2) {
         color = background(rd);
     } else {
         if (df <= 0.001) {
             vec3 normal = getNormal(p);
-            rd = refract(rd, normal, 0.1);
-            if (disp < 2) color = mix(color, background(rd), smoothstep(0.0, 4.0, d));
+            vec3 rdR = refract(rd, normal, 0.1);
+            // Fallback when refract returns zero (total internal reflection edge):
+            // reflect along the normal so highlights still register.
+            if (dot(rdR, rdR) < 1e-4) rdR = reflect(rd, normal);
+            vec3 obj = background(rdR);
+
+            // Specular rim — view-aligned highlight peaks well above 1.0 so
+            // bloom catches the silhouette without redesigning shading.
+            float fres = pow(1.0 - max(dot(normal, -rd), 0.0), 4.0);
+            float spec = pow(max(dot(reflect(rd, normal), -rd), 0.0), 32.0);
+            vec3 hdrEdge = vec3(1.0, 1.05, 1.15) * (fres * 1.4 + spec * 2.5);
+            obj += hdrEdge;
+
+            // Glow edge: thin AA-feathered band along silhouette (driven by
+            // fresnel) pushed into HDR territory for bloom catch.
+            float glow = smoothstep(0.55, 0.95, fres);
+            obj += vec3(1.1, 0.9, 1.4) * glow * 1.6;
+
+            if (disp < 2) {
+                color = mix(obj, background(rd), smoothstep(0.0, 4.0, d));
+            } else {
+                color = obj;
+            }
         } else if (disp == 0) {
             color = mix(color, background(rd), smoothstep(0.0, 4.0, d));
         }
@@ -163,6 +191,14 @@ void main() {
     }
     cOut *= uIntensity;
 
+    // Audio non-gating: a subtle bass pulse boosts HDR peak when audio is
+    // present, but at audio=0 we still hold a baseline 1.0 multiplier so the
+    // shader is fully alive without any sound input.
+    float audioLift = 1.0 + audioBass * 0.35;
+    // Apply audio lift only on object pixels (silhouette mask), so the
+    // background never gates on audio either — it's already alive.
+    cOut *= mix(1.0, audioLift, hitMask);
+
     // Surprise: every ~29s the color basis briefly inverts — the cube
     // turns inside-out for ~0.6s, mapping each axis to its complement.
     {
@@ -171,5 +207,8 @@ void main() {
         cOut = mix(cOut, 1.0 - cOut, _f);
     }
 
+    // No tonemap: pass linear HDR straight through. Phase Q v4 bloom downstream
+    // expects peaks in the 1.4–2.5 range, which the fresnel/spec/glow above
+    // produce on cube faces and silhouette edges.
     gl_FragColor = vec4(cOut, 1.0);
 }

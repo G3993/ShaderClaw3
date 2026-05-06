@@ -33,6 +33,14 @@
 			"NAME": "innerColor",
 			"TYPE": "color",
 			"DEFAULT": [0.0, 0.0, 0.0, 1.0]
+		},
+		{
+			"NAME": "audioReact",
+			"LABEL": "Audio React",
+			"TYPE": "float",
+			"MIN": 0.0,
+			"MAX": 2.0,
+			"DEFAULT": 1.0
 		}
     ]
 }*/
@@ -263,7 +271,11 @@ float Sph(float x, float rr) { return sqrt(rr - x*x); }
 float SphX0(float d, float rr0, float rr1) { return 0.5 * (d + (rr0 - rr1) / d); }
 
 vec3 EvalSceneCol(vec3 cpos, mat3 cam_mat, float focalLen, vec2 uv0)
-{      
+{
+    // Non-gating audio: alive at audio=0; audioReact only adds on top.
+    float aLvl = audioLevel * audioReact;
+    float aBas = audioBass  * audioReact;
+    float aHi  = audioHigh  * audioReact;
     vec3 cBG = bgColor.rgb;
 
         
@@ -336,14 +348,20 @@ vec3 EvalSceneCol(vec3 cpos, mat3 cam_mat, float focalLen, vec2 uv0)
 
     vec4 r = ProjDisk(rdir0, dp_c, dn_c, d0rr);        
 
-    float cmask = clamp01(-r.w * rsqrt(dot(r.xy, r.xy))*rdir0S * maskS);
+    // Soft AA: smoothstep on the analytical edge softens the step into the disk
+    // mask. Width derived from the same -r.w/|r.xy|*rdir0S*maskS quantity, so
+    // edges that span ~1 pixel get a half-pixel feather. Preserves the original
+    // analytical AA but removes residual hard pixels for bloom cleanliness.
+    float edge0 = -r.w * rsqrt(dot(r.xy, r.xy)) * rdir0S * maskS;
+    float cmask = smoothstep(0.0, 1.0, clamp01(edge0));
 
     float cmask2 = 0.0;
     {
         vec3 d1c = n2 * (x0 - 0.005);
 
         vec4 r = ProjDisk(rdir0, (d1c - cpos) * cam_mat, n2 * cam_mat, (1.0 - x0*x0)*rra);
-        cmask2 = clamp01(-r.w * rsqrt(dot(r.xy, r.xy))*rdir0S * maskS);
+        float edge1 = -r.w * rsqrt(dot(r.xy, r.xy)) * rdir0S * maskS;
+        cmask2 = smoothstep(0.0, 1.0, clamp01(edge1));
     }
 
 
@@ -373,7 +391,19 @@ vec3 EvalSceneCol(vec3 cpos, mat3 cam_mat, float focalLen, vec2 uv0)
     //vec3 cX = mix(cB, cR, lerpF);
     //vec3 cY = mix(cR, cB, lerpF);
 
-    return mix(cBG, mix(cR, innerColor.rgb, cmask2), cmask);        
+    // HDR PEAKS: core highlights pushed into linear HDR so Phase Q v4 bloom
+    // catches them. Base shell at 1.4x linear, accent flash on rra (sin-driven
+    // anim peak) lifts to ~2.5x, with audio adding non-gating boost on top.
+    // Outer dot stays in canonical range; inner core does the HDR work.
+    float corePeak = 1.4 + 0.85 * Pow2(rra) + aLvl * 0.6 + aHi * 0.4;
+    vec3 cCore = mix(cR, innerColor.rgb, cmask2) * corePeak;
+    // Outer disk gets a gentler audio-driven lift so bass beats add weight
+    // without altering the silhouette.
+    vec3 cDot = cR * (1.0 + aBas * 0.35);
+    vec3 cIn  = mix(cDot, cCore, cmask2);
+
+    return mix(cBG, cIn, cmask);
+    //return mix(cBG, mix(cR, innerColor.rgb, cmask2), cmask);
     //return mix(cBG, mix(cR, cB, cmask2), cmask);
     //return mix(cBG, mix(cX, cY, cmask2), cmask);        
     //return mix(cBG, mix(cW, cX, cmask2), cmask);
@@ -458,8 +488,11 @@ void mainImage( out vec4 outCol, in vec2 uv0 )
 
     #endif
 
-    float	alpha = (col.r + col.g + col.b);
-	outCol = vec4(GammaEncode(clamp01(col)), alpha);
+    // Linear HDR out: no clamp, no gamma encode. Phase Q v4 bloom expects
+    // unclamped linear values so the >1.0 cores actually contribute light.
+    // Alpha computed from luminance proxy so the original additive feel holds.
+    float alpha = clamp01((col.r + col.g + col.b));
+    outCol = vec4(col, alpha);
 }
 
 void main(void) {

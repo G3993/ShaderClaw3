@@ -15,7 +15,8 @@
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
     { "NAME": "scrollSpeed", "LABEL": "Camera Scroll", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 3.0 },
     { "NAME": "texScale", "LABEL": "Tex Scale", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 5.0 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "palette", "LABEL": "Palette", "TYPE": "long", "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Source", "Aurora", "Magma", "Cyberpunk", "Bioluminescence"], "DEFAULT": 0 }
   ],
   "PASSES": [
     { "TARGET": "albedoBuf", "PERSISTENT": true },
@@ -33,6 +34,50 @@
 
 float hash(vec2 co) {
     return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+// Curated palettes — sampled by particle "phase" (0..1) along the gradient.
+// Returns linear-HDR RGB; some peaks intentionally exceed 1.0 so bloom catches them.
+vec3 paletteSample(int p, float k) {
+    k = clamp(k, 0.0, 1.0);
+    if (p == 1) {
+        // Aurora — deep indigo -> teal -> mint -> hot magenta
+        vec3 c0 = vec3(0.05, 0.02, 0.35);
+        vec3 c1 = vec3(0.05, 0.55, 0.85);
+        vec3 c2 = vec3(0.35, 1.10, 0.75);
+        vec3 c3 = vec3(1.40, 0.25, 0.95);
+        if (k < 0.33) return mix(c0, c1, k / 0.33);
+        if (k < 0.66) return mix(c1, c2, (k - 0.33) / 0.33);
+        return mix(c2, c3, (k - 0.66) / 0.34);
+    } else if (p == 2) {
+        // Magma — black -> blood -> orange -> white-hot
+        vec3 c0 = vec3(0.02, 0.0, 0.05);
+        vec3 c1 = vec3(0.85, 0.05, 0.10);
+        vec3 c2 = vec3(1.40, 0.55, 0.05);
+        vec3 c3 = vec3(1.80, 1.60, 0.95);
+        if (k < 0.33) return mix(c0, c1, k / 0.33);
+        if (k < 0.66) return mix(c1, c2, (k - 0.33) / 0.33);
+        return mix(c2, c3, (k - 0.66) / 0.34);
+    } else if (p == 3) {
+        // Cyberpunk — neon cyan / magenta / yellow
+        vec3 c0 = vec3(0.0, 0.95, 1.30);
+        vec3 c1 = vec3(1.30, 0.10, 0.95);
+        vec3 c2 = vec3(1.40, 1.20, 0.10);
+        vec3 c3 = vec3(0.10, 0.30, 1.30);
+        if (k < 0.33) return mix(c0, c1, k / 0.33);
+        if (k < 0.66) return mix(c1, c2, (k - 0.33) / 0.33);
+        return mix(c2, c3, (k - 0.66) / 0.34);
+    } else if (p == 4) {
+        // Bioluminescence — abyss blue -> jellyfish cyan -> chartreuse pop
+        vec3 c0 = vec3(0.0, 0.05, 0.12);
+        vec3 c1 = vec3(0.05, 0.45, 0.80);
+        vec3 c2 = vec3(0.20, 1.20, 1.00);
+        vec3 c3 = vec3(0.95, 1.40, 0.30);
+        if (k < 0.33) return mix(c0, c1, k / 0.33);
+        if (k < 0.66) return mix(c1, c2, (k - 0.33) / 0.33);
+        return mix(c2, c3, (k - 0.66) / 0.34);
+    }
+    return vec3(-1.0); // sentinel: "use source"
 }
 
 // Compute particle position analytically from time
@@ -123,7 +168,13 @@ void main() {
             vec2 ppPrev = particlePos(i, t - dt);
 
             vec3 pc;
-            if (hasTex) {
+            int pal = int(palette);
+            if (pal > 0) {
+                // Palette mode — slowly cycle each particle along the gradient
+                float fi = float(i);
+                float k = fract(fi / float(N_PARTICLES) + TIME * 0.05 + hash(vec2(fi, 9.1)) * 0.3);
+                pc = paletteSample(pal, k);
+            } else if (hasTex) {
                 // Sample texture at midpoint for stable color along trail
                 vec2 ppMid = (ppCur + ppPrev) * 0.5;
                 pc = texture2D(inputTex, texUV(ppMid)).rgb;
@@ -147,7 +198,9 @@ void main() {
                 dist = distance(pos, ppPrev + seg * proj);
             }
 
-            float a = smoothstep(pSize, pSize * 0.4, dist);
+            // Soft AA: use fwidth to anti-alias the capsule edge in screen space
+            float aaw = max(fwidth(dist), 1.0);
+            float a = smoothstep(pSize + aaw, pSize * 0.4 - aaw, dist);
             col = mix(col, vec4(pc, 1.0), a);
         }
 
@@ -178,7 +231,9 @@ void main() {
 
             vec2 v = pos - closest;
             float l = length(v);
-            float a = smoothstep(pSize, pSize * 0.4, l);
+            // Soft AA on normal capsule edge
+            float aaw = max(fwidth(l), 1.0);
+            float a = smoothstep(pSize + aaw, pSize * 0.4 - aaw, l);
             float z = sqrt(abs(pSize * pSize - l * l));
             nrm = mix(nrm, vec4(normalize(vec3(v, z)), 1.0), a);
         }
@@ -198,11 +253,18 @@ void main() {
     float diff = mix(0.3, 1.0, nDot);
     float spec = pow(clamp(dot(reflect(-lDir, normal), vec3(0,0,1)), 0.0, 1.0), glossiness) * specular;
 
-    // Lit trail color
-    vec3 result = albedo.rgb * diff + vec3(spec * 0.3);
+    // Lit trail color — specular peak lifted to HDR (~1.8x at the gloss centroid)
+    vec3 result = albedo.rgb * diff + vec3(spec * 0.3) + vec3(pow(spec, 1.5) * 1.5);
 
-    // Mix with background based on trail alpha
-    result = mix(bgColor.rgb, result, min(albedo.a * 1.2, 1.0));
+    // Mix with background based on trail alpha. Palette mode injects a
+    // matching deep tint so the whole frame commits to the look.
+    vec3 bg = bgColor.rgb;
+    int palMode = int(palette);
+    if (palMode == 1) bg = mix(bg, vec3(0.015, 0.005, 0.06), 0.85); // Aurora
+    else if (palMode == 2) bg = mix(bg, vec3(0.05, 0.005, 0.01), 0.85); // Magma
+    else if (palMode == 3) bg = mix(bg, vec3(0.02, 0.0, 0.04), 0.85); // Cyberpunk
+    else if (palMode == 4) bg = mix(bg, vec3(0.0, 0.02, 0.05), 0.85); // Biolum
+    result = mix(bg, result, min(albedo.a * 1.2, 1.0));
 
     // Particle glow — drawn along the SAME capsule that the trail pass
     // uses, so the orb sits exactly on the rendered ball, not ahead of it.
@@ -229,9 +291,14 @@ void main() {
         }
 
         // Tight core matched to the trail pSize so orb == ball
-        float core = smoothstep(pSize * 0.8, 0.0, dist);
-        float halo = smoothstep(pSize * 2.0, pSize * 0.5, dist) * 0.25;
+        // Soft AA on orb core/halo edges
+        float aaw = max(fwidth(dist), 1.0);
+        float core = smoothstep(pSize * 0.8 + aaw, -aaw, dist);
+        float halo = smoothstep(pSize * 2.0 + aaw, pSize * 0.5 - aaw, dist) * 0.25;
+        // HDR PEAKS: tight cores blow past 1.0 so the bloom catches them
+        float hdrCore = pow(core, 3.0) * 2.2; // up to ~2.2x linear at center
         result += pc * (core + halo) * glowAmount * 0.4;
+        result += pc * hdrCore * glowAmount * 0.9;
     }
 
     // Vignette
@@ -242,8 +309,8 @@ void main() {
         result *= pow(1.0 / (rf2 * rf2), 2.24);
     }
 
-    // Gamma
-    result = pow(max(result, vec3(0.0)), vec3(1.0 / 2.2));
+    // Linear HDR out — host applies ACES tonemap. Clamp negatives only.
+    result = max(result, vec3(0.0));
 
     float alpha = 1.0;
     if (transparentBg) alpha = smoothstep(0.01, 0.1, albedo.a);

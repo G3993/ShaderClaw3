@@ -173,8 +173,12 @@ vec3 shadeSphere(vec3 p, vec3 n, vec3 rd, float id) {
     float fresnel = pow(1.0 - max(dot(n, -rd), 0.0), 3.0);
 
     vec3 col = baseCol * diff * (1.0 - metallic * 0.5);
-    col += (baseCol * metallic + vec3(1.0) * (1.0 - metallic)) * (spec * 0.8 + spec2 * 0.3);
-    col += fresnel * 0.3 * (baseCol * metallic + vec3(0.5));
+    // HDR PEAKS: specular highlights blow past 1.0 so bloom catches them.
+    // Tight mirror lobe → punchy linear-HDR peaks (~1.8–2.2 on bright metals).
+    vec3 specTint = baseCol * metallic + vec3(1.0) * (1.0 - metallic);
+    col += specTint * (spec * 1.8 + spec2 * 0.6);
+    // Fresnel rim — push slightly hot at grazing angles for bloom.
+    col += fresnel * 0.45 * (baseCol * metallic + vec3(0.6));
 
     // Ambient
     col += baseCol * 0.08;
@@ -233,9 +237,17 @@ vec4 passScene(vec2 uv) {
             col = mix(col, texCol, texMix);
         }
 
-        // Audio brightness boost for blooming spheres
+        // Audio brightness boost for blooming spheres.
+        // Baseline TIME pulse keeps the shader alive in silence (audio non-gating).
         if (shouldBloom(hit.y)) {
-            col *= 1.0 + audioLevel * audioDrive * 0.5;
+            float idle = 0.5 + 0.5 * sin(TIME * 1.7 + hit.y * 1.3);
+            float beat = audioLevel * audioDrive;
+            // HDR core boost: hot blooming spheres punch into linear HDR (~1.4–2.2x).
+            col *= 1.0 + beat * 0.9 + idle * 0.25;
+            // Audio/idle flash: sharp linear-HDR spike on transients pushes bloom hard.
+            // Tinted by the sphere's own color so flashes feel considered, not white.
+            vec3 hotTint = normalize(col + vec3(1e-4)) * 1.4 + vec3(0.2);
+            col += hotTint * (beat * 0.55 + idle * 0.18);
         }
 
         // Encode bloom flag in alpha: 1.0 = bloom, 0.5 = no bloom

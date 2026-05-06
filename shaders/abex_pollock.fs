@@ -148,11 +148,14 @@ void main() {
         // Deposit: walk each dripper to its CURRENT position (not its
         // whole history) and check if this fragment is on the stroke.
         // Wider strokes for low-frequency content (bass kicks).
-        float t = TIME * wanderSpeed * (0.5 + audioMid * audioReact * 1.5);
+        // Non-gating: 1.0 base advance at audio=0, audio only adds.
+        float t = TIME * wanderSpeed * (1.0 + audioMid * audioReact * 1.0);
         // Width chosen per dripper per second so strokes vary thickness
         // like real flicks of enamel — not all uniform.
         float wHash = hash11(float(0) + floor(TIME * 1.2));  // shared baseline
         float w = strokeWidth * (1.0 + audioLevel * audioReact * 0.8);
+        // Soft AA: pixel footprint in UV space for smoothstep edges.
+        float pxUV = max(fwidth(uv.x), fwidth(uv.y));
         // Hard loop bound 100 — GLSL needs a constant upper limit on
         // for-loop counters. The early `break` keeps actual cost
         // proportional to the live N, not to the 100 ceiling.
@@ -175,13 +178,25 @@ void main() {
             d.x *= aspect;
             float ds = length(d);
             if (ds > w * 4.0) continue;
-            float falloff = smoothstep(w, w * 0.4, ds);
+            // Soft AA edge: ramp using fwidth-derived pixel footprint
+            // so stroke boundaries resolve at sub-pixel scale.
+            float aa = max(pxUV * 1.5, 1e-5);
+            float falloff = smoothstep(w + aa, max(w * 0.4 - aa, 0.0), ds);
             if (falloff < 0.001) continue;
             vec3 src = (IMG_SIZE_inputTex.x > 0.0)
                      ? texture(inputTex, cl).rgb : vec3(0.5);
             vec3 c = useTexColor ? src
                                  : dripperColor(i, src, blackWeight);
-            prev = mix(prev, c, falloff);
+            // HDR core: a thin wet ridge along the stroke center hits
+            // 1.4–2.0 linear so the bloom pass picks up specular peaks
+            // on metallic/white drippers without making everything glow.
+            float corePeak = smoothstep(w * 0.55, w * 0.15, ds);
+            float metalLike = max(max(c.r, c.g), c.b);
+            // Only the brightest dripper colors (white/silver/cad-red/ochre)
+            // pick up specular HDR; black skein stays matte.
+            float hdrAmt = corePeak * smoothstep(0.45, 0.85, metalLike) * wetness;
+            vec3 deposit = c + c * hdrAmt * 1.1;
+            prev = mix(prev, deposit, falloff);
         }
 
         gl_FragColor = vec4(prev, 1.0);
@@ -193,19 +208,29 @@ void main() {
     vec3 col = texture(paintBuf, uv).rgb;
 
     // Splatter: tiny solid dots scattered at hashed positions, replacing
-    // the underlying canvas value. Treble surges push splatter density.
+    // the underlying canvas value. Treble adds density without gating.
     if (splatterDensity > 0.0) {
         vec2 g = uv * 480.0;
         vec2 gi = floor(g);
         float roll = hash21(gi);
+        // Non-gating: 1.0 base coverage at audio=0, treble adds.
         if (roll > 1.0 - splatterDensity * 0.05
-                * (0.5 + audioHigh * audioReact * 1.3)) {
-            float spat = step(length(fract(g) - 0.5), 0.18);
+                * (1.0 + audioHigh * audioReact * 1.0)) {
+            // Soft AA dot: smoothstep with fwidth-derived edge.
+            vec2 dC = fract(g) - 0.5;
+            float dr = length(dC);
+            float aa = fwidth(dr) + 1e-5;
+            float spat = 1.0 - smoothstep(0.18 - aa, 0.18 + aa, dr);
             int cidx = int(hash21(gi + 17.3) * 4.0);
             vec3 sc = (cidx == 0) ? POL_BLACK
                     : (cidx == 1) ? POL_WHITE
                     : (cidx == 2) ? POL_RED : POL_OCHRE;
-            col = mix(col, sc, spat);
+            // HDR drip highlight: bright splatters get a wet specular
+            // peak (1.4–2.0 linear). Black splatters stay matte.
+            float bright = max(max(sc.r, sc.g), sc.b);
+            float coreSp = (1.0 - smoothstep(0.0, 0.06, dr)) * smoothstep(0.45, 0.85, bright);
+            vec3 hdrSc = sc + sc * coreSp * 1.0;  // peaks ~2.0 linear on white
+            col = mix(col, hdrSc, spat);
         }
     }
 
@@ -228,37 +253,57 @@ void main() {
         vec2 lightDir = normalize(vec2(-0.6, 0.8));
         float diff = clamp(dot(normalize(vec2(grad.x, grad.y) * 8.0 + vec2(0.0, 0.0001)), lightDir), -1.0, 1.0);
         float specBoost = pow(max(diff, 0.0), 8.0);
-        // Highlight on raised paint, shadow on the down-slope side
+        // Highlight on raised paint, shadow on the down-slope side.
+        // Specular peaks lifted to HDR (1.4–2.0 linear) so the Phase Q
+        // bloom pass picks up wet-paint glints — but only on raised,
+        // bright paint. Ridge mask isolates ridges from flat areas.
+        float ridge = smoothstep(0.02, 0.18, length(grad) * 8.0);
         col *= 1.0 + diff * 0.18;
-        col += vec3(1.0, 0.95, 0.85) * specBoost * 0.20;
+        // HDR specular: warm white peak; ridge × specBoost confines it.
+        col += vec3(1.0, 0.95, 0.85) * specBoost * ridge * 1.1;
         // Wet paint glistening — small bright dots where paint is densest
-        col += vec3(0.9, 0.85, 0.75) * smoothstep(0.75, 1.0, hC) * 0.15;
+        // pushed into HDR (~1.6 linear) on the brightest pixels only.
+        float wetMask = smoothstep(0.78, 1.0, hC) * wetness;
+        col += vec3(1.0, 0.94, 0.82) * wetMask * 0.9;
     }
 
     // Multiple splatter scales — large drops + medium + fine spray
     // already exist in one scale; add a second pass at finer scale for
-    // depth and busyness in dense areas.
+    // depth and busyness in dense areas. Non-gating: 1.0 base + audio.
     {
         float n2 = 80.0;
         vec2 g2 = uv * n2;
         vec2 gi2 = floor(g2);
         float r2 = hash21(gi2 + 73.1);
-        if (r2 > 1.0 - splatterDensity * 0.04 * (0.5 + audioHigh * audioReact * 1.5)) {
-            float spat2 = step(length(fract(g2) - 0.5), 0.22);
+        if (r2 > 1.0 - splatterDensity * 0.04 * (1.0 + audioHigh * audioReact * 1.0)) {
+            // Soft AA disc.
+            vec2 dC2 = fract(g2) - 0.5;
+            float dr2 = length(dC2);
+            float aa2 = fwidth(dr2) + 1e-5;
+            float spat2 = 1.0 - smoothstep(0.22 - aa2, 0.22 + aa2, dr2);
             int cidx2 = int(hash21(gi2 + 27.3) * 4.0);
             vec3 sc2 = (cidx2 == 0) ? POL_BLACK
                      : (cidx2 == 1) ? POL_WHITE
                      : (cidx2 == 2) ? POL_RED : POL_OCHRE;
-            col = mix(col, sc2, spat2 * 0.7);
+            // HDR core for bright fine-spray dots (~1.5 linear peak).
+            float bright2 = max(max(sc2.r, sc2.g), sc2.b);
+            float core2 = (1.0 - smoothstep(0.0, 0.08, dr2)) * smoothstep(0.45, 0.85, bright2);
+            vec3 hdr2 = sc2 + sc2 * core2 * 0.7;
+            col = mix(col, hdr2, spat2 * 0.7);
         }
     }
 
     // Surprise: every ~14 seconds a gold-leaf flash washes the brightest
-    // splatters with metallic gold for ~1 second.
+    // splatters with metallic gold for ~1 second. HDR peak so the bloom
+    // pass picks it up as a true highlight.
     float goldPhase = fract(TIME / 14.0);
     float goldFlash = smoothstep(0.0, 0.10, goldPhase) * smoothstep(0.18, 0.10, goldPhase);
     float lum = dot(col, vec3(0.299, 0.587, 0.114));
-    col = mix(col, vec3(1.00, 0.85, 0.35), goldFlash * smoothstep(0.55, 0.85, lum) * 0.6);
+    float goldMask = goldFlash * smoothstep(0.55, 0.85, lum);
+    // Push gold into HDR (~1.7 linear) on brightest pixels only.
+    col = mix(col, vec3(1.50, 1.28, 0.52), goldMask * 0.6);
 
+    // NO TONEMAP — output linear HDR; downstream Phase Q v4 bloom and
+    // tonemapping handle the final compression.
     gl_FragColor = vec4(col, 1.0);
 }

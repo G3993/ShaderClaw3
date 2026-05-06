@@ -1,347 +1,240 @@
 /*{
-  "DESCRIPTION": "Data Sculpture — thousands of cubes form a fluid 3D landscape from input imagery",
-  "CATEGORIES": ["Radiant"],
+  "DESCRIPTION": "Data Sculpture — abstract data-art (Anadol / Koblin / Paley lineage). A synthetic 32-band FFT, hash-driven and audio-modulated, drives five moods: Bar Forest, Particle Stream, Skyline Grid, Fingerprint Field, Ribbon Cloud. Single-pass LINEAR HDR.",
+  "CATEGORIES": ["Generator", "Data", "Audio Reactive"],
   "INPUTS": [
-    { "NAME": "baseColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.91, 0.25, 0.34, 1.0] },
-    { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
-    { "NAME": "gridDensity", "LABEL": "Density", "TYPE": "float", "DEFAULT": 14.0, "MIN": 4.0, "MAX": 28.0 },
-    { "NAME": "shapeType", "LABEL": "Shape", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1], "LABELS": ["Cube", "Sphere"] },
-    { "NAME": "cubeScale", "LABEL": "Size", "TYPE": "float", "DEFAULT": 0.65, "MIN": 0.15, "MAX": 0.95 },
-    { "NAME": "waveHeight", "LABEL": "Wave Height", "TYPE": "float", "DEFAULT": 1.2, "MIN": 0.0, "MAX": 4.0 },
-    { "NAME": "flowSpeed", "LABEL": "Flow Speed", "TYPE": "float", "DEFAULT": 0.4, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "camHeight", "LABEL": "Camera Height", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fogAmount", "LABEL": "Atmosphere", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "baseGrid", "LABEL": "Base Grid", "TYPE": "bool", "DEFAULT": true },
-    { "NAME": "baseGap", "LABEL": "Base Gap", "TYPE": "float", "DEFAULT": 1.2, "MIN": 0.3, "MAX": 3.0 },
-    { "NAME": "baseGlow", "LABEL": "Base Glow", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "basePulse", "LABEL": "Base Pulse", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 1.0 }
+    { "NAME": "mood",       "LABEL": "Mood",         "TYPE": "long",  "DEFAULT": 0,
+      "VALUES": [0,1,2,3,4],
+      "LABELS": ["Bar Forest","Particle Stream","Skyline Grid","Fingerprint Field","Ribbon Cloud"] },
+    { "NAME": "audioReact", "LABEL": "Audio React",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
+    { "NAME": "density",    "LABEL": "Data Density", "TYPE": "float", "MIN": 0.4, "MAX": 1.6, "DEFAULT": 1.0 },
+    { "NAME": "flow",       "LABEL": "Flow Speed",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
+    { "NAME": "intensity",  "LABEL": "Intensity",    "TYPE": "float", "MIN": 0.4, "MAX": 1.8, "DEFAULT": 1.0 }
   ]
 }*/
 
-#define STEPS 48
-#define HIT 0.003
-#define FAR 20.0
-#define PI 3.14159265
-#define EXT 7.0
+// ════════════════════════════════════════════════════════════════════════
+//  Five abstract data-art moods, one synthetic 32-band FFT.
+//  Bass = energy; mid = spectral tilt; treble = sparkle. Lives in silence.
+// ════════════════════════════════════════════════════════════════════════
+#define PI    3.14159265
+#define TAU   6.28318531
+#define BANDS 32
 
-// ---- Fast hash ----
-float hash(vec2 p) {
-    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.x + p3.y) * p3.z);
+float h11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
+float h21(vec2 p)  { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+vec2  h22(vec2 p)  { return fract(sin(vec2(dot(p, vec2(127.1,311.7)),
+                                           dot(p, vec2(269.5,183.3)))) * 43758.5453); }
+
+// Synthetic FFT: 32 hash-seeded oscillators shaped by audio components.
+float fftBand(int i, float t, float bass, float mid, float treble) {
+    float fi = float(i);
+    float s1 = h11(fi * 1.731), s2 = h11(fi * 4.219), s3 = h11(fi * 7.913);
+    float v  = sin(t * (0.6 + s1 * 1.4) + s1 * TAU) * 0.55
+             + sin(t * (0.3 + s2 * 0.9) + s2 * TAU + fi * 0.21) * 0.30
+             + sin(t * (1.4 + s3 * 2.1) + s3 * TAU) * 0.15;
+    v = v * 0.5 + 0.5;
+    float u    = fi / float(BANDS - 1);
+    float tilt = mix(1.0 - u * 0.6, 0.4 + u * 0.8, clamp(mid, 0.0, 1.0));
+    float spark = step(0.985 - treble * 0.05, h11(fi * 11.0 + floor(t * 6.0)))
+                * treble * 0.6 * step(0.55, u);
+    return clamp(v * tilt * (0.35 + bass * 0.85) + spark, 0.0, 1.4);
+}
+float fftSample(float fIdx, float t, float bass, float mid, float treble) {
+    fIdx     = clamp(fIdx, 0.0, float(BANDS - 1) - 0.001);
+    float i0 = floor(fIdx), f = fIdx - i0;
+    return mix(fftBand(int(i0),     t, bass, mid, treble),
+               fftBand(int(i0)+1,   t, bass, mid, treble), f);
+}
+void synthAudio(float t, float ar, out float bass, out float mid, out float treble) {
+    float k = clamp(ar, 0.0, 2.0);
+    bass   = (0.20 + 0.18 * (sin(t * 0.71) * 0.5 + 0.5))           * (0.5 + 0.9 * k);
+    mid    = (0.25 + 0.20 * (sin(t * 1.13 + 1.7) * 0.5 + 0.5))     * (0.5 + 0.9 * k);
+    treble = (0.15 + 0.15 * (sin(t * 2.31 + 3.1) * 0.5 + 0.5))     * (0.4 + 1.1 * k);
 }
 
-// ---- Cheap animated height from 2D hashes (replaces expensive vnoise) ----
-float cheapHeight(vec2 id, vec2 disp, float t, float fs) {
-    // Animated height using hash + sin combinations (no 3D noise)
-    float h1 = hash(id);
-    float h2 = hash(id + 73.0);
-    float h3 = hash(id * 0.7 + 31.0);
-    float anim = sin(t * fs * 0.6 + h1 * 6.28) * 0.4
-               + sin(t * fs * 0.3 + h2 * 6.28 + disp.x * 2.0) * 0.35
-               + cos(t * fs * 0.45 + h3 * 6.28 + disp.y * 1.5) * 0.25;
-    return anim;
-}
-
-// ---- SDF ----
-float sdBox(vec3 p, vec3 b) {
-    vec3 q = abs(p) - b;
-    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
-}
-
-// ---- Globals ----
-vec2 g_cell;
-float g_h;
-float g_isBase;
-
-// Compute cell data: returns height, writes disp to out param
-float cellHeight(vec2 id, float sp, out vec2 disp) {
-    vec2 center = (id + 0.5) * sp;
-    float h1 = hash(id);
-    float h2 = hash(id + 73.0);
-    float phase = TIME * flowSpeed * 0.4 + h1 * 6.28;
-    vec2 flow = vec2(sin(phase + h2 * 3.0), cos(phase * 0.7 + h1 * 5.0));
-    disp = center + flow * sp * 0.25;
-
-    float n = cheapHeight(id, disp, TIME, flowSpeed);
-
-    vec2 texUV = clamp((center + EXT) / (2.0 * EXT), 0.0, 1.0);
-    vec4 tex = texture2D(inputTex, texUV);
-
-    float ht;
-    if (tex.a > 0.01) {
-        float lum = dot(tex.rgb, vec3(0.299, 0.587, 0.114));
-        ht = lum * 0.65 + n * 0.35;
-    } else {
-        ht = n;
-    }
-
-    float r = length(center) / EXT;
-    ht *= smoothstep(1.0, 0.85, r);
-    ht += audioBass * 0.12 * (1.0 - r);
-    ht *= waveHeight;
-    return ht;
-}
-
-// ---- Scene: 2x2 neighbor for raised, single cell for base ----
-float scene(vec3 p) {
-    float sp = 1.0 / gridDensity;
-    float ch = sp * 0.5 * cubeScale;
-
-    // Bounds
-    if (abs(p.x) > EXT + sp * 2.0 || abs(p.z) > EXT + sp * 2.0)
-        return max(abs(p.x) - EXT, abs(p.z) - EXT);
-    float maxH = waveHeight + 1.5;
-    if (p.y > maxH) return p.y - maxH + 0.1;
-    float minH = baseGrid ? baseGap + 1.5 : maxH;
-    if (p.y < -minH) return -p.y - minH + 0.1;
-
-    vec2 cellPos = p.xz / sp;
-    vec2 baseId = floor(cellPos);
-    // 2x2 quadrant: pick the neighbor direction based on fractional position
-    vec2 frac = fract(cellPos);
-    vec2 offset = step(0.5, frac) * 2.0 - 1.0; // -1 or +1
-
-    float best = 999.0;
-    vec2 bestCenter = vec2(0.0);
-    float bestH = 0.0;
-    float bestIsBase = 0.0;
-    bool isSphere = shapeType > 0.5;
-
-    // Check 2x2 raised cells
-    for (int i = 0; i < 4; i++) {
-        vec2 id = baseId;
-        if (i == 1) id.x += offset.x;
-        else if (i == 2) id.y += offset.y;
-        else if (i == 3) id += offset;
-
-        vec2 center = (id + 0.5) * sp;
-        // Quick reject: if xz distance to center is too far, skip
-        vec2 xzDiff = p.xz - center;
-        if (abs(xzDiff.x) > sp * 1.5 || abs(xzDiff.y) > sp * 1.5) continue;
-        if (length(center) > EXT + sp) continue;
-
-        float h1 = hash(id);
-        float h2 = hash(id + 73.0);
-
-        vec2 disp;
-        float ht = cellHeight(id, sp, disp);
-
-        float vScale = 0.6 + h1 * 0.8;
-        vec3 cubePos = vec3(disp.x, ht, disp.y);
-        vec3 q = p - cubePos;
-
-        float rot = h2 * 0.2;
-        float cr = cos(rot), sr = sin(rot);
-        q.xz = vec2(cr * q.x - sr * q.z, sr * q.x + cr * q.z);
-
-        float d;
-        if (isSphere) {
-            d = length(q) - ch * vScale;
-        } else {
-            d = sdBox(q, vec3(ch, ch * vScale, ch));
-        }
-
-        if (d < best) {
-            best = d;
-            bestCenter = center;
-            bestH = ht;
-            bestIsBase = 0.0;
+// ─── MOOD 0 — BAR FOREST ──────────────────────────────────────────────
+//  Skewed-iso forest of vertical bars. Graphite + neon-cyan accents.
+vec3 moodBarForest(vec2 uv, float t, float bass, float mid, float treble) {
+    vec2  p = uv * 2.0 - 1.0;
+    vec2  g = vec2(p.x - p.y * 0.32, p.y * 1.45) * (4.0 * density);
+    vec2  cell = floor(g), fr = fract(g);
+    vec3  col = vec3(0.018, 0.020, 0.024)
+              + vec3(0.025, 0.030, 0.036) * smoothstep(-1.0, 0.6, p.y);
+    for (int dy = 4; dy >= -1; dy--)
+    for (int dx = -1; dx <= 1; dx++) {
+        vec2  id = cell + vec2(float(dx), float(dy));
+        float bandF = mod(h21(id) * 31.999, float(BANDS));
+        float h  = fftSample(bandF, t * (0.6 + flow * 0.6), bass, mid, treble);
+        float bH = 0.05 + h * 1.05 * intensity;
+        vec2  lp = fr - vec2(float(dx), float(dy)) - 0.5;
+        float top = -0.5 + bH;
+        float bar = step(abs(lp.x), 0.32) * step(lp.y, top) * step(-0.5, lp.y);
+        if (bar > 0.5) {
+            float vert = (lp.y + 0.5) / max(bH, 0.001);
+            vec3  face = mix(vec3(0.045,0.052,0.065), vec3(0.085,0.095,0.115), vert)
+                       * (1.0 - 0.18 * float(dx));
+            float edge = smoothstep(0.04, 0.0, abs(lp.y - top));
+            vec3  cyan = vec3(0.10, 0.95, 1.10) * (0.6 + 0.6 * h);
+            col = face + cyan * edge * 0.85 + cyan * 0.06 * h * h;
         }
     }
-
-    // Base layer: single cell (no displacement = no neighbor issues)
-    if (baseGrid) {
-        vec2 id = baseId;
-        vec2 center = (id + 0.5) * sp;
-        if (length(center) <= EXT + sp) {
-            float h1 = hash(id);
-            float h2 = hash(id + 73.0);
-            float pulse = sin(TIME * 1.5 + h1 * 6.28 + h2 * 3.14) * basePulse * 0.15;
-            float baseY = -baseGap + pulse;
-            float baseScale = 0.35 + h1 * 0.15;
-
-            vec3 basePos = vec3(center.x, baseY, center.y);
-            vec3 qb = p - basePos;
-
-            float d;
-            if (isSphere) {
-                d = length(qb) - ch * baseScale;
-            } else {
-                d = sdBox(qb, vec3(ch, ch * baseScale, ch));
-            }
-
-            if (d < best) {
-                best = d;
-                bestCenter = center;
-                bestIsBase = 1.0;
-                // Store raised height at this cell for base glow effect
-                vec2 dummy;
-                bestH = cellHeight(id, sp, dummy);
-            }
-        }
-    }
-
-    g_cell = bestCenter;
-    g_h = bestH;
-    g_isBase = bestIsBase;
-
-    return best;
+    float gx = abs(fract(g.x) - 0.5), gy = abs(fract(g.y) - 0.5);
+    col += vec3(0.04, 0.18, 0.22) * smoothstep(0.49, 0.495, max(gx, gy)) * 0.18;
+    col += vec3(0.4, 1.0, 1.1)
+         * step(0.997 - treble * 0.06, h21(floor(g * 8.0) + floor(t * 4.0))) * 0.6;
+    return col;
 }
 
-// ---- Normal (tetrahedron method, wider epsilon for speed) ----
-vec3 calcNormal(vec3 p) {
-    vec2 e = vec2(0.004, -0.004);
-    return normalize(
-        e.xyy * scene(p + e.xyy) +
-        e.yyx * scene(p + e.yyx) +
-        e.yxy * scene(p + e.yxy) +
-        e.xxx * scene(p + e.xxx)
-    );
+// ─── MOOD 1 — PARTICLE STREAM ─────────────────────────────────────────
+//  Particles trace the waveform; magenta trails fade behind each.
+vec3 moodParticleStream(vec2 uv, float t, float bass, float mid, float treble) {
+    vec3 col = vec3(0.002, 0.001, 0.004);
+    int  N = int(140.0 * density);
+    for (int i = 0; i < 200; i++) {
+        if (i >= N) break;
+        float fi = float(i), seed = h11(fi * 0.731);
+        float x  = fract(seed + t * (0.06 + flow * 0.08) + fi * 0.005);
+        float bandF = fract(seed * 7.3 + fi * 0.37) * float(BANDS - 1);
+        float w = fftSample(bandF, t, bass, mid, treble);
+        float y = 0.5 + (w - 0.5) * 0.85 * intensity;
+        vec2  d = uv - vec2(x, y);
+        float trail = exp(-pow(d.y * 90.0, 2.0))
+                    * smoothstep(-(0.06 + 0.10 * w), 0.0, d.x) * step(d.x, 0.0);
+        float head  = exp(-dot(d * 220.0, d * 220.0));
+        col += vec3(1.0) * head * 1.6 + vec3(1.10, 0.18, 0.85) * trail * 0.55;
+    }
+    for (int i = 0; i < 16; i++) {
+        float fi = float(i);
+        vec2 sp = h22(vec2(floor(t * (3.0 + treble * 5.0)) + fi, fi * 1.7));
+        col += vec3(1.0, 0.85, 1.0) * exp(-length(uv - sp) * 280.0) * treble * 1.2;
+    }
+    col += vec3(0.18, 0.02, 0.14) * bass * 0.18;
+    return col;
+}
+
+// ─── MOOD 2 — SKYLINE GRID ────────────────────────────────────────────
+//  Iso city: 32 bars across; cobalt-base → magenta-top per bar.
+vec3 moodSkylineGrid(vec2 uv, float t, float bass, float mid, float treble) {
+    vec3  col = vec3(0.012, 0.018, 0.045) * smoothstep(-1.0, 1.0, uv.y * 2.0 - 1.0)
+              + vec3(0.008, 0.010, 0.022);
+    vec2  p   = (uv * 2.0 - 1.0) * vec2(1.4, 1.0);
+    float bw  = 1.8 / float(BANDS), baseY = -0.78, depth = 0.18;
+    for (int i = BANDS - 1; i >= 0; i--) {
+        float fi = float(i);
+        float bx = -0.9 + (fi + 0.5) * bw;
+        float h  = fftBand(i, t * (0.7 + flow * 0.5), bass, mid, treble);
+        float topY = baseY + 0.05 + h * 1.5 * intensity;
+        // Front face
+        float front = step(abs(p.x - bx), bw * 0.44)
+                    * step(p.y, topY) * step(baseY, p.y);
+        // Top slab (parallelogram)
+        float topThk = depth * 0.35;
+        float u = clamp((p.y - topY) / max(topThk, 0.001), 0.0, 1.0);
+        float top = step(abs(p.x - mix(bx, bx + depth * 0.6, u)), bw * 0.44)
+                  * step(p.y, topY + topThk) * step(topY, p.y);
+        // Right side (small parallelogram)
+        float sLx = bx + bw * 0.44, sRx = sLx + depth * 0.5;
+        float sUp = clamp((p.x - sLx) / max(depth * 0.5, 0.001), 0.0, 1.0);
+        float side = step(sLx, p.x) * step(p.x, sRx)
+                   * step(p.y, mix(topY, topY + topThk, sUp))
+                   * step(mix(baseY, baseY + topThk, sUp), p.y);
+        if (front + top + side > 0.001) {
+            float vG = clamp((p.y - baseY) / max(topY - baseY, 0.001), 0.0, 1.0);
+            vec3  g  = mix(vec3(0.10, 0.30, 1.05), vec3(1.05, 0.18, 0.85), pow(vG, 1.1));
+            col = mix(col, g * front + g * 1.45 * top + g * 0.55 * side,
+                      clamp(front + top + side, 0.0, 1.0));
+            col += vec3(1.05, 0.18, 0.85)
+                 * smoothstep(0.012, 0.0, abs(p.y - topY)) * step(abs(p.x - bx), bw * 0.44)
+                 * (0.4 + 0.6 * h) * intensity;
+        }
+    }
+    col += vec3(1.0, 0.5, 0.95)
+         * step(0.992 - treble * 0.06, h21(floor(uv * 220.0) + floor(t * 8.0))) * 0.6;
+    col += vec3(0.30, 0.10, 0.50) * bass * 0.10;
+    return col;
+}
+
+// ─── MOOD 3 — FINGERPRINT FIELD ───────────────────────────────────────
+//  Concentric whorls warped by data — Anadol palette.
+vec3 moodFingerprint(vec2 uv, float t, float bass, float mid, float treble) {
+    vec2 p = (uv * 2.0 - 1.0) * vec2(RENDERSIZE.x / RENDERSIZE.y, 1.0);
+    float warp = 0.0;
+    for (int k = 0; k < 3; k++) {
+        float fk = float(k);
+        vec2  c  = vec2(0.55 * sin(t * (0.13 + fk * 0.07) + fk * 2.1),
+                        0.45 * cos(t * (0.11 + fk * 0.09) + fk * 1.3));
+        vec2  d  = p - c;
+        float r  = length(d), a = atan(d.y, d.x);
+        float bandF = fract((a + PI) / TAU + fk * 0.3) * float(BANDS - 1);
+        float w = fftSample(bandF, t * (0.5 + flow * 0.6), bass, mid, treble);
+        warp   += (r * (1.0 + 0.45 * sin(a * (3.0 + fk) + t * 0.4))
+                  - w * (0.18 + bass * 0.25)) * (1.0 - fk * 0.25);
+    }
+    float ridge = sin(warp * 32.0 * density);
+    float lines = smoothstep(0.85, 0.95, abs(ridge));
+    float hue = clamp(0.5 + 0.5 * sin(warp * 1.2 + t * 0.2), 0.0, 1.0);
+    vec3  fc  = mix(vec3(0.05, 0.08, 0.55), vec3(0.55, 0.18, 1.10),
+                    smoothstep(0.0, 0.55, hue));
+    fc        = mix(fc, vec3(1.10, 0.18, 0.65), smoothstep(0.5, 1.0, hue));
+    vec3 col  = mix(vec3(0.02, 0.02, 0.10), fc * 0.65,
+                    smoothstep(-0.8, 0.8, sin(warp * 2.0)) * (0.4 + bass * 0.4));
+    col += fc * lines * (0.6 + mid * 0.9) * intensity;
+    col += vec3(1.10, 0.18, 0.65)
+         * exp(-(length(p) - 0.05 + 0.03 * sin(t)) * 4.0) * 0.10 * (0.5 + bass);
+    col += vec3(1.05, 0.55, 1.0)
+         * step(0.991 - treble * 0.06, h21(floor(uv * 240.0) + floor(t * 9.0))) * 0.55;
+    return col;
+}
+
+// ─── MOOD 4 — RIBBON CLOUD ────────────────────────────────────────────
+//  6 ribbons threading the canvas, latent-space feel; Anadol palette.
+vec3 moodRibbonCloud(vec2 uv, float t, float bass, float mid, float treble) {
+    vec3 col = mix(vec3(0.020, 0.020, 0.085), vec3(0.085, 0.025, 0.150),
+                   smoothstep(0.0, 1.0, uv.y));
+    for (int i = 0; i < 6; i++) {
+        float fi = float(i), seed = h11(fi * 1.51);
+        float bandF = (fi + 0.5) / 6.0 * float(BANDS - 1);
+        float w  = fftSample(bandF, t * (0.5 + flow * 0.6), bass, mid, treble);
+        float yC = 0.18 + 0.13 * fi + seed * 0.05
+                 + 0.13 * sin(uv.x * 6.0  + t * (0.4 + seed * 0.3) + fi)
+                 + 0.07 * sin(uv.x * 14.0 + t * 0.7 + seed * 5.0)
+                 + (w - 0.5) * 0.18 * intensity;
+        float thick = max(0.018 + 0.025 * 0.5 * sin(uv.x * 5.0 + t * 0.3 + fi * 1.7)
+                        + 0.025 + 0.040 * w * intensity, 0.012);
+        float d = abs(uv.y - yC);
+        float core = smoothstep(thick, thick * 0.4, d);
+        float halo = smoothstep(thick * 4.5, thick, d) * 0.45;
+        float a = fi / 5.0;
+        vec3  rc = mix(vec3(0.10, 0.20, 1.10), vec3(0.65, 0.18, 1.10),
+                       smoothstep(0.0, 0.6, a));
+        rc       = mix(rc, vec3(1.15, 0.20, 0.70), smoothstep(0.5, 1.0, a))
+                 * (0.7 + 0.6 * w);
+        col += rc * core * 1.10 + rc * halo * 0.55;
+    }
+    for (int i = 0; i < 24; i++) {
+        float fi = float(i), seed = h11(fi * 9.71);
+        vec2 c = vec2(fract(seed + t * (0.04 + flow * 0.05) + fi * 0.013),
+                      0.5 + 0.45 * sin(t * (0.3 + seed) + fi));
+        col += vec3(1.0, 0.85, 1.0) * exp(-length(uv - c) * 220.0) * (0.4 + treble * 1.2);
+    }
+    col += vec3(0.15, 0.08, 0.35) * bass * 0.18;
+    return col;
 }
 
 void main() {
-    vec2 uv = (gl_FragCoord.xy - RENDERSIZE.xy * 0.5) / min(RENDERSIZE.x, RENDERSIZE.y);
+    vec2  uv = isf_FragNormCoord.xy;
+    float t  = TIME;
+    float bass, mid, treble;
+    synthAudio(t, audioReact, bass, mid, treble);
 
-    // Camera
-    float angle = TIME * 0.1;
-    float elevAngle = camHeight * PI * 0.48;
-    float camDist = 6.0;
-    vec3 ro = vec3(
-        sin(angle) * cos(elevAngle) * camDist,
-        sin(elevAngle) * camDist + 0.5,
-        cos(angle) * cos(elevAngle) * camDist
-    );
-    vec3 fwd = normalize(-ro);
-    vec3 worldUp = abs(fwd.y) > 0.99 ? vec3(0.001, 0.0, 1.0) : vec3(0.0, 1.0, 0.0);
-    vec3 right = normalize(cross(fwd, worldUp));
-    vec3 up = cross(right, fwd);
-    vec3 rd = normalize(fwd * 1.2 + right * uv.x + up * uv.y);
+    int  m = int(mood + 0.5);
+    vec3 col;
+    if      (m == 0) col = moodBarForest      (uv, t, bass, mid, treble);
+    else if (m == 1) col = moodParticleStream (uv, t, bass, mid, treble);
+    else if (m == 2) col = moodSkylineGrid    (uv, t, bass, mid, treble);
+    else if (m == 3) col = moodFingerprint    (uv, t, bass, mid, treble);
+    else             col = moodRibbonCloud    (uv, t, bass, mid, treble);
 
-    // Raymarch
-    float t = 0.0;
-    bool hit = false;
-    vec3 p;
-    float glow = 0.0;
-
-    for (int i = 0; i < STEPS; i++) {
-        p = ro + rd * t;
-        float d = scene(p);
-        glow += 0.003 / (0.15 + d * d);
-        if (d < HIT) { hit = true; break; }
-        if (t > FAR) break;
-        t += d;
-    }
-
-    vec3 col = vec3(0.0);
-    float alpha = 0.0;
-
-    if (hit) {
-        scene(p);
-        vec3 n = calcNormal(p);
-        vec3 v = normalize(ro - p);
-
-        // Lighting
-        vec3 L = normalize(vec3(1.5, 3.0, 2.0));
-        vec3 H = normalize(L + v);
-        float diff = max(dot(n, L), 0.0);
-        float spec = pow(max(dot(n, H), 0.0), 48.0);
-        float fres = pow(1.0 - max(dot(n, v), 0.0), 3.0);
-
-        // Color
-        vec2 texUV = clamp((g_cell + EXT) / (2.0 * EXT), 0.0, 1.0);
-        vec4 texS = texture2D(inputTex, texUV);
-        float hn = clamp(g_h / max(waveHeight, 0.01) * 0.5 + 0.5, 0.0, 1.0);
-
-        vec3 albedo = texS.a > 0.01
-            ? texS.rgb
-            : mix(vec3(0.04, 0.03, 0.06), baseColor.rgb, hn * hn);
-
-        if (g_isBase > 0.5) {
-            // ---- Base layer effects ----
-            float h1 = hash(floor(g_cell * gridDensity));
-
-            vec3 baseAlbedo = albedo * 0.25;
-
-            // Ripple pulse
-            float ripple = sin(length(g_cell) * 4.0 - TIME * 2.0 + h1 * 6.28);
-            ripple = ripple * 0.5 + 0.5;
-            baseAlbedo = mix(baseAlbedo, baseColor.rgb * 0.3, ripple * basePulse);
-
-            // Height-reactive glow
-            float heightGlow = smoothstep(0.0, waveHeight * 0.8, abs(g_h)) * baseGlow;
-            baseAlbedo += baseColor.rgb * heightGlow * 0.4;
-
-            // Audio shimmer
-            baseAlbedo += baseColor.rgb * audioBass * 0.15;
-
-            col = baseAlbedo * (diff * 0.7 + 0.15);
-            col += spec * baseColor.rgb * 0.15;
-            col += fres * baseColor.rgb * 0.08;
-            col += baseColor.rgb * pow(fres, 2.0) * baseGlow * 0.5;
-
-        } else {
-            // ---- Raised layer ----
-            // Two-light setup for real volumetric depth.
-            vec3 ld1 = normalize(vec3(-0.45, 0.85, 0.30));   // primary key
-            vec3 ld2 = normalize(vec3( 0.55, 0.40, -0.65));  // fill
-            float diff1 = clamp(dot(n, ld1), 0.0, 1.0);
-            float diff2 = clamp(dot(n, ld2), 0.0, 1.0) * 0.4;
-
-            // Ambient occlusion proxy — taller (closer to top) cubes get
-            // more light, lower cubes are AO-darkened.
-            float ao = clamp(0.4 + hn * 0.7, 0.3, 1.0);
-
-            // Cast-shadow approximation: short march toward primary light.
-            // If we hit something within 0.6, this cube is shadowed.
-            float sh = 1.0;
-            {
-                float st = 0.05;
-                for (int s = 0; s < 6; s++) {
-                    vec3 sp = p + ld1 * st;
-                    float sd = scene(sp);
-                    if (sd < 0.005) { sh = 0.35; break; }
-                    st += sd;
-                    if (st > 0.6) break;
-                }
-            }
-
-            col = albedo * (diff1 * sh + diff2 + 0.06) * ao;
-            col += spec * mix(vec3(1.0), albedo, 0.3) * 0.7 * sh;
-            col += fres * baseColor.rgb * 0.18;
-            col += albedo * (hn * hn * 0.18 + audioBass * 0.08);
-        }
-
-        // Fog
-        float fog = 1.0 - exp(-t * fogAmount * 0.07);
-        col = mix(col, vec3(0.01, 0.01, 0.015), fog);
-        alpha = 1.0;
-    }
-
-    // Glow
-    col += baseColor.rgb * glow * 0.015;
-
-    // Tone map
-    col = col * (2.51 * col + 0.03) / (col * (2.43 * col + 0.59) + 0.14);
-
-    if (!hit && transparentBg) {
-        alpha = glow > 0.1 ? clamp(glow * 0.03, 0.0, 0.3) : 0.0;
-    } else if (!hit) {
-        col = max(col, vec3(0.01, 0.01, 0.02));
-        alpha = 1.0;
-    }
-
-    // Surprise: every ~32s a single horizontal scan-line cuts across,
-    // marking the moment a measurement is taken — the data is observed.
-    {
-        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
-        float _ph = fract(TIME / 32.0);
-        float _y  = (_ph - 0.04) / 0.30;
-        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.34, 0.18, _ph);
-        float _line = exp(-pow((_suv.y - _y) * 200.0, 2.0));
-        col += vec3(0.4, 1.0, 0.8) * _line * _f;
-    }
-
-    gl_FragColor = vec4(col, alpha);
+    col += (h21(uv * RENDERSIZE.xy + floor(t * 60.0)) - 0.5) * 0.010;
+    gl_FragColor = vec4(max(col, 0.0), 1.0);
 }

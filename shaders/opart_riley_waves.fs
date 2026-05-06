@@ -1,11 +1,13 @@
 /*{
   "CATEGORIES": ["Generator", "Geometric", "Audio Reactive"],
-  "DESCRIPTION": "Dense black-and-white parallel waves bending and swimming until your eyes refuse to focus. Bridget Riley Op-Art that breathes with the music.",
+  "DESCRIPTION": "Dense black-and-white Op Art that breathes with the music. Switch between Riley waves, zigzags, checkers, diamonds, and wobbling stripes.",
   "INPUTS": [
+    {"NAME":"pattern","LABEL":"Pattern","TYPE":"long","DEFAULT":0,"VALUES":[0,1,2,3,4],"LABELS":["Wave","Zigzag","Checker","Diamond","Stripe Wobble"]},
     {"NAME":"freq","TYPE":"float","MIN":10.0,"MAX":160.0,"DEFAULT":60.0},
     {"NAME":"warpAmp","TYPE":"float","MIN":0.0,"MAX":0.5,"DEFAULT":0.12},
     {"NAME":"xFreq","TYPE":"float","MIN":0.5,"MAX":12.0,"DEFAULT":3.0},
     {"NAME":"flow","TYPE":"float","MIN":0.0,"MAX":2.0,"DEFAULT":0.4},
+    {"NAME":"contrast","TYPE":"float","MIN":0.0,"MAX":1.0,"DEFAULT":1.0},
     {"NAME":"accentEvery","TYPE":"float","MIN":2.0,"MAX":20.0,"DEFAULT":7.0},
     {"NAME":"accentColor","TYPE":"color","DEFAULT":[0.95,0.15,0.25,1.0]},
     {"NAME":"texDisplace","TYPE":"float","MIN":0.0,"MAX":0.3,"DEFAULT":0.0},
@@ -19,6 +21,13 @@ float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 // "swimming" feel that Riley's plates evoke.
 float audioCurl(vec2 uv, float t) {
     return sin(uv.x * 5.0 + t) * cos(uv.y * 7.0 - t) * 0.5;
+}
+
+// Triangle wave in [-1,1] with period 2*PI — drop-in for sin() so the
+// AA / accent / crest math downstream still works.
+float triWave(float x) {
+    float p = x * (1.0 / 6.2831853);
+    return abs(fract(p) * 4.0 - 2.0) - 1.0;
 }
 
 void main() {
@@ -36,20 +45,102 @@ void main() {
     warp += audioCurl(uv, TIME * flow) * audioMid * 0.08;
     warp += guide * texDisplace;
 
-    float y = uv.y + warp;
-
-    // Final stripe field — frequency modulated by audioHigh so highs tighten.
     float effectiveFreq = freq * (1.0 + audioHigh * 0.15);
-    float stripe = sin(y * effectiveFreq);
-    // Smoothstep edges to avoid aliasing on subpixel stripe widths.
-    float bw = smoothstep(-0.04, 0.04, stripe);
 
-    // Accent stripe substitution — every Nth black band becomes accent colour.
-    float idx = floor(y * effectiveFreq / 3.14159);
+    // ---- pattern dispatch ---------------------------------------------------
+    // Each branch produces:
+    //   phase  — used for accent-stripe indexing (continuous coordinate)
+    //   field  — value in [-1,1] feeding the AA smoothstep
+    //   aaScale— derivative-based AA width, kept tight to preserve Op-Art bite
+    int mode = int(pattern + 0.5);
+    float phase;
+    float field;
+    float aaScale;
+
+    if (mode == 1) {
+        // ZIGZAG: triangle wave instead of sin — sharp peaks, harder optical
+        // tension because the eye chases the corners.
+        float y = uv.y + warp;
+        phase = y * effectiveFreq;
+        field = triWave(phase);
+        aaScale = fwidth(phase) * 1.25 + 1e-4;
+    } else if (mode == 2) {
+        // CHECKER: large checkerboard. Op illusion comes from low frequency
+        // and the warp twisting the grid lines.
+        vec2 cuv = uv;
+        cuv.x += warp * 0.5;
+        cuv.y += sin(uv.x * xFreq * 0.7 + TIME * flow) * warpAmp * 0.5;
+        // tile count derived from freq so the existing knob still matters
+        float tiles = max(2.0, effectiveFreq * 0.18);
+        vec2 g = cuv * vec2(tiles * (RENDERSIZE.x / RENDERSIZE.y), tiles);
+        // Use the SDF of grid cell center as a smooth field
+        vec2 f = fract(g) - 0.5;
+        // checker sign: +1 white cell, -1 black cell
+        float parity = mod(floor(g.x) + floor(g.y), 2.0) * 2.0 - 1.0;
+        // distance to cell edge — keeps fwidth-AA semantics
+        float edge = 0.5 - max(abs(f.x), abs(f.y));
+        field = parity * sign(edge) * (1.0 - smoothstep(0.0, 0.02, abs(edge)) * 0.0);
+        // Actually we want a hard parity field with AA at cell boundaries:
+        field = parity;
+        aaScale = fwidth(parity) * 1.25 + 1e-4;
+        // phase used for accent indexing — diagonal stripe through the grid
+        phase = (floor(g.x) + floor(g.y)) * 3.14159;
+    } else if (mode == 3) {
+        // DIAMOND: rotated square grid. abs(x)+abs(y) iso-lines give diamond
+        // rings; warp bends them into a moiré.
+        vec2 d = uv - 0.5;
+        d.x *= RENDERSIZE.x / RENDERSIZE.y;
+        d += vec2(warp, warp * 0.6);
+        float r = abs(d.x) + abs(d.y);
+        phase = r * effectiveFreq;
+        field = sin(phase);
+        aaScale = fwidth(phase) * 1.25 + 1e-4;
+    } else if (mode == 4) {
+        // STRIPE WOBBLE: vertical stripes whose x-position wobbles per row,
+        // giving the page-bowing Riley illusion ("Cataract").
+        float wob = sin(uv.y * xFreq * 2.0 + TIME * flow * 1.3) * warpAmp;
+        wob += audioCurl(uv.yx, TIME * flow) * audioMid * 0.08;
+        float x = uv.x + wob;
+        // aspect-correct so stripes look uniform
+        x *= RENDERSIZE.x / RENDERSIZE.y;
+        phase = x * effectiveFreq;
+        field = sin(phase);
+        aaScale = fwidth(phase) * 1.25 + 1e-4;
+    } else {
+        // WAVE (default, original Riley behavior).
+        float y = uv.y + warp;
+        phase = y * effectiveFreq;
+        field = sin(phase);
+        aaScale = fwidth(phase) * 1.25 + 1e-4;
+    }
+
+    // Soft AA: derivative-based smoothstep so edges stay crisp at any scale
+    // without shimmering. Op Art lives or dies on edge fidelity.
+    float bw = smoothstep(-aaScale, aaScale, field);
+
+    // Accent stripe substitution — every Nth dark band becomes accent colour.
+    float idx = floor(phase / 3.14159);
     bool isAccent = mod(idx, max(2.0, accentEvery)) < 0.5;
     vec3 darkCol = isAccent ? accentColor.rgb : vec3(0.0);
 
     vec3 col = mix(darkCol, vec3(1.0), bw);
+
+    // CONTRAST: 1.0 = full binary B/W (original Riley bite); lower values
+    // pull the stripe field toward mid-gray for variety / softer Op variants.
+    // Applied as a lerp from 0.5-gray so accent colour still reads.
+    {
+        float c = clamp(contrast, 0.0, 1.0);
+        vec3 mid = mix(vec3(0.5), darkCol * 0.5 + vec3(0.5) * 0.5, 0.0);
+        // mid stays neutral 0.5 so the eye gets a clean "half tone" at c=0
+        col = mix(vec3(0.5), col, c);
+    }
+
+    // HDR PEAKS: only the very crest of each white stripe lifts above 1.0,
+    // so Phase Q bloom kisses the ridge — never the whole white field.
+    // Restraint: 1.2–1.4 max, gated tight on stripe maxima. Scales with
+    // contrast so soft mode doesn't bloom unnaturally.
+    float crest = smoothstep(0.85, 0.995, field) * bw;
+    col += vec3(crest) * 0.3 * clamp(contrast, 0.0, 1.0);
 
     // Audio peak invert flash — tasteful, only at very high level.
     float flash = smoothstep(0.85, 1.0, audioLevel);
@@ -63,8 +154,9 @@ void main() {
         float _ph = fract(TIME / 16.0);
         float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.18, 0.08, _ph);
         float _doubled = step(0.5, fract(_suv.y * 80.0)) * 2.0 - 1.0;
-        col = mix(col, vec3(0.5 + 0.5 * _doubled), _f * 0.45);
+        col = mix(col, vec3(0.5 + 0.5 * _doubled), _f * 0.45 * clamp(contrast, 0.0, 1.0));
     }
 
+    // LINEAR HDR output — no gamma encode here; downstream tone-mapper handles it.
     gl_FragColor = vec4(col, 1.0);
 }

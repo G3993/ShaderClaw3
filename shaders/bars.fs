@@ -325,49 +325,79 @@ float adjust_balance(float value, float b) {
     return pow(value, gamma);
 }
 
+// Smooth stripe contribution: anti-aliases the ceil() boundary using fwidth
+// so adjacent stripe phases cross-fade across one pixel of derivative width.
+float stripe_mask_for(float stripe_index, float secondary_in, float secondary_orig) {
+    float phase_offset = stripe_index * (1.0 / (num_columns * max(offset, 0.001)));
+    float phase = fract(TIME * speed * (1.0 + audioBass * 2.0) + phase_offset);
+    float lfo = fun(phase, easing_type) * phase_iter - (phase_iter / 2.0);
+
+    bool is_even_stripe = mod(stripe_index, 2.0) < 1.0;
+    float secondary_adjusted = is_even_stripe ? secondary_orig : 1.0 - secondary_orig;
+    float sec = mix(secondary_in, secondary_adjusted, use_odd_dirs);
+
+    float gradient = pow(sec, gradient_pow * (1.0 - audioLevel * 0.5));
+    gradient = mix(gradient, 1.0 - gradient, 0.5 + sin(TIME * invert_speed) * 0.5);
+
+    float animated_coord = fract(lfo + gradient);
+    float col = 0.5 + 0.5 * sin(animated_coord * 6.28318530718);
+    col = adjust_balance(col, balance);
+    return 1.0 - col;
+}
+
 void main() {
     vec2 uv = isf_FragNormCoord.xy;
     float primary = use_columns ? uv.x : uv.y;
     float secondary = use_columns ? uv.y : uv.x;
 
     float mirrored_primary = abs(primary - 0.5) * x_iter;
-    float stripe_index = ceil(mirrored_primary * num_columns);
+    float stripe_pos = mirrored_primary * num_columns;
+    float stripe_index = ceil(stripe_pos);
 
-    float phase_offset = stripe_index * (1.0 / (num_columns * max(offset, 0.001)));
-    float phase = fract(TIME * speed * (1.0 + audioBass * 2.0) + phase_offset);
-    float lfo = fun(phase, easing_type) * phase_iter - (phase_iter / 2.0);
+    // SOFT AA: resolution-independent edge across stripe boundary.
+    // fwidth gives the per-pixel derivative; smoothstep across one pixel of it.
+    float aa = fwidth(stripe_pos);
+    float frac_in_stripe = stripe_pos - floor(stripe_pos);
+    // weight near the upper boundary (frac_in_stripe near 1 == near ceil edge)
+    float edge_t = smoothstep(1.0 - aa, 1.0, frac_in_stripe);
 
-    bool is_even_stripe = mod(stripe_index, 2.0) < 1.0;
-    float secondary_adjusted = is_even_stripe ? secondary : 1.0 - secondary;
-    secondary = mix(secondary, secondary_adjusted, use_odd_dirs);
+    float mask = stripe_mask_for(stripe_index, secondary, secondary);
+    if (edge_t > 0.0) {
+        float mask_neighbor = stripe_mask_for(stripe_index + 1.0, secondary, secondary);
+        mask = mix(mask, mask_neighbor, edge_t);
+    }
 
-    float gradient = pow(secondary, gradient_pow * (1.0 - audioLevel * 0.5));
-    gradient = mix(gradient, 1.0 - gradient, 0.5 + sin(TIME * invert_speed) * 0.5);
-
-    float animated_coord = fract(lfo + gradient);
-    float col = 0.5 + 0.5 * sin(animated_coord * 6.28318530718);
-    col = adjust_balance(col, balance);
-
-    float mask = 1.0 - col;
     // Surprise: every ~17s a single bar briefly bursts to twice its mass
     // and tints magenta — the runaway peak event you can't anticipate.
+    float _ph = fract(TIME / 17.0);
+    float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.18, 0.10, _ph);
     {
-        float _ph = fract(TIME / 17.0);
-        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.18, 0.10, _ph);
         float _which = floor(fract(TIME / 17.0 + 0.5) * 32.0);
         float _bx = (_which + 0.5) / 32.0;
         float _bandX = exp(-pow((uv.x - _bx) * 80.0, 2.0));
         mask += _bandX * _f * 0.9;
     }
 
+    // HDR PEAKS: lift bar tops into linear-HDR (>0.85) so the host bloom
+    // pipeline catches them. Always-on baseline keeps things alive at audio=0;
+    // bass kicks add a non-gated push that makes tops glow, not just brighten.
+    float peakShape = smoothstep(0.55, 1.0, mask); // emphasize bar tops
+    float baseGain  = 1.0 + 0.55 * peakShape;       // alive at audio=0
+    float audioGain = 0.85 * audioBass + 0.45 * audioLevel; // additive, non-gating
+    float burstGain = 0.9 * _f * peakShape;         // surprise event glows
+    float hdrGain   = baseGain + audioGain * peakShape + burstGain;
+    // clamp upper end to ~2.5 linear so bloom stays controlled
+    hdrGain = min(hdrGain, 2.5);
+    float mask_hdr = mask * hdrGain;
+
     bool hasTex = IMG_SIZE_inputTex.x > 0.0;
     if (hasTex) {
         vec4 tex = IMG_NORM_PIXEL(inputTex, uv);
-        gl_FragColor = vec4(tex.rgb * mask, tex.a * mask);
+        // linear HDR out — host applies ACES tonemap
+        gl_FragColor = vec4(tex.rgb * mask_hdr, tex.a * mask);
     } else {
         // Magenta tint when the surprise is firing
-        float _ph = fract(TIME / 17.0);
-        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.18, 0.10, _ph);
-        gl_FragColor = vec4(mix(vec3(mask), vec3(1.0, 0.2, 0.8) * mask, _f * 0.5), 1.0);
+        vec3 base = mix(vec3(mask_hdr), vec3(1.0, 0.2, 0.8) * mask_hdr, _f * 0.5);
+        gl_FragColor = vec4(base, 1.0);
     }
 }

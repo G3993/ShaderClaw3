@@ -4,7 +4,7 @@
   "INPUTS": [
     { "NAME": "hueShift", "LABEL": "Hue Shift", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
     { "NAME": "hueRange", "LABEL": "Hue Range", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "saturation", "LABEL": "Saturation", "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.6 },
+    { "NAME": "saturation", "LABEL": "Saturation", "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.42 },
     { "NAME": "brightness", "LABEL": "Brightness", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.6 },
     { "NAME": "petalCount", "LABEL": "Petals", "TYPE": "float", "MIN": 1.0, "MAX": 12.0, "DEFAULT": 5.0 },
     { "NAME": "layers", "LABEL": "Layers", "TYPE": "float", "MIN": 5.0, "MAX": 60.0, "DEFAULT": 40.0 },
@@ -38,6 +38,12 @@ const float PI2 = 6.2831852;
 
 #define SF 1.0 / min(RENDERSIZE.x, RENDERSIZE.y)
 #define SS(l, s) smoothstep(SF, -SF, l - s)
+
+// Soft-AA edge using fwidth so petal silhouettes stay crisp at any scale.
+float aaEdge(float x) {
+    float w = max(fwidth(x), 1e-5);
+    return smoothstep(w, -w, x);
+}
 
 vec4 hueToColor(float v) {
     return saturation + brightness * cos(6.3 * v + vec4(0.0, 23.0, 21.0, 0.0));
@@ -97,14 +103,18 @@ void main() {
     // Scale
     uv /= max(scale, 0.01);
 
-    // Audio
+    // Audio (non-gating: floor keeps shader alive at audio=0).
     float aBass = audioBass * audioReact;
     float aMid = audioMid * audioReact;
     float aHigh = audioHigh * audioReact;
     float aLevel = audioLevel * audioReact;
 
-    // Audio-reactive scale pulse
-    uv /= 1.0 + aBass * 0.15;
+    // Idle ambient pulse so motion + glow exist without audio.
+    float idleP = 0.5 + 0.5 * sin(TIME * 0.7);
+    float idleQ = 0.5 + 0.5 * sin(TIME * 1.3 + 1.7);
+
+    // Audio-reactive scale pulse (idle breath when silent).
+    uv /= 1.0 + aBass * 0.15 + idleP * 0.02;
 
     // Spin rotation
     float spinAngle = TIME * spinSpeed + aBass * 0.3;
@@ -144,11 +154,13 @@ void main() {
         zn += aBass * 0.008 * t;
         zn += aHigh * 0.003 * (1.0 - t) * sin(angle * 8.0 + TIME * 5.0);
 
-        float d = SS(l, zn);
+        // Soft-AA petal edge — fwidth-based so it stays clean at any zoom.
+        float edge = l - zn;
+        float d = aaEdge(edge);
 
         // Hue: shifted + range-scaled per layer
         float rn = hash11(i);
-        float hueVal = rn * hueRange + hueShift + aMid * 0.1;
+        float hueVal = rn * hueRange + hueShift + aMid * 0.1 + idleQ * 0.02;
         vec3 col = hueToColor(hueVal).rgb;
 
         // Layered depth shading — inner layers progressively darker
@@ -164,10 +176,16 @@ void main() {
         float interior = 1.0 - smoothstep(0.0, 0.15, l);
         col *= 1.0 - interior * innerShadow * (1.0 - t);
 
-        // Petal rim light — small bright halo just inside each layer's
-        // outer edge so petals read as having a glossy lifted edge.
-        float rim = exp(-pow((l - zn) * 80.0 / max(shadowSoftness, 0.5), 2.0));
-        col += vec3(1.0, 0.95, 0.85) * rim * rimLight * t;
+        // Ring-light removed — was blowing out the petals into a whitewashed
+        // halo. Specular tip retained for crest definition only.
+        float spec = exp(-pow((l - zn) * 220.0 / max(shadowSoftness, 0.5), 2.0));
+        col += vec3(1.4, 1.3, 1.1) * spec * (0.7 + 0.3 * petalMod) * t * rimLight;
+
+        // Petal-face HDR boost: lift the bright side of each petal so the
+        // colourful highlights punch above 1.0 and bloom can grab them.
+        // Toned down peak so the bloom pipeline catches it gentler.
+        float petalFace = max(petalMod, 0.0);
+        col += col * petalFace * (0.25 + idleP * 0.10) * t;
 
         result = mix(result, col, d);
 
@@ -187,31 +205,31 @@ void main() {
         result *= 1.0 - d * ambientOcclusion * 0.05;
     }
 
-    // Center glow
-    float centerGlow = exp(-l * l * 20.0) * bloom * 0.5;
-    result += vec3(1.0, 0.95, 0.9) * centerGlow * (1.0 + aBass * 0.5);
+    // Center glow — HDR core so bloom flares the heart of the flower.
+    float centerCore = exp(-l * l * 80.0);
+    float centerHalo = exp(-l * l * 20.0);
+    float centerGlow = (centerHalo * 0.5 + centerCore * 1.6) * (0.5 + bloom * 0.5);
+    result += vec3(1.0, 0.95, 0.9) * centerGlow
+            * (1.7 + aBass * 0.6 + idleP * 0.25);
+
+    // Pollen sparks — tiny HDR specks near the centre (alive at audio=0).
+    float sparkA = exp(-pow(l * 9.0 - 1.2, 2.0) * 6.0);
+    float sparkMod = 0.5 + 0.5 * sin(atan(uv.y, uv.x) * 9.0 + TIME * 2.3);
+    result += vec3(1.4, 1.2, 0.7) * sparkA * sparkMod
+            * (0.35 + aHigh * 0.6 + idleQ * 0.1);
 
     // Vignette
     float vig = 1.0 - smoothstep(0.4, 1.2, l * scale);
     result *= 0.7 + 0.3 * vig;
 
-    result = clamp(result, 0.0, 1.0);
+    // No tonemap, no clamp at top end — let Phase Q v4 bloom see HDR peaks.
+    result = max(result, 0.0);
 
-    // Surprise: every ~23s a bee shadow buzzes past — a tiny dark
-    // specter loops the petals for ~1.2s.
-    {
-        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
-        float _ph = fract(TIME / 23.0);
-        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.24, 0.14, _ph);
-        float _t = (_ph - 0.04) / 0.20;
-        vec2 _bee = vec2(0.5 + 0.30 * sin(_t * 8.0), 0.5 + 0.30 * cos(_t * 6.0));
-        float _body = smoothstep(0.018, 0.0, length(_suv - _bee));
-        result = mix(result, vec3(0.05, 0.04, 0.04), _body * _f);
-    }
+    // Bee/fly easter egg removed — the drifting dot was distracting.
 
     if (transparentBg) {
         float lum = dot(result, vec3(0.299, 0.587, 0.114));
-        float a = max(lum, 1.0 - smoothstep(0.0, 0.02, l - 0.01));
+        float a = clamp(max(lum, 1.0 - smoothstep(0.0, 0.02, l - 0.01)), 0.0, 1.0);
         gl_FragColor = vec4(result, a);
     } else {
         gl_FragColor = vec4(result, 1.0);

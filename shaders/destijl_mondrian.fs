@@ -1,244 +1,280 @@
 /*{
   "CATEGORIES": ["Generator", "Art Movement", "Audio Reactive"],
-  "DESCRIPTION": "De Stijl after Mondrian's Broadway Boogie Woogie (1942-43) — orthogonal lanes carrying marching coloured pulses across a white field, with bright primary squares pulsing at intersections. Manhattan grid as syncopated rhythm of yellow/red/blue/grey. No subdivision tree, no Voronoi.",
+  "DESCRIPTION": "De Stijl after late Mondrian — Broadway Boogie Woogie (1942–43) and Victory Boogie Woogie (1942–44). Asymmetric black grid lines partition a cream canvas into rectangles, some filled with pure cadmium red / cobalt blue / Naples yellow. Down each line marches a syncopated stream of small coloured squares at harmonic tempi (1x, 1.5x, 2x, 2.5x of base) — Mondrian's literal jazz. The grid quietly REPARTITIONS via smoothstep. Bass throws extra red squares; treble throws yellow. Rare audio-bass-triggered cell colour swaps. Five-colour palette only, no gradients. Stays alive in silence. Linear HDR.",
   "INPUTS": [
-    { "NAME": "lanesH", "LABEL": "Horizontal Lanes", "TYPE": "float", "MIN": 2.0, "MAX": 14.0, "DEFAULT": 6.0 },
-    { "NAME": "lanesV", "LABEL": "Vertical Lanes", "TYPE": "float", "MIN": 2.0, "MAX": 14.0, "DEFAULT": 6.0 },
-    { "NAME": "laneWidth", "LABEL": "Lane Width", "TYPE": "float", "MIN": 0.002, "MAX": 0.040, "DEFAULT": 0.018 },
-    { "NAME": "rectMotion", "LABEL": "Rectangle Motion", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.45 },
-    { "NAME": "rectCount", "LABEL": "Rectangles", "TYPE": "float", "MIN": 0.0, "MAX": 16.0, "DEFAULT": 8.0 },
-    { "NAME": "pulseDensity", "LABEL": "Pulse Density", "TYPE": "float", "MIN": 0.5, "MAX": 12.0, "DEFAULT": 4.0 },
-    { "NAME": "pulseSize", "LABEL": "Pulse Size", "TYPE": "float", "MIN": 0.005, "MAX": 0.04, "DEFAULT": 0.014 },
-    { "NAME": "marchSpeed", "LABEL": "March Speed", "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.35 },
-    { "NAME": "intersectionGlow", "LABEL": "Intersection Glow", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.7 },
-    { "NAME": "redArea", "LABEL": "Red Probability", "TYPE": "float", "MIN": 0.0, "MAX": 0.6, "DEFAULT": 0.22 },
-    { "NAME": "blueArea", "LABEL": "Blue Probability", "TYPE": "float", "MIN": 0.0, "MAX": 0.6, "DEFAULT": 0.18 },
-    { "NAME": "yellowArea", "LABEL": "Yellow Probability", "TYPE": "float", "MIN": 0.0, "MAX": 0.6, "DEFAULT": 0.30 },
-    { "NAME": "greyMix", "LABEL": "Grey Mix", "TYPE": "float", "MIN": 0.0, "MAX": 0.5, "DEFAULT": 0.18 },
-    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "compositionSeed", "LABEL": "Seed", "TYPE": "float", "MIN": 0.0, "MAX": 50.0, "DEFAULT": 0.0 },
-    { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" }
+    { "NAME": "lineThickness",       "LABEL": "Line Thickness",        "TYPE": "float", "MIN": 0.001, "MAX": 0.012, "DEFAULT": 0.0035 },
+    { "NAME": "gridDensity",         "LABEL": "Grid Density",          "TYPE": "long",  "VALUES": [0, 1, 2, 3], "LABELS": ["Sparse", "Medium", "Dense", "Very Dense"], "DEFAULT": 1 },
+    { "NAME": "repartitionPeriod",   "LABEL": "Repartition Period (s)","TYPE": "float", "MIN": 8.0,   "MAX": 30.0,  "DEFAULT": 16.0 },
+    { "NAME": "colorPulseIntensity", "LABEL": "Color Pulse Intensity", "TYPE": "float", "MIN": 0.0,   "MAX": 1.0,   "DEFAULT": 1.0 },
+    { "NAME": "whiteSaturation",     "LABEL": "White Tint Saturation", "TYPE": "float", "MIN": 0.0,   "MAX": 0.3,   "DEFAULT": 0.0 },
+    { "NAME": "audioReact",          "LABEL": "Audio React",           "TYPE": "float", "MIN": 0.0,   "MAX": 2.0,   "DEFAULT": 1.0 }
   ]
 }*/
 
-const vec3 BBW_RED    = vec3(0.89, 0.12, 0.14);
-const vec3 BBW_BLUE   = vec3(0.10, 0.18, 0.65);
-const vec3 BBW_YELLOW = vec3(0.97, 0.85, 0.10);
-const vec3 BBW_GREY   = vec3(0.62, 0.62, 0.60);
-const vec3 BBW_PAPER  = vec3(0.96, 0.94, 0.90);
+// ════════════════════════════════════════════════════════════════════════
+//  DE STIJL — Mondrian, Boogie Woogie era
+//  Broadway Boogie Woogie (1942–43) was Mondrian's response to Manhattan
+//  jazz after fleeing Europe. The black grid he had used since 1920 broke
+//  apart into chains of coloured squares pulsing along the lines — the
+//  painting LITERALIZED syncopation. This shader is built around that
+//  device: a kinetic grid where every black line carries marching squares
+//  at harmonic tempi, and every ~16 seconds the line POSITIONS slide to
+//  new locations (smoothstep transitions) honouring Mondrian's iterative
+//  practice — he physically re-taped his grid lines for months on end.
+//  Five-colour palette, no mixing, no gradients. Silence is fine: TIME
+//  drives the boogie regardless of audio.
+// ════════════════════════════════════════════════════════════════════════
 
-float hash11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
+// ─── Mondrian palette (the only five colours allowed) ─────────────────
+const vec3 PAL_RED    = vec3(0.85, 0.15, 0.10); // cadmium red
+const vec3 PAL_BLUE   = vec3(0.10, 0.20, 0.65); // cobalt blue
+const vec3 PAL_YELLOW = vec3(0.96, 0.86, 0.20); // Naples yellow
+const vec3 PAL_WHITE  = vec3(0.96, 0.94, 0.88); // off-white / cream
+const vec3 PAL_BLACK  = vec3(0.04, 0.04, 0.06); // pure black
 
-vec3 pickColor(float seed, float r, float b, float y, float g) {
-    float h = fract(seed);
-    if (h < r)            return BBW_RED;
-    if (h < r + b)        return BBW_BLUE;
-    if (h < r + b + y)    return BBW_YELLOW;
-    if (h < r + b + y + g) return BBW_GREY;
-    return vec3(0.05);
+// Maximum grid capacity (compile-time array sizes). Actual line counts used
+// at runtime are derived from gridDensity and clamped to these maxima.
+#define LINES_H 7   // max horizontal interior lines
+#define LINES_V 8   // max vertical interior lines
+#define SQUARE   0.020   // marching square half-size (in normalized coord)
+
+// ─── hashes ───────────────────────────────────────────────────────────
+float h11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
+float h12(vec2 p)  { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+
+// Quantize [0,1] -> one of 5 palette colours by index.
+vec3 pal5(int idx) {
+    if (idx == 0) return PAL_WHITE;
+    if (idx == 1) return PAL_RED;
+    if (idx == 2) return PAL_BLUE;
+    if (idx == 3) return PAL_YELLOW;
+    return PAL_BLACK;
 }
 
+// Cell fill choice — heavily weighted toward white (Mondrian's canvas was
+// mostly cream). Bass-triggered swap key changes the index every now and
+// then for the audio-reactive surprise.
+int cellColour(vec2 cellId, float swapKey) {
+    float r = h12(cellId * 1.7 + swapKey * 7.13);
+    if (r < 0.62) return 0;          // WHITE — dominant
+    if (r < 0.74) return 1;          // RED
+    if (r < 0.84) return 2;          // BLUE
+    if (r < 0.94) return 3;          // YELLOW
+    return 0;                        // small extra white pad
+}
+
+// ─── grid layout ──────────────────────────────────────────────────────
+// We keep two SETS of line positions and crossfade between them every
+// ~16 seconds with a 1-second smoothstep — this is the "repartition"
+// gesture that reads as Mondrian re-taping his canvas.
+//
+// Each line has its OWN epoch (slightly de-synchronised) so they don't
+// all shift at once — the canvas re-tunes itself piece by piece, like
+// Mondrian's diary entries describe his own sessions.
+
+float linePos(float idx, float total, float salt, float t, float period) {
+    // Base slot (evenly spaced 0..1) plus an asymmetric per-epoch jitter.
+    float slot   = (idx + 1.0) / (total + 1.0);
+    float per    = max(period, 1.0);
+    float epoch  = floor(t / per + salt * 0.31);
+    float ph     = fract(t / per + salt * 0.31);
+    // Last ~1s of each epoch is the smoothstep crossfade.
+    float transStart = max(0.0, 1.0 - 1.0 / per);
+    float trans  = smoothstep(transStart, 1.0, ph);
+    float jitA   = (h11(epoch * 7.13 + salt) - 0.5) * 0.55 / total;
+    float jitB   = (h11((epoch + 1.0) * 7.13 + salt) - 0.5) * 0.55 / total;
+    float jit    = mix(jitA, jitB, trans);
+    return clamp(slot + jit, 0.04, 0.96);
+}
+
+// ─── marching square pulses along a single line ───────────────────────
+// Returns a colour OVER black (the line itself). The line carries a
+// stream of small coloured squares at harmonic tempo. dir = 1 horizontal
+// (squares travel along x), dir = 0 vertical (along y).
+//
+// Tempo harmonic per line: 1x, 1.5x, 2x, or 2.5x of base — chosen by
+// hash, deterministic per line. Bass injects extra reds; treble extra
+// yellows (hueBias parameter modulates spawn colour selection).
+//
+// We DO NOT blend — Mondrian had no gradients. Either the square is
+// here (return colour) or it isn't (return black, which is the line).
+vec3 lineSquares(float along, float coord, float lineSalt, float t,
+                 float audioBass, float audioTreble, float audioReact,
+                 float pulseAmt)
+{
+    // Tempo: 1.0, 1.5, 2.0, 2.5 — boogie-woogie harmonic ladder.
+    float tempoSel = h11(lineSalt * 17.7);
+    float tempo    = (tempoSel < 0.25) ? 1.0
+                   : (tempoSel < 0.55) ? 1.5
+                   : (tempoSel < 0.85) ? 2.0 : 2.5;
+    float dir      = (h11(lineSalt * 23.3) < 0.5) ? -1.0 : 1.0;
+    float baseSpd  = 0.075;
+    float march    = t * baseSpd * tempo * dir;
+
+    // Density: 4–7 squares riding the line at any time. pulseAmt scales
+    // how many squares actually paint (when 0, the line is bare black).
+    float density  = 4.0 + floor(h11(lineSalt * 29.7) * 4.0);
+    density       *= clamp(pulseAmt, 0.0, 1.0);
+
+    vec3 outCol = PAL_BLACK; // the line itself
+
+    // Iterate over slots; each slot has a phase offset and a colour.
+    for (int k = 0; k < 8; k++) {
+        if (float(k) >= density) break;
+        float fk     = float(k);
+        float spawn  = h11(lineSalt * 31.1 + fk * 5.7);
+
+        // Position along the line (with march).
+        float pos    = fract(march + spawn);
+        // Wrap-aware distance.
+        float dA     = abs(along - pos);
+        dA           = min(dA, 1.0 - dA);
+
+        // Each square is offset in the cross direction so it sits ON the
+        // line (cross dist must already be small for us to be here).
+        // Square colour: deterministic pick from primaries, with audio
+        // injecting bass=red and treble=yellow surprises.
+        float colSel = h11(lineSalt * 41.3 + fk * 7.1);
+        // Bass kick — promote some yellows/blues to red.
+        float bassKick = audioBass * audioReact;
+        float trebKick = audioTreble * audioReact;
+        // Default: 1/3 each among R/B/Y.
+        int sqIdx;
+        if (colSel < 0.33 + 0.20 * bassKick)        sqIdx = 1; // RED
+        else if (colSel < 0.66 - 0.10 * trebKick)   sqIdx = 2; // BLUE
+        else                                        sqIdx = 3; // YELLOW
+        // Treble overrides occasional non-yellows to yellow.
+        if (h11(lineSalt * 53.7 + fk * 3.3) < trebKick * 0.30) sqIdx = 3;
+
+        // Square drawn iff |dA| < SQUARE and |dCross| < SQUARE — caller
+        // already guarantees |dCross| < small via line proximity. We
+        // require BOTH explicitly (cross dist passed via 'coord').
+        if (dA < SQUARE && abs(coord) < SQUARE) {
+            outCol = pal5(sqIdx);
+        }
+    }
+    // Audio-bass extra-red sprinkle: occasional bonus square mid-line.
+    // Gated by pulseAmt so a fully muted boogie stays bare.
+    if (audioBass * audioReact > 0.35 && pulseAmt > 0.05) {
+        float bspawn = fract(t * 0.22 + lineSalt * 1.11);
+        float dA = abs(along - bspawn);
+        dA = min(dA, 1.0 - dA);
+        if (dA < SQUARE && abs(coord) < SQUARE) outCol = PAL_RED;
+    }
+    return outCol;
+}
+
+// ════════════════════════════════════════════════════════════════════════
 void main() {
-    vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
-    float aspect = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
-    vec3 col = BBW_PAPER;
+    vec2  uv = isf_FragNormCoord.xy;
+    float t  = TIME;
 
-    int NH = int(clamp(lanesH, 1.0, 14.0));
-    int NV = int(clamp(lanesV, 1.0, 14.0));
+    // ─── parameter normalisation ─────────────────────────────────────
+    float lineW    = clamp(lineThickness,       0.001, 0.012);
+    float period   = clamp(repartitionPeriod,   8.0,   30.0);
+    float pulseAmt = clamp(colorPulseIntensity, 0.0,   1.0);
+    float wSat     = clamp(whiteSaturation,     0.0,   0.3);
+    float aR       = clamp(audioReact,          0.0,   2.0);
 
-    // ---- Horizontal lanes ----
-    // Each lane has a hashed Y position. Marching pulses move along
-    // +x with varying per-lane speed and color.
-    for (int i = 0; i < 14; i++) {
-        if (i >= NH) break;
-        float fi = float(i) + compositionSeed * 1.31;
-        float laneY = (float(i) + 0.5) / float(NH)
-                    + (hash11(fi * 7.13) - 0.5) * (1.0 / float(NH)) * 0.7
-                    + sin(TIME * 0.15 + fi * 2.7) * 0.012;
-        float dy = abs(uv.y - laneY);
-        if (dy > laneWidth + pulseSize) continue;
+    // gridDensity is a long enum (0..3): Sparse, Medium, Dense, Very Dense.
+    // It maps to active line counts (clamped to compile-time maxima).
+    int dIdx = int(clamp(gridDensity, 0.0, 3.0) + 0.5);
+    int activeLinesV = (dIdx == 0) ? 3 : (dIdx == 1) ? 5 : (dIdx == 2) ? 6 : 8;
+    int activeLinesH = (dIdx == 0) ? 2 : (dIdx == 1) ? 4 : (dIdx == 2) ? 5 : 7;
 
-        // Lane line — thin grey baseline.
-        float lane = smoothstep(laneWidth, 0.0, dy);
-        col = mix(col, BBW_GREY * 0.6, lane * 0.35);
+    // Audio: split full-band react into pseudo-bass (slow) and pseudo-
+    // treble (fast) using TIME modulation when no real audio is wired.
+    float audioBass   = 0.5 + 0.5 * sin(t * 1.7);    // 0..1, slow
+    float audioTreble = 0.5 + 0.5 * sin(t * 4.3 + 1.3); // 0..1, fast
+    audioBass   *= aR;
+    audioTreble *= aR;
 
-        // Pulses marching along this lane.
-        float speed = marchSpeed * (0.5 + hash11(fi * 11.1) * 1.5)
-                    * (1.0 + audioMid * audioReact * 0.6);
-        float dir = (hash11(fi * 17.7) < 0.5) ? -1.0 : 1.0;
-        float t = TIME * speed * dir;
-        // Multiple pulses per lane.
-        for (int k = 0; k < 12; k++) {
-            if (float(k) >= pulseDensity) break;
-            float fk = float(k);
-            float spawn = hash11(fi * 23.3 + fk);
-            float xpos = fract(t + spawn);
-            float dx = abs(uv.x - xpos);
-            // Wrap distance for cleaner edges
-            dx = min(dx, 1.0 - dx);
-            float pulse = step(dx, pulseSize) * step(dy, pulseSize);
-            if (pulse > 0.0) {
-                vec3 pc = pickColor(hash11(fi * 31.1 + fk * 5.7),
-                                    redArea, blueArea, yellowArea, greyMix);
-                col = pc;
-            }
+    // Rare cell-colour swap key — bass-triggered, holds for several
+    // seconds so the swap reads as a "decision" not a strobe.
+    float swapKey = floor(t / 7.0 + audioBass * 0.5);
+
+    // ─── compute current line positions (with smoothstep repartition) ─
+    // Arrays are sized to LINES_V/LINES_H maxima; only the first
+    // activeLinesV / activeLinesH slots are actually consulted.
+    float xs[LINES_V];
+    for (int j = 0; j < LINES_V; j++) {
+        xs[j] = linePos(float(j), float(activeLinesV),
+                        float(j) * 1.31 + 11.0, t, period);
+    }
+    float ys[LINES_H];
+    for (int i = 0; i < LINES_H; i++) {
+        ys[i] = linePos(float(i), float(activeLinesH),
+                        float(i) * 1.71 + 27.0, t, period);
+    }
+
+    // ─── identify which rectangle we're in ────────────────────────────
+    int cellX = 0;
+    for (int j = 0; j < LINES_V; j++) {
+        if (j < activeLinesV && uv.x > xs[j]) cellX = j + 1;
+    }
+    int cellY = 0;
+    for (int i = 0; i < LINES_H; i++) {
+        if (i < activeLinesH && uv.y > ys[i]) cellY = i + 1;
+    }
+
+    // ─── default fill: cell colour ───────────────────────────────────
+    int cIdx = cellColour(vec2(float(cellX), float(cellY)), swapKey);
+    vec3 col = pal5(cIdx);
+
+    // Optional warm/cool tint on cream cells: shift PAL_WHITE toward
+    // a slightly warmer or cooler hue per cell. Strictly bounded so the
+    // five-colour read stays intact when wSat == 0 (default).
+    if (cIdx == 0 && wSat > 0.0) {
+        float tintHash = h12(vec2(float(cellX), float(cellY)) * 3.7
+                              + swapKey * 0.91);
+        // -1..+1 — negative = cool, positive = warm.
+        float tintDir  = tintHash * 2.0 - 1.0;
+        vec3  warm     = vec3( 0.06,  0.02, -0.06); // pull R+, B-
+        vec3  cool     = vec3(-0.06, -0.02,  0.06); // pull B+, R-
+        vec3  shift    = (tintDir > 0.0) ? warm : cool;
+        col = clamp(col + shift * wSat * abs(tintDir), 0.0, 1.0);
+    }
+
+    // ─── horizontal lines: black baseline + marching squares ─────────
+    for (int i = 0; i < LINES_H; i++) {
+        if (i >= activeLinesH) break;
+        float dy = uv.y - ys[i];
+        float ady = abs(dy);
+        if (ady < lineW) {
+            col = PAL_BLACK;
+        }
+        if (ady < SQUARE) {
+            float salt = float(i) * 11.13 + 3.7;
+            vec3 sq = lineSquares(uv.x, dy, salt, t,
+                                  audioBass, audioTreble, aR, pulseAmt);
+            if (sq != PAL_BLACK) col = sq;
         }
     }
 
-    // ---- Vertical lanes ----
-    for (int j = 0; j < 14; j++) {
-        if (j >= NV) break;
-        float fj = float(j) + compositionSeed * 2.17;
-        float laneX = (float(j) + 0.5) / float(NV)
-                    + (hash11(fj * 5.71) - 0.5) * (1.0 / float(NV)) * 0.7
-                    + cos(TIME * 0.13 + fj * 3.1) * 0.012;
-        float dx = abs(uv.x - laneX);
-        if (dx > laneWidth + pulseSize) continue;
-
-        float lane = smoothstep(laneWidth, 0.0, dx);
-        col = mix(col, BBW_GREY * 0.6, lane * 0.35);
-
-        float speed = marchSpeed * (0.5 + hash11(fj * 13.7) * 1.5)
-                    * (1.0 + audioHigh * audioReact * 0.6);
-        float dir = (hash11(fj * 19.3) < 0.5) ? -1.0 : 1.0;
-        float t = TIME * speed * dir;
-        for (int k = 0; k < 12; k++) {
-            if (float(k) >= pulseDensity) break;
-            float fk = float(k);
-            float spawn = hash11(fj * 29.7 + fk);
-            float ypos = fract(t + spawn);
-            float dy2 = abs(uv.y - ypos);
-            dy2 = min(dy2, 1.0 - dy2);
-            float pulse = step(dy2, pulseSize) * step(dx, pulseSize);
-            if (pulse > 0.0) {
-                vec3 pc = pickColor(hash11(fj * 37.3 + fk * 7.1),
-                                    redArea, blueArea, yellowArea, greyMix);
-                col = pc;
-            }
+    // ─── vertical lines: same idea, march along y ────────────────────
+    for (int j = 0; j < LINES_V; j++) {
+        if (j >= activeLinesV) break;
+        float dx = uv.x - xs[j];
+        float adx = abs(dx);
+        if (adx < lineW) {
+            col = PAL_BLACK;
+        }
+        if (adx < SQUARE) {
+            float salt = float(j) * 13.71 + 17.3;
+            vec3 sq = lineSquares(uv.y, dx, salt, t,
+                                  audioBass, audioTreble, aR, pulseAmt);
+            if (sq != PAL_BLACK) col = sq;
         }
     }
 
-    // ---- Static rectangular cell fills — the canonical Mondrian
-    // ---- *Composition with Red, Blue and Yellow* device. Without
-    // ---- these, shader is Boogie Woogie only; with them, it can read
-    // ---- as either the late jazz grids OR the classical primary
-    // ---- compositions. Cells positioned and sized at hashed offsets,
-    // ---- drift slowly so they breathe without strobing.
-    {
-        const int CELLS = 4;
-        const vec3 CELL_COLS[4] = vec3[4](
-            BBW_RED, BBW_BLUE, BBW_YELLOW, BBW_GREY);
-        for (int k = 0; k < CELLS; k++) {
-            float fk = float(k) + compositionSeed * 5.71;
-            vec2 cMin = vec2(hash11(fk * 1.7) * 0.55,
-                             hash11(fk * 2.3) * 0.55);
-            vec2 cSize = vec2(0.12 + hash11(fk * 3.1) * 0.18,
-                              0.10 + hash11(fk * 4.7) * 0.16);
-            // Slow drift so cells don't read as dead-static geometry.
-            cMin += 0.008 * vec2(sin(TIME * 0.11 + fk),
-                                 cos(TIME * 0.09 + fk * 1.7));
-            vec2 cMax = cMin + cSize;
-            if (uv.x > cMin.x && uv.x < cMax.x
-             && uv.y > cMin.y && uv.y < cMax.y) {
-                col = CELL_COLS[k];
-            }
-        }
+    // ─── frame border (Mondrian framed his canvases edge-to-edge in
+    // ─── black) — gives the composition a definite stop.
+    if (uv.x < lineW || uv.x > 1.0 - lineW
+     || uv.y < lineW || uv.y > 1.0 - lineW) {
+        col = PAL_BLACK;
     }
 
-    // ---- Intersection glow ----
-    // Where a horizontal and vertical lane cross, paint a small primary
-    // square that pulses with the bass — Boogie Woogie's brightest beats.
-    if (intersectionGlow > 0.0) {
-        for (int i = 0; i < 14; i++) {
-            if (i >= NH) break;
-            float fi = float(i) + compositionSeed * 1.31;
-            // Lane Y must include the same breath as the lane loop above
-            // or the glow squares will drift off the actual lane crossings.
-            float laneY = (float(i) + 0.5) / float(NH)
-                        + (hash11(fi * 7.13) - 0.5) * (1.0 / float(NH)) * 0.7
-                        + sin(TIME * 0.15 + fi * 2.7) * 0.012;
-            for (int j = 0; j < 14; j++) {
-                if (j >= NV) break;
-                float fj = float(j) + compositionSeed * 2.17;
-                float laneX = (float(j) + 0.5) / float(NV)
-                            + (hash11(fj * 5.71) - 0.5) * (1.0 / float(NV)) * 0.7
-                            + cos(TIME * 0.13 + fj * 3.1) * 0.012;
-                vec2 d = uv - vec2(laneX, laneY);
-                float r = length(d);
-                float boxSz = pulseSize * 1.6
-                            * (1.0 + audioBass * audioReact * 0.6);
-                if (abs(d.x) < boxSz && abs(d.y) < boxSz) {
-                    vec3 pc = pickColor(hash11(fi * 41.3 + fj * 43.1),
-                                        redArea, blueArea, yellowArea, greyMix);
-                    float lit = 1.0 - smoothstep(boxSz * 0.6, boxSz, max(abs(d.x), abs(d.y)));
-                    col = mix(col, pc, lit * intersectionGlow);
-                }
-            }
-        }
-    }
-
-    // Optional input bleed — quantized to primaries through a 3-colour
-    // posterize, lets video drive the composition.
-    if (IMG_SIZE_inputTex.x > 0.0) {
-        vec3 src = texture(inputTex, uv).rgb;
-        float L = dot(src, vec3(0.299, 0.587, 0.114));
-        vec3 q = (L > 0.6) ? BBW_YELLOW
-              : (L > 0.4) ? BBW_RED
-              : (L > 0.2) ? BBW_BLUE : vec3(0.05);
-        col = mix(col, q, 0.10);
-    }
-
-    // ── Animated colored rectangles drifting across the grid ──────────
-    // Adds the "movement" the user wants — colored rectangles that
-    // glide between grid intersections, all bordered with thick black.
-    int RC = int(clamp(rectCount, 0.0, 16.0));
-    for (int ri = 0; ri < 16; ri++) {
-        if (ri >= RC) break;
-        float fri = float(ri);
-        // Each rect drifts on a unique low-frequency path
-        vec2 home = vec2(hash11(fri * 7.13), hash11(fri * 11.7));
-        vec2 wobble = vec2(sin(TIME * rectMotion * 0.5 + fri * 1.3),
-                           cos(TIME * rectMotion * 0.4 + fri * 1.7)) * 0.04;
-        vec2 ctr = home + wobble;
-        // Snap centers to lane intersections so rects always sit "in" the grid
-        float lH = clamp(lanesH, 2.0, 14.0);
-        float lV = clamp(lanesV, 2.0, 14.0);
-        ctr.x = floor(ctr.x * lV + 0.5) / lV;
-        ctr.y = floor(ctr.y * lH + 0.5) / lH;
-        // Size — varies, snaps to grid cells
-        vec2 hs = vec2(0.06 + 0.08 * hash11(fri * 13.3),
-                       0.05 + 0.07 * hash11(fri * 17.9));
-        vec2 d = abs(uv - ctr);
-        if (d.x < hs.x && d.y < hs.y) {
-            float ridx = mod(fri, 4.0);
-            vec3 rc = (ridx < 0.5) ? BBW_RED
-                    : (ridx < 1.5) ? BBW_YELLOW
-                    : (ridx < 2.5) ? BBW_BLUE
-                                   : BBW_PAPER;
-            col = rc;
-        }
-        // Thick black outline (Mondrian's signature heavy black borders)
-        float outerX = abs(uv.x - ctr.x) - hs.x;
-        float outerY = abs(uv.y - ctr.y) - hs.y;
-        float edge = max(outerX, outerY);
-        // Outline thickness scales with laneWidth (now defaults thicker)
-        col = mix(col, vec3(0.05),
-                  smoothstep(laneWidth + 0.002, laneWidth - 0.002, abs(edge)) * 0.95);
-    }
-
-    // Surprise: every ~31s a single rectangle quietly turns Mondrian-
-    // forbidden green for ~0.5s.
-    {
-        float _ph = fract(TIME / 31.0);
-        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.20, 0.10, _ph);
-        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
-        float _h = fract(sin(floor(TIME / 31.0) * 91.7) * 43758.5453);
-        vec2 _o = vec2(0.05 + _h * 0.55, 0.05 + fract(_h * 13.7) * 0.55);
-        vec2 _s = vec2(0.18 + fract(_h * 7.3) * 0.20, 0.18 + fract(_h * 11.1) * 0.20);
-        vec2 _q = (_suv - _o) / _s;
-        float _in = step(0.0, _q.x) * step(_q.x, 1.0) * step(0.0, _q.y) * step(_q.y, 1.0);
-        col = mix(col, vec3(0.10, 0.55, 0.20), _f * _in * 0.75);
-    }
-
+    // Output linear HDR — palette deliberately stays in [0,1] to keep
+    // the strict five-colour read; host applies tone curve.
     gl_FragColor = vec4(col, 1.0);
 }

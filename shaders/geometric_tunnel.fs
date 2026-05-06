@@ -1,229 +1,309 @@
 /*{
-  "CATEGORIES": [
-    "Radiant"
-  ],
-  "DESCRIPTION": "Geometric tunnel flythrough with neon edges and texture-mapped walls",
+  "CATEGORIES": ["Generator", "Tunnel", "Audio Reactive"],
+  "DESCRIPTION": "Geometric Tunnel — architectural recession to a vanishing point, rendered in screen-space with log-distance mapping. Five mood presets reference Kubrick's Stargate (Trumbull '68), Anthony McCall's solid-light cones, Escher tessellated stairwells, Bauhaus concentric primaries (Klee/Kandinsky), and brutalist concrete grids. Bass pushes forward speed, mid drives lateral handheld sway, treble sparkles the off-center vanishing-point hot spot. Stays alive in silence with constant slow forward drift. Single-pass, LINEAR HDR.",
   "INPUTS": [
-    {
-      "NAME": "baseColor",
-      "LABEL": "Color",
-      "TYPE": "color",
-      "DEFAULT": [1.0, 1.0, 1.0, 1.0]
-    },
-    {
-      "NAME": "inputTex",
-      "LABEL": "Texture",
-      "TYPE": "image"
-    },
-    {
-      "NAME": "transparentBg",
-      "LABEL": "Transparent",
-      "TYPE": "bool",
-      "DEFAULT": true
-    },
-    {
-      "NAME": "tunnelSides",
-      "LABEL": "Sides",
-      "TYPE": "float",
-      "DEFAULT": 6.0,
-      "MIN": 4.0,
-      "MAX": 10.0
-    },
-    {
-      "NAME": "tunnelRadius",
-      "LABEL": "Radius",
-      "TYPE": "float",
-      "DEFAULT": 1.5,
-      "MIN": 0.8,
-      "MAX": 3.0
-    },
-    {
-      "NAME": "neonGlow",
-      "LABEL": "Neon Glow",
-      "TYPE": "float",
-      "DEFAULT": 0.6,
-      "MIN": 0.0,
-      "MAX": 1.0
-    },
-    {
-      "NAME": "flightSpeed",
-      "LABEL": "Speed",
-      "TYPE": "float",
-      "DEFAULT": 0.5,
-      "MIN": 0.0,
-      "MAX": 1.0
-    }
+    { "NAME": "mood",        "LABEL": "Mood",          "TYPE": "long",  "DEFAULT": 0,
+      "VALUES": [0,1,2,3,4],
+      "LABELS": ["Stargate","McCall Cone","Escher Stair","Bauhaus","Brutalist"] },
+    { "NAME": "tunnelSpeed", "LABEL": "Forward Speed", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.55 },
+    { "NAME": "tunnelTwist", "LABEL": "Twist",         "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.18 },
+    { "NAME": "vanishOffX",  "LABEL": "Vanish Off-X",  "TYPE": "float", "MIN": -0.4, "MAX": 0.4, "DEFAULT": 0.08 },
+    { "NAME": "vanishOffY",  "LABEL": "Vanish Off-Y",  "TYPE": "float", "MIN": -0.4, "MAX": 0.4, "DEFAULT": -0.06 },
+    { "NAME": "hazeDensity", "LABEL": "Atmosphere",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55 },
+    { "NAME": "exposure",    "LABEL": "Exposure",      "TYPE": "float", "MIN": 0.2, "MAX": 2.5, "DEFAULT": 1.0 },
+    { "NAME": "audioReact",  "LABEL": "Audio React",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
-#define MAX_STEPS 48
-#define SURF_DIST 0.003
-#define MAX_DIST 30.0
-#define PI 3.14159265
+// ════════════════════════════════════════════════════════════════════════
+//  Geometric Tunnel — five compositional moods, all keyed to a single
+//  log-distance screen-space mapping:
+//        depth = log(1/r)   so depth grows toward the vanishing point
+//        angle = atan2(uv - vanishingPoint)
+//  Decorations live at integer depths via fract(depth + flightZ) so the
+//  tunnel "flies past" without raymarching. The vanishing point is held
+//  off-center for compositional ease (rule of thirds nudge).
+//
+//  Output is LINEAR HDR — no internal tonemap. Host applies ACES.
+//  Vanishing-point peaks 1.6+, scan-band crests ~1.4 to seed bloom.
+// ════════════════════════════════════════════════════════════════════════
 
-// Polygon distance in 2D (hexagonal/octagonal cross-section)
-float sdPolygon(vec2 p, float r, float sides) {
-  float an = PI / sides;
-  float bn = atan(p.x, p.y);
-  float sector = floor(bn / (2.0 * an) + 0.5);
-  bn = bn - sector * 2.0 * an;
-  vec2 cs = vec2(cos(an), sin(an));
-  p = length(p) * vec2(cos(bn), abs(sin(bn)));
-  p -= r * cs;
-  p.x = max(p.x, 0.0);
-  return length(p) * sign(p.y);
+#define PI   3.14159265359
+#define TAU  6.28318530718
+
+// ─── tiny utils ───────────────────────────────────────────────────────
+float hash11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
+float hash21(vec2 p)  { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+
+vec3 hsv2rgb(vec3 c) {
+    vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 
-float scene(vec3 p, float z_offset) {
-  // Tunnel along Z axis
-  vec3 q = p;
-  q.z += z_offset;
-
-  // Bass makes walls pulse
-  float bassPulse = smoothstep(0.0, 1.0, audioBass) * 0.25;
-  float radius = tunnelRadius + bassPulse + sin(q.z * 0.3 + TIME * 0.5) * 0.15;
-
-  // Negative polygon — inside is the empty space
-  float sides = floor(tunnelSides);
-  float d = -sdPolygon(q.xy, radius, sides);
-
-  // Add ring segments for edge detail
-  float ringSpacing = 2.0;
-  float ringZ = mod(q.z + ringSpacing * 0.5, ringSpacing) - ringSpacing * 0.5;
-  float ring = max(abs(ringZ) - 0.06, -sdPolygon(q.xy, radius - 0.08, sides));
-  d = min(d, ring);
-
-  return d;
+// Smooth pulse around a center value
+float band(float x, float center, float w) {
+    return smoothstep(w, 0.0, abs(x - center));
 }
 
-vec3 calcNormal(vec3 p, float z_offset) {
-  vec2 e = vec2(0.003, -0.003);
-  return normalize(
-    e.xyy * scene(p + e.xyy, z_offset) +
-    e.yyx * scene(p + e.yyx, z_offset) +
-    e.yxy * scene(p + e.yxy, z_offset) +
-    e.xxx * scene(p + e.xxx, z_offset)
-  );
+// Recession factor: 1.0 right at the vanishing point, 0.0 at the frame edge.
+// Drives both depth darkening (near = dim) and vanishing-point glow (far = bright).
+float recession(float r) {
+    return 1.0 - smoothstep(0.0, 0.9, r);
 }
 
-float edgeGlow(vec3 p, float z_offset) {
-  // Detect polygon edges by how close we are to them
-  float sides = floor(tunnelSides);
-  float an = PI / sides;
-  vec2 q = p.xy;
-  float bn = atan(q.x, q.y);
-  float sector = floor(bn / (2.0 * an) + 0.5);
-  float edgeAngle = abs(bn - sector * 2.0 * an);
-  // Closer to edge = stronger glow
-  float edgeDist = edgeAngle * length(q);
-  float glow = exp(-edgeDist * 12.0);
+// ─── MOOD 0 : Stargate — vertical rainbow bands flying past ───────────
+vec3 moodStargate(float depth, float angle, float r, float flightZ, float audio, float treble) {
+    // Hue sweeps with depth (so bands fly toward camera) and with angle
+    // (so columns colour-shift around the wall).
+    float bandIdx = angle * (3.0 / PI) * 6.0 + depth * 1.6 + flightZ * 0.6;
+    float h       = fract(bandIdx * 0.08 + flightZ * 0.05);
+    vec3  rb      = hsv2rgb(vec3(h, 0.95, 1.0));
 
-  // Ring glow
-  float ringSpacing = 2.0;
-  float ringZ = mod(p.z + z_offset + ringSpacing * 0.5, ringSpacing) - ringSpacing * 0.5;
-  float ringGlow = exp(-abs(ringZ) * 8.0);
+    // Hard-edged saturated columns marching past the vanishing point
+    float colJit  = step(0.55, fract(bandIdx * 0.5));
+    rb            = mix(rb * 0.35, rb * 1.4, colJit);
 
-  return (glow + ringGlow * 0.5) * neonGlow;
+    // Iconic horizontal scan-band: a ring at a flying depth, crossing radially
+    float ringPos = fract(depth * 0.5 + flightZ * 0.35);
+    float ring    = exp(-pow((ringPos - 0.5) * 8.0, 2.0));
+    rb           += vec3(1.4, 1.1, 0.8) * ring * (0.7 + 0.7 * treble);
+
+    // Recession: near (large r) is dim, far (small r) is bright
+    float rec     = recession(r);
+    rb           *= mix(0.08, 1.2, rec);
+
+    // Bright vanishing-point spike — peaks above 1.6 for bloom
+    rb           += vec3(1.7, 1.5, 2.0) * pow(rec, 6.0) * (0.7 + 0.6 * audio);
+    return rb;
 }
 
-void main() {
-  vec2 uv = (gl_FragCoord.xy - RENDERSIZE.xy * 0.5) / min(RENDERSIZE.x, RENDERSIZE.y);
+// ─── MOOD 1 : McCall Cone — single cone of light through fog ──────────
+vec3 moodMcCall(float depth, float angle, float r, float flightZ, float audio) {
+    // Volumetric reading: brightness falls with radial distance from the
+    // vanishing point, plus a soft "haze" gradient that boils slowly.
+    float core    = exp(-r * 7.0);                 // tight on-axis core
+    float halo    = exp(-r * 2.0) * 0.55;          // wider halo
+    float fogBoil = 0.5 + 0.5 * sin(flightZ * 1.3 + angle * 3.0);
+    float haze    = exp(-r * 1.1) * (0.30 + 0.40 * fogBoil);
 
-  // Camera flies through tunnel
-  float audioSpeed = smoothstep(0.0, 1.0, audioLevel) * flightSpeed;
-  float z_offset = TIME * (flightSpeed * 2.0 + audioSpeed * 3.0);
+    // Solid-light striations radiating from the vanishing point
+    float rays    = pow(0.5 + 0.5 * cos(angle * 9.0 + flightZ * 0.5), 12.0);
+    rays         *= exp(-r * 1.8);
 
-  vec3 ro = vec3(0.0, 0.0, 0.0);
+    // Depth-banded volumetric slabs (the Anthony McCall reading)
+    float slab    = 0.5 + 0.5 * sin(depth * 3.0 - flightZ * 1.4);
+    slab          = pow(slab, 4.0) * exp(-r * 2.2);
 
-  // Mouse controls camera tilt
-  vec2 tilt = vec2(0.0);
-  if (mousePos.x > 0.0 || mousePos.y > 0.0) {
-    tilt = (mousePos - 0.5) * 0.8;
-  }
-  vec3 rd = normalize(vec3(uv.x + tilt.x, uv.y + tilt.y, 1.5));
+    vec3 light    = vec3(0.95, 0.92, 1.00);        // cool white lamp
+    vec3 col      = light * (core * 1.7 + halo + haze * 0.8 + rays * 0.7 + slab * 0.6);
+    col          *= 0.9 + 0.4 * audio;             // breath
+    return col;
+}
 
-  // Raymarch
-  float totalDist = 0.0;
-  bool hit = false;
-  vec3 p;
-  for (int i = 0; i < MAX_STEPS; i++) {
-    p = ro + rd * totalDist;
-    float d = scene(p, z_offset);
-    if (d < SURF_DIST) { hit = true; break; }
-    if (totalDist > MAX_DIST) break;
-    totalDist += d * 0.8; // Slow down near walls for accuracy
-  }
+// ─── MOOD 2 : Escher Stair — tessellated polygons along walls ─────────
+vec3 moodEscher(float depth, float angle, float r, float flightZ, float audio) {
+    // Subdivide the tunnel wall into a (depth, theta) grid; each cell hosts
+    // a hexagon whose orientation flips with cell parity for the
+    // impossible-stair illusion.
+    float zCell   = floor(depth * 1.6 + flightZ);
+    float aCell   = floor(angle * 6.0 / PI + zCell * 0.5); // shift each row
+    vec2  cellId  = vec2(aCell, zCell);
 
-  vec2 texUV = gl_FragCoord.xy / RENDERSIZE.xy;
-  vec4 texSample = texture2D(inputTex, texUV);
-  bool hasTexture = texSample.a > 0.01;
+    // Local cell coords [-1,1]
+    float zLocal  = fract(depth * 1.6 + flightZ) * 2.0 - 1.0;
+    float aLocal  = fract(angle * 6.0 / PI + zCell * 0.5) * 2.0 - 1.0;
+    vec2  q       = vec2(aLocal, zLocal);
 
-  vec3 col = vec3(0.0);
-  float alpha = 0.0;
+    // Rotate alternate cells 30° for the woven Escher reading
+    float rot     = mod(cellId.x + cellId.y, 2.0) * (PI / 6.0);
+    float c = cos(rot), s = sin(rot);
+    q             = mat2(c, -s, s, c) * q;
 
-  if (hit) {
-    vec3 n = calcNormal(p, z_offset);
-    vec3 v = normalize(-rd);
-    vec3 L = normalize(vec3(0.5, 1.0, -0.5));
-    vec3 H = normalize(L + v);
+    // Hexagon SDF
+    vec2  hq      = abs(q);
+    float hex     = max(hq.x * 0.866 + hq.y * 0.5, hq.y) - 0.78;
 
-    float diff = max(dot(n, L), 0.0);
-    float spec = pow(max(dot(n, H), 0.0), 48.0);
-    float fresnel = 0.3 + 0.7 * pow(1.0 - max(dot(n, v), 0.0), 3.0);
+    // Edge stroke + fill
+    float stroke  = smoothstep(0.06, 0.02, abs(hex));
+    float fill    = smoothstep(0.02, -0.06, hex);
 
-    // Neon edge glow
-    float glow = edgeGlow(p, z_offset);
-    vec3 neonCol = baseColor.rgb * 2.0;
+    // Two-tone weave — alternates per cell to read as Escher
+    float tone    = mod(cellId.x + cellId.y * 0.5, 2.0);
+    vec3  warm    = vec3(0.95, 0.78, 0.42);
+    vec3  cool    = vec3(0.28, 0.42, 0.66);
+    vec3  fillCol = mix(cool, warm, tone) * 0.85;
+    vec3  edgeCol = vec3(1.0, 0.92, 0.72) * 1.5;
 
-    // Depth fade
-    float depthFade = 1.0 - smoothstep(5.0, MAX_DIST, totalDist);
+    vec3 col      = fillCol * fill + edgeCol * stroke;
 
-    if (hasTexture) {
-      // Texture on tunnel walls
-      vec2 refractUV = texUV + n.xy * 0.06;
-      // Scroll texture with tunnel flight
-      refractUV.y += fract(z_offset * 0.05);
-      vec3 texCol = texture2D(inputTex, fract(refractUV)).rgb;
+    // Recession: dim the near rim, glow the vanishing point
+    float rec     = recession(r);
+    col          *= mix(0.10, 1.1, rec);
+    col          += vec3(1.6, 1.3, 0.85) * pow(rec, 5.0) * (0.5 + 0.5 * audio);
+    return col;
+}
 
-      col = texCol * (diff * 0.5 + 0.15);
-      col += texCol * spec * fresnel * 0.6;
-      col += neonCol * glow * 0.8;
+// ─── MOOD 3 : Bauhaus — concentric primary frames spaced along axis ───
+vec3 moodBauhaus(float depth, float angle, float r, float flightZ, float audio) {
+    // Each integer step in depth places one frame; cycles 5 primaries / 3 shapes.
+    float zCell  = floor(depth * 0.8 + flightZ);
+    float zLocal = fract(depth * 0.8 + flightZ);
+    float framePresence = exp(-pow((zLocal - 0.5) * 4.5, 2.0));
+
+    // Klee/Kandinsky primaries: red, yellow, blue, black, off-white
+    int idx = int(mod(zCell, 5.0));
+    vec3 cFrame;
+    if      (idx == 0) cFrame = vec3(1.10, 0.22, 0.18);
+    else if (idx == 1) cFrame = vec3(1.15, 0.92, 0.16);
+    else if (idx == 2) cFrame = vec3(0.10, 0.36, 0.95);
+    else if (idx == 3) cFrame = vec3(0.06, 0.06, 0.06);
+    else               cFrame = vec3(1.05, 1.00, 0.92);
+
+    // Shape per cell: 0 = ring, 1 = filled disk, 2 = square frame
+    float shapeIdx = mod(zCell, 3.0);
+    float shape;
+    if (shapeIdx < 0.5) {
+        // Ring
+        shape = band(r, 0.55, 0.04);
+    } else if (shapeIdx < 1.5) {
+        // Filled disk with a thin outline accent
+        float disk    = smoothstep(0.50, 0.46, r);
+        float outline = band(r, 0.50, 0.015) * 1.3;
+        shape = disk * 0.7 + outline;
     } else {
-      // Procedural wall color
-      vec3 wallCol = vec3(0.08, 0.06, 0.12);
-      col = wallCol * (diff * 0.5 + 0.1);
-      col += vec3(0.9) * spec * fresnel * 0.5;
-      col += neonCol * glow * 1.2;
+        // Square frame (in angle/r space, approximated by max(|cos|,|sin|))
+        float sq    = max(abs(r * cos(angle)), abs(r * sin(angle)));
+        shape = band(sq, 0.50, 0.035);
     }
 
-    col *= depthFade;
-    col += smoothstep(0.0, 1.0, audioLevel) * neonCol * 0.05;
-    alpha = depthFade;
-  }
+    vec3 col = cFrame * shape * framePresence * 1.5;
 
-  // Apply base color tinting
-  col *= mix(vec3(1.0), baseColor.rgb, 0.5);
+    // Recession + vanishing pop
+    float rec = recession(r);
+    col      *= mix(0.18, 1.0, rec);
+    col      += vec3(1.6, 1.4, 0.95) * pow(rec, 6.0) * (0.5 + 0.5 * audio);
+    return col;
+}
 
-  // Tone mapping
-  col = col * (2.51 * col + 0.03) / (col * (2.43 * col + 0.59) + 0.14);
+// ─── MOOD 4 : Brutalist — gridded concrete panels, cool ambient end ───
+vec3 moodBrutalist(float depth, float angle, float r, float flightZ, float audio) {
+    // Panel grid in (depth, theta). Seams = bright lines between cells.
+    float zCell   = floor(depth * 2.2 + flightZ);
+    float aCell   = floor(angle * 8.0 / PI);
+    float zLocal  = fract(depth * 2.2 + flightZ);
+    float aLocal  = fract(angle * 8.0 / PI);
 
-  if (!hit && transparentBg) {
-    alpha = 0.0;
-  }
+    // Seams: thin bright stripes at panel borders
+    float seamZ   = smoothstep(0.04, 0.0, min(zLocal, 1.0 - zLocal));
+    float seamA   = smoothstep(0.04, 0.0, min(aLocal, 1.0 - aLocal));
+    float seam    = max(seamZ, seamA);
 
-  // Surprise: every ~42s the tunnel briefly turns into a stained-glass
-  // window — the geometric facets fill with saturated jewel tones for
-  // ~1s then return to neutral.
-  {
-    float _ph = fract(TIME / 42.0);
-    float _f  = smoothstep(0.0, 0.05, _ph) * smoothstep(0.20, 0.10, _ph);
-    if (hit) {
-      vec3 _jewel = 0.5 + 0.5 * cos(6.28318 *
-                          dot(col, vec3(0.41, 0.31, 0.27)) +
-                          vec3(0.0, 2.094, 4.188));
-      col = mix(col, _jewel * (0.5 + dot(col, vec3(0.5))), _f * 0.7);
+    // Per-panel concrete tone — small grayscale variation
+    float t        = hash21(vec2(aCell, zCell));
+    vec3  concrete = vec3(0.42 + 0.15 * t, 0.42 + 0.14 * t, 0.44 + 0.15 * t);
+
+    // Subtle aggregate speckle (poured concrete texture feel)
+    float speckle = hash21(vec2(aCell * 17.0 + zLocal * 31.0, zCell * 13.0 + aLocal * 19.0));
+    concrete     *= 0.85 + 0.30 * (speckle - 0.5);
+
+    // Recession: near panels dim, far panels bright
+    float rec     = recession(r);
+    vec3  col     = concrete * mix(0.06, 1.1, rec);
+
+    // Bright concrete seams accentuate the perspective
+    col          += vec3(1.0, 0.95, 0.85) * seam * mix(0.15, 1.4, rec);
+
+    // Cool ambient lamp at the vanishing end (peaks above 1.6)
+    col          += vec3(0.55, 0.75, 1.05) * pow(rec, 5.0) * (0.9 + 0.5 * audio);
+    return col;
+}
+
+// ─── main ─────────────────────────────────────────────────────────────
+void main() {
+    // Aspect-corrected centered coords
+    vec2 uv  = isf_FragNormCoord.xy * 2.0 - 1.0;
+    uv.x    *= RENDERSIZE.x / RENDERSIZE.y;
+
+    float t      = TIME;
+    float audio  = clamp(audioReact, 0.0, 2.0);
+    float bass   = clamp(audioBass, 0.0, 1.0) * audio;
+    float mid    = clamp(audioMid,  0.0, 1.0) * audio;
+    float treble = clamp(audioHigh, 0.0, 1.0) * audio;
+
+    // Mid-band drives lateral "handheld" camera sway
+    vec2 sway = vec2(
+        sin(t * 0.7) * 0.025 + sin(t * 1.9) * 0.012,
+        cos(t * 0.5) * 0.018 + cos(t * 2.1) * 0.010
+    ) * (0.4 + 1.6 * mid);
+
+    // Off-center vanishing point — held away from dead-center
+    vec2 vp   = vec2(vanishOffX, vanishOffY) + sway;
+    vec2 d    = uv - vp;
+
+    // Optional twist around the vanishing point (treble sparkle modulation)
+    float twAng = tunnelTwist * (0.6 + 0.4 * sin(t * 0.27)) + treble * 0.15;
+    float c = cos(twAng), s = sin(twAng);
+    d        = mat2(c, -s, s, c) * d;
+
+    // Polar mapping: r = distance from vanishing point, a = angle
+    float r     = length(d);
+    float angle = atan(d.y, d.x);
+
+    // Log-distance "depth": grows toward the vanishing point.
+    // log(1/r) is large at center, small (or negative) at edges.
+    float depth = -log(max(r, 0.012));
+
+    // Forward flight — silence baseline + bass push (kept always alive)
+    float speed   = tunnelSpeed * (0.6 + 1.5 * bass) + 0.22;
+    float flightZ = t * speed;
+
+    // Choose mood
+    int   m   = int(mood + 0.5);
+    vec3  col = vec3(0.0);
+    if      (m == 0) col = moodStargate (depth, angle, r, flightZ, audio, treble);
+    else if (m == 1) col = moodMcCall   (depth, angle, r, flightZ, audio);
+    else if (m == 2) col = moodEscher   (depth, angle, r, flightZ, audio);
+    else if (m == 3) col = moodBauhaus  (depth, angle, r, flightZ, audio);
+    else             col = moodBrutalist(depth, angle, r, flightZ, audio);
+
+    // ── Atmosphere / haze: lifts the deeper parts of the frame ────────
+    float haze   = exp(-r * 1.3) * hazeDensity;
+    vec3  hazeC;
+    if      (m == 0) hazeC = vec3(0.30, 0.14, 0.45); // stargate violet
+    else if (m == 1) hazeC = vec3(0.55, 0.62, 0.80); // McCall white-blue
+    else if (m == 2) hazeC = vec3(0.34, 0.24, 0.14); // Escher umber
+    else if (m == 3) hazeC = vec3(1.00, 0.96, 0.88); // Bauhaus paper
+    else             hazeC = vec3(0.20, 0.26, 0.36); // brutalist cool grey
+    col         += hazeC * haze * 0.65;
+
+    // ── Vanishing-point hot spot (treble sparkle) ─────────────────────
+    float hotR   = 0.07 + 0.03 * sin(t * 2.3);
+    float hot    = exp(-pow(r / hotR, 2.0));
+    vec3  hotC;
+    if      (m == 0) hotC = vec3(1.7, 1.4, 2.1);
+    else if (m == 1) hotC = vec3(1.7, 1.65, 1.55);
+    else if (m == 2) hotC = vec3(1.7, 1.4, 0.90);
+    else if (m == 3) hotC = vec3(1.7, 1.5, 1.00);
+    else             hotC = vec3(1.0, 1.2, 1.6);
+    col         += hotC * hot * (0.8 + 1.6 * treble);
+
+    // Tiny multi-octave sparkle near the vanishing point on treble
+    float spk    = 0.0;
+    for (int i = 0; i < 6; i++) {
+        float fi = float(i);
+        vec2  sp = vp + vec2(0.04 * cos(t * (1.7 + fi)),
+                             0.04 * sin(t * (1.3 + fi * 0.7)));
+        spk     += exp(-length(uv - sp) * 60.0);
     }
-  }
+    col         += vec3(1.4, 1.2, 1.6) * spk * (0.15 + treble) * 0.8;
 
-  gl_FragColor = vec4(col, alpha);
+    // ── Soft vignette pull (corners) ──────────────────────────────────
+    float vig    = 1.0 - 0.28 * dot(uv * 0.55, uv * 0.55);
+    col         *= vig;
+
+    // Final exposure (LINEAR HDR — no tonemap; host applies ACES)
+    col         *= exposure;
+
+    gl_FragColor = vec4(col, 1.0);
 }

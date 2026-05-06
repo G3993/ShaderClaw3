@@ -1,157 +1,399 @@
 /*{
   "CATEGORIES": ["Generator", "Art Movement", "Audio Reactive"],
-  "DESCRIPTION": "Fauvism after Matisse — accumulating brush-stroke field. N curved colored capsules layer on top of each other, each pulled along the painter's wrist direction. No cells, no Voronoi, no closest-wins. Just impasto paint laid on impasto paint. Pure Fauvist primaries.",
+  "DESCRIPTION": "Fauvism after Matisse — four discrete moods, each its own visual world. La Danse (1909–10): five silhouetted figures ringing on cobalt/viridian ground, holding hands, audio bass throws the tempo. Jazz Cut-Out (1947): flat Icarus-style paper shapes — cobalt body, red heart-circle, yellow stars on white. Femme au chapeau (1905): the Salon scandal portrait — central oval head with green nose-stripe, vermilion cheek, viridian shadow. Goldfish (1912): orange-vermilion fish in glass bowl, flattened multi-perspective. Loud, unmixed, wild-beasts color. Single-pass, LINEAR HDR.",
   "INPUTS": [
-    { "NAME": "strokeCount",    "LABEL": "Stroke Count",  "TYPE":"float","MIN":10.0,"MAX":80.0, "DEFAULT":48.0 },
-    { "NAME": "strokeLength",   "LABEL": "Stroke Length", "TYPE":"float","MIN":0.05,"MAX":0.50, "DEFAULT":0.18 },
-    { "NAME": "strokeWidth",    "LABEL": "Stroke Width",  "TYPE":"float","MIN":0.005,"MAX":0.06,"DEFAULT":0.020 },
-    { "NAME": "strokeCurve",    "LABEL": "Stroke Curve",  "TYPE":"float","MIN":0.0, "MAX":0.30, "DEFAULT":0.10 },
-    { "NAME": "lengthVariance","LABEL": "Length Variance","TYPE":"float","MIN":0.0, "MAX":1.0,  "DEFAULT":0.55 },
-    { "NAME": "drift",          "LABEL": "Drift Speed",   "TYPE":"float","MIN":0.0, "MAX":1.5,  "DEFAULT":0.20 },
-    { "NAME": "wristAngle",     "LABEL": "Wrist Angle",   "TYPE":"float","MIN":0.0, "MAX":6.2832,"DEFAULT":0.7 },
-    { "NAME": "wristSpread",    "LABEL": "Wrist Spread",  "TYPE":"float","MIN":0.0, "MAX":3.14, "DEFAULT":0.9 },
-    { "NAME": "strokeOpacity",  "LABEL": "Stroke Opacity","TYPE":"float","MIN":0.30,"MAX":1.0,  "DEFAULT":0.85 },
-    { "NAME": "edgeSoftness",   "LABEL": "Edge Softness", "TYPE":"float","MIN":0.0, "MAX":1.0,  "DEFAULT":0.45 },
-    { "NAME": "canvasGrain",    "LABEL": "Canvas Grain",  "TYPE":"float","MIN":0.0, "MAX":0.30, "DEFAULT":0.10 },
-    { "NAME": "saturation",     "LABEL": "Saturation",    "TYPE":"float","MIN":0.4, "MAX":2.0,  "DEFAULT":1.20 },
-    { "NAME": "paletteShift",   "LABEL": "Palette Shift", "TYPE":"float","MIN":0.0, "MAX":1.0,  "DEFAULT":0.0 },
-    { "NAME": "audioReact",     "LABEL": "Audio React",   "TYPE":"float","MIN":0.0, "MAX":2.0,  "DEFAULT":1.0 },
-    { "NAME": "inputBleed",     "LABEL": "Input Bleed",   "TYPE":"float","MIN":0.0, "MAX":0.7,  "DEFAULT":0.0 },
-    { "NAME": "inputTex",       "LABEL": "Texture",       "TYPE":"image" }
+    { "NAME": "mood",        "LABEL": "Mood",        "TYPE": "long",  "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["La Danse","Jazz Cut-Out","Femme au chapeau","Goldfish (1912)"] },
+    { "NAME": "tempo",       "LABEL": "Tempo",       "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.7 },
+    { "NAME": "wildness",    "LABEL": "Wildness",    "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 1.0 },
+    { "NAME": "paintTooth",  "LABEL": "Paint Tooth", "TYPE": "float", "MIN": 0.0, "MAX": 0.4, "DEFAULT": 0.12 },
+    { "NAME": "audioReact",  "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
+    { "NAME": "gestureSpeed","LABEL": "Gesture Speed","TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
+    { "NAME": "figureScale", "LABEL": "Figure Scale","TYPE": "float", "MIN": 0.5, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
-// 9-stop Fauvist palette
-const vec3 FAUVE0 = vec3(0.96, 0.32, 0.16);  // vermilion
-const vec3 FAUVE1 = vec3(0.97, 0.83, 0.20);  // lemon
-const vec3 FAUVE2 = vec3(0.30, 0.66, 0.32);  // sap green
-const vec3 FAUVE3 = vec3(0.10, 0.32, 0.78);  // cobalt
-const vec3 FAUVE4 = vec3(0.94, 0.30, 0.55);  // hot pink
-const vec3 FAUVE5 = vec3(0.62, 0.34, 0.68);  // mauve
-const vec3 FAUVE6 = vec3(0.95, 0.55, 0.10);  // cadmium orange
-const vec3 FAUVE7 = vec3(0.18, 0.55, 0.65);  // viridian
-const vec3 FAUVE8 = vec3(0.85, 0.10, 0.25);  // alizarin
-const vec3 CANVAS = vec3(0.94, 0.90, 0.78);
+// ════════════════════════════════════════════════════════════════════════
+//  Fauvism — Matisse, four moods.
+//  Each mood is a self-contained scene. No cross-blending: when you flip
+//  the enum the world changes. Palette is loud, unmixed, saturated.
+// ════════════════════════════════════════════════════════════════════════
 
+// ─── shared palette (loud, unmixed) ──────────────────────────────────
+const vec3 VERMILION = vec3(0.96, 0.22, 0.12);
+const vec3 COBALT    = vec3(0.05, 0.22, 0.78);
+const vec3 VIRIDIAN  = vec3(0.05, 0.55, 0.42);
+const vec3 LEMON     = vec3(0.98, 0.86, 0.16);
+const vec3 ROSE      = vec3(0.95, 0.32, 0.55);
+const vec3 ORANGE    = vec3(0.98, 0.52, 0.10);
+const vec3 EMERALD   = vec3(0.10, 0.70, 0.30);
+const vec3 PAPER     = vec3(0.97, 0.95, 0.88);
+
+// ─── hash / noise / tooth ────────────────────────────────────────────
 float hash11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
 float hash21(vec2 p)  { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
-vec3 fauvePalette(float idx) {
-    int i = int(mod(idx + paletteShift * 9.0, 9.0));
-    if (i == 0) return FAUVE0;
-    if (i == 1) return FAUVE1;
-    if (i == 2) return FAUVE2;
-    if (i == 3) return FAUVE3;
-    if (i == 4) return FAUVE4;
-    if (i == 5) return FAUVE5;
-    if (i == 6) return FAUVE6;
-    if (i == 7) return FAUVE7;
-    return FAUVE8;
-}
-vec3 saturateCol(vec3 c, float a) {
-    float L = dot(c, vec3(0.299, 0.587, 0.114));
-    return mix(vec3(L), c, a);
+// painter's tooth — coarse canvas grain, no fine noise
+float paintGrain(vec2 p) {
+    vec2 g = floor(p * 220.0);
+    return hash21(g) - 0.5;
 }
 
-// Distance to a quadratic bezier — used to give strokes a gentle curve.
-// Approximated by sampling 5 points along the curve, returning min dist.
-float distToCurvedStroke(vec2 p, vec2 a, vec2 b, vec2 c) {
-    float minD = 1e9;
-    // Sample 6 points along bezier from a to c, with control point b
-    for (int i = 0; i <= 5; i++) {
-        float t = float(i) / 5.0;
-        vec2 q = mix(mix(a, b, t), mix(b, c, t), t);
-        float d = length(p - q);
-        if (d < minD) minD = d;
-    }
-    return minD;
+mat2 rot(float a) { float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
+
+// ─── SDFs ────────────────────────────────────────────────────────────
+float sdCircle(vec2 p, float r) { return length(p) - r; }
+float sdEllipse(vec2 p, vec2 r) { return (length(p / r) - 1.0) * min(r.x, r.y); }
+float sdSegment(vec2 p, vec2 a, vec2 b, float r) {
+    vec2 pa = p - a, ba = b - a;
+    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+    return length(pa - ba * h) - r;
+}
+// 5-pointed star
+float sdStar(vec2 p, float r) {
+    p = abs(p);
+    float a = atan(p.x, p.y);
+    float n = 5.0;
+    float ang = mod(a, 6.2831853 / n) - 3.1415926 / n;
+    return length(p) * cos(ang) - r * cos(3.1415926 / n);
 }
 
-void main() {
-    vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
-    float aspect = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
-    vec2 cuv = uv * vec2(aspect, 1.0);
-    float t = TIME * (1.0 + audioMid * audioReact * 0.3);
+// ─── MOOD 0 — La Danse ───────────────────────────────────────────────
+//  Five silhouetted figures in a ring on saturated cobalt/viridian ground.
+//  Heads + torso + reaching arms. Slowly rotating. Bass throws tempo.
+vec3 moodLaDanse(vec2 uv, float t, float audio, float wild, float fScale) {
+    // Two-band ground — cobalt sky upper, viridian ground lower (horizon ~0.55)
+    float horizon = 0.52 + 0.04 * sin(uv.x * 3.0);
+    vec3 col = uv.y > horizon ? COBALT : VIRIDIAN;
 
-    // Start with raw canvas — strokes paint ON TOP.
-    vec3 col = CANVAS * (0.92 + 0.08 * hash21(uv * RENDERSIZE.x * 0.3) * canvasGrain * 10.0);
+    // Slowly rotating ring center
+    vec2 center = vec2(0.5, 0.46);
+    vec2 q = (uv - center) / fScale;
+    q.x *= 1.0;  // already aspect-corrected by caller
 
-    // ── Stroke accumulation pass ─────────────────────────────────────
-    // Each stroke is a curved bezier capsule. We layer strokes onto the
-    // canvas in deterministic order — later strokes paint over earlier
-    // ones (no closest-wins; this is impasto, not Voronoi).
-    int N = int(clamp(strokeCount, 1.0, 80.0));
-    for (int i = 0; i < 80; i++) {
-        if (i >= N) break;
+    float ring = 0.30;
+    float dance = t * (0.4 + audio * 0.6);  // bass throws tempo
+
+    float bestD = 1e9;
+    int bestI = 0;
+    // Five figures
+    for (int i = 0; i < 5; i++) {
         float fi = float(i);
+        float a = dance + fi * 1.25663706;  // 2pi/5
+        vec2 fp = vec2(cos(a), sin(a)) * ring;
 
-        // Stroke center — random position with slow drift
-        vec2 home = vec2(hash11(fi * 7.13), hash11(fi * 11.7));
-        home += vec2(sin(t * drift + fi * 1.7),
-                     cos(t * drift * 0.7 + fi * 2.3)) * 0.06;
-        vec2 center = home * vec2(aspect, 1.0);
+        // Figure-local coords — rotate with the dance so they face outward
+        vec2 lp = q - fp;
+        // Tilt slightly outward (Matisse's bodies lean away from center)
+        float lean = a + 1.5707963;
+        lp = rot(-lean) * lp;
 
-        // Stroke direction — wrist angle + per-stroke spread
-        float angle = wristAngle + (hash11(fi * 13.3) - 0.5) * wristSpread;
-        // Slight angle jitter over time
-        angle += sin(t * 0.05 + fi * 0.7) * 0.15;
-        vec2 dir = vec2(cos(angle), sin(angle));
-        vec2 perp = vec2(-dir.y, dir.x);
+        // Head — slightly above the body
+        float head = sdCircle(lp - vec2(0.0, 0.085), 0.040);
 
-        // Stroke length
-        float len = strokeLength * mix(0.5, 1.5, hash11(fi * 17.9) * lengthVariance + (1.0 - lengthVariance) * 0.5);
-        len *= 1.0 + audioBass * audioReact * 0.10;
+        // Torso — vertical capsule
+        float torso = sdSegment(lp, vec2(0.0, 0.05), vec2(0.0, -0.06), 0.038);
 
-        // Bezier control points — start, curved-mid, end
-        vec2 a = center - dir * len * 0.5;
-        vec2 c = center + dir * len * 0.5;
-        // Curved control point — pushes off the line by strokeCurve
-        float bend = (hash11(fi * 19.7) - 0.5) * 2.0 * strokeCurve;
-        vec2 b = center + perp * bend * len;
+        // Reaching arms — toward neighbors (left/right)
+        float armSwing = sin(dance * 2.0 + fi) * 0.05 * wild;
+        float armL = sdSegment(lp,
+            vec2(-0.02, 0.03),
+            vec2(-0.115, 0.012 + armSwing),
+            0.018);
+        float armR = sdSegment(lp,
+            vec2( 0.02, 0.03),
+            vec2( 0.115, 0.012 - armSwing),
+            0.018);
 
-        // Distance from this fragment to the stroke
-        float d = distToCurvedStroke(cuv, a, b, c);
+        // Legs — slight stride
+        float stride = sin(dance * 2.0 + fi * 1.7) * 0.02;
+        float legL = sdSegment(lp, vec2(-0.012, -0.06), vec2(-0.025 + stride, -0.135), 0.020);
+        float legR = sdSegment(lp, vec2( 0.012, -0.06), vec2( 0.025 - stride, -0.135), 0.020);
 
-        // Stroke width with per-stroke variance + audio modulation
-        float w = strokeWidth * (0.7 + hash11(fi * 23.1) * 0.6);
-
-        // Mask — soft tapered edges with edgeSoftness slider
-        float core = 1.0 - smoothstep(w * 0.4, w, d);
-        float fringe = 1.0 - smoothstep(w, w * (1.0 + edgeSoftness * 1.5), d);
-        float mask = mix(core, fringe, edgeSoftness);
-
-        if (mask < 0.001) continue;
-
-        // Stroke color
-        float pidx = mod(fi * 2.31 + floor(t * 0.03), 9.0);
-        vec3 strokeCol = fauvePalette(pidx);
-
-        // Per-stroke pigment density variation — paint loaded on the
-        // brush isn't uniform; some patches are denser
-        float density = 0.65 + 0.35 * hash21(floor(cuv * 80.0) + fi);
-        strokeCol *= density;
-
-        // Composite — straight alpha over (impasto stacking)
-        col = mix(col, strokeCol, mask * strokeOpacity);
+        float fig = min(head, min(torso, min(min(armL, armR), min(legL, legR))));
+        if (fig < bestD) { bestD = fig; bestI = i; }
     }
 
-    // ── Optional input texture bleed ─────────────────────────────────
-    if (IMG_SIZE_inputTex.x > 0.0 && inputBleed > 0.0) {
-        vec3 src = texture(inputTex, uv).rgb;
-        vec3 best = FAUVE0; float bd = 1e9;
-        for (int k = 0; k < 9; k++) {
-            vec3 cand = fauvePalette(float(k));
-            float dd = dot(src - cand, src - cand);
-            if (dd < bd) { bd = dd; best = cand; }
-        }
-        col = mix(col, best, inputBleed);
+    // Figures are silhouetted in vermilion-pink (Matisse's terracotta-red bodies)
+    vec3 figureCol = vec3(0.86, 0.30, 0.18);  // Matisse's body-red
+    float silh = 1.0 - smoothstep(0.0, 0.004, bestD * fScale);
+    col = mix(col, figureCol, silh);
+
+    // Tiny rim of darker red where bodies meet ground (Matisse outlined)
+    float rim = smoothstep(0.006, 0.0, abs(bestD * fScale)) * 0.6;
+    col = mix(col, figureCol * 0.55, rim * 0.4);
+
+    return col;
+}
+
+// ─── MOOD 1 — Jazz Cut-Out (Icarus, plate VIII, 1947) ───────────────
+//  Flat colored paper shapes: cobalt body w/ red heart-circle, yellow stars,
+//  stark white ground. Audio drives star pulse + heartbeat.
+vec3 moodJazz(vec2 uv, float t, float audio, float wild, float fScale) {
+    vec3 col = PAPER;  // stark off-white paper
+
+    // Icarus body — falling silhouette, cobalt cut-paper
+    // Body roughly centered; arms flung up; legs trailing
+    vec2 c = vec2(0.50, 0.48);
+    vec2 p = (uv - c) / fScale;
+    // Slight sway as if falling
+    p.x += 0.012 * sin(t * 0.8);
+
+    // Torso — elongated ellipse
+    float torso = sdEllipse(p - vec2(0.0, 0.0), vec2(0.055, 0.13));
+    // Head
+    float head = sdCircle(p - vec2(0.0, 0.16), 0.045);
+    // Arms — flung up and out
+    float armL = sdSegment(p, vec2(-0.02, 0.08), vec2(-0.16, 0.20 + 0.01 * sin(t)), 0.025);
+    float armR = sdSegment(p, vec2( 0.02, 0.08), vec2( 0.17, 0.18 - 0.01 * sin(t)), 0.025);
+    // Legs — kicking
+    float legL = sdSegment(p, vec2(-0.025, -0.10), vec2(-0.05, -0.24 + 0.012 * sin(t * 1.3)), 0.030);
+    float legR = sdSegment(p, vec2( 0.025, -0.10), vec2( 0.06, -0.23 - 0.012 * sin(t * 1.3)), 0.030);
+
+    float body = min(torso, min(head, min(min(armL, armR), min(legL, legR))));
+    // Hard cut-paper edge — almost binary
+    float bodyMask = 1.0 - smoothstep(0.0, 0.0015, body * fScale);
+    col = mix(col, COBALT, bodyMask);
+
+    // Heart-circle on the body — red, audio-pulses
+    float heartBeat = 0.85 + 0.20 * sin(t * (3.0 + audio * 4.0));
+    float heart = sdCircle(p - vec2(0.0, 0.02), 0.030 * heartBeat);
+    float heartMask = 1.0 - smoothstep(0.0, 0.002, heart * fScale);
+    col = mix(col, VERMILION, heartMask);
+
+    // Yellow stars scattered on the page — pulse with audio
+    for (int i = 0; i < 9; i++) {
+        float fi = float(i);
+        vec2 sp = vec2(hash11(fi * 3.7), hash11(fi * 5.13));
+        // Push stars away from center mass
+        sp = mix(vec2(0.1, 0.1), vec2(0.9, 0.9), sp);
+        // Skip ones too close to the body
+        vec2 sd = uv - sp;
+        if (length(sd - vec2(0.0, 0.0) + (sp - c)) < 0.01) continue;
+
+        float starR = mix(0.020, 0.038, hash11(fi * 7.7));
+        starR *= 0.85 + 0.30 * sin(t * 1.5 + fi) * (0.5 + audio * wild * 0.8);
+
+        // Rotate each star a bit
+        vec2 lq = uv - sp;
+        lq = rot(fi * 0.6 + t * 0.1) * lq;
+        float st = sdStar(lq, starR);
+        float sm = 1.0 - smoothstep(0.0, 0.0015, st);
+        col = mix(col, LEMON, sm);
     }
 
-    // Saturation push — Fauvism wants pure unmodulated color
-    col = saturateCol(col, saturation * (0.92 + audioBass * audioReact * 0.18));
+    // Two small green leaf shapes (Matisse loved tucking these in)
+    for (int j = 0; j < 2; j++) {
+        float fj = float(j);
+        vec2 lp = uv - vec2(0.12 + 0.76 * fj, 0.78 - 0.55 * fj);
+        lp = rot(0.8 + fj * 1.2) * lp;
+        float leaf = sdEllipse(lp, vec2(0.030, 0.012));
+        float lm = 1.0 - smoothstep(0.0, 0.0015, leaf);
+        col = mix(col, EMERALD, lm);
+    }
 
-    // Audio breath
-    col *= 0.92 + audioLevel * audioReact * 0.15;
+    return col;
+}
+
+// ─── MOOD 2 — Femme au chapeau (1905) ────────────────────────────────
+//  Single oval head, wild non-naturalistic colors: green nose stripe,
+//  vermilion cheek, viridian shadow. The Salon scandal piece.
+vec3 moodFemme(vec2 uv, float t, float audio, float wild, float fScale) {
+    // Background — riotous unblended brushstrokes (rose / orange / yellow patches)
+    vec2 bp = uv * vec2(8.0, 6.0);
+    vec2 bc = floor(bp);
+    float h = hash21(bc);
+    vec3 bg;
+    if (h < 0.33) bg = ROSE;
+    else if (h < 0.66) bg = ORANGE;
+    else bg = LEMON;
+    // Soften patch borders just a hair
+    vec2 bf = fract(bp);
+    float patchEdge = min(min(bf.x, 1.0 - bf.x), min(bf.y, 1.0 - bf.y));
+    bg *= 0.88 + 0.12 * smoothstep(0.0, 0.04, patchEdge);
+    vec3 col = bg;
+
+    vec2 c = vec2(0.50, 0.52);
+    vec2 p = (uv - c) / fScale;
+
+    // The hat — large flamboyant ellipse on top, multi-color
+    vec2 hp = p - vec2(0.0, 0.20);
+    float hat = sdEllipse(hp, vec2(0.26, 0.13));
+    float hatMask = 1.0 - smoothstep(0.0, 0.002, hat * fScale);
+    // Hat is bands of color — vermilion crown, viridian band, rose plume
+    float hatBand = (hp.y + 0.13) / 0.26;
+    vec3 hatCol = VERMILION;
+    if (hatBand > 0.55) hatCol = VIRIDIAN;
+    if (hatBand > 0.78) hatCol = ROSE;
+    // Plume — small offset blob
+    float plume = sdEllipse(hp - vec2(0.13, 0.06), vec2(0.07, 0.05));
+    float plumeMask = 1.0 - smoothstep(0.0, 0.002, plume);
+    col = mix(col, hatCol, hatMask);
+    col = mix(col, LEMON, plumeMask);
+
+    // Head — oval, off-white-ish base
+    vec2 fp = p - vec2(0.0, 0.0);
+    float face = sdEllipse(fp, vec2(0.13, 0.18));
+    float faceMask = 1.0 - smoothstep(0.0, 0.002, face * fScale);
+    // Base skin — pale rose
+    vec3 skin = vec3(0.96, 0.78, 0.62);
+    vec3 faceCol = skin;
+
+    // The infamous green nose stripe — vertical band down center
+    float nose = abs(fp.x) - 0.018;
+    float noseStripe = (1.0 - smoothstep(0.0, 0.005, nose)) * step(fp.y, 0.07) * step(-0.10, fp.y);
+    faceCol = mix(faceCol, EMERALD, noseStripe * 0.95 * wild);
+
+    // Vermilion cheek — left side, audio-flush
+    vec2 cheekP = fp - vec2(-0.065, -0.035);
+    float cheek = sdEllipse(cheekP, vec2(0.030, 0.025));
+    float cheekMask = (1.0 - smoothstep(0.0, 0.004, cheek)) * (0.85 + 0.15 * audio);
+    faceCol = mix(faceCol, VERMILION, cheekMask * wild);
+
+    // Viridian shadow — right side of face (the scandalous one)
+    vec2 shadP = fp - vec2(0.06, -0.02);
+    float shad = sdEllipse(shadP, vec2(0.045, 0.10));
+    float shadMask = (1.0 - smoothstep(0.0, 0.012, shad)) * 0.85;
+    faceCol = mix(faceCol, VIRIDIAN, shadMask * wild);
+
+    // Eyes — two small cobalt almond shapes
+    float eyeL = sdEllipse(fp - vec2(-0.045, 0.03), vec2(0.012, 0.006));
+    float eyeR = sdEllipse(fp - vec2( 0.045, 0.03), vec2(0.012, 0.006));
+    float eyeMask = (1.0 - smoothstep(0.0, 0.0015, min(eyeL, eyeR)));
+    faceCol = mix(faceCol, COBALT, eyeMask);
+
+    // Mouth — small vermilion mark, gently pulses
+    float mouth = sdEllipse(fp - vec2(0.0, -0.085), vec2(0.022, 0.008 * (0.9 + 0.2 * sin(t * 0.7))));
+    float mouthMask = 1.0 - smoothstep(0.0, 0.002, mouth);
+    faceCol = mix(faceCol, vec3(0.88, 0.18, 0.28), mouthMask);
+
+    col = mix(col, faceCol, faceMask);
+
+    return col;
+}
+
+// ─── MOOD 3 — Goldfish (1912) ────────────────────────────────────────
+//  Orange-vermilion fish drifting in glass bowl, viewed top + side
+//  simultaneously (Matisse's flattened multi-perspective).
+vec3 moodGoldfish(vec2 uv, float t, float audio, float wild, float fScale) {
+    // Background — Matisse's signature pink-rose interior wall
+    vec3 col = vec3(0.94, 0.55, 0.50);
+
+    // Green leafy frame at edges (the ferns)
+    vec2 ep = uv;
+    float leaves = 0.0;
+    for (int i = 0; i < 5; i++) {
+        float fi = float(i);
+        vec2 lc = vec2(0.05 + 0.22 * fi, 0.05 + 0.18 * sin(fi * 2.0));
+        vec2 lp = uv - lc;
+        lp = rot(fi * 1.4) * lp;
+        float lf = sdEllipse(lp, vec2(0.06, 0.018));
+        leaves = max(leaves, 1.0 - smoothstep(0.0, 0.003, lf));
+    }
+    // mirror on other corner
+    for (int i = 0; i < 5; i++) {
+        float fi = float(i);
+        vec2 lc = vec2(0.95 - 0.22 * fi, 0.95 - 0.18 * sin(fi * 1.7));
+        vec2 lp = uv - lc;
+        lp = rot(-fi * 1.1) * lp;
+        float lf = sdEllipse(lp, vec2(0.05, 0.015));
+        leaves = max(leaves, 1.0 - smoothstep(0.0, 0.003, lf));
+    }
+    col = mix(col, EMERALD, leaves);
+
+    // The bowl — circular (top view) inset on the left,
+    // and an ellipse (side view) on the right. Both contain fish.
+    vec2 cTop = vec2(0.32, 0.50);
+    vec2 cSide = vec2(0.72, 0.50);
+
+    // Top-view bowl — a circle of pale water
+    float topBowl = sdCircle(uv - cTop, 0.20 * fScale);
+    float topMask = 1.0 - smoothstep(0.0, 0.003, topBowl);
+    vec3 water = vec3(0.78, 0.92, 0.95);
+    col = mix(col, water, topMask);
+    // Bowl rim
+    float topRim = abs(topBowl) - 0.005;
+    col = mix(col, vec3(0.35, 0.55, 0.58), 1.0 - smoothstep(0.0, 0.002, topRim));
+
+    // Side-view bowl — an upright ellipse (cylinder seen from side)
+    vec2 sp = uv - cSide;
+    float sideBowl = sdEllipse(sp, vec2(0.16, 0.22) * fScale);
+    float sideMask = 1.0 - smoothstep(0.0, 0.003, sideBowl);
+    col = mix(col, water, sideMask);
+    float sideRim = abs(sideBowl) - 0.005;
+    col = mix(col, vec3(0.35, 0.55, 0.58), 1.0 - smoothstep(0.0, 0.002, sideRim));
+
+    // Fish in top-view bowl — circular drift
+    for (int i = 0; i < 4; i++) {
+        float fi = float(i);
+        float a = t * (0.4 + audio * 0.3) + fi * 1.5707963;
+        vec2 fp = cTop + vec2(cos(a), sin(a)) * 0.10;
+        // fish body — small ellipse pointing along motion
+        vec2 lp = uv - fp;
+        lp = rot(-a + 1.5707963) * lp;
+        float fish = sdEllipse(lp, vec2(0.030, 0.012));
+        // Tail — triangle behind
+        float tail = sdSegment(lp, vec2(-0.025, 0.0), vec2(-0.045, 0.015 * sin(t * 4.0 + fi)), 0.008);
+        float fishMask = (1.0 - smoothstep(0.0, 0.002, min(fish, tail))) * topMask;
+        col = mix(col, VERMILION, fishMask);
+        // Tiny dark eye
+        float eye = sdCircle(lp - vec2(0.018, 0.003), 0.003);
+        col = mix(col, vec3(0.10, 0.05, 0.08), (1.0 - smoothstep(0.0, 0.0008, eye)) * topMask);
+    }
+
+    // Fish in side-view bowl — drifting horizontally
+    for (int i = 0; i < 3; i++) {
+        float fi = float(i);
+        float dx = sin(t * 0.6 + fi * 2.1) * 0.08;
+        float dy = (fi - 1.0) * 0.07 + 0.012 * sin(t + fi);
+        vec2 fp = cSide + vec2(dx, dy);
+        vec2 lp = uv - fp;
+        // Flip by direction of motion
+        float dir = sign(cos(t * 0.6 + fi * 2.1));
+        lp.x *= dir;
+        float fish = sdEllipse(lp, vec2(0.028, 0.011));
+        float tail = sdSegment(lp, vec2(-0.024, 0.0), vec2(-0.040, 0.012 * sin(t * 3.0 + fi * 2.0)), 0.007);
+        float fishMask = (1.0 - smoothstep(0.0, 0.002, min(fish, tail))) * sideMask;
+        col = mix(col, ORANGE, fishMask * 0.7 + VERMILION.r * 0.0);
+        // re-mix with vermilion for boldness
+        col = mix(col, VERMILION, fishMask * 0.6);
+        float eye = sdCircle(lp - vec2(0.017, 0.003), 0.0028);
+        col = mix(col, vec3(0.10, 0.05, 0.08), (1.0 - smoothstep(0.0, 0.0008, eye)) * sideMask);
+    }
+
+    return col;
+}
+
+// ─── main ────────────────────────────────────────────────────────────
+void main() {
+    vec2 uv = isf_FragNormCoord.xy;
+    float aspect = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
+
+    // Aspect-correct so circles stay circles
+    vec2 cuv = uv;
+    cuv.x = (uv.x - 0.5) * aspect + 0.5;
+
+    float gSpeed = clamp(gestureSpeed, 0.0, 2.0);
+    float t = TIME * (0.6 + tempo) * gSpeed;
+    float audio = clamp(audioReact, 0.0, 2.0);
+    float wild = clamp(wildness, 0.0, 1.5);
+    float fScale = clamp(figureScale, 0.5, 2.0);
+
+    int m = int(mood + 0.5);
+    vec3 col;
+    if (m == 0)      col = moodLaDanse(cuv, t, audio, wild, fScale);
+    else if (m == 1) col = moodJazz(cuv, t, audio, wild, fScale);
+    else if (m == 2) col = moodFemme(cuv, t, audio, wild, fScale);
+    else             col = moodGoldfish(cuv, t, audio, wild, fScale);
+
+    // Painter's tooth — coarse canvas grain across the whole image
+    float tooth = paintGrain(uv) * paintTooth;
+    col += tooth * 0.15;
+
+    // Subtle audio breath — never flatten the silence
+    col *= 0.95 + 0.10 * audio * (0.5 + 0.5 * sin(t * 1.4));
+
+    // LINEAR HDR — keep saturation high; host applies tonemap
+    col = max(col, vec3(0.0));
 
     gl_FragColor = vec4(col, 1.0);
 }

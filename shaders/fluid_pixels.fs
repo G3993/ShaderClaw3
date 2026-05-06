@@ -285,45 +285,60 @@ vec4 getColorFromRamp(float t) {
 
 void main() {
     vec2 pix = gl_FragCoord.xy;
-    float gs = max(gridSize * (1.0 + audioBass * 0.5), 1.0);
+    // Non-gating: base alive at audio=0 with subtle idle breath
+    float idlePulse = 1.0 + 0.04 * sin(TIME * 0.7);
+    float gs = max(gridSize * (1.0 + audioBass * 0.5) * idlePulse, 1.0);
     vec2 cell = floor(pix / gs);
     vec2 within = mod(pix, gs);
     float gap = spacing;
 
-    if (useBackgroundColor) {
-        gl_FragColor = backgroundColor;
-    } else {
-        gl_FragColor = vec4(0.0);
+    vec4 bgColor = useBackgroundColor ? backgroundColor : vec4(0.0);
+
+    // Soft AA on cell boundaries: derive a coverage mask via smoothstep+fwidth.
+    // Preserves the pixel-grid aesthetic at small AA width while killing aliasing.
+    float aaW = max(fwidth(pix.x) + fwidth(pix.y), 0.0001) * 0.75;
+    float maskX = smoothstep(gap - aaW, gap + aaW, within.x)
+                * (1.0 - smoothstep(gs - gap - aaW, gs - gap + aaW, within.x));
+    float maskY = smoothstep(gap - aaW, gap + aaW, within.y)
+                * (1.0 - smoothstep(gs - gap - aaW, gs - gap + aaW, within.y));
+    float cellMask = maskX * maskY;
+
+    vec2 cellUV = (cell * gs + gs * 0.5) / RENDERSIZE.xy;
+    vec3 pos = vec3(cellUV.x / zoom * horizontalScale, cellUV.y / zoom * verticalScale, TIME * speed * (1.0 + audioHigh * 3.0));
+    float noiseValue = fbm(pos);
+
+    int ns = int(noiseStyle);
+    if (ns == 3) {
+        noiseValue = sin(noiseValue * 10.0 + TIME * 0.05 * speed);
+    } else if (ns == 2) {
+        noiseValue = abs(noiseValue);
+    } else if (ns == 1) {
+        noiseValue = smoothstep(-0.5, 0.5, noiseValue);
     }
 
-    if (within.x >= gap && within.x <= gs - gap && within.y >= gap && within.y <= gs - gap) {
-        vec2 cellUV = (cell * gs + gs * 0.5) / RENDERSIZE.xy;
-        vec3 pos = vec3(cellUV.x / zoom * horizontalScale, cellUV.y / zoom * verticalScale, TIME * speed * (1.0 + audioHigh * 3.0));
-        float noiseValue = fbm(pos);
+    float intensity = (noiseValue + 1.0) * 0.5;
+    vec4 color = getColorFromRamp(intensity);
 
-        int ns = int(noiseStyle);
-        if (ns == 3) {
-            noiseValue = sin(noiseValue * 10.0 + TIME * 0.05 * speed);
-        } else if (ns == 2) {
-            noiseValue = abs(noiseValue);
-        } else if (ns == 1) {
-            noiseValue = smoothstep(-0.5, 0.5, noiseValue);
-        }
-
-        float intensity = (noiseValue + 1.0) * 0.5;
-        vec4 color = getColorFromRamp(intensity);
-
-        // Texture sampling: each pixel cell samples from the texture at its center
-        vec4 texSample = texture2D(inputTex, cellUV);
-        if (texSample.a > 0.01 && texMix > 0.001) {
-            // Mix texture color with the noise-driven color ramp
-            vec3 texCol = texSample.rgb;
-            // Noise modulates the texture brightness
-            texCol *= (0.3 + intensity * 0.7);
-            color.rgb = mix(color.rgb, texCol, texMix);
-        }
-
-        color.a *= maxOpacity;
-        gl_FragColor = color;
+    // Texture sampling: each pixel cell samples from the texture at its center
+    vec4 texSample = texture2D(inputTex, cellUV);
+    if (texSample.a > 0.01 && texMix > 0.001) {
+        vec3 texCol = texSample.rgb;
+        texCol *= (0.3 + intensity * 0.7);
+        color.rgb = mix(color.rgb, texCol, texMix);
     }
+
+    // HDR PEAKS: hot fluid cores push into 1.4-2.5 linear so bloom catches them.
+    // Curve: quiet mids stay ~1.0, top quartile lifts hard. Audio adds extra heat
+    // but base lift is fully alive at audio=0.
+    float hot = smoothstep(0.65, 0.98, intensity);
+    float peakBoost = 1.0 + hot * (1.1 + audioHigh * 0.6); // ~1.0 -> ~2.1-2.7
+    color.rgb *= peakBoost;
+
+    color.a *= maxOpacity;
+
+    // Composite: cellMask blends fluid pixel over background with soft AA edges.
+    // HDR-safe: no clamp, no tonemap — bright cores stay >1.0 for bloom.
+    float coverage = cellMask * color.a;
+    gl_FragColor.rgb = mix(bgColor.rgb, color.rgb, coverage);
+    gl_FragColor.a = mix(bgColor.a, color.a, cellMask);
 }

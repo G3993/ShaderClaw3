@@ -1,164 +1,155 @@
 /*{
-  "DESCRIPTION": "Interactive Particles — 1024 particles attracted to a center point and the cursor, glowing with velocity-based color. Click and drag to pull them around.",
-  "CREDIT": "Ported from Shadertoy McXXzH by berelium",
-  "CATEGORIES": ["Generator", "Particles", "Interactive"],
+  "DESCRIPTION": "Interactive Particles — infinite procedural particle field. Multiple streams of particles loop forever by drifting across the canvas via fract(time*speed+seed); no accumulating state means no decay. mouseX/mouseY (-1..1) steer the field — bind from MIDI/OSC/another source to let collaborators edit the flow live. Audio modulates density and glow (never gates). Outputs LINEAR HDR; host applies tonemap.",
+  "CREDIT": "Reimagined as a procedural infinite field by Easel/ShaderClaw3",
+  "CATEGORIES": ["Generator", "Particles", "Interactive", "Audio Reactive"],
   "INPUTS": [
-    { "NAME": "attraction",     "LABEL": "Attraction",     "TYPE": "float", "DEFAULT": 8.0,    "MIN": 0.0,    "MAX": 30.0 },
-    { "NAME": "maxSpeed",       "LABEL": "Max Speed",      "TYPE": "float", "DEFAULT": 600.0,  "MIN": 50.0,   "MAX": 2000.0 },
-    { "NAME": "particleSize",   "LABEL": "Particle Size",  "TYPE": "float", "DEFAULT": 0.0005, "MIN": 0.0001, "MAX": 0.003 },
-    { "NAME": "intensity",      "LABEL": "Intensity",      "TYPE": "float", "DEFAULT": 1.9,    "MIN": 0.5,    "MAX": 3.0 },
-    { "NAME": "contrast",       "LABEL": "Contrast",       "TYPE": "float", "DEFAULT": 1.04,   "MIN": 0.5,    "MAX": 2.0 },
-    { "NAME": "gamma",          "LABEL": "Gamma",          "TYPE": "float", "DEFAULT": 1.6,    "MIN": 1.0,    "MAX": 3.0 },
-    { "NAME": "centerAttractor","LABEL": "Center Attract", "TYPE": "bool",  "DEFAULT": true },
-    { "NAME": "wrapEdges",      "LABEL": "Wrap Edges",     "TYPE": "bool",  "DEFAULT": true },
-    { "NAME": "bounce",         "LABEL": "Bounce",         "TYPE": "float", "DEFAULT": 0.4,    "MIN": 0.0,    "MAX": 1.5 },
-    { "NAME": "atanColor",      "LABEL": "Direction Hue",  "TYPE": "bool",  "DEFAULT": true }
-  ],
-  "PASSES": [
-    { "TARGET": "bufA", "PERSISTENT": true },
-    {}
+    { "NAME": "streamCount",    "LABEL": "Streams",         "TYPE": "long",  "DEFAULT": 3, "VALUES": [1,2,3,4,5], "LABELS": ["1","2","3","4","5"] },
+    { "NAME": "particlesPerStream","LABEL": "Density",      "TYPE": "long",  "DEFAULT": 2, "VALUES": [0,1,2,3],   "LABELS": ["Sparse","Med","Dense","Storm"] },
+    { "NAME": "flowSpeed",      "LABEL": "Flow Speed",      "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.0,  "MAX": 1.5 },
+    { "NAME": "flowAngle",      "LABEL": "Flow Angle",      "TYPE": "float", "DEFAULT": 0.0,  "MIN": 0.0,  "MAX": 6.2832 },
+    { "NAME": "spread",         "LABEL": "Stream Spread",   "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0,  "MAX": 1.0 },
+    { "NAME": "swirl",          "LABEL": "Swirl",           "TYPE": "float", "DEFAULT": 0.6,  "MIN": 0.0,  "MAX": 2.0 },
+    { "NAME": "particleSize",   "LABEL": "Particle Size",   "TYPE": "float", "DEFAULT": 0.0014, "MIN": 0.0003, "MAX": 0.005 },
+    { "NAME": "intensity",      "LABEL": "Intensity",       "TYPE": "float", "DEFAULT": 1.7,  "MIN": 0.5,  "MAX": 3.0 },
+    { "NAME": "exposure",       "LABEL": "Exposure",        "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.2,  "MAX": 3.0 },
+    { "NAME": "hueShift",       "LABEL": "Hue",             "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0,  "MAX": 1.0 },
+    { "NAME": "hueSpread",      "LABEL": "Hue Spread",      "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0,  "MAX": 1.0 },
+    { "NAME": "mouseX",         "LABEL": "Mouse X (-1..1)", "TYPE": "float", "DEFAULT": 0.0,  "MIN": -1.0, "MAX": 1.0 },
+    { "NAME": "mouseY",         "LABEL": "Mouse Y (-1..1)", "TYPE": "float", "DEFAULT": 0.0,  "MIN": -1.0, "MAX": 1.0 },
+    { "NAME": "mouseInfluence", "LABEL": "Steer Strength",  "TYPE": "float", "DEFAULT": 0.6,  "MIN": 0.0,  "MAX": 2.0 },
+    { "NAME": "mouseRadius",    "LABEL": "Steer Radius",    "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.05, "MAX": 1.5 },
+    { "NAME": "audioReact",     "LABEL": "Audio React",     "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0,  "MAX": 2.0 }
   ]
 }*/
 
-#define NUM_PARTICLES 1024
-#define P_ITERATOR    32
-#define PI            3.14159265359
-#define ASPECT        (RENDERSIZE.x / RENDERSIZE.y)
+// INTERACTIVE PARTICLES — fully procedural; no buffers, no state, no decay.
+// Each particle's position is f(streamIndex, particleIndex, TIME) so the field
+// is INFINITE BY DESIGN — every frame is computed fresh from TIME. Collaborators
+// can bind mouseX / mouseY (and any of the float inputs) from MIDI/OSC/another
+// source to "edit" the flow live without ever respawning anything.
+// LINEAR HDR out; host applies tonemap.
 
-// Hash without sine (Dave Hoskins, https://www.shadertoy.com/view/4djSRW)
-#define HASHSCALE1 443.8975
-#define HASHSCALE3 vec3(443.897, 441.423, 437.195)
+#define PI 3.14159265359
+#define TWO_PI 6.28318530718
+#define MAX_PARTICLES 96
 
-float hash12(vec2 p) {
-    vec3 p3 = fract(vec3(p.xyx) * HASHSCALE1);
-    p3 += dot(p3, p3.yzx + 19.19);
-    return fract((p3.x + p3.y) * p3.z);
-}
-vec2 hash22(vec2 p) {
-    vec3 p3 = fract(vec3(p.xyx) * HASHSCALE3);
-    p3 += dot(p3, p3.yzx + 19.19);
-    return fract((p3.xx + p3.yz) * p3.zy);
-}
+float h11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
+vec2  h21(float n) { return vec2(h11(n), h11(n + 17.31)); }
 
-vec3 hsl2rgb(vec3 c) {
-    vec3 rgb = clamp(abs(mod(c.x * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
-    return c.z + c.y * (rgb - 0.5) * (1.0 - abs(2.0 * c.z - 1.0));
+// HSV → RGB (for HDR-friendly emissive colors).
+vec3 hsv2rgb(vec3 c) {
+    vec3 p = abs(fract(c.xxx + vec3(0.0, 2.0/3.0, 1.0/3.0)) * 6.0 - 3.0);
+    return c.z * mix(vec3(1.0), clamp(p - 1.0, 0.0, 1.0), c.y);
 }
 
-float ltos1(float x) { return x <= 0.0031308 ? x * 12.92 : 1.055 * pow(x, 0.4166667) - 0.055; }
-
-// ──────────────────────────────────────────────────────────────────────
-// Pass 0 — Buffer A: simulate one particle per pixel (slots 32×32 = 1024)
-// ──────────────────────────────────────────────────────────────────────
-vec2 initialVelocity(vec2 pos) {
-    vec2 dir = normalize(vec2(0.5) - pos);
-    float angle = atan(dir.y, dir.x) * PI;
-    float speed = 0.5;
-    return speed * maxSpeed * vec2(cos(angle), sin(angle));
+int particleTier(int t) {
+    return t == 0 ? 24 : t == 1 ? 48 : t == 2 ? 72 : MAX_PARTICLES;
 }
 
-vec4 passSim(vec2 fragCoord) {
-    vec2 uv = fragCoord / RENDERSIZE;
+// Compute a particle's procedural position in [0,1]^2.
+// (streamIdx, partIdx) seed; TIME drives wrap; mouseX/Y steers when bound.
+vec2 particlePos(int streamIdx, int partIdx, float t, float audio,
+                 vec2 steerTarget, float steerW) {
+    float sf = float(streamIdx);
+    float pf = float(partIdx);
+    float seed = pf * 0.137 + sf * 7.91;
 
-    // Init: first 5 frames seed random positions
-    if (FRAMEINDEX < 5) {
-        vec2 pos = hash22(uv.yx);
-        vec2 vel = initialVelocity(pos);
-        return vec4(pos, vel);
-    }
+    // Per-stream direction & speed (small variance per particle).
+    float a   = flowAngle + sf * 1.21 + (h11(seed + 3.7) - 0.5) * 0.6;
+    float spd = flowSpeed * (0.55 + 0.9 * h11(seed + 9.1)) * (1.0 + 0.25 * sf);
+    vec2  dir = vec2(cos(a), sin(a));
 
-    vec4 prev = texelFetch(bufA, ivec2(fragCoord), 0);
-    vec2 position = prev.xy;
-    vec2 velocity = prev.zw;
+    // Phase wraps forever via fract — INFINITE LOOP BY DESIGN.
+    float phase = fract(t * spd + h11(seed));
 
-    // Mouse attraction (when held — Easel: mouseDown > 0.5)
-    if (mouseDown > 0.5) {
-        vec2 mV = mousePos - position;
-        velocity += attraction * 5.0 / PI * normalize(mV);
-    }
+    // Lateral offset across the stream's perpendicular axis.
+    vec2  perp = vec2(-dir.y, dir.x);
+    float lat  = (h11(seed + 1.3) - 0.5) * 2.0 * spread;
 
-    // Center attractor — inverse-square pull toward (0.5, 0.5)
-    if (centerAttractor) {
-        vec2 v = vec2(0.5) - position;
-        float d = length(v);
-        velocity += (v / d) / pow(max(d, 2.0) / attraction, 2.0);
-    }
+    // Base linear flow centered on (0.5, 0.5).
+    vec2 base = vec2(0.5) + dir * (phase - 0.5) * 1.6 + perp * lat * 0.5;
 
-    // Edge handling
-    if (wrapEdges) {
-        position = fract(position);
-    } else {
-        if (position.x - particleSize < 0.0)  { position.x = particleSize;       velocity.x =  abs(velocity.x) * bounce; }
-        if (position.y + particleSize > 1.0)  { position.y = 1.0 - particleSize; velocity.y = -abs(velocity.y) * bounce; }
-        if (position.x + particleSize > 1.0)  { position.x = 1.0 - particleSize; velocity.x = -abs(velocity.x) * bounce; }
-        if (position.y - particleSize < 0.0)  { position.y = particleSize;       velocity.y =  abs(velocity.y) * bounce; }
-    }
+    // Swirl: a slow rotational wobble around screen center, per-particle phase.
+    float swA = t * (0.15 + 0.35 * h11(seed + 4.2)) + seed * 1.7;
+    vec2  sw  = vec2(cos(swA), sin(swA)) * (0.04 + 0.06 * h11(seed + 5.5)) * swirl;
+    base += sw;
 
-    // Step
-    float dt = TIMEDELTA * 0.001;
-    position += velocity * dt;
+    // Steer toward an external target (mouseX/Y or held mouse). Falloff with
+    // distance — particles outside steerRadius are barely affected; this keeps
+    // the global flow intact while letting the user "edit" a region.
+    vec2 toT = steerTarget - base;
+    float d  = length(toT);
+    float w  = exp(-(d * d) / max(mouseRadius * mouseRadius, 1e-4)) * steerW;
+    base += toT * clamp(w, 0.0, 0.85);
 
-    // Speed cap
-    if (length(velocity) > maxSpeed) velocity = normalize(velocity) * maxSpeed;
+    // Wrap back into [0,1]^2 so streams seamlessly replace themselves.
+    base = fract(base);
 
-    return vec4(position, velocity);
+    // Audio-modulated micro-jitter (modulator, NEVER a gate — works at audio=0).
+    float jA = t * 2.3 + seed * 11.0;
+    base += (vec2(sin(jA), cos(jA * 1.3))) * 0.004 * (0.4 + audio);
+
+    return base;
 }
 
-// ──────────────────────────────────────────────────────────────────────
-// Pass 1 — Image: render particles by iterating Buffer A's grid
-// ──────────────────────────────────────────────────────────────────────
-vec3 renderParticles(vec2 uv) {
-    vec3 color = vec3(0.01);
-    float drawSize = particleSize * ASPECT;
+void main() {
+    vec2 fragCoord = gl_FragCoord.xy;
+    vec2 uv = fragCoord / RENDERSIZE.xy;
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
 
-    for (int y = 0; y < P_ITERATOR; y++) {
-        for (int x = 0; x < P_ITERATOR; x++) {
-            vec4 p = texelFetch(bufA, ivec2(x, y), 0);
-            vec2 d = uv - p.xy;
-            d.x *= ASPECT;
+    // Audio: pure modulator. audio=0 means a slightly less dense / less bright
+    // field — never an empty one. Bass dominates density, mid/high add shimmer.
+    float audio = clamp(audioBass * 1.0 + audioMid * 0.5 + audioHigh * 0.3, 0.0, 2.0);
+    audio *= clamp(audioReact, 0.0, 2.0);
 
-            float mag = (p.z * p.z + p.w * p.w) * 0.000000625;
-            vec3 col;
-            if (atanColor) {
-                float r = atan(p.w, p.z);
-                r += PI * 1.5;
-                col = hsl2rgb(vec3(((r / PI) / 2.0), mag + 0.45, mag + 0.11));
-            } else {
-                col = hsl2rgb(vec3(((mag / maxSpeed * maxSpeed) * 2.5), 0.6, max(0.25, mag)));
-            }
-            float c = 1.0 / length(d);
-            c *= drawSize;
+    // External steer target: prefer host mousePos when held, else mouseX/Y.
+    // mouseX/Y are -1..1 so a MIDI knob centered at 0 means "no steering bias".
+    vec2 mxy01 = vec2(mouseX, mouseY) * 0.5 + 0.5;     // -1..1 → 0..1
+    vec2 steer = mix(mxy01, mousePos, step(0.5, mouseDown));
+    float steerW = mouseInfluence * (0.35 + 0.65 * step(0.5, mouseDown)
+                                    + 0.65 * step(0.001, length(vec2(mouseX, mouseY))));
+
+    int sCount = clamp(int(streamCount), 1, 5);
+    int pCount = particleTier(int(particlesPerStream));
+    // Audio adds up to +50% density without ever subtracting.
+    int activeCount = clamp(pCount + int(float(pCount) * 0.5 * audio), 1, MAX_PARTICLES);
+
+    float drawSize = particleSize * aspect;
+    vec3 color = vec3(0.0);
+
+    for (int s = 0; s < 5; s++) {
+        if (s >= sCount) break;
+        float sf = float(s);
+        for (int i = 0; i < MAX_PARTICLES; i++) {
+            if (i >= activeCount) break;
+
+            vec2 p = particlePos(s, i, TIME, audio, steer, steerW);
+
+            vec2 d = uv - p;
+            d.x *= aspect;
+            float r = length(d);
+
+            // Soft glow kernel — smooth 1/r falloff, never produces NaN.
+            float c = drawSize / max(r, 1e-4);
             c = pow(c, intensity);
+
+            // Per-particle hue: stream + index + a slow time drift for variety.
+            float hue = fract(hueShift
+                              + sf * 0.13
+                              + h11(float(i) * 0.07 + sf * 3.1) * hueSpread
+                              + TIME * 0.015);
+            float sat = 0.7 + 0.25 * h11(float(i) * 0.31 + sf);
+            float val = 0.6 + 0.6 * audio;
+            vec3  col = hsv2rgb(vec3(hue, sat, val));
+
             color += c * col;
         }
     }
 
-    if (centerAttractor) {
-        vec2 a = uv - vec2(0.5);
-        a.x *= ASPECT;
-        float c = 1.0 / length(a);
-        c *= drawSize * 10.0;
-        c = pow(c, intensity);
-        color += c * vec3(0.5);
-    }
-    return color;
-}
+    // Subtle ambient floor so audio=0 still has presence (modulator, not gate).
+    color += vec3(0.012, 0.014, 0.020);
 
-vec4 passFinal(vec2 fragCoord) {
-    vec2 uv = fragCoord / RENDERSIZE;
-    vec3 col = renderParticles(uv);
-
-    // Contrast + ACES tonemap + sRGB encode + gamma
-    col = (col - 0.5) * contrast + 0.5;
-    col = (col * (2.51 * col + 0.03)) / (col * (2.43 * col + 0.59) + 0.14);
-    col = vec3(ltos1(col.r), ltos1(col.g), ltos1(col.b));
-    col = pow(col, vec3(1.0 / gamma));
-    return vec4(col, 1.0);
-}
-
-// ──────────────────────────────────────────────────────────────────────
-void main() {
-    vec2 fragCoord = gl_FragCoord.xy;
-    if (PASSINDEX == 0) FragColor = passSim(fragCoord);
-    else                FragColor = passFinal(fragCoord);
+    // LINEAR HDR out — host applies tonemap.
+    color *= exposure;
+    gl_FragColor = vec4(color, 1.0);
 }

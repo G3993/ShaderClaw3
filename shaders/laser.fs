@@ -45,6 +45,14 @@
       "LABEL": "Color C",
       "TYPE": "color",
       "DEFAULT": [1.0, 0.0, 0.0, 1.0]
+    },
+    {
+      "NAME": "beamCount",
+      "LABEL": "Beam Count",
+      "TYPE": "long",
+      "VALUES": [1, 2, 3, 4, 6, 8, 12],
+      "LABELS": ["1", "2", "3", "4", "6", "8", "12"],
+      "DEFAULT": 4
     }
   ]
 }
@@ -59,45 +67,80 @@ precision highp float;
 float makePoint(float x, float y, float fx, float fy, float sx, float sy, float t) {
    float xx = x * cos(t * fx);
    float yy = y * sin(t * fy);
-   return 1.0 / (sqrt(length(xx + yy) + length(xx * yy)));
+   // Original beam recipe — preserved.
+   float v = 1.0 / (sqrt(length(xx + yy) + length(xx * yy)));
+   // Soft AA on the silhouette: feather the beam edge using screen-space
+   // derivatives so HDR-bright cores don't pixelate when bloom samples them.
+   float aa = fwidth(v) + 1e-4;
+   float core = smoothstep(0.0, aa * 2.0, v - 0.15);
+   return v * mix(0.85, 1.0, core);
 }
 
-vec3 laserCluster(vec2 p, float t) {
+// Beam recipe tables — column-per-channel (a/b/c). The original 9-beam
+// design is preserved; lower beamCount values clamp the loop early.
+const int MAX_BEAMS = 9;
+
+float aFx(int i) {
+   if (i == 0) return 3.3; if (i == 1) return 1.9; if (i == 2) return 0.8;
+   if (i == 3) return 2.3; if (i == 4) return 0.8; if (i == 5) return 0.3;
+   if (i == 6) return 1.4; if (i == 7) return 1.3; return 1.8;
+}
+float aFy(int i) {
+   if (i == 0) return 2.9; if (i == 1) return 2.0; if (i == 2) return 0.7;
+   if (i == 3) return 0.1; if (i == 4) return 1.7; if (i == 5) return 1.0;
+   if (i == 6) return 1.7; if (i == 7) return 2.1; return 1.7;
+}
+float bFx(int i) {
+   if (i == 0) return 1.2; if (i == 1) return 0.7; if (i == 2) return 1.4;
+   if (i == 3) return 2.6; if (i == 4) return 0.7; if (i == 5) return 0.7;
+   if (i == 6) return 0.8; if (i == 7) return 1.4; return 0.7;
+}
+float bFy(int i) {
+   if (i == 0) return 1.9; if (i == 1) return 2.7; if (i == 2) return 0.6;
+   if (i == 3) return 0.9; if (i == 4) return 1.4; if (i == 5) return 1.7;
+   if (i == 6) return 0.5; if (i == 7) return 0.7; return 1.3;
+}
+float cFx(int i) {
+   if (i == 0) return 3.7; if (i == 1) return 1.9; if (i == 2) return 0.8;
+   if (i == 3) return 1.2; if (i == 4) return 0.3; if (i == 5) return 0.3;
+   if (i == 6) return 1.4; if (i == 7) return 0.2; return 1.3;
+}
+float cFy(int i) {
+   if (i == 0) return 0.3; if (i == 1) return 1.3; if (i == 2) return 0.9;
+   if (i == 3) return 1.7; if (i == 4) return 0.6; if (i == 5) return 0.3;
+   if (i == 6) return 0.8; if (i == 7) return 0.6; return 0.5;
+}
+float sxOf(int i) {
+   if (i == 0) return 0.3; if (i == 1) return 0.4; if (i == 2) return 0.4;
+   if (i == 3) return 0.6; if (i == 4) return 0.5; if (i == 5) return 0.4;
+   if (i == 6) return 0.4; if (i == 7) return 0.6; return 0.5;
+}
+float syOf(int i) {
+   if (i == 0) return 0.3; if (i == 1) return 0.4; if (i == 2) return 0.5;
+   if (i == 3) return 0.3; if (i == 4) return 0.4; if (i == 5) return 0.4;
+   if (i == 6) return 0.5; if (i == 7) return 0.3; return 0.4;
+}
+
+vec3 laserCluster(vec2 p, float t, int count) {
    float x = p.x;
    float y = p.y;
 
-   float a =
-       makePoint(x, y, 3.3, 2.9, 0.3, 0.3, t);
-   a = a + makePoint(x, y, 1.9, 2.0, 0.4, 0.4, t);
-   a = a + makePoint(x, y, 0.8, 0.7, 0.4, 0.5, t);
-   a = a + makePoint(x, y, 2.3, 0.1, 0.6, 0.3, t);
-   a = a + makePoint(x, y, 0.8, 1.7, 0.5, 0.4, t);
-   a = a + makePoint(x, y, 0.3, 1.0, 0.4, 0.4, t);
-   a = a + makePoint(x, y, 1.4, 1.7, 0.4, 0.5, t);
-   a = a + makePoint(x, y, 1.3, 2.1, 0.6, 0.3, t);
-   a = a + makePoint(x, y, 1.8, 1.7, 0.5, 0.4, t);
+   // Clamp the requested beam count to the recipe table size.
+   int n = count;
+   if (n < 1) n = 1;
+   if (n > MAX_BEAMS) n = MAX_BEAMS;
 
-   float b =
-       makePoint(x, y, 1.2, 1.9, 0.3, 0.3, t);
-   b = b + makePoint(x, y, 0.7, 2.7, 0.4, 0.4, t);
-   b = b + makePoint(x, y, 1.4, 0.6, 0.4, 0.5, t);
-   b = b + makePoint(x, y, 2.6, 0.9, 0.6, 0.3, t);
-   b = b + makePoint(x, y, 0.7, 1.4, 0.5, 0.4, t);
-   b = b + makePoint(x, y, 0.7, 1.7, 0.4, 0.4, t);
-   b = b + makePoint(x, y, 0.8, 0.5, 0.4, 0.5, t);
-   b = b + makePoint(x, y, 1.4, 0.7, 0.6, 0.3, t);
-   b = b + makePoint(x, y, 0.7, 1.3, 0.5, 0.4, t);
+   float a = 0.0;
+   float b = 0.0;
+   float c = 0.0;
 
-   float c =
-       makePoint(x, y, 3.7, 0.3, 0.3, 0.3, t);
-   c = c + makePoint(x, y, 1.9, 1.3, 0.4, 0.4, t);
-   c = c + makePoint(x, y, 0.8, 0.9, 0.4, 0.5, t);
-   c = c + makePoint(x, y, 1.2, 1.7, 0.6, 0.3, t);
-   c = c + makePoint(x, y, 0.3, 0.6, 0.5, 0.4, t);
-   c = c + makePoint(x, y, 0.3, 0.3, 0.4, 0.4, t);
-   c = c + makePoint(x, y, 1.4, 0.8, 0.4, 0.5, t);
-   c = c + makePoint(x, y, 0.2, 0.6, 0.6, 0.3, t);
-   c = c + makePoint(x, y, 1.3, 0.5, 0.5, 0.4, t);
+   // Fixed upper bound for GLSL ES; gated by `i < n` for the actual count.
+   for (int i = 0; i < MAX_BEAMS; i++) {
+      if (i >= n) break;
+      a += makePoint(x, y, aFx(i), aFy(i), sxOf(i), syOf(i), t);
+      b += makePoint(x, y, bFx(i), bFy(i), sxOf(i), syOf(i), t);
+      c += makePoint(x, y, cFx(i), cFy(i), sxOf(i), syOf(i), t);
+   }
 
    return a * color1.rgb + b * color2.rgb + c * color3.rgb;
 }
@@ -119,16 +162,28 @@ void main(void) {
    // hand-tracking; the original ShaderClaw3 build used mpHandCount /
    // mpHandPos2 here, which made GLSL compilation fail under Easel
    // because those uniforms are undeclared).
-   vec3 d = laserCluster(p - toCenter(mousePos) + drift, t);
+   int bc = int(beamCount);
+   vec3 d = laserCluster(p - toCenter(mousePos) + drift, t, bc);
 
    // Secondary cluster — slow opposing drift so the globe always has a
    // second light source. Substitutes for the second-hand branch.
    vec2 alt = vec2(1.0 - mousePos.x, mousePos.y);
-   d += laserCluster(p - toCenter(alt) - drift, t) * 0.6;
+   d += laserCluster(p - toCenter(alt) - drift, t, bc) * 0.6;
 
-   // Audio-driven boost (bass for kick-coupled flares).
+   // Audio non-gating: alive at audio=0. Bass adds kick-coupled flare on top.
    float boost = 1.0 + audioBass * 5.0;
    d *= intensity * boost;
+
+   // HDR PEAKS for Phase Q v4 bloom — lift beam cores into 1.6–2.5 linear so
+   // the post-bloom convolution gets real light-bleed off the brightest beams
+   // without blowing past the bloom kernel's headroom. Soft knee preserves the
+   // existing look in the lower range, then expands peaks geometrically.
+   // Output is LINEAR HDR — no tonemap.
+   float luma = max(max(d.r, d.g), d.b);
+   float knee = 0.6;
+   float over = max(luma - knee, 0.0);
+   float hdrGain = 1.0 + over * 2.2;
+   d *= hdrGain;
 
    gl_FragColor = vec4(d, 1.0);
 }

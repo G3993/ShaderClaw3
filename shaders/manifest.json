@@ -35,18 +35,6 @@
     "hasVertex": true
   },
   {
-    "id": 19,
-    "title": "black hole sun",
-    "description": "black hole sun",
-    "type": "generator",
-    "categories": [
-      "Distortion Effect"
-    ],
-    "file": "black_hole_sun.fs",
-    "hasVertex": true,
-    "hidden": true
-  },
-  {
     "id": 28,
     "title": "Etherea",
     "description": "Cycling font styles per letter with 18 visual patterns",
@@ -365,7 +353,7 @@
   {
     "id": 202,
     "title": "Red Carpet",
-    "description": "Draped velvet cloth simulation \u2014 flowing folds with velvet sheen, specular highlights, wind, and audio-reactive ripples",
+    "description": "Carbon-fiber 2x2 weave geometry rendered as deep red velvet \u2014 oxblood/crimson warp-and-weft, anisotropic fiber-streak specular, pile shimmer, slow light drift",
     "categories": [
       "Generator"
     ],
@@ -465,15 +453,6 @@
       "Simulation"
     ],
     "file": "cfd_paint.fs"
-  },
-  {
-    "id": 430,
-    "title": "Liquid Warp",
-    "description": "Underwater ripple displacement \u2014 multi-layer sine waves with chromatic aberration and mouse ripples",
-    "categories": [
-      "VFX"
-    ],
-    "file": "liquid_warp.fs"
   },
   {
     "id": 437,
@@ -631,17 +610,6 @@
     "file": "text_3d_aurora.fs"
   },
   {
-    "id": 464,
-    "title": "Liquid Ripples 3D",
-    "description": "Sound made literally visible \u2014 concentric ripples rolling across stacked depth-planes, audio frequencies sculpting cymatic interference patterns in 3D.",
-    "type": "generator",
-    "categories": [
-      "Generator",
-      "Audio Reactive"
-    ],
-    "file": "liquid_ripples_3d.fs"
-  },
-  {
     "id": 467,
     "title": "Turrell Chroma",
     "description": "Breathing volume of pure colour-light \u2014 almost no motion, just slow chromatic drift. Architectural light, not screen content. Aten Reign / Skyspace.",
@@ -738,9 +706,10 @@
   {
     "id": 478,
     "title": "Futurism (Boccioni)",
-    "description": "Motion-blur trails along a velocity vector, radiating linee-forza force lines, divisionist brushwork dots. Speed as visual concept. After Dynamism of a Cyclist (1913).",
+    "description": "Stylized humanoid SDF stutter-cloned along a velocity vector \u2014 true Futurist motion phases (lines of force) without frame-feedback. Force rays burst from a wandering origin; divisionist dabs streak the wake; warm sienna palette; lateral camera pan. After Dynamism of a Cyclist (1913) and Unique Forms of Continuity in Space (1913).",
     "type": "generator",
     "categories": [
+      "3D",
       "Generator",
       "Art Movement",
       "Audio Reactive"
@@ -1004,14 +973,109 @@
   },
   {
     "id": 497,
-    "title": "Vaporwave Hologram",
-    "description": "Y2K vaporwave scene transmitted through a degrading holographic channel \u2014 sun, grid, Y2K swarm, katakana with vertical tear, RGB shift, EMI bursts.",
+    "title": "Vaporwave Hologram 3D",
+    "description": "Twin suns sinking into a Tron grid horizon with 3-5 raymarched chrome SDF primitives (sphere, cube, pyramid, torus) drifting on independent orbits. Hot pink \u2192 magenta \u2192 indigo sky. HDR sun discs and grid lines, sun reflections off chrome, scanlines, chromatic aberration. Single-pass linear HDR.",
     "file": "vapor_hologram.fs",
     "type": "generator",
     "categories": [
       "Generator",
-      "Glitch",
+      "3D",
       "Audio Reactive"
     ]
+  },
+  {
+    "id": 498,
+    "title": "Basic Shapes 3D",
+    "description": "Reference 3D scene \u2014 raymarched SDF primitives (sphere, cube, pyramid, torus, capsule) on a turntable. Selectable lighting model: Studio / Cinematic / Painterly / Neon. Depth fog. Foundation template for all future 3D shaders in Easel.",
+    "type": "generator",
+    "categories": [
+      "3D",
+      "Generator",
+      "Audio Reactive"
+    ],
+    "file": "basic_shapes_3d.fs"
+  },
+  {
+    "id": 499,
+    "title": "Volumetric Clouds 3D",
+    "description": "Volumetric raymarched clouds \u2014 single-scatter integration through procedural noise field. Beer-Lambert extinction, Henyey-Greenstein phase, sun + sky gradient. Bass swells density.",
+    "type": "generator",
+    "categories": [
+      "3D",
+      "Generator",
+      "Audio Reactive"
+    ],
+    "file": "volumetric_clouds_3d.fs"
+  },
+  {
+    "id": 500,
+    "title": "Audio Particles 3D",
+    "description": "1024 procedurally-positioned particles in 3D. Each pixel evaluates nearest particles for metaball-style proximity glow. Bass/mid/high drive curl, size, and tint.",
+    "type": "generator",
+    "categories": [
+      "3D",
+      "Generator",
+      "Audio Reactive"
+    ],
+    "file": "audio_particles_3d.fs"
+  },
+  {
+    "id": 501,
+    "title": "PBR Reference 3D",
+    "description": "Physically-based reference template \u2014 Cook-Torrance GGX BRDF, Schlick Fresnel, energy-conserving direct + IBL on raymarched SDF scene. Copy this for any 3D shader needing physical look.",
+    "type": "generator",
+    "categories": [
+      "3D",
+      "Generator",
+      "Audio Reactive"
+    ],
+    "file": "pbr_reference_3d.fs"
+  },
+  {
+    "id": 502,
+    "title": "PBR Glass Dispersion 3D",
+    "description": "Refractive crystal sculpture with per-channel index of refraction \u2014 prism-style chromatic dispersion through SDF glass over a colored grid floor. Fresnel mix between reflected sky and refracted floor; specular highlight + rim halo. Audio modulates twist + dispersion.",
+    "type": "generator",
+    "categories": [
+      "3D",
+      "Generator",
+      "Audio Reactive"
+    ],
+    "file": "pbr_glass_dispersion.fs"
+  },
+  {
+    "id": 503,
+    "title": "Prism Basilica",
+    "description": "Gothic cathedral interior \u2014 pointed-arch window emits HDR sun core with per-channel chromatic dispersion through stained-glass panes. Volumetric god-rays sweep cobalt/ruby/emerald/gold beams; ink tracery silhouette; refracted color pools wash the floor. Audio bass pulses sun, mid sways rays, treble sparkles dust motes.",
+    "type": "generator",
+    "categories": [
+      "3D",
+      "Generator",
+      "Audio Reactive"
+    ],
+    "file": "prism_basilica.fs"
+  },
+  {
+    "id": 504,
+    "title": "Inkwash Dragon",
+    "description": "Sumi-e mountain landscape \u2014 calligraphic black ink dragon coils through layered fog past three painted ridges; HDR sun disk burns through bone-white sky; gold-leaf eye and vermillion seal punctuate. Audio bass tremors the mountain, mid coils the dragon, treble flares the sun.",
+    "type": "generator",
+    "categories": [
+      "Generator",
+      "Audio Reactive"
+    ],
+    "file": "inkwash_dragon.fs"
+  },
+  {
+    "id": 505,
+    "title": "Cymatic Oracle",
+    "description": "First-person view inside an octagonal marble temple. Eight ink-veined columns ring a central water bowl whose surface ripples with Bessel cymatic modes driven by audio bass/mid/treble. A single HDR oculus beam strikes the water and throws moving caustics across column bases.",
+    "type": "generator",
+    "categories": [
+      "3D",
+      "Generator",
+      "Audio Reactive"
+    ],
+    "file": "cymatic_oracle.fs"
   }
 ]

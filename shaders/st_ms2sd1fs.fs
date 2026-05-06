@@ -126,6 +126,10 @@ vec3 getSkyColor(vec3 e) {
     ret.x = pow(1.0-e.y,2.0);
     ret.y = 1.0-e.y;
     ret.z = 0.6+(1.0-e.y)*0.4;
+    // HDR sun disc: lifts toward horizon glow to ~1.8 linear so bloom blooms it
+    vec3 sunDir = normalize(vec3(0.0,0.1,0.8));
+    float sun = max(dot(normalize(e + vec3(0.0,1e-4,0.0)), sunDir), 0.0);
+    ret += vec3(1.0,0.85,0.7) * pow(sun, 80.0) * 1.8;
     return ret;
 }
 
@@ -172,20 +176,23 @@ float map_detailed(vec3 p) {
     return p.y - h;
 }
 
-vec3 getSeaColor(vec3 p, vec3 n, vec3 l, vec3 eye, vec3 dist) {  
+vec3 getSeaColor(vec3 p, vec3 n, vec3 l, vec3 eye, vec3 dist) {
     float fresnel = 1.0 - max(dot(n,-eye),0.0);
     fresnel = pow(fresnel,3.0) * 0.65;
-        
-    vec3 reflected = getSkyColor(reflect(eye,n));    
-    vec3 refracted = SEA_BASE.rgb + diffuse(n,l,80.0) * SEA_WATER_COLOR.rgb * 0.12; 
-    
+
+    vec3 reflected = getSkyColor(reflect(eye,n));
+    vec3 refracted = SEA_BASE.rgb + diffuse(n,l,80.0) * SEA_WATER_COLOR.rgb * 0.12;
+
     vec3 color = mix(refracted,reflected,fresnel);
-    
+
     float atten = max(1.0 - dot(dist,dist) * 0.001, 0.0);
     color += SEA_WATER_COLOR.rgb * (p.y - SEA_HEIGHT) * 0.18 * atten;
-    
-    color += vec3(specular(n,l,eye,60.0));
-    
+
+    // HDR specular peaks: sharp highlight core lifted to ~2.2 linear so bloom catches it
+    float spec = specular(n,l,eye,60.0);
+    float specCore = pow(max(dot(reflect(eye,n),l),0.0), 220.0);
+    color += vec3(spec) + vec3(1.0,0.95,0.85) * specCore * 2.2;
+
     return color;
 }
 
@@ -241,12 +248,14 @@ void main(){
     vec3 n = getNormal(p, dot(dist,dist) * EPSILON_NRM);
     vec3 light = normalize(vec3(0.0,1.0,0.8)); 
              
-    // color
+    // color — soft AA on horizon mix using fwidth
+    float horizonAA = max(fwidth(dir.y) * 1.5, 1e-4);
+    float horizonMix = pow(smoothstep(horizonAA, -0.05 - horizonAA, dir.y), 0.3);
     vec3 color = mix(
         getSkyColor(dir),
         getSeaColor(p,n,light,dir,dist),
-    	pow(smoothstep(0.0,-0.05,dir.y),0.3));
-        
-    // post
-	gl_FragColor = vec4(pow(color,vec3(0.75)), 1.0);
+        horizonMix);
+
+    // linear HDR out — host applies ACES tonemap
+    gl_FragColor = vec4(color, 1.0);
 }

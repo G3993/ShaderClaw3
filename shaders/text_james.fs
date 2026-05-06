@@ -158,8 +158,8 @@ vec4 effectEtherea(vec2 uv) {
 
     // Iterate ALL 24 slots — single line, no wrapping
     for (int i = 0; i < 48; i++) {
-        // Compute active mask instead of break
-        float active = step(float(i) + 0.5, float(numChars));
+        // Compute active mask instead of break ('active' is a reserved word in GLSL ES)
+        float isActive = step(float(i) + 0.5, float(numChars));
 
         // Character lookup (tent function — all uniforms always evaluated)
         int ch = int(getCharF(float(i)) + 0.5);
@@ -180,7 +180,7 @@ vec4 effectEtherea(vec2 uv) {
         float inBounds = step(-0.15, cellUV.x) * step(cellUV.x, 1.15)
                        * step(-0.15, cellUV.y) * step(cellUV.y, 1.15);
 
-        if (active * inBounds > 0.5) {
+        if (isActive * inBounds > 0.5) {
             float raw = sampleAtlas(ch, cellUV);
             if (raw > 0.05) {
                 float edgeAA = smoothstep(0.1, 0.5, raw);
@@ -195,7 +195,7 @@ vec4 effectEtherea(vec2 uv) {
         }
 
         // Glow (always accumulate for active chars, even if pixel is outside cell)
-        if (active > 0.5) {
+        if (isActive > 0.5) {
             vec2 cc = vec2(cx + charW * 0.5, cy + charH * 0.5);
             float gd = length((p - cc) * vec2(1.0, 0.7));
             glowAccum += exp(-gd * gd / (charW * charW * 2.0)) * 0.15;

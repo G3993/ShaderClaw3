@@ -1,247 +1,337 @@
 /*{
   "CATEGORIES": ["Generator", "Art Movement", "Audio Reactive"],
-  "DESCRIPTION": "Art Nouveau ornament frame after Mucha posters / vectorstock floral-swirl frames — heavy ornate border running the canvas perimeter, sinuous whiplash S-curves swirling around the edges, stylized lily/iris cartouches at corners and mid-spans. Mauve + gold + black palette. The interior is left open for a texture or live image to read through.",
+  "DESCRIPTION": "Art Nouveau (Mucha) — 3D raymarched. Sarah-Bernhardt-as-Médée bust in profile rendered as a stylized SDF relief, wrapped by 3D twisted gold ribbon-tendrils orbiting an invisible torus, halo cartouche of floating star primitives behind the head. Studio 3-point lighting with warm gilt key, dark walnut plinth with subtle reflection. Mood enum cycles four Mucha-print pose+palette variations (Reverie 1897, Médée 1898, La Dame aux Camélias 1896, Job 1896). Audio low-band pulses halo radius; treble shimmers ribbon brass. Returns LINEAR HDR.",
   "INPUTS": [
-    { "NAME": "frameWidth",     "LABEL": "Frame Width",     "TYPE":"float","MIN":0.05,"MAX":0.30, "DEFAULT":0.14 },
-    { "NAME": "frameTint",      "LABEL": "Frame Tint",      "TYPE":"color","DEFAULT":[0.5647, 0.2941, 0.5098, 1.0] },
-    { "NAME": "goldStrength",   "LABEL": "Gold Strength",   "TYPE":"float","MIN":0.0, "MAX":1.0,  "DEFAULT":0.75 },
-    { "NAME": "swirlCount",     "LABEL": "Swirl Strands",   "TYPE":"float","MIN":2.0, "MAX":12.0, "DEFAULT":7.0 },
-    { "NAME": "swirlAmplitude", "LABEL": "Swirl Amplitude", "TYPE":"float","MIN":0.0, "MAX":0.30, "DEFAULT":0.10 },
-    { "NAME": "swirlFreq",      "LABEL": "Swirl Frequency", "TYPE":"float","MIN":1.0, "MAX":12.0, "DEFAULT":4.5 },
-    { "NAME": "swirlWidth",     "LABEL": "Swirl Width",     "TYPE":"float","MIN":0.001,"MAX":0.012,"DEFAULT":0.0035 },
-    { "NAME": "rotateSpeed",    "LABEL": "Animation Speed", "TYPE":"float","MIN":0.0, "MAX":2.0,  "DEFAULT":0.30 },
-    { "NAME": "lilyShow",       "LABEL": "Corner Lilies",   "TYPE":"float","MIN":0.0, "MAX":1.0,  "DEFAULT":0.85 },
-    { "NAME": "lilySize",       "LABEL": "Lily Size",       "TYPE":"float","MIN":0.04,"MAX":0.18, "DEFAULT":0.10 },
-    { "NAME": "midCartouche",   "LABEL": "Mid Cartouches",  "TYPE":"float","MIN":0.0, "MAX":1.0,  "DEFAULT":0.65 },
-    { "NAME": "innerLine",      "LABEL": "Inner Frame Line","TYPE":"float","MIN":0.0, "MAX":0.012,"DEFAULT":0.003 },
-    { "NAME": "centerFlower",   "LABEL": "Center Flower",   "TYPE":"float","MIN":0.0, "MAX":1.0,  "DEFAULT":0.0 },
-    { "NAME": "interiorWash",   "LABEL": "Interior Wash",   "TYPE":"float","MIN":0.0, "MAX":1.0,  "DEFAULT":0.20 },
-    { "NAME": "audioReact",     "LABEL": "Audio React",     "TYPE":"float","MIN":0.0, "MAX":2.0,  "DEFAULT":1.0 },
-    { "NAME": "inputTex",       "LABEL": "Texture",         "TYPE":"image" }
+    { "NAME": "mood",          "LABEL": "Mood",            "TYPE": "long",  "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Reverie 1897","Médée 1898","La Dame aux Camélias 1896","Job 1896"] },
+    { "NAME": "ribbonCount",   "LABEL": "Ribbons",         "TYPE": "long",  "DEFAULT": 5, "VALUES": [3,4,5,6,8], "LABELS": ["3","4","5","6","8"] },
+    { "NAME": "ribbonRadius",  "LABEL": "Ribbon Radius",   "TYPE": "float", "MIN": 0.04, "MAX": 0.16, "DEFAULT": 0.085 },
+    { "NAME": "ribbonTwist",   "LABEL": "Ribbon Twist",    "TYPE": "float", "MIN": 0.0,  "MAX": 6.0,  "DEFAULT": 2.4 },
+    { "NAME": "starCount",     "LABEL": "Halo Stars",      "TYPE": "long",  "DEFAULT": 12, "VALUES": [0,6,8,12,16,24], "LABELS": ["Off","6","8","12","16","24"] },
+    { "NAME": "haloRadius",    "LABEL": "Halo Radius",     "TYPE": "float", "MIN": 0.5,  "MAX": 1.6,  "DEFAULT": 0.95 },
+    { "NAME": "rotateSpeed",   "LABEL": "Rotation Speed",  "TYPE": "float", "MIN": 0.0,  "MAX": 1.5,  "DEFAULT": 0.18 },
+    { "NAME": "audioReact",    "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
+    { "NAME": "camDist",       "LABEL": "Camera Distance", "TYPE": "float", "MIN": 2.0,  "MAX": 8.0,  "DEFAULT": 3.6 },
+    { "NAME": "camHeight",     "LABEL": "Camera Height",   "TYPE": "float", "MIN": -1.0, "MAX": 2.0,  "DEFAULT": 0.35 },
+    { "NAME": "camOrbitSpeed", "LABEL": "Camera Orbit",    "TYPE": "float", "MIN": -0.5, "MAX": 0.5,  "DEFAULT": 0.04 },
+    { "NAME": "camAzimuth",    "LABEL": "Camera Azimuth",  "TYPE": "float", "MIN": -3.1416,"MAX": 3.1416,"DEFAULT": 0.35 },
+    { "NAME": "keyAngle",      "LABEL": "Key Angle",       "TYPE": "float", "MIN": -3.1416,"MAX": 3.1416,"DEFAULT": -0.7 },
+    { "NAME": "keyElevation",  "LABEL": "Key Elevation",   "TYPE": "float", "MIN": 0.0,  "MAX": 1.5708,"DEFAULT": 0.55 },
+    { "NAME": "keyColor",      "LABEL": "Key Color",       "TYPE": "color", "DEFAULT": [1.45, 1.18, 0.72, 1.0] },
+    { "NAME": "fillColor",     "LABEL": "Fill Color",      "TYPE": "color", "DEFAULT": [0.32, 0.36, 0.46, 1.0] },
+    { "NAME": "ambient",       "LABEL": "Ambient",         "TYPE": "float", "MIN": 0.0,  "MAX": 0.6,  "DEFAULT": 0.14 },
+    { "NAME": "rimStrength",   "LABEL": "Rim Strength",    "TYPE": "float", "MIN": 0.0,  "MAX": 2.5,  "DEFAULT": 0.85 },
+    { "NAME": "exposure",      "LABEL": "Exposure",        "TYPE": "float", "MIN": 0.2,  "MAX": 3.0,  "DEFAULT": 1.0 },
+    { "NAME": "inputTex",      "LABEL": "Texture",         "TYPE": "image" }
   ]
 }*/
 
-const vec3 PALE_CREAM = vec3(0.96, 0.92, 0.78);
-const vec3 GOLD       = vec3(0.95, 0.78, 0.30);
-const vec3 BRONZE     = vec3(0.72, 0.52, 0.16);
-const vec3 INK        = vec3(0.10, 0.06, 0.10);
+//  Mucha — 3D rewrite. Raymarched SDF: profile bust on plinth, 3D ribbon
+//  tendrils on hidden torus, floating star halo. Studio 3-point gilt key.
 
-float hash11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
-float hash21(vec2 p)  { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-float vnoise(vec2 p) {
-    vec2 ip = floor(p), fp = fract(p);
-    fp = fp * fp * (3.0 - 2.0 * fp);
-    float a = hash21(ip);
-    float b = hash21(ip + vec2(1.0, 0.0));
-    float c = hash21(ip + vec2(0.0, 1.0));
-    float d = hash21(ip + vec2(1.0, 1.0));
-    return mix(mix(a, b, fp.x), mix(c, d, fp.x), fp.y);
+#define MAX_STEPS 96
+#define MAX_DIST  18.0
+#define SURF_EPS  0.0008
+
+mat2 rot2(float a){ float c=cos(a),s=sin(a); return mat2(c,-s,s,c); }
+float smin(float a, float b, float k){
+    float h = clamp(0.5 + 0.5*(b-a)/k, 0.0, 1.0);
+    return mix(b, a, h) - k*h*(1.0-h);
 }
 
-// ──────────────────────────────────────────────────────────────────────
-// Distance from a point to a sinuous curve that tracks the canvas edge.
-// The curve follows the outer rectangle perimeter at offset `offset` from
-// the edge, modulated by sin waves to produce whiplash S-curves.
-// Returns the closest distance over a sampled set of perimeter points.
-// ──────────────────────────────────────────────────────────────────────
-float distToFrameSwirl(vec2 uv, float offset, float amplitude, float frequency, float phase) {
-    float minD = 1e9;
-    // Walk perimeter parameter t in [0,4): each unit = one side of the rect
-    // 0..1 = bottom, 1..2 = right, 2..3 = top, 3..4 = left
-    const int SAMPLES = 80;
-    for (int i = 0; i < SAMPLES; i++) {
-        float t = float(i) / float(SAMPLES) * 4.0;
-        float side = floor(t);
-        float u    = fract(t);
-        // Offset from the edge perpendicular to the side
-        // and a wave-amp sine along the perimeter parameter
-        float wave = sin(t * frequency + phase) * amplitude;
-        vec2 p;
-        if      (side < 0.5) p = vec2(u,        offset + wave);             // bottom
-        else if (side < 1.5) p = vec2(1.0 - offset - wave, u);             // right
-        else if (side < 2.5) p = vec2(1.0 - u,  1.0 - offset - wave);      // top
-        else                  p = vec2(offset + wave, 1.0 - u);             // left
-        float d = length(uv - p);
-        if (d < minD) minD = d;
+// ─── primitive SDFs ─────────────────────────────────────────────────────
+float sdSphere(vec3 p, float r){ return length(p) - r; }
+float sdEllipsoid(vec3 p, vec3 r){
+    float k0 = length(p/r);
+    float k1 = length(p/(r*r));
+    return k0*(k0-1.0)/k1;
+}
+float sdCapsule(vec3 p, vec3 a, vec3 b, float r){
+    vec3 pa = p-a, ba = b-a;
+    float h = clamp(dot(pa,ba)/dot(ba,ba), 0.0, 1.0);
+    return length(pa - ba*h) - r;
+}
+float sdTorus(vec3 p, vec2 t){
+    vec2 q = vec2(length(p.xz)-t.x, p.y);
+    return length(q)-t.y;
+}
+float sdBox(vec3 p, vec3 b){
+    vec3 d = abs(p)-b;
+    return length(max(d,0.0)) + min(max(d.x,max(d.y,d.z)),0.0);
+}
+// 2D star -> extruded into 3D thin chip
+float sdStar2D(vec2 p, float r, int n, float m){
+    float an = 3.141593/float(n);
+    float en = 3.141593/m;
+    vec2  acs = vec2(cos(an), sin(an));
+    vec2  ecs = vec2(cos(en), sin(en));
+    float bn = mod(atan(p.x,p.y), 2.0*an) - an;
+    p = length(p)*vec2(cos(bn), abs(sin(bn)));
+    p -= r*acs;
+    p += ecs*clamp(-dot(p,ecs), 0.0, r*acs.y/ecs.y);
+    return length(p)*sign(p.x);
+}
+float sdStar3D(vec3 p, float r, float thick){
+    float d2 = sdStar2D(p.xy, r, 8, 3.0);
+    vec2 w = vec2(d2, abs(p.z) - thick);
+    return min(max(w.x,w.y),0.0) + length(max(w,0.0));
+}
+
+// ─── palette ────────────────────────────────────────────────────────────
+// Mucha print palette HDR-tuned. Mood selects pose+tint biases.
+const vec3 GOLD   = vec3(2.50, 1.80, 0.60);
+const vec3 CREAM  = vec3(0.92, 0.86, 0.74);
+const vec3 ROSE   = vec3(0.78, 0.42, 0.45);
+const vec3 TEAL   = vec3(0.18, 0.42, 0.45);
+const vec3 BONE   = vec3(0.96, 0.93, 0.82);
+
+vec3 moodTint(int m){
+    if (m == 0) return TEAL  * 0.55 + ROSE * 0.10;       // Reverie
+    if (m == 1) return ROSE  * 0.65 + vec3(0.10,0.0,0.0); // Médée
+    if (m == 2) return CREAM * 0.70;                      // Camélias
+    return GOLD * 0.30;                                   // Job
+}
+
+// ─── scene ──────────────────────────────────────────────────────────────
+// Material id is packed alongside distance.
+struct Hit { float d; int id; };
+Hit hitMin(Hit a, Hit b){ return (a.d < b.d) ? a : b; }
+
+// Bust in profile facing +X. Built from primitives blended with smin.
+// id: 1 = bust (cream porcelain), 2 = ribbon (gold), 3 = star (gold),
+//     4 = plinth (walnut), 5 = backplate (rose).
+float sdBust(vec3 p, int mood){
+    // Pose tweaks per mood — head tilt + chin lift.
+    float tilt = (mood == 1) ?  0.18 :
+                 (mood == 2) ? -0.10 :
+                 (mood == 3) ?  0.05 : 0.0;
+    p.yz = rot2(tilt) * p.yz;
+
+    // Head — ellipsoid, slightly tall
+    vec3 hp = p - vec3(0.04, 0.78, 0.0);
+    float head = sdEllipsoid(hp, vec3(0.34, 0.40, 0.36));
+
+    // Nose ridge — small capsule extending +X
+    float nose = sdCapsule(p, vec3(0.30, 0.78, 0.0), vec3(0.40, 0.72, 0.0), 0.045);
+    head = smin(head, nose, 0.05);
+
+    // Chin / jaw — sphere blended below
+    float jaw = sdSphere(p - vec3(0.18, 0.55, 0.0), 0.18);
+    head = smin(head, jaw, 0.10);
+
+    // Neck — capsule
+    float neck = sdCapsule(p, vec3(0.05, 0.55, 0.0), vec3(0.0, 0.20, 0.0), 0.14);
+    float bust = smin(head, neck, 0.12);
+
+    // Shoulders / bust silhouette — wide flattened ellipsoid
+    float shoulders = sdEllipsoid(p - vec3(0.0, -0.05, 0.0), vec3(0.55, 0.28, 0.40));
+    bust = smin(bust, shoulders, 0.18);
+
+    // Hair bun behind head
+    float bun = sdEllipsoid(p - vec3(-0.22, 0.82, 0.0), vec3(0.26, 0.28, 0.30));
+    bust = smin(bust, bun, 0.10);
+
+    return bust;
+}
+
+float sdRibbons(vec3 p, float t, int n, float radius, float twist){
+    // Tubes that wrap an invisible torus around the head, slowly rotating.
+    // Sample N capsules along each ribbon's parametric path.
+    vec3 c = vec3(0.04, 0.78, 0.0);    // ribbon center (head)
+    vec3 rp = p - c;
+    rp.xz = rot2(t) * rp.xz;
+
+    float best = 1e9;
+    for (int i = 0; i < 8; i++){
+        if (i >= n) break;
+        float fi = float(i);
+        float phase = fi / float(n) * 6.2832;
+        // SDF sample around a torus path: parameterize by toroidal angle u.
+        // Approximate by snapping current point's toroidal angle then offsetting.
+        float u = atan(rp.z, rp.x);
+        float du = u + phase + t*0.4;
+        float majR = 0.55;
+        float minR = radius * (0.7 + 0.3*sin(du*twist + fi*1.7));
+        // Position on torus at angle du, with poloidal twist
+        vec3 ringCenter = vec3(cos(u)*majR, 0.0, sin(u)*majR);
+        // Poloidal angle threads around with twist
+        float v = du*twist + fi*0.9;
+        vec3 offs = vec3(cos(u)*cos(v), sin(v), sin(u)*cos(v)) * minR;
+        vec3 q = rp - (ringCenter + offs);
+        float tube = length(q) - 0.022;
+        best = min(best, tube);
     }
-    return minD;
+    return best;
 }
 
-// Stylized lily SDF — symmetric three-petal lily.
-float sdLily(vec2 p, float r) {
-    p.x = abs(p.x);
-    // Central petal
-    float c = length(p - vec2(0.0, 0.6 * r)) - r * 0.6;
-    // Side petals — rotated -45°
-    vec2 q = mat2(0.7071, -0.7071, 0.7071, 0.7071) * (p - vec2(0.4 * r, 0.2 * r));
-    float s = length(q) - r * 0.55;
-    // Stem
-    float st = max(abs(p.x) - r * 0.05, abs(p.y + r * 0.5) - r * 0.5);
-    return min(min(c, s), st);
-}
+float sdHaloStars(vec3 p, float t, int n, float radius, float audio){
+    // Floating ring of small star chips, behind the head (negative X side
+    // is "behind" given our profile faces +X; we'll place them on -X plane).
+    vec3 c = vec3(-0.05, 0.82, 0.0);
+    vec3 rp = p - c;
+    // Push into a plane behind head (z plane)
+    // Stars sit on a circle in the X=const plane facing camera.
+    float pulse = 1.0 + 0.08 * audio * sin(t*3.0);
+    float R = radius * pulse;
 
-// Filigree sweep — long sinuous quadratic curves that loop within the
-// frame band. Returns distance to the curve, sampled along bezier.
-float distToFiligree(vec2 uv, vec2 a, vec2 b, vec2 c) {
-    float minD = 1e9;
-    for (int i = 0; i <= 8; i++) {
-        float t = float(i) / 8.0;
-        vec2 q = mix(mix(a, b, t), mix(b, c, t), t);
-        float d = length(uv - q);
-        if (d < minD) minD = d;
+    float best = 1e9;
+    for (int i = 0; i < 24; i++){
+        if (i >= n) break;
+        float fi = float(i);
+        float a = fi/float(n)*6.2832 + t*0.35;
+        vec3 sp = vec3(-0.05 + 0.02*sin(a*2.0+t),  // slight depth wobble behind
+                        0.82 + sin(a)*R*0.55,
+                        cos(a)*R);
+        vec3 q = p - sp;
+        // Orient star to face camera roughly (rotate around y by a)
+        q.xz = rot2(-a) * q.xz;
+        float bob = 0.5 + 0.5*sin(t*2.0 + fi*1.3);
+        float ds = sdStar3D(q, 0.045 + 0.012*bob, 0.012);
+        best = min(best, ds);
     }
-    return minD;
+    return best;
+}
+
+Hit map(vec3 p, float t, int mood, int nR, float rR, float twist,
+        int nS, float hR, float audio){
+    // Plinth — dark walnut box below the bust.
+    float plinth = sdBox(p - vec3(0.0, -0.85, 0.0), vec3(1.0, 0.18, 0.7));
+    Hit h = Hit(plinth, 4);
+
+    // Backplate — rose-tinted rectangular cartouche behind everything.
+    float back = sdBox(p - vec3(-0.4, 0.4, 0.0), vec3(0.04, 1.1, 1.1));
+    h = hitMin(h, Hit(back, 5));
+
+    // Bust
+    float b = sdBust(p, mood);
+    h = hitMin(h, Hit(b, 1));
+
+    // Ribbons (gold)
+    float r = sdRibbons(p, t, nR, rR, twist);
+    h = hitMin(h, Hit(r, 2));
+
+    // Halo stars
+    if (nS > 0){
+        float s = sdHaloStars(p, t, nS, hR, audio);
+        h = hitMin(h, Hit(s, 3));
+    }
+    return h;
+}
+
+vec3 calcNormal(vec3 p, float t, int mood, int nR, float rR, float twist,
+                int nS, float hR, float audio){
+    const vec2 e = vec2(0.0008, 0.0);
+    return normalize(vec3(
+        map(p+e.xyy, t, mood, nR, rR, twist, nS, hR, audio).d -
+        map(p-e.xyy, t, mood, nR, rR, twist, nS, hR, audio).d,
+        map(p+e.yxy, t, mood, nR, rR, twist, nS, hR, audio).d -
+        map(p-e.yxy, t, mood, nR, rR, twist, nS, hR, audio).d,
+        map(p+e.yyx, t, mood, nR, rR, twist, nS, hR, audio).d -
+        map(p-e.yyx, t, mood, nR, rR, twist, nS, hR, audio).d
+    ));
+}
+
+// Lighting per material id.
+vec3 shade(vec3 pos, vec3 nor, vec3 rd, int id, vec3 keyDir, vec3 keyCol,
+           vec3 fillDir, vec3 fillCol, float amb, float rim, int mood){
+    vec3 base; float spec; float gloss;
+    if      (id == 1){ base = CREAM * (0.85 + 0.15*moodTint(mood)); spec = 0.12; gloss = 16.0; }
+    else if (id == 2){ base = GOLD;                                  spec = 1.20; gloss = 48.0; }
+    else if (id == 3){ base = GOLD * 1.15;                           spec = 1.40; gloss = 64.0; }
+    else if (id == 4){ base = vec3(0.10, 0.06, 0.04);               spec = 0.25; gloss = 24.0; }
+    else             { base = ROSE * 0.55 + moodTint(mood)*0.15;    spec = 0.08; gloss = 12.0; }
+
+    float ndK = max(dot(nor, keyDir),  0.0);
+    float ndF = max(dot(nor, fillDir), 0.0);
+    vec3  hK  = normalize(keyDir  - rd);
+    float spK = pow(max(dot(nor, hK), 0.0), gloss) * spec;
+
+    float rimT = pow(1.0 - max(dot(nor, -rd), 0.0), 3.0);
+
+    vec3 col  = base * (amb + ndK*keyCol + ndF*fillCol*0.5);
+    col += keyCol * spK;
+    col += GOLD * rimT * rim * 0.25;     // warm rim regardless of material
+    return col;
 }
 
 void main() {
-    vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
-    float aspect = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
-    float t = TIME * rotateSpeed;
+    vec2 uv = isf_FragNormCoord.xy;
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    vec2 ndc = (uv * 2.0 - 1.0) * vec2(aspect, 1.0);
 
-    vec3 col = PALE_CREAM;
-    col *= 0.94 + 0.06 * vnoise(uv * 220.0);
+    int   mt    = int(mood + 0.5);
+    int   nR    = int(ribbonCount + 0.5);
+    int   nS    = int(starCount + 0.5);
+    float t     = TIME * rotateSpeed;
+    float audio = clamp(audioReact, 0.0, 2.0);
 
-    // Distance from the canvas edge in normalized space
-    vec2 edgeD = min(uv, 1.0 - uv);
-    float edgeMin = min(edgeD.x, edgeD.y);
+    // ─── Camera (orbiting) ─────────────────────────────────────────────
+    float az = camAzimuth + TIME * camOrbitSpeed;
+    vec3  ro = vec3(sin(az)*camDist, camHeight, cos(az)*camDist);
+    vec3  ta = vec3(0.0, 0.4, 0.0);
+    vec3  fwd = normalize(ta - ro);
+    vec3  rgt = normalize(cross(fwd, vec3(0.0, 1.0, 0.0)));
+    vec3  upv = cross(rgt, fwd);
+    vec3  rd  = normalize(fwd + rgt*ndc.x*0.85 + upv*ndc.y*0.85);
 
-    // ── Outer frame band (mauve fill with gold edge bevels) ───────────
-    float fW = frameWidth * (1.0 + audioBass * audioReact * 0.04);
-    float frameMask = step(edgeMin, fW);
-    if (frameMask > 0.5) {
-        // Mauve base
-        vec3 frame = frameTint.rgb;
-        // Gold inner-edge highlight (closer to interior)
-        float innerDist = fW - edgeMin;
-        float innerEdge = smoothstep(0.0, 0.012, innerDist) * smoothstep(0.025, 0.005, innerDist);
-        frame = mix(frame, GOLD, innerEdge * goldStrength);
-        // Gold outer-edge highlight
-        float outerEdge = smoothstep(0.0, 0.008, edgeMin);
-        frame = mix(frame, BRONZE, (1.0 - outerEdge) * goldStrength * 0.4);
-        col = frame;
+    // ─── Lights ────────────────────────────────────────────────────────
+    vec3 keyDir = normalize(vec3(
+        cos(keyElevation)*cos(keyAngle),
+        sin(keyElevation),
+        cos(keyElevation)*sin(keyAngle)
+    ));
+    vec3 fillDir = normalize(vec3(-0.6, 0.3, 0.7));
+
+    // ─── March ─────────────────────────────────────────────────────────
+    float d = 0.0;
+    int   id = 0;
+    vec3  pos = ro;
+    for (int i = 0; i < MAX_STEPS; i++){
+        pos = ro + rd*d;
+        Hit h = map(pos, t, mt, nR, ribbonRadius, ribbonTwist, nS, haloRadius, audio);
+        if (h.d < SURF_EPS){ id = h.id; break; }
+        if (d > MAX_DIST) break;
+        d += h.d * 0.85;
     }
 
-    // ── Sinuous floral swirl strands tracking the perimeter ──────────
-    int N = int(clamp(swirlCount, 1.0, 12.0));
-    for (int i = 0; i < 12; i++) {
-        if (i >= N) break;
-        float fi = float(i);
-        // Each strand sits at a different offset within the frame band
-        float baseOffset = mix(0.025, fW * 0.75, hash11(fi * 7.13));
-        // Slow phase walk so swirls sweep around the frame
-        float phase = fi * 1.7 + t * 1.3;
-        float amp = swirlAmplitude * (0.7 + hash11(fi * 11.7) * 0.6);
-        float freq = swirlFreq * (0.6 + hash11(fi * 13.3) * 0.8);
-        float d = distToFrameSwirl(uv, baseOffset, amp, freq, phase);
-        // Stroke width with per-strand variance
-        float w = swirlWidth * (0.6 + hash11(fi * 17.9) * 0.9);
-        float maskCore  = smoothstep(w, 0.0, d);
-        float maskGlow  = smoothstep(w * 2.5, w * 0.8, d);
-        // Color: ink for the curve, gold halo
-        col = mix(col, INK, maskCore * 0.9);
-        col = mix(col, GOLD, (maskGlow - maskCore) * goldStrength * 0.65);
-    }
+    // ─── Background gradient (warm gilt -> dusty teal) ─────────────────
+    vec3 bg = mix(GOLD*0.18, TEAL*0.35, smoothstep(-0.3, 0.6, ndc.y));
+    bg += moodTint(mt) * 0.20;
+    bg *= 0.9 + 0.1*length(ndc);
 
-    // ── Filigree spirals inside the frame band — extra ornamentation ─
-    {
-        // Six anchor points along the perimeter, each spawning a curl
-        for (int s = 0; s < 6; s++) {
-            float fs = float(s);
-            float pT = mod(fs * 0.667 + t * 0.05, 4.0);
-            float side = floor(pT);
-            float pu   = fract(pT);
-            vec2 anchor;
-            if      (side < 0.5) anchor = vec2(pu, fW * 0.4);
-            else if (side < 1.5) anchor = vec2(1.0 - fW * 0.4, pu);
-            else if (side < 2.5) anchor = vec2(1.0 - pu, 1.0 - fW * 0.4);
-            else                  anchor = vec2(fW * 0.4, 1.0 - pu);
+    vec3 col = bg;
 
-            // Curl direction — tangent to perimeter then arc inward
-            vec2 inward = vec2(0.5) - anchor;
-            inward = normalize(inward + vec2(1e-4));
-            vec2 a = anchor;
-            vec2 b = anchor + inward * fW * 0.7 + vec2(-inward.y, inward.x) * fW * 0.5;
-            vec2 c = anchor + inward * fW * 0.3 - vec2(-inward.y, inward.x) * fW * 0.4;
-            float d = distToFiligree(uv, a, b, c);
-            float maskF = smoothstep(swirlWidth * 1.4, 0.0, d);
-            col = mix(col, GOLD, maskF * goldStrength * 0.85);
-            // Tiny dot at the curl tip
-            float dotMask = smoothstep(swirlWidth * 2.5, 0.0, length(uv - c));
-            col = mix(col, INK, dotMask * 0.6);
+    if (id != 0){
+        vec3 nor = calcNormal(pos, t, mt, nR, ribbonRadius, ribbonTwist,
+                              nS, haloRadius, audio);
+        col = shade(pos, nor, rd, id, keyDir, keyColor.rgb,
+                    fillDir, fillColor.rgb, ambient, rimStrength, mt);
+
+        // Plinth reflection — mirror ray, single bounce, sample bust only.
+        if (id == 4 && nor.y > 0.5){
+            vec3  rrd = reflect(rd, nor);
+            float rd2 = 0.0; vec3 rpos = pos + nor*0.01; int rid = 0;
+            for (int j = 0; j < 32; j++){
+                rpos = (pos + nor*0.01) + rrd*rd2;
+                Hit rh = map(rpos, t, mt, nR, ribbonRadius, ribbonTwist,
+                             nS, haloRadius, audio);
+                if (rh.d < SURF_EPS){ rid = rh.id; break; }
+                if (rd2 > 6.0) break;
+                rd2 += rh.d * 0.9;
+            }
+            vec3 refCol = bg * 0.4;
+            if (rid != 0){
+                vec3 rn = calcNormal(rpos, t, mt, nR, ribbonRadius, ribbonTwist,
+                                     nS, haloRadius, audio);
+                refCol = shade(rpos, rn, rrd, rid, keyDir, keyColor.rgb,
+                               fillDir, fillColor.rgb, ambient, rimStrength, mt);
+            }
+            col = mix(col, refCol, 0.18);
         }
     }
 
-    // ── Corner lilies ────────────────────────────────────────────────
-    if (lilyShow > 0.001) {
-        for (int c = 0; c < 4; c++) {
-            float fc = float(c);
-            vec2 corner = vec2(mod(fc, 2.0), floor(fc / 2.0));
-            // Inset slightly
-            vec2 cPos = mix(corner, vec2(0.5), 0.05);
-            // Rotate based on which corner
-            float ang = fc * 1.5708 + sin(t * 0.4 + fc) * 0.10;
-            float ca = cos(ang), sa = sin(ang);
-            vec2 lp = (uv - cPos) / lilySize;
-            lp = mat2(ca, -sa, sa, ca) * lp;
-            // Direction toward the canvas
-            float lily = sdLily(lp, 1.0);
-            float fillMask = smoothstep(0.04, -0.04, lily);
-            col = mix(col, GOLD, fillMask * lilyShow * goldStrength);
-            float lineMask = smoothstep(0.06, 0.02, abs(lily));
-            col = mix(col, INK, lineMask * lilyShow * 0.7);
-        }
-    }
-
-    // ── Mid-span cartouches (decorative ovals on each side midpoint) ─
-    if (midCartouche > 0.001) {
-        for (int s = 0; s < 4; s++) {
-            float fs = float(s);
-            vec2 midPos;
-            if      (fs < 0.5) midPos = vec2(0.5, fW * 0.5);
-            else if (fs < 1.5) midPos = vec2(1.0 - fW * 0.5, 0.5);
-            else if (fs < 2.5) midPos = vec2(0.5, 1.0 - fW * 0.5);
-            else               midPos = vec2(fW * 0.5, 0.5);
-            vec2 d2 = uv - midPos;
-            // Oval oriented along the side
-            if (fs < 0.5 || fs > 1.5 && fs < 2.5) d2.x *= 0.5; else d2.y *= 0.5;
-            float r = length(d2);
-            float oval = smoothstep(fW * 0.30, fW * 0.25, r);
-            col = mix(col, GOLD, oval * midCartouche * goldStrength * 0.85);
-            // Inner ink dot
-            float dot_ = smoothstep(fW * 0.10, fW * 0.07, r);
-            col = mix(col, INK, dot_ * midCartouche * 0.55);
-        }
-    }
-
-    // ── Inner frame line ─────────────────────────────────────────────
-    if (innerLine > 0.001) {
-        float lineDist = abs(edgeMin - fW);
-        float inner = smoothstep(innerLine, 0.0, lineDist);
-        col = mix(col, INK, inner * 0.7);
-    }
-
-    // ── Optional center flower (off by default; user wanted frames) ──
-    if (centerFlower > 0.001) {
-        vec2 cuv = (uv - 0.5) * vec2(aspect, 1.0);
-        float r = length(cuv);
-        float th = atan(cuv.y, cuv.x);
-        float petalR = 0.10 * (1.0 + 0.35 * cos(8.0 * (th + t * 0.5)));
-        float ring = smoothstep(0.005, 0.0, abs(r - petalR));
-        float fillM = smoothstep(petalR + 0.003, petalR - 0.005, r);
-        col = mix(col, frameTint.rgb, fillM * centerFlower);
-        col = mix(col, INK, ring * centerFlower);
-    }
-
-    // ── Interior wash from input texture ─────────────────────────────
-    if (IMG_SIZE_inputTex.x > 0.0 && interiorWash > 0.0) {
-        vec3 src = texture(inputTex, uv).rgb;
-        // Only apply inside the frame
-        float interior = smoothstep(0.0, 0.03, edgeMin - fW);
-        col = mix(col, src, interior * interiorWash);
-    }
-
-    // Audio breath
-    col *= 0.94 + audioLevel * audioReact * 0.10;
+    // Treble shimmer on gold (id 2/3) handled via audio modulating exposure tail.
+    col *= exposure;
+    col += GOLD * 0.04 * audio * float(id == 2 || id == 3);
 
     gl_FragColor = vec4(col, 1.0);
 }

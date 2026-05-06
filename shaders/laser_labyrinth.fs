@@ -1,178 +1,178 @@
 /*{
-  "CATEGORIES": [
-    "Radiant"
-  ],
-  "DESCRIPTION": "Volumetric light cones sweeping through fog - nightclub laser beams",
+  "CATEGORIES": ["Generator", "Light", "Audio Reactive"],
+  "DESCRIPTION": "Single-source laser fan — 4 to 12 thin HDR beams emanate from a central point and rotate slowly through volumetric haze. Each beam carries its own curated color (red/green/blue/cyan/magenta/yellow/white). FBM-noise modulates brightness along each beam so the volumetric smoke shows through invisible patches. A BPM-style synchronized pulse kicks every beat and ripples outward. Output is linear HDR — core peaks 2.0-3.0 for downstream bloom.",
   "INPUTS": [
-    {
-      "NAME": "sweepSpeed",
-      "TYPE": "float",
-      "DEFAULT": 0.5,
-      "MIN": 0,
-      "MAX": 2,
-      "LABEL": "Sweep Speed"
-    },
-    {
-      "NAME": "beamIntensity",
-      "TYPE": "float",
-      "DEFAULT": 1,
-      "MIN": 0,
-      "MAX": 2,
-      "LABEL": "Beam Intensity"
-    },
-    {
-      "NAME": "baseColor",
-      "LABEL": "Color",
-      "TYPE": "color",
-      "DEFAULT": [
-        0.91,
-        0.25,
-        0.34,
-        1
-      ]
-    },
-    {
-      "NAME": "inputTex",
-      "LABEL": "Texture",
-      "TYPE": "image"
-    }
+    { "NAME": "beamCount",     "LABEL": "Beam Count",     "TYPE": "long",  "DEFAULT": 6, "VALUES": [4,6,8,12], "LABELS": ["4","6","8","12"] },
+    { "NAME": "rotationSpeed", "LABEL": "Rotation",       "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.45 },
+    { "NAME": "hazeIntensity", "LABEL": "Haze",           "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.85 },
+    { "NAME": "colorMode",     "LABEL": "Color Mode",     "TYPE": "long",  "DEFAULT": 0, "VALUES": [0,1,2], "LABELS": ["Mono","Rainbow","Custom"] },
+    { "NAME": "audioReact",    "LABEL": "Audio React",    "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
-precision highp float;
+// LASER FAN — one source, N beams, slow rotation, BPM-synced pulse.
 
 #define PI 3.14159265359
+#define TAU 6.28318530718
 
-float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-float hash3(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
-float noise3d(vec3 p) {
-  vec3 i = floor(p); vec3 f = fract(p);
-  f = f * f * (3.0 - 2.0 * f);
-  float n000 = hash3(i); float n100 = hash3(i + vec3(1,0,0));
-  float n010 = hash3(i + vec3(0,1,0)); float n110 = hash3(i + vec3(1,1,0));
-  float n001 = hash3(i + vec3(0,0,1)); float n101 = hash3(i + vec3(1,0,1));
-  float n011 = hash3(i + vec3(0,1,1)); float n111 = hash3(i + vec3(1,1,1));
-  return mix(mix(mix(n000,n100,f.x),mix(n010,n110,f.x),f.y),
-             mix(mix(n001,n101,f.x),mix(n011,n111,f.x),f.y),f.z);
+float vnoise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = h21(i), b = h21(i + vec2(1.0, 0.0));
+    float c = h21(i + vec2(0.0, 1.0)), d = h21(i + vec2(1.0, 1.0));
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+float fbm(vec2 p) {
+    float v = 0.0, a = 0.5;
+    for (int i = 0; i < 5; i++) { v += a * vnoise(p); p = p * 2.03 + 17.0; a *= 0.5; }
+    return v;
 }
 
-float fbm(vec3 p) {
-  float v = 0.0; float a = 0.5; vec3 shift = vec3(100.0);
-  for (int i = 0; i < 4; i++) { v += a * noise3d(p); p = p * 2.0 + shift; a *= 0.5; }
-  return v;
+// Curated laser palette — 7 saturated HDR colors
+vec3 paletteColor(int idx) {
+    if (idx == 0) return vec3(2.40, 0.18, 0.22);   // red
+    if (idx == 1) return vec3(0.22, 2.60, 0.42);   // green
+    if (idx == 2) return vec3(0.32, 0.55, 2.70);   // blue
+    if (idx == 3) return vec3(0.30, 2.40, 2.50);   // cyan
+    if (idx == 4) return vec3(2.50, 0.30, 2.40);   // magenta
+    if (idx == 5) return vec3(2.50, 2.30, 0.30);   // yellow
+    return            vec3(2.40, 2.40, 2.55);      // white
 }
 
-vec3 coneColor(int idx, float hueShift) {
-  vec3 col;
-  if (idx == 0) col = vec3(1.0, 0.0, 0.5);
-  else if (idx == 1) col = vec3(0.5, 0.05, 1.0);
-  else if (idx == 2) col = vec3(0.1, 0.35, 1.0);
-  else if (idx == 3) col = vec3(0.85, 0.0, 0.85);
-  else if (idx == 4) col = vec3(0.15, 0.2, 1.0);
-  else col = vec3(0.0, 0.8, 0.95);
-  float angle = hueShift;
-  float cosA = cos(angle); float sinA = sin(angle);
-  float lum = dot(col, vec3(0.299, 0.587, 0.114));
-  vec3 grey = vec3(lum); vec3 diff = col - grey;
-  vec3 axis1 = normalize(vec3(1.0, -1.0, 0.0));
-  vec3 axis2 = normalize(vec3(0.5, 0.5, -1.0));
-  float d1 = dot(diff, axis1); float d2 = dot(diff, axis2);
-  return clamp(grey + axis1 * (d1 * cosA - d2 * sinA) + axis2 * (d1 * sinA + d2 * cosA), 0.0, 1.0);
+// HSV→RGB for rainbow mode (kept HDR by scaling)
+vec3 hsv(float h, float s, float v) {
+    vec3 k = mod(vec3(5.0, 3.0, 1.0) + h * 6.0, 6.0);
+    k = clamp(min(k, 4.0 - k), 0.0, 1.0);
+    return v * mix(vec3(1.0), k, s);
+}
+
+vec3 beamColorFor(int i, int N, int mode, float t) {
+    if (mode == 0) {
+        // MONO — single color, slowly cycles through palette
+        int idx = int(mod(floor(t * 0.20), 7.0));
+        return paletteColor(idx);
+    }
+    if (mode == 1) {
+        // RAINBOW — distribute hues evenly around the wheel, drift over time
+        float h = fract(float(i) / float(N) + t * 0.05);
+        return hsv(h, 1.0, 2.45);
+    }
+    // CUSTOM — each beam picks a different palette slot, deterministic
+    int idx = int(mod(float(i) * 2.0 + 1.0, 7.0));
+    return paletteColor(idx);
 }
 
 void main() {
-  vec2 fragUV = gl_FragCoord.xy / RENDERSIZE.xy;
-  float aspect = RENDERSIZE.x / RENDERSIZE.y;
-  vec2 uv = fragUV;
-  uv.x = (uv.x - 0.5) * aspect;
+    vec2 uv = isf_FragNormCoord.xy;
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
 
-  float t = TIME * sweepSpeed;
-  float intensity = beamIntensity + audioLevel * 0.5;
+    // Stage coords: x in [-aspect, aspect], y in [-1, 1]
+    vec2 p = uv * 2.0 - 1.0;
+    p.x *= aspect;
 
-  vec3 fogCoord = vec3(fragUV * 3.0, t * 0.08);
-  fogCoord.y -= t * 0.03; fogCoord.x += t * 0.015;
-  float fogDensity = fbm(fogCoord);
-  vec3 fogCoord2 = vec3(fragUV * 6.0 + 50.0, t * 0.12);
-  fogCoord2.y -= t * 0.05;
-  float fog = fogDensity * 0.5 + fbm(fogCoord2) * 0.5;
-  fog = fog * fog * 1.5;
+    float t  = TIME;
+    float aR = clamp(audioReact, 0.0, 2.0);
 
-  vec3 col = vec3(0.0);
-  float hueShift = sin(t * 0.07) * 0.2;
-  float globalBeat = pow(abs(sin(t * PI / 1.5)), 8.0) * 0.2 + audioBass * 0.3;
+    // ─── BPM-style pulse — synthetic 120 BPM (2 Hz) beat envelope.
+    // Each beat rises sharply and decays exponentially. Audio host can
+    // amplify via audioReact.
+    float bpm    = 120.0;
+    float beatHz = bpm / 60.0;
+    float beatPhase = fract(t * beatHz);
+    // Sharp attack + exponential decay
+    float beat = exp(-beatPhase * 6.0) * (0.5 + 0.5 * aR);
 
-  for (int i = 0; i < 3; i++) {
-    float fi = float(i);
-    float originX = (fi - 1.0) * 0.4 * aspect + sin(t * 0.07 + fi * 2.5) * 0.1 * aspect;
-    vec2 origin = vec2(originX, 1.05);
-    float sweepAmp = 0.4 + fi * 0.1;
-    float theta = sin(t * (0.3 + fi * 0.11) * 0.7 + fi * 1.9) * sweepAmp;
-    vec2 dir = vec2(sin(theta), -cos(theta));
-    vec2 toPixel = uv - origin;
-    float along = dot(toPixel, dir);
-    float perp = abs(toPixel.x * dir.y - toPixel.y * dir.x);
-    float coneWidth = (0.13 + fi * 0.015) * max(along, 0.0) + 0.012;
-    float inCone = exp(-perp * perp / (coneWidth * coneWidth * 0.55));
-    inCone *= smoothstep(0.0, 0.08, along) * exp(-along * along * 0.15);
-    float volumetric = inCone * (0.25 + fog * 0.75);
-    col += coneColor(i, hueShift + fi * 0.15) * volumetric * 0.35 * intensity * (1.0 + globalBeat);
-  }
+    // Vector from center source to current pixel
+    vec2 src = vec2(0.0, 0.0);
+    vec2 q   = p - src;
+    float r  = length(q);
+    float ang = atan(q.y, q.x);
 
-  for (int i = 0; i < 3; i++) {
-    float fi = float(i);
-    float originX = (fi - 1.0) * 0.5 * aspect + 0.15 * aspect + sin(t * 0.1 + fi * 3.1 + 1.0) * 0.08 * aspect;
-    vec2 origin = vec2(originX, 1.02);
-    float theta = sin(t * (0.4 + fi * 0.13) + fi * 2.3 + 0.7) * (0.5 + fi * 0.08);
-    vec2 dir = vec2(sin(theta), -cos(theta));
-    vec2 toPixel = uv - origin;
-    float along = dot(toPixel, dir);
-    float perp = abs(toPixel.x * dir.y - toPixel.y * dir.x);
-    float coneWidth = (0.11 + fi * 0.012) * max(along, 0.0) + 0.01;
-    float inCone = exp(-perp * perp / (coneWidth * coneWidth * 0.4));
-    inCone += exp(-perp * perp / (coneWidth * coneWidth * 0.04)) * 0.4;
-    inCone *= smoothstep(0.0, 0.06, along) * exp(-along * along * 0.1);
-    float volumetric = inCone * (0.2 + fog * 0.8);
-    col += coneColor(i + 3, hueShift + fi * 0.15 + 0.5) * volumetric * 0.75 * intensity * (1.0 + globalBeat);
-  }
+    // Slow global rotation
+    float rot = t * rotationSpeed;
 
-  float brightness = dot(col, vec3(0.299, 0.587, 0.114));
-  col = mix(col, vec3(brightness * 1.3), smoothstep(0.4, 1.2, brightness) * 0.5);
+    // Beam count from enum
+    int N = (beamCount <= 4) ? 4 : (beamCount <= 6) ? 6 : (beamCount <= 8) ? 8 : 12;
+    float Nf = float(N);
 
-  float groundHaze = smoothstep(0.2, 0.0, fragUV.y);
-  col += col * groundHaze * 0.3;
-  col += vec3(0.06, 0.03, 0.1) * groundHaze * fbm(vec3(fragUV.x * 4.0, fragUV.y * 2.0, t * 0.05 + 10.0)) * intensity;
+    // Folded angle into single beam-sector → distance to nearest beam axis
+    // Each beam sits at angle (k * TAU/N + rot). The signed angular distance
+    // to the nearest beam is computed via fold.
+    float sector = TAU / Nf;
+    float relAng = ang - rot;
+    // Index of the nearest beam (used for per-beam color + breath seed)
+    float nearestK = floor(relAng / sector + 0.5);
+    int   ki       = int(mod(nearestK, Nf));
+    float beamAng  = nearestK * sector + rot;
+    // Perpendicular distance from the beam axis (radius * sin of angle delta)
+    float dAng = ang - beamAng;
+    // wrap into [-PI, PI]
+    dAng = mod(dAng + PI, TAU) - PI;
+    float perp = r * dAng;            // approximate perpendicular distance
+    float along = r;                  // distance along the beam from source
 
-  col = 1.0 - exp(-col * 2.0);
-  col += hash(gl_FragCoord.xy + fract(TIME) * 100.0) * 0.04 - 0.02;
+    // ─── HAZE FIELD — drifting fbm
+    vec2  hazeUV   = vec2(p.x * 1.1, p.y * 1.1 + t * 0.05);
+    float hazeBase = fbm(hazeUV * 1.5 + vec2(0.0, t * 0.04));
+    float hazeFine = fbm(hazeUV * 3.4 + vec2(t * 0.08, 0.0));
+    float haze     = hazeBase * 0.65 + hazeFine * 0.35;
+    haze = clamp(haze * hazeIntensity, 0.0, 1.4);
 
-  vec2 vigUV = fragUV - 0.5;
-  col *= clamp(1.0 - dot(vigUV, vigUV) * 0.8, 0.0, 1.0);
-  col = clamp(col, 0.0, 1.0);
+    // ─── BEAM BREATHING — fbm along the beam axis creates invisible
+    // patches in the smoke so beams visibly pulse as they cut through.
+    float seed     = float(ki) * 1.91;
+    vec2  axisCoord = vec2(along * 4.0 + seed, t * 0.55 + seed * 7.13);
+    float breathe   = fbm(axisCoord);
+    breathe = smoothstep(0.18, 0.78, breathe);
 
-  // Texture as source — shader VFX processes the input content
-    vec2 texUV = gl_FragCoord.xy / RENDERSIZE.xy;
-    vec4 texSample = texture2D(inputTex, texUV);
-    if (texSample.a > 0.01) {
-        // Blend: texture is the source, shader effect modulates it
-        float effectStrength = max(col.r, max(col.g, col.b));
-        col = mix(texSample.rgb, col, 0.5) * (0.5 + effectStrength * 0.5);
-        col *= baseColor.rgb;
-    } else {
-        col *= baseColor.rgb;
-    }
+    // BPM pulse ripples outward from the source as a radial wave.
+    float pulseRing = exp(-pow((along - beatPhase * 2.2) * 4.0, 2.0)) * beat;
 
-  // Surprise: every ~15s the labyrinth solves itself — for ~0.5s a
-  // single straight horizontal beam cuts through everything, the
-  // shortest path revealed.
-  {
-      vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
-      float _ph = fract(TIME / 15.0);
-      float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.16, 0.08, _ph);
-      float _y  = 0.5 + 0.20 * sin(floor(TIME / 15.0));
-      float _beam = exp(-pow((_suv.y - _y) * 320.0, 2.0));
-      col += vec3(1.0, 0.6, 0.2) * _beam * _f * 1.5;
-  }
+    // ─── BEAM SHAPE — sharp gaussian core + soft volumetric halo
+    float core = exp(-perp * perp * 18000.0);
+    core      += exp(-perp * perp * 3500.0) * 0.55;
 
-  gl_FragColor = vec4(col, 1.0);
+    float haloW = 0.045;
+    float halo  = exp(-perp * perp / (haloW * haloW));
+    halo *= (0.20 + 1.10 * haze) * breathe;
+
+    // Source glow — small bright bloom right at the origin
+    float srcGlow = exp(-r * r * 80.0) * 1.4;
+
+    // Falloff with distance from source — beams thin as they reach the edge
+    float reach   = smoothstep(2.4, 0.0, r);
+    float endFade = smoothstep(0.0, 0.05, r);   // hide singularity at center
+    float beamLine = (core * 0.95 + halo * 0.55) * reach * endFade;
+
+    // BPM pulse boosts the beam intensity globally on each beat
+    float beatBoost = 1.0 + 0.85 * beat;
+    beamLine *= beatBoost;
+    // Pulse ring adds a traveling brighter band along each beam
+    beamLine += halo * pulseRing * 0.9 * reach;
+
+    // Color this beam
+    vec3 col3 = beamColorFor(ki, N, int(colorMode), t);
+    vec3 col = col3 * beamLine;
+
+    // Source glow inherits the average mood color (blend a few neighbors)
+    vec3 srcCol = beamColorFor(ki, N, int(colorMode), t);
+    col += srcCol * srcGlow * (0.7 + 0.4 * beat);
+
+    // ─── ROOM AMBIENCE — deep cool black + faint smoke pickup
+    vec3 ambient = vec3(0.012, 0.014, 0.022);
+    float smokePickup = clamp(dot(col, vec3(0.299, 0.587, 0.114)) * 0.04, 0.0, 0.20);
+    col += ambient + vec3(0.18, 0.20, 0.30) * haze * (0.05 + smokePickup);
+
+    // Vignette
+    vec2  vg  = uv - 0.5;
+    float vig = clamp(1.0 - dot(vg, vg) * 0.85, 0.0, 1.0);
+    col *= vig;
+
+    // Tiny dither against banding in the haze
+    col += (h21(gl_FragCoord.xy + fract(t) * 53.0) - 0.5) * 0.004;
+
+    // Output LINEAR HDR (host applies tone-map / bloom)
+    gl_FragColor = vec4(col, 1.0);
 }

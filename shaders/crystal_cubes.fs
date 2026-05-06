@@ -144,8 +144,14 @@ void main() {
 
     float diff1 = max(dot(n, L1), 0.0);
     float diff2 = max(dot(n, L2), 0.0) * 0.3;
-    float spec1 = pow(max(dot(n, H1), 0.0), 128.0);
-    float spec2 = pow(max(dot(n, H2), 0.0), 64.0);
+
+    // Soft AA on facet specular edges via fwidth on the half-vector dot
+    float ndh1 = max(dot(n, H1), 0.0);
+    float ndh2 = max(dot(n, H2), 0.0);
+    float aa1 = fwidth(ndh1) + 1e-4;
+    float aa2 = fwidth(ndh2) + 1e-4;
+    float spec1 = pow(smoothstep(-aa1, aa1, ndh1) * ndh1, 128.0);
+    float spec2 = pow(smoothstep(-aa2, aa2, ndh2) * ndh2, 64.0);
     float fresnel = 0.6 + 0.4 * pow(1.0 - max(dot(n, v), 0.0), 4.0);
 
     if (hasTexture) {
@@ -154,7 +160,9 @@ void main() {
       vec3 texCol = texture2D(inputTex, refractUV).rgb;
 
       col = texCol * (diff1 + diff2) * 0.5;
-      col += texCol * (spec1 + spec2 * 0.5) * fresnel * 0.7;
+      // HDR peak: facet glints push to ~2.6 linear for bloom
+      col += texCol * (spec1 + spec2 * 0.5) * fresnel * 2.6;
+      col += vec3(1.0) * spec1 * fresnel * 2.2;
       col += texCol * pow(1.0 - max(dot(n, v), 0.0), 3.0) * 0.25;
     } else {
       // Procedural "demo" texture — colorful gradient + slow noise so
@@ -170,20 +178,21 @@ void main() {
       vec3 procCol = mix(grad, vec3(0.85, 0.92, 1.0), 0.3) * (0.7 + 0.3 * band);
 
       col = procCol * (diff1 + diff2) * 0.5;
-      col += procCol * (spec1 + spec2 * 0.5) * fresnel * 0.9;
-      col += vec3(1.0) * spec1 * fresnel * 1.2;
+      // HDR peak: refractive highlights hit ~2.8 linear so they sparkle through bloom
+      col += procCol * (spec1 + spec2 * 0.5) * fresnel * 2.8;
+      col += vec3(1.0) * spec1 * fresnel * 2.6;
       col += procCol * pow(1.0 - max(dot(n, v), 0.0), 3.0) * 0.35;
     }
 
-    // Subtle audio glow
+    // Audio non-gating: alive at audio=0, audio adds a subtle tint when present
+    col += vec3(0.04, 0.025, 0.015);
     col += smoothstep(0.0, 1.0, audioLevel) * vec3(0.05, 0.03, 0.02);
     alpha = 1.0;
   }
 
   col *= baseColor.rgb;
 
-  // Tone mapping
-  col = col * (2.51 * col + 0.03) / (col * (2.43 * col + 0.59) + 0.14);
+  // No tonemap — preserve HDR for Phase Q v4 bloom
 
   if (!hit && transparentBg) {
     alpha = 0.0;

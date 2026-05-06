@@ -1,200 +1,289 @@
 /*{
-  "DESCRIPTION": "Soft 3D gradient orb with drifting color stops, rim glow, optional video texture (masked to orb) with fisheye lens, blend modes, and optional wireframe ground grid",
-  "CREDIT": "ShaderClaw",
-  "CATEGORIES": ["Generator", "3D"],
+  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
+  "DESCRIPTION": "Sophic Orb — a single contemplative central orb rendered with curatorial conviction. Four surface treatments (Iridescent Pearl, Living Wood, Plasma Core, Marble + Gold Kintsugi) each carry their own material logic: thin-film interference, slow Voronoi morph, volumetric inner turbulence, or veined classical stone. Bass breathes the orb scale, mids drive the surface morph rate, treble ignites micro-flickers across the silhouette. Drifting mote field surrounds; complementary deep gradient backdrop. Returns LINEAR HDR.",
   "INPUTS": [
-    { "NAME": "inputTex", "LABEL": "Video", "TYPE": "image" },
-    { "NAME": "color1", "LABEL": "Color 1", "TYPE": "color", "DEFAULT": [0.45, 0.95, 0.30, 1.0] },
-    { "NAME": "color2", "LABEL": "Color 2", "TYPE": "color", "DEFAULT": [0.95, 0.45, 0.95, 1.0] },
-    { "NAME": "color3", "LABEL": "Color 3", "TYPE": "color", "DEFAULT": [0.55, 0.25, 0.85, 1.0] },
-    { "NAME": "color4", "LABEL": "Color 4", "TYPE": "color", "DEFAULT": [0.10, 0.30, 0.75, 1.0] },
-    { "NAME": "gradIntensity", "LABEL": "Gradient Intensity", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "blendMode", "LABEL": "Blend Mode", "TYPE": "long", "VALUES": [0,1,2,3,4,5,6], "LABELS": ["Normal","Multiply","Screen","Overlay","Add","Soft Light","Color Dodge"], "DEFAULT": 3 },
-    { "NAME": "blendAmount", "LABEL": "Blend Amount", "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fisheye", "LABEL": "Video Fisheye", "TYPE": "float", "DEFAULT": 0.3, "MIN": -1.0, "MAX": 1.5 },
-    { "NAME": "videoZoom", "LABEL": "Video Zoom", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.3, "MAX": 3.0 },
-    { "NAME": "sceneFisheye", "LABEL": "Scene Fisheye", "TYPE": "float", "DEFAULT": 0.0, "MIN": -1.0, "MAX": 1.5 },
-    { "NAME": "orbRadius", "LABEL": "Orb Size", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.2, "MAX": 2.0 },
-    { "NAME": "rotSpeed", "LABEL": "Rotation Speed", "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "driftSpeed", "LABEL": "Gradient Drift", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "softness", "LABEL": "Edge Softness", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "glow", "LABEL": "Inner Glow", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "blur", "LABEL": "Gradient Blur", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "showGrid", "LABEL": "Show Grid", "TYPE": "bool", "DEFAULT": true },
-    { "NAME": "gridColor", "LABEL": "Grid Color", "TYPE": "color", "DEFAULT": [0.45, 0.85, 1.0, 1.0] },
-    { "NAME": "gridSpacing", "LABEL": "Grid Spacing", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.1, "MAX": 2.0 },
-    { "NAME": "gridThickness", "LABEL": "Grid Thickness", "TYPE": "float", "DEFAULT": 0.02, "MIN": 0.005, "MAX": 0.1 },
-    { "NAME": "gridOpacity", "LABEL": "Grid Opacity", "TYPE": "float", "DEFAULT": 0.7, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "gridHeight", "LABEL": "Grid Height", "TYPE": "float", "DEFAULT": -1.3, "MIN": -3.0, "MAX": 0.0 },
-    { "NAME": "gridFog", "LABEL": "Grid Fog", "TYPE": "float", "DEFAULT": 0.08, "MIN": 0.0, "MAX": 0.5 }
+    { "NAME": "camDist",       "LABEL": "Camera Distance", "TYPE": "float", "MIN": 1.5, "MAX": 12.0, "DEFAULT": 4.5 },
+    { "NAME": "camHeight",     "LABEL": "Camera Height",   "TYPE": "float", "MIN": -3.0, "MAX": 4.0, "DEFAULT": 1.2 },
+    { "NAME": "camOrbitSpeed", "LABEL": "Orbit Speed",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 0.18 },
+    { "NAME": "camAzimuth",    "LABEL": "Camera Azimuth",  "TYPE": "float", "MIN": 0.0, "MAX": 6.2832, "DEFAULT": 0.0 },
+    { "NAME": "keyAngle",      "LABEL": "Key Light Angle", "TYPE": "float", "MIN": 0.0, "MAX": 6.2832, "DEFAULT": 0.785 },
+    { "NAME": "keyElevation",  "LABEL": "Key Elevation",   "TYPE": "float", "MIN": 0.0, "MAX": 1.5708, "DEFAULT": 0.7 },
+    { "NAME": "keyColor",      "LABEL": "Key Light",       "TYPE": "color", "DEFAULT": [1.0, 0.94, 0.82, 1.0] },
+    { "NAME": "fillColor",     "LABEL": "Fill Light",      "TYPE": "color", "DEFAULT": [0.55, 0.70, 1.0, 1.0] },
+    { "NAME": "ambient",       "LABEL": "Ambient",         "TYPE": "float", "MIN": 0.0, "MAX": 0.5,  "DEFAULT": 0.08 },
+    { "NAME": "rimStrength",   "LABEL": "Rim Strength",    "TYPE": "float", "MIN": 0.0, "MAX": 1.5,  "DEFAULT": 0.5 },
+    { "NAME": "exposure",      "LABEL": "Exposure",        "TYPE": "float", "MIN": 0.3, "MAX": 3.0,  "DEFAULT": 1.0 },
+    { "NAME": "mood",          "LABEL": "Surface Treatment","TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Iridescent Pearl","Living Wood","Plasma Core","Marble + Gold"], "DEFAULT": 0 },
+    { "NAME": "orbScale",      "LABEL": "Orb Size",        "TYPE": "float", "MIN": 0.5, "MAX": 1.4, "DEFAULT": 0.95 },
+    { "NAME": "moteDensity",   "LABEL": "Mote Field",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55 },
+    { "NAME": "highlightStrength","LABEL": "Specular Key", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
+    { "NAME": "morphSpeed",    "LABEL": "Surface Morph",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.6 },
+    { "NAME": "audioReact",    "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
+    { "NAME": "kintsugiGold",  "LABEL": "Kintsugi Gold",   "TYPE": "float", "MIN": 0.0, "MAX": 2.5, "DEFAULT": 1.0 },
+    { "NAME": "pearlIridescence","LABEL": "Pearl Iridescence","TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
-#define PI 3.14159265
-#define MAX_DIST 1000.0
+#define MAX_STEPS 80
+#define MAX_DIST  20.0
+#define EPS       0.0009
+#define PI        3.14159265
 
-vec3 rotY(vec3 p, float a) {
-    float c = cos(a), s = sin(a);
-    return vec3(c * p.x + s * p.z, p.y, -s * p.x + c * p.z);
+float hash11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
+float hash21(vec2 p)  { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float hash31(vec3 p)  { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+
+float vnoise(vec3 p) {
+    vec3 i = floor(p), f = fract(p);
+    f = f*f*(3.0 - 2.0*f);
+    float n000 = hash31(i + vec3(0,0,0));
+    float n100 = hash31(i + vec3(1,0,0));
+    float n010 = hash31(i + vec3(0,1,0));
+    float n110 = hash31(i + vec3(1,1,0));
+    float n001 = hash31(i + vec3(0,0,1));
+    float n101 = hash31(i + vec3(1,0,1));
+    float n011 = hash31(i + vec3(0,1,1));
+    float n111 = hash31(i + vec3(1,1,1));
+    return mix(
+        mix(mix(n000, n100, f.x), mix(n010, n110, f.x), f.y),
+        mix(mix(n001, n101, f.x), mix(n011, n111, f.x), f.y),
+        f.z);
 }
 
-vec3 rotX(vec3 p, float a) {
-    float c = cos(a), s = sin(a);
-    return vec3(p.x, c * p.y - s * p.z, s * p.y + c * p.z);
+float fbm(vec3 p) {
+    float v = 0.0, a = 0.5;
+    for (int i = 0; i < 5; i++) { v += a * vnoise(p); p *= 2.02; a *= 0.5; }
+    return v;
 }
 
-// Analytic sphere intersection (sphere at origin, radius r). Returns nearest positive t.
-bool hitSphere(vec3 ro, vec3 rd, float r, out float t) {
-    float b = dot(ro, rd);
-    float c = dot(ro, ro) - r * r;
-    float h = b * b - c;
-    if (h < 0.0) return false;
-    h = sqrt(h);
-    float t0 = -b - h;
-    float t1 = -b + h;
-    t = t0 > 0.0 ? t0 : t1;
-    return t > 0.0;
+float voronoi3(vec3 p) {
+    vec3 i = floor(p), f = fract(p);
+    float md = 1.0;
+    for (int x = -1; x <= 1; x++)
+    for (int y = -1; y <= 1; y++)
+    for (int z = -1; z <= 1; z++) {
+        vec3 g = vec3(x,y,z);
+        vec3 o = vec3(hash31(i + g + vec3(1.0,0.0,0.0)),
+                      hash31(i + g + vec3(0.0,1.0,0.0)),
+                      hash31(i + g + vec3(0.0,0.0,1.0)));
+        vec3 r = g + o - f;
+        md = min(md, dot(r, r));
+    }
+    return sqrt(md);
 }
 
-// Soft weighted blend over four anchor directions on the unit sphere.
-vec3 orbGradient(vec3 n, float t, float softK) {
-    vec3 a1 = normalize(vec3(sin(t * 0.71),        cos(t * 0.63 + 1.3),  sin(t * 0.92 + 0.4)));
-    vec3 a2 = normalize(vec3(cos(t * 0.83 + 1.1),  sin(t * 0.57 + 2.0),  cos(t * 0.41 + 2.5)));
-    vec3 a3 = normalize(vec3(sin(t * 0.37 + 3.2),  cos(t * 0.91 + 0.5),  sin(t * 0.68 + 1.3)));
-    vec3 a4 = normalize(vec3(cos(t * 0.54 + 2.3),  sin(t * 0.76 + 1.8),  cos(t * 0.82 + 0.2)));
+float bassEnv()  { return clamp(audioBass, 0.0, 1.0); }
+float midEnv()   { return clamp(audioMid,  0.0, 1.0); }
+float trebleEnv(){ return clamp(audioHigh, 0.0, 1.0); }
 
-    float k = mix(6.0, 1.2, softK);
+float sdOrb(vec3 p, float r) { return length(p) - r; }
 
-    float w1 = pow(max(0.0, dot(n, a1) * 0.5 + 0.5), k);
-    float w2 = pow(max(0.0, dot(n, a2) * 0.5 + 0.5), k);
-    float w3 = pow(max(0.0, dot(n, a3) * 0.5 + 0.5), k);
-    float w4 = pow(max(0.0, dot(n, a4) * 0.5 + 0.5), k);
-    float wsum = w1 + w2 + w3 + w4 + 1e-5;
-    return (color1.rgb * w1 + color2.rgb * w2 + color3.rgb * w3 + color4.rgb * w4) / wsum;
+vec3 orbNormal(vec3 p, float r) {
+    const vec2 e = vec2(EPS, 0.0);
+    return normalize(vec3(
+        sdOrb(p + e.xyy, r) - sdOrb(p - e.xyy, r),
+        sdOrb(p + e.yxy, r) - sdOrb(p - e.yxy, r),
+        sdOrb(p + e.yyx, r) - sdOrb(p - e.yyx, r)));
 }
 
-// --- Blend modes ---
-vec3 bOverlay(vec3 b, vec3 f) {
-    return mix(2.0 * b * f, 1.0 - 2.0 * (1.0 - b) * (1.0 - f), step(0.5, b));
-}
-vec3 bSoftLight(vec3 b, vec3 f) {
-    return mix(2.0 * b * f + b * b * (1.0 - 2.0 * f),
-               sqrt(b) * (2.0 * f - 1.0) + 2.0 * b * (1.0 - f),
-               step(0.5, f));
-}
-vec3 bColorDodge(vec3 b, vec3 f) {
-    return clamp(b / max(1.0 - f, 1e-3), 0.0, 2.0);
+vec3 thinFilm(float ndv, float thickness, float irid) {
+    float phase = (1.0 - ndv) * thickness * 18.0 * irid;
+    vec3 col;
+    col.r = 0.5 + 0.5 * cos(phase + 0.0);
+    col.g = 0.5 + 0.5 * cos(phase + 2.094);
+    col.b = 0.5 + 0.5 * cos(phase + 4.188);
+    vec3 base = vec3(0.92, 0.88, 0.82);
+    return mix(base, col, clamp(0.40 + 0.45 * irid, 0.0, 1.0));
 }
 
-vec3 applyBlend(vec3 base, vec3 over, int mode, float amt) {
-    vec3 r;
-    if (mode == 0)      r = over;
-    else if (mode == 1) r = base * over;
-    else if (mode == 2) r = 1.0 - (1.0 - base) * (1.0 - over);
-    else if (mode == 3) r = bOverlay(base, over);
-    else if (mode == 4) r = base + over;
-    else if (mode == 5) r = bSoftLight(base, over);
-    else                r = bColorDodge(base, over);
-    return mix(base, r, amt);
+vec3 surfacePearl(vec3 p, vec3 n, vec3 v, float t) {
+    float ndv = clamp(dot(n, v), 0.0, 1.0);
+    float swirl = fbm(p * 2.4 + vec3(0.0, t * 0.18, 0.0));
+    float thick = 0.65 + 0.55 * swirl;
+    vec3 ir = thinFilm(ndv, thick, pearlIridescence);
+    ir *= mix(vec3(0.85, 0.92, 1.05), vec3(1.10, 0.90, 0.95), swirl);
+    return ir;
 }
 
-// Fisheye distortion of a disk coordinate p in [-1,1]
-vec2 fisheyeWarp(vec2 p, float amt) {
-    float r2 = dot(p, p);
-    float nz = sqrt(max(0.0, 1.0 - r2));
-    // amt > 0: pushes content outward (barrel / bulge lens feel)
-    // amt < 0: pulls content to center (pincushion)
-    float k = amt;
-    vec2 pd = p * (1.0 + k * (1.0 - nz));
-    return pd;
+vec3 surfaceWood(vec3 p, vec3 n, float t) {
+    vec3 q = p * 5.5 + vec3(0.0, 0.0, t * 0.12);
+    q += 0.35 * vec3(fbm(p * 2.0 + t * 0.07),
+                     fbm(p * 2.0 + 7.3 + t * 0.07),
+                     fbm(p * 2.0 + 13.1));
+    float v1 = voronoi3(q);
+    float v2 = voronoi3(q * 1.7 + 4.1);
+    float grain = smoothstep(0.0, 0.18, v1) * smoothstep(0.0, 0.30, v2);
+    vec3 walnut = vec3(0.32, 0.18, 0.10);
+    vec3 umber  = vec3(0.55, 0.32, 0.16);
+    vec3 dark   = vec3(0.10, 0.06, 0.04);
+    vec3 col    = mix(dark, walnut, grain);
+    col = mix(col, umber, smoothstep(0.45, 0.85, fbm(p * 4.0 + t * 0.05)));
+    return col;
+}
+
+vec3 surfacePlasma(vec3 p, vec3 n, vec3 v, float t) {
+    vec3 inner = p - n * 0.18;
+    float turb = fbm(inner * 3.8 + vec3(0.0, t * 0.6, 0.0));
+    turb = pow(turb, 1.4);
+    vec3 core   = vec3(2.40, 1.20, 0.35);
+    vec3 mid    = vec3(1.50, 0.45, 0.10);
+    vec3 shell  = vec3(0.45, 0.10, 0.04);
+    vec3 col    = mix(shell, mid, turb);
+    col         = mix(col, core, smoothstep(0.55, 0.85, turb));
+    float ndv = clamp(dot(n, v), 0.0, 1.0);
+    col += core * pow(1.0 - ndv, 4.0) * 0.6;
+    return col;
+}
+
+vec3 surfaceMarble(vec3 p, vec3 n, float t) {
+    float base   = fbm(p * 3.0 + vec3(0.0, t * 0.04, 0.0));
+    float veinF  = fbm(p * 8.0 + vec3(t * 0.03));
+    float ridge  = 1.0 - abs(2.0 * veinF - 1.0);
+    float vein   = pow(smoothstep(0.55, 0.95, ridge), 6.0);
+    vec3 stone   = mix(vec3(0.92, 0.90, 0.86), vec3(0.78, 0.76, 0.72), base * 0.55);
+    vec3 gold    = vec3(1.45, 1.05, 0.45) * kintsugiGold;
+    return mix(stone, gold, vein * clamp(kintsugiGold, 0.0, 1.0));
+}
+
+vec3 surface(vec3 p, vec3 n, vec3 v, int moodID, float t) {
+    if (moodID == 0) return surfacePearl(p, n, v, t);
+    if (moodID == 1) return surfaceWood(p, n, t);
+    if (moodID == 2) return surfacePlasma(p, n, v, t);
+    return surfaceMarble(p, n, t);
+}
+
+vec3 backdrop(vec2 uv, int moodID) {
+    float vy = uv.y;
+    vec3 top, bot;
+    if (moodID == 0)      { top = vec3(0.025, 0.018, 0.045); bot = vec3(0.10, 0.05, 0.12); }
+    else if (moodID == 1) { top = vec3(0.020, 0.040, 0.060); bot = vec3(0.05, 0.10, 0.14); }
+    else if (moodID == 2) { top = vec3(0.020, 0.030, 0.060); bot = vec3(0.04, 0.05, 0.09); }
+    else                  { top = vec3(0.030, 0.020, 0.050); bot = vec3(0.10, 0.07, 0.05); }
+    return mix(bot, top, smoothstep(0.0, 1.0, vy));
+}
+
+vec3 moteField(vec2 ndc, float t, float density, int moodID, float treble) {
+    if (density <= 0.001) return vec3(0.0);
+    vec3 acc = vec3(0.0);
+    vec3 tint = (moodID == 2) ? vec3(1.30, 0.85, 0.55)
+              : (moodID == 1) ? vec3(0.85, 0.78, 0.55)
+              : (moodID == 3) ? vec3(1.20, 1.00, 0.70)
+                              : vec3(0.85, 0.92, 1.10);
+    for (int layer = 0; layer < 3; layer++) {
+        float fl = float(layer);
+        float scale = mix(40.0, 110.0, fl / 2.0);
+        vec2 q = ndc * scale + vec2(t * (0.05 + 0.04 * fl), -t * (0.03 + 0.02 * fl));
+        vec2 i = floor(q), f = fract(q);
+        float h = hash21(i + fl * 17.3);
+        if (h > 0.96) {
+            vec2 c = vec2(0.5) + 0.4 * vec2(hash21(i + fl * 3.7) - 0.5,
+                                            hash21(i + fl * 9.1) - 0.5);
+            float d = length(f - c);
+            float r = mix(0.06, 0.14, hash21(i + fl * 23.5));
+            float twinkle = 0.5 + 0.5 * sin(t * (1.5 + 3.0 * h) + h * 30.0);
+            float lum = smoothstep(r, 0.0, d) * twinkle;
+            acc += tint * lum * (0.20 + 0.5 * fl * 0.4);
+        }
+    }
+    return acc * density * (1.0 + 0.6 * treble);
 }
 
 void main() {
-    vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
-    vec2 p = uv * 2.0 - 1.0;
-    p.x *= RENDERSIZE.x / RENDERSIZE.y;
+    vec2 uv  = isf_FragNormCoord.xy;
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    vec2 ndc = (uv * 2.0 - 1.0) * vec2(aspect, 1.0);
 
-    vec3 ro = vec3(0.0, 0.0, 4.0);
+    int   moodID = int(mood + 0.5);
+    float t      = TIME;
+    float ar     = clamp(audioReact, 0.0, 2.0);
+    float bass   = bassEnv()   * ar;
+    float mid    = midEnv()    * ar;
+    float treble = trebleEnv() * ar;
 
-    // Scene-wide fisheye: radial distortion of the primary ray direction.
-    // Positive = barrel / bulge (whole scene warps outward, orb balloons),
-    // negative = pincushion (scene pinches toward center).
-    vec2 pRay = p;
-    if (abs(sceneFisheye) > 0.001) {
-        float r2 = dot(p, p);
-        float nz = sqrt(max(0.0, 1.0 - min(r2, 1.0)));
-        pRay = p * (1.0 + sceneFisheye * (1.0 - nz));
-    }
-    vec3 rd = normalize(vec3(pRay, -1.8));
+    float baseRadius = 0.92 * orbScale;
+    float breath     = 1.0 + 0.06 * sin(t * 0.7) + 0.10 * bass;
+    float r          = baseRadius * breath;
 
-    vec3 col = vec3(0.0);
-    float tOrb = MAX_DIST;
+    // Universal orbiting camera: azimuth + height look at origin.
+    float az = camAzimuth + t * camOrbitSpeed;
+    vec3 ro  = vec3(sin(az) * camDist, camHeight, cos(az) * camDist);
+    vec3 fwd = normalize(-ro);
+    vec3 right = normalize(cross(fwd, vec3(0.0, 1.0, 0.0)));
+    vec3 up    = cross(right, fwd);
+    vec3 rd    = normalize(ndc.x * right + ndc.y * up + 1.7 * fwd);
 
-    // ---- Orb ----
-    float t;
-    if (hitSphere(ro, rd, orbRadius, t)) {
-        tOrb = t;
-        vec3 hp = ro + rd * t;
-        vec3 n = normalize(hp);
+    float morphT = t * (morphSpeed * (0.6 + 1.4 * mid) + 0.10);
 
-        // Rotating sample direction for drifting gradient
-        vec3 sn = rotY(n, TIME * rotSpeed);
-        sn = rotX(sn, TIME * rotSpeed * 0.7);
-
-        vec3 gradient = orbGradient(sn, TIME * driftSpeed, blur) * gradIntensity;
-
-        // Video texture masked to the orb disk, with fisheye lens
-        vec3 videoCol = vec3(0.0);
-        bool hasVideo = IMG_SIZE_inputTex.x > 0.0;
-        if (hasVideo) {
-            // Normalized disk coordinate from the orb's screen projection
-            vec2 dp = hp.xy / orbRadius;
-            dp = fisheyeWarp(dp, fisheye);
-            // Zoom around center
-            dp /= max(videoZoom, 1e-3);
-            vec2 vUV = dp * 0.5 + 0.5;
-            // Correct for video aspect vs orb (orb disk is square in world, video is wider)
-            float vAspect = IMG_SIZE_inputTex.x / max(IMG_SIZE_inputTex.y, 1.0);
-            vUV.x = (vUV.x - 0.5) / vAspect + 0.5;
-            if (vUV.x >= 0.0 && vUV.x <= 1.0 && vUV.y >= 0.0 && vUV.y <= 1.0) {
-                videoCol = texture2D(inputTex, vUV).rgb;
-            }
-        }
-
-        int bm = int(blendMode + 0.5);
-        vec3 base = hasVideo ? applyBlend(videoCol, gradient, bm, blendAmount) : gradient;
-
-        // Rim falloff to black at silhouette
-        float ndv = clamp(dot(n, -rd), 0.0, 1.0);
-        float rim = pow(ndv, mix(0.25, 2.8, softness));
-        vec3 c = base * rim;
-        // Inner glow
-        c += base * glow * pow(ndv, 5.0);
-
-        col = c;
+    float dist = 0.0;
+    bool hit = false;
+    for (int i = 0; i < MAX_STEPS; i++) {
+        float d = sdOrb(ro + rd * dist, r);
+        if (d < EPS) { hit = true; break; }
+        dist += d;
+        if (dist > MAX_DIST) break;
     }
 
-    // ---- Ground grid ----
-    if (showGrid && rd.y < 0.0) {
-        float tg = (gridHeight - ro.y) / rd.y;
-        if (tg > 0.0 && tg < tOrb) {
-            vec3 gp = ro + rd * tg;
+    vec3 col = backdrop(uv, moodID);
 
-            float thick = gridThickness * (1.0 + tg * 0.15);
-            float thickNorm = clamp(thick / gridSpacing, 0.001, 0.49);
+    if (hit) {
+        vec3 p = ro + rd * dist;
+        vec3 n = orbNormal(p, r);
+        vec3 v = -rd;
 
-            vec2 cell = abs(fract(gp.xz / gridSpacing) - 0.5);
-            float lineX = smoothstep(0.5, 0.5 - thickNorm, cell.x);
-            float lineZ = smoothstep(0.5, 0.5 - thickNorm, cell.y);
-            float line = max(lineX, lineZ);
+        vec3 albedo = surface(p, n, v, moodID, morphT);
 
-            float fog = exp(-gridFog * tg);
-            float a = line * gridOpacity * fog;
+        // Universal lighting from azimuth/elevation angles.
+        float ce = cos(keyElevation);
+        vec3 keyDir = normalize(vec3(cos(keyAngle) * ce, sin(keyElevation), sin(keyAngle) * ce));
+        vec3 fillDir = normalize(vec3(-keyDir.x, max(0.1, keyDir.y * 0.4), -keyDir.z));
 
-            col += gridColor.rgb * a;
-        }
+        float ndl  = max(dot(n, keyDir), 0.0);
+        float ndlF = max(dot(n, fillDir), 0.0);
+        float ndv  = clamp(dot(n, v), 0.0, 1.0);
+
+        float rough = (moodID == 0) ? 0.22
+                     : (moodID == 1) ? 0.55
+                     : (moodID == 2) ? 0.70
+                                     : 0.30;
+        vec3  H   = normalize(keyDir + v);
+        float ndh = max(dot(n, H), 0.0);
+        float a2  = rough * rough;
+        float denom = (ndh*ndh) * (a2 - 1.0) + 1.0;
+        float D   = a2 / (PI * denom * denom + 1e-5);
+        float fres = pow(1.0 - ndv, 5.0);
+        float F   = 0.04 + 0.96 * fres;
+        float spec = D * F * highlightStrength;
+
+        float rim = pow(1.0 - ndv, 3.0);
+        vec3  rimTint = (moodID == 2) ? vec3(2.20, 0.80, 0.30)
+                       : (moodID == 0) ? vec3(0.85, 0.95, 1.15)
+                       : (moodID == 3) ? vec3(1.30, 1.10, 0.70)
+                                        : vec3(0.85, 0.65, 0.40);
+
+        float sparkleSeed = hash31(floor(p * 90.0));
+        float flick = step(0.985, sparkleSeed) * (0.5 + 0.5 * sin(t * 22.0 + sparkleSeed * 31.0));
+        flick *= treble * 1.6;
+
+        vec3 lit = albedo * ambient
+                 + albedo * ndl  * keyColor.rgb
+                 + albedo * 0.25 * ndlF * fillColor.rgb;
+        lit += keyColor.rgb * spec * 1.4;
+        lit += rimTint * rim * rimStrength;
+        lit += vec3(1.30, 1.20, 1.00) * flick;
+
+        if (moodID == 2) lit += albedo * 0.45;
+
+        col = lit;
     }
 
-    col = clamp(col, 0.0, 4.0);
+    if (!hit) {
+        col += moteField(ndc, t, moteDensity, moodID, treble);
+    }
+
+    float vig = 1.0 - 0.30 * dot(ndc * 0.55, ndc * 0.55);
+    col *= vig;
+
+    col *= exposure;
+    col = max(col, 0.0);
     gl_FragColor = vec4(col, 1.0);
 }

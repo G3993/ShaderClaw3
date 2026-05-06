@@ -8,6 +8,7 @@
     { "NAME": "noiseScale", "LABEL": "Noise Scale", "TYPE": "float", "DEFAULT": 3.0, "MIN": 0.5, "MAX": 12.0 },
     { "NAME": "flowSpeed", "LABEL": "Speed", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "contrastAmt", "LABEL": "Contrast", "TYPE": "float", "DEFAULT": 12.0, "MIN": 1.0, "MAX": 30.0 },
+    { "NAME": "causticStrength", "LABEL": "Caustics", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.5 },
     { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
   ],
   "PASSES": [
@@ -145,6 +146,72 @@ void main() {
     vec3 col = sampleDisp(uv, ln, dispScale * ld);
     col = sigmoidContrast(col, contrastAmt);
 
+    // ---- Caustics: bright focal lines where the dispersion field converges ----
+    // Negative divergence of the flow field = light rays focusing to a point.
+    // Computed from the same 4 neighbor samples we already fetched. Produces
+    // crisp animated rainbow filaments — the "light through water" look.
+    if (causticStrength > 0.0) {
+        float divX = d_e.x - d_w.x;
+        float divY = d_n.y - d_s.y;
+        float divergence = divX + divY;
+        // Caustic intensity = focusing (negative divergence), sharpened.
+        float focus = max(-divergence, 0.0);
+        float caustic = pow(focus, 3.0) * 18.0;
+        // Tint by the local dispersion direction so caustics inherit hue
+        // from the spectrum they're focusing — different colors converge
+        // at different points.
+        vec3 causticHue = 0.5 + 0.5 * cos(6.28318 *
+                          (ld * 4.0 + vec3(0.0, 0.33, 0.67)));
+        col += causticHue * caustic * causticStrength;
+    }
+
+    // ---- HDR PEAKS: lift brightest dispersion strips into bloom range ----
+    // Spec edges = high gradient of luminance in the field, where the
+    // sigmoid contrast clips into pure spectrum. Audio peaks = high |db|
+    // ridges. Both get pushed into linear 1.6–2.5 so the upstream bloom
+    // bright-pass (>~0.85) rims them without changing the look at base.
+    {
+        // Spec edge: how steeply does the dispersion vector field change
+        // around this pixel? Length-of-gradient via the 4 neighbors we
+        // already sampled. Soft-AA via fwidth of the field length.
+        float ldn = length(d_n);
+        float lde = length(d_e);
+        float lds = length(d_s);
+        float ldw = length(d_w);
+        float gx = lde - ldw;
+        float gy = ldn - lds;
+        float specEdge = sqrt(gx * gx + gy * gy);
+
+        // Audio peak: ridge of the field itself. Smoothstep with fwidth
+        // for soft, resolution-independent edges (no audio gating: alive
+        // at audio=0 because |db| is purely the noise field).
+        float aw = max(fwidth(ld), 1e-4);
+        float audioPeak = smoothstep(0.55 - aw, 0.85 + aw, ld);
+
+        // Saturation of the dispersed color — most rainbow strips live
+        // where one channel dominates the other two.
+        float mxc = max(max(col.r, col.g), col.b);
+        float mnc = min(min(col.r, col.g), col.b);
+        float sat = (mxc - mnc) / max(mxc, 1e-4);
+
+        // Brightness in linear-ish luminance (the bloom expects linear).
+        float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
+
+        // Combine: highlight rims need both a spectrum-clipped pixel AND
+        // either a spec edge or audio ridge. Soft-AA all transitions.
+        float ew = max(fwidth(specEdge), 1e-4);
+        float specMask = smoothstep(0.05 - ew, 0.25 + ew, specEdge);
+        float satMask  = smoothstep(0.55, 0.95, sat);
+        float lumMask  = smoothstep(0.65, 0.98, lum);
+
+        float peakMask = clamp(max(specMask, audioPeak) * satMask * lumMask, 0.0, 1.0);
+
+        // Lift peaks into HDR — directional along spectrum so the rim
+        // keeps its hue. Push ~1.6× at edge of peak, up to ~2.5× at core.
+        float lift = mix(1.0, mix(1.6, 2.5, lumMask), peakMask);
+        col *= lift;
+    }
+
     float alpha = 1.0;
     if (transparentBg) {
         alpha = dot(col, vec3(0.299, 0.587, 0.114));
@@ -160,5 +227,6 @@ void main() {
         col = mix(col, vec3(col.r * 1.4, col.g, col.b * 0.8) * (0.5 + _l), _f * 0.4);
     }
 
+    // NO TONEMAP — pass HDR through to bloom pipeline.
     gl_FragColor = vec4(col, alpha);
 }

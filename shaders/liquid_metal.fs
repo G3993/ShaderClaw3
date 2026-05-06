@@ -225,24 +225,28 @@ void main() {
     vec3 ground = hsv2rgb(vec3(0.08 + envShift, 0.6, 0.15));    // warm dark ground
     vec3 horizon = hsv2rgb(vec3(0.1 + envShift, 0.3, 0.9));     // bright warm horizon line
 
-    vec3 envColor;
-    if (envY > 0.52) {
-        // Sky — gradient from horizon to zenith
-        float t = smoothstep(0.52, 1.0, envY);
-        envColor = mix(horizon, skyHigh, t);
-        // Add subtle cloud-like variation
-        float cloud = sin(envAngle * 12.0 + R.y * 8.0) * 0.5 + 0.5;
-        envColor = mix(envColor, skyLow, cloud * 0.2);
-    } else if (envY > 0.48) {
-        // Horizon band — bright line
-        envColor = horizon * 1.3;
-    } else {
-        // Ground reflection
-        float t = smoothstep(0.48, 0.0, envY);
-        envColor = mix(horizon * 0.5, ground, t);
-    }
+    // Soft AA on horizon band boundaries via fwidth
+    float aaW = max(fwidth(envY), 0.001);
+    float skyMask = smoothstep(0.52 - aaW, 0.52 + aaW, envY);
+    float groundMask = 1.0 - smoothstep(0.48 - aaW, 0.48 + aaW, envY);
+    float horizonMask = 1.0 - skyMask - groundMask;
 
-    // Apply reflection
+    // Sky gradient
+    float tSky = smoothstep(0.52, 1.0, envY);
+    vec3 skyCol = mix(horizon, skyHigh, tSky);
+    float cloud = sin(envAngle * 12.0 + R.y * 8.0) * 0.5 + 0.5;
+    skyCol = mix(skyCol, skyLow, cloud * 0.2);
+
+    // Horizon band — HDR bright line for bloom glare
+    vec3 horizonCol = horizon * 2.4;
+
+    // Ground reflection
+    float tGround = smoothstep(0.48, 0.0, envY);
+    vec3 groundCol = mix(horizon * 0.5, ground, tGround);
+
+    vec3 envColor = skyCol * skyMask + horizonCol * horizonMask + groundCol * groundMask;
+
+    // Apply reflection (HDR — let highlights exceed 1.0 for bloom)
     vec3 refl = envColor * envBright;
 
     // Fluid color contribution — gives the bismuth/oil-slick look
@@ -277,13 +281,16 @@ void main() {
         finalCol = blended;
     }
 
-    // Add specular highlight
+    // Add HDR specular highlight — peaks lifted to 2.5x for metallic bloom glare
     vec3 lightDir = normalize(vec3(0.5, 0.8, 1.0));
     vec3 halfVec = normalize(lightDir - viewDir);
-    float spec = pow(max(dot(n, halfVec), 0.0), 64.0) * 1.5;
-    finalCol += vec3(spec) * metalColor.rgb;
+    float specBase = pow(max(dot(n, halfVec), 0.0), 64.0);
+    // Tight inner core spike pushes brightest pixels into HDR (>1.0)
+    float specCore = pow(max(dot(n, halfVec), 0.0), 256.0);
+    vec3 specHDR = vec3(specBase) * 1.5 + vec3(specCore) * 2.5;
+    finalCol += specHDR * metalColor.rgb;
 
-    // Audio-reactive brightness pulse
+    // Audio-reactive brightness pulse (non-gating: present at audio=0)
     finalCol += metalColor.rgb * audioBass * 0.1;
 
     float alpha = 1.0;

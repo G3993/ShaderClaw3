@@ -186,7 +186,9 @@ vec3 shade(vec3 pos, vec3 rd, vec3 n, vec3 alb) {
         float k = pow(roughness + 1.0, 2.0) / 8.0;
         float G = (1.0 / (nl * (1.0 - k) + k)) * (1.0 / (nvv * (1.0 - k) + k));
         vec3 F = f0 + (1.0 - f0) * exp2((-5.55473 * lh - 6.98316) * lh);
-        vec3 spec = nl * D * F * G;
+        // HDR specular boost: tight highlights blow out to 1.4-2.5 linear for bloom
+        float specHDR = 1.0 + 1.4 * pow(nh, 8.0);
+        vec3 spec = nl * D * F * G * specHDR;
         col.rgb = lcol * nl * (spec + alb * (1.0 - f0));
     }
 
@@ -283,25 +285,39 @@ void main() {
     vec2 ib2 = iBox(ro, brd, vec4(0.0, 0.0, 0.0, 2.2));
     float brad = 2.28;
 
+    // Soft AA width for the glass box edge mask, derived from screen-space derivative
+    float aaw = max(fwidth(p.x) + fwidth(p.y), 1e-4) * 0.6;
+
     if (ib2.x > 0.0) {
         if (ib2.y < rz) {
             vec3 pos = ro + brd * ib2.y;
-            vec3 e = smoothstep(brad - 0.15, brad, abs(pos));
+            vec3 e = smoothstep(brad - 0.15 - aaw, brad + aaw, abs(pos));
             float al = 1.0 - (1.0 - e.x * e.y) * (1.0 - e.y * e.z) * (1.0 - e.z * e.x);
             col = mix(col, vec3(0.03), 0.4 * al);
+            // HDR edge accent: corners/edges punch above 1.0 for bloom
+            float edgeCore = smoothstep(0.55, 1.0, al);
+            col += vec3(0.97, 1.0, 0.99) * edgeCore * 1.1;
             col *= (triNoise3d(pos * 2.0) * 0.1 + 0.95) * vec3(0.97, 1.0, 0.99);
         }
         if (ib2.x < rz) {
             vec3 pos = ro + brd * ib2.x;
-            vec3 e = smoothstep(brad - 0.15, brad, abs(pos));
+            vec3 e = smoothstep(brad - 0.15 - aaw, brad + aaw, abs(pos));
             float al = 1.0 - (1.0 - e.x * e.y) * (1.0 - e.y * e.z) * (1.0 - e.z * e.x);
             col = mix(col, vec3(0.03), 0.4 * al);
+            // HDR edge accent on the front faces (stronger — these read as highlights)
+            float edgeCore = smoothstep(0.55, 1.0, al);
+            col += vec3(0.97, 1.0, 0.99) * edgeCore * 1.4;
             col *= (triNoise3d(pos * 2.0) * 0.17 + 0.9) * vec3(0.97, 1.0, 0.99);
         }
     }
 
-    col = clamp(col, 0.0, 1.0);
-    col = pow(col, vec3(0.416667)) * 1.055 - 0.055;
+    // Central highlight HDR boost: brightest pixels (already-hot specular) push to 1.4-2.5 linear
+    float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
+    float hdrLift = smoothstep(0.85, 1.6, lum);
+    col += col * hdrLift * 0.8;
+
+    // NO TONEMAP, NO sRGB OETF — leave linear HDR for downstream Phase Q v4 bloom.
+    // Preserve the original vignette character.
     col *= pow(20.0 * q.x * q.y * (1.0 - q.x) * (1.0 - q.y), 0.07);
 
     float alpha = 1.0;

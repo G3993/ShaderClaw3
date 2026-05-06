@@ -17,7 +17,11 @@
     { "NAME": "vignetteAmt", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "gapShade", "LABEL": "Gap Shade", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 0.5 },
     { "NAME": "bgColor", "LABEL": "Gap Color", "TYPE": "color", "DEFAULT": [0.2, 0.3, 0.4, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 },
+    { "NAME": "dotShape", "LABEL": "Dot Shape", "TYPE": "long",
+      "VALUES": [0, 1, 2, 3],
+      "LABELS": ["Circle", "Star", "Square", "Hexagon"],
+      "DEFAULT": 0 }
   ],
   "PASSES": [
     { "TARGET": "histBuf", "PERSISTENT": true },
@@ -56,13 +60,64 @@ vec4 getColor(int frame, vec2 uv) {
     return texture2D(histBuf, frameUV(frame, uv));
 }
 
+// Soft AA circle: smoothstep + fwidth for clean polka edges
 float circle(vec2 uv, float r) {
     float l = length(uv - 0.5);
-    return 1.0 - smoothstep(r - 0.05, r + 0.05, l);
+    float aa = max(fwidth(l), 1e-4);
+    return 1.0 - smoothstep(r - aa, r + aa, l);
+}
+
+// Square primitive (Chebyshev / L-inf distance)
+float squareShape(vec2 uv, float r) {
+    vec2 d = abs(uv - 0.5);
+    float l = max(d.x, d.y);
+    float aa = max(fwidth(l), 1e-4);
+    return 1.0 - smoothstep(r - aa, r + aa, l);
+}
+
+// Regular hexagon primitive
+float hexShape(vec2 uv, float r) {
+    vec2 p = abs(uv - 0.5);
+    float l = max(p.x * 0.8660254 + p.y * 0.5, p.y);
+    float aa = max(fwidth(l), 1e-4);
+    return 1.0 - smoothstep(r - aa, r + aa, l);
+}
+
+// 5-pointed star primitive (polar petal distance)
+float starShape(vec2 uv, float r) {
+    vec2 p = uv - 0.5;
+    float a = atan(p.y, p.x);
+    float l = length(p);
+    // 5-fold modulation: inner/outer radius ratio creates star points
+    float mod5 = 0.5 + 0.5 * cos(5.0 * a);
+    float petal = mix(0.45, 1.0, mod5);
+    float lp = l / max(petal, 0.05);
+    float aa = max(fwidth(lp), 1e-4);
+    return 1.0 - smoothstep(r - aa, r + aa, lp);
+}
+
+// Dispatcher: pick primitive by dotShape enum (0=circle,1=star,2=square,3=hex)
+// ISF wraps "long" as uniform float — use float comparisons with epsilon.
+float dotPrim(vec2 uv, float r) {
+    float s = float(dotShape);
+    if (s > 2.5) return hexShape(uv, r);
+    if (s > 1.5) return squareShape(uv, r);
+    if (s > 0.5) return starShape(uv, r);
+    return circle(uv, r);
 }
 
 float circleMask(vec2 uv, float y, float r1, float r2) {
-    return circle(uv + vec2(0.0, y - 1.0), r1) + circle(uv + vec2(0.0, y), r2);
+    return dotPrim(uv + vec2(0.0, y - 1.0), r1) + dotPrim(uv + vec2(0.0, y), r2);
+}
+
+// Returns a soft "centerness" 0..1 — peaks at dot center, falls off near edge.
+float circleCore(vec2 uv, float y, float r1, float r2) {
+    float l1 = length(uv + vec2(0.0, y - 1.0) - 0.5);
+    float l2 = length(uv + vec2(0.0, y) - 0.5);
+    float aa = max(fwidth(l1 + l2), 1e-4);
+    float c1 = 1.0 - smoothstep(r1 * 0.15, r1 * 0.85, l1);
+    float c2 = 1.0 - smoothstep(r2 * 0.15, r2 * 0.85, l2);
+    return clamp(c1 + c2, 0.0, 1.0);
 }
 
 float rectMask(float b, float w, vec2 uv) {
@@ -136,6 +191,7 @@ void main() {
     y *= y;
 
     // Pulsing dot size — bass and time both modulate the radius.
+    // Audio non-gating: time-based pulse alive at audio=0.
     float pulse = 1.0 + sin(TIME * 2.5 + rand.x * 6.28) * dotPulse * 0.4
                 + audioBass * audioReact * dotPulse * 0.3;
     float r1 = dotSize * pulse;
@@ -158,7 +214,23 @@ void main() {
     );
     col.xyz += specAmt * spec;
 
-    // Vignette
+    // ==== HDR PEAKS for Phase Q v4 bloom ====
+    // Dot centers lift to 1.4-2.0 linear; audio-flash adds extra hot punch on kicks.
+    // Time-driven shimmer keeps it alive at audio=0 (non-gating).
+    float core = circleCore(duv, y, r1, r2);
+    float shimmer = 0.5 + 0.5 * sin(TIME * 3.7 + rand.y * 6.28);
+    float idleHDR = 0.45 + 0.25 * shimmer;            // 0.45..0.70 baseline lift
+    float audioHDR = audioBass * audioReact * 1.10;   // up to ~1.1 extra on kicks
+    float hdrLift = idleHDR + audioHDR;
+    // Apply lift weighted by dot core, modulated by base color luminance so dark
+    // dots still bloom but bright dots peak hardest. No tonemap.
+    float lum = dot(col.rgb, vec3(0.299, 0.587, 0.114));
+    col.rgb += col.rgb * core * hdrLift * (0.55 + 0.85 * lum);
+
+    // Spec highlight HDR boost — already-hot edges become real bloom seeds.
+    col.rgb += vec3(spec * specAmt * (0.6 + 0.5 * audioBass * audioReact));
+
+    // Vignette (no tonemap after this — preserve HDR for bloom)
     if (vignetteAmt > 0.0) {
         col *= mix(1.0, 1.2 * getVign(pos), vignetteAmt);
     }

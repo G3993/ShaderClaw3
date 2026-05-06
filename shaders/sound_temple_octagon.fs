@@ -3,6 +3,10 @@
   "DESCRIPTION": "Octagonal sound temple — eight frequency bands circle you in synchronised pulses. Designed for 5-channel installations where light orbits the listener like a Turrell apse.",
   "INPUTS": [
     {"NAME":"sectors","TYPE":"float","MIN":4.0,"MAX":12.0,"DEFAULT":8.0},
+    {"NAME":"pillarCount","TYPE":"long","VALUES":[6,8,10,12],"LABELS":["6","8","10","12"],"DEFAULT":8},
+    {"NAME":"pillarHeight","TYPE":"float","MIN":0.0,"MAX":2.0,"DEFAULT":0.8},
+    {"NAME":"audioPunch","TYPE":"float","MIN":0.0,"MAX":2.0,"DEFAULT":1.0},
+    {"NAME":"goldGlow","TYPE":"float","MIN":0.0,"MAX":2.0,"DEFAULT":0.7},
     {"NAME":"pulseSpeed","TYPE":"float","MIN":0.0,"MAX":3.0,"DEFAULT":0.6},
     {"NAME":"pulseWidth","TYPE":"float","MIN":0.01,"MAX":0.2,"DEFAULT":0.06},
     {"NAME":"seamSoftness","TYPE":"float","MIN":0.0,"MAX":0.05,"DEFAULT":0.008},
@@ -43,10 +47,23 @@ void main() {
     float sec   = floor((th + PI) / TAU * secs);
     float secF  = sec / secs;
 
+    // Pillar lattice — angular pillars at fixed bearings around the
+    // ring. pillarCount lets the user pick 6/8/10/12 columns; height
+    // controls how tall they project radially toward the centre.
+    float pCount = float(pillarCount);
+    float pAng   = (th + PI) / TAU * pCount;
+    float pFrac  = abs(fract(pAng) - 0.5) * 2.0;
+    float pillarMask = smoothstep(0.55, 0.95, pFrac);
+    float pillarBand = smoothstep(1.05, 0.25, r);
+    float pillar = pillarMask * pillarBand * pillarHeight;
+
     // Per-sector FFT bin. Distribute bins across 0..0.85 of the FFT
     // texture so we skip the very-top bins which are mostly noise.
     float bin   = (sec + 0.5) / secs * 0.85;
     float amp   = texture(audioFFT, vec2(bin, 0.5)).r;
+    // Audio punch — bass-keyed extra gain that snaps on kicks.
+    float punch = 1.0 + audioBass * audioBass * audioPunch * 2.5;
+    amp *= punch;
 
     // Travelling pulse — fract advances over time, offset per sector
     // so consecutive sectors see the pulse at staggered phases. This
@@ -73,9 +90,18 @@ void main() {
     // Subtle base wash so dark sectors aren't pure black.
     col += hue * 0.04;
 
-    // Centre core — bass-driven breathing sphere
+    // Centre core — bass-driven breathing sphere, audio-punch boosted.
     float core = smoothstep(coreSize, coreSize * 0.55, r);
-    col += vec3(1.0, 0.96, 0.92) * core * (0.4 + audioBass * 1.6);
+    col += vec3(1.0, 0.96, 0.92) * core * (0.4 + audioBass * 1.6 * punch);
+
+    // Pillars — warm gold columns rimmed with HDR emission. Shoulders
+    // glow brighter on bass kicks so the temple feels load-bearing.
+    vec3  goldHue = vec3(1.35, 0.95, 0.45);
+    float pillarLight = pillar * (0.6 + amp * 1.4);
+    col += goldHue * pillarLight;
+    // Gold rim — narrow HDR halo on pillar edges.
+    float rim = smoothstep(0.78, 0.98, pFrac) * pillarBand;
+    col += goldHue * rim * goldGlow * (1.5 + audioBass * 3.0 * audioPunch);
 
     // Inter-sector seam — neutral light so it reads as architecture.
     col += vec3(0.95) * seam * 0.18;

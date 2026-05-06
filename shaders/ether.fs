@@ -34,6 +34,7 @@ float map(vec3 p, float t) {
 }
 
 void main() {
+    // Audio non-gating: alive at audio=0. Pulse adds on top of base.
     float audioPulse = 1.0 + audioBass * audioReact * 0.25;
     float t = TIME * speed * audioPulse;
     vec2 p = gl_FragCoord.xy / RENDERSIZE.y - vec2(centerX, centerY);
@@ -46,30 +47,56 @@ void main() {
         float rz = map(pos, t);
         float f = clamp((rz - map(pos + 0.1, t)) * 0.5, -0.1, 1.0);
         vec3 l = colorTint.rgb + vec3(highlightR, highlightG, highlightB) * f;
-        cl = cl * l + smoothstep(2.5, 0.0, rz) * 0.7 * l;
+
+        // SOFT AA: anti-alias the tendril core threshold using fwidth on rz.
+        // Replaces the hard 0.0 cutoff of smoothstep(2.5, 0.0, rz) with one
+        // that's pixel-aware near the bright core where banding is visible.
+        float aa = max(fwidth(rz) * 1.5, 1e-4);
+        float core = smoothstep(2.5, -aa, rz);
+
+        cl = cl * l + core * 0.7 * l;
         d += min(rz, 1.0);
     }
 
+    // Audio non-gating: 0.85 base means full life at audio=0; audio adds on.
     cl *= brightness * (0.85 + audioLevel * audioReact * 0.30);
+
+    // HDR PEAKS: lift the bright cores into 1.4-2.5 linear range so bloom
+    // catches them. Soft knee preserves character — only the brightest
+    // ether centers (already > ~0.7) get pushed; midtones unchanged.
+    float lum = dot(cl, vec3(0.299, 0.587, 0.114));
+    float peakMask = smoothstep(0.55, 1.1, lum);
+    // Bass-driven extra lift on already-bright pixels (additive, non-gating).
+    float audioPeakLift = 1.0 + audioBass * audioReact * 0.45 * peakMask;
+    cl *= 1.0 + peakMask * 0.85;
+    cl *= audioPeakLift;
 
     float alpha = 1.0;
     if (transparentBg) {
-        alpha = clamp(dot(cl, vec3(0.299, 0.587, 0.114)) * 1.5, 0.0, 1.0);
+        // Use pre-HDR luminance so alpha stays in [0,1] regardless of peaks.
+        alpha = clamp(lum * 1.5, 0.0, 1.0);
     }
 
     // Surprise: every ~50s a chromatic aurora curtain ripples once
     // across the field — the ether gets pulled through a dispersive
-    // medium for ~2s.
+    // medium for ~2s. HDR-lifted peaks during the burst catch bloom.
     {
         vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
         float _ph = fract(TIME / 50.0);
-        float _f  = smoothstep(0.0, 0.05, _ph) * smoothstep(0.30, 0.18, _ph);
+        // SOFT AA on the temporal envelope edges.
+        float _fw = fwidth(_ph);
+        float _f  = smoothstep(0.0, max(0.05, _fw * 2.0), _ph)
+                  * smoothstep(0.30, 0.18 + _fw, _ph);
         float _wave = sin(_suv.y * 8.0 + TIME * 4.0);
         vec3 _shift = vec3(sin(_suv.y * 6.0 + TIME * 2.0),
                            sin(_suv.y * 6.0 + TIME * 2.0 + 2.094),
                            sin(_suv.y * 6.0 + TIME * 2.0 + 4.188)) * 0.5 + 0.5;
-        cl += _shift * 0.22 * _f * _wave * _wave;
+        // Boost aurora accent into HDR for bloom — it's a once-per-50s event.
+        float _w2 = _wave * _wave;
+        cl += _shift * 0.22 * _f * _w2;
+        cl += _shift * 0.55 * _f * _w2 * smoothstep(0.6, 1.0, _w2);
     }
 
+    // NO TONEMAP — pass linear HDR through; bloom + downstream handle it.
     gl_FragColor = vec4(cl, alpha);
 }

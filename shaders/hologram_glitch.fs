@@ -1,79 +1,327 @@
 /*{
-  "CATEGORIES": ["Effect", "Generator", "Audio Reactive"],
-  "DESCRIPTION": "A signal trying to hold itself together — scanlines, RGB shift, vertical tear, EMI bursts. Image transmits rather than displays. Blade Runner 2049 + Nam June Paik.",
+  "CATEGORIES": ["Generator", "Sci-Fi", "Audio Reactive"],
+  "DESCRIPTION": "Unstable projected hologram — wireframe SDF subject (head/cube/sphere/cylinder/custom) scanned by a sweeping line, corrupted by interference bands, smeared by chromatic aberration, hazed by volumetric beam dust. Drop any image into Custom Image to project your own logo or silhouette as a hologram. References: Princess Leia recording (1977), Blade Runner 2049 Joi, JARVIS UI, HoloLens, Cyberpunk brain-dance. Bass triggers signal-loss dropouts, mid drives scan speed, treble shimmers the RGB split. Single-pass, linear HDR.",
   "INPUTS": [
-    {"NAME":"chroma","TYPE":"float","MIN":0.0,"MAX":0.04,"DEFAULT":0.008},
-    {"NAME":"scanFreq","TYPE":"float","MIN":1.0,"MAX":4.0,"DEFAULT":2.0},
-    {"NAME":"tearProbability","TYPE":"float","MIN":0.0,"MAX":0.3,"DEFAULT":0.06},
-    {"NAME":"breakAmount","TYPE":"float","MIN":0.0,"MAX":1.0,"DEFAULT":0.3},
-    {"NAME":"glow","TYPE":"float","MIN":0.0,"MAX":2.0,"DEFAULT":0.7},
-    {"NAME":"hologramTint","TYPE":"color","DEFAULT":[0.4,1.0,0.95,1.0]},
-    {"NAME":"audioReact","TYPE":"float","MIN":0.0,"MAX":2.0,"DEFAULT":1.0},
-    {"NAME":"inputTex","TYPE":"image"}
+    { "NAME": "subject",       "LABEL": "Subject",          "TYPE": "long",  "DEFAULT": 0, "VALUES": [0,1,2,3,4], "LABELS": ["Head","Cube","Sphere","Cylinder","Custom"] },
+    { "NAME": "inputTex",      "LABEL": "Custom Image",     "TYPE": "image" },
+    { "NAME": "scanSpeed",     "LABEL": "Scan Speed",       "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.55 },
+    { "NAME": "interference",  "LABEL": "Interference",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55 },
+    { "NAME": "chromaShift",   "LABEL": "Chromatic Split",  "TYPE": "float", "MIN": 0.0, "MAX": 0.04,"DEFAULT": 0.010 },
+    { "NAME": "beamHaze",      "LABEL": "Beam Haze",        "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.65 },
+    { "NAME": "wireDensity",   "LABEL": "Wire Density",     "TYPE": "float", "MIN": 4.0, "MAX": 28.0,"DEFAULT": 14.0 },
+    { "NAME": "rotateSpeed",   "LABEL": "Rotation",         "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.35 },
+    { "NAME": "audioReact",    "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
-float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+// Hologram/Glitch — SDF subject re-rendered as triplanar wireframe, then
+// degraded in screen space: scan line sweep, interference bands, chromatic
+// aberration, bass-triggered signal-loss dropouts, volumetric beam haze.
+// Five-color palette, pure black bg, linear HDR (host tonemaps).
 
-// Procedural test pattern when no input bound — looks like a holographic
-// circuit grid so the shader is still meaningful as a generator.
-vec3 testPattern(vec2 uv) {
-    vec2 g = fract(uv * 16.0);
-    float lines = step(0.95, max(g.x, g.y));
-    float diag = sin((uv.x + uv.y) * 60.0) * 0.5 + 0.5;
-    float ring = smoothstep(0.05, 0.0, abs(length(uv - 0.5) - 0.3));
-    return vec3(0.2 + lines * 0.6 + diag * 0.2 + ring * 0.8) * vec3(0.4, 1.0, 0.95);
+#define MAX_STEPS 80
+#define MAX_DIST  18.0
+#define EPS       0.0015
+
+// ─── palette (locked) ────────────────────────────────────────────────────
+const vec3 PAL_PRIMARY = vec3(0.25, 0.85, 1.00);
+const vec3 PAL_SHADOW  = vec3(0.25, 0.45, 1.00);
+const vec3 PAL_HIGH    = vec3(0.96, 0.98, 1.00);
+const vec3 PAL_ERROR   = vec3(0.95, 0.20, 0.75);
+
+// ─── hash / noise ────────────────────────────────────────────────────────
+float h11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
+float h21(vec2 p)  { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float h31(vec3 p)  { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+
+// ─── primitive SDFs ──────────────────────────────────────────────────────
+float sdSphere (vec3 p, float r) { return length(p) - r; }
+float sdBox    (vec3 p, vec3 b)  { vec3 q = abs(p) - b; return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0); }
+float sdCyl    (vec3 p, float r, float h) { vec2 d = vec2(length(p.xz)-r, abs(p.y)-h); return min(max(d.x,d.y),0.0) + length(max(d,0.0)); }
+float sdCapsule(vec3 p, vec3 a, vec3 b, float r) {
+    vec3 pa = p - a, ba = b - a;
+    float t = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+    return length(pa - ba * t) - r;
+}
+float opSU(float a, float b, float k) {
+    float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
+    return mix(b, a, h) - k * h * (1.0 - h);
 }
 
-vec3 sampleSrc(vec2 uv) {
-    if (IMG_SIZE_inputTex.x > 0.0) return texture(inputTex, clamp(uv, 0.0, 1.0)).rgb;
-    return testPattern(uv);
+// ─── stylized humanoid head silhouette (Leia hologram reference) ────────
+float sdHead(vec3 p) {
+    // Skull — slightly squashed sphere
+    float skull = sdSphere(p * vec3(1.0, 0.92, 1.05), 0.55);
+    // Jaw — rounded box pulled forward and down
+    float jaw   = sdBox(p - vec3(0.0, -0.32, 0.10), vec3(0.32, 0.20, 0.30)) - 0.12;
+    // Neck — capsule descending
+    float neck  = sdCapsule(p, vec3(0.0, -0.55, 0.0), vec3(0.0, -1.10, 0.0), 0.18);
+    float head  = opSU(skull, jaw, 0.15);
+    head        = opSU(head,  neck, 0.10);
+    // Two side "buns" — Leia silhouette tell
+    float bunL  = sdSphere(p - vec3(-0.55, -0.05,  0.0), 0.22);
+    float bunR  = sdSphere(p - vec3( 0.55, -0.05,  0.0), 0.22);
+    head        = opSU(head, bunL, 0.05);
+    head        = opSU(head, bunR, 0.05);
+    return head;
 }
 
-void main() {
-    vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
+// ─── subject dispatch ────────────────────────────────────────────────────
+float sdSubject(vec3 p, int which) {
+    if (which == 1) return sdBox(p, vec3(0.55));
+    if (which == 2) return sdSphere(p, 0.70);
+    if (which == 3) return sdCyl(p, 0.55, 0.75);
+    return sdHead(p);
+}
 
-    // Vertical tear: divide screen into bands, hash some bands per time-slice
-    // and shift them horizontally. Probability scales with audioBass.
-    float bandH = 0.04;
-    float bandY = floor(uv.y / bandH) * bandH;
-    float tearTrig = step(1.0 - tearProbability * (1.0 + audioBass * audioReact),
-                          hash(vec2(bandY, floor(TIME * 8.0))));
-    uv.x += tearTrig * (hash(vec2(bandY, TIME)) - 0.5) * 0.15;
+// ─── triplanar wireframe carve — gives the SDF its grid skin ────────────
+// Returns the line intensity at p (0 = empty, 1 = on a wire).
+float wireGrid(vec3 p, float density) {
+    vec3 g = abs(fract(p * density) - 0.5);
+    float lx = smoothstep(0.45, 0.50, max(g.y, g.z));
+    float ly = smoothstep(0.45, 0.50, max(g.x, g.z));
+    float lz = smoothstep(0.45, 0.50, max(g.x, g.y));
+    return clamp(lx + ly + lz, 0.0, 1.5);
+}
 
-    // RGB chromatic shift — width modulated by audioHigh.
-    float ch = chroma * (1.0 + audioHigh * audioReact);
-    float r = sampleSrc(uv + vec2( ch, 0.0)).r;
-    float g = sampleSrc(uv                ).g;
-    float b = sampleSrc(uv - vec2( ch, 0.0)).b;
-    vec3 col = vec3(r, g, b) * hologramTint.rgb;
+// ─── normal via tetrahedron ─────────────────────────────────────────────
+vec3 sdNormal(vec3 p, int which) {
+    const vec2 e = vec2(0.0015, -0.0015);
+    return normalize(
+        e.xyy * sdSubject(p + e.xyy, which) +
+        e.yyx * sdSubject(p + e.yyx, which) +
+        e.yxy * sdSubject(p + e.yxy, which) +
+        e.xxx * sdSubject(p + e.xxx, which));
+}
 
-    // Scanlines — pin frequency to gl_FragCoord.y so it scales with resolution.
-    col *= 0.85 + 0.15 * sin(gl_FragCoord.y * scanFreq * 0.5);
+// ─── interference: per-row band with shifted/inverted/noisy slices ──────
+// Returns: x = horizontal shift, y = invert flag, z = noise replace amount
+vec3 interferenceBand(float ny, float t, float amount) {
+    // Time-quantized so bands hold for a frame slice (~12Hz)
+    float slab = floor(ny * 24.0) + floor(t * 12.0) * 47.0;
+    float r1   = h11(slab);
+    float r2   = h11(slab + 7.7);
+    float r3   = h11(slab + 13.3);
+    // Probability of corruption rises with `amount`
+    float trig = step(1.0 - 0.30 * amount, r1);
+    float shift = (r2 - 0.5) * 0.18 * amount * trig;
+    float invert = step(0.85, r2) * trig;
+    float noiseR = step(0.92, r3) * trig;
+    return vec3(shift, invert, noiseR);
+}
 
-    // Signal break: every K seconds, replace fragments with hash noise.
-    float breakTrig = step(0.9, hash(vec2(floor(TIME * 4.0), 0.0)));
-    col = mix(col, vec3(hash(uv * TIME)),
-              breakAmount * audioBass * audioReact * 0.4 * breakTrig);
+// ─── 2D silhouette sample from input texture (Custom mode) ──────────────
+// Maps screen UV onto a centered, aspect-preserving square that holds the
+// image. Returns alpha-bright regions of the texture as the silhouette mask.
+float sampleCustomMask(vec2 uv, float t, float rotSpeed, float audioM) {
+    // Center, square the sample plane (aspect-corrected NDC)
+    vec2 ndc = uv * 2.0 - 1.0;
+    ndc.x   *= RENDERSIZE.x / RENDERSIZE.y;
+    // Rotate the silhouette around screen center for parity with SDF subjects
+    float ang = t * (rotSpeed + 0.10) + audioM * 0.4;
+    float ca = cos(ang), sa = sin(ang);
+    // 2D rotation (fake Y-spin → x-squash for that hologram shimmy)
+    vec2 r2 = vec2(ndc.x * ca, ndc.y);
+    // Fit ~1.4 unit square into 0..1 image coords, centered
+    vec2 iuv = r2 / 1.4 * 0.5 + 0.5;
+    if (iuv.x < 0.0 || iuv.x > 1.0 || iuv.y < 0.0 || iuv.y > 1.0) return 0.0;
+    vec4 tex = IMG_NORM_PIXEL(inputTex, iuv);
+    // Treat both alpha and luminance as silhouette signal so PNGs with alpha
+    // and JPEGs without alpha both work.
+    float lum = dot(tex.rgb, vec3(0.299, 0.587, 0.114));
+    float mask = max(tex.a, lum);
+    return clamp(mask, 0.0, 1.0);
+}
 
-    // Mid-band flicker — audioMid drives a subtle brightness wobble.
-    float flicker = 0.92 + 0.08 * sin(TIME * 60.0 + hash(vec2(floor(TIME * 30.0))) * 6.28);
-    col *= mix(1.0, flicker, audioMid * audioReact * 0.5);
-
-    // Edge bloom — high-luminance pixels glow beyond their actual position.
-    float lum = dot(col, vec3(0.299, 0.587, 0.114));
-    col += hologramTint.rgb * pow(lum, 1.4) * glow * 0.3;
-
-    // Transmission strength: low audio dims the hologram (signal is weak).
-    col *= 0.5 + audioLevel * 0.6;
-
-    // Surprise: every ~9s the carrier wave drops out completely for
-    // ~120ms — the receiver loses lock then re-syncs. A blink.
-    {
-        float _ph = fract(TIME / 9.0);
-        float _drop = step(_ph, 0.06);
-        col = mix(col, vec3(0.02, 0.02, 0.03), _drop * 0.95);
+// ─── render the hologram subject at one screen-space sample ─────────────
+// Returns linear color contribution + alpha-like density in .a
+vec4 sampleHologram(vec2 uv, float t, int which, float density,
+                    float rotSpeed, float audioM) {
+    // ─── Custom 2D image mode ──────────────────────────────────────────
+    if (which == 4) {
+        float m = sampleCustomMask(uv, t, rotSpeed, audioM);
+        if (m < 0.02) return vec4(0.0);
+        // Fake wireGrid in screen space so chromatic split + scanlines still
+        // see structure inside the silhouette.
+        vec2 ndc = uv * 2.0 - 1.0;
+        ndc.x   *= RENDERSIZE.x / RENDERSIZE.y;
+        vec3 g = abs(fract(vec3(ndc.x, ndc.y, ndc.x + ndc.y) * density * 0.5) - 0.5);
+        float wire = smoothstep(0.45, 0.50, max(g.x, g.y));
+        // Edge detection on the mask = silhouette emission (stand-in for fresnel)
+        float e = 0.004;
+        float mL = sampleCustomMask(uv + vec2(-e, 0.0), t, rotSpeed, audioM);
+        float mR = sampleCustomMask(uv + vec2( e, 0.0), t, rotSpeed, audioM);
+        float mD = sampleCustomMask(uv + vec2(0.0,-e), t, rotSpeed, audioM);
+        float mU = sampleCustomMask(uv + vec2(0.0, e), t, rotSpeed, audioM);
+        float edge = clamp(abs(mL - mR) + abs(mD - mU), 0.0, 1.0) * 4.0;
+        edge = clamp(edge, 0.0, 1.0);
+        vec3 base = mix(PAL_SHADOW, PAL_PRIMARY, m);
+        vec3 col  = mix(base * 0.25, PAL_HIGH, wire * m);
+        col += PAL_PRIMARY * edge * 0.9;
+        float a = clamp(m * (0.55 + 0.45 * wire) + edge * 0.6, 0.0, 1.0);
+        return vec4(col, a);
     }
+
+    // ─── SDF mode (Head/Cube/Sphere/Cylinder) ──────────────────────────
+    // NDC with aspect correction
+    vec2 ndc = (uv * 2.0 - 1.0);
+    ndc.x   *= RENDERSIZE.x / RENDERSIZE.y;
+
+    // Camera — fixed, the subject rotates
+    vec3 ro = vec3(0.0, 0.0, 3.2);
+    vec3 rd = normalize(vec3(ndc.x, ndc.y, -1.6));
+
+    // Subject rotation around Y, gentle bob
+    float ang = t * (rotSpeed + 0.10) + audioM * 0.4;
+    float ca = cos(ang), sa = sin(ang);
+    mat3 R = mat3( ca, 0.0,  sa,
+                  0.0, 1.0, 0.0,
+                  -sa, 0.0,  ca);
+
+    float d = 0.0;
+    float hitDist = -1.0;
+    vec3  hitP    = vec3(0.0);
+    for (int i = 0; i < MAX_STEPS; i++) {
+        vec3 p = ro + rd * d;
+        vec3 pr = R * p;
+        float ds = sdSubject(pr, which);
+        if (ds < EPS) { hitDist = d; hitP = pr; break; }
+        if (d > MAX_DIST) break;
+        d += ds * 0.90;
+    }
+
+    if (hitDist < 0.0) return vec4(0.0);
+
+    vec3 n   = sdNormal(hitP, which);
+    // Carve the wireframe into the surface using triplanar lines
+    float w  = wireGrid(hitP, density);
+    // Edge highlight via fresnel — accentuates silhouette
+    float fres = pow(1.0 - max(dot(n, normalize(-rd)), 0.0), 2.2);
+
+    // Shading from primary→shadow along normal y (top lit, bottom shaded)
+    float lit = 0.5 + 0.5 * dot(n, normalize(vec3(0.3, 0.8, 0.5)));
+    vec3  base = mix(PAL_SHADOW, PAL_PRIMARY, lit);
+    // Wires on the surface get the highlight color
+    vec3  col  = mix(base * 0.25, PAL_HIGH, clamp(w, 0.0, 1.0));
+    // Silhouette emission
+    col += PAL_PRIMARY * fres * 0.8;
+
+    return vec4(col, clamp(w * 0.85 + fres * 0.6, 0.0, 1.0));
+}
+
+// ─── main ───────────────────────────────────────────────────────────────
+void main() {
+    vec2 uv = isf_FragNormCoord.xy;
+    float t = TIME;
+
+    float aR    = clamp(audioReact, 0.0, 2.0);
+    float aBass = audioBass * aR;
+    float aMid  = audioMid  * aR;
+    float aHigh = audioHigh * aR;
+
+    int   which   = int(clamp(float(subject), 0.0, 4.0) + 0.5);
+    // Fallback: if Custom is selected but no image is bound (host returns a
+    // 1x1 placeholder), drop back to the head silhouette.
+    if (which == 4 && IMG_SIZE_inputTex.x < 2.0) which = 0;
+    float scanS   = scanSpeed * (1.0 + 1.5 * aMid);
+    float chrAmt  = chromaShift * (1.0 + 2.0 * aHigh);
+    float intAmt  = clamp(interference + 0.4 * aBass, 0.0, 1.0);
+    float density = wireDensity;
+
+    // Major signal-loss event — bass thump triggers a short dropout
+    // "_drop" rises sharply, decays over ~0.4s. Latched by bass envelope.
+    float dropPhase = fract(t * 0.31 + h11(floor(t * 0.31)) * 0.5);
+    float dropTrig  = step(0.93, h11(floor(t * 4.0))) * step(0.55, aBass);
+    float dropEnv   = exp(-dropPhase * 6.0) * dropTrig;
+    dropEnv = max(dropEnv, step(0.997, h11(floor(t * 13.0))) * 0.7);
+
+    // Scan line — bright thin sweep climbing the frame, with a fading trail
+    float scanY = fract(t * scanS * 0.35);
+    float scanD = uv.y - scanY;
+    // Bright leading line
+    float scanLine = exp(-pow(scanD * 180.0, 2.0)) * 1.4;
+    // Fading downward trail (only below the line as it sweeps up)
+    float trail = exp(-max(-scanD, 0.0) * 9.0) * 0.18;
+    float scanFx = scanLine + trail;
+
+    // Per-row interference band data
+    vec3 band = interferenceBand(uv.y, t, intAmt);
+    float rowShift = band.x;
+    float rowInv   = band.y;
+    float rowNoise = band.z;
+
+    // Screen-space jitter on big drops — whole frame trembles
+    vec2 quake = vec2(
+        (h21(vec2(floor(t * 30.0), 0.0)) - 0.5),
+        (h21(vec2(0.0, floor(t * 30.0))) - 0.5)) * dropEnv * 0.04;
+
+    vec2 sUV = uv + vec2(rowShift, 0.0) + quake;
+
+    // Chromatic aberration — sample three offset copies of the hologram
+    vec2 caOff = vec2(chrAmt, 0.0);
+    vec4 sR = sampleHologram(sUV + caOff, t, which, density, rotateSpeed, aMid);
+    vec4 sG = sampleHologram(sUV,         t, which, density, rotateSpeed, aMid);
+    vec4 sB = sampleHologram(sUV - caOff, t, which, density, rotateSpeed, aMid);
+
+    vec3 holo = vec3(sR.r, sG.g, sB.b);
+    float alpha = max(sG.a, max(sR.a, sB.a));
+
+    // Color invert on corrupted bands
+    holo = mix(holo, PAL_HIGH - holo, rowInv);
+    // Replace with magenta-tinted noise on worst bands
+    if (rowNoise > 0.5) {
+        float n = h21(uv * RENDERSIZE.xy + floor(t * 24.0));
+        vec3 noiseCol = mix(PAL_ERROR, PAL_HIGH, n);
+        holo  = mix(holo,  noiseCol, 0.85);
+        alpha = mix(alpha, 0.9,      0.7);
+    }
+
+    // Bass drop: dissolve the figure into pure noise + magenta error flashes
+    if (dropEnv > 0.01) {
+        float n = h21(uv * RENDERSIZE.xy * 0.5 + floor(t * 30.0));
+        vec3  errCol = mix(vec3(0.0), PAL_ERROR, step(0.6, n));
+        errCol = mix(errCol, PAL_HIGH, step(0.93, n));
+        holo  = mix(holo, errCol, dropEnv * 0.92);
+        alpha = mix(alpha, n, dropEnv * 0.6);
+    }
+
+    // Apply scan line — additive bright sweep over the figure & the haze
+    holo += PAL_PRIMARY * scanFx * (alpha * 0.6 + 0.15);
+
+    // ─── volumetric beam haze ────────────────────────────────────────────
+    // Cone of dust around vertical axis through the figure.
+    vec2 ndc = uv * 2.0 - 1.0;
+    ndc.x   *= RENDERSIZE.x / RENDERSIZE.y;
+    float radial = length(ndc.xy * vec2(0.9, 0.55));
+    float beam   = exp(-radial * 2.4) * (0.35 + 0.65 * smoothstep(-1.0, 0.4, ndc.y));
+    // Drifting dust motes — slow vertical particles
+    float dust = 0.0;
+    for (int i = 0; i < 5; i++) {
+        float fi = float(i);
+        vec2  c  = vec2(0.5 + 0.42 * (h11(fi * 3.7) - 0.5),
+                        fract(h11(fi * 1.3) - t * (0.05 + 0.04 * fi)));
+        float r  = 0.004 + 0.010 * h11(fi * 9.1);
+        float dm = length((uv - c) * vec2(RENDERSIZE.x / RENDERSIZE.y, 1.0));
+        dust    += smoothstep(r, 0.0, dm) * (0.3 + 0.5 * h11(fi * 7.7));
+    }
+
+    vec3 hazeCol = PAL_PRIMARY * beam * beamHaze * 0.35
+                 + PAL_HIGH    * dust * 0.55;
+
+    // Composite hologram over black bg + additive haze + floor gleam
+    vec3 col = mix(vec3(0.0), holo, clamp(alpha, 0.0, 1.0)) + hazeCol;
+    float floorGleam = smoothstep(0.0, 0.08, uv.y) * (1.0 - smoothstep(0.0, 0.18, uv.y));
+    col += PAL_PRIMARY * floorGleam * 0.18 * (alpha + 0.4);
+
+    // Broadcast scanlines + carrier breathing + treble sparkle
+    col *= 0.92 + 0.08 * sin(uv.y * RENDERSIZE.y * 1.7);
+    col *= 0.88 + 0.12 * sin(t * 1.3) + 0.06 * sin(t * 7.1);
+    float sparkle = step(0.997 - aHigh * 0.012, h21(uv * RENDERSIZE.xy + t));
+    col += PAL_HIGH * sparkle * 0.6 * (0.3 + aHigh);
+
+    // Linear HDR boost on the brightest emissive bits (host tonemaps)
+    float lum = dot(col, vec3(0.299, 0.587, 0.114));
+    col += PAL_PRIMARY * pow(max(lum - 0.6, 0.0), 1.6) * 0.8;
 
     gl_FragColor = vec4(col, 1.0);
 }

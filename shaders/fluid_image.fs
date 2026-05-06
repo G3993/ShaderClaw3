@@ -73,6 +73,18 @@ vec2 prevPoseJoint(int idx) {
     vec4 lm = texture2D(prevPoseBuf, vec2((float(idx) + 0.5) / 33.0, 0.5));
     return vec2(1.0 - lm.r, lm.g);
 }
+// Pose-active probe — peek at the alpha (visibility) of a few core joints. If the
+// landmark texture is unbound or empty, all visibilities read zero and pose is "off".
+// This replaces a host-supplied mpPoseActive flag with a self-contained derivation.
+float poseActive() {
+    float v = 0.0;
+    v = max(v, poseJointVis(0));   // nose
+    v = max(v, poseJointVis(11));  // L shoulder
+    v = max(v, poseJointVis(12));  // R shoulder
+    v = max(v, poseJointVis(23));  // L hip
+    v = max(v, poseJointVis(24));  // R hip
+    return v;
+}
 
 // Apply one joint's splat to the velocity color. Force direction = joint movement since
 // last frame (fluid "follows the body"), plus a weaker radial push outward from the joint
@@ -299,7 +311,7 @@ void main() {
         // When pose is active, inject fluid at 13 key body joints. Each splat combines a
         // movement-following force (fluid tracks body motion) with a radial outward spawn
         // force (fluid emanates from the skeleton even when still).
-        if (mpPoseActive > 0.5) {
+        if (poseActive() > 0.3) {
             float poseR  = poseRadius;
             float poseR2 = poseR * poseR;
             float poseCutoff2 = poseR2 * 12.0;
@@ -377,7 +389,7 @@ void main() {
     // Runs AFTER velBuf/uvBuf so next frame's velocity pass reads this as the "previous"
     // pose sample for per-joint delta computation.
     if (PASSINDEX == 2) {
-        if (mpPoseActive > 0.5) {
+        if (poseActive() > 0.3) {
             gl_FragColor = texture2D(mpPoseLandmarks, uv);
         } else {
             // Pose off — write zeros so stale landmarks don't resurrect when re-enabled.
@@ -436,10 +448,30 @@ void main() {
         vec2 sc = (gl_FragCoord.xy - Res * 0.5) / Res.x;
         vec3 viewDir = normalize(vec3(sc, -1.0));
         vec3 halfVec = normalize(lightDir - viewDir);
-        float spec = pow(max(dot(n, halfVec), 0.0), specPow) * specAmount;
+        float specRaw = pow(max(dot(n, halfVec), 0.0), specPow);
 
-        col = col * diff + vec3(spec);
+        // Phase Q v4: fwidth() AA on the specular ridge so caustic glints don't
+        // flicker at sub-pixel scale on high-DPI displays.
+        float ridgeMag = length(vec2(hR - hL, hU - hD)) * bumpHeight;
+        float aaW = max(fwidth(ridgeMag), 0.0001);
+        float ridgeMask = smoothstep(0.0, aaW * 4.0, ridgeMag);
+        float spec = specRaw * specAmount * ridgeMask;
+
+        // Phase Q v4: HDR specular peaks (1.4–2.0 linear) on bright wet caustic
+        // ridges only — gated by ridge strength and source brightness so flat
+        // regions stay matte. Bloom downstream picks these peaks up cleanly.
+        float srcBright = max(max(col.r, col.g), col.b);
+        float hdrGate = smoothstep(0.45, 0.85, srcBright)
+                      * smoothstep(0.04, 0.20, ridgeMag)
+                      * specRaw;
+        // Warm-white wet glint, peaks ~1.7–2.0 linear on the brightest pixels.
+        vec3 hdrPeak = vec3(1.0, 0.97, 0.90) * hdrGate * 1.6;
+
+        col = col * diff + vec3(spec) + hdrPeak;
     }
+
+    // No internal tonemap — return LINEAR HDR. Downstream Phase Q bloom expects
+    // values >1.0 on highlights and clamps at composite time.
 
     // Transparent background
     float alpha = 1.0;

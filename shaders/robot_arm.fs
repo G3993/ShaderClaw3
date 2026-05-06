@@ -1,31 +1,70 @@
 /*{
-  "DESCRIPTION": "Robot arm — 2-link inverse kinematics follows hand tracking or mouse. Up to 4 arms. Lasers fire on click, pinch, or audio bass.",
-  "CREDIT": "ShaderClaw",
-  "CATEGORIES": ["Generator"],
+  "DESCRIPTION": "Robot arm choreography — 1 or 2 articulated industrial arms (forward kinematics) tracing audio-reactive paths in a workshop environment. Bass triggers pose snaps, mids drive speed, treble adds servo-jitter. Inspired by Madeline Gannon's Manus, Quayola's Asymmetric Archeology, and KUKA pick-and-place choreographies.",
+  "CREDIT": "ShaderClaw — curated revision",
+  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
   "INPUTS": [
-    { "NAME": "armMode", "LABEL": "Arms", "TYPE": "long", "DEFAULT": 1, "VALUES": [1, 2, 3, 4], "LABELS": ["1", "2", "3", "4"] },
-    { "NAME": "armColor", "LABEL": "Arm", "TYPE": "color", "DEFAULT": [1.0, 0.239, 0.239, 1.0] },
-    { "NAME": "accentColor", "LABEL": "Accent", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "laserColor", "LABEL": "Laser", "TYPE": "color", "DEFAULT": [1.0, 0.2, 0.15, 1.0] },
-    { "NAME": "armScale", "LABEL": "Size", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.3, "MAX": 2.0 },
-    { "NAME": "segWidth", "LABEL": "Thickness", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.3, "MAX": 2.5 },
-    { "NAME": "laserSize", "LABEL": "Laser Size", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 3.0 },
-    { "NAME": "laserLength", "LABEL": "Laser Length", "TYPE": "float", "DEFAULT": 1.5, "MIN": 0.3, "MAX": 5.0 },
-    { "NAME": "laserGlow", "LABEL": "Laser Glow", "TYPE": "float", "DEFAULT": 1.5, "MIN": 0.0, "MAX": 5.0 },
-    { "NAME": "showGrid", "LABEL": "Grid", "TYPE": "bool", "DEFAULT": false },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.035, 0.035, 0.055, 1.0] }
+    { "NAME": "camDist",       "LABEL": "Camera Distance", "TYPE": "float", "MIN": 1.5, "MAX": 12.0, "DEFAULT": 4.5 },
+    { "NAME": "camHeight",     "LABEL": "Camera Height",   "TYPE": "float", "MIN": -3.0, "MAX": 4.0, "DEFAULT": 1.2 },
+    { "NAME": "camOrbitSpeed", "LABEL": "Orbit Speed",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 0.18 },
+    { "NAME": "camAzimuth",    "LABEL": "Camera Azimuth",  "TYPE": "float", "MIN": 0.0, "MAX": 6.2832, "DEFAULT": 0.0 },
+    { "NAME": "keyAngle",      "LABEL": "Key Light Angle", "TYPE": "float", "MIN": 0.0, "MAX": 6.2832, "DEFAULT": 0.785 },
+    { "NAME": "keyElevation",  "LABEL": "Key Elevation",   "TYPE": "float", "MIN": 0.0, "MAX": 1.5708, "DEFAULT": 0.7 },
+    { "NAME": "keyColor",      "LABEL": "Key Light",       "TYPE": "color", "DEFAULT": [1.0, 0.94, 0.82, 1.0] },
+    { "NAME": "fillColor",     "LABEL": "Fill Light",      "TYPE": "color", "DEFAULT": [0.55, 0.70, 1.0, 1.0] },
+    { "NAME": "ambient",       "LABEL": "Ambient",         "TYPE": "float", "MIN": 0.0, "MAX": 0.5,  "DEFAULT": 0.08 },
+    { "NAME": "rimStrength",   "LABEL": "Rim Strength",    "TYPE": "float", "MIN": 0.0, "MAX": 1.5,  "DEFAULT": 0.5 },
+    { "NAME": "exposure",      "LABEL": "Exposure",        "TYPE": "float", "MIN": 0.3, "MAX": 3.0,  "DEFAULT": 1.0 },
+    { "NAME": "mood", "LABEL": "Mood", "TYPE": "long", "DEFAULT": 0,
+      "VALUES": [0, 1, 2, 3],
+      "LABELS": ["Solo Reach", "Dual Choreography", "Pick & Place", "Conductor"] },
+    { "NAME": "armSegments", "LABEL": "Arm Segments", "TYPE": "long", "DEFAULT": 5,
+      "VALUES": [4, 5, 6, 7],
+      "LABELS": ["4-link", "5-link", "6-link", "7-link"] },
+    { "NAME": "paintColor",  "LABEL": "Arm Paint",    "TYPE": "color", "DEFAULT": [0.08, 0.08, 0.10, 1.0] },
+    { "NAME": "jointColor",  "LABEL": "Joint",        "TYPE": "color", "DEFAULT": [0.18, 0.20, 0.24, 1.0] },
+    { "NAME": "warningColor","LABEL": "Warning",      "TYPE": "color", "DEFAULT": [1.00, 0.78, 0.10, 1.0] },
+    { "NAME": "ledColor",    "LABEL": "LED",          "TYPE": "color", "DEFAULT": [1.00, 0.18, 0.12, 1.0] },
+    { "NAME": "floorColor",  "LABEL": "Floor",        "TYPE": "color", "DEFAULT": [0.13, 0.14, 0.16, 1.0] },
+    { "NAME": "floorReflection", "LABEL": "Floor Reflection", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.35 },
+    { "NAME": "audioReact",  "LABEL": "Audio React",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
+    { "NAME": "armScale",    "LABEL": "Size",         "TYPE": "float", "MIN": 0.4, "MAX": 1.6, "DEFAULT": 1.0 },
+    { "NAME": "armCount",    "LABEL": "Arm Count",    "TYPE": "long", "DEFAULT": 1,
+      "VALUES": [1, 2, 3, 4],
+      "LABELS": ["1 Arm", "2 Arms", "3 Arms", "4 Arms"] },
+    { "NAME": "mouseX",      "LABEL": "Mouse X",      "TYPE": "float", "MIN": -1.0, "MAX": 1.0, "DEFAULT": 0.0 },
+    { "NAME": "mouseY",      "LABEL": "Mouse Y",      "TYPE": "float", "MIN": -1.0, "MAX": 1.0, "DEFAULT": 0.0 },
+    { "NAME": "showGrid",    "LABEL": "Engineering Grid", "TYPE": "bool", "DEFAULT": true }
   ]
 }*/
 
-float sdCapsule(vec2 p, vec2 a, vec2 b, float r) {
-    vec2 pa = p - a, ba = b - a;
-    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
-    return length(pa - ba * h) - r;
+// ROBOT ARM CHOREOGRAPHY — audio-driven, MediaPipe-free.
+// Forward kinematics, bass-snap pose targets, mid-tempo, treble servo-jitter.
+
+float sdCircle(vec2 p, vec2 c, float r) { return length(p - c) - r; }
+float hash11(float n) { return fract(sin(n * 91.345) * 43758.5453); }
+
+// Universal lighting helper: key + fill + ambient + rim + spec, returns lit color
+vec3 universalLight(vec3 N, vec3 baseCol, vec3 Lkey, vec3 Lfil,
+                    vec3 keyTint, vec3 fillTint, float amb, float rimAmt, float specAmt)
+{
+    float diffK = max(0.0, dot(N, Lkey));
+    float diffF = max(0.0, dot(N, Lfil));
+    float spec  = pow(max(0.0, dot(reflect(-Lkey, N), vec3(0.0, 0.0, 1.0))), 64.0);
+    float rim   = pow(1.0 - max(0.0, N.z), 3.0);
+    vec3 lit = baseCol * (amb + diffK * keyTint + diffF * 0.45 * fillTint)
+             + spec * keyTint * specAmt
+             + baseCol * rim * rimAmt;
+    return lit;
 }
 
-vec3 shadeCapsule(vec2 p, vec2 a, vec2 b, float r, vec3 color, vec3 accent, vec3 L, float px, out float mask) {
+// ── Capsule shading: metallic + warning stripes + LED dot ──────────────
+vec3 shadeSegment(vec2 p, vec2 a, vec2 b, float r,
+                  vec3 baseCol, vec3 warnCol, vec3 ledCol, float ledPulse,
+                  vec3 Lkey, vec3 Lfil, vec3 keyTint, vec3 fillTint,
+                  float amb, float rimAmt, float px, out float mask)
+{
     vec2 pa = p - a, ba = b - a;
+    float bl = max(length(ba), 1e-4);
     float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
     vec2 closest = a + ba * h;
     float dist = length(p - closest);
@@ -34,160 +73,179 @@ vec3 shadeCapsule(vec2 p, vec2 a, vec2 b, float r, vec3 color, vec3 accent, vec3
 
     float t = clamp(dist / r, 0.0, 1.0);
     float nz = sqrt(max(0.0, 1.0 - t * t));
-    vec3 N = normalize(vec3((p - closest) / max(dist, 0.0001), nz));
+    vec2 perp = (dist > 1e-4) ? (p - closest) / dist : vec2(0.0, 1.0);
+    vec3 N = normalize(vec3(perp, nz));
 
-    float diff = max(0.0, dot(N, L));
-    float spec = pow(max(0.0, dot(reflect(-L, N), vec3(0.0, 0.0, 1.0))), 80.0);
-    float rim = pow(1.0 - nz, 2.5);
+    // Brushed paint stripes (longitudinal) — very subtle
+    float brush = 0.5 + 0.5 * sin(perp.x * 80.0 + h * 4.0);
+    vec3  metal = baseCol * (0.95 + 0.05 * brush);
 
-    // Panel lines + armor facets (combined, cheap)
-    float groove = smoothstep(0.015, 0.0, abs(fract(h * 5.0 + 0.5) - 0.5) - 0.48) * 0.25;
-    float facet = abs(fract(h * 8.0 + 0.25) - 0.5) * 0.12;
+    // Joint-end warning stripes (yellow/black diagonals near caps)
+    float capProx = min(h, 1.0 - h);
+    float capBand = smoothstep(0.18, 0.06, capProx);
+    float diag    = step(0.5, fract(h * 18.0 + perp.y * 4.0));
+    vec3  warn    = mix(vec3(0.04), warnCol, diag);
+    metal = mix(metal, warn, capBand * 0.55);
 
-    vec3 c = color * (1.0 - groove) * (1.0 + facet);
-    return c * (0.12 + 0.58 * diff) + c * spec * 0.8 + c * rim * 0.22;
+    // Tiny LED dot near distal end of segment
+    vec2 ledPos = a + ba * 0.82;
+    float ledD = length(p - ledPos);
+    float led = smoothstep(0.012, 0.004, ledD);
+    vec3  ledEmit = ledCol * (0.4 + 1.6 * ledPulse) * led;
+
+    vec3 lit = universalLight(N, metal, Lkey, Lfil, keyTint, fillTint, amb, rimAmt, 0.6);
+    return lit + ledEmit;
 }
 
-vec3 shadeSphere(vec2 p, vec2 c, float r, vec3 color, vec3 accent, vec3 L, float px, out float mask) {
-    float dist = length(p - c);
-    mask = smoothstep(r + px, r - px, dist);
+// Joint disc (the dark hub between segments)
+vec3 shadeJoint(vec2 p, vec2 c, float r, vec3 jc, vec3 warnCol,
+                vec3 Lkey, vec3 Lfil, vec3 keyTint, vec3 fillTint,
+                float amb, float rimAmt, float px, out float mask)
+{
+    float d = sdCircle(p, c, r);
+    mask = smoothstep(px, -px, d);
     if (mask < 0.001) return vec3(0.0);
-
-    float t = clamp(dist / r, 0.0, 1.0);
+    float t = clamp(length(p - c) / r, 0.0, 1.0);
     float nz = sqrt(max(0.0, 1.0 - t * t));
-    vec3 N = normalize(vec3((p - c) / max(dist, 0.0001), nz));
+    vec2 dir = (p - c) / max(length(p - c), 1e-4);
+    vec3 N = normalize(vec3(dir, nz));
 
-    float diff = max(0.0, dot(N, L));
-    float spec = pow(max(0.0, dot(reflect(-L, N), vec3(0.0, 0.0, 1.0))), 100.0);
-
-    // Servo ring groove
-    float ring = smoothstep(0.03, 0.0, abs(t - 0.55)) * 0.18;
-    vec3 base = color * (1.0 - ring);
-    return base * (0.10 + 0.55 * diff) + base * spec * 0.9 + base * pow(1.0 - nz, 2.0) * 0.35;
+    float ring = smoothstep(0.04, 0.0, abs(t - 0.66)) * 0.45;
+    float ang = atan(dir.y, dir.x);
+    float bolt = smoothstep(0.08, 0.0, abs(fract(ang / 1.5708 + 0.5) - 0.5) - 0.1)
+               * smoothstep(0.05, 0.0, abs(t - 0.45));
+    vec3 base = jc;
+    vec3 c0 = universalLight(N, base, Lkey, Lfil, keyTint, fillTint, amb + 0.15, rimAmt * 0.5, 0.3);
+    c0 = mix(c0, warnCol * 0.9, ring * 0.18);
+    c0 = mix(c0, vec3(0.06), bolt);
+    return c0;
 }
 
-void drawSphereChain(vec2 p, vec2 a, vec2 b, int count, float rStart, float rEnd,
-                     vec3 color, vec3 accent, vec3 L, float px,
-                     inout vec3 col, inout float armMask) {
-    float mask;
-    vec3 ec;
-    for (int i = 0; i < 8; i++) {
-        if (i >= count) break;
-        float t = float(i) / float(count - 1);
-        vec2 center = mix(a, b, t);
-        float r = mix(rStart, rEnd, t);
-        ec = shadeSphere(p, center, r, color, accent, L, px, mask);
-        col = mix(col, ec, mask); armMask = max(armMask, mask);
+// Forward-kinematic chain. Bass-triggered pose targets ease into angles.
+struct Pose {
+    float a0; float a1; float a2; float a3; float a4; float a5; float a6;
+};
+
+Pose mixPose(Pose p, Pose q, float t) {
+    Pose r;
+    r.a0 = mix(p.a0, q.a0, t); r.a1 = mix(p.a1, q.a1, t);
+    r.a2 = mix(p.a2, q.a2, t); r.a3 = mix(p.a3, q.a3, t);
+    r.a4 = mix(p.a4, q.a4, t); r.a5 = mix(p.a5, q.a5, t);
+    r.a6 = mix(p.a6, q.a6, t);
+    return r;
+}
+
+Pose poseForSeed(float seed, float spread) {
+    Pose p;
+    p.a0 = mix(-0.4, 0.4, hash11(seed + 1.0)) * spread;
+    p.a1 = mix(-1.4, 0.2, hash11(seed + 2.0));
+    p.a2 = mix(-0.4, 1.8, hash11(seed + 3.0));
+    p.a3 = mix(-1.0, 1.0, hash11(seed + 4.0));
+    p.a4 = mix(-0.6, 0.6, hash11(seed + 5.0));
+    p.a5 = mix(-0.5, 0.5, hash11(seed + 6.0));
+    p.a6 = mix(-0.4, 0.4, hash11(seed + 7.0));
+    return p;
+}
+
+vec2 moodTarget(int moodId, float t, float bass, float aspect, float side) {
+    if (moodId == 2) {
+        float ph = fract(t * 0.35);
+        vec2 binA = vec2(-aspect * 0.32, -0.30);
+        vec2 binB = vec2( aspect * 0.32, -0.30);
+        vec2 mid  = mix(binA, binB, smoothstep(0.0, 1.0, ph));
+        float arc = sin(ph * 3.14159) * 0.42;
+        return vec2(mid.x, mid.y + arc);
+    } else if (moodId == 3) {
+        float beat = mod(floor(t * 2.2), 4.0);
+        vec2 g0 = vec2( 0.00,  0.30);
+        vec2 g1 = vec2( 0.34, -0.05);
+        vec2 g2 = vec2( 0.00, -0.20);
+        vec2 g3 = vec2(-0.34, -0.05);
+        vec2 dst = (beat < 0.5) ? g0 : (beat < 1.5) ? g1 : (beat < 2.5) ? g2 : g3;
+        return dst * (0.95 + 0.10 * bass) + vec2(0.0, -0.05);
+    }
+    return vec2(0.0);
+}
+
+// Solve chain for up to 7 segments
+void solveChain(vec2 base, float scl, int nseg, float[7] angs, out vec2[8] pts) {
+    float seg[7];
+    seg[0] = 0.21 * scl; seg[1] = 0.18 * scl; seg[2] = 0.15 * scl;
+    seg[3] = 0.10 * scl; seg[4] = 0.08 * scl; seg[5] = 0.07 * scl;
+    seg[6] = 0.06 * scl;
+
+    pts[0] = base;
+    float cum = 1.5708;
+    for (int i = 0; i < 7; i++) {
+        if (i >= nseg) { pts[i + 1] = pts[i]; continue; }
+        cum += angs[i];
+        pts[i + 1] = pts[i] + seg[i] * vec2(cos(cum), sin(cum));
     }
 }
 
-void drawArm(vec2 p, vec2 base, vec2 target, float grip, float sc, float sw,
-             vec4 aCol, vec4 accCol, vec3 L, float px, float elbowSign,
-             inout vec3 col, inout float armMask,
-             out vec2 outWrist, out vec2 outFDir,
-             out vec2 outF1, out vec2 outF2, out vec2 outF3) {
-
-    float L1 = 0.25 * sc;
-    float L2 = 0.22 * sc;
-    float w1 = 0.024 * sw;
-    float w2 = 0.018 * sw;
-    float jR = 0.028 * sw;
-
-    // IK
-    vec2 toTarget = target - base;
-    float d = length(toTarget);
-    float maxReach = L1 + L2 - 0.005;
-    d = clamp(d, abs(L1 - L2) + 0.005, maxReach);
-    vec2 dir = normalize(toTarget) * d;
-
-    float cosT2 = clamp((d * d - L1 * L1 - L2 * L2) / (2.0 * L1 * L2), -1.0, 1.0);
-    float theta2 = acos(cosT2);
-    float bAngle = atan(dir.y, dir.x);
-    float theta1 = bAngle - elbowSign * atan(L2 * sin(theta2), L1 + L2 * cos(theta2));
-    float theta2f = elbowSign * theta2;
-
-    vec2 elbow = base + L1 * vec2(cos(theta1), sin(theta1));
-    vec2 wrist = elbow + L2 * vec2(cos(theta1 + theta2f), sin(theta1 + theta2f));
-
-    // Claw geometry — claws grow slightly when gripping (powering up)
-    vec2 fDir_ = normalize(target - base);
-    float fAngle = atan(fDir_.y, fDir_.x);
-    float gripScale = 1.0 + grip * 0.15;
-    float clawBase = 0.042 * sc * gripScale;
-    float clawTip  = 0.036 * sc * gripScale;
-    float openA = 0.40;
-    float hookA = 0.22;
-
-    vec2 f1Mid = wrist + clawBase * vec2(cos(fAngle + openA), sin(fAngle + openA));
-    vec2 f1End = f1Mid + clawTip * vec2(cos(fAngle + openA - hookA), sin(fAngle + openA - hookA));
-    vec2 f2Mid = wrist + clawBase * vec2(cos(fAngle - openA), sin(fAngle - openA));
-    vec2 f2End = f2Mid + clawTip * vec2(cos(fAngle - openA + hookA), sin(fAngle - openA + hookA));
-    vec2 f3Mid = wrist + 0.036 * sc * vec2(cos(fAngle), sin(fAngle));
-    vec2 f3End = f3Mid + clawTip * vec2(cos(fAngle), sin(fAngle));
-
-    outWrist = wrist; outFDir = fDir_;
-    outF1 = f1End; outF2 = f2End; outF3 = f3End;
-
-    vec3 acc = accCol.rgb;
-    float mask;
-    vec3 ec;
-
-    // Base mount sphere
-    ec = shadeSphere(p, base, jR * 1.3, aCol.rgb * 0.45, acc, L, px, mask);
-    col = mix(col, ec, mask); armMask = max(armMask, mask);
-
-    // Upper arm — sphere chain
-    drawSphereChain(p, base, elbow, 6, w1 * 1.1, w1 * 0.9, aCol.rgb, acc, L, px, col, armMask);
-
-    // Shoulder joint
-    ec = shadeSphere(p, base, jR, mix(aCol.rgb, acc, 0.35), acc, L, px, mask);
-    col = mix(col, ec, mask); armMask = max(armMask, mask);
-
-    // Forearm — sphere chain
-    drawSphereChain(p, elbow, wrist, 5, w2 * 1.0, w2 * 0.8, aCol.rgb * 0.95, acc, L, px, col, armMask);
-
-    // Elbow joint
-    ec = shadeSphere(p, elbow, jR, mix(aCol.rgb, acc, 0.5), acc, L, px, mask);
-    col = mix(col, ec, mask); armMask = max(armMask, mask);
-
-    // Claw bases — sphere chains (3 spheres each)
-    vec3 clawCol = mix(aCol.rgb, acc, 0.45);
-    drawSphereChain(p, wrist, f1Mid, 3, w2 * 0.7, w2 * 0.5, clawCol, acc, L, px, col, armMask);
-    drawSphereChain(p, wrist, f2Mid, 3, w2 * 0.7, w2 * 0.5, clawCol, acc, L, px, col, armMask);
-    drawSphereChain(p, wrist, f3Mid, 3, w2 * 0.7, w2 * 0.5, clawCol, acc, L, px, col, armMask);
-
-    // Claw tips — sphere chains (3 spheres each, tapered)
-    vec3 tipCol = acc * 0.9;
-    drawSphereChain(p, f1Mid, f1End, 3, w2 * 0.5, w2 * 0.25, tipCol, acc, L, px, col, armMask);
-    drawSphereChain(p, f2Mid, f2End, 3, w2 * 0.5, w2 * 0.25, tipCol, acc, L, px, col, armMask);
-    drawSphereChain(p, f3Mid, f3End, 3, w2 * 0.5, w2 * 0.25, tipCol, acc, L, px, col, armMask);
-
-    // Wrist joint (on top of claws)
-    ec = shadeSphere(p, wrist, jR * 0.75, mix(aCol.rgb, acc, 0.6), acc, L, px, mask);
-    col = mix(col, ec, mask); armMask = max(armMask, mask);
+void poseToAngs(Pose p, out float[7] a) {
+    a[0] = p.a0; a[1] = p.a1; a[2] = p.a2; a[3] = p.a3;
+    a[4] = p.a4; a[5] = p.a5; a[6] = p.a6;
 }
 
-void drawLaser(vec2 p, vec2 origin, vec2 dir, float grip, vec3 beamColor, float px,
-               float size, float lenMul, float glowMul,
-               inout vec3 col, inout float armMask) {
-    if (grip < 0.05) return;
+// Render one arm
+void drawArm(vec2 p, vec2 base, Pose pose, float scl, int nseg, float jitter, float ledPulse,
+             vec3 armC, vec3 jntC, vec3 warnC, vec3 ledC,
+             vec3 Lkey, vec3 Lfil, vec3 keyTint, vec3 fillTint, float amb, float rimAmt,
+             float px, inout vec3 col, inout float armMask)
+{
+    float a[7]; poseToAngs(pose, a);
+    a[0] += (hash11(floor(TIME * 60.0) + 0.1) - 0.5) * jitter;
+    a[1] += (hash11(floor(TIME * 60.0) + 0.3) - 0.5) * jitter * 1.2;
+    a[2] += (hash11(floor(TIME * 60.0) + 0.5) - 0.5) * jitter * 1.4;
+    a[3] += (hash11(floor(TIME * 60.0) + 0.7) - 0.5) * jitter * 1.6;
+    a[4] += (hash11(floor(TIME * 60.0) + 0.9) - 0.5) * jitter * 1.8;
+    a[5] += (hash11(floor(TIME * 60.0) + 1.1) - 0.5) * jitter * 1.9;
+    a[6] += (hash11(floor(TIME * 60.0) + 1.3) - 0.5) * jitter * 2.0;
 
-    float intensity = smoothstep(0.05, 0.4, grip);
-    float beamLen = mix(0.08, 0.6, intensity) * (1.0 + audioBass * 0.8) * lenMul;
+    vec2 pts[8];
+    solveChain(base, scl, nseg, a, pts);
 
-    vec2 tip = origin + dir * beamLen;
-    vec2 po = p - origin, bo = tip - origin;
-    float t = clamp(dot(po, bo) / dot(bo, bo), 0.0, 1.0);
-    float d = length(p - (origin + bo * t));
-    float taper = mix(0.008 * size, 0.002 * size, t);
+    float radii[7];
+    radii[0] = 0.034 * scl; radii[1] = 0.028 * scl; radii[2] = 0.022 * scl;
+    radii[3] = 0.017 * scl; radii[4] = 0.014 * scl; radii[5] = 0.012 * scl;
+    radii[6] = 0.010 * scl;
 
-    float safeGlow = max(glowMul, 0.01);
-    float core = smoothstep(taper + px, taper * 0.3, d) * intensity;
-    col += beamColor * 1.8 * core * glowMul;
-    armMask = max(armMask, core * 0.6);
-    // Beam glow — no white added, pure beam color
-    col += beamColor * (exp(-d * (60.0 / safeGlow / size) * mix(0.5, 1.5, t)) * 0.5 * glowMul
-         + exp(-d * (25.0 / safeGlow / size) * mix(0.4, 1.0, t)) * 0.3 * glowMul) * intensity;
+    for (int i = 0; i < 7; i++) {
+        if (i >= nseg) break;
+        float m;
+        vec3 c = shadeSegment(p, pts[i], pts[i + 1], radii[i],
+                              armC, warnC, ledC, ledPulse,
+                              Lkey, Lfil, keyTint, fillTint, amb, rimAmt, px, m);
+        col = mix(col, c, m);
+        armMask = max(armMask, m);
+    }
+
+    float jr[8];
+    jr[0] = 0.040 * scl; jr[1] = 0.034 * scl; jr[2] = 0.027 * scl; jr[3] = 0.022 * scl;
+    jr[4] = 0.018 * scl; jr[5] = 0.015 * scl; jr[6] = 0.012 * scl; jr[7] = 0.010 * scl;
+    for (int j = 0; j < 8; j++) {
+        if (j > nseg) break;
+        float m;
+        vec3 c = shadeJoint(p, pts[j], jr[j], jntC, warnC,
+                            Lkey, Lfil, keyTint, fillTint, amb, rimAmt, px, m);
+        col = mix(col, c, m);
+        armMask = max(armMask, m);
+    }
+
+    // Mounting plinth
+    float plinth = max(abs(p.x - base.x) - 0.075 * scl, abs(p.y - base.y + 0.045 * scl) - 0.045 * scl);
+    float pm = smoothstep(px, -px, plinth);
+    col = mix(col, jntC * 0.55, pm);
+    armMask = max(armMask, pm);
+
+    // Emergency-stop indicator (uses LED color)
+    vec2 stopC = base + vec2(0.045 * scl, -0.04 * scl);
+    float stopD = length(p - stopC) - 0.012 * scl;
+    float sm = smoothstep(px, -px, stopD);
+    vec3 stopGlow = ledC * (0.5 + 0.5 * sin(TIME * 1.7));
+    col = mix(col, stopGlow * 0.9, sm);
+    armMask = max(armMask, sm);
 }
 
 void main() {
@@ -195,156 +253,179 @@ void main() {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
     vec2 p = (uv - 0.5) * vec2(aspect, 1.0);
     float px = 1.5 / RENDERSIZE.y;
-    vec3 L = normalize(vec3(-0.4, 0.6, 0.8));
 
-    float numArms = float(armMode);
-    float spread = aspect * 0.4;
+    // ── Universal camera: orbiting azimuth shifts horizontal framing,
+    //    camHeight shifts vertical, camDist scales the scene ──────────
+    float orbit = camAzimuth + TIME * camOrbitSpeed;
+    float camOffsetX = sin(orbit) * 0.15;
+    float zoom = 4.5 / max(camDist, 0.1);
+    p = p / max(zoom, 0.01);
+    p.x += camOffsetX;
+    p.y -= camHeight * 0.08;
 
-    // Base positions for up to 4 arms
-    vec2 base1, base2, base3, base4;
+    // ── Universal lighting: build key/fill direction vectors ────────
+    float kx = cos(keyAngle) * cos(keyElevation);
+    float ky = sin(keyElevation);
+    float kz = sin(keyAngle) * cos(keyElevation);
+    vec3 Lkey = normalize(vec3(kx, ky, kz));
+    vec3 Lfil = normalize(vec3(-kx * 0.6, -ky * 0.4, kz * 0.7 + 0.3));
+    vec3 keyTint = keyColor.rgb;
+    vec3 fillTint = fillColor.rgb;
 
-    if (numArms < 1.5) {
-        base1 = vec2(0.0, -0.38);
-        base2 = base1; base3 = base1; base4 = base1;
-    } else if (numArms < 2.5) {
-        base1 = vec2(-spread, -0.38);
-        base2 = vec2( spread, -0.38);
-        base3 = base1; base4 = base2;
-    } else if (numArms < 3.5) {
-        base1 = vec2(-spread, -0.38);
-        base2 = vec2( 0.00, -0.38);
-        base3 = vec2( spread, -0.38);
-        base4 = base2;
-    } else {
-        base1 = vec2(-spread * 1.3, -0.38);
-        base2 = vec2( spread * 1.3, -0.38);
-        base3 = vec2(-spread * 1.3,  0.38);
-        base4 = vec2( spread * 1.3,  0.38);
-    }
+    float bass = clamp(audioBass, 0.0, 1.0) * audioReact;
+    float mids = clamp(audioMid,  0.0, 1.0) * audioReact;
+    float treb = clamp(audioHigh, 0.0, 1.0) * audioReact;
+    int moodId = int(mood);
+    int nseg = int(armSegments);
 
-    float t = TIME;
-    vec2 mouseTgt = (mousePos - 0.5) * vec2(aspect, 1.0);
-    vec2 hand1Tgt = (vec2(1.0 - mpHandPos.x, mpHandPos.y) - 0.5) * vec2(aspect, 1.0);
-    vec2 hand2Tgt = (vec2(1.0 - mpHandPos2.x, mpHandPos2.y) - 0.5) * vec2(aspect, 1.0);
+    // Workshop floor: concrete + horizon gradient + grain
+    vec3 col = floorColor.rgb;
+    float horizon = 1.0 - smoothstep(0.0, 0.7, abs(p.y));
+    col += vec3(0.04, 0.045, 0.05) * horizon;
+    float n = fract(sin(dot(floor(p * 480.0), vec2(12.9898, 78.233))) * 43758.5453);
+    col += (n - 0.5) * 0.012;
 
-    vec2 handL = hand1Tgt, handR = hand2Tgt;
-    if (mpHandCount >= 1.5 && handL.x > handR.x) { vec2 tmp = handL; handL = handR; handR = tmp; }
-
-    float activity = clamp(inputActivity, 0.0, 1.0);
-    vec2 mm = vec2(-mouseTgt.x, mouseTgt.y);
-    vec2 mmFlipY = vec2(mouseTgt.x, -mouseTgt.y);
-    vec2 mmFlipXY = vec2(-mouseTgt.x, -mouseTgt.y);
-
-    // Idle offsets -- bottom arms drift up, top arms drift down
-    vec2 idleB1 = vec2(sin(t * 0.70) * 0.08, cos(t * 0.50) * 0.06 + 0.18);
-    vec2 idleB2 = vec2(sin(t * 0.60 + 2.1) * 0.08, cos(t * 0.45 + 1.3) * 0.06 + 0.18);
-    vec2 idleB3 = vec2(sin(t * 0.55 + 4.2) * 0.08, cos(t * 0.40 + 2.6) * 0.06 + 0.18);
-    vec2 idleB4 = vec2(sin(t * 0.65 + 5.8) * 0.08, cos(t * 0.48 + 3.9) * 0.06 + 0.18);
-    vec2 idleT1 = vec2(sin(t * 0.55 + 4.2) * 0.08, -(cos(t * 0.40 + 2.6) * 0.06 + 0.18));
-    vec2 idleT2 = vec2(sin(t * 0.65 + 5.8) * 0.08, -(cos(t * 0.48 + 3.9) * 0.06 + 0.18));
-
-    // Per-arm idle and live targets
-    vec2 idle1, idle2, idle3, idle4;
-    vec2 live1, live2, live3, live4;
-
-    bool hasHands = mpHandCount >= 1.5;
-    bool hasOneHand = mpHandCount > 0.5;
-
-    if (numArms < 1.5) {
-        idle1 = idleB1;
-        live1 = hasOneHand ? hand1Tgt : mouseTgt;
-        idle2 = idle1; idle3 = idle1; idle4 = idle1;
-        live2 = live1; live3 = live1; live4 = live1;
-    } else if (numArms < 2.5) {
-        idle1 = idleB1; idle2 = idleB2;
-        live1 = hasHands ? handL : mouseTgt;
-        live2 = hasHands ? handR : mm;
-        idle3 = idle1; idle4 = idle2;
-        live3 = live1; live4 = live2;
-    } else if (numArms < 3.5) {
-        idle1 = idleB1; idle2 = idleB2; idle3 = idleB3;
-        live1 = hasHands ? handL : mouseTgt;
-        live3 = hasHands ? handR : mm;
-        live2 = hasHands ? (handL + handR) * 0.5 : mouseTgt * vec2(0.0, 1.0);
-        idle4 = idle2;
-        live4 = live2;
-    } else {
-        idle1 = idleB1; idle2 = idleB2; idle3 = idleT1; idle4 = idleT2;
-        if (hasHands) {
-            live1 = handL; live2 = handR; live3 = handL; live4 = handR;
-        } else {
-            live1 = mouseTgt; live2 = mm;
-            live3 = mmFlipY; live4 = mmFlipXY;
-        }
-    }
-
-    vec2 target1 = mix(base1 + idle1, live1, activity);
-    vec2 target2 = mix(base2 + idle2, live2, activity);
-    vec2 target3 = mix(base3 + idle3, live3, activity);
-    vec2 target4 = mix(base4 + idle4, live4, activity);
-
-    // Grid overlay
-    vec3 col = bgColor.rgb;
     if (showGrid) {
-        float gx = abs(fract(p.x * 10.0) - 0.5);
-        float gy = abs(fract(p.y * 10.0) - 0.5);
-        float grid = smoothstep(0.48, 0.5, max(gx, gy));
-        col += vec3(0.04) * grid;
+        vec2 gp = p * 14.0;
+        vec2 gf = abs(fract(gp) - 0.5);
+        float fine = smoothstep(0.49, 0.5, max(gf.x, gf.y));
+        vec2 gp2 = p * 2.8;
+        vec2 gf2 = abs(fract(gp2) - 0.5);
+        float major = smoothstep(0.495, 0.5, max(gf2.x, gf2.y));
+        col += vec3(0.08, 0.09, 0.11) * fine * 0.35;
+        col += vec3(0.18, 0.20, 0.24) * major * 0.55;
     }
 
+    float speed = 0.45 + mids * 1.3;
+    float beatT = TIME * speed + bass * 0.6;
+    float beatI = floor(beatT);
+    float beatF = fract(beatT);
+    float ease = 1.0 - pow(1.0 - beatF, 3.0);
+
+    float jitter = treb * 0.06;
+    float ledPulse = 0.3 + 0.7 * smoothstep(0.0, 0.25, beatF);
+
+    int nArms = int(armCount);
+    nArms = clamp(nArms, 1, 4);
+    bool mouseActive = (abs(mouseX) > 0.001 || abs(mouseY) > 0.001);
+
+    // Mouse target in scene-space (matches normalized p coordinates: x in ~[-aspect/2, aspect/2], y in [-0.5, 0.5])
+    vec2 mouseTgt = vec2(mouseX * aspect * 0.5, mouseY * 0.5);
+
+    float shadowY = -0.34;
+
+    // Compute base positions: spread evenly across screen
+    // For 1 arm: center. For N arms: spread across [-aspect*0.35, +aspect*0.35]
+    // Floor reflection pass first
+    if (floorReflection > 0.001 && p.y < shadowY) {
+        vec2 mp = vec2(p.x, 2.0 * shadowY - p.y);
+        vec3 refCol = col;
+        float refMask = 0.0;
+        for (int i = 0; i < 4; i++) {
+            if (i >= nArms) break;
+            float fi = float(i);
+            float fn = float(nArms);
+            float t = (fn > 1.0) ? (fi / (fn - 1.0)) : 0.5;
+            float bx = mix(-aspect * 0.35, aspect * 0.35, t);
+            if (nArms == 1) bx = 0.0;
+            vec2 base_i = vec2(bx, shadowY);
+
+            float seedOff = fi * 13.0;
+            Pose poseA = poseForSeed(beatI * 1.7 + seedOff,         1.0);
+            Pose poseB = poseForSeed((beatI + 1.0) * 1.7 + seedOff, 1.0);
+            Pose pose_i = mixPose(poseA, poseB, ease);
+
+            if (mouseActive) {
+                vec2 dir = mouseTgt - base_i;
+                float ang = atan(dir.y, dir.x) - 1.5708;
+                float reach = clamp(length(dir) / (armScale * 0.6), 0.2, 1.0);
+                pose_i.a0 = ang * 0.6;
+                pose_i.a1 = mix(-1.2, -0.2, reach);
+                pose_i.a2 = mix( 1.6,  0.3, reach);
+                pose_i.a3 = sin(TIME * 2.0 + bass * 4.0) * 0.2;
+                pose_i.a4 = cos(TIME * 1.7) * 0.15;
+                pose_i.a5 = sin(TIME * 1.3) * 0.12;
+                pose_i.a6 = cos(TIME * 2.4) * 0.10;
+            } else if (moodId == 2 || moodId == 3) {
+                vec2 tgt = moodTarget(moodId, TIME, bass, aspect, 1.0);
+                vec2 dir = tgt - base_i;
+                float ang = atan(dir.y, dir.x) - 1.5708;
+                float reach = clamp(length(dir) / (armScale * 0.6), 0.2, 1.0);
+                pose_i.a0 = ang * 0.6;
+                pose_i.a1 = mix(-1.2, -0.2, reach);
+                pose_i.a2 = mix( 1.6,  0.3, reach);
+                pose_i.a3 = sin(TIME * 2.0 + bass * 4.0) * 0.4;
+                pose_i.a4 = cos(TIME * 1.7) * 0.3;
+                pose_i.a5 = sin(TIME * 1.3) * 0.25;
+                pose_i.a6 = cos(TIME * 2.4) * 0.2;
+            }
+
+            drawArm(mp, base_i, pose_i, armScale, nseg, jitter * (1.0 + fi * 0.05), ledPulse * (1.0 - fi * 0.05),
+                    paintColor.rgb, jointColor.rgb, warningColor.rgb, ledColor.rgb,
+                    Lkey, Lfil, keyTint, fillTint, ambient, rimStrength, px, refCol, refMask);
+        }
+        float falloff = smoothstep(0.45, 0.0, shadowY - p.y);
+        col = mix(col, refCol, refMask * floorReflection * falloff * 0.9);
+    }
+
+    // Main arm pass
     float armMask = 0.0;
+    for (int i = 0; i < 4; i++) {
+        if (i >= nArms) break;
+        float fi = float(i);
+        float fn = float(nArms);
+        float t = (fn > 1.0) ? (fi / (fn - 1.0)) : 0.5;
+        float bx = mix(-aspect * 0.35, aspect * 0.35, t);
+        if (nArms == 1) bx = 0.0;
+        vec2 base_i = vec2(bx, shadowY);
 
-    // Laser fires on click/pinch OR on audio bass hits
-    float grip = max(max(pinchHold, mouseDown), audioBass);
-    vec3 beamColor = laserColor.rgb * 2.5;
-    float lenMul = laserLength;
-    float glowMul = laserGlow;
+        float seedOff = fi * 13.0;
+        Pose poseA = poseForSeed(beatI * 1.7 + seedOff,         1.0);
+        Pose poseB = poseForSeed((beatI + 1.0) * 1.7 + seedOff, 1.0);
+        Pose pose_i = mixPose(poseA, poseB, ease);
 
-    // Arm 1
-    vec2 w1, fd1, f1a, f1b, f1c;
-    drawArm(p, base1, target1, grip, armScale, segWidth,
-            armColor, accentColor, L, px, (numArms < 1.5) ? 1.0 : -1.0,
-            col, armMask, w1, fd1, f1a, f1b, f1c);
-    float a1 = atan(fd1.y, fd1.x);
-    drawLaser(p, f1c, fd1, grip, beamColor, px, laserSize, lenMul, glowMul, col, armMask);
-    drawLaser(p, f1a, vec2(cos(a1 + 0.25), sin(a1 + 0.25)), grip, beamColor, px, laserSize, lenMul, glowMul, col, armMask);
-    drawLaser(p, f1b, vec2(cos(a1 - 0.25), sin(a1 - 0.25)), grip, beamColor, px, laserSize, lenMul, glowMul, col, armMask);
+        if (mouseActive) {
+            vec2 dir = mouseTgt - base_i;
+            float ang = atan(dir.y, dir.x) - 1.5708;
+            float reach = clamp(length(dir) / (armScale * 0.6), 0.2, 1.0);
+            pose_i.a0 = ang * 0.6;
+            pose_i.a1 = mix(-1.2, -0.2, reach);
+            pose_i.a2 = mix( 1.6,  0.3, reach);
+            pose_i.a3 = sin(TIME * 2.0 + bass * 4.0) * 0.2;
+            pose_i.a4 = cos(TIME * 1.7) * 0.15;
+            pose_i.a5 = sin(TIME * 1.3) * 0.12;
+            pose_i.a6 = cos(TIME * 2.4) * 0.10;
+        } else if (moodId == 2 || moodId == 3) {
+            vec2 tgt = moodTarget(moodId, TIME, bass, aspect, 1.0);
+            vec2 dir = tgt - base_i;
+            float ang = atan(dir.y, dir.x) - 1.5708;
+            float reach = clamp(length(dir) / (armScale * 0.6), 0.2, 1.0);
+            pose_i.a0 = ang * 0.6;
+            pose_i.a1 = mix(-1.2, -0.2, reach);
+            pose_i.a2 = mix( 1.6,  0.3, reach);
+            pose_i.a3 = sin(TIME * 2.0 + bass * 4.0) * 0.4;
+            pose_i.a4 = cos(TIME * 1.7) * 0.3;
+            pose_i.a5 = sin(TIME * 1.3) * 0.25;
+            pose_i.a6 = cos(TIME * 2.4) * 0.2;
+        }
 
-    // Arm 2
-    if (numArms > 1.5) {
-        vec2 w2, fd2, f2a, f2b, f2c;
-        drawArm(p, base2, target2, grip, armScale, segWidth,
-                armColor, accentColor, L, px, 1.0,
-                col, armMask, w2, fd2, f2a, f2b, f2c);
-        float a2 = atan(fd2.y, fd2.x);
-        drawLaser(p, f2c, fd2, grip, beamColor, px, laserSize, lenMul, glowMul, col, armMask);
-        drawLaser(p, f2a, vec2(cos(a2 + 0.25), sin(a2 + 0.25)), grip, beamColor, px, laserSize, lenMul, glowMul, col, armMask);
-        drawLaser(p, f2b, vec2(cos(a2 - 0.25), sin(a2 - 0.25)), grip, beamColor, px, laserSize, lenMul, glowMul, col, armMask);
+        drawArm(p, base_i, pose_i, armScale, nseg, jitter * (1.0 + fi * 0.05), ledPulse * (1.0 - fi * 0.05),
+                paintColor.rgb, jointColor.rgb, warningColor.rgb, ledColor.rgb,
+                Lkey, Lfil, keyTint, fillTint, ambient, rimStrength, px, col, armMask);
+
+        // Floor contact shadow per arm
+        float sh = exp(-pow((p.x - base_i.x) * 4.5, 2.0))
+                 * smoothstep(0.0, 0.06, shadowY - p.y + 0.01)
+                 * smoothstep(0.10, 0.0, abs(p.y - shadowY + 0.04));
+        col *= 1.0 - sh * 0.45;
     }
 
-    // Arm 3
-    if (numArms > 2.5) {
-        vec2 w3, fd3, f3a, f3b, f3c;
-        drawArm(p, base3, target3, grip, armScale, segWidth,
-                armColor, accentColor, L, px, 1.0,
-                col, armMask, w3, fd3, f3a, f3b, f3c);
-        float a3 = atan(fd3.y, fd3.x);
-        drawLaser(p, f3c, fd3, grip, beamColor, px, laserSize, lenMul, glowMul, col, armMask);
-        drawLaser(p, f3a, vec2(cos(a3 + 0.25), sin(a3 + 0.25)), grip, beamColor, px, laserSize, lenMul, glowMul, col, armMask);
-        drawLaser(p, f3b, vec2(cos(a3 - 0.25), sin(a3 - 0.25)), grip, beamColor, px, laserSize, lenMul, glowMul, col, armMask);
-    }
+    // Vignette
+    float vig = 1.0 - smoothstep(0.4, 1.05, length(p));
+    col *= mix(0.78, 1.0, vig);
 
-    // Arm 4
-    if (numArms > 3.5) {
-        vec2 w4, fd4, f4a, f4b, f4c;
-        drawArm(p, base4, target4, grip, armScale, segWidth,
-                armColor, accentColor, L, px, -1.0,
-                col, armMask, w4, fd4, f4a, f4b, f4c);
-        float a4 = atan(fd4.y, fd4.x);
-        drawLaser(p, f4c, fd4, grip, beamColor, px, laserSize, lenMul, glowMul, col, armMask);
-        drawLaser(p, f4a, vec2(cos(a4 + 0.25), sin(a4 + 0.25)), grip, beamColor, px, laserSize, lenMul, glowMul, col, armMask);
-        drawLaser(p, f4b, vec2(cos(a4 - 0.25), sin(a4 - 0.25)), grip, beamColor, px, laserSize, lenMul, glowMul, col, armMask);
-    }
+    // Universal exposure + bass HDR boost
+    col *= exposure * (1.0 + bass * 0.18);
 
-    gl_FragColor = vec4(col, transparentBg ? armMask : 1.0);
+    gl_FragColor = vec4(col, 1.0);
 }

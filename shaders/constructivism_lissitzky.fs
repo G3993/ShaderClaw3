@@ -1,225 +1,374 @@
 /*{
-  "CATEGORIES": ["Generator", "Art Movement", "Audio Reactive"],
-  "DESCRIPTION": "Russian Constructivism / Suprematism — Malevich, Lissitzky, Kassák, Bauhaus poster geometry. N animated primary-color shapes (squares, triangles, circles, arcs, rectangles, half-rounds) drift across cream paper in diagonal composition; black accent forms; subtle paper grain. Lithograph palette discipline. Beat the Whites with the Red Wedge.",
+  "CATEGORIES": ["3D", "Generator", "Art Movement", "Audio Reactive"],
+  "DESCRIPTION": "El Lissitzky — Proun Room (3D). Raymarched architectural space: pure red triangular prism (the wedge) menacing a white sphere, with a black cube on edge and a thin black slab plane drifting in restrained orbits inside a bright industrial cyc. Hard cool fluorescent overhead light, sharp floor shadows. Bass triggers a periodic SLAM where the wedge advances 30% toward the sphere then retreats. LINEAR HDR.",
   "INPUTS": [
-    {"NAME":"shapeCount",      "LABEL":"Shape Count",   "TYPE":"float","MIN":4.0, "MAX":24.0, "DEFAULT":14.0},
-    {"NAME":"motion",          "LABEL":"Motion",        "TYPE":"float","MIN":0.0, "MAX":1.0,  "DEFAULT":0.30},
-    {"NAME":"compositionTilt", "LABEL":"Diagonal Tilt", "TYPE":"float","MIN":0.0, "MAX":1.0,  "DEFAULT":0.55},
-    {"NAME":"redWedge",        "LABEL":"Red Wedge",     "TYPE":"float","MIN":0.0, "MAX":1.0,  "DEFAULT":1.0},
-    {"NAME":"wedgeThrust",     "LABEL":"Wedge Thrust",  "TYPE":"float","MIN":0.0, "MAX":0.4,  "DEFAULT":0.15},
-    {"NAME":"whiteCircle",     "LABEL":"White Circle",  "TYPE":"float","MIN":0.0, "MAX":1.0,  "DEFAULT":1.0},
-    {"NAME":"barCount",        "LABEL":"Black Bars",    "TYPE":"float","MIN":0.0, "MAX":6.0,  "DEFAULT":3.0},
-    {"NAME":"glyphIntensity",  "LABEL":"Cyrillic Glyphs","TYPE":"float","MIN":0.0,"MAX":1.0,  "DEFAULT":0.45},
-    {"NAME":"paperGrain",      "LABEL":"Paper Grain",   "TYPE":"float","MIN":0.0, "MAX":0.10, "DEFAULT":0.025},
-    {"NAME":"paletteShift",    "LABEL":"Palette Shift", "TYPE":"float","MIN":0.0, "MAX":1.0,  "DEFAULT":0.0},
-    {"NAME":"audioReact",      "LABEL":"Audio React",   "TYPE":"float","MIN":0.0, "MAX":2.0,  "DEFAULT":1.0},
-    {"NAME":"inputTex",        "LABEL":"Texture",       "TYPE":"image"}
+    { "NAME": "audioReact",    "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 1.0 },
+    { "NAME": "slamCadence",   "LABEL": "Slam Cadence",    "TYPE": "float", "MIN": 3.0, "MAX": 14.0, "DEFAULT": 6.5 },
+    { "NAME": "driftSpeed",    "LABEL": "Drift Speed",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 1.0 },
+    { "NAME": "camDist",       "LABEL": "Camera Distance", "TYPE": "float", "MIN": 2.0, "MAX": 9.0,  "DEFAULT": 4.6 },
+    { "NAME": "camHeight",     "LABEL": "Camera Height",   "TYPE": "float", "MIN": -1.0, "MAX": 3.0, "DEFAULT": 1.1 },
+    { "NAME": "camOrbitSpeed", "LABEL": "Orbit Speed",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.06 },
+    { "NAME": "camAzimuth",    "LABEL": "Camera Azimuth",  "TYPE": "float", "MIN": 0.0, "MAX": 6.2832, "DEFAULT": 0.55 },
+    { "NAME": "keyAngle",      "LABEL": "Key Light Angle", "TYPE": "float", "MIN": 0.0, "MAX": 6.2832, "DEFAULT": 1.05 },
+    { "NAME": "keyElevation",  "LABEL": "Key Elevation",   "TYPE": "float", "MIN": 0.2, "MAX": 1.5,  "DEFAULT": 1.15 },
+    { "NAME": "exposure",      "LABEL": "Exposure",        "TYPE": "float", "MIN": 0.4, "MAX": 2.4,  "DEFAULT": 1.0 }
   ]
 }*/
 
-// Constructivist palette — disciplined lithograph primaries. Departure
-// from these collapses the read.
-const vec3 CR_CREAM  = vec3(0.96, 0.92, 0.82);
-const vec3 CR_RED    = vec3(0.89, 0.12, 0.14);
-const vec3 CR_BLACK  = vec3(0.10, 0.08, 0.10);
-const vec3 CR_WHITE  = vec3(0.99, 0.98, 0.94);
-const vec3 CR_YELLOW = vec3(0.98, 0.78, 0.12);
-const vec3 CR_BLUE   = vec3(0.10, 0.30, 0.78);
-const vec3 CR_GREEN  = vec3(0.18, 0.50, 0.28);
-const vec3 CR_ORANGE = vec3(0.95, 0.45, 0.10);
+// El Lissitzky — Proun Room (3D). Red prism, white sphere, black cube on
+// edge, thin black slab — drifting in a cool-grey cyc. Bass SLAM advances
+// the wedge 30% toward the sphere then retreats. Linear HDR.
 
-float hash11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
-float hash21(vec2 p)  { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-float vnoise(vec2 p) {
-    vec2 ip = floor(p), fp = fract(p);
-    fp = fp * fp * (3.0 - 2.0 * fp);
-    float a = hash21(ip);
-    float b = hash21(ip + vec2(1.0, 0.0));
-    float c = hash21(ip + vec2(0.0, 1.0));
-    float d = hash21(ip + vec2(1.0, 1.0));
-    return mix(mix(a, b, fp.x), mix(c, d, fp.x), fp.y);
+#define MAX_STEPS 88
+#define MAX_DIST  40.0
+#define EPS       0.0009
+
+#define MAT_CYC    0
+#define MAT_WEDGE  1
+#define MAT_SPHERE 2
+#define MAT_CUBE   3
+#define MAT_SLAB   4
+
+const float PI = 3.14159265;
+
+// Pure Lissitzky palette — HDR linear.
+const vec3 LZ_RED   = vec3(2.00, 0.20, 0.20);
+const vec3 LZ_WHITE = vec3(1.00, 1.00, 1.00);
+const vec3 LZ_BLACK = vec3(0.04, 0.04, 0.04);
+const vec3 LZ_CYC   = vec3(0.92, 0.94, 0.96);
+
+// Charcoal face shading for "black" solids — lit vs shadow side.
+const vec3 LZ_BLACK_LIT    = vec3(0.30, 0.30, 0.32);
+const vec3 LZ_BLACK_SHADOW = vec3(0.04, 0.04, 0.06);
+const vec3 LZ_CYC_LO = vec3(0.86, 0.88, 0.92);
+const vec3 LZ_CYC_HI = vec3(0.92, 0.94, 0.96);
+
+// ── SDF library ─────────────────────────────────────────────────────────
+float sdSphere(vec3 p, float r) { return length(p) - r; }
+
+float sdBox(vec3 p, vec3 b) {
+    vec3 q = abs(p) - b;
+    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
 }
 
-vec3 crPalette(float idx) {
-    int i = int(mod(idx + paletteShift * 8.0, 8.0));
-    if (i == 0) return CR_RED;
-    if (i == 1) return CR_BLACK;
-    if (i == 2) return CR_YELLOW;
-    if (i == 3) return CR_BLUE;
-    if (i == 4) return CR_WHITE;
-    if (i == 5) return CR_ORANGE;
-    if (i == 6) return CR_GREEN;
-    return CR_RED;
+// Triangular prism — isoceles triangle (tip at origin, opening along +x to
+// x=h with half-height w), extruded along z by ±d.
+float sdTriPrism(vec3 p, float h, float w, float d) {
+    vec2 q = p.xy;
+    vec2 n1 = normalize(vec2(w, -h));
+    vec2 n2 = normalize(vec2(w,  h));
+    float tri = max(max(dot(q, n1), dot(q, n2)), q.x - h);
+    vec2 w2 = vec2(tri, abs(p.z) - d);
+    return min(max(w2.x, w2.y), 0.0) + length(max(w2, 0.0));
 }
 
-// SDF primitives
-float sdBox(vec2 p, vec2 b) {
-    vec2 d = abs(p) - b;
-    return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
-}
-float sdCircle(vec2 p, float r) { return length(p) - r; }
-float sdRoundedBox(vec2 p, vec2 b, float r) {
-    vec2 d = abs(p) - b + r;
-    return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - r;
-}
-float sdTriangle(vec2 p) {
-    // Equilateral triangle pointing up, side length 1
-    const float k = sqrt(3.0);
-    p.x = abs(p.x) - 0.5;
-    p.y = p.y + 0.5 / k;
-    if (p.x + k * p.y > 0.0) p = vec2(p.x - k * p.y, -k * p.x - p.y) / 2.0;
-    p.x -= clamp(p.x, -1.0, 0.0);
-    return -length(p) * sign(p.y);
-}
-// Half-disc (the Kassák / Lissitzky arc shape)
-float sdArc(vec2 p, float ra, float rb, float angle) {
-    p = mat2(cos(angle), sin(angle), -sin(angle), cos(angle)) * p;
-    p.x = abs(p.x);
-    return max(length(p) - ra, ra - rb - length(p));
-}
-// Long thin rectangle (constructivist bar)
-float sdBar(vec2 p, float len_, float thick, float angle) {
-    p = mat2(cos(angle), sin(angle), -sin(angle), cos(angle)) * p;
-    return sdBox(p, vec2(len_, thick));
-}
-// Wedge — isosceles triangle pointing along direction
-float sdWedge(vec2 p, vec2 dir, float len_, float halfWidth) {
-    // Rotate into wedge frame
-    vec2 axis = normalize(dir);
-    vec2 perp = vec2(-axis.y, axis.x);
-    float along = dot(p, axis);
-    float across = dot(p, perp);
-    if (along < 0.0) return length(p);
-    if (along > len_) return length(p - axis * len_);
-    float t = along / len_;
-    float halfB = halfWidth * (1.0 - t);
-    return abs(across) - halfB;
+mat3 rotY(float a) { float c=cos(a), s=sin(a); return mat3(c,0.0,-s, 0.0,1.0,0.0, s,0.0,c); }
+mat3 rotX(float a) { float c=cos(a), s=sin(a); return mat3(1.0,0.0,0.0, 0.0,c,-s, 0.0,s,c); }
+mat3 rotZ(float a) { float c=cos(a), s=sin(a); return mat3(c,-s,0.0, s,c,0.0, 0.0,0.0,1.0); }
+
+// Cyc — flat floor at y=0 curving up into vertical backdrop via quarter arc.
+float sdCyc(vec3 p) {
+    float seamZ = -1.6, seamY = 1.8, r = 1.6;
+    if (p.z > seamZ && p.y < seamY) return p.y;
+    if (p.y > seamY && p.z < seamZ) return -(p.z - (seamZ - r));
+    return length(vec2(p.y - seamY, p.z - seamZ)) - r;
 }
 
-void main() {
-    vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
-    float aspect = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
-    vec2 cuv = (uv - 0.5) * vec2(aspect, 1.0);
-
-    // Cream paper with subtle grain
-    vec3 col = CR_CREAM;
-    col += (vnoise(uv * RENDERSIZE.x * 0.5) - 0.5) * paperGrain;
-
-    float t = TIME * motion;
-
-    // Background: soft diagonal cream-shading reinforces the diagonal
-    // composition energy of constructivist posters.
-    float diag = (cuv.x + cuv.y) * compositionTilt * 0.3;
-    col *= 1.0 - diag * 0.04;
-
-    // ── Hero: red wedge slamming through ──────────────────────────────
-    if (redWedge > 0.001) {
-        float wedgeAngle = 3.14159 * 0.55 + sin(t * 0.2) * 0.10;
-        vec2 wDir = vec2(cos(wedgeAngle), sin(wedgeAngle));
-        // Origin oscillates along the diagonal, gives the "thrust" feel
-        vec2 wOrigin = vec2(-0.4 + sin(t * 0.5) * 0.05,
-                             0.3 + cos(t * 0.7) * 0.05);
-        float wedge = sdWedge(cuv - wOrigin, wDir, 1.4 + wedgeThrust, 0.18 + wedgeThrust * 0.5);
-        col = mix(col, CR_RED, smoothstep(0.005, -0.005, wedge) * redWedge);
+// ── Slam envelope ───────────────────────────────────────────────────────
+// Returns vec3(impact, advance01, phase01)
+vec3 slamPhase(float t, float cadence, float audioBoost) {
+    float c = max(cadence - audioBoost * 1.6, 3.0);
+    float ph = fract(t / c);
+    float adv, impact;
+    if (ph < 0.07) {
+        float k = ph / 0.07; k = k*k*(3.0-2.0*k);
+        adv = k; impact = k;
+    } else if (ph < 0.22) {
+        adv = 1.0; impact = 1.0;
+    } else if (ph < 0.50) {
+        float k = (ph - 0.22) / 0.28; k = k*k*(3.0-2.0*k);
+        adv = 1.0 - k; impact = 1.0 - k;
+    } else {
+        adv = 0.0; impact = 0.0;
     }
+    return vec3(impact, adv, ph);
+}
 
-    // ── Hero: white circle (symbol of order being struck) ──────────────
-    if (whiteCircle > 0.001) {
-        vec2 cPos = vec2(0.10 + sin(t * 0.3) * 0.02, 0.05 + cos(t * 0.4) * 0.02);
-        float circle = sdCircle(cuv - cPos, 0.18);
-        col = mix(col, CR_WHITE, smoothstep(0.004, -0.004, circle) * whiteCircle);
-        // Optional video inside the circle
-        if (IMG_SIZE_inputTex.x > 0.0) {
-            vec3 src = texture(inputTex, uv).rgb;
-            float L = dot(src, vec3(0.299, 0.587, 0.114));
-            vec3 hard = vec3(step(0.5, L));
-            col = mix(col, hard, smoothstep(0.004, -0.004, circle) * whiteCircle * 0.9);
-        }
-        // Black ring outline
-        col = mix(col, CR_BLACK, smoothstep(0.008, 0.002, abs(circle)) * 0.85);
-    }
+// ── Scene parameters ────────────────────────────────────────────────────
+struct Scene {
+    vec3 spherePos;  float sphereR;
+    vec3 wedgePos;   mat3 wedgeRot;  vec3 wedgeSize;
+    vec3 cubePos;    mat3 cubeRot;   float cubeH;
+    vec3 slabPos;    mat3 slabRot;   vec3 slabHalf;
+    float impact;
+};
 
-    // ── N animated geometric shapes scattered across the canvas ───────
-    int N = int(clamp(shapeCount, 0.0, 24.0));
-    for (int i = 0; i < 24; i++) {
-        if (i >= N) break;
-        float fi = float(i);
-        // Drift trajectory — slow diagonal float with hash-driven phase
-        vec2 home = vec2(hash11(fi * 7.13) - 0.5, hash11(fi * 11.7) - 0.5) * 1.6;
-        home.x *= aspect / max(aspect, 0.5);
-        vec2 wobble = vec2(sin(t * 0.4 + fi * 1.1), cos(t * 0.5 + fi * 1.7)) * 0.04;
-        vec2 ctr = home + wobble;
+Scene buildScene() {
+    float t = TIME;
+    float drift = clamp(driftSpeed, 0.0, 2.0);
+    float bass  = clamp(audioBass, 0.0, 1.0) * audioReact;
 
-        // Per-shape rotation
-        float rot = t * (0.05 + hash11(fi * 13.7) * 0.20) + fi * 0.7;
-        float ca = cos(rot), sa = sin(rot);
-        vec2 lp = mat2(ca, -sa, sa, ca) * (cuv - ctr);
+    vec3 spherePos = vec3(
+        0.05 + 0.10 * sin(t * 0.18 * drift),
+        0.95 + 0.06 * cos(t * 0.22 * drift),
+        0.05 + 0.07 * sin(t * 0.13 * drift + 1.3));
+    float sphereR = 0.65;
 
-        // Per-shape kind (0..5)
-        int kind = int(hash11(fi * 17.9) * 6.0);
-        float scale = 0.05 + hash11(fi * 23.1) * 0.10;
-        scale *= 1.0 + audioBass * audioReact * 0.10;
-        float dist;
-        if      (kind == 0) dist = sdBox(lp, vec2(scale, scale * 0.5));
-        else if (kind == 1) dist = sdCircle(lp, scale);
-        else if (kind == 2) dist = sdTriangle(lp / scale) * scale;
-        else if (kind == 3) dist = sdRoundedBox(lp, vec2(scale, scale * 0.85), scale * 0.35);
-        else if (kind == 4) dist = sdArc(lp, scale, scale * 0.45, 0.0);
-        else                dist = sdBar(lp, scale, scale * 0.12, 0.0);
+    // Wedge orbits sphere, tip aimed at sphere, SLAM advances 30%
+    vec3 sp = slamPhase(t, slamCadence, bass);
+    float dist = 1.95 * (1.0 - sp.y * 0.30);
+    float yaw  = t * 0.13 * drift;
+    float pit  = -0.18 + 0.10 * sin(t * 0.07 * drift);
+    vec3 toBase = vec3(cos(yaw)*cos(pit), sin(pit), sin(yaw)*cos(pit));
+    vec3 wedgeBase = spherePos + toBase * dist;
+    vec3 tipDir = -toBase;
 
-        // Color
-        float pidx = mod(fi * 2.31 + floor(t * 0.05), 8.0);
-        vec3 fillCol = crPalette(pidx);
+    vec3 wx = normalize(tipDir);
+    vec3 wy = normalize(cross(vec3(0.0, 1.0, 0.0), wx));
+    if (length(wy) < 1e-3) wy = vec3(0.0, 0.0, 1.0);
+    vec3 wz = normalize(cross(wx, wy));
+    mat3 wedgeRot = mat3(wx.x, wy.x, wz.x,
+                         wx.y, wy.y, wz.y,
+                         wx.z, wy.z, wz.z);
+    vec3 wedgeSize = vec3(1.55, 0.55, 0.22);
+    vec3 wedgePos  = wedgeBase + tipDir * wedgeSize.x;
 
-        // Fill
-        col = mix(col, fillCol, smoothstep(0.005, -0.005, dist));
-        // Black contour
-        col = mix(col, CR_BLACK, smoothstep(0.006, 0.002, abs(dist)) * 0.55);
-    }
+    vec3 cubePos = vec3(
+        -1.85 + 0.05 * sin(t * 0.11 * drift),
+         0.55 + 0.04 * cos(t * 0.15 * drift),
+        -0.40 + 0.06 * sin(t * 0.09 * drift + 0.7));
+    mat3 cubeRot = rotY(0.18 + t * 0.04 * drift) * rotZ(PI * 0.25) * rotX(0.05);
 
-    // ── Black bars (Lissitzky's diagonal slabs) ───────────────────────
-    int B = int(clamp(barCount, 0.0, 6.0));
-    for (int i = 0; i < 6; i++) {
-        if (i >= B) break;
-        float fi = float(i);
-        float angle = (fi * 0.62 - 1.0 + sin(t * 0.1 + fi) * 0.12) * compositionTilt;
-        vec2 origin = vec2(-0.3 + 0.6 * hash11(fi * 31.7),
-                           -0.3 + 0.6 * hash11(fi * 37.1));
-        float bar = sdBar(cuv - origin, 0.6 + 0.3 * hash11(fi * 41.3), 0.025, angle);
-        col = mix(col, CR_BLACK, smoothstep(0.004, -0.004, bar));
-    }
+    vec3 slabPos = vec3(
+         1.70 + 0.06 * sin(t * 0.10 * drift + 2.1),
+         1.30 + 0.05 * cos(t * 0.13 * drift),
+        -0.55 + 0.05 * sin(t * 0.08 * drift));
+    mat3 slabRot = rotZ(0.22) * rotY(-0.55 + t * 0.03 * drift) * rotX(0.08);
 
-    // ── Cyrillic glyph clusters ───────────────────────────────────────
-    if (glyphIntensity > 0.001) {
-        // Two clusters of vertical strokes + horizontal bars (stencil look)
-        for (int g = 0; g < 2; g++) {
-            float fg = float(g);
-            vec2 origin = vec2(0.18 + fg * 0.55, 0.10);
-            vec2 ld = (uv - origin) * vec2(60.0, 30.0);
-            if (ld.x >= 0.0 && ld.x <= 8.0 && ld.y >= 0.0 && ld.y <= 4.0) {
-                vec2 ci = floor(ld);
-                float h = hash21(ci + floor(t * (0.4 + audioHigh * audioReact * 1.0)));
-                float vert = step(h, 0.55) * step(0.30, fract(ld.x)) * step(fract(ld.x), 0.55);
-                float bar  = step(0.55, h) * step(h, 0.85) * step(0.40, fract(ld.y)) * step(fract(ld.y), 0.62);
-                float ink  = max(vert, bar);
-                col = mix(col, CR_BLACK, ink * glyphIntensity);
-            }
-        }
-    }
+    Scene s;
+    s.spherePos = spherePos; s.sphereR = sphereR;
+    s.wedgePos  = wedgePos;  s.wedgeRot = wedgeRot; s.wedgeSize = wedgeSize;
+    s.cubePos   = cubePos;   s.cubeRot  = cubeRot;  s.cubeH = 0.42;
+    s.slabPos   = slabPos;   s.slabRot  = slabRot;  s.slabHalf = vec3(1.05, 0.62, 0.018);
+    s.impact    = sp.x;
+    return s;
+}
 
-    // Surprise: every ~22s a single red diagonal beam sweeps the canvas
+// ── Scene SDF ───────────────────────────────────────────────────────────
+struct Hit { float d; int mat; };
+
+Hit map(vec3 p, Scene s) {
+    Hit best = Hit(1e9, MAT_CYC);
+
+    float d = sdCyc(p);
+    if (d < best.d) { best.d = d; best.mat = MAT_CYC; }
+
+    d = sdSphere(p - s.spherePos, s.sphereR);
+    if (d < best.d) { best.d = d; best.mat = MAT_SPHERE; }
+
     {
-        float _ph = fract(TIME / 22.0);
-        float _f  = smoothstep(0.0, 0.05, _ph) * smoothstep(0.35, 0.20, _ph);
-        float _t = (_ph - 0.05) / 0.30;
-        vec2 _r = vec2(uv.x * 0.7071 + uv.y * 0.7071,
-                      -uv.x * 0.7071 + uv.y * 0.7071);
-        float _band = exp(-pow((_r.x - (-0.2 + 1.4 * _t)) * 30.0, 2.0));
-        col = mix(col, vec3(0.90, 0.10, 0.08), _f * _band * 0.85);
+        vec3 lp = s.wedgeRot * (p - s.wedgePos);
+        d = sdTriPrism(lp, s.wedgeSize.x, s.wedgeSize.y, s.wedgeSize.z);
+        if (d < best.d) { best.d = d; best.mat = MAT_WEDGE; }
     }
 
-    // Audio breath
-    col *= 0.94 + audioLevel * audioReact * 0.10;
+    {
+        vec3 lp = s.cubeRot * (p - s.cubePos);
+        d = sdBox(lp, vec3(s.cubeH));
+        if (d < best.d) { best.d = d; best.mat = MAT_CUBE; }
+    }
+
+    {
+        vec3 lp = s.slabRot * (p - s.slabPos);
+        d = sdBox(lp, s.slabHalf);
+        if (d < best.d) { best.d = d; best.mat = MAT_SLAB; }
+    }
+
+    return best;
+}
+
+vec3 calcNormal(vec3 p, Scene s) {
+    const vec2 e = vec2(EPS, 0.0);
+    return normalize(vec3(
+        map(p + e.xyy, s).d - map(p - e.xyy, s).d,
+        map(p + e.yxy, s).d - map(p - e.yxy, s).d,
+        map(p + e.yyx, s).d - map(p - e.yyx, s).d
+    ));
+}
+
+// Hard architectural shadow — high step count, no banding.
+float keyShadow(vec3 ro, vec3 rd, Scene s) {
+    float res = 1.0, t = 0.04;
+    for (int i = 0; i < 48; i++) {
+        if (t > 8.0) break;
+        float h = map(ro + rd * t, s).d;
+        if (h < 0.0008) return 0.0;
+        res = min(res, 18.0 * h / t);
+        t  += clamp(h, 0.020, 0.35);
+    }
+    return clamp(res, 0.0, 1.0);
+}
+
+// Analytic floor shadow: project each scene object straight down (along key
+// light direction) onto y=0 and accumulate soft elliptical falloffs. This
+// replaces the raymarched floor shadow which was producing horizon banding.
+float floorShadow(vec3 p, vec3 keyDir, Scene s) {
+    // Project a world point onto y=0 along -keyDir to get caster footprint.
+    // For each caster, compute distance from the projected center to p.xz.
+    float occ = 0.0;
+    float invKy = 1.0 / max(keyDir.y, 0.15);
+
+    // Sphere shadow
+    {
+        vec2 c = (s.spherePos.xz - keyDir.xz * (s.spherePos.y * invKy));
+        float d = length(p.xz - c);
+        float r = s.sphereR * 1.20;
+        occ = max(occ, smoothstep(r, r * 0.45, d) * 0.78);
+    }
+    // Wedge shadow (use bounding sphere of half-extent)
+    {
+        vec2 c = (s.wedgePos.xz - keyDir.xz * (s.wedgePos.y * invKy));
+        float d = length(p.xz - c);
+        float r = max(s.wedgeSize.x, s.wedgeSize.y) * 1.10;
+        occ = max(occ, smoothstep(r, r * 0.40, d) * 0.85);
+    }
+    // Cube shadow
+    {
+        vec2 c = (s.cubePos.xz - keyDir.xz * (s.cubePos.y * invKy));
+        float d = length(p.xz - c);
+        float r = s.cubeH * 1.55;
+        occ = max(occ, smoothstep(r, r * 0.40, d) * 0.88);
+    }
+    // Slab shadow
+    {
+        vec2 c = (s.slabPos.xz - keyDir.xz * (s.slabPos.y * invKy));
+        float d = length(p.xz - c);
+        float r = max(s.slabHalf.x, s.slabHalf.y) * 1.10;
+        occ = max(occ, smoothstep(r, r * 0.35, d) * 0.80);
+    }
+    return clamp(1.0 - occ, 0.0, 1.0);
+}
+
+float ao(vec3 p, vec3 n, Scene s) {
+    float occ = 0.0, sca = 1.0;
+    for (int i = 0; i < 5; i++) {
+        float h = 0.012 + 0.09 * float(i);
+        occ += (h - map(p + n * h, s).d) * sca;
+        sca *= 0.92;
+    }
+    return clamp(1.0 - 1.6 * occ, 0.0, 1.0);
+}
+
+vec3 sphDir(float a, float e) { return normalize(vec3(cos(a)*cos(e), sin(e), sin(a)*cos(e))); }
+
+// ── Shading ─────────────────────────────────────────────────────────────
+vec3 shadeMat(int mat, vec3 p, vec3 n, vec3 v, Scene s) {
+    vec3 keyDir  = sphDir(keyAngle, keyElevation);
+    vec3 keyCol  = vec3(0.96, 0.99, 1.05);     // cool fluorescent
+    vec3 fillCol = vec3(0.90, 0.93, 0.96);     // bounce/fill
+
+    float ndl = max(dot(n, keyDir), 0.0);
+    float sh  = keyShadow(p + n * 0.005, keyDir, s);
+    float fillTerm = max(dot(n, vec3(0.0, 1.0, 0.0)), 0.0);
+    float occ = mix(0.65, 1.0, ao(p, n, s));
+
+    if (mat == MAT_CYC) {
+        // Clean cool-grey cyc gradient — no raymarched soft shadow (was banding).
+        // Gradient goes lighter near foreground, slightly darker upward into the curve.
+        float h = clamp((p.y + 0.4) / 2.4, 0.0, 1.0);
+        vec3 base = mix(LZ_CYC_HI, LZ_CYC_LO, h);
+        // Analytic projected shadows from objects (kills horizon banding).
+        float fs = floorShadow(p, keyDir, s);
+        vec3 lit = base * (0.85 + 0.15 * fillTerm) * mix(0.55, 1.0, fs);
+        return lit * occ;
+    }
+
+    if (mat == MAT_WEDGE) {
+        vec3 albedo = LZ_RED * (1.0 + 0.35 * s.impact);
+        vec3 H = normalize(keyDir + v);
+        float spec = pow(max(dot(n, H), 0.0), 36.0) * sh * 0.35;
+        vec3 col = albedo * (0.18 + 0.95 * ndl * sh) + albedo * 0.12 * fillTerm;
+        col += keyCol * spec;
+        return col * occ;
+    }
+
+    if (mat == MAT_SPHERE) {
+        vec3 albedo = LZ_WHITE;
+        vec3 H = normalize(keyDir + v);
+        float spec = pow(max(dot(n, H), 0.0), 64.0) * sh * 0.18;
+        vec3 col = albedo * (0.32 + 0.85 * ndl * sh) + albedo * fillCol * 0.22 * fillTerm;
+        col += vec3(spec);
+        // Subtle red bounce on slam
+        col += LZ_RED * 0.04 * s.impact * max(dot(normalize(s.wedgePos - p), n), 0.0);
+        return col * occ;
+    }
+
+    if (mat == MAT_CUBE) {
+        // Charcoal-gray faces: lit side vs shadow side via dot(n, lightDir).
+        float litTerm = ndl * sh;
+        vec3 face = mix(LZ_BLACK_SHADOW, LZ_BLACK_LIT, litTerm);
+        // Subtle fill bounce so silhouette doesn't disappear.
+        face += fillCol * LZ_BLACK_LIT * 0.18 * fillTerm;
+        vec3 H = normalize(keyDir + v);
+        float spec = pow(max(dot(n, H), 0.0), 80.0) * sh * 0.25;
+        float rim = pow(1.0 - max(dot(n, v), 0.0), 4.0);
+        return (face + vec3(spec) * 0.45 + fillCol * 0.06 * rim) * occ;
+    }
+
+    // SLAB — same charcoal face shading, slightly more matte.
+    float litTerm = ndl * sh;
+    vec3 face = mix(LZ_BLACK_SHADOW, LZ_BLACK_LIT, litTerm);
+    face += fillCol * LZ_BLACK_LIT * 0.20 * fillTerm;
+    float rim = pow(1.0 - max(dot(n, v), 0.0), 3.0);
+    return (face + fillCol * 0.05 * rim) * occ;
+}
+
+vec3 background(vec3 rd) {
+    float h = clamp(0.5 + 0.5 * rd.y, 0.0, 1.0);
+    return mix(LZ_CYC * 0.97, LZ_CYC * 1.04, h);
+}
+
+vec4 traceScene(vec3 ro, vec3 rd, Scene s) {
+    float dist = 0.0;
+    int mat = MAT_CYC;
+    bool hit = false;
+    for (int i = 0; i < MAX_STEPS; i++) {
+        Hit h = map(ro + rd * dist, s);
+        if (h.d < EPS) { hit = true; mat = h.mat; break; }
+        dist += h.d * 0.92;
+        if (dist > MAX_DIST) break;
+    }
+    if (!hit) return vec4(background(rd), MAX_DIST);
+    vec3 p = ro + rd * dist;
+    vec3 n = calcNormal(p, s);
+    return vec4(shadeMat(mat, p, n, -rd, s), dist);
+}
+
+// ── Main ────────────────────────────────────────────────────────────────
+void main() {
+    vec2 res = RENDERSIZE.xy;
+    vec2 fc  = (gl_FragCoord.xy - 0.5 * res) / res.y;
+
+    Scene s = buildScene();
+
+    float mid = clamp(audioMid, 0.0, 1.0) * audioReact;
+    float orb = camAzimuth + TIME * camOrbitSpeed * (1.0 + 0.4 * mid);
+    vec3 ro = vec3(cos(orb) * camDist, camHeight, sin(orb) * camDist);
+    vec3 ta = vec3(0.05, 0.85, 0.0);
+    vec3 fwd = normalize(ta - ro);
+    vec3 rgt = normalize(cross(fwd, vec3(0.0, 1.0, 0.0)));
+    vec3 up  = cross(rgt, fwd);
+
+    vec3 rd = normalize(fwd + rgt * fc.x + up * fc.y);
+
+    vec4 sc = traceScene(ro, rd, s);
+    vec3 col = sc.rgb;
+
+    // Soft architectural vignette
+    vec2 q = (gl_FragCoord.xy / res) - 0.5;
+    col *= clamp(1.0 - dot(q, q) * 0.35, 0.0, 1.0);
+
+    col *= exposure;
 
     gl_FragColor = vec4(col, 1.0);
 }
