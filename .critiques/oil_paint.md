@@ -18,3 +18,22 @@
 - Audio modulates pulse intensity
 **HDR peaks reached:** white-hot crack edges 3.0, gold flow 1.5–2.5, orange mid-tone 1.0
 **Estimated rating:** 4.5★
+
+## 2026-05-06
+**Prior rating:** 0.0★
+**Approach:** 2D refine (Impressionist waterlily pond — Monet palette, FBM caustics, drifting lily pads)
+**Critique:**
+1. Reference fidelity: Complete rewrite as 2D generator; impressionist water surface with floating lily pads captures Monet reference.
+2. Compositional craft: Dark blue base, aqua mid-tones, HDR lavender+white caustic sparkles. Lily pads (dark green, hot pink bloom, aqua rim) provide focal elements with notch cutouts.
+3. Technical execution: Domain-warped FBM for water surface; constructive interference (two sin×sin products) for caustics; 10-pad loop with deterministic drift and per-pad bloom.
+4. Liveness: waveSpeed drives all FBM animation; audioMod boosts caustic brightness; lily pads drift sinusoidally.
+5. Differentiation: 2D impressionist vs v1's 3D lava impasto — completely orthogonal genre and palette.
+**Changes:**
+- Full rewrite as Waterlily Pool: domain-warped 5-octave FBM water surface
+- Monet palette: deep blue [0,0.05,0.38] → aqua [0.10,0.55,0.68] → lavender [0.52,0.32,0.80] → HDR lavender [h×0.45,h×0.65,h] → white-hot [h,h,h×0.88]
+- Caustic sparkles: two interfering sin×sin products, `pow(max(cA*0.6+cB*0.4, 0), 3.5)` for sharp peaks
+- Up to 10 lily pads: deterministic positions with time-drift, dark green fill, notch cutout, pink bloom HDR, aqua rim HDR
+- Inputs: waveSpeed, waveScale, causticStr, lilyCount, hdrPeak, audioMod
+- Removed: inputImage, Kuwahara filter, multi-pass architecture
+**HDR peaks reached:** caustic white-hot [h,h,h×0.88] = [2.5,2.5,2.2]; lavender [1.1,1.6,2.5]; bloom hot pink [2.4,1.1,1.4]; aqua rim [0.9,1.75,1.25]
+**Estimated rating:** 4.3★

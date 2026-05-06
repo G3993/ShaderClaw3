@@ -1,124 +1,115 @@
 /*{
-  "DESCRIPTION": "Oil paint effect — Kuwahara filter with relief lighting for painterly brush strokes",
-  "CREDIT": "ShaderClaw (Kuwahara approach inspired by flockaroo)",
-  "CATEGORIES": ["Effect"],
+  "DESCRIPTION": "Waterlily Pool — impressionist Monet-palette water surface with caustics and floating lily pads",
+  "CREDIT": "ShaderClaw — waterlily v2",
+  "CATEGORIES": ["Generator"],
   "INPUTS": [
-    { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "brushRadius", "LABEL": "Brush Size", "TYPE": "float", "DEFAULT": 4.0, "MIN": 1.0, "MAX": 12.0 },
-    { "NAME": "paintSpec", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "vignetteAmt", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
-  ],
-  "PASSES": [
-    { "TARGET": "paintBuf", "PERSISTENT": true },
-    {}
+    { "NAME": "waveSpeed",  "LABEL": "Wave Speed",  "TYPE": "float", "DEFAULT": 0.40, "MIN": 0.0, "MAX": 2.0 },
+    { "NAME": "waveScale",  "LABEL": "Wave Scale",  "TYPE": "float", "DEFAULT": 3.0,  "MIN": 0.5, "MAX": 8.0 },
+    { "NAME": "causticStr", "LABEL": "Caustics",    "TYPE": "float", "DEFAULT": 1.8,  "MIN": 0.0, "MAX": 4.0 },
+    { "NAME": "lilyCount",  "LABEL": "Lily Pads",   "TYPE": "float", "DEFAULT": 6.0,  "MIN": 0.0, "MAX": 10.0 },
+    { "NAME": "hdrPeak",    "LABEL": "HDR Peak",    "TYPE": "float", "DEFAULT": 2.5,  "MIN": 0.5, "MAX": 4.0 },
+    { "NAME": "audioMod",   "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0, "MAX": 2.0 }
   ]
 }*/
 
-#define PI 3.1415927
-
-// Aspect-correct UV
-vec2 fitUV(vec2 pos) {
-    return (pos - 0.5 * RENDERSIZE) * min(IMG_SIZE_inputImage.y / RENDERSIZE.y, IMG_SIZE_inputImage.x / RENDERSIZE.x) / IMG_SIZE_inputImage + 0.5;
+float hash21w(vec2 p) {
+    p = fract(p * vec2(234.34, 435.346));
+    p += dot(p, p + 34.23);
+    return fract(p.x * p.y);
 }
 
-// Kuwahara filter: find the quadrant with lowest variance and use its mean color
-// This creates the flat-color brush stroke look of oil paintings
-vec3 kuwahara(vec2 uv, float radius) {
-    vec2 texel = 1.0 / RENDERSIZE;
+float hash1w(float n) { return fract(sin(n * 127.1) * 43758.5); }
 
-    vec3 mean[4];
-    vec3 var_acc[4];
-    float count[4];
+float smoothNoiseW(vec2 p) {
+    vec2 i = floor(p); vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = hash21w(i), b = hash21w(i + vec2(1.0, 0.0));
+    float c = hash21w(i + vec2(0.0, 1.0)), d = hash21w(i + vec2(1.0, 1.0));
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
 
-    // Initialize accumulators
-    for (int i = 0; i < 4; i++) {
-        mean[i] = vec3(0.0);
-        var_acc[i] = vec3(0.0);
-        count[i] = 0.0;
+float fbmWater(vec2 p) {
+    float v = 0.0, a = 0.5;
+    for (int i = 0; i < 5; i++) {
+        v += a * smoothNoiseW(p);
+        p = p * 2.07 + vec2(3.2, 1.83);
+        a *= 0.52;
     }
+    return v;
+}
 
-    // Sample the 4 quadrants around the pixel
-    for (int j = -6; j <= 6; j++) {
-        for (int i = -6; i <= 6; i++) {
-            if (abs(float(i)) > radius || abs(float(j)) > radius) continue;
-
-            vec3 c = texture2D(inputImage, fitUV((uv * RENDERSIZE) + vec2(float(i), float(j)))).rgb;
-
-            // Determine which quadrant(s) this sample belongs to
-            // Quadrant 0: top-right, 1: top-left, 2: bottom-left, 3: bottom-right
-            // Use loop to assign to correct quadrant (WebGL requires const/loop index)
-            int qi = (i >= 0) ? 0 : 1;
-            int qj = (j >= 0) ? 0 : 2;
-            int q = qi + qj;
-
-            for (int k = 0; k < 4; k++) {
-                if (k == q) {
-                    mean[k] += c;
-                    var_acc[k] += c * c;
-                    count[k] += 1.0;
-                }
-            }
-        }
-    }
-
-    // Find the quadrant with minimum variance
-    float minVar = 1e8;
-    vec3 result = vec3(0.0);
-
-    for (int q = 0; q < 4; q++) {
-        if (count[q] < 1.0) continue;
-        vec3 m = mean[q] / count[q];
-        vec3 v = var_acc[q] / count[q] - m * m;
-        float totalVar = v.r + v.g + v.b;
-        if (totalVar < minVar) {
-            minVar = totalVar;
-            result = m;
-        }
-    }
-
-    return result;
+// Monet palette: deep blue → aqua → lavender HDR → white-hot HDR
+vec3 monetPalette(float f) {
+    float h = hdrPeak;
+    if (f < 0.25)      return mix(vec3(0.0,  0.05, 0.38),        vec3(0.10, 0.55, 0.68),        f / 0.25);
+    else if (f < 0.50) return mix(vec3(0.10, 0.55, 0.68),        vec3(0.52, 0.32, 0.80),        (f - 0.25) / 0.25);
+    else if (f < 0.75) return mix(vec3(0.52, 0.32, 0.80),        vec3(h*0.45, h*0.65, h),       (f - 0.50) / 0.25);
+    else               return mix(vec3(h*0.45, h*0.65, h),        vec3(h, h, h*0.88),            (f - 0.75) / 0.25);
 }
 
 void main() {
-    vec2 pos = gl_FragCoord.xy;
-    vec2 uv = pos / RENDERSIZE;
+    vec2 uv = isf_FragNormCoord;
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    vec2 uvA = vec2(uv.x * aspect, uv.y);
 
-    // ==== PASS 0: Kuwahara paint filter ====
-    if (PASSINDEX == 0) {
-        gl_FragColor = vec4(kuwahara(uv, brushRadius), 1.0);
-        return;
+    float t = TIME * waveSpeed;
+    float audioBoost = 1.0 + audioLevel * audioMod * 0.5;
+
+    // ── Water FBM (domain warped) ──────────────────────────────────────────
+    vec2 q = vec2(fbmWater(uvA * waveScale + t * 0.08),
+                  fbmWater(uvA * waveScale + vec2(5.1, 2.9) + t * 0.06));
+    float water = fbmWater(uvA * waveScale * 0.85 + q * 1.6 + t * 0.04);
+
+    // ── Caustic sparkles: constructive interference at wave peaks ──────────
+    float cA = sin(uvA.x * 24.0 * waveScale + water * 9.0 + t * 2.8)
+             * sin(uvA.y * 19.0 * waveScale + water * 7.0 - t * 2.3);
+    float cB = sin(uvA.x * 11.0 * waveScale - uvA.y * 7.0 * waveScale + t * 1.9)
+             * sin(uvA.x * 6.0  * waveScale + uvA.y * 14.0 * waveScale - t * 1.5);
+    float caustic = pow(max(cA * 0.6 + cB * 0.4, 0.0), 3.5);
+
+    // ── Palette index ──────────────────────────────────────────────────────
+    float f = clamp(water * 0.62 + caustic * causticStr * 0.38, 0.0, 1.0);
+    f = clamp(f * (0.85 + audioBoost * 0.15), 0.0, 1.0);
+    vec3 col = monetPalette(f);
+
+    // ── Lily pads ──────────────────────────────────────────────────────────
+    int maxPads = 10;
+    float lc = min(lilyCount, 10.0);
+    for (int i = 0; i < 10; i++) {
+        if (float(i) >= lc) break;
+        float fi = float(i);
+        // Deterministic position with gentle drift
+        vec2 center = vec2(
+            (0.12 + fract(fi * 0.7374 + 0.13) * 0.76) * aspect,
+             0.10 + fract(fi * 0.3819 + 0.57) * 0.80
+        );
+        center.x += 0.035 * sin(t * 0.28 + fi * 2.37);
+        center.y += 0.025 * cos(t * 0.21 + fi * 1.93);
+
+        float radius = 0.038 + fract(fi * 0.5137) * 0.052;
+        float dist   = length(uvA - center);
+
+        // Lily pad: dark green fill
+        float padEdge = dist - radius;
+        float padMask = smoothstep(0.006, -0.008, padEdge);
+        vec3 lilyGreen = vec3(0.02, 0.14 + fract(fi * 0.31) * 0.06, 0.03);
+        col = mix(col, lilyGreen, padMask * 0.92);
+
+        // Notch (water gap in pad): wedge cutout
+        float angle = atan(uvA.y - center.y, uvA.x - center.x);
+        float notch = smoothstep(0.18, 0.0, abs(angle - (fi * 1.37 + 0.5))) * float(dist < radius);
+        col = mix(col, col * 0.0, notch * padMask);
+
+        // Flower bloom at pad center: hot pink/white HDR
+        float flowerD = dist - radius * 0.28;
+        float flowerMask = smoothstep(0.012, 0.001, abs(flowerD));
+        vec3 bloom = vec3(hdrPeak * 0.95, hdrPeak * 0.45, hdrPeak * 0.55);
+        col += bloom * flowerMask * 0.7;
+
+        // Rim highlight: aqua/white HDR at pad edge
+        float rimMask = smoothstep(0.012, 0.0, abs(padEdge) - 0.002);
+        col += vec3(hdrPeak * 0.35, hdrPeak * 0.7, hdrPeak * 0.5) * rimMask * 0.5;
     }
 
-    // ==== PASS 1: Relief lighting ====
-    vec2 texel = 1.0 / RENDERSIZE;
-    float valC = dot(texture2D(paintBuf, uv).rgb, vec3(0.333));
-    float valR = dot(texture2D(paintBuf, uv + vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valL = dot(texture2D(paintBuf, uv - vec2(texel.x, 0.0)).rgb, vec3(0.333));
-    float valU = dot(texture2D(paintBuf, uv + vec2(0.0, texel.y)).rgb, vec3(0.333));
-    float valD = dot(texture2D(paintBuf, uv - vec2(0.0, texel.y)).rgb, vec3(0.333));
-
-    vec3 norm = normalize(vec3(
-        (valR - valL) / texel.x,
-        (valU - valD) / texel.y,
-        150.0
-    ));
-
-    vec3 light = normalize(vec3(-1.0, 1.0, 1.4));
-    float diff = clamp(dot(norm, light), 0.0, 1.0);
-    float spec = pow(clamp(dot(reflect(light, norm), vec3(0.0, 0.0, -1.0)), 0.0, 1.0), 12.0) * paintSpec;
-
-    gl_FragColor = texture2D(paintBuf, uv) * mix(diff, 1.0, 0.9)
-                 + spec * vec4(0.85, 1.0, 1.15, 1.0);
-
-    // Vignette
-    if (vignetteAmt > 0.0) {
-        vec2 scc = (pos - 0.5 * RENDERSIZE) / RENDERSIZE.x;
-        float vign = 1.1 - vignetteAmt * dot(scc, scc);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.x / RENDERSIZE.x * PI) * 40.0);
-        vign *= 1.0 - 0.7 * vignetteAmt * exp(-sin(pos.y / RENDERSIZE.y * PI) * 20.0);
-        gl_FragColor.xyz *= vign;
-    }
-
-    gl_FragColor.w = 1.0;
+    gl_FragColor = vec4(col, 1.0);
 }
