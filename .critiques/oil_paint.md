@@ -18,3 +18,22 @@
 - Audio modulates pulse intensity
 **HDR peaks reached:** white-hot crack edges 3.0, gold flow 1.5–2.5, orange mid-tone 1.0
 **Estimated rating:** 4.5★
+
+## 2026-05-06
+**Prior rating:** 0.0★
+**Approach:** 3D raymarch — NEW ANGLE: Volumetric metaball paint cloud (prior 2026-05-05 was 3D displaced lava plane, never committed)
+**Critique:**
+1. Reference fidelity: Metaball cluster references Pollock / abstract expressionist paint throw — distinct from lava impasto.
+2. Compositional craft: 8 blobs in golden-angle arrangement creates organic but balanced composition.
+3. Technical execution: smin blending, per-blob color weighting, normal via central differences, fwidth() ink edges.
+4. Liveness: Blobs slowly drift/pulse with TIME and audio bass.
+5. Differentiation: Different 3D primitive (metaballs vs displaced FBM plane); different palette (Zorn vs lava); different lighting (painterly vs cinematic).
+**Changes:**
+- Full rewrite from Kuwahara filter to 3D metaball paint cloud
+- 8 golden-angle blobs with smooth-min blending
+- Palette: vermillion/cobalt/ochre — classic Zorn limited palette at HDR levels
+- Painterly warm-key + cool-fill lighting + gloss specular
+- Ink outline via fwidth() edge darkening
+- Audio bass modulates blob scale
+**HDR peaks reached:** blob surfaces at hdrPeak * diff = 2.5+; specular peaks ~1.5 additional
+**Estimated rating:** 4.0★
