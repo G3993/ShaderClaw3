@@ -12,9 +12,13 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.0, 1.0, 1.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.0, 0.03, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "plasmaSpeed", "LABEL": "Plasma Speed", "TYPE": "float", "DEFAULT": 0.4,  "MIN": 0.0, "MAX": 2.0 },
+    { "NAME": "plasmaScale", "LABEL": "Plasma Scale", "TYPE": "float", "DEFAULT": 3.0,  "MIN": 1.0, "MAX": 8.0 },
+    { "NAME": "hdrGlow",     "LABEL": "HDR Glow",     "TYPE": "float", "DEFAULT": 2.3,  "MIN": 1.0, "MAX": 5.0 },
+    { "NAME": "audioMod",    "LABEL": "Audio",         "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0, "MAX": 2.0 }
   ]
 }*/
 
@@ -94,6 +98,68 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
+// PLASMA ENERGY FIELD BACKGROUND
+// =======================================================================
+
+float hash21(vec2 p) { return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+
+float smoothNoise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    f = f*f*(3.0-2.0*f);
+    return mix(mix(hash21(i),hash21(i+vec2(1,0)),f.x),
+               mix(hash21(i+vec2(0,1)),hash21(i+vec2(1,1)),f.x),f.y);
+}
+
+float fbm(vec2 p) {
+    float v=0.0, a=0.5;
+    for(int i=0;i<5;i++){v+=smoothNoise(p)*a; p*=2.1; a*=0.5;}
+    return v;
+}
+
+vec3 plasmaEnergyBg(vec2 uv, float aspect, float t) {
+    float audio = 1.0 + audioLevel * audioMod * 0.35 + audioBass * audioMod * 0.2;
+
+    vec2 p = uv * vec2(aspect, 1.0) * plasmaScale;
+
+    // Domain warped FBM plasma
+    vec2 q = vec2(fbm(p + vec2(0.0, t*plasmaSpeed)),
+                  fbm(p + vec2(5.2, t*plasmaSpeed*0.7)));
+    vec2 r = vec2(fbm(p + 4.0*q + vec2(1.7, t*plasmaSpeed*0.5)),
+                  fbm(p + 4.0*q + vec2(9.2, t*plasmaSpeed*0.3)));
+    float f = fbm(p + 4.0*r);
+
+    // Map plasma value to hot color gradient: deep crimson → magenta → violet → dark
+    // f is roughly in [0,1]
+    vec3 c0 = vec3(0.05, 0.0, 0.08);   // near-black violet void
+    vec3 c1 = vec3(0.6, 0.0, 0.15);    // deep crimson
+    vec3 c2 = vec3(0.95, 0.0, 0.55);   // hot magenta
+    vec3 c3 = vec3(0.5, 0.1, 1.0);     // violet-electric
+    vec3 c4 = vec3(0.85, 0.3, 1.0);    // bright violet HDR
+
+    vec3 plasmaCol;
+    float f4 = f * 4.0;
+    if (f4 < 1.0) plasmaCol = mix(c0, c1, f4);
+    else if (f4 < 2.0) plasmaCol = mix(c1, c2, f4-1.0);
+    else if (f4 < 3.0) plasmaCol = mix(c2, c3, f4-2.0);
+    else plasmaCol = mix(c3, c4, f4-3.0);
+
+    // HDR brightness boost on bright plasma peaks
+    float brightness = dot(plasmaCol, vec3(0.333));
+    plasmaCol *= 1.0 + brightness * hdrGlow * audio * 0.5;
+
+    // Plasma tendrils: bright filaments along gradient ridges
+    vec2 grad = vec2(
+        fbm(p + vec2(0.01, 0.0) + 4.0*r) - f,
+        fbm(p + vec2(0.0, 0.01) + 4.0*r) - f
+    ) / 0.01;
+    float ridgeMag = length(grad);
+    float ridgeMask = exp(-ridgeMag * 0.3) * f;
+    plasmaCol += vec3(1.0, 0.2, 0.5) * ridgeMask * hdrGlow * 0.4 * audio;
+
+    return plasmaCol;
+}
+
+// =======================================================================
 // EFFECT: SPACY - perspective tunnel rows
 // =======================================================================
 
@@ -145,12 +211,14 @@ vec4 effectSpacy(vec2 uv, int sub) {
         }
     }
 
+    vec3 bg = transparentBg ? bgColor.rgb : plasmaEnergyBg(uv, aspect, TIME);
+
     bool inv = mod(ri, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
+    vec3 fg = inv ? bg : textColor.rgb * hdrGlow;
+    vec3 rowBg = inv ? textColor.rgb * hdrGlow : bg;
+    vec3 fc = mix(rowBg, fg, textHit);
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
+    if (transparentBg) { a = textHit; fc = textColor.rgb * hdrGlow; }
     return vec4(fc, a);
 }
 
