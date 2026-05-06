@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Chat — speech-bubble note taker. Splits the message into chunks and emits each chunk as a small chat bubble that floats up the screen, alternating sender/receiver sides like an iMessage thread. New bubble spawns at the bottom every interval; old bubbles drift up and fade. Drop a long sentence in MSG and watch it self-organize into a conversation.",
+  "DESCRIPTION": "Chat — speech-bubble note taker. Splits the message into chunks and emits each chunk as a small chat bubble that floats up the screen. Each bubble cycles through a 6-slot palette so consecutive messages get wildly different colors. Bubbles alternate left/right sides like a chaotic group chat. Drop a long sentence in MSG and watch it self-organize. Tighter kerning so chunks read like dense one-liners.",
   "CREDIT": "ShaderClaw",
   "CATEGORIES": ["Generator", "Text"],
   "INPUTS": [
@@ -10,14 +10,19 @@
     { "NAME": "floatSpeed", "LABEL": "Float Speed", "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.05, "MAX": 0.6 },
     { "NAME": "wobble", "LABEL": "Wobble", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.5 },
     { "NAME": "textScale", "LABEL": "Text Size", "TYPE": "float", "DEFAULT": 0.038, "MIN": 0.018, "MAX": 0.07 },
+    { "NAME": "kerning", "LABEL": "Kerning", "TYPE": "float", "DEFAULT": 0.92, "MIN": 0.7, "MAX": 1.4 },
     { "NAME": "bubblePadding", "LABEL": "Bubble Padding", "TYPE": "float", "DEFAULT": 0.022, "MIN": 0.005, "MAX": 0.05 },
     { "NAME": "cornerRadius", "LABEL": "Corner Radius", "TYPE": "float", "DEFAULT": 0.025, "MIN": 0.0, "MAX": 0.05 },
     { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0 },
+    { "NAME": "autoTextColor", "LABEL": "Auto Text Color", "TYPE": "bool", "DEFAULT": 1.0 },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.06, 0.07, 0.10, 1.0] },
-    { "NAME": "senderColor", "LABEL": "Sender Bubble", "TYPE": "color", "DEFAULT": [0.10, 0.55, 1.0, 1.0] },
-    { "NAME": "receiverColor", "LABEL": "Receiver Bubble", "TYPE": "color", "DEFAULT": [0.20, 0.22, 0.26, 1.0] },
-    { "NAME": "senderTextColor", "LABEL": "Sender Text", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "receiverTextColor", "LABEL": "Receiver Text", "TYPE": "color", "DEFAULT": [0.95, 0.95, 0.97, 1.0] },
+    { "NAME": "color1", "LABEL": "Bubble 1", "TYPE": "color", "DEFAULT": [0.10, 0.55, 1.00, 1.0] },
+    { "NAME": "color2", "LABEL": "Bubble 2", "TYPE": "color", "DEFAULT": [1.00, 0.20, 0.55, 1.0] },
+    { "NAME": "color3", "LABEL": "Bubble 3", "TYPE": "color", "DEFAULT": [0.30, 1.00, 0.45, 1.0] },
+    { "NAME": "color4", "LABEL": "Bubble 4", "TYPE": "color", "DEFAULT": [1.00, 0.75, 0.10, 1.0] },
+    { "NAME": "color5", "LABEL": "Bubble 5", "TYPE": "color", "DEFAULT": [0.65, 0.20, 1.00, 1.0] },
+    { "NAME": "color6", "LABEL": "Bubble 6", "TYPE": "color", "DEFAULT": [0.10, 0.95, 0.95, 1.0] },
+    { "NAME": "manualTextColor", "LABEL": "Manual Text", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
     { "NAME": "transparentBg", "LABEL": "Transparent BG", "TYPE": "bool", "DEFAULT": 0.0 }
   ]
 }*/
@@ -208,11 +213,20 @@ void main() {
         float fill = 1.0 - smoothstep(-fw, fw, sdf);
         if (fill < 0.001) continue;
 
-        vec3 bubColor = senderSide ? senderColor.rgb : receiverColor.rgb;
-        // Vertical sheen on the bubble for that "iMessage" gloss.
+        // Per-bubble color from the 6-slot palette. Cycle by index so
+        // consecutive bubbles never share a color.
+        int paletteIdx = int(mod(fk, 6.0));
+        vec3 bubColor = color1.rgb;
+        if (paletteIdx == 1) bubColor = color2.rgb;
+        else if (paletteIdx == 2) bubColor = color3.rgb;
+        else if (paletteIdx == 3) bubColor = color4.rgb;
+        else if (paletteIdx == 4) bubColor = color5.rgb;
+        else if (paletteIdx == 5) bubColor = color6.rgb;
+
+        // Vertical sheen for that glossy iMessage feel.
         float sheen = smoothstep(-halfBox.y, halfBox.y * 0.7, d.y);
         bubColor = mix(bubColor * 0.92, bubColor * 1.12, sheen);
-        // Bass pulse on the freshest bubble (k==0 visually = newest in cycle).
+        // Bass pulse on the freshest bubble (just spawned).
         if (phase < 0.2) bubColor *= 1.0 + 0.15 * bass * audio * (1.0 - phase / 0.2);
 
         // Composite — newest bubble wins overlap.
@@ -221,11 +235,11 @@ void main() {
 
         // ─── Text inside bubble ───
         // Bubble-local coords with text origin at top-left of inner area.
-        // Text starts at (-halfBox.x + padding, -halfBox.y + padding + charH).
         float innerL = -halfBox.x + bubblePadding;
         float innerB = -halfBox.y + bubblePadding;
-        // Each char cell: width charW (with kerning), height charH.
-        float kern = charW * 1.15;
+        // Char advance — `kerning` uniform controls letter spacing
+        // multiplier (1.0 = touching, <1.0 = overlapping, >1.0 = airy).
+        float kern = charW * kerning;
 
         // Position relative to inner top-left of text row.
         float lx = (d.x - innerL);
@@ -239,13 +253,21 @@ void main() {
         if (globalIdx >= total) continue;
 
         int ch = getChar(globalIdx);
-        // Spaces / unknowns render as nothing.
         vec2 cellLocal = vec2((lx - float(colIdx) * kern) / charW,
                               ly / charH);
         float s = sampleChar(ch, cellLocal);
         s = smoothstep(0.18, 0.55, s);
         if (s > 0.001) {
-            vec3 txtColor = senderSide ? senderTextColor.rgb : receiverTextColor.rgb;
+            // Auto contrast: pick black/white based on bubble luminance,
+            // so any "crazy" palette entry stays readable. Manual override
+            // with autoTextColor=false uses manualTextColor instead.
+            vec3 txtColor;
+            if (autoTextColor) {
+                float lum = dot(bubColor, vec3(0.299, 0.587, 0.114));
+                txtColor = (lum > 0.55) ? vec3(0.04) : vec3(1.0);
+            } else {
+                txtColor = manualTextColor.rgb;
+            }
             charMask = max(charMask, s * env * fill);
             charCol  = mix(charCol, txtColor, s * env * fill);
         }

@@ -1,10 +1,13 @@
 /*{
-  "DESCRIPTION": "La Bloom — message characters arranged on a rose-curve flower silhouette that continuously blooms outward from the center. Multiple concurrent bloom waves spiral out at offset phases so a new flower is always opening while older ones fade at the edges. Saturated jewel palette, HDR petal peaks, ink-black character silhouettes against bloom haze.",
+  "DESCRIPTION": "La Bloom — message characters arranged on a rose-curve flower silhouette that continuously blooms outward from the center. Multiple concurrent bloom waves at offset phases keep a new flower always opening while older ones fade at the rim. Toggle 3D for a tilted bowl-shaped bloom: petals lift toward the viewer with perspective scaling, depth-based haze, and rim-light HDR peaks. Saturated jewel palette, ink-black silhouettes against bloom haze.",
   "CREDIT": "ShaderClaw",
-  "CATEGORIES": ["Generator", "Text", "Audio Reactive"],
+  "CATEGORIES": ["Generator", "Text", "Audio Reactive", "3D"],
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": "BLOOM ", "MAX_LENGTH": 48 },
     { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "DEFAULT": 3, "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"] },
+    { "NAME": "mode3D", "LABEL": "3D Mode", "TYPE": "bool", "DEFAULT": 0.0 },
+    { "NAME": "bowlDepth", "LABEL": "Bowl Depth (3D)", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.4 },
+    { "NAME": "camTilt", "LABEL": "Camera Tilt (3D)", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.4 },
     { "NAME": "petals", "LABEL": "Petals", "TYPE": "long", "DEFAULT": 6, "VALUES": [3,4,5,6,7,8,10,12], "LABELS": ["3","4","5","6","7","8","10","12"] },
     { "NAME": "waveCount", "LABEL": "Bloom Waves", "TYPE": "long", "DEFAULT": 3, "VALUES": [1,2,3,4,5,6], "LABELS": ["1","2","3","4","5","6"] },
     { "NAME": "bloomSpeed", "LABEL": "Bloom Speed", "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.02, "MAX": 1.0 },
