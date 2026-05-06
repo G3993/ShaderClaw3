@@ -9,9 +9,10 @@
     { "NAME": "intensity", "LABEL": "Displacement", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Grid Density", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.9, 0.3, 0.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.92, 0.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.03, 0.03, 0.08, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true },
+    { "NAME": "hdrBoost", "LABEL": "Text HDR", "TYPE": "float", "DEFAULT": 2.4, "MIN": 1.0, "MAX": 4.0 }
   ]
 }*/
 
@@ -151,10 +152,48 @@ vec4 effectBricks(vec2 uv, int sub) {
     return vec4(fc, a);
 }
 
+// ── Electric Storm background ────────────────────────────────────────────────────
+vec3 electricStormBg(vec2 uv) {
+    float t   = TIME;
+    // Storm cloud layers (dark blue-grey turbulence)
+    float cloud = 0.0;
+    for (int i = 0; i < 5; i++) {
+        float fi = float(i) + 1.0;
+        cloud += (1.0 / fi) * (0.5 + 0.5 * sin(uv.x * fi * 9.3 + t * 0.08 * fi)
+                                      * sin(uv.y * fi * 7.1 + t * 0.06 * fi));
+    }
+    vec3 sky = mix(vec3(0.03, 0.03, 0.08), vec3(0.10, 0.11, 0.20), cloud * 0.6);
+
+    // Lightning bolt: hash-modulated zigzag path
+    float flashT = floor(t * 3.0);
+    float boltX = 0.5
+        + 0.07 * sin(uv.y * 19.3 + hash(flashT) * 100.0)
+        + 0.04 * sin(uv.y * 37.7 + hash(flashT + 1.0) * 100.0)
+        + 0.025 * sin(uv.y * 61.1 + hash(flashT + 2.0) * 100.0);
+    float distBolt = abs(uv.x - boltX);
+    float trigger  = step(0.68, hash(flashT * 0.27));
+    float boltMask = exp(-distBolt * 130.0) * trigger;
+
+    // Branch bolt (thinner, offset)
+    float branchY  = 0.3 + 0.4 * hash(flashT * 3.1);
+    float branchOff = (hash(flashT * 5.7) - 0.5) * 0.18;
+    float branchX  = boltX + branchOff * clamp(uv.y - branchY, 0.0, 1.0) / max(1.0 - branchY, 0.001);
+    float boltMask2 = exp(-abs(uv.x - branchX) * 200.0) * trigger * step(branchY, uv.y);
+
+    float bolt = boltMask + boltMask2 * 0.6;
+    vec3 boltCol = mix(vec3(0.5, 0.2, 1.0), vec3(2.8, 2.8, 2.0), bolt);
+    return sky + boltCol * bolt;
+}
+
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     int p = int(preset);
     vec4 col = effectBricks(uv, p);
+
+    // Composite text (alpha) over electric storm background
+    vec3 storm = electricStormBg(uv);
+    col.rgb = mix(storm, textColor.rgb * hdrBoost, col.a);
+    col.a   = 1.0;
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
