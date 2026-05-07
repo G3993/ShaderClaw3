@@ -1,12 +1,12 @@
 /*{
-  "DESCRIPTION": "Balls — metallic spheres with selective Unreal-style bloom",
+  "DESCRIPTION": "Balls — metallic spheres with selective bloom. Five movement modes including Cellular (Voronoi clustering). AudioDrive capped to 1.5 per motion discipline. LINEAR HDR peaks 2.0+ on specular tips.",
   "CREDIT": "ShaderClaw (inspired by three.js selective bloom example)",
   "CATEGORIES": ["Generator", "3D"],
   "INPUTS": [
     { "NAME": "ballCount", "LABEL": "Count", "TYPE": "float", "DEFAULT": 25.0, "MIN": 5.0, "MAX": 50.0 },
     { "NAME": "ballSize", "LABEL": "Size", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.05, "MAX": 1.0 },
     { "NAME": "sizeVariance", "LABEL": "Size Variance", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "movementMode", "LABEL": "Movement", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Orbit", "Heart Pump", "Morph Center", "Dance Around", "Swarm"] },
+    { "NAME": "movementMode", "LABEL": "Movement", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4, 5], "LABELS": ["Orbit", "Heart Pump", "Morph Center", "Dance Around", "Swarm", "Cellular"] },
     { "NAME": "noiseTexture", "LABEL": "Surface Noise", "TYPE": "float", "DEFAULT": 0.30, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "rimLight", "LABEL": "Rim Light", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "shadowSoftness", "LABEL": "Shadow Soft", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 1.0 },
@@ -15,7 +15,7 @@
     { "NAME": "rotSpeed", "LABEL": "Orbit Speed", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "bloomRatio", "LABEL": "Glow Ratio", "TYPE": "float", "DEFAULT": 0.4, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "metallic", "LABEL": "Metallic", "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "audioDrive", "LABEL": "Audio Drive", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 5.0 },
+    { "NAME": "audioDrive", "LABEL": "Audio Drive", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 1.5 },
     { "NAME": "accentColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.04, 1.0] },
     { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
@@ -80,13 +80,29 @@ vec2 mapScene(vec3 p, float count) {
             float a3 = TIME * rotSpeed * (0.5 + hash1(i * 13.3));
             center += vec3(sin(a1) * 1.0, sin(a2) * 0.6, sin(a3) * 0.8) * 0.5;
             center.xz = mat2(ca, -sa, sa, ca) * center.xz;
-        } else {
+        } else if (movementMode < 4.5) {
             // 4: SWARM — all balls drift toward a moving target
             vec3 swarmTarget = vec3(sin(TIME * 0.3) * 2.5,
                                     cos(TIME * 0.4) * 1.5,
                                     sin(TIME * 0.5) * 2.5);
             center = mix(center, swarmTarget + (h * 1.2), 0.4);
             center.xz = mat2(ca, -sa, sa, ca) * center.xz;
+        } else {
+            // 5: CELLULAR — balls cluster into Voronoi cells that pulse
+            // independently. Each cell breathes with a staggered bass phase.
+            float cellId = floor(i / 5.0);
+            float cellPh = cellId * 1.91;
+            float cellR  = 1.5 + sin(TIME * 0.28 + cellPh) * 1.2;
+            vec3 cellCtr = vec3(
+                sin(TIME * 0.18 + cellId * 2.39) * 2.5,
+                cos(TIME * 0.14 + cellId * 1.73) * 1.2,
+                sin(TIME * 0.22 + cellId * 3.11) * 2.5
+            );
+            float inCellR = 0.35 + hash1(i * 3.13) * 0.45;
+            float cellBeat = audioBass * audioDrive
+                           * (0.5 + 0.5 * sin(TIME * 6.0 + cellPh));
+            inCellR *= 1.0 + cellBeat * 0.6;  // K = audioDrive ≤ 1.5 ✓
+            center = cellCtr + normalize(h + vec3(0.001)) * cellR * inCellR;
         }
 
         // Audio pulse: expand radius on beat
