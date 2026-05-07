@@ -1,10 +1,8 @@
 /*{
-    "DESCRIPTION": "Gradient Bars",
-    "CREDIT": "Joshua Batty",
+    "DESCRIPTION": "Gradient Bars — 30 easing functions on columns/rows. Four built-in neon HDR palettes when no texture is connected: Neon Noir (cyan/magenta on void), Chromatic (full saturated hue wheel), Lava (crimson/amber/black), Ice (cobalt/teal/white). Audio-reactive non-gating HDR peaks on bar tops (K ≤ 1.5). Linear HDR out.",
+    "CREDIT": "Joshua Batty / ShaderClaw",
     "ISFVSN": "2",
-    "CATEGORIES": [
-        "Generator"
-    ],
+    "CATEGORIES": ["Generator", "Audio Reactive"],
     "INPUTS": [
         {
             "NAME": "easing_type",
@@ -28,6 +26,14 @@
                 "Ease In Bounce", "Ease Out Bounce", "Ease InOut Bounce"
             ],
             "LABEL": "Easing Type"
+        },
+        {
+            "NAME": "neonPalette",
+            "LABEL": "Neon Palette",
+            "TYPE": "long",
+            "DEFAULT": 0,
+            "VALUES": [0, 1, 2, 3],
+            "LABELS": ["Neon Noir", "Chromatic", "Lava", "Ice"]
         },
         {
             "NAME": "gradient_pow",
@@ -121,203 +127,94 @@ precision highp float;
 
 const float PI = 3.14159265358979;
 
-float easeInSine(float x) {
-    return 1. - cos((x * PI) / 2.);
-}
-
-float easeOutSine(float x) {
-    return sin((x * PI) / 2.);
-}
-
-float easeInOutSine(float x) {
-    return -(cos(PI * x) - 1.) / 2.;
-}
-
-float easeInCubic(float x) {
-    return x * x * x;
-}
-
-float easeOutCubic(float x) {
-    return 1. - pow(1. - x, 3.);
-}
-
-float easeInOutCubic(float x) {
-    return x < .5 ? 4. * x * x * x : 1. - pow(-2. * x + 2., 3.) / 2.;
-}
-
-float easeInQuint(float x) {
-    return x * x * x * x * x;
-}
-
-float easeOutQuint(float x) {
-    return 1. - pow(1. - x, 5.);
-}
-
-float easeInOutQuint(float x) {
-    return x < .5 ? 16. * x * x * x * x * x : 1. - pow(-2. * x + 2., 5.) / 2.;
-}
-
-float easeInCirc(float x) {
-    return 1. - sqrt(abs(1. - pow(x, 2.)));
-}
-
-float easeOutCirc(float x) {
-    return sqrt(abs(1. - pow(x - 1., 2.)));
-}
-
+float easeInSine(float x)    { return 1. - cos((x * PI) / 2.); }
+float easeOutSine(float x)   { return sin((x * PI) / 2.); }
+float easeInOutSine(float x) { return -(cos(PI * x) - 1.) / 2.; }
+float easeInCubic(float x)   { return x * x * x; }
+float easeOutCubic(float x)  { return 1. - pow(1. - x, 3.); }
+float easeInOutCubic(float x){ return x < .5 ? 4.*x*x*x : 1. - pow(-2.*x+2.,3.)/2.; }
+float easeInQuint(float x)   { return x*x*x*x*x; }
+float easeOutQuint(float x)  { return 1. - pow(1.-x,5.); }
+float easeInOutQuint(float x){ return x<.5 ? 16.*x*x*x*x*x : 1.-pow(-2.*x+2.,5.)/2.; }
+float easeInCirc(float x)    { return 1.-sqrt(abs(1.-pow(x,2.))); }
+float easeOutCirc(float x)   { return sqrt(abs(1.-pow(x-1.,2.))); }
 float easeInOutCirc(float x) {
-    return x < .5
-      ? (1. - sqrt(1. - pow(2. * x, 2.))) / 2.
-      : (sqrt(1. - pow(-2. * x + 2., 2.)) + 1.) / 2.;
+    return x<.5?(1.-sqrt(1.-pow(2.*x,2.)))/2.:(sqrt(1.-pow(-2.*x+2.,2.))+1.)/2.;
 }
-
 float easeInElastic(float x) {
-    float c4 = (2. * PI) / 3.;
-    return x == 0.
-      ? 0.
-      : x == 1.
-      ? 1.
-      : -pow(2., 10. * x - 10.) * sin((x * 10. - 10.75) * c4);
+    float c4=(2.*PI)/3.;
+    return x==0.?0.:x==1.?1.:-pow(2.,10.*x-10.)*sin((x*10.-10.75)*c4);
 }
-
 float easeOutElastic(float x) {
-    float c4 = (2. * PI) / 3.;
-    return x == 0.
-      ? 0.
-      : x == 1.
-      ? 1.
-      : pow(2., -10. * x) * sin((x * 10. - .75) * c4) + 1.;
+    float c4=(2.*PI)/3.;
+    return x==0.?0.:x==1.?1.:pow(2.,-10.*x)*sin((x*10.-.75)*c4)+1.;
 }
-
 float easeInOutElastic(float x) {
-    float c5 = (2. * PI) / 4.5;
-    return x == 0.
-      ? 0.
-      : x == 1.
-      ? 1.
-      : x < .5
-      ? -(pow(2., 20. * x - 10.) * sin((20. * x - 11.125) * c5)) / 2.
-      : (pow(2., -20. * x + 10.) * sin((20. * x - 11.125) * c5)) / 2. + 1.;
+    float c5=(2.*PI)/4.5;
+    return x==0.?0.:x==1.?1.:x<.5
+        ?-(pow(2.,20.*x-10.)*sin((20.*x-11.125)*c5))/2.
+        :(pow(2.,-20.*x+10.)*sin((20.*x-11.125)*c5))/2.+1.;
 }
-
-float easeInQuad(float x) {
-    return x * x;
-}
-
-float easeOutQuad(float x) {
-    return 1. - (1. - x) * (1. - x);
-}
-
-float easeInOutQuad(float x) {
-    return x < .5 ? 2. * x * x : 1. - pow(-2. * x + 2., 2.) / 2.;
-}
-
-float easeInQuart(float x) {
-    return x * x * x * x;
-}
-
-float easeOutQuart(float x) {
-    return 1. - pow(1. - x, 4.);
-}
-
-float easeInOutQuart(float x) {
-    return x < .5 ? 8. * x * x * x * x : 1. - pow(-2. * x + 2., 4.) / 2.;
-}
-
-float easeInExpo(float x) {
-    return x == 0. ? 0. : pow(2., 10. * x - 10.);
-}
-
-float easeOutExpo(float x) {
-    return x == 1. ? 1. : 1. - pow(2., -10. * x);
-}
-
+float easeInQuad(float x)    { return x*x; }
+float easeOutQuad(float x)   { return 1.-(1.-x)*(1.-x); }
+float easeInOutQuad(float x) { return x<.5?2.*x*x:1.-pow(-2.*x+2.,2.)/2.; }
+float easeInQuart(float x)   { return x*x*x*x; }
+float easeOutQuart(float x)  { return 1.-pow(1.-x,4.); }
+float easeInOutQuart(float x){ return x<.5?8.*x*x*x*x:1.-pow(-2.*x+2.,4.)/2.; }
+float easeInExpo(float x)    { return x==0.?0.:pow(2.,10.*x-10.); }
+float easeOutExpo(float x)   { return x==1.?1.:1.-pow(2.,-10.*x); }
 float easeInOutExpo(float x) {
-    return x == 0.
-      ? 0.
-      : x == 1.
-      ? 1.
-      : x < .5 ? pow(2., 20. * x - 10.) / 2.
-      : (2. - pow(2., -20. * x + 10.)) / 2.;
+    return x==0.?0.:x==1.?1.:x<.5?pow(2.,20.*x-10.)/2.:(2.-pow(2.,-20.*x+10.))/2.;
 }
-
-float easeInBack(float x) {
-    float c1 = 1.70158;
-    float c3 = c1 + 1.;
-    return c3 * x * x * x - c1 * x * x;
+float easeInBack(float x)  { float c1=1.70158,c3=c1+1.; return c3*x*x*x-c1*x*x; }
+float easeOutBack(float x) { float c1=1.70158,c3=c1+1.; return 1.+c3*pow(x-1.,3.)+c1*pow(x-1.,2.); }
+float easeInOutBack(float x){
+    float c1=1.70158,c2=c1*1.525;
+    return x<.5?(pow(2.*x,2.)*((c2+1.)*2.*x-c2))/2.:(pow(2.*x-2.,2.)*((c2+1.)*(x*2.-2.)+c2)+2.)/2.;
 }
-
-float easeOutBack(float x) {
-    float c1 = 1.70158;
-    float c3 = c1 + 1.;
-    return 1. + c3 * pow(x - 1., 3.) + c1 * pow(x - 1., 2.);
-}
-
-float easeInOutBack(float x) {
-    float c1 = 1.70158;
-    float c2 = c1 * 1.525;
-    return x < .5
-      ? (pow(2. * x, 2.) * ((c2 + 1.) * 2. * x - c2)) / 2.
-      : (pow(2. * x - 2., 2.) * ((c2 + 1.) * (x * 2. - 2.) + c2) + 2.) / 2.;
-}
-
 float easeOutBounce(float x) {
-    float n1 = 7.5625;
-    float d1 = 2.75;
-    if (x < 1. / d1) {
-        return n1 * x * x;
-    } else if (x < 2. / d1) {
-        return n1 * (x -= 1.5 / d1) * x + 0.75;
-    } else if (x < 2.5 / d1) {
-        return n1 * (x -= 2.25 / d1) * x + 0.9375;
-    } else {
-        return n1 * (x -= 2.625 / d1) * x + 0.984375;
-    }
+    float n1=7.5625,d1=2.75;
+    if(x<1./d1) return n1*x*x;
+    else if(x<2./d1) return n1*(x-=1.5/d1)*x+.75;
+    else if(x<2.5/d1) return n1*(x-=2.25/d1)*x+.9375;
+    return n1*(x-=2.625/d1)*x+.984375;
 }
-
-float easeInBounce(float x) {
-    return 1. - easeOutBounce(1. - x);
-}
-
-float easeInOutBounce(float x) {
-    return x < .5
-      ? (1. - easeOutBounce(1. - 2. * x)) / 2.
-      : (1. + easeOutBounce(2. * x - 1.)) / 2.;
-}
+float easeInBounce(float x)   { return 1.-easeOutBounce(1.-x); }
+float easeInOutBounce(float x){ return x<.5?(1.-easeOutBounce(1.-2.*x))/2.:(1.+easeOutBounce(2.*x-1.))/2.; }
 
 float fun(float phase, float id) {
     int i = int(id);
-    if (i == 0) return easeInSine(phase);
-    else if (i == 1) return easeOutSine(phase);
-    else if (i == 2) return easeInOutSine(phase);
-    else if (i == 3) return easeInQuad(phase);
-    else if (i == 4) return easeOutQuad(phase);
-    else if (i == 5) return easeInOutQuad(phase);
-    else if (i == 6) return easeInCubic(phase);
-    else if (i == 7) return easeOutCubic(phase);
-    else if (i == 8) return easeInOutCubic(phase);
-    else if (i == 9) return easeInQuart(phase);
-    else if (i == 10) return easeOutQuart(phase);
-    else if (i == 11) return easeInOutQuart(phase);
-    else if (i == 12) return easeInQuint(phase);
-    else if (i == 13) return easeOutQuint(phase);
-    else if (i == 14) return easeInOutQuint(phase);
-    else if (i == 15) return easeInExpo(phase);
-    else if (i == 16) return easeOutExpo(phase);
-    else if (i == 17) return easeInOutExpo(phase);
-    else if (i == 18) return easeInCirc(phase);
-    else if (i == 19) return easeOutCirc(phase);
-    else if (i == 20) return easeInOutCirc(phase);
-    else if (i == 21) return easeInBack(phase);
-    else if (i == 22) return easeOutBack(phase);
-    else if (i == 23) return easeInOutBack(phase);
-    else if (i == 24) return easeInElastic(phase);
-    else if (i == 25) return easeOutElastic(phase);
-    else if (i == 26) return easeInOutElastic(phase);
-    else if (i == 27) return easeInBounce(phase);
-    else if (i == 28) return easeOutBounce(phase);
-    else if (i == 29) return easeInOutBounce(phase);
-    else return 0.0;
+    if(i==0)  return easeInSine(phase);
+    else if(i==1)  return easeOutSine(phase);
+    else if(i==2)  return easeInOutSine(phase);
+    else if(i==3)  return easeInQuad(phase);
+    else if(i==4)  return easeOutQuad(phase);
+    else if(i==5)  return easeInOutQuad(phase);
+    else if(i==6)  return easeInCubic(phase);
+    else if(i==7)  return easeOutCubic(phase);
+    else if(i==8)  return easeInOutCubic(phase);
+    else if(i==9)  return easeInQuart(phase);
+    else if(i==10) return easeOutQuart(phase);
+    else if(i==11) return easeInOutQuart(phase);
+    else if(i==12) return easeInQuint(phase);
+    else if(i==13) return easeOutQuint(phase);
+    else if(i==14) return easeInOutQuint(phase);
+    else if(i==15) return easeInExpo(phase);
+    else if(i==16) return easeOutExpo(phase);
+    else if(i==17) return easeInOutExpo(phase);
+    else if(i==18) return easeInCirc(phase);
+    else if(i==19) return easeOutCirc(phase);
+    else if(i==20) return easeInOutCirc(phase);
+    else if(i==21) return easeInBack(phase);
+    else if(i==22) return easeOutBack(phase);
+    else if(i==23) return easeInOutBack(phase);
+    else if(i==24) return easeInElastic(phase);
+    else if(i==25) return easeOutElastic(phase);
+    else if(i==26) return easeInOutElastic(phase);
+    else if(i==27) return easeInBounce(phase);
+    else if(i==28) return easeOutBounce(phase);
+    else if(i==29) return easeInOutBounce(phase);
+    return 0.0;
 }
 
 float adjust_balance(float value, float b) {
@@ -325,49 +222,125 @@ float adjust_balance(float value, float b) {
     return pow(value, gamma);
 }
 
-void main() {
-    vec2 uv = isf_FragNormCoord.xy;
-    float primary = use_columns ? uv.x : uv.y;
-    float secondary = use_columns ? uv.y : uv.x;
+// Four saturated HDR palettes — sampled by bar position t (0..1) and
+// stripe index. Returns LINEAR HDR color (peaks 2.0-2.5 at bar top).
+vec3 neonColor(float t, float stripeIdx, int palette) {
+    // Hue per stripe (stays constant for a given bar number)
+    float hue = fract(stripeIdx / max(num_columns, 1.0));
 
-    float mirrored_primary = abs(primary - 0.5) * x_iter;
-    float stripe_index = ceil(mirrored_primary * num_columns);
+    if (palette == 0) {
+        // Neon Noir: electric cyan ↔ hot magenta alternating on void black
+        float even = step(0.5, fract(stripeIdx * 0.5));
+        vec3 cyan = vec3(0.0, 2.20, 2.50);
+        vec3 magenta = vec3(2.40, 0.0, 2.10);
+        vec3 base = mix(cyan, magenta, even);
+        return base * t;
+    } else if (palette == 1) {
+        // Chromatic: full hue wheel, each bar a different saturated hue
+        float h = hue * 6.0;
+        vec3 col;
+        col.r = abs(h - 3.0) - 1.0;
+        col.g = 2.0 - abs(h - 2.0);
+        col.b = 2.0 - abs(h - 4.0);
+        col = clamp(col, 0.0, 1.0);
+        // Saturate fully and push into HDR at bar peaks
+        return col * 2.20 * t;
+    } else if (palette == 2) {
+        // Lava: crimson → amber → near-black
+        vec3 c0 = vec3(0.0, 0.0, 0.0);
+        vec3 c1 = vec3(2.10, 0.18, 0.05);   // deep crimson HDR
+        vec3 c2 = vec3(2.40, 1.10, 0.05);   // amber HDR
+        float s = t * t;  // power-curve emphasis on tips
+        if (s < 0.5) return mix(c0, c1, s * 2.0);
+        return mix(c1, c2, (s - 0.5) * 2.0);
+    } else {
+        // Ice: deep cobalt → electric teal → blinding white
+        vec3 c0 = vec3(0.0, 0.02, 0.08);
+        vec3 c1 = vec3(0.08, 0.60, 2.20);   // electric teal HDR
+        vec3 c2 = vec3(2.40, 2.45, 2.50);   // white HDR peak
+        float s = t * t;
+        if (s < 0.6) return mix(c0, c1, s / 0.6);
+        return mix(c1, c2, (s - 0.6) / 0.4);
+    }
+}
 
+// Smooth stripe contribution with anti-aliased boundary.
+// Audio multiplier K capped at 1.5 per motion discipline §2.
+float stripe_mask_for(float stripe_index, float secondary_in, float secondary_orig) {
     float phase_offset = stripe_index * (1.0 / (num_columns * max(offset, 0.001)));
-    float phase = fract(TIME * speed * (1.0 + audioBass * 2.0) + phase_offset);
+    // K ≤ 1.5: base rate * (1 + audioBass * 1.5)
+    float phase = fract(TIME * speed * (1.0 + audioBass * 1.5) + phase_offset);
     float lfo = fun(phase, easing_type) * phase_iter - (phase_iter / 2.0);
 
     bool is_even_stripe = mod(stripe_index, 2.0) < 1.0;
-    float secondary_adjusted = is_even_stripe ? secondary : 1.0 - secondary;
-    secondary = mix(secondary, secondary_adjusted, use_odd_dirs);
+    float secondary_adjusted = is_even_stripe ? secondary_orig : 1.0 - secondary_orig;
+    float sec = mix(secondary_in, secondary_adjusted, use_odd_dirs);
 
-    float gradient = pow(secondary, gradient_pow * (1.0 - audioLevel * 0.5));
+    float gradient = pow(sec, gradient_pow * (1.0 - audioLevel * 0.5));
     gradient = mix(gradient, 1.0 - gradient, 0.5 + sin(TIME * invert_speed) * 0.5);
 
     float animated_coord = fract(lfo + gradient);
     float col = 0.5 + 0.5 * sin(animated_coord * 6.28318530718);
     col = adjust_balance(col, balance);
+    return 1.0 - col;
+}
 
-    float mask = 1.0 - col;
-    // Surprise: every ~17s a single bar briefly bursts to twice its mass
-    // and tints magenta — the runaway peak event you can't anticipate.
+void main() {
+    vec2 uv = isf_FragNormCoord.xy;
+    float primary   = use_columns ? uv.x : uv.y;
+    float secondary = use_columns ? uv.y : uv.x;
+
+    float mirrored_primary = abs(primary - 0.5) * x_iter;
+    float stripe_pos   = mirrored_primary * num_columns;
+    float stripe_index = ceil(stripe_pos);
+
+    // SOFT AA: one-pixel blend across stripe boundary.
+    float aa = fwidth(stripe_pos);
+    float frac_in_stripe = stripe_pos - floor(stripe_pos);
+    float edge_t = smoothstep(1.0 - aa, 1.0, frac_in_stripe);
+
+    float mask = stripe_mask_for(stripe_index, secondary, secondary);
+    if (edge_t > 0.0) {
+        float mask_neighbor = stripe_mask_for(stripe_index + 1.0, secondary, secondary);
+        mask = mix(mask, mask_neighbor, edge_t);
+    }
+
+    // Surprise event: one bar briefly doubles mass, held for ~0.7s / 17s.
+    float _ph = fract(TIME / 17.0);
+    float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.18, 0.10, _ph);
     {
-        float _ph = fract(TIME / 17.0);
-        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.18, 0.10, _ph);
-        float _which = floor(fract(TIME / 17.0 + 0.5) * 32.0);
-        float _bx = (_which + 0.5) / 32.0;
+        float _which = floor(fract(TIME / 17.0 + 0.5) * num_columns);
+        float _bx = (_which + 0.5) / num_columns;
         float _bandX = exp(-pow((uv.x - _bx) * 80.0, 2.0));
         mask += _bandX * _f * 0.9;
     }
 
+    // HDR PEAKS: bar tops pushed into linear HDR (>1.0) for bloom.
+    // Baseline keeps the shader alive at audio=0; bass adds non-gated K≤1.5 push.
+    float peakShape = smoothstep(0.55, 1.0, mask);
+    float baseGain  = 1.0 + 0.55 * peakShape;
+    float audioGain = audioBass * 0.85 + audioLevel * 0.45;   // K≤1.5 ✓
+    float burstGain = 0.9 * _f * peakShape;
+    float hdrGain   = min(baseGain + audioGain * peakShape + burstGain, 2.50);
+    float mask_hdr  = mask * hdrGain;
+
     bool hasTex = IMG_SIZE_inputTex.x > 0.0;
+    vec3 result;
     if (hasTex) {
         vec4 tex = IMG_NORM_PIXEL(inputTex, uv);
-        gl_FragColor = vec4(tex.rgb * mask, tex.a * mask);
+        // Scale texture into HDR via mask
+        result = tex.rgb * mask_hdr;
+        gl_FragColor = vec4(result, tex.a * mask);
     } else {
-        // Magenta tint when the surprise is firing
-        float _ph = fract(TIME / 17.0);
-        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.18, 0.10, _ph);
-        gl_FragColor = vec4(mix(vec3(mask), vec3(1.0, 0.2, 0.8) * mask, _f * 0.5), 1.0);
+        // Neon palette: color comes from stripe index + mask height.
+        // mask_hdr already encodes the HDR intensity; neonColor maps 0..1.
+        float t = clamp(mask_hdr / 2.50, 0.0, 1.0);  // normalize for color gradient
+        vec3 base  = neonColor(t, stripe_index, int(neonPalette));
+        // Surprise flash: tint event bar toward palette complement
+        vec3 flash = vec3(1.0) - base * 0.5;
+        base = mix(base, flash * mask_hdr, _f * 0.4);
+        // Restore HDR scale (neonColor returns HDR-scaled values; multiply by mask)
+        result = base * clamp(mask, 0.0, 1.0) + base * peakShape * (hdrGain - 1.0);
+        gl_FragColor = vec4(result, 1.0);
     }
 }
