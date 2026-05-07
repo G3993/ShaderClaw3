@@ -1,8 +1,8 @@
 /*{
   "CATEGORIES": ["Generator", "Art Movement", "Audio Reactive"],
-  "DESCRIPTION": "Pollock action painting — N independent drippers wander the canvas via curl-noise advection, depositing thick paint into a persistent buffer that fades slowly. All-over skein composition: black, aluminium, ochre, cadmium red on raw canvas. After Number 1A (1948) and Autumn Rhythm (1950).",
+  "DESCRIPTION": "Pollock action painting — N independent drippers on curl-noise paths. NEW: Night Studio mode adds a Black Pourings (1952) variant — near-void black ground with luminous neon paint (cadmium yellow HDR 2.5, alizarin crimson HDR 2.2, electric white HDR 2.8) for maximum contrast. Classic raw-canvas works retained. Linear HDR peaks on wet paint tips.",
   "INPUTS": [
-    { "NAME": "pollockWork", "LABEL": "Painting", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Autumn Rhythm (1950)", "Lavender Mist (1950)", "Number 1A (1948)", "Blue Poles (1952)", "Convergence (1952)"] },
+    { "NAME": "pollockWork", "LABEL": "Painting", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4, 5], "LABELS": ["Autumn Rhythm (1950)", "Lavender Mist (1950)", "Number 1A (1948)", "Blue Poles (1952)", "Convergence (1952)", "Black Pourings (1952)"] },
     { "NAME": "drippers", "LABEL": "Drippers", "TYPE": "float", "MIN": 4.0, "MAX": 100.0, "DEFAULT": 40.0 },
     { "NAME": "strokeWidth", "LABEL": "Stroke Width", "TYPE": "float", "MIN": 0.001, "MAX": 0.025, "DEFAULT": 0.006 },
     { "NAME": "turbulence", "LABEL": "Turbulence", "TYPE": "float", "MIN": 0.5, "MAX": 6.0, "DEFAULT": 2.4 },
@@ -105,6 +105,14 @@ void pollockPalette(int w, out vec3 c0, out vec3 c1, out vec3 c2,
         c0 = vec3(0.05, 0.04, 0.04); c1 = vec3(0.96, 0.95, 0.92);
         c2 = vec3(0.85, 0.20, 0.18); c3 = vec3(0.92, 0.78, 0.20);
         c4 = vec3(0.20, 0.30, 0.55);
+    } else if (w == 5) {     // Black Pourings 1952 — near-void ground, HDR neon drips
+        // Ground is near-black; paint is luminous neon so strokes READ HOT.
+        // HDR peaks handled via the existing corePeak system → bloom catches them.
+        c0 = vec3(0.02, 0.02, 0.03);   // void black (tiny, replaces black skein)
+        c1 = vec3(2.80, 2.75, 2.60);   // titanium white HDR 2.8
+        c2 = vec3(2.50, 2.10, 0.05);   // cadmium yellow HDR 2.5
+        c3 = vec3(2.20, 0.08, 0.06);   // alizarin crimson HDR 2.2
+        c4 = vec3(0.05, 0.30, 2.40);   // electric cobalt HDR 2.4
     } else {                 // 0 = Autumn Rhythm 1950 (default)
         c0 = POL_BLACK; c1 = POL_WHITE; c2 = POL_SILVR;
         c3 = POL_RED;   c4 = POL_OCHRE;
@@ -131,15 +139,18 @@ void main() {
     if (PASSINDEX == 0) {
 
         if (FRAMEINDEX < 2 || resetField) {
-            gl_FragColor = vec4(RAW_CANVAS, 1.0);
+            // Black Pourings uses near-void ground instead of raw canvas
+            vec3 groundCol = (int(pollockWork) == 5) ? vec3(0.02, 0.02, 0.03) : RAW_CANVAS;
+            gl_FragColor = vec4(groundCol, 1.0);
             return;
         }
 
         // Slow self-decay toward canvas — paint stays for many seconds,
         // long enough for a dense skein to build, but eventually clears
         // so live performance never saturates the buffer.
+        vec3 groundCol = (int(pollockWork) == 5) ? vec3(0.02, 0.02, 0.03) : RAW_CANVAS;
         vec3 prev = texture(paintBuf, uv).rgb;
-        prev = mix(RAW_CANVAS, prev, paintFade);
+        prev = mix(groundCol, prev, paintFade);
 
         // No self-advection — Pollock paint stays where the gesture put
         // it. (Removed to differentiate visually from Fauvism's flowing
