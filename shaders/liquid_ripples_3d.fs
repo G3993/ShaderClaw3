@@ -25,7 +25,7 @@ vec2 hashPos(int L) {
 // TIME * 0.15 cycles fast enough to show distinct colours across audit frames.
 vec3 planeColor(int L, float layers) {
     float t = fract(float(L) / max(layers - 1.0, 1.0) + TIME * 0.15);
-    return 0.5 + 0.5 * cos(6.2832 * (vec3(0.0, 0.33, 0.67) + t));
+    return 0.5 + 0.5 * cos(6.2832 * (vec3(0.0, 0.08, 0.16) + t));
 }
 
 void main() {
