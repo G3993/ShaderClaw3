@@ -1,11 +1,11 @@
 /*{
-  "DESCRIPTION": "ASCII art filter — converts any image/video to colored ASCII characters with ANSI palette matching",
+  "DESCRIPTION": "ASCII art filter — converts any image/video to colored ASCII characters. Color modes: ANSI 16, Mono, Custom Duo, Full Color, Heatmap, Cyberpunk, Volumetric Glow (HDR 2.5+ on bright cells), Phosphor (amber/green with luminance bloom).",
   "CATEGORIES": ["Effect", "Text"],
   "INPUTS": [
     { "NAME": "inputTex", "LABEL": "Source", "TYPE": "image" },
     { "NAME": "cellSize", "LABEL": "Cell Size", "TYPE": "float", "DEFAULT": 8.0, "MIN": 4.0, "MAX": 32.0 },
     { "NAME": "charSet", "LABEL": "Character Set", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4, 5, 6], "LABELS": ["Simple", "Extended", "Blocks", "Binary 01", "Hex", "Matrix Glyphs", "Geometric"] },
-    { "NAME": "colorMode", "LABEL": "Color Mode", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4, 5], "LABELS": ["ANSI 16", "Mono", "Custom Duo", "Full Color", "Heatmap", "Cyberpunk"] },
+    { "NAME": "colorMode", "LABEL": "Color Mode", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4, 5, 6, 7], "LABELS": ["ANSI 16", "Mono", "Custom Duo", "Full Color", "Heatmap", "Cyberpunk", "Volumetric Glow", "Phosphor"] },
     { "NAME": "depth", "LABEL": "Depth (Zoom Center)", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "depthFalloff", "LABEL": "Depth Falloff", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.2, "MAX": 4.0 },
     { "NAME": "charCycle", "LABEL": "Charset Cycle", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 4.0 },
@@ -278,12 +278,33 @@ void main() {
         else if (lum < 0.66) fg = mix(c1, c2, (lum - 0.33) / 0.33);
         else                 fg = mix(c2, c3, (lum - 0.66) / 0.34);
         bg = c0 * 0.6;
-    } else {
+    } else if (colorMode < 5.5) {
         // Cyberpunk — magenta/cyan/yellow on near-black with audio glow
         float h = fract(lum + TIME * 0.05);
         vec3 cyber = 0.5 + 0.5 * cos(6.28318 * h + vec3(0.0, 2.094, 4.188));
-        fg = cyber * (0.7 + audioBass * audioReact * 0.5);
+        fg = cyber * (0.7 + audioBass * audioReact * 0.5);   // K≈0.7 ≤ 1.5 ✓
         bg = vec3(0.02, 0.0, 0.04);
+    } else if (colorMode < 6.5) {
+        // Volumetric Glow — bright cells pushed to HDR 2.5 linear so
+        // the ASCII texture reads as an emissive surface. Dark cells near-black.
+        // Full-colour source tinted then scaled to HDR on bright characters.
+        float hdrScale = 1.0 + lum * 1.5;  // 1.0 (dark) → 2.5 (bright)
+        fg = sampleCol * hdrScale;
+        // Audio treble shimmers bright character intensity (K = audioReact * 0.8 ≤ 1.5 ✓)
+        fg *= 1.0 + audioHigh * audioReact * 0.8;
+        bg = vec3(0.0);
+    } else {
+        // Phosphor — classic amber/green phosphor display with HDR hot-spot.
+        // Bright cells glow at 2.2 linear; dark cells are a dim amber ember.
+        vec3 phosphorAmber = vec3(1.00, 0.62, 0.05);
+        vec3 phosphorGreen = vec3(0.12, 1.00, 0.22);
+        // Blend between amber and green based on image hue preference
+        float hueBlend = clamp(dot(sampleCol, vec3(-0.5, 0.5, 0.2)) + 0.5, 0.0, 1.0);
+        vec3 phosphorCol = mix(phosphorAmber, phosphorGreen, hueBlend * 0.6);
+        // HDR: bright pixels emit above 1.0 so bloom catches the hot spots
+        float phosGain = 0.40 + lum * 1.80;   // 0.4 (black) → 2.2 (white)
+        fg = phosphorCol * phosGain * (1.0 + audioBass * audioReact * 0.4); // K≤0.8 ✓
+        bg = phosphorCol * 0.04;
     }
 
     // Mix character foreground/background
