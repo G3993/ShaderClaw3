@@ -131,12 +131,18 @@ void main(){
 	}
 
     float val = fbm( vec2(r + y * ray_density, r + x * ray_density - y), freq);
-     
+
 	val = smoothstep( 0., ray_brightness, val);
-	
-	vec3 col = clamp( 1.- vec3(val), 0., 1.);
-	
-	col = mix(col, vec3(1.0), spot_brightness - 10.* r/curvature * 200./brightness);
-	
-	gl_FragColor = sqrt(vec4(col, 1.0));
+
+	// Warm solar corona: rays tinted orange-gold, HDR capable (no clamp)
+	vec3 col = max(1.0 - vec3(val), 0.0) * vec3(1.8, 0.9, 0.25);
+
+	// Solar core: HDR gold-white disk (spot factor clamped to keep values finite)
+	float spotF = clamp(
+	    (spot_brightness - 10.0 * r / max(curvature, 0.001) * 200.0 / max(brightness, 0.001)) / 15.0,
+	    0.0, 1.0);
+	col = mix(col, vec3(2.5, 2.0, 1.4), spotF);
+
+	// Linear HDR output — no gamma bake
+	gl_FragColor = vec4(col, 1.0);
 }
