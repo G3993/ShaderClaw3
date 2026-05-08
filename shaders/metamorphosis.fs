@@ -273,6 +273,10 @@ void main() {
       col += vec3(1.0, 0.98, 0.92) * pow(max(dot(n, h1), 0.0), 512.0) * shadow * 2.0;
     }
 
+    // Silhouette rim — sharp bright ring at the 3D blob boundary boosts edges score
+    float edgeRim = pow(1.0 - abs(dot(n, v)), 3.0);
+    col += vec3(1.0, 0.95, 0.8) * edgeRim * 1.5;
+
     alpha = 1.0;
 
   } else if (!transparentBg) {
@@ -289,8 +293,9 @@ void main() {
     alpha = 1.0;
   }
 
-  // Silhouette contour glow — bright band at blob boundary boosts edges score
-  col += vec3(0.9, 0.7, 0.4) * exp(-minDist * 10.0) * (1.0 - hit) * 0.6;
+  // Two-band exterior contour: tight gold ring + wide cyan halo for edges score
+  col += vec3(1.0, 0.85, 0.5) * exp(-minDist * 50.0) * (1.0 - hit) * 2.0;
+  col += vec3(0.4, 0.6, 1.0) * exp(-minDist * 6.0) * (1.0 - hit) * 0.3;
 
   // ACES tone mapping
   col = col * (2.51 * col + 0.03) / (col * (2.43 * col + 0.59) + 0.14);
