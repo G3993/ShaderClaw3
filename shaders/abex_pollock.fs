@@ -80,7 +80,7 @@ vec2 dripperPos(int id, float t, float turb, float speed) {
                      cos(TIME * 0.40 + fid));
     // Optional pooling — every few seconds, 15% of drippers dwell near
     // their base point so the canvas develops paint pools.
-    if (hash11(fid + floor(TIME * 0.3)) > 0.85) p = mix(p, base, 0.5);
+    if (hash11(fid + floor(TIME * 0.15)) > 0.85) p = mix(p, base, 0.5);
     return clamp(p, 0.02, 0.98);
 }
 
@@ -148,11 +148,8 @@ void main() {
         // Deposit: walk each dripper to its CURRENT position (not its
         // whole history) and check if this fragment is on the stroke.
         // Wider strokes for low-frequency content (bass kicks).
-        float t = TIME * wanderSpeed * (0.5 + audioMid * audioReact * 1.5);
-        // Width chosen per dripper per second so strokes vary thickness
-        // like real flicks of enamel — not all uniform.
-        float wHash = hash11(float(0) + floor(TIME * 1.2));  // shared baseline
-        float w = strokeWidth * (1.0 + audioLevel * audioReact * 0.8);
+        float t = TIME * wanderSpeed * (1.0 + audioMid * audioReact * 0.75);
+        float w = strokeWidth * (1.0 + audioLevel * audioReact * 0.75);
         // Hard loop bound 100 — GLSL needs a constant upper limit on
         // for-loop counters. The early `break` keeps actual cost
         // proportional to the live N, not to the 100 ceiling.
@@ -175,13 +172,17 @@ void main() {
             d.x *= aspect;
             float ds = length(d);
             if (ds > w * 4.0) continue;
-            float falloff = smoothstep(w, w * 0.4, ds);
+            float aa = max(fwidth(ds), 1e-5);
+            float falloff = smoothstep(w + aa, max(w * 0.4 - aa, 0.0), ds);
             if (falloff < 0.001) continue;
             vec3 src = (IMG_SIZE_inputTex.x > 0.0)
                      ? texture(inputTex, cl).rgb : vec3(0.5);
             vec3 c = useTexColor ? src
                                  : dripperColor(i, src, blackWeight);
-            prev = mix(prev, c, falloff);
+            float metalLike = max(max(c.r, c.g), c.b);
+            float corePeak = smoothstep(w * 0.55, w * 0.1, ds) * smoothstep(0.4, 0.85, metalLike) * wetness;
+            vec3 deposit = c + c * corePeak * 1.2;
+            prev = mix(prev, deposit, falloff);
         }
 
         gl_FragColor = vec4(prev, 1.0);
@@ -199,13 +200,17 @@ void main() {
         vec2 gi = floor(g);
         float roll = hash21(gi);
         if (roll > 1.0 - splatterDensity * 0.05
-                * (0.5 + audioHigh * audioReact * 1.3)) {
-            float spat = step(length(fract(g) - 0.5), 0.18);
+                * (1.0 + audioHigh * audioReact * 0.75)) {
+            float dr = length(fract(g) - 0.5);
+            float aa = fwidth(dr) + 1e-5;
+            float spat = 1.0 - smoothstep(0.18 - aa, 0.18 + aa, dr);
             int cidx = int(hash21(gi + 17.3) * 4.0);
             vec3 sc = (cidx == 0) ? POL_BLACK
                     : (cidx == 1) ? POL_WHITE
                     : (cidx == 2) ? POL_RED : POL_OCHRE;
-            col = mix(col, sc, spat);
+            float bright = max(max(sc.r, sc.g), sc.b);
+            float coreS = (1.0 - smoothstep(0.0, 0.06, dr)) * smoothstep(0.4, 0.85, bright);
+            col = mix(col, sc + sc * coreS * 1.1, spat);
         }
     }
 
@@ -230,9 +235,10 @@ void main() {
         float specBoost = pow(max(diff, 0.0), 8.0);
         // Highlight on raised paint, shadow on the down-slope side
         col *= 1.0 + diff * 0.18;
-        col += vec3(1.0, 0.95, 0.85) * specBoost * 0.20;
-        // Wet paint glistening — small bright dots where paint is densest
-        col += vec3(0.9, 0.85, 0.75) * smoothstep(0.75, 1.0, hC) * 0.15;
+        float ridge = smoothstep(0.02, 0.18, length(grad) * 8.0);
+        col += vec3(1.0, 0.95, 0.85) * specBoost * ridge * 2.2;
+        // Wet paint glistening pushed to HDR so bloom picks up the peaks.
+        col += vec3(0.9, 0.85, 0.75) * smoothstep(0.75, 1.0, hC) * 1.1;
     }
 
     // Multiple splatter scales — large drops + medium + fine spray
@@ -243,8 +249,10 @@ void main() {
         vec2 g2 = uv * n2;
         vec2 gi2 = floor(g2);
         float r2 = hash21(gi2 + 73.1);
-        if (r2 > 1.0 - splatterDensity * 0.04 * (0.5 + audioHigh * audioReact * 1.5)) {
-            float spat2 = step(length(fract(g2) - 0.5), 0.22);
+        if (r2 > 1.0 - splatterDensity * 0.04 * (1.0 + audioHigh * audioReact * 0.75)) {
+            float dr2 = length(fract(g2) - 0.5);
+            float aa2 = fwidth(dr2) + 1e-5;
+            float spat2 = 1.0 - smoothstep(0.22 - aa2, 0.22 + aa2, dr2);
             int cidx2 = int(hash21(gi2 + 27.3) * 4.0);
             vec3 sc2 = (cidx2 == 0) ? POL_BLACK
                      : (cidx2 == 1) ? POL_WHITE
@@ -258,7 +266,7 @@ void main() {
     float goldPhase = fract(TIME / 14.0);
     float goldFlash = smoothstep(0.0, 0.10, goldPhase) * smoothstep(0.18, 0.10, goldPhase);
     float lum = dot(col, vec3(0.299, 0.587, 0.114));
-    col = mix(col, vec3(1.00, 0.85, 0.35), goldFlash * smoothstep(0.55, 0.85, lum) * 0.6);
+    col = mix(col, vec3(1.80, 1.48, 0.55), goldFlash * smoothstep(0.55, 0.85, lum) * 0.6);
 
     gl_FragColor = vec4(col, 1.0);
 }
