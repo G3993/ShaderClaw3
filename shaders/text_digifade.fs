@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Digifade - glitch dissolve",
+  "DESCRIPTION": "Digifade — glitch dissolve over a neon circuit-trace PCB background",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1], "LABELS": ["Digifade","Digifade Glitch"], "DEFAULT": 0 },
@@ -9,16 +9,62 @@
     { "NAME": "intensity", "LABEL": "Glitch", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Dissolve", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.2 },
+    { "NAME": "audioMod", "LABEL": "Audio Mod", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.8 },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
 const float PI = 3.14159265;
 const float TWO_PI = 6.28318530;
 
-// Atlas-only font engine (no bitmap fallback — faster ANGLE compile)
+float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+
+// PCB circuit trace background — hot magenta traces on void black
+// Palette: void [0,0.01,0.005], trace [0.0,0.12,0.08], via [0,0.7,0.4]*0.35, text magenta [1,0,0.9]
+vec3 circuitBg(vec2 uv) {
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    vec2 p = vec2(uv.x * aspect, uv.y);
+    float t = TIME * 0.18;
+
+    // Coarse grid for trace routing
+    float gridScale = 14.0;
+    vec2 cell = floor(p * gridScale);
+    vec2 local = fract(p * gridScale);
+
+    // Each cell has a randomly chosen trace direction (H or V)
+    float cellHash = hash2(cell + floor(t * 0.1));
+    float cellHash2 = hash2(cell * 7.3 + 1.7);
+
+    // Trace lines (H or V based on cellHash)
+    float traceW = 0.07;
+    float hTrace = step(abs(local.y - 0.5), traceW) * step(cellHash, 0.6);
+    float vTrace = step(abs(local.x - 0.5), traceW) * step(0.4, cellHash);
+
+    // Via dots at cell centers
+    float viaDist = length(local - 0.5);
+    float via = smoothstep(0.18, 0.10, viaDist);
+
+    float trace = max(hTrace, vTrace);
+
+    // Signal pulse — hot spot traveling along traces, TIME-driven
+    float pulse = step(0.7, hash2(cell + floor(t * 3.0 + cellHash2 * 10.0)));
+    float traceColor = trace * (0.25 + pulse * 0.75);
+
+    // Colors: dark PCB base, teal traces, bright via nodes
+    vec3 base  = vec3(0.0, 0.012, 0.006);
+    vec3 trCol = vec3(0.0, 0.55, 0.32) * traceColor;
+    vec3 viaCol = vec3(0.0, 1.0, 0.6) * via * 0.4;
+
+    // Occasional hot signal packet (bright cyan burst on via)
+    float packet = via * pulse;
+    viaCol += vec3(0.0, 1.0, 0.8) * packet * 1.2;
+
+    return base + trCol + viaCol;
+}
+
+// Atlas-only font engine
 float charPixel(int ch, float col, float row) {
     if (ch < 0 || ch > 36) return 0.0;
     vec2 uv = vec2(col / 5.0, row / 7.0);
@@ -82,16 +128,8 @@ int charCount() {
     return n > 0 ? n : 1;
 }
 
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
-}
-
-float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
-
 // =======================================================================
-// EFFECT: DIGIFADE - glitch dissolve
+// EFFECT: DIGIFADE — glitch dissolve with PCB circuit background
 // =======================================================================
 
 vec4 effectDigifade(vec2 uv, int sub) {
@@ -106,19 +144,16 @@ vec4 effectDigifade(vec2 uv, int sub) {
     float t = TIME * speed * sweepSpeed;
     vec2 p = vec2((uv.x - 0.5) * aspect + 0.5, uv.y);
 
-    // Single-line layout: all chars on one row, scale to fit width
+    // Single-line layout
     float cH = 0.18 * textScale;
     if (aspect < 1.0) cH *= aspect;
     float cW = cH * (5.0/7.0);
     float gW = cW * 0.2;
 
-    // Scale down if text is wider than screen
     float totalTextW = float(numChars) * cW + float(numChars - 1) * gW;
     float maxW = 0.9 * aspect;
     float fitScale = totalTextW > maxW ? maxW / totalTextW : 1.0;
-    cH *= fitScale;
-    cW *= fitScale;
-    gW *= fitScale;
+    cH *= fitScale; cW *= fitScale; gW *= fitScale;
 
     float rowW = float(numChars) * cW + float(numChars - 1) * gW;
     float startX = 0.5 - rowW * 0.5;
@@ -153,9 +188,23 @@ vec4 effectDigifade(vec2 uv, int sub) {
         }
     }
 
-    vec3 fc = mix(bgColor.rgb, textColor.rgb, textHit);
+    // PCB circuit background
+    vec3 bg = circuitBg(uv);
+
+    // Electric magenta text — HDR boosted
+    float audioBoost = 1.0 + audioLevel * audioMod;
+    vec3 textCol = vec3(1.0, 0.0, 0.9) * hdrGlow * audioBoost;
+
+    // AA
+    float aa = fwidth(textHit) * 2.0;
+    float mask = smoothstep(0.5 - aa, 0.5 + aa, textHit);
+
+    // Black silhouette behind text
+    vec3 inkBg = bg * (1.0 - mask * 0.9);
+    vec3 fc = inkBg + textCol * mask;
+
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
+    if (transparentBg) { a = mask; fc = textCol; }
     return vec4(fc, a);
 }
 
