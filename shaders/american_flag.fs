@@ -4,14 +4,14 @@
   "CATEGORIES": ["Generator"],
   "INPUTS": [
     { "NAME": "windStrength", "LABEL": "Wind", "TYPE": "float", "DEFAULT": 0.06, "MIN": 0.0, "MAX": 0.25 },
-    { "NAME": "windSpeed", "LABEL": "Wind Speed", "TYPE": "float", "DEFAULT": 1.6, "MIN": 0.0, "MAX": 6.0 },
+    { "NAME": "windSpeed", "LABEL": "Wind Speed", "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 1.5 },
     { "NAME": "windScale", "LABEL": "Wind Scale", "TYPE": "float", "DEFAULT": 4.5, "MIN": 0.5, "MAX": 12.0 },
     { "NAME": "flagFill", "LABEL": "Flag Fill", "TYPE": "float", "DEFAULT": 0.92, "MIN": 0.5, "MAX": 1.0 },
     { "NAME": "shadeStrength", "LABEL": "Fabric Shading", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.5 },
     { "NAME": "fabricNoise", "LABEL": "Fabric Noise", "TYPE": "float", "DEFAULT": 0.06, "MIN": 0.0, "MAX": 0.4 },
     { "NAME": "audioGust", "LABEL": "Audio Gust", "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 3.0 },
     { "NAME": "audioFlap", "LABEL": "Audio Flap", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "starGlow", "LABEL": "Star Glow", "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0, "MAX": 1.5 },
+    { "NAME": "starGlow", "LABEL": "Star Glow", "TYPE": "float", "DEFAULT": 0.9, "MIN": 0.0, "MAX": 1.5 },
     { "NAME": "starSize", "LABEL": "Star Size", "TYPE": "float", "DEFAULT": 0.42, "MIN": 0.15, "MAX": 0.7 },
     { "NAME": "redColor", "LABEL": "Red", "TYPE": "color", "DEFAULT": [0.698, 0.133, 0.203, 1.0] },
     { "NAME": "whiteColor", "LABEL": "White", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
@@ -98,8 +98,8 @@ void main() {
     // ===== Wind: sample-time displacement of flag-local UV =====
     // Hoist (left edge) is anchored, fly (right edge) waves more.
     float anchor = clamp(flagUV.x, 0.0, 1.0);
-    float gust = (1.0 + audioGust * (0.5 + bass * 1.8));
-    float flap = audioFlap * (0.6 + high * 1.5);
+    float gust = (1.0 + audioGust * (0.5 + bass * 0.5));
+    float flap = audioFlap * (0.6 + high * 0.75);
 
     float t = TIME * windSpeed;
     float wx = flagUV.x * windScale;
@@ -189,16 +189,21 @@ void main() {
                 float starMask = smoothstep(0.02, -0.01, d);
                 surface = mix(surface, whiteColor.rgb, starMask);
                 // Soft glow
-                float glow = exp(-max(d, 0.0) * 22.0) * starGlow * (0.6 + high * 1.5);
+                float glow = exp(-max(d, 0.0) * 22.0) * starGlow * (0.6 + high * 0.75);
                 surface += vec3(0.6, 0.7, 1.0) * glow;
+                // HDR tight core — peaks 2.0+ linear so bloom resolves star shimmer.
+                float starCore = exp(-max(d, 0.0) * 70.0) * starGlow;
+                surface += vec3(0.95, 0.97, 1.0) * starCore * 1.4;
             }
         }
 
         col = surface * shade;
 
-        // Edge highlight along fold crests
-        float crest = smoothstep(0.6, 1.0, slope * anchorMask);
-        col += vec3(0.04) * crest;
+        // HDR fabric specular on wave crests — silk/nylon flag catches highlights.
+        // Peaks ~2.0 linear on bright crest of white stripes; bloom catches it.
+        float slopeN = clamp(slope / 1.83, 0.0, 1.0);
+        float specCrest = pow(slopeN * anchorMask, 3.0) * shadeStrength;
+        col += vec3(1.0, 0.98, 0.95) * specCrest * 1.8;
 
         // Audio level lift
         col *= (1.0 + level * 0.15);
