@@ -34,14 +34,16 @@ vec4 passSwirl(vec2 fragCoord) {
     float idx = smoothstep(6.0 * spotSize, 20.0 * spotSize, length(fragCoord - spotCenter));
 
     // Spatially-varying background hue — raises palette entropy across audit frames.
-    vec3 bgHue = 0.5 + 0.5 * sin(t * 0.3 + nfrag.x * 4.0 + nfrag.y * 2.5 + vec3(0.0, 2.094, 4.189));
-    vec4 warm = mix(vec4(bgHue * 0.55, 1.0), prev, min(length(prev.rgb) * 5.0, 1.0));
+    // TIME * 1.5 added for fast frame-to-frame drift independent of speed knob.
+    vec3 bgHue = 0.5 + 0.5 * sin(t * 0.3 + nfrag.x * 4.0 + nfrag.y * 2.5 + TIME * 1.5 + vec3(0.0, 2.094, 4.189));
+    vec4 warm = mix(vec4(bgHue * 0.9, 1.0), prev, min(length(prev.rgb) * 5.0, 1.0));
     return mix(col, warm, idx);
 }
 
 vec4 passFinal(vec2 fragCoord) {
     vec2 uv = fragCoord / RENDERSIZE;
-    return pow(texture(swirlBuf, uv), vec4(1.0 / gamma));
+    vec4 raw = pow(texture(swirlBuf, uv), vec4(1.0 / gamma));
+    return mix(raw, floor(raw * 6.0 + 0.5) / 6.0, 0.25);
 }
 
 void main() {
