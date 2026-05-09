@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Bricks - grid with animated displacement",
+  "DESCRIPTION": "Bricks — grid displacement typography on void black with HDR bloom. Text cells reach 2.8× linear for massive bloom. Minimal Modernist typographic composition.",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1,2], "LABELS": ["Bricks","Bricks Harlequin","Bricks Zebra"], "DEFAULT": 0 },
@@ -10,8 +10,10 @@
     { "NAME": "density", "LABEL": "Grid Density", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
     { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.02, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "hdrBoost", "LABEL": "HDR Boost", "TYPE": "float", "DEFAULT": 2.8, "MIN": 1.0, "MAX": 4.0 },
+    { "NAME": "radialGlow", "LABEL": "Cell Glow", "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 2.0 }
   ]
 }*/
 
@@ -148,6 +150,17 @@ vec4 effectBricks(vec2 uv, int sub) {
     vec3 fc = mix(bg, fg, textHit);
     float a = 1.0;
     if (transparentBg) { a = textHit; fc = textColor.rgb; }
+
+    if (!transparentBg) {
+        // HDR boost on text pixels — drives bloom in linear HDR pipeline
+        fc *= mix(1.0, hdrBoost, textHit);
+        // Radial cell glow — soft halo around text pixels
+        vec2 cellCenter = vec2(0.5);
+        float cellDist = length(vec2(lx, ly) - cellCenter);
+        float glow = exp(-cellDist * cellDist * 8.0) * radialGlow * textHit;
+        fc += textColor.rgb * glow * hdrBoost * 0.4;
+    }
+
     return vec4(fc, a);
 }
 
