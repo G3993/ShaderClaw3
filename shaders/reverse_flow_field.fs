@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Reverse Flow Field — colored seeds streaked backward through an animated cellular flow field. Looks like wind-blown grass tips.",
+  "DESCRIPTION": "Ocean Current Flow Field — colored seeds streaked through animated cellular flow. Cool ocean palette: midnight navy, cerulean blue, aquamarine, HDR white foam. LINEAR HDR output.",
   "CREDIT": "Ported from Shadertoy X3BBD1 by webwarrior (Material Maker output)",
   "CATEGORIES": ["Generator", "Flow"],
   "INPUTS": [
@@ -9,8 +9,8 @@
     { "NAME": "flowSpeed",   "LABEL": "Flow Speed",      "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 4.0 },
     { "NAME": "octaves",     "LABEL": "Octaves",         "TYPE": "float", "DEFAULT": 4.0,  "MIN": 1.0,  "MAX": 6.0 },
     { "NAME": "persistence", "LABEL": "Persistence",     "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.1,  "MAX": 0.9 },
-    { "NAME": "dotDensity",  "LABEL": "Seed Density",    "TYPE": "float", "DEFAULT": 0.1,  "MIN": 0.01, "MAX": 0.5 },
-    { "NAME": "intensity",   "LABEL": "Brightness",      "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.2,  "MAX": 3.0 }
+    { "NAME": "dotDensity",  "LABEL": "Seed Density",    "TYPE": "float", "DEFAULT": 0.30, "MIN": 0.01, "MAX": 0.5 },
+    { "NAME": "intensity",   "LABEL": "Brightness",      "TYPE": "float", "DEFAULT": 2.0,  "MIN": 0.2,  "MAX": 3.0 }
   ],
   "PASSES": [
     { "TARGET": "directions" },
@@ -111,24 +111,26 @@ vec3 blend_darken(vec3 c1, vec3 c2, float opacity) {
     return opacity * min(c1, c2) + (1.0 - opacity) * c2;
 }
 
-vec4 grassGradient(float x) {
-    const float p0 = 0.363636, p1 = 0.592727, p2 = 0.804218, p3 = 0.907897;
-    const vec4 c0 = vec4(0.0,        0.0,        0.0,        1.0);
-    const vec4 c1 = vec4(0.05680800, 0.31962299, 0.15774099, 1.0);
-    const vec4 c2 = vec4(0.78224099, 0.78224099, 0.78224099, 1.0);
-    const vec4 c3 = vec4(1.0,        1.0,        1.0,        1.0);
-    if (x < p0) return c0;
-    if (x < p1) return mix(c0, c1, 0.5 - 0.5 * cos(3.14159265359 * (x - p0) / (p1 - p0)));
-    if (x < p2) return mix(c1, c2, 0.5 - 0.5 * cos(3.14159265359 * (x - p1) / (p2 - p1)));
-    if (x < p3) return mix(c2, c3, 0.5 - 0.5 * cos(3.14159265359 * (x - p2) / (p3 - p2)));
-    return c3;
+vec3 oceanPalette(float t) {
+    vec3 deep    = vec3(0.01, 0.04, 0.18);   // midnight navy
+    vec3 current = vec3(0.05, 0.38, 0.72);   // cerulean blue
+    vec3 surface = vec3(0.20, 0.78, 0.85);   // aquamarine teal
+    vec3 foam    = vec3(0.90, 0.97, 1.00);   // white foam (HDR boost later)
+    if (t < 0.33) return mix(deep,    current, t / 0.33);
+    if (t < 0.66) return mix(current, surface, (t - 0.33) / 0.33);
+    return mix(surface, foam, (t - 0.66) / 0.34);
+}
+
+vec4 oceanGradient(float x) {
+    vec3 col = oceanPalette(clamp(x, 0.0, 1.0));
+    return vec4(col, 1.0);
 }
 
 vec4 passPositions(vec2 fragCoord) {
     float minSize = min(RENDERSIZE.x, RENDERSIZE.y);
     vec2 UV = vec2(0.0, 1.0) + vec2(1.0, -1.0) * (fragCoord - 0.5 * (RENDERSIZE - vec2(minSize))) / minSize;
     vec3 dotColor = color_dots(UV, 1.0 / 1024.0, 0.0);
-    vec4 grad     = grassGradient(dot(dotColor, vec3(1.0)) / 3.0);
+    vec4 grad     = oceanGradient(dot(dotColor, vec3(1.0)) / 3.0);
     float dotMask = dots(UV, 1.0 / 1024.0, dotDensity, 0.334808);
     vec3  blended = blend_darken(grad.rgb, vec3(dotMask), 1.0 * grad.a);
     float a = min(1.0, dotMask + grad.a);
