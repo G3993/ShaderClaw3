@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Spacy - perspective tunnel rows",
+  "DESCRIPTION": "Spacy — perspective tunnel rows on electric discharge field. Fractal Lichtenberg lightning bolts illuminate the void. Electric cyan text at 2.5× HDR; blue/violet bolt arcs reach 2.5 linear.",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Spacy","Spacy Bridge","Spacy Whitney","Spacy Recede"], "DEFAULT": 0 },
@@ -12,9 +12,11 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.3, 0.9, 1.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.03, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "hdrBoost", "LABEL": "HDR Boost", "TYPE": "float", "DEFAULT": 2.5, "MIN": 1.0, "MAX": 4.0 },
+    { "NAME": "boltCount", "LABEL": "Bolt Count", "TYPE": "float", "DEFAULT": 4.0, "MIN": 1.0, "MAX": 6.0 }
   ]
 }*/
 
@@ -94,6 +96,60 @@ float sampleChar(int ch, vec2 uv) {
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // =======================================================================
+// ELECTRIC DISCHARGE BACKGROUND (Lichtenberg lightning arcs)
+// =======================================================================
+
+float hash11(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+float hash21b(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+
+// Fractal lightning bolt from point a to b
+float lightningBolt(vec2 p, vec2 a, vec2 b, float seed, float jitter) {
+    float d = 1e9;
+    vec2 prev = a;
+    for (int i = 1; i <= 12; i++) {
+        float t = float(i) / 12.0;
+        vec2 mid = mix(a, b, t);
+        // Random perpendicular offset
+        vec2 dir = b - a;
+        vec2 perp = vec2(-dir.y, dir.x);
+        float plen = length(perp);
+        if (plen > 0.0001) perp = perp / plen;
+        float h = hash11(seed + float(i) * 0.37 + floor(TIME * 0.15) * 7.1);
+        mid += perp * (h - 0.5) * jitter * (1.0 - abs(t - 0.5) * 2.0);
+        // Segment distance
+        vec2 pa = p - prev, ba = mid - prev;
+        float hh = clamp(dot(pa, ba) / max(dot(ba, ba), 0.00001), 0.0, 1.0);
+        d = min(d, length(pa - ba * hh));
+        prev = mid;
+    }
+    return d;
+}
+
+vec3 lightningBg(vec2 uv) {
+    vec3 col = vec3(0.0, 0.0, 0.02); // void dark blue
+    float t = TIME;
+    int nb = int(clamp(boltCount, 1.0, 6.0));
+    for (int i = 0; i < 6; i++) {
+        if (i >= nb) break;
+        float fi = float(i);
+        float epoch = floor(t * 0.12 + fi * 0.25); // slow epoch (≥5s cycle at rate=0.12)
+        vec2 aTop = vec2(hash11(fi * 3.1 + epoch), 1.0);
+        vec2 bBot = vec2(hash11(fi * 7.7 + epoch + 1.0), 0.0);
+        float seed = fi * 13.3 + epoch * 0.1;
+        float d = lightningBolt(uv, aTop, bBot, seed, 0.12);
+        float w = 0.003 + hash11(fi + epoch) * 0.004;
+        float glow = exp(-d * d / (w * w * 4.0));
+        float core = smoothstep(w * 0.5, 0.0, d);
+        // Electric blue / violet colors
+        vec3 bolt;
+        if (mod(fi, 2.0) < 1.0) bolt = vec3(0.3, 0.6, 1.0) * 2.5; // electric blue
+        else bolt = vec3(0.6, 0.2, 1.0) * 2.0; // violet
+        col += bolt * (glow * 0.5 + core);
+    }
+    return col;
+}
+
+// =======================================================================
 // EFFECT: SPACY - perspective tunnel rows
 // =======================================================================
 
@@ -148,9 +204,16 @@ vec4 effectSpacy(vec2 uv, int sub) {
     bool inv = mod(ri, 2.0) < 1.0;
     vec3 fg = inv ? bgColor.rgb : textColor.rgb;
     vec3 bg = inv ? textColor.rgb : bgColor.rgb;
-    vec3 fc = mix(bg, fg, textHit);
+    vec3 fc;
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
+    if (transparentBg) {
+        a = textHit;
+        fc = textColor.rgb * hdrBoost;
+    } else {
+        vec3 bgField = lightningBg(uv);
+        vec3 fgHdr = fg * hdrBoost;
+        fc = mix(bgField, fgHdr, textHit);
+    }
     return vec4(fc, a);
 }
 
