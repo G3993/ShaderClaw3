@@ -18,3 +18,22 @@
 - Audio modulates pulse intensity
 **HDR peaks reached:** white-hot crack edges 3.0, gold flow 1.5–2.5, orange mid-tone 1.0
 **Estimated rating:** 4.5★
+
+## 2026-05-10
+**Prior rating:** 0.0★
+**Approach:** 2D refine — NEW ANGLE: Monet Water Lilies cool palette (prior 2026-05-05 was 3D raymarch lava impasto; current master is warm cadmium/ultramarine/naples Kuwahara)
+**Critique:**
+1. Composition: same blob-field structure, but now references Monet's Nymphéas (overcast pond surface) vs. volcanic lava flow. Horizontal ripple anisotropy replaces omnidirectional blob.
+2. Palette: cobalt blue, violet, sage green, rose pink, pond teal — all cool, all fully saturated. Prior was warm cadmium red/naples yellow. Axis change: warm→cool color grading.
+3. Motion: swirlSpeed default 0.18 (within 0.15–0.30 calm floor). Light wobble 0.22 rad/s — gentle.
+4. Silhouette: sky-reflection HDR hotspot 2.0+ (cool blue-white glint) replaces warm amber/gold. Lily bloom secondary peak at ~1.8.
+5. HDR fidelity: sky reflection 2.0+, lily bloom 1.8, specular cool-sky vec3(0.75,0.88,1.10) * specHDR. Overcast light angle changed.
+**Changes:**
+- `procPigment()` palette: cadmium/naples → cobalt/violet/sage/rose/teal (all cool)
+- Sky-reflection HDR hotspot 2.0+ (cool blue-white) replaces amber impasto ridge 1.8
+- Lily bloom secondary highlight ~1.8 hot pink
+- Light direction: gallery raking → overcast high-angle (Monet en plein air)
+- Specular: warm-white → cool-sky vec3(0.75, 0.88, 1.10)
+**Motion audit:** swirlSpeed 0.18 default, MAX 1.0 — within §1 drift range ✓; audio aL*audioReact with baseline — non-gating ✓
+**HDR peaks reached:** sky reflection 2.0+, lily bloom 1.8, specular ~1.8
+**Estimated rating:** 4.0★
