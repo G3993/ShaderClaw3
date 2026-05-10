@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Cascade - tiled rows with wave offsets",
+  "DESCRIPTION": "Cascade - tiled rows with wave offsets, ember storm background. Rising glowing embers on void black — each row alternates text color between hot orange and deep crimson. HDR ember cores 2.0+, text 2.5+ glow.",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
@@ -11,9 +11,10 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.55, 0.0, 1.0] },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.5 },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
@@ -91,6 +92,53 @@ float sampleChar(int ch, vec2 uv) {
 }
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+
+// ── Ember Storm Background ───────────────────────────────────────────────
+// Rising embers: small bright sparks drifting upward on void black.
+// Palette: deep crimson → orange → gold → white-hot HDR core.
+vec3 emberBg(vec2 uv, float t) {
+    vec3 col = vec3(0.004, 0.001, 0.0); // near-void black with warm tint
+
+    // 40 ember particles distributed across UV space, rising upward
+    for (int i = 0; i < 40; i++) {
+        float fi   = float(i);
+        float seed = hash(fi * 7.31 + 1.0);
+        float seed2= hash(fi * 3.17 + 2.0);
+        float seed3= hash(fi * 5.43 + 0.5);
+
+        // Ember horizontal start position
+        float ex = seed;
+        // Vertical drift: rising with time, looping
+        float riseSpeed = 0.04 + seed2 * 0.06;
+        float ey = fract(1.0 - (t * riseSpeed + seed3));
+
+        // Small horizontal sway
+        float swayAmp  = 0.015 + seed * 0.025;
+        float swayFreq = 2.0 + seed2 * 4.0;
+        ex = fract(ex + swayAmp * sin(t * swayFreq + fi * 2.3));
+
+        // Distance from current UV to ember center
+        vec2 delta = uv - vec2(ex, ey);
+        float d = length(delta);
+
+        // Ember size varies: 0.003–0.012 in UV space
+        float r = 0.003 + seed * 0.009;
+        if (d < r * 6.0) {
+            float falloff = exp(-d * d / (r * r * 0.5));
+            // Color: white-hot core → gold → orange → crimson at edges
+            float heat = falloff;
+            vec3 coreCol  = vec3(2.0, 1.4, 0.8);  // white-hot HDR
+            vec3 midCol   = vec3(1.8, 0.5, 0.0);  // orange
+            vec3 outerCol = vec3(0.8, 0.05, 0.0); // deep crimson
+            vec3 ec = heat > 0.7 ? mix(midCol,  coreCol,  (heat - 0.7) / 0.3) :
+                      heat > 0.3 ? mix(outerCol, midCol,  (heat - 0.3) / 0.4) :
+                                   outerCol * (heat / 0.3);
+            col += ec * falloff;
+        }
+    }
+    return col;
+}
 
 // =======================================================================
 // EFFECT: CASCADE - tiled rows with wave offsets
@@ -131,9 +179,15 @@ vec4 effectCascade(vec2 uv) {
         }
     }
 
+    // Ember storm bg per row position
+    vec3 rowBg = transparentBg ? bgColor.rgb : emberBg(uv, TIME);
+
     bool inv = mod(rowIdx, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
+    // Alternating rows: orange text vs crimson text, both on ember bg
+    vec3 altTextCol = inv ? textColor.rgb * hdrGlow
+                          : vec3(1.0, 0.15, 0.0) * hdrGlow;
+    vec3 fg = inv ? rowBg : altTextCol;
+    vec3 bg = inv ? altTextCol : rowBg;
     vec3 fc = mix(bg, fg, textHit);
     float a = 1.0;
     if (transparentBg) { a = textHit; fc = textColor.rgb; }
