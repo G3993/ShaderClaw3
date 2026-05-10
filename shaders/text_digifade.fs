@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Digifade - glitch dissolve",
+  "DESCRIPTION": "Digifade - glitch dissolve, UV black-light background. Neon splatter drips on void black — electric magenta, lime, cyan UV-reactive paint splashes. Text glows hot white at 2.5+ HDR. Different from prior CRT-phosphor angle.",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1], "LABELS": ["Digifade","Digifade Glitch"], "DEFAULT": 0 },
@@ -9,9 +9,10 @@
     { "NAME": "intensity", "LABEL": "Glitch", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Dissolve", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
+    { "NAME": "textColor", "LABEL": "Text Color", "TYPE": "color", "DEFAULT": [0.9, 0.0, 1.0, 1.0] },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.5 },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
@@ -88,7 +89,65 @@ float sampleChar(int ch, vec2 uv) {
     return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
 }
 
-float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+float hash(float n)  { return fract(sin(n * 127.1) * 43758.5453); }
+float hash2(vec2 p)  { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+
+// ── UV Black-Light Splatter Background ──────────────────────────────────
+// Neon paint blobs on void black — UV reactive magenta, lime, cyan, yellow.
+vec3 uvBlacklightBg(vec2 uv, float t) {
+    vec3 col = vec3(0.002, 0.0, 0.005); // near-void dark purple
+
+    // UV neon palette
+    vec3 uvCols[4];
+    uvCols[0] = vec3(1.0,  0.0,  1.0);  // UV magenta
+    uvCols[1] = vec3(0.1,  1.0,  0.05); // UV lime
+    uvCols[2] = vec3(0.0,  0.9,  1.0);  // UV cyan
+    uvCols[3] = vec3(1.0,  0.9,  0.0);  // UV yellow
+
+    // 8 paint splash blobs, slow drift
+    for (int i = 0; i < 8; i++) {
+        float fi   = float(i);
+        float sx   = hash(fi * 5.31 + 0.1);
+        float sy   = hash(fi * 3.17 + 0.7);
+        float sdx  = hash(fi * 7.43 + 0.3);
+        float sdy  = hash(fi * 2.09 + 0.9);
+        float sSize= hash(fi * 11.7 + 0.5);
+
+        // Slow ooze drift
+        float cx = sx + 0.04 * sin(t * 0.15 + fi * 1.7) * sdx;
+        float cy = sy + 0.04 * cos(t * 0.12 + fi * 2.3) * sdy;
+        float r  = 0.04 + sSize * 0.10;
+
+        float d = length(uv - vec2(cx, cy));
+        float blob = exp(-d * d / (r * r * 0.4));
+
+        int ci = int(mod(fi, 4.0));
+        vec3 uc = (ci == 0) ? uvCols[0] :
+                  (ci == 1) ? uvCols[1] :
+                  (ci == 2) ? uvCols[2] : uvCols[3];
+        col += uc * blob * 2.0; // HDR boost for UV glow
+    }
+
+    // Drip streaks: thin vertical streams below each blob
+    for (int i = 0; i < 6; i++) {
+        float fi   = float(i);
+        float sx   = hash(fi * 9.13 + 0.2);
+        float sy0  = hash(fi * 4.71 + 0.6);
+        float sy1  = sy0 + 0.15 + hash(fi * 2.37) * 0.25;
+        float sw   = 0.003 + hash(fi * 6.83) * 0.006;
+        int ci     = int(mod(fi * 1.3, 4.0));
+        vec3 uc    = (ci == 0) ? uvCols[0] :
+                     (ci == 1) ? uvCols[1] :
+                     (ci == 2) ? uvCols[2] : uvCols[3];
+
+        float dx = abs(uv.x - sx);
+        float inY = step(sy0, uv.y) * step(uv.y, sy1);
+        float drip = exp(-dx * dx / (sw * sw)) * inY;
+        col += uc * drip * 1.5;
+    }
+
+    return col;
+}
 
 // =======================================================================
 // EFFECT: DIGIFADE - glitch dissolve
@@ -153,7 +212,8 @@ vec4 effectDigifade(vec2 uv, int sub) {
         }
     }
 
-    vec3 fc = mix(bgColor.rgb, textColor.rgb, textHit);
+    vec3 uvBg = transparentBg ? bgColor.rgb : uvBlacklightBg(uv, TIME);
+    vec3 fc = mix(uvBg, textColor.rgb * hdrGlow, textHit);
     float a = 1.0;
     if (transparentBg) { a = textHit; fc = textColor.rgb; }
     return vec4(fc, a);
