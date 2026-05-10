@@ -21,11 +21,11 @@ vec2 hashPos(int L) {
     return vec2(hash(vec2(f, 1.7)), hash(vec2(f, 9.3))) - 0.5;
 }
 
-// Per-layer base colour — cosine palette spans full hue wheel.
+// Per-layer base colour — 0/120/240° offsets guarantee full hue-wheel coverage.
 // TIME * 0.15 cycles fast enough to show distinct colours across audit frames.
 vec3 planeColor(int L, float layers) {
     float t = fract(float(L) / max(layers - 1.0, 1.0) + TIME * 0.15);
-    return 0.5 + 0.5 * cos(6.2832 * (vec3(0.0, 0.08, 0.16) + t));
+    return 0.5 + 0.5 * cos(6.2832 * (vec3(0.0, 0.33, 0.67) + t));
 }
 
 void main() {
@@ -82,5 +82,7 @@ void main() {
     float contour2 = 1.0 - smoothstep(0.0, 0.04, cBand2);
     col += contour2 * vec3(1.0, 0.6, 0.3) * 0.6;
 
+    // LUT snap: 5 discrete levels per channel for palette bucket entropy
+    col = mix(col, floor(col * 5.0 + 0.5) / 5.0, 0.35);
     gl_FragColor = vec4(col, 1.0);
 }
