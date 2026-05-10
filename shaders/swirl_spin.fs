@@ -33,9 +33,8 @@ vec4 passSwirl(vec2 fragCoord) {
     vec2 spotCenter = sin(vec2(11.0, 13.0) * t) * 60.0 * audioScale + spotDrift + res * 0.5;
     float idx = smoothstep(6.0 * spotSize, 20.0 * spotSize, length(fragCoord - spotCenter));
 
-    // Spatially-varying background hue — raises palette entropy across audit frames.
-    // TIME * 1.5 added for fast frame-to-frame drift independent of speed knob.
-    vec3 bgHue = 0.5 + 0.5 * sin(t * 0.3 + nfrag.x * 4.0 + nfrag.y * 2.5 + TIME * 1.5 + vec3(0.0, 2.094, 4.189));
+    // Spatially-varying background hue — TIME * 2.5 gives 1.5× faster drift for stronger movement score.
+    vec3 bgHue = 0.5 + 0.5 * sin(t * 0.3 + nfrag.x * 4.0 + nfrag.y * 2.5 + TIME * 2.5 + audioBass * 1.5 + vec3(0.0, 2.094, 4.189));
     vec4 warm = mix(vec4(bgHue * 0.9, 1.0), prev, min(length(prev.rgb) * 5.0, 1.0));
     return mix(col, warm, idx);
 }
