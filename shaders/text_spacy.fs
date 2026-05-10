@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Spacy - perspective tunnel rows",
+  "DESCRIPTION": "Spacy - perspective tunnel rows, neon city night background. City skyline silhouette with glowing neon windows and signs — cyan, magenta, gold on near-black. Text recedes into the cityscape with HDR depth glow 2.0+.",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Spacy","Spacy Bridge","Spacy Whitney","Spacy Recede"], "DEFAULT": 0 },
@@ -12,9 +12,10 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.0, 1.0, 0.9, 1.0] },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.0 },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
@@ -93,6 +94,75 @@ float sampleChar(int ch, vec2 uv) {
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
+// ── Neon City Night Background ───────────────────────────────────────────
+// Procedural city skyline: dark building silhouettes with glowing neon
+// windows and signs. Palette: cyan, hot magenta, gold on near-black sky.
+vec3 neonCityBg(vec2 uv, float t) {
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    vec3 col = vec3(0.004, 0.003, 0.012); // near-black night sky
+
+    // Horizon glow — neon light bleed from below the skyline
+    float horizonY = 0.30;
+    float horizonGlow = exp(-abs(uv.y - horizonY) * 8.0);
+    col += vec3(0.10, 0.0, 0.25) * horizonGlow * 0.6;
+
+    // City buildings: 10 rectangles of varying width and height
+    for (int i = 0; i < 10; i++) {
+        float fi  = float(i);
+        float bx0 = hash(fi * 7.31) * 0.9;
+        float bw  = 0.05 + hash(fi * 3.17) * 0.12;
+        float bh  = 0.10 + hash(fi * 5.43) * 0.38; // 10–48% of height
+        float bx1 = bx0 + bw;
+        float by0 = 0.0;
+        float by1 = bh;
+
+        if (uv.x >= bx0 && uv.x <= bx1 && uv.y >= by0 && uv.y <= by1) {
+            // Inside building: near-black silhouette
+            col = vec3(0.012, 0.008, 0.016);
+
+            // Neon windows: small bright dots on building face
+            float wx = mod((uv.x - bx0) * 40.0, 1.0);
+            float wy = mod(uv.y * 30.0, 1.0);
+            float winMask = step(0.15, wx) * step(wx, 0.75) *
+                            step(0.2, wy)  * step(wy, 0.75);
+            float winRow  = floor(uv.y * 30.0);
+            float winCol2 = floor((uv.x - bx0) * 40.0);
+            float winOn   = step(0.55, hash(winRow * 17.3 + winCol2 * 5.7 + fi));
+            // Cycle through neon colors per window
+            float wcIdx = mod(floor(winRow * 3.0 + winCol2), 3.0);
+            vec3 winCol;
+            if (wcIdx < 0.5)      winCol = vec3(0.0, 1.0, 0.9) * 2.0; // cyan
+            else if (wcIdx < 1.5) winCol = vec3(1.0, 0.05, 0.9) * 2.0; // magenta
+            else                   winCol = vec3(1.0, 0.75, 0.0) * 2.0; // gold
+            col += winCol * winMask * winOn;
+        }
+    }
+
+    // Neon signs: horizontal glowing strips at building tops
+    for (int i = 0; i < 5; i++) {
+        float fi  = float(i);
+        float sx  = hash(fi * 9.13 + 0.2);
+        float sy  = 0.15 + hash(fi * 4.71) * 0.30; // above building mid
+        float sw  = 0.03 + hash(fi * 6.83) * 0.08;
+        float sh  = 0.005 + hash(fi * 2.37) * 0.008;
+        float sci = mod(fi, 3.0);
+        vec3 sc   = (sci < 0.5)  ? vec3(0.0, 1.0, 0.9) :
+                    (sci < 1.5)  ? vec3(1.0, 0.05, 0.9) : vec3(1.0, 0.75, 0.0);
+
+        float dx = abs(uv.x - (sx + sw * 0.5)) - sw * 0.5;
+        float dy = abs(uv.y - sy) - sh * 0.5;
+        float signDist = max(dx, dy);
+        float signMask = 1.0 - smoothstep(0.0, 0.008, signDist);
+        col += sc * signMask * 2.5; // HDR neon sign
+
+        // Soft aura
+        float aura = exp(-max(dx, dy) * max(dx, dy) * 800.0) * 0.3;
+        col += sc * aura;
+    }
+
+    return col;
+}
+
 // =======================================================================
 // EFFECT: SPACY - perspective tunnel rows
 // =======================================================================
@@ -145,9 +215,15 @@ vec4 effectSpacy(vec2 uv, int sub) {
         }
     }
 
+    // Neon city bg — depth-dimmed (farther rows dimmer)
+    vec3 cityBg = transparentBg ? bgColor.rgb : neonCityBg(uv, TIME);
+    // Depth factor: close rows (large rs) are full brightness, far rows dimmer
+    float depthFade = clamp(rs / 2.5, 0.3, 1.0);
+    vec3 depthText = textColor.rgb * hdrGlow * depthFade;
+
     bool inv = mod(ri, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
+    vec3 fg = inv ? cityBg : depthText;
+    vec3 bg = inv ? depthText : cityBg;
     vec3 fc = mix(bg, fg, textHit);
     float a = 1.0;
     if (transparentBg) { a = textHit; fc = textColor.rgb; }
