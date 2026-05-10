@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Vaporwave Hologram 3D — twin suns sinking into a Tron grid horizon, hot pink to magenta to indigo sky, with 3-5 raymarched SDF primitives (cube, sphere, pyramid, torus) drifting through the scene on independent orbits. No focal element at the optical center. Scanlines, chromatic aberration, HDR peaks on sun discs, grid lines, and sun reflections off the chrome primitives. Single-pass, LINEAR HDR, no internal tonemap. Alive in silence — TIME-driven, audio amplifies.",
+  "DESCRIPTION": "Vaporwave Hologram 3D — twin suns sinking into a Tron grid horizon. NEW: Midnight Rain Mode (on by default) adds falling rain streaks and darkens the sky to deep midnight, shifting palette from hot-pink tropical to cool stormy violet. Raymarched chrome SDF objects, HDR peaks on sun discs + grid. LINEAR HDR, no tonemap.",
   "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
   "CREDIT": "Easel — vaporwave_hologram_3d",
   "INPUTS": [
@@ -21,6 +21,8 @@
     { "NAME": "chromaticAb",   "LABEL": "Chromatic Ab.", "TYPE": "float", "MIN": 0.0,  "MAX": 0.04, "DEFAULT": 0.010 },
     { "NAME": "scanFreq",      "LABEL": "Scanlines",     "TYPE": "float", "MIN": 0.0,  "MAX": 4.0,  "DEFAULT": 1.6 },
     { "NAME": "scanDepth",     "LABEL": "Scanline Depth","TYPE": "float", "MIN": 0.0,  "MAX": 0.4,  "DEFAULT": 0.12 },
+    { "NAME": "rainMode",      "LABEL": "Rain Mode",     "TYPE": "bool",  "DEFAULT": true },
+    { "NAME": "rainIntensity", "LABEL": "Rain Intensity","TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.8 },
     { "NAME": "audioReact",    "LABEL": "Audio React",   "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 }
   ]
 }*/
@@ -301,6 +303,60 @@ void main() {
 
     // alive-in-silence pulse on grid lines — slow breathing in luminance
     col += vec3(0.04, 0.02, 0.08) * (0.5 + 0.5 * sin(TIME * 0.6));
+
+    // ── MIDNIGHT RAIN MODE ───────────────────────────────────────────────
+    if (rainMode) {
+        // Darken sky toward midnight — multiply sky regions by a cool factor
+        // (does not affect ground/primitives — those stay bright)
+        float skyMask = clamp((uv.y - horizonY) / (1.0 - horizonY), 0.0, 1.0);
+        // Shift sky toward deep midnight violet (cool tint, reduce warm pink)
+        vec3 midnightTint = vec3(0.55, 0.45, 1.0); // cool blue-violet
+        col = mix(col, col * midnightTint, skyMask * 0.45);
+
+        // Rain streaks: thin vertical lines falling with TIME
+        // Use two layers for parallax (near + far rain)
+        float rainAmt = rainIntensity * 0.8;
+        for (int layer = 0; layer < 2; layer++) {
+            float fl = float(layer);
+            float layerScale = mix(60.0, 110.0, fl * 0.5); // columns
+            float layerSpeed = mix(1.2, 0.6, fl * 0.5);    // far rain slower
+            float layerBright= mix(0.35, 0.18, fl * 0.5);  // far dimmer
+
+            float colIdx = floor(uv.x * layerScale + fl * 37.3);
+            float colOff = hash11(colIdx * 5.31 + fl * 13.7);
+
+            // Vertical position of raindrop leading edge: falls from top (1) to bottom (0)
+            float dropY  = 1.0 - fract(TIME * layerSpeed + colOff);
+            float dropLen= 0.05 + hash11(colIdx * 3.17) * 0.12;
+
+            // Is this pixel inside a raindrop streak? (dropY is leading edge, trail above it)
+            float inStreak = step(dropY, uv.y) * step(uv.y, dropY + dropLen);
+            float distFromLeading = (uv.y - dropY) / max(dropLen, 0.001);
+            float dropFade = 1.0 - distFromLeading; // bright at leading edge
+
+            // Raindrop horizontal thickness
+            float dropX = fract(uv.x * layerScale) - 0.5;
+            float hWidth = 0.12; // fraction of cell width
+            float hMask  = smoothstep(hWidth, hWidth * 0.3, abs(dropX));
+
+            // Raindrop color: cool silver-blue HDR at leading edge
+            vec3 dropCol = vec3(0.55, 0.78, 1.0) * 1.6; // cool blue-white
+            col += dropCol * inStreak * dropFade * hMask * rainAmt * layerBright;
+        }
+
+        // Occasional lightning: brief full-frame white flash
+        // Rate: very slow epoch so it doesn't strobe (≥5s between flashes)
+        float lightningEpoch = floor(TIME * 0.12); // one chance per ~8s
+        float lightningRand  = hash11(lightningEpoch * 7.31);
+        float lightningFlash = step(0.92, lightningRand);
+        float flashPhase     = fract(TIME * 0.12);
+        // Eased flash: quick bright spike, eased out over 0.3s of cycle
+        float flashFadeIn  = smoothstep(0.0, 0.05, flashPhase);
+        float flashFadeOut = 1.0 - smoothstep(0.05, 0.25, flashPhase);
+        float flashMask    = flashFadeIn * flashFadeOut;
+        flashMask = flashMask * flashMask * (3.0 - 2.0 * flashMask); // Hermite
+        col += vec3(1.8, 1.7, 2.0) * lightningFlash * flashMask * rainIntensity * 0.4;
+    }
 
     // OUTPUT LINEAR HDR — no tonemap, no pow, no clamp
     gl_FragColor = vec4(col, 1.0);

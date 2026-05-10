@@ -19,3 +19,22 @@
 - holoGlow default: 0.7 → 1.4
 **HDR peaks reached:** sun 2.2, Y2K shapes 2.0, grid lines 2.0, katakana 2.5, holo spec 2.0+
 **Estimated rating:** 4.5★
+
+## 2026-05-10
+**Prior rating:** 0.0★
+**Approach:** 2D refine — NEW ANGLE: Midnight Neon Rain mode (prior 2026-05-05 was vaporwave HDR fix + hologram brightness fix)
+**Critique:**
+1. Composition: 2-layer rainfall over vaporwave 3D scene vs. prior dry vaporwave scene with HDR boost only. Adds vertical kinetic element to static scene.
+2. Palette: cool silver-blue rain `vec3(0.55,0.78,1.0) × 1.6`; midnight sky darkening (cool violet shift 55%/45%); lightning white-hot flash — contrasts warm magenta grid below.
+3. Motion: near-layer speed 1.2 uv/s, far-layer 0.6 uv/s — directional fall (§1 compliant); lightning epoch 0.12 rate ≤0.2 (§4 ✓); eased with Hermite.
+4. Silhouette: vertical rain streaks create dense kinetic screen fill against existing horizontal grid — orthogonal motion axes create compositional tension.
+5. HDR: rain streak 1.6 linear; lightning flash to 1.0 screen fill (eased); existing sun 2.2 + katakana 2.5 unchanged.
+**Changes:**
+- Added `rainMode` bool (default true) and `rainIntensity` float (default 0.8)
+- 2-layer rain: near (scale 60, speed 1.2), far (scale 110, speed 0.6) with gaussian horizontal thickness
+- Sky midnight darkening: cool violet shift `vec3(0.55,0.45,1.0) × 0.45`
+- Lightning: epoch 0.12 rate, 8% chance via `step(0.92, rand)`, Hermite ease-in/out
+- Rain color cool silver-blue `vec3(0.55,0.78,1.0) × 1.6`
+**Motion audit:** rain fall 1.2/0.6 uv/s (§1 calm ✓); lightning epoch 0.12 ≤ 0.2 ✓; no audio on epoch ✓
+**HDR peaks reached:** rain streaks 1.6; lightning 1.0 full-screen; existing sun 2.2, katakana 2.5 unchanged
+**Estimated rating:** 4.5★
