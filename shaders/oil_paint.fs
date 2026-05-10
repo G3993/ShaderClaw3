@@ -1,6 +1,6 @@
 /*{
-  "DESCRIPTION": "Oil paint — Kuwahara painterly filter with HDR impasto relief, specular highlights, and a procedural warm-pigment swirl fallback when no texture is bound. TIME-driven living surface, audio non-gating.",
-  "CREDIT": "ShaderClaw (Kuwahara approach inspired by flockaroo)",
+  "DESCRIPTION": "Oil paint — Kuwahara painterly filter with HDR impasto relief, specular highlights. Procedural fallback: Monet Water Lilies palette — cool cobalt, soft violet, sage, rose, white HDR light reflections on a slow-drifting pond surface. Cinematic cool-light (overcast sky). LINEAR HDR out.",
+  "CREDIT": "ShaderClaw (Kuwahara approach inspired by flockaroo) — Monet palette",
   "CATEGORIES": ["Effect", "Generator", "Audio Reactive"],
   "INPUTS": [
     { "NAME": "brushRadius", "LABEL": "Brush Size", "TYPE": "float", "DEFAULT": 4.0, "MIN": 1.0, "MAX": 12.0 },
@@ -45,70 +45,70 @@ float fbm(vec2 p) {
 vec3 sToL(vec3 c) { return c * c * (0.6 + 0.4 * c); }
 
 // ---------- procedural pigment blob field (fallback) ----------
-// Saturated oil palette: cadmium red, ultramarine, viridian, naples
-// yellow, raw umber. 3-5 large drifting blob clusters mixed via metaball
-// weights, then overlaid with palette-knife streaks so the canvas reads
-// as thick paint even with nothing plugged in.
+// Monet Water Lilies palette: overcast-sky cool light.
+// Cobalt blue pond, violet lily pads, sage green stems, rose pink blooms,
+// white HDR sky-reflection hotspots. Five drifting blob anchors on a
+// slow Lissajous so the surface breathes. Domain-warped FBM for ripple
+// texture. HDR white light-reflection peaks 2.0+.
 vec3 procPigment(vec2 uv, float t) {
-    // Aspect-correct local coords centered, so blobs stay round.
     vec2 p = (uv - 0.5) * vec2(RENDERSIZE.x / RENDERSIZE.y, 1.0);
 
-    // Five drifting blob anchors — slow Lissajous so they wander.
-    vec2 c0 = 0.55 * vec2(sin(t * 0.21 + 0.0), cos(t * 0.17 + 1.3));
-    vec2 c1 = 0.50 * vec2(cos(t * 0.15 + 2.1), sin(t * 0.23 - 0.7));
-    vec2 c2 = 0.60 * vec2(sin(t * 0.13 - 1.7), cos(t * 0.19 + 2.4));
-    vec2 c3 = 0.45 * vec2(cos(t * 0.27 + 0.9), sin(t * 0.11 + 0.4));
-    vec2 c4 = 0.52 * vec2(sin(t * 0.18 + 3.1), cos(t * 0.25 - 1.9));
+    // Five drifting blob anchors
+    vec2 c0 = 0.52 * vec2(sin(t * 0.21 + 0.0), cos(t * 0.17 + 1.3));
+    vec2 c1 = 0.46 * vec2(cos(t * 0.15 + 2.1), sin(t * 0.23 - 0.7));
+    vec2 c2 = 0.58 * vec2(sin(t * 0.13 - 1.7), cos(t * 0.19 + 2.4));
+    vec2 c3 = 0.42 * vec2(cos(t * 0.27 + 0.9), sin(t * 0.11 + 0.4));
+    vec2 c4 = 0.50 * vec2(sin(t * 0.18 + 3.1), cos(t * 0.25 - 1.9));
 
-    // Domain-warp p with a low-freq curl so blob edges feather like wet pigment.
+    // Domain-warp for pond ripple effect
     vec2 warp = vec2(
-        fbm(p * 1.6 + vec2(0.0, t * 0.11)) - 0.5,
-        fbm(p * 1.6 + vec2(7.3, t * 0.09 + 2.0)) - 0.5
+        fbm(p * 1.8 + vec2(0.0, t * 0.09)) - 0.5,
+        fbm(p * 1.8 + vec2(5.7, t * 0.07 + 2.0)) - 0.5
     );
-    vec2 pp = p + 0.32 * warp;
+    vec2 pp = p + 0.28 * warp;
 
-    // Saturated oil palette (linear-ish, deliberately bright so bloom bites).
-    vec3 cadRed     = vec3(1.05, 0.18, 0.10);
-    vec3 ultramar   = vec3(0.10, 0.18, 0.95);
-    vec3 viridian   = vec3(0.05, 0.62, 0.42);
-    vec3 naples     = vec3(1.10, 0.82, 0.32);
-    vec3 umber      = vec3(0.22, 0.14, 0.08);
+    // Monet cool palette — fully saturated, no white-mixing for base blobs
+    vec3 cobalt   = vec3(0.08, 0.22, 0.95);  // deep pond blue
+    vec3 violet   = vec3(0.55, 0.10, 0.88);  // lily pad shadow violet
+    vec3 sage     = vec3(0.12, 0.62, 0.35);  // stem viridian
+    vec3 rose     = vec3(0.95, 0.28, 0.55);  // bloom pink
+    vec3 teal     = vec3(0.05, 0.70, 0.75);  // pond surface teal
 
-    // Per-blob radial weights. Variable sizes for compositional interest.
     float w0 = exp(-dot(pp - c0, pp - c0) * 5.5);
     float w1 = exp(-dot(pp - c1, pp - c1) * 6.5);
     float w2 = exp(-dot(pp - c2, pp - c2) * 5.0);
     float w3 = exp(-dot(pp - c3, pp - c3) * 7.5);
     float w4 = exp(-dot(pp - c4, pp - c4) * 6.0);
-    float wSum = w0 + w1 + w2 + w3 + w4 + 0.18;
+    float wSum = w0 + w1 + w2 + w3 + w4 + 0.20;
 
-    // Weighted color blend — umber as base canvas tone.
-    vec3 col = umber * 0.18;
-    col += cadRed   * w0;
-    col += ultramar * w1;
-    col += viridian * w2;
-    col += naples   * w3;
-    col += cadRed   * w4 * 0.7 + ultramar * w4 * 0.3;
+    vec3 col = teal * 0.22;  // pond teal as base
+    col += cobalt * w0;
+    col += violet * w1;
+    col += sage   * w2;
+    col += rose   * w3;
+    col += cobalt * w4 * 0.6 + violet * w4 * 0.4;
     col /= wSum;
 
-    // Palette-knife streak texture: high-freq directional noise overlay
-    // that breaks the blobs into thick brush strokes.
-    vec2 sp = pp * 9.0;
-    float angle = 0.6 + 0.4 * fbm(pp * 1.2);
+    // Palette-knife horizontal streaks (horizontal ripple direction)
+    vec2 sp = pp * vec2(7.0, 12.0);  // anisotropic — more horizontal
+    float angle = 0.1 + 0.15 * fbm(pp * 1.0);
     vec2 dir = vec2(cos(angle), sin(angle));
-    float streak = fbm(vec2(dot(sp, dir) * 0.6, dot(sp, vec2(-dir.y, dir.x)) * 3.5));
-    float knife = smoothstep(0.35, 0.85, streak);
-    col *= mix(0.78, 1.32, knife);
+    float streak = fbm(vec2(dot(sp, dir) * 0.5, dot(sp, vec2(-dir.y, dir.x)) * 4.0));
+    float knife = smoothstep(0.32, 0.82, streak);
+    col *= mix(0.80, 1.28, knife);
 
-    // Pigment grain — fine high-freq tint variation.
-    float grain = fbm(pp * 22.0 + t * 0.05);
-    col *= mix(0.92, 1.08, grain);
+    float grain = fbm(pp * 20.0 + t * 0.04);
+    col *= mix(0.93, 1.07, grain);
 
-    // HDR impasto highlights: cresting ridges where streak peaks coincide
-    // with blob centers — push to ~1.8 linear so bloom catches them.
-    float ridge = smoothstep(0.78, 0.98, streak) *
-                  smoothstep(0.35, 0.95, max(max(w0, w1), max(max(w2, w3), w4)));
-    col += vec3(1.05, 0.98, 0.82) * ridge * 1.1;
+    // HDR sky-reflection hotspot: where streak peaks near a blob center
+    // push to 2.0+ (overcast bright sky glint on water surface)
+    float ridge = smoothstep(0.80, 0.99, streak) *
+                  smoothstep(0.30, 0.92, max(max(w0, w1), max(max(w2, w3), w4)));
+    col += vec3(0.80, 0.90, 1.10) * ridge * 1.4;  // cool sky reflection 2.0+
+
+    // Secondary warm lily-bloom HDR highlight (rose blooms catch warm sky gap)
+    float bloom_h = smoothstep(0.72, 0.95, streak) * smoothstep(0.50, 0.92, w3);
+    col += vec3(1.10, 0.55, 0.80) * bloom_h * 0.8;
 
     return col;
 }
@@ -224,11 +224,11 @@ void main() {
         reliefScale
     ));
 
-    // Light wobbles slightly with TIME (gallery raking light).
+    // Overcast sky light: softer, cooler, high-angle (Monet painted en plein air)
     vec3 light = normalize(vec3(
-        -1.0 + 0.15 * sin(TIME * 0.25),
-         1.0 + 0.10 * cos(TIME * 0.21),
-         1.4
+        -0.3 + 0.10 * sin(TIME * 0.22),
+         1.2 + 0.08 * cos(TIME * 0.18),
+         1.6
     ));
 
     float diff = clamp(dot(norm, light), 0.0, 1.0);
@@ -256,9 +256,8 @@ void main() {
     float diffuse = mix(0.55, 1.0, diff);
 
     vec3 lit = cC * diffuse;
-    // Warm-cool tinted specular — paint highlight is slightly cool-white
-    // because of gallery daylight.
-    vec3 specColor = vec3(0.90, 0.96, 1.05) * specHDR;
+    // Cool-sky tinted specular — overcast diffuse with soft blue-white glint
+    vec3 specColor = vec3(0.75, 0.88, 1.10) * specHDR;
     vec3 outCol = lit + specColor;
 
     // Push brightest highlights toward 1.5–2.0 linear for bloom.
