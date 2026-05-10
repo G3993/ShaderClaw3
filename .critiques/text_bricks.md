@@ -35,3 +35,22 @@
 - Lava crack palette: obsidian rock, lava orange 2.5, fire gold 2.5
 **HDR peaks reached:** lava cracks 2.5 (orange), fire gold 2.5; text 2.2x orange
 **Estimated rating:** 3.8★
+
+## 2026-05-10
+**Prior rating:** 0.0★
+**Approach:** 2D refine — NEW ANGLE: Cathedral Stained Glass background (prior angles: neon bricks bg 2026-05-05, lava cracks bg 2026-05-06)
+**Critique:**
+1. Composition: per-cell jewel glass panels separated by dark lead lines — each brick becomes a stained glass pane. vs prior neon bricks (repeating uniform pattern) and lava cracks (fluid organic).
+2. Palette: ruby, sapphire, emerald, topaz, amethyst cycling per cell — 5 fully saturated jewel colors, none generated/mixed. vs prior neon cyan/violet/gold and orange/black lava.
+3. Motion: slow hue oscillation per cell 0.25 rad/s — within §1 bounds. speed default 0.5.
+4. Silhouette: lead lines (dark mortar) create strong geometric grid against bright glass cells — high contrast black separators.
+5. HDR: glass cell interior 2.0 (jewel * 2.0); text gold 2.2× hdrGlow; lead lines near-black 0.015 for maximum contrast ratio.
+**Changes:**
+- Added `stainedGlassBg()` — per-cell jewel color (ruby/sapphire/emerald/topaz/amethyst) with dark lead lines
+- `transparentBg` default: true → false
+- `textColor` default: white → gold [1.0, 0.95, 0.0]
+- Added `hdrGlow` input (default 2.2) for text HDR boost
+- Glass cell uses localUV for radial luminance gradient within each pane
+**Motion audit:** speed 0.5 default, MAX 3.0 — §1 animation pulse ✓; no audio in this shader ✓
+**HDR peaks reached:** glass cells 2.0 (jewel color × 2.0); text hdrGlow 2.2; lead lines ~0.015 (true black contrast)
+**Estimated rating:** 4.0★

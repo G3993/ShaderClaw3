@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Bricks - grid with animated displacement",
+  "DESCRIPTION": "Bricks - grid with animated displacement, cathedral stained glass background. Each brick cell glows with a different jewel color — ruby, sapphire, emerald, topaz — separated by dark lead lines. Text composited over stained glass. HDR peaks 2.2+ on cell cores.",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1,2], "LABELS": ["Bricks","Bricks Harlequin","Bricks Zebra"], "DEFAULT": 0 },
@@ -9,9 +9,10 @@
     { "NAME": "intensity", "LABEL": "Displacement", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Grid Density", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
+    { "NAME": "textColor", "LABEL": "Text Color", "TYPE": "color", "DEFAULT": [1.0, 0.95, 0.0, 1.0] },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.2 },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
@@ -90,6 +91,49 @@ float sampleChar(int ch, vec2 uv) {
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
+// ── Cathedral Stained Glass Background ──────────────────────────────────
+// Given a cell center UV, returns a jewel-tinted HDR color.
+// Colors: ruby, sapphire, emerald, topaz, amethyst (cycling by cell index).
+// Lead lines (mortar): thin dark borders at cell edges.
+vec3 stainedGlassBg(vec2 cellCenter, float cellW, float cellH, vec2 localUV, float t) {
+    // Hash the cell to pick a hue from the jewel palette
+    float cellIdx = floor(cellCenter.x * 37.0 + cellCenter.y * 131.0);
+    float hSeed   = hash(cellIdx * 3.17 + 1.1);
+
+    // Jewel palette: ruby, sapphire, emerald, topaz, amethyst
+    vec3 jewels[5];
+    jewels[0] = vec3(1.0,  0.05, 0.10); // ruby
+    jewels[1] = vec3(0.10, 0.25, 1.0);  // sapphire
+    jewels[2] = vec3(0.05, 0.90, 0.30); // emerald
+    jewels[3] = vec3(1.0,  0.70, 0.0);  // topaz
+    jewels[4] = vec3(0.65, 0.05, 1.0);  // amethyst
+    int ji = int(mod(cellIdx, 5.0));
+    // GLSL 1.2 compatible array access
+    vec3 jewel = (ji == 0) ? jewels[0] :
+                 (ji == 1) ? jewels[1] :
+                 (ji == 2) ? jewels[2] :
+                 (ji == 3) ? jewels[3] : jewels[4];
+
+    // Slow hue oscillation per cell (breathing stained glass)
+    float hShift = 0.08 * sin(t * 0.25 + hSeed * 6.28318);
+    jewel = mix(jewel, jewels[int(mod(cellIdx + 1.0, 5.0))], hShift * 0.5 + 0.5 * abs(hShift));
+
+    // Lead lines: dark border at cell edges (mortar between panes)
+    float borderW = 0.06;
+    float fx = min(localUV.x, 1.0 - localUV.x) / borderW;
+    float fy = min(localUV.y, 1.0 - localUV.y) / borderW;
+    float leadMask = smoothstep(0.0, 1.0, min(fx, fy));
+
+    // Glass interior HDR: bright at center, dimmer at edges
+    float radial = 1.0 - smoothstep(0.0, 0.5, length(localUV - 0.5) * 1.6);
+    float glassLum = 0.8 + 0.4 * radial;
+
+    vec3 glassCol = jewel * glassLum * 2.0; // HDR peak ~2.0
+    vec3 leadCol  = vec3(0.015, 0.010, 0.008); // near-black lead
+
+    return mix(leadCol, glassCol, leadMask);
+}
+
 // =======================================================================
 // EFFECT: BRICKS - grid with animated displacement
 // =======================================================================
@@ -142,9 +186,15 @@ vec4 effectBricks(vec2 uv, int sub) {
         }
     }
 
+    // Cathedral stained glass: use glass color for bg, textColor for text
+    vec2 cellCenter = vec2((ci + 0.5) * cellW, (ri + 0.5) * cellH);
+    vec2 localUV = vec2(lx, ly);
+    vec3 glassBg = transparentBg ? bgColor.rgb
+                                 : stainedGlassBg(cellCenter, cellW, cellH, localUV, TIME);
+
     bool inv = mod(ri, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
+    vec3 fg = inv ? glassBg : textColor.rgb * hdrGlow;
+    vec3 bg = inv ? textColor.rgb * hdrGlow : glassBg;
     vec3 fc = mix(bg, fg, textHit);
     float a = 1.0;
     if (transparentBg) { a = textHit; fc = textColor.rgb; }
