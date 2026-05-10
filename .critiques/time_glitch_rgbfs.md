@@ -37,3 +37,23 @@
 - Audio modulates ring width and glitch amount
 **HDR peaks reached:** single channel 2.0-2.5; ring overlaps additive ~3.0-4.0
 **Estimated rating:** 4.0★
+
+## 2026-05-10
+**Prior rating:** 0.0★
+**Approach:** 2D standalone — NEW ANGLE: Diagonal Film Splice Glitch (prior 2026-05-05 was 3D RGB data planes; prior 2026-05-06 was 2D RGB prism rings)
+**Critique:**
+1. Reference: physical film splice tear vs. prior concentric ring chromatic aberration (2D) and 3D geometry planes — diagonal geometry vs. radial vs. rectilinear.
+2. Palette: 6 fully saturated ROYGBV color bars (procedural `filmContent()`); splice flash 2.5 HDR white; no channel mixing/averaging.
+3. Motion: `glitchRate * 0.15 ≤ 0.2` epoch (§4 ✓); per-band per-channel random displacement; diagonal band coord `diagUV = uv.x + uv.y * tan(bandAngle)`.
+4. Silhouette: diagonal bands with hard splice lines + 6% dropout black — slash geometry vs. prior ring/plane structure.
+5. HDR: splice flash `2.5 * aBoost`; color bar glow + grain; dropout black creates contrast.
+**Changes:**
+- Full rewrite from VIDVOX 8-frame buffer (inputImage) to standalone 2D diagonal glitch generator
+- `filmContent()` — 6-color ROYGBV bars + grain + scanlines per band
+- Per-band per-channel independent displacement + chroma split via `bandHash()`
+- Diagonal band coordinate with `bandAngle` parameter, `fwidth()` edge splice flash
+- 6% hash-gated band dropout (step 0.94 threshold)
+- Epoch `glitchRate * 0.15` rate (≤0.2 §4 ✓)
+**Motion audit:** epoch rate glitchRate×0.15 ≤ 0.2 at default; audioReact K=0.4 → aBoost K≤1.2 ✓
+**HDR peaks reached:** splice edge flash 2.5; color bar peak 1.0 base × aBoost ~1.2; additive grain overlap ~1.5
+**Estimated rating:** 4.0★

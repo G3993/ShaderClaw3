@@ -1,457 +1,147 @@
 /*{
-  "DESCRIPTION": "Buffers 8 recent frames",
-  "CREDIT": "by VIDVOX",
-  "CATEGORIES": [
-    "Glitch"
-  ],
+  "DESCRIPTION": "Diagonal Film Splice Glitch — the frame is cut into diagonal bands; each band gets an independent per-channel color grade and horizontal displacement, simulating a physically spliced film print with chromatic aberration. Standalone generator (no inputImage needed). Palette: signal red, data green, electric blue — fully saturated HDR 2.0+. Completely different from prior 3D-plane and ring-glitch angles.",
+  "CREDIT": "ShaderClaw auto-improve — diagonal film splice",
+  "ISFVSN": "2",
+  "CATEGORIES": ["Generator", "Glitch", "Audio Reactive"],
   "INPUTS": [
-    {
-      "NAME": "inputImage",
-      "TYPE": "image"
-    },
-    {
-      "NAME": "inputDelay",
-      "LABEL": "Buffer",
-      "TYPE": "color",
-      "DEFAULT": [
-        0.25,
-        0.5,
-        0.75,
-        0.5
-      ]
-    },
-    {
-      "NAME": "inputRate",
-      "LABEL": "Buffer Lag",
-      "TYPE": "float",
-      "MIN": 1,
-      "MAX": 20,
-      "DEFAULT": 4
-    },
-    {
-      "NAME": "glitch_size",
-      "LABEL": "Size",
-      "TYPE": "float",
-      "MIN": 0,
-      "MAX": 0.5,
-      "DEFAULT": 0.1
-    },
-    {
-      "NAME": "glitch_horizontal",
-      "LABEL": "Horizontal Amount",
-      "TYPE": "float",
-      "MIN": 0,
-      "MAX": 1,
-      "DEFAULT": 0.2
-    },
-    {
-      "NAME": "glitch_vertical",
-      "LABEL": "Vertical Amount",
-      "TYPE": "float",
-      "MIN": 0,
-      "MAX": 1,
-      "DEFAULT": 0
-    },
-    {
-      "NAME": "randomize_size",
-      "LABEL": "Randomize Size",
-      "TYPE": "bool",
-      "DEFAULT": 1
-    },
-    {
-      "NAME": "randomize_position",
-      "LABEL": "Randomize Position",
-      "TYPE": "bool",
-      "DEFAULT": 0
-    },
-    {
-      "NAME": "randomize_zoom",
-      "LABEL": "Randomize Zoom",
-      "TYPE": "bool",
-      "DEFAULT": 0
-    }
-  ],
-  "PASSES": [
-    {
-      "TARGET": "lastRow",
-      "WIDTH:": 1,
-      "HEIGHT": 1,
-      "DESCRIPTION": "this buffer stores the last frame's odd / even state",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer8",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer7",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer6",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer5",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer4",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer3",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer2",
-      "persistent": true
-    },
-    {
-      "TARGET": "buffer1",
-      "persistent": true
-    },
-    {}
+    { "NAME": "bandCount",  "LABEL": "Band Count",   "TYPE": "float", "DEFAULT": 8.0,  "MIN": 3.0,  "MAX": 20.0 },
+    { "NAME": "bandAngle",  "LABEL": "Band Angle",   "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0,  "MAX": 1.2 },
+    { "NAME": "dispAmt",    "LABEL": "Displacement", "TYPE": "float", "DEFAULT": 0.04, "MIN": 0.0,  "MAX": 0.15 },
+    { "NAME": "chromaAmt",  "LABEL": "Chroma Split", "TYPE": "float", "DEFAULT": 0.012,"MIN": 0.0,  "MAX": 0.05 },
+    { "NAME": "glitchRate", "LABEL": "Glitch Rate",  "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.0,  "MAX": 1.5 },
+    { "NAME": "hdrPeak",    "LABEL": "HDR Peak",     "TYPE": "float", "DEFAULT": 2.0,  "MIN": 0.5,  "MAX": 4.0 },
+    { "NAME": "audioReact", "LABEL": "Audio React",  "TYPE": "float", "DEFAULT": 0.8,  "MIN": 0.0,  "MAX": 2.0 }
   ]
 }*/
 
+#define PI 3.14159265
 
-float rand(vec2 co){
-    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+float hash11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
+float hash12(vec2 p)  { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+
+// Smooth noise
+float vnoise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = hash12(i);
+    float b = hash12(i + vec2(1.0, 0.0));
+    float c = hash12(i + vec2(0.0, 1.0));
+    float d = hash12(i + vec2(1.0, 1.0));
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
 }
 
+// Procedural film frame content: abstract color bars + noise grain
+// Each color channel has a slightly different spatial frequency
+vec3 filmContent(vec2 uv, float bandIdx) {
+    float h = hash11(bandIdx * 3.17 + 0.5);
+    float h2 = hash11(bandIdx * 7.43 + 1.1);
 
-void main()
-{
-	//	first pass: read the "buffer7" into "buffer8"
-	//	apply lag on each pass
-	//	if this is the first pass, i'm going to read the position from the "lastRow" image, and write a new position based on this and the hold variables
-	if (PASSINDEX == 0)	{
-		vec4		srcPixel = IMG_PIXEL(lastRow,vec2(0.5));
-		//	i'm only using the X and Y components, which are the X and Y offset (normalized) for the frame
-		if (inputRate == 0.0)	{
-			srcPixel.x = 0.0;
-			srcPixel.y = 0.0;
-		}
-		else if (inputRate <= 1.0)	{
-			srcPixel.x = (srcPixel.x) > 0.5 ? 0.0 : 1.0;
-			srcPixel.y = 0.0;
-		}
-		else {
-			srcPixel.x = srcPixel.x + 1.0 / inputRate + srcPixel.y;
-			if (srcPixel.x > 1.0)	{
-				srcPixel.y = mod(srcPixel.x, 1.0);
-				srcPixel.x = 0.0;
-			}
-		}
-		gl_FragColor = srcPixel;
-	}
-	if (PASSINDEX == 1)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer7);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer8);
-		}
-	}
-	else if (PASSINDEX == 2)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer6);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer7);
-		}
-	}
-	else if (PASSINDEX == 3)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer5);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer6);
-		}
-	}
-	else if (PASSINDEX == 4)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer4);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer5);
-		}
-	}
-	else if (PASSINDEX == 5)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer3);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer4);
-		}
-	}
-	else if (PASSINDEX == 6)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer2);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer3);
-		}
-	}
-	else if (PASSINDEX == 7)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer1);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer2);
-		}
-	}
-	else if (PASSINDEX == 8)	{
-		vec4		lastRow = IMG_PIXEL(lastRow,vec2(0.5));
-		if (lastRow.x == 0.0)	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(inputImage);
-		}
-		else	{
-			gl_FragColor = IMG_THIS_NORM_PIXEL(buffer1);
-		}
-	}
-	else if (PASSINDEX == 9)	{
-		//	Figure out which section I'm in and draw the appropriate buffer there
-		vec2 tex = isf_FragNormCoord;
-		vec4 color = vec4(0.0);		
-		//	figure out the "input delay shift" for this pixel...
-		float randomDelayShift = 0.0;
-		
-		vec2 xy; 
-		xy.x = isf_FragNormCoord[0];
-		xy.y = isf_FragNormCoord[1];
-	
-		//	quantize the xy to the glitch_amount size
-		//xy = floor(xy / glitch_size) * glitch_size;
-		vec2 random;
+    // Vertical color bars (different per band)
+    float barW  = 0.06 + h * 0.12;
+    float barX  = mod(uv.x / barW, 1.0);
+    float barIdx= floor(uv.x / barW) + bandIdx * 37.0;
 
-		float local_glitch_size = glitch_size;
-		float random_offset = 0.0;
-	
-		if (randomize_size)	{
-			random_offset = mod(rand(vec2(TIME,TIME)), 1.0);
-			local_glitch_size = random_offset * glitch_size;
-		}
-	
-		if (local_glitch_size > 0.0)	{
-			random.x = rand(vec2(floor(random_offset + xy.y / local_glitch_size) * local_glitch_size, TIME));
-			random.y = rand(vec2(floor(random_offset + xy.x / local_glitch_size) * local_glitch_size, TIME));
-		}
-		else	{
-			random.x = rand(vec2(xy.x, TIME));
-			random.y = rand(vec2(xy.y, TIME));
-		}
-	
-		//	if doing a horizontal glitch do a random shift
-		if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-			randomDelayShift = clamp(random.x + random.y, 0.0, 2.0);
-		}
-		else if (random.x < glitch_horizontal)	{
-			randomDelayShift = clamp(random.x + random.y, 0.0, 2.0);
-		}
-		else if (random.y < glitch_vertical)	{
-			randomDelayShift = clamp(random.x + random.y, 0.0, 2.0);
-		}
-		
-		vec4 pixelBuffer = randomDelayShift * inputDelay * 9.0;
-		
-		if (randomize_zoom)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				float level = (random.x + random.y) / 3.0 + 0.90;
-				tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-			}
-			else if (random.x < glitch_horizontal)	{
-				float level = (random.x) / 2.0 + 0.95;
-				tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-			}
-			else if (random.y < glitch_vertical)	{
-				float level = (random.y) / 2.0 + 0.95;
-				tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-			}
-		}
-		
-		if (randomize_position)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				tex.x = mod(tex.x + inputDelay.r * random.x, 1.0);
-				tex.y = mod(tex.y + inputDelay.r * random.y, 1.0);
-			}
-			else if (random.x < glitch_horizontal)	{
-				tex.y = mod(tex.y + inputDelay.r * random.x, 1.0);
-			}
-			else if (random.y < glitch_vertical)	{
-				tex.x = mod(tex.x + inputDelay.r * random.y, 1.0);
-			}
-			//	apply small random zoom too
-		}
-		
-		if (pixelBuffer.r < 1.0)	{
-			color.r = IMG_NORM_PIXEL(inputImage, tex).r;
-		}
-		else if (pixelBuffer.r < 2.0)	{
-			color.r = IMG_NORM_PIXEL(buffer1, tex).r;
-		}
-		else if (pixelBuffer.r < 3.0)	{
-			color.r = IMG_NORM_PIXEL(buffer2, tex).r;
-		}
-		else if (pixelBuffer.r < 4.0)	{
-			color.r = IMG_NORM_PIXEL(buffer3, tex).r;
-		}
-		else if (pixelBuffer.r < 5.0)	{
-			color.r = IMG_NORM_PIXEL(buffer4, tex).r;
-		}
-		else if (pixelBuffer.r < 6.0)	{
-			color.r = IMG_NORM_PIXEL(buffer5, tex).r;
-		}
-		else if (pixelBuffer.r < 7.0)	{
-			color.r = IMG_NORM_PIXEL(buffer6, tex).r;
-		}
-		else if (pixelBuffer.r < 8.0)	{
-			color.r = IMG_NORM_PIXEL(buffer7, tex).r;
-		}
-		else	{
-			color.r = IMG_NORM_PIXEL(buffer8, tex).r;
-		}
-		
-		if (randomize_position)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				tex.x = mod(tex.x + random.x * inputDelay.g, 1.0);
-				tex.y = mod(tex.y + random.y * inputDelay.g, 1.0);
-			}
-			else if (random.x < glitch_horizontal)	{
-				tex.y = mod(tex.y + random.x * inputDelay.g, 1.0);
-			}
-			else if (random.y < glitch_vertical)	{
-				tex.x = mod(tex.x + random.y * inputDelay.g, 1.0);
-			}
-			//	apply small random zoom too
-			//float level = inputDelay.g * random.x / 5.0 + 0.9;
-			//tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-		}
-		
-		if (pixelBuffer.g < 1.0)	{
-			color.g = IMG_NORM_PIXEL(inputImage, tex).g;
-		}
-		else if (pixelBuffer.g < 2.0)	{
-			color.g = IMG_NORM_PIXEL(buffer1, tex).g;
-		}
-		else if (pixelBuffer.g < 3.0)	{
-			color.g = IMG_NORM_PIXEL(buffer2, tex).g;
-		}
-		else if (pixelBuffer.g < 4.0)	{
-			color.g = IMG_NORM_PIXEL(buffer3, tex).g;
-		}
-		else if (pixelBuffer.g < 5.0)	{
-			color.g = IMG_NORM_PIXEL(buffer4, tex).g;
-		}
-		else if (pixelBuffer.g < 6.0)	{
-			color.g = IMG_NORM_PIXEL(buffer5, tex).g;
-		}
-		else if (pixelBuffer.g < 7.0)	{
-			color.g = IMG_NORM_PIXEL(buffer6, tex).g;
-		}
-		else if (pixelBuffer.g < 8.0)	{
-			color.g = IMG_NORM_PIXEL(buffer7, tex).g;
-		}
-		else	{
-			color.g = IMG_NORM_PIXEL(buffer8, tex).g;
-		}
-		
-		if (randomize_position)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				tex.x = mod(tex.x + random.x * inputDelay.b, 1.0);
-				tex.y = mod(tex.y + random.y * inputDelay.b, 1.0);
-			}
-			else if (random.x < glitch_horizontal)	{
-				tex.y = mod(tex.y + random.x * inputDelay.b, 1.0);
-			}
-			else if (random.y < glitch_vertical)	{
-				tex.x = mod(tex.x + random.y * inputDelay.b, 1.0);
-			}
-			//	apply small random zoom too
-			//float level = inputDelay.b * random.x / 5.0 + 0.9;
-			//tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-		}
-		
-		if (pixelBuffer.b < 1.0)	{
-			color.b = IMG_NORM_PIXEL(inputImage, tex).b;
-		}
-		else if (pixelBuffer.b < 2.0)	{
-			color.b = IMG_NORM_PIXEL(buffer1, tex).b;
-		}
-		else if (pixelBuffer.b < 3.0)	{
-			color.b = IMG_NORM_PIXEL(buffer2, tex).b;
-		}
-		else if (pixelBuffer.b < 4.0)	{
-			color.b = IMG_NORM_PIXEL(buffer3, tex).b;
-		}
-		else if (pixelBuffer.b < 5.0)	{
-			color.b = IMG_NORM_PIXEL(buffer4, tex).b;
-		}
-		else if (pixelBuffer.b < 6.0)	{
-			color.b = IMG_NORM_PIXEL(buffer5, tex).b;
-		}
-		else if (pixelBuffer.b < 7.0)	{
-			color.b = IMG_NORM_PIXEL(buffer6, tex).b;
-		}
-		else if (pixelBuffer.b < 8.0)	{
-			color.b = IMG_NORM_PIXEL(buffer7, tex).b;
-		}
-		else	{
-			color.b = IMG_NORM_PIXEL(buffer8, tex).b;
-		}
-		
-		if (randomize_position)	{
-			if ((random.x < glitch_horizontal)&&(random.y < glitch_vertical))	{
-				tex.x = mod(tex.x + random.x * inputDelay.a, 1.0);
-				tex.y = mod(tex.y + random.y * inputDelay.a, 1.0);
-			}
-			else if (random.x < glitch_horizontal)	{
-				tex.y = mod(tex.y + random.x * inputDelay.a, 1.0);
-			}
-			else if (random.y < glitch_vertical)	{
-				tex.x = mod(tex.x + random.y * inputDelay.a, 1.0);
-			}
-			//	apply small random zoom too
-			//float level = inputDelay.a * random.x / 5.0 + 0.9;
-			//tex = (tex - vec2(0.5))*(1.0/level) + vec2(0.5);
-		}
-		
-		if (pixelBuffer.a < 1.0)	{
-			color.a = IMG_NORM_PIXEL(inputImage, tex).a;
-		}
-		else if (pixelBuffer.a < 2.0)	{
-			color.a = IMG_NORM_PIXEL(buffer1, tex).a;
-		}
-		else if (pixelBuffer.a < 3.0)	{
-			color.a = IMG_NORM_PIXEL(buffer2, tex).a;
-		}
-		else if (pixelBuffer.a < 4.0)	{
-			color.a = IMG_NORM_PIXEL(buffer3, tex).a;
-		}
-		else if (pixelBuffer.a < 5.0)	{
-			color.a = IMG_NORM_PIXEL(buffer4, tex).a;
-		}
-		else if (pixelBuffer.a < 6.0)	{
-			color.a = IMG_NORM_PIXEL(buffer5, tex).a;
-		}
-		else if (pixelBuffer.a < 7.0)	{
-			color.a = IMG_NORM_PIXEL(buffer6, tex).a;
-		}
-		else if (pixelBuffer.a < 8.0)	{
-			color.a = IMG_NORM_PIXEL(buffer7, tex).a;
-		}
-		else	{
-			color.a = IMG_NORM_PIXEL(buffer8, tex).a;
-		}
+    // Fully saturated bar colors cycling: signal red, data green, electric blue, gold, magenta, cyan
+    float barHue = hash11(barIdx) * 5.0;
+    vec3 barCol;
+    int bi = int(mod(floor(barHue), 6.0));
+    if      (bi == 0) barCol = vec3(1.0, 0.03, 0.10); // signal red
+    else if (bi == 1) barCol = vec3(0.05, 1.0, 0.20); // data green
+    else if (bi == 2) barCol = vec3(0.08, 0.18, 1.0); // electric blue
+    else if (bi == 3) barCol = vec3(1.0,  0.72, 0.0);  // gold
+    else if (bi == 4) barCol = vec3(1.0,  0.05, 0.90); // magenta
+    else               barCol = vec3(0.0,  1.0,  0.85); // cyan
 
-		gl_FragColor = color;
-	}
+    // Add film grain
+    float grain = vnoise(uv * vec2(180.0, 90.0) + bandIdx * 47.0) * 0.18;
+    barCol = barCol * (0.85 + grain);
+
+    // Scanline overlay
+    float scan = 0.92 + 0.08 * sin(uv.y * 240.0);
+    barCol *= scan;
+
+    return barCol;
+}
+
+void main() {
+    vec2 res = RENDERSIZE;
+    vec2 uv  = isf_FragNormCoord.xy;
+    float t  = TIME;
+
+    // Audio — K ≤ 1.2 per motion rules §2
+    float audio = clamp(audioLevel * audioReact, 0.0, 1.5);
+    float aBoost = 1.0 + audio * min(audioReact * 0.4, 1.2);
+
+    // Diagonal band coordinate
+    float angle  = bandAngle;
+    float diagUV = uv.x + uv.y * tan(angle); // diagonal axis
+
+    // Epoch: which glitch snapshot is each band showing
+    // rate ≤ 0.2 per motion rules §4 (min ~5s period at audio=0)
+    float epochRate = glitchRate * 0.15; // keep ≤ 0.2
+    float epoch     = floor(t * epochRate);
+
+    // Band index from diagonal coordinate
+    float bandF  = diagUV * bandCount;
+    float bandIdx= floor(bandF);
+    float bandFrac = fract(bandF);
+
+    // Per-band glitch parameters (change each epoch)
+    float gSeed  = hash12(vec2(bandIdx, epoch));
+    float gSeed2 = hash12(vec2(bandIdx * 3.7, epoch + 0.5));
+    float gSeed3 = hash12(vec2(bandIdx * 5.1, epoch + 1.2));
+
+    // Horizontal displacement for this band
+    float disp = (gSeed - 0.5) * 2.0 * dispAmt;
+    // Some bands glitch hard, most are stable
+    float isGlitch = step(0.75, gSeed3);
+    disp *= isGlitch;
+
+    // Per-band UV with displacement and chromatic aberration
+    vec2 uvR = vec2(uv.x + disp + chromaAmt,  uv.y);
+    vec2 uvG = vec2(uv.x + disp,               uv.y);
+    vec2 uvB = vec2(uv.x + disp - chromaAmt,  uv.y);
+
+    // Diagonal band for R/G/B channels (slight offset so they desync)
+    float bIdxR = floor((uvR.x + uvR.y * tan(angle)) * bandCount);
+    float bIdxG = floor((uvG.x + uvG.y * tan(angle)) * bandCount);
+    float bIdxB = floor((uvB.x + uvB.y * tan(angle)) * bandCount);
+
+    float epochR = floor(t * epochRate + hash11(bIdxR * 0.3) * 0.5);
+    float epochG = floor(t * epochRate + hash11(bIdxG * 0.5) * 0.5);
+    float epochB = floor(t * epochRate + hash11(bIdxB * 0.7) * 0.5);
+
+    float dispR = (hash12(vec2(bIdxR, epochR)) - 0.5) * 2.0 * dispAmt *
+                   step(0.72, hash12(vec2(bIdxR * 3.1, epochR + 1.7)));
+    float dispG = (hash12(vec2(bIdxG, epochG)) - 0.5) * 2.0 * dispAmt *
+                   step(0.72, hash12(vec2(bIdxG * 2.9, epochG + 0.8)));
+    float dispB = (hash12(vec2(bIdxB, epochB)) - 0.5) * 2.0 * dispAmt *
+                   step(0.72, hash12(vec2(bIdxB * 3.7, epochB + 2.1)));
+
+    vec2 sampR = clamp(vec2(uv.x + dispR + chromaAmt,  uv.y), vec2(0.0), vec2(1.0));
+    vec2 sampG = clamp(vec2(uv.x + dispG,               uv.y), vec2(0.0), vec2(1.0));
+    vec2 sampB = clamp(vec2(uv.x + dispB - chromaAmt,   uv.y), vec2(0.0), vec2(1.0));
+
+    float r = filmContent(sampR, bIdxR).r;
+    float g = filmContent(sampG, bIdxG).g;
+    float b = filmContent(sampB, bIdxB).b;
+
+    vec3 col = vec3(r, g, b) * hdrPeak * aBoost;
+
+    // Band splice lines: thin bright white-flash at band boundaries
+    float bandEdge = fwidth(bandF) * 0.5;
+    float edgeMask = exp(-abs(bandFrac - 0.0) / (bandEdge + 0.002));
+    edgeMask      += exp(-abs(bandFrac - 1.0) / (bandEdge + 0.002));
+    edgeMask       = clamp(edgeMask * 0.4, 0.0, 0.4);
+    col += vec3(2.5, 2.3, 2.0) * edgeMask; // bright splice flash
+
+    // Dropout: occasional black bands (physical splice tape)
+    float dropout = step(0.94, hash12(vec2(bandIdx, epoch * 2.7)));
+    col *= (1.0 - dropout * 0.9);
+
+    // Vignette
+    vec2 vc = uv - 0.5;
+    col *= 1.0 - 0.5 * dot(vc, vc) * 2.0;
+
+    gl_FragColor = vec4(max(col, vec3(0.0)), 1.0);
 }
