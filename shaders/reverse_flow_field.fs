@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Reverse Flow Field — colored seeds streaked backward through an animated cellular flow field. Linear HDR output; peaks 1.4–2.0 on flow streams and audio hits.",
+  "DESCRIPTION": "Bioluminescent Reverse Flow Field — colored seeds streaked backward through an animated cellular flow field. Palette: deep ocean bioluminescence — electric teal, violet, gold on void black. LINEAR HDR out; peaks 2.0+ on stream confluences.",
   "CREDIT": "Ported from Shadertoy X3BBD1 by webwarrior (Material Maker output)",
   "CATEGORIES": ["Generator", "Flow"],
   "INPUTS": [
@@ -109,22 +109,25 @@ float dots(vec2 uv, float size, float density, float seed) {
     return step(rand1(seed2 + point_pos), density);
 }
 
-vec3 grassPalette(float t) {
-    vec3 a = vec3(0.05, 0.32, 0.16);
-    vec3 b = vec3(0.95, 0.85, 0.45);
-    vec3 c = vec3(0.30, 0.85, 0.55);
-    vec3 d = vec3(1.00, 0.65, 0.30);
-    if (t < 0.33) return mix(a, c, t / 0.33);
-    if (t < 0.66) return mix(c, b, (t - 0.33) / 0.33);
-    return mix(b, d, (t - 0.66) / 0.34);
+// Bioluminescent deep-ocean palette — electric teal, violet, gold on black
+vec3 bioLumPalette(float t) {
+    // Cosine palette for full saturation across the range
+    vec3 a = vec3(0.5, 0.5, 0.5);
+    vec3 b = vec3(0.5, 0.5, 0.5);
+    vec3 c = vec3(1.0, 1.0, 1.0);
+    vec3 d = vec3(0.00, 0.33, 0.67); // teal, violet, gold phase offsets
+    return a + b * cos(6.28318 * (c * t + d));
 }
+
+// Keep backward-compat alias used below
+vec3 grassPalette(float t) { return bioLumPalette(t); }
 
 vec4 passPositions(vec2 fragCoord) {
     vec2 UV = screenUV(fragCoord);
     // Cell size in UV space: ~96 cells across the long axis
     float cellSize = 1.0 / 96.0;
     vec3 dotColor = color_dots(UV, cellSize, 0.0);
-    vec3 grad     = grassPalette(fract(dot(dotColor, vec3(0.333)) * 1.7));
+    vec3 grad     = bioLumPalette(fract(dot(dotColor, vec3(0.333)) * 1.7));
     float dotMask = dots(UV, cellSize, dotDensity, 0.334808);
     vec3  rgb     = grad * dotMask;
     return vec4(rgb, dotMask);
@@ -134,13 +137,14 @@ vec4 passPositions(vec2 fragCoord) {
 // Procedural fallback — used when the trace yields no signal
 // ──────────────────────────────────────────────────────────────────────
 vec3 proceduralFallback(vec2 UV) {
-    // Direct sample of the flow field as colored streams
-    vec2 uv = UV * flowScale + TIME * flowSpeed * 0.08;
-    float n = fbm_2d_cellular6(uv, vec2(flowScale, flowScale), int(octaves), persistence, TIME * flowSpeed * 0.05, 0.0);
-    vec3 col = grassPalette(fract(n * 2.3 + TIME * 0.05));
-    // Stream highlight where field is low (seam regions)
-    float stream = smoothstep(0.6, 0.0, n);
-    col *= 0.4 + 1.6 * stream;
+    // Bioluminescent stream: dark void with glowing stream seams
+    vec2 uv = UV * flowScale + TIME * flowSpeed * 0.06;
+    float n = fbm_2d_cellular6(uv, vec2(flowScale, flowScale), int(octaves), persistence, TIME * flowSpeed * 0.04, 0.0);
+    vec3 col = bioLumPalette(fract(n * 2.1 + TIME * 0.04));
+    // Stream seams glow brighter (bioluminescent organism trails)
+    float stream = smoothstep(0.65, 0.0, n);
+    // Black void base — light ONLY in stream seams
+    col = col * (0.05 + 1.95 * stream * stream);
     return col;
 }
 
