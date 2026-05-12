@@ -5,15 +5,6 @@
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": "BUBBLES APPEAR AS YOU SPEAK", "MAX_LENGTH": 48 },
     { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Inter","Times","Caslon","Outfit"] },
-    { "NAME": "clusterCount", "LABEL": "Clusters", "TYPE": "long", "DEFAULT": 9, "VALUES": [4,6,8,9,10,12,14,16], "LABELS": ["4","6","8","9","10","12","14","16"] },
-    { "NAME": "nodesPerCluster", "LABEL": "Nodes / Cluster", "TYPE": "long", "DEFAULT": 1, "VALUES": [1,2,3,4,5], "LABELS": ["1","2","3","4","5"] },
-    { "NAME": "spawnRate", "LABEL": "Spawn Rate", "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.04, "MAX": 0.8 },
-    { "NAME": "bridgeK", "LABEL": "Bridge Smoothness", "TYPE": "float", "DEFAULT": 0.045, "MIN": 0.0, "MAX": 0.12 },
-    { "NAME": "interBridgeK", "LABEL": "Inter-Cluster Bridge", "TYPE": "float", "DEFAULT": 0.02, "MIN": 0.0, "MAX": 0.35 },
-    { "NAME": "morphAmp", "LABEL": "Bridge Morph", "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "nodeRadius", "LABEL": "Node Radius", "TYPE": "float", "DEFAULT": 0.095, "MIN": 0.025, "MAX": 0.18 },
-    { "NAME": "radiusVariance", "LABEL": "Radius Variance", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "orbitSpeed", "LABEL": "Orbit Speed", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.5 },
     { "NAME": "textScale", "LABEL": "Text Size", "TYPE": "float", "DEFAULT": 0.020, "MIN": 0.010, "MAX": 0.06 },
     { "NAME": "kerning", "LABEL": "Kerning", "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.55, "MAX": 1.4 },
     { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 0.7, "MIN": 0.0, "MAX": 2.0 },
@@ -22,7 +13,17 @@
     { "NAME": "cellA", "LABEL": "Cell Color A", "TYPE": "color", "DEFAULT": [0.84, 0.66, 0.86, 1.0] },
     { "NAME": "cellB", "LABEL": "Cell Color B", "TYPE": "color", "DEFAULT": [1.00, 0.49, 0.39, 1.0] },
     { "NAME": "manualTextColor", "LABEL": "Manual Text", "TYPE": "color", "DEFAULT": [0.05, 0.05, 0.07, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent BG", "TYPE": "bool", "DEFAULT": 1.0 }
+    { "NAME": "transparentBg", "LABEL": "Transparent BG", "TYPE": "bool", "DEFAULT": 1.0 },
+
+    { "NAME": "clusterCount", "LABEL": "Clusters", "TYPE": "long", "DEFAULT": 9, "VALUES": [4,6,8,9,10,12,14,16], "LABELS": ["4","6","8","9","10","12","14","16"] },
+    { "NAME": "nodesPerCluster", "LABEL": "Nodes / Cluster", "TYPE": "long", "DEFAULT": 1, "VALUES": [1,2,3,4,5], "LABELS": ["1","2","3","4","5"] },
+    { "NAME": "nodeRadius", "LABEL": "Node Radius", "TYPE": "float", "DEFAULT": 0.095, "MIN": 0.025, "MAX": 0.18 },
+    { "NAME": "radiusVariance", "LABEL": "Radius Variance", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "orbitSpeed", "LABEL": "Orbit Speed", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.5 },
+    { "NAME": "spawnRate", "LABEL": "Spawn Rate", "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.04, "MAX": 0.8 },
+    { "NAME": "bridgeK", "LABEL": "Bridge Smoothness", "TYPE": "float", "DEFAULT": 0.045, "MIN": 0.0, "MAX": 0.12 },
+    { "NAME": "interBridgeK", "LABEL": "Inter-Cluster Bridge", "TYPE": "float", "DEFAULT": 0.02, "MIN": 0.0, "MAX": 0.35 },
+    { "NAME": "morphAmp", "LABEL": "Bridge Morph", "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.5 }
   ]
 }*/
 
