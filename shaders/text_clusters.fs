@@ -3,10 +3,10 @@
   "CREDIT": "ShaderClaw — inspired by Clear Supply Flüx Modular soft cell kit",
   "CATEGORIES": ["Generator", "Text"],
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "FLUX MODULAR SOFT CELLS BLOOM ACROSS THE CANVAS", "MAX_LENGTH": 48 },
+    { "NAME": "msg", "TYPE": "text", "DEFAULT": "", "MAX_LENGTH": 48 },
     { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Inter","Times","Caslon","Outfit"] },
     { "NAME": "clusterCount", "LABEL": "Clusters", "TYPE": "long", "DEFAULT": 9, "VALUES": [4,6,8,9,10,12,14,16], "LABELS": ["4","6","8","9","10","12","14","16"] },
-    { "NAME": "nodesPerCluster", "LABEL": "Nodes / Cluster", "TYPE": "long", "DEFAULT": 3, "VALUES": [2,3,4,5], "LABELS": ["2","3","4","5"] },
+    { "NAME": "nodesPerCluster", "LABEL": "Nodes / Cluster", "TYPE": "long", "DEFAULT": 1, "VALUES": [1,2,3,4,5], "LABELS": ["1","2","3","4","5"] },
     { "NAME": "spawnRate", "LABEL": "Spawn Rate", "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.04, "MAX": 0.8 },
     { "NAME": "bridgeK", "LABEL": "Bridge Smoothness", "TYPE": "float", "DEFAULT": 0.045, "MIN": 0.0, "MAX": 0.12 },
     { "NAME": "interBridgeK", "LABEL": "Inter-Cluster Bridge", "TYPE": "float", "DEFAULT": 0.02, "MIN": 0.0, "MAX": 0.35 },
@@ -22,7 +22,7 @@
     { "NAME": "cellA", "LABEL": "Cell Color A", "TYPE": "color", "DEFAULT": [0.84, 0.66, 0.86, 1.0] },
     { "NAME": "cellB", "LABEL": "Cell Color B", "TYPE": "color", "DEFAULT": [1.00, 0.49, 0.39, 1.0] },
     { "NAME": "manualTextColor", "LABEL": "Manual Text", "TYPE": "color", "DEFAULT": [0.05, 0.05, 0.07, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent BG", "TYPE": "bool", "DEFAULT": 0.0 }
+    { "NAME": "transparentBg", "LABEL": "Transparent BG", "TYPE": "bool", "DEFAULT": 1.0 }
   ]
 }*/
 
@@ -99,7 +99,7 @@ int getChar(int slot) {
 
 int charCount() {
     int n = int(msg_len);
-    if (n <= 0) return 12;
+    if (n <= 0) return 0;
     if (n > 48) return 48;
     return n;
 }
@@ -164,12 +164,36 @@ void main() {
     float charW     = charH * (5.0 / 7.0);
     float kern      = charW * kerning;
 
-    // Each node now hosts a multi-line word-wrapped paragraph chunk
-    // (set in the rendering block below from the bubble's char budget).
-    // chunkLen kept here only as a coarse upper bound used for chunk
-    // assignment across nodes.
-    int chunkLen = total;
-    if (chunkLen > 48) chunkLen = 48;
+    // No active utterance: render empty canvas. msgAge < 0 means there
+    // has been no message; total==0 means message is currently empty.
+    // Default behaviour is nothing-until-someone-speaks.
+    if (msgAge < 0.0 || total <= 0) {
+        if (transparentBg) { gl_FragColor = vec4(0.0); return; }
+        gl_FragColor = vec4(bgColor.rgb, 1.0);
+        return;
+    }
+
+    // Each cluster owns a contiguous chunk of the message. As the
+    // typewriter reveal pushes new chars, clusters spawn one after
+    // another — each born when its first char is about to land.
+    int chunkLen = (total + clusters - 1) / clusters;
+    if (chunkLen < 1) chunkLen = 1;
+
+    // Per-cluster lifecycle durations (seconds). Tuned so the curtain
+    // of speech bubbles lasts ~6-7s after the utterance finishes
+    // before drifting off.
+    const float CPS_EST   = 28.0;   // matches C++ typewriter cps
+    const float SPAWN_DUR = 0.40;
+    const float HOLD_DUR  = 5.5;
+    const float EXIT_DUR  = 1.6;
+
+    // Text-mass + voice driven node size. As the message grows, bubbles
+    // grow with it so more glyphs fit; live audio adds a continuous pulse
+    // so the bubble breathes with whoever's talking. The fitMax cell-clamp
+    // below still wins, so neighbours can never collide.
+    float textMass   = smoothstep(6.0, 42.0, float(total));
+    float voicePulse = 1.0 + 0.28 * clamp(bass * audio, 0.0, 1.0);
+    float sizeMul    = mix(0.55, 1.25, textMass) * voicePulse;
 
     // Each cluster's life cycles every `lifetime` seconds. Phase staggered
     // by clusterIdx/clusters so spawns never bunch up.
@@ -189,12 +213,30 @@ void main() {
         if (c >= clusters) break;
         float fc = float(c);
 
-        // Phase in [0,1): 0=fresh spawn, 1=expired.
-        float phase = mod(TIME / lifetime + fc / float(clusters), 1.0);
-        float popIn  = smoothstep(0.0, 0.10, phase);
-        float fadeOut = 1.0 - smoothstep(0.85, 1.0, phase);
-        float env = popIn * fadeOut;
+        // Each cluster covers chars [chunkStart, chunkEnd) of the message.
+        // Cluster c only exists if its chunk has at least one char.
+        int chunkStart = c * chunkLen;
+        if (chunkStart >= total) continue;
+
+        // Birth time = when typewriter reveals the cluster's first char.
+        // Per-cluster age tracks spawn → hold → exit → gone purely from
+        // the utterance window (msgAge resets on every new utterance,
+        // so old clusters vanish instantly when a new one starts).
+        float tBirth = float(chunkStart) / CPS_EST;
+        float tAge   = msgAge - tBirth;
+        if (tAge < 0.0) continue;
+        if (tAge > SPAWN_DUR + HOLD_DUR + EXIT_DUR) continue;
+
+        float popIn = smoothstep(0.0, SPAWN_DUR, tAge);
+        float exitT = clamp(
+            (tAge - SPAWN_DUR - HOLD_DUR) / max(EXIT_DUR, 1e-3),
+            0.0, 1.0);
+        float fadeOut = 1.0 - exitT;
+        float env     = popIn * fadeOut;
         if (env < 0.01) continue;
+        // For the legacy bass-pulse on freshly-born clusters; matches
+        // the prior 0-25% spawn window heuristic.
+        float phase = clamp(tAge / max(SPAWN_DUR + HOLD_DUR, 1e-3), 0.0, 1.0);
 
         // Grid-packed deterministic anchor — each cluster gets its own
         // cell so bubbles don't pile up. Grid sized from cluster count
@@ -224,17 +266,28 @@ void main() {
         anchor.x += cellW * 0.06 * sin(TIME * 0.18 + driftSeed);
         anchor.y += cellH * 0.06 * cos(TIME * 0.22 + driftSeed * 1.7);
 
+        // Exit drift: float upward off the canvas with a slight sway. Each
+        // cluster picks its own sway phase so the exit isn't a uniform
+        // marching column.
+        if (exitT > 0.0) {
+            float ease = exitT * exitT * (3.0 - 2.0 * exitT); // Hermite
+            anchor.y += ease * 0.70;
+            anchor.x += ease * 0.05 * sin(driftSeed * 3.1 + TIME * 0.8);
+        }
+
         // Two-color tint: alternate by cluster index for visual rhythm.
         vec3 cTint = (mod(fc, 2.0) < 0.5) ? cellA.rgb : cellB.rgb;
         // Pop-in scale (cluster grows from a point at spawn).
         float clusterScale = mix(0.4, 1.0, popIn);
 
         // Auto-fit: clamp the cluster's max footprint to ~42% of the
-        // smaller cell dimension so neighbours never touch. Cluster
-        // extent ≈ nodeRadius * (max orbR factor 2.0 + max rad factor
-        // 1.32) ≈ nodeRadius * 3.32. fitScale shrinks oversize requests.
+        // smaller cell dimension so neighbours never touch. Single-node
+        // clusters use the first-node spread factor (0.4×orbR + rad)
+        // ≈ nodeRadius·2.12; multi-node clusters orbit the anchor with
+        // spread=1.0 giving max-extent ≈ nodeRadius·3.32.
+        float extentFactor = (nodesEach > 1) ? 3.32 : 2.12;
         float fitMax  = 0.42 * min(cellW, cellH);
-        float fitRad  = min(nodeRadius, fitMax / 3.32);
+        float fitRad  = min(nodeRadius * sizeMul, fitMax / extentFactor);
 
         // Build the cluster's metaball SDF: smooth-min of every node circle.
         // Track the closest node so we know which character cell to draw.
@@ -315,11 +368,12 @@ void main() {
         float fill = 1.0 - smoothstep(-fw, fw, clusterSdf);
         if (fill < 0.001) continue;
 
-        // ─── Multi-line word-wrapped text inside the nearest node ───
-        // Inscribed axis-aligned text box, top-left anchored. Word-wrap:
-        // a word that won't fit on the current line wraps as a unit
-        // (never mid-word); single words longer than charsPerRow hard-
-        // wrap. Speech-bubble layout — each node holds a small paragraph.
+        // ─── Multi-line word-wrapped text inside the primary node ───
+        // Text only renders on the cluster's first node (n==0). With the
+        // default 1-node layout this is "the bubble"; with multi-node
+        // clusters, extra nodes are visual extensions of the same bubble
+        // and stay text-free so glyphs don't double-render.
+        if (nearestNode != 0) continue;
         vec2 localP = p - nearestPos;
 
         // Inscribed box: 62% of node radius keeps a margin so text
@@ -353,10 +407,14 @@ void main() {
         float yInRow = ly - float(targetRow) * lineH;
         if (yInRow > effCharH) continue;
 
-        // Each node owns a paragraph-sized chunk of the wrapped
-        // message stream, sized to roughly fill the bubble's grid.
-        int budget = charsPerRow * maxRows;
-        int chunkStart = (c * nodesEach + nearestNode) * budget;
+        // Cluster-scoped chunk: the contiguous slice of the message that
+        // this bubble owns. budget caps how much of the chunk can fit
+        // in the bubble's char grid; anything beyond is just clipped
+        // (no wrap to the next bubble).
+        int budget    = charsPerRow * maxRows;
+        int chunkRun  = min(chunkLen, budget);
+        int chunkEnd  = chunkStart + chunkRun;
+        if (chunkEnd > total) chunkEnd = total;
 
         // Word-wrap walk. Maintain (cursorR, cursorC); a word that
         // won't fit wraps as a unit. outCh is filled when the walk
@@ -366,22 +424,21 @@ void main() {
         int outCh = -1;
 
         for (int i = 0; i < MAX_WALK; i++) {
-            if (i >= budget) break;
+            int globalIdx = chunkStart + i;
+            if (globalIdx >= chunkEnd) break;        // past cluster's chunk
             if (cursorR > targetRow) break;
 
-            int rawIdx    = chunkStart + i;
-            int globalIdx = rawIdx - (rawIdx / total) * total;
-            int ch        = getChar(globalIdx);
+            int ch = getChar(globalIdx);
 
             if (ch == SPACE_CH) {
-                // Look-ahead: length of the upcoming word.
+                // Look-ahead: length of the upcoming word (bounded by
+                // the cluster's chunk — words don't span across bubbles).
                 int wlen = 0;
                 for (int j = 1; j < MAX_WALK; j++) {
                     int jj = i + j;
-                    if (jj >= budget) break;
-                    int gj  = chunkStart + jj;
-                    int gjm = gj - (gj / total) * total;
-                    int chj = getChar(gjm);
+                    int gj = chunkStart + jj;
+                    if (gj >= chunkEnd) break;
+                    int chj = getChar(gj);
                     if (chj == SPACE_CH || chj < 0 || chj > 36) break;
                     wlen++;
                 }
