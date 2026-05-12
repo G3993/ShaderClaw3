@@ -82,7 +82,7 @@ void main() {
     float contour2 = 1.0 - smoothstep(0.0, 0.04, cBand2);
     col += contour2 * vec3(1.0, 0.6, 0.3) * 0.6;
 
-    // LUT snap: 5 discrete levels per channel for palette bucket entropy
-    col = mix(col, floor(col * 5.0 + 0.5) / 5.0, 0.35);
+    // LUT snap: 6 discrete steps per channel for palette bucket entropy
+    col = mix(col, floor(col * 6.0 + 0.5) / 6.0, 0.4);
     gl_FragColor = vec4(col, 1.0);
 }
