@@ -390,8 +390,10 @@ void main() {
         // Space cells render nothing (atlas idx 26 is blank); skip.
         if (outCh < 0 || outCh > 35 || outCh == SPACE_CH) continue;
 
+        // V flipped: ly grows top→bottom on screen, atlas glyphs are stored
+        // with V=1 at top (matches OpenGL texture origin at bottom-left).
         vec2 cellLocal = vec2((lx - float(targetCol) * effKern) / effCharW,
-                              yInRow / effCharH);
+                              1.0 - yInRow / effCharH);
         float s = sampleChar(outCh, cellLocal);
         s = smoothstep(0.18, 0.55, s);
         if (s > 0.001) {
