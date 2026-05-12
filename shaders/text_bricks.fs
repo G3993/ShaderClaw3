@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Text"],
-  "DESCRIPTION": "Bricks - grid with animated displacement",
+  "DESCRIPTION": "Bricks — grid with animated displacement. Deep space nebula background: procedural FBM nebula clouds in cyan/magenta on void black, so the brick grid floats in space. Text boosted to HDR for bloom. LINEAR HDR out.",
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
     { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1,2], "LABELS": ["Bricks","Bricks Harlequin","Bricks Zebra"], "DEFAULT": 0 },
@@ -9,9 +9,10 @@
     { "NAME": "intensity", "LABEL": "Displacement", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "density", "LABEL": "Grid Density", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.9, 0.9, 1.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.01, 0.0, 0.03, 1.0] },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
+    { "NAME": "hdrGlow",  "LABEL": "HDR Glow",  "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 2.2 }
   ]
 }*/
 
@@ -89,12 +90,41 @@ float sampleChar(int ch, vec2 uv) {
 }
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+float h21nb(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float vnb(vec2 p) {
+    vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
+    return mix(mix(h21nb(i),h21nb(i+vec2(1,0)),f.x),mix(h21nb(i+vec2(0,1)),h21nb(i+vec2(1,1)),f.x),f.y);
+}
+float fbmNB(vec2 p) {
+    float v=0.0,a=0.5;
+    for (int i=0;i<5;i++){v+=a*vnb(p);p=p*2.03+vec2(13.1,7.7);a*=0.5;}
+    return v;
+}
+
+// Deep space nebula background
+vec3 nebulaBg(vec2 uv) {
+    vec2 p = uv * 2.8;
+    // Domain-warp for billowing cloud shape
+    vec2 warp = vec2(fbmNB(p + vec2(0.0, TIME*0.04)), fbmNB(p + vec2(5.3, TIME*0.03+1.7)));
+    float n1 = fbmNB(p + 0.45*warp);
+    float n2 = fbmNB(p * 1.4 + vec2(3.1, 1.8) + 0.35*warp.yx);
+    // Cyan nebula cloud
+    vec3 cyan = vec3(0.0, 0.65, 1.0) * smoothstep(0.35, 0.7, n1) * 0.6;
+    // Magenta nebula cloud
+    vec3 mage = vec3(0.85, 0.0, 0.75) * smoothstep(0.40, 0.72, n2) * 0.5;
+    // Deep void base
+    vec3 col = vec3(0.01, 0.0, 0.03) + cyan + mage;
+    // Star field (tiny bright dots)
+    float star = step(0.994, h21nb(floor(uv * 320.0)));
+    col += vec3(1.0, 0.95, 0.9) * star * 0.8;
+    return col;
+}
 
 // =======================================================================
 // EFFECT: BRICKS - grid with animated displacement
 // =======================================================================
 
-vec4 effectBricks(vec2 uv, int sub) {
+vec4 effectBricks(vec2 uv, int sub, vec3 bgOverride) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
     int numChars = charCount();
     float waveAmount = intensity;
@@ -143,18 +173,20 @@ vec4 effectBricks(vec2 uv, int sub) {
     }
 
     bool inv = mod(ri, 2.0) < 1.0;
-    vec3 fg = inv ? bgColor.rgb : textColor.rgb;
-    vec3 bg = inv ? textColor.rgb : bgColor.rgb;
+    vec3 tCol = textColor.rgb * hdrGlow;
+    vec3 fg = inv ? bgOverride : tCol;
+    vec3 bg = inv ? tCol : bgOverride;
     vec3 fc = mix(bg, fg, textHit);
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = textColor.rgb; }
+    if (transparentBg) { a = textHit; fc = tCol; }
     return vec4(fc, a);
 }
 
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     int p = int(preset);
-    vec4 col = effectBricks(uv, p);
+    vec3 animBg = transparentBg ? bgColor.rgb : nebulaBg(uv);
+    vec4 col = effectBricks(uv, p, animBg);
 
     if (_voiceGlitch > 0.01) {
         float g = _voiceGlitch;
@@ -167,9 +199,9 @@ void main() {
         vec2 uvR = uv + vec2(shift + chromaAmt, 0.0);
         vec2 uvB = uv + vec2(shift - chromaAmt, 0.0);
         vec2 uvG = uv + vec2(shift, chromaAmt * 0.5);
-        vec4 cR = effectBricks(uvR, p);
-        vec4 cG = effectBricks(uvG, p);
-        vec4 cB = effectBricks(uvB, p);
+        vec4 cR = effectBricks(uvR, p, nebulaBg(uvR));
+        vec4 cG = effectBricks(uvG, p, nebulaBg(uvG));
+        vec4 cB = effectBricks(uvB, p, nebulaBg(uvB));
         vec4 glitched = vec4(cR.r, cG.g, cB.b, max(max(cR.a, cG.a), cB.a));
         float scanline = 0.95 + 0.05 * sin(uv.y * RENDERSIZE.y * 1.5 + t * 40.0);
         float blockX = floor(uv.x * 6.0);

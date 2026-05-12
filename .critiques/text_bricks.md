@@ -35,3 +35,22 @@
 - Lava crack palette: obsidian rock, lava orange 2.5, fire gold 2.5
 **HDR peaks reached:** lava cracks 2.5 (orange), fire gold 2.5; text 2.2x orange
 **Estimated rating:** 3.8★
+
+## 2026-05-12
+**Prior rating:** 0.0★
+**Approach:** 2D refine — NEW ANGLE: Deep space nebula bg (prior entries planned neon bricks / lava cracks)
+**Critique:**
+1. Reference fidelity: Brick grid displacement effect now composited against rich nebula background — deep cyan + magenta gas clouds with star field.
+2. Compositional craft: Star field depth layer + nebula clouds + bright HDR text creates multi-plane depth; black ink brick mortar lines provide strong edge contrast.
+3. Technical execution: domain-warped FBM nebula in 3 layers (base gas, cloud density, fine turbulence); star hash field with sine twinkle; bgOverride pattern keeps transparent mode intact.
+4. Liveness: Nebula clouds drift via TIME offset in FBM domain; stars twinkle independently.
+5. Differentiation: Different bg generator (nebula vs neon bricks vs lava cracks); cold space palette vs warm/digital prior entries.
+**Changes:**
+- Added nebulaBg(): domain-warped FBM for cyan + magenta nebula clouds + procedural star field
+- effectBricks() accepts bgOverride param — uses nebulaBg() when transparentBg=false
+- transparentBg default: true→false
+- textColor default: white→near-white [0.9,0.9,1.0] with hdrGlow=2.2 HDR boost
+- bgColor default: black→deep space [0.01,0.0,0.03]
+- hdrGlow parameter added (default 2.2)
+**HDR peaks reached:** star field 1.5, nebula HDR peaks ~1.2; text * 2.2 glow
+**Estimated rating:** 3.8★
