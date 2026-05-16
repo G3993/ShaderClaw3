@@ -65,24 +65,31 @@ float sdRB(vec2 p, vec2 b, float r) {
     return min(max(d.x, d.y), 0.0) + length(max(d, 0.0)) - r;
 }
 
-// Six-stop cyclic candy palette — the iridescent marble lives here.
+// Eight-stop cyclic "high-end" palette — luxe jewel tones with a thin-
+// film iridescent shimmer ride on top. This is the heart of the marble.
 vec3 PAL(float t) {
-    t = fract(t) * 6.0;
-    int i = int(t);
-    float f = t - float(i);
-    f = f * f * (3.0 - 2.0 * f);
-    vec3 S0 = vec3(0.96, 0.55, 0.78);   // pink
-    vec3 S1 = vec3(0.42, 0.82, 0.88);   // cyan
-    vec3 S2 = vec3(0.20, 0.45, 0.86);   // blue
-    vec3 S3 = vec3(0.42, 0.80, 0.52);   // green
-    vec3 S4 = vec3(0.97, 0.88, 0.36);   // yellow
-    vec3 S5 = vec3(0.98, 0.52, 0.20);   // orange
-    if (i == 0) return mix(S0, S1, f);
-    if (i == 1) return mix(S1, S2, f);
-    if (i == 2) return mix(S2, S3, f);
-    if (i == 3) return mix(S3, S4, f);
-    if (i == 4) return mix(S4, S5, f);
-    return mix(S5, S0, f);
+    vec3 S[8];
+    S[0] = vec3(0.98, 0.42, 0.66);   // rose magenta
+    S[1] = vec3(0.99, 0.62, 0.36);   // warm coral
+    S[2] = vec3(0.99, 0.84, 0.42);   // champagne gold
+    S[3] = vec3(0.36, 0.82, 0.66);   // emerald aqua
+    S[4] = vec3(0.20, 0.66, 0.86);   // lagoon teal
+    S[5] = vec3(0.34, 0.40, 0.92);   // electric indigo
+    S[6] = vec3(0.62, 0.42, 0.95);   // violet
+    S[7] = vec3(0.93, 0.50, 0.84);   // orchid
+
+    float x = fract(t) * 8.0;
+    int i = int(x);
+    float f = x - float(i);
+    f = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);   // quintic — silkier ramps
+    vec3 col = mix(S[i], S[(i + 1) & 7], f);
+
+    // Thin-film iridescence: a low-amplitude spectral shimmer that keeps
+    // the gradients reading as a premium oil-slick rather than flat candy.
+    vec3 irid = 0.5 + 0.5 * cos(6.2831853 * (t * vec3(1.0, 1.07, 1.13)
+                                              + vec3(0.0, 0.33, 0.67)));
+    col = mix(col, col * (0.78 + 0.5 * irid), 0.32);
+    return clamp(col, 0.0, 1.0);
 }
 
 float hash21(vec2 p) { return fract(sin(dot(p, vec2(41.3, 289.1))) * 43758.5453); }
@@ -129,12 +136,17 @@ void applyField(inout vec3 col, vec2 p, float aspect, float t, float au) {
     for (int i = 0; i < 2; i++) {
         vec2  c   = (i == 0) ? vec2(aspect * 0.52, 0.15) : vec2(aspect * 0.74, 0.56);
         vec2  rad = (i == 0) ? vec2(0.32, 0.10)          : vec2(0.21, 0.085);
+        // Flowing marbled interior — domain-warped so the lakes churn.
+        vec2 fp2 = p + 0.10 * vec2(fbm(p * 4.0 + t * 0.25),
+                                   fbm(p.yx * 4.0 - t * 0.22));
         float d   = length((p - c) / rad);
-        float m   = smoothstep(1.0, 0.55, d) * 0.80 * FA;
+        float m   = smoothstep(1.0, 0.55, d) * 0.82 * FA;
+        float mb  = fbm(fp2 * 5.0 + (i == 0 ? t * 0.18 : -t * 0.16));
         vec3  pc  = (i == 0)
-            ? mix(vec3(0.25, 0.55, 0.95), vec3(0.55, 0.35, 0.92), fbm(p * 5.0 + t * 0.1))
-            : mix(vec3(0.24, 0.74, 0.30), vec3(0.85, 0.85, 0.22), fbm(p * 6.0 - t * 0.1));
-        pc += (vnoise(p * 120.0) - 0.5) * 0.15;
+            ? PAL(0.55 + mb * 0.45 + 0.05 * sin(t * 0.3))
+            : PAL(0.18 + mb * 0.40 - 0.05 * cos(t * 0.3));
+        pc = mix(pc, vec3(1.0), smoothstep(0.72, 0.95, mb) * 0.35);
+        pc += (vnoise(p * 120.0) - 0.5) * 0.12;
         col = mix(col, pc, m);
     }
 
@@ -234,21 +246,35 @@ void panelData(int idx, out vec2 c, out vec2 b, out float r,
 // Iridescent liquid marble inside one panel. luv ∈ [0,1]², y down.
 vec3 liquid(vec2 luv, float seed, float t, float warp, float pshift, float inkAmt) {
     vec2 p = luv * vec2(2.4, 3.0) + seed * 7.13;
-    for (int k = 0; k < 2; k++) {
-        p += warp * vec2(fbm(p * 1.3 + t * 0.20 + seed),
-                         fbm(p * 1.3 - t * 0.16 + seed + 4.0));
+
+    // Iterative curl-style flow advection — each pass folds the field
+    // back through itself, so the marble keeps churning fluidly rather
+    // than sliding rigidly. More iterations = deeper, glossier swirl.
+    for (int k = 0; k < 4; k++) {
+        float fk = float(k);
+        vec2 flow = vec2(fbm(p * 1.30 + t * (0.22 + 0.05 * fk) + seed + fk),
+                         fbm(p.yx * 1.30 - t * (0.18 + 0.04 * fk) + seed + 4.0 + fk));
+        flow -= 0.5;
+        p += warp * (0.65 + 0.35 * fk * 0.5) * flow;
+        p += 0.06 * vec2(sin(p.y * 2.0 + t * 0.6), cos(p.x * 2.0 - t * 0.5));
     }
-    float n = fbm(p + t * 0.05);
-    float m = fbm(p * 1.9 - n * 1.5 + seed);
 
-    float h = n * 1.25 + m * 0.55 + pshift + luv.y * 0.22 + seed * 0.07;
+    float n = fbm(p + t * 0.07);
+    float m = fbm(p * 1.9 - n * 1.6 + seed);
+    float s = fbm(p * 3.3 + m * 2.0 - t * 0.12);   // fine ripple detail
+
+    float h = n * 1.30 + m * 0.55 + s * 0.18 + pshift + luv.y * 0.22 + seed * 0.07;
     vec3 col = PAL(h);
+    // Veined colour banding — second palette tap blended on the ridges.
+    col = mix(col, PAL(h * 1.7 + 0.35), smoothstep(0.45, 0.85, s) * 0.35);
 
-    // Milky sheen where the secondary field crests.
-    col = mix(col, vec3(0.98, 0.98, 0.97), smoothstep(0.62, 0.95, m) * 0.65);
-    // Inky pooling where it sinks — the deep black bleed in the source art.
-    col = mix(col, vec3(0.03, 0.035, 0.05), smoothstep(0.26, 0.04, m) * inkAmt);
-    return col;
+    // Specular pearl sheen where the secondary field crests.
+    float sheen = smoothstep(0.60, 0.95, m) * (0.55 + 0.35 * s);
+    col = mix(col, vec3(1.0, 0.99, 0.97), sheen * 0.70);
+    col += vec3(0.30, 0.22, 0.40) * pow(sheen, 3.0) * 0.5;   // iridescent rim
+    // Inky pooling where it sinks — the deep glossy bleed in the source art.
+    col = mix(col, vec3(0.025, 0.03, 0.05), smoothstep(0.26, 0.03, m) * inkAmt);
+    return clamp(col, 0.0, 1.2);
 }
 
 // Solid accent plate carrying black cut-out shapes. luv y down.
