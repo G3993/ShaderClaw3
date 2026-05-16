@@ -1908,5 +1908,18 @@
     "file": "underwater.fs",
     "hasVertex": false,
     "hidden": false
+  },
+  {
+    "id": 570,
+    "title": "Color Frames",
+    "description": "Color Frames — a bento poster of rounded panels on warm paper, each filled with a domain-warped iridescent liquid marble. Solid accent panels carry black cut-out glyphs; a blue crosshair plate and grainy disc round out the grid. Soft drop shadows, hairline ink outlines, audio-swelled flow.",
+    "type": "generator",
+    "categories": [
+      "Generator",
+      "Audio Reactive"
+    ],
+    "file": "color_frames.fs",
+    "hasVertex": false,
+    "hidden": false
   }
 ]
