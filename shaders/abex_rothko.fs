@@ -158,12 +158,24 @@ void main() {
         col = mix(col, cTop, t1);
         col = mix(col, cMid, t2);
         col = mix(col, cBot, t3);
+        // HDR interior radiance — tight band cores peak at 2.0+ linear.
+        // Bloom resolves this as Rothko's "light from within" quality.
+        float hdrT = bandShape(uv, 0.70, 0.84, xIn + 0.03, fth * 0.30);
+        float hdrM = bandShape(uv, 0.40, 0.52, xIn + 0.03, fth * 0.30);
+        float hdrB = bandShape(uv, 0.14, 0.24, xIn + 0.03, fth * 0.30);
+        col += cTop * hdrT * 1.15;
+        col += cMid * hdrM * 1.15;
+        col += cBot * hdrB * 1.15;
     } else {
         // 2-band layout
         float t1 = bandShape(uv, 0.55 + bDrift, 0.92 + bDrift, xIn, fthB);
         float t2 = bandShape(uv, 0.10 - bDrift, 0.46 - bDrift, xIn, fthB);
         col = mix(col, cTop, t1);
         col = mix(col, cBot, t2);
+        float hdrT2 = bandShape(uv, 0.67, 0.80, xIn + 0.03, fth * 0.30);
+        float hdrB2 = bandShape(uv, 0.22, 0.34, xIn + 0.03, fth * 0.30);
+        col += cTop * hdrT2 * 1.15;
+        col += cBot * hdrB2 * 1.15;
     }
 
     // Slow noise breath — symmetric around 1.0 so bands brighten and
@@ -187,10 +199,10 @@ void main() {
     // ghosts across the canvas — the trace of a previous painting on the
     // same canvas. Visible for ~3 seconds, very faint.
     float gPhase = fract(TIME / 47.0);
-    float gFade = smoothstep(0.0, 0.05, gPhase) * smoothstep(0.20, 0.10, gPhase);
+    float gFade = smoothstep(0.0, 0.25, gPhase) * smoothstep(0.45, 0.25, gPhase);
     float gY = 0.30 + 0.40 * hash21(vec2(floor(TIME / 47.0), 0.0));
     float gLine = exp(-pow((uv.y - gY) * 80.0, 2.0));
-    col += vec3(0.20, 0.15, 0.10) * gLine * gFade * 0.25;
+    col += vec3(0.42, 0.32, 0.20) * gLine * gFade;
 
     gl_FragColor = vec4(col, 1.0);
 }
