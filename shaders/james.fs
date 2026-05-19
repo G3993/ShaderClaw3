@@ -218,10 +218,14 @@ void main() {
                         intensity = styleNeon(lp);
                     }
 
-                    vec3 lc = textColor.rgb;
+                    // Per-char rainbow: full-saturation HDR color cycling through hue wheel
+                    float charHue = fract(float(i) * 0.137 + TIME * cycleSpeed * 0.04);
+                    vec4 hK = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
+                    vec3 hp = abs(fract(charHue + hK.xyz) * 6.0 - hK.www);
+                    vec3 lc = clamp(hp - hK.xxx, 0.0, 1.0) * 2.5;  // HDR saturated
 
                     if (style == 7) {
-                        intensity *= 1.3;
+                        intensity *= 2.5;  // neon style: HDR peak
                     }
 
                     textCol = max(textCol, lc * intensity);
@@ -232,7 +236,7 @@ void main() {
 
         vec2 cellCenter = vec2(cx + charW * 0.5, cy + charH * 0.5);
         float glowDist = length((p - cellCenter) * vec2(1.0, 0.7));
-        float glow = exp(-glowDist * glowDist / (charW * charW * 2.0)) * 0.15;
+        float glow = exp(-glowDist * glowDist / (charW * charW * 2.0)) * 0.65;
         float glowPulse = 0.8 + 0.2 * sin(phase * 2.0);
         glowAccum += glow * glowPulse;
     }
@@ -241,7 +245,12 @@ void main() {
     col = mix(col, textCol, clamp(textMask, 0.0, 1.0));
 
     if (!transparentBg) {
-        col += textColor.rgb * glowAccum;
+        // Cycling neon halo — blends with textColor
+        float poolHue = fract(TIME * cycleSpeed * 0.04);
+        vec4 gK = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
+        vec3 gp = abs(fract(poolHue + gK.xyz) * 6.0 - gK.www);
+        vec3 glowTint = max(clamp(gp - gK.xxx, 0.0, 1.0), textColor.rgb * 0.5);
+        col += glowTint * glowAccum * 2.5;
     }
 
     // Vignette
