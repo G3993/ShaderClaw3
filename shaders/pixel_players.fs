@@ -4,7 +4,7 @@
   "CATEGORIES": ["Generator", "Character", "Audio", "Text"],
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": "PIXEL PLAYERS", "MAX_LENGTH": 16 },
-    { "NAME": "playerCount",  "LABEL": "Min Players",     "TYPE": "float", "DEFAULT": 9.0,  "MIN": 1.0,  "MAX": 16.0 },
+    { "NAME": "playerCount",  "LABEL": "Players",         "TYPE": "float", "DEFAULT": 9.0,  "MIN": 1.0,  "MAX": 16.0 },
     { "NAME": "playerSize",   "LABEL": "Size",            "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.06, "MAX": 0.40 },
     { "NAME": "useFlowField", "LABEL": "Flow-field Drift","TYPE": "bool",  "DEFAULT": 1.0  },
     { "NAME": "driftAmt",     "LABEL": "Drift Range",     "TYPE": "float", "DEFAULT": 0.22, "MIN": 0.0,  "MAX": 0.50 },
@@ -37,7 +37,7 @@
     { "NAME": "bgColor",      "LABEL": "Background",      "TYPE": "color", "DEFAULT": [0.961, 0.937, 0.882, 1.0] },
     { "NAME": "eyeColor",     "LABEL": "Eye White",       "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
     { "NAME": "pupilColor",   "LABEL": "Pupil",           "TYPE": "color", "DEFAULT": [0.04, 0.04, 0.04, 1.0] },
-    { "NAME": "transparentBg","LABEL": "Transparent BG",  "TYPE": "bool",  "DEFAULT": 0.0  }
+    { "NAME": "transparentBg","LABEL": "Transparent BG",  "TYPE": "bool",  "DEFAULT": 1.0  }
   ]
 }*/
 
@@ -109,11 +109,11 @@ float msgChar(int slot){
     return 0.0;
 }
 int msgLen(){
-    int n = 0;
-    for (int i = 0; i < MAX_PLAYERS; i++){
-        if (msgChar(i) > 0.5) n = i + 1;
-    }
-    return n;
+    // Host provides the real text length in msg_len and pads unused slots
+    // with code 26 ("space"), so a "> 0.5" scan would always count all
+    // MAX_PLAYERS slots. Trust the host-provided length. Compute in float so
+    // this is valid whether the host injects msg_len as int or float.
+    return int(clamp(float(msg_len), 0.0, float(MAX_PLAYERS)));
 }
 
 // ───────── one face, sampled in local UV ([0..1]^2) ────────────
@@ -289,9 +289,11 @@ void main(){
     float lvl  = audioLevel;
 
     int   archeIn = int(playerArche);
-    int   minPlayers = int(clamp(playerCount, 1.0, float(MAX_PLAYERS)));
-    int   textLen    = msgLen();
-    int   pcount     = int(clamp(float(max(minPlayers, textLen)), 1.0, float(MAX_PLAYERS)));
+    // playerCount is the AUTHORITATIVE number of players to render: the slider
+    // directly sets it across its whole range, independent of message length.
+    int   pcount  = int(clamp(floor(playerCount + 0.5), 1.0, float(MAX_PLAYERS)));
+    // textLen only feeds per-player character selection (not the count).
+    int   textLen = msgLen();
 
     float baseSize = playerSize;
 
@@ -301,8 +303,11 @@ void main(){
     for (int i = 0; i < MAX_PLAYERS; ++i){
         if (i >= pcount) break;
 
-        // Each player carries one character of msg (if available) into its seed
-        float charCode = msgChar(i);
+        // Each player carries one character of msg, cycling the available
+        // message chars across however many players the slider asked for.
+        // Empty message -> charCode 0.0 (graceful blank, players still render).
+        int   charSlot = (textLen > 0) ? int(mod(float(i), float(textLen))) : -1;
+        float charCode = (charSlot >= 0) ? msgChar(charSlot) : 0.0;
         float pseed = seed + float(i) * 73.137 + charCode * 1.91;
 
         // Audio bass squash/stretch oscillation, per-player phase

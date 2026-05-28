@@ -23,7 +23,7 @@
     { "NAME": "petalB", "LABEL": "Petal Cool", "TYPE": "color", "DEFAULT": [0.95, 0.78, 0.20, 1.0] },
     { "NAME": "centerColor", "LABEL": "Pistil", "TYPE": "color", "DEFAULT": [1.0, 0.95, 0.55, 1.0] },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.04, 0.02, 0.08, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 1.0 }
   ]
 }*/
 

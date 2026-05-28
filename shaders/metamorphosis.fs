@@ -11,7 +11,7 @@
     { "NAME": "blobSize", "LABEL": "Size", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.3, "MAX": 2.0 },
     { "NAME": "smoothness", "LABEL": "Melt", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.1, "MAX": 1.5 },
     { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
   ]
 }*/
 

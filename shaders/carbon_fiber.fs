@@ -15,7 +15,7 @@
     { "NAME": "mouseDeform", "LABEL": "Mouse Deform", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
     { "NAME": "invert", "LABEL": "Invert", "TYPE": "bool", "DEFAULT": true },
     { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.3 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
   ]
 }*/
 

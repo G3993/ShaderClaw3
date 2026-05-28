@@ -22,7 +22,7 @@
     { "NAME": "poseForce", "LABEL": "Body Force", "TYPE": "float", "DEFAULT": 2.0, "MIN": 0.0, "MAX": 6.0 },
     { "NAME": "poseSpawn", "LABEL": "Body Spawn", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
     { "NAME": "poseRadius", "LABEL": "Body Radius", "TYPE": "float", "DEFAULT": 0.08, "MIN": 0.02, "MAX": 0.25 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
   ],
   "PASSES": [
     { "TARGET": "velBuf", "PERSISTENT": true },

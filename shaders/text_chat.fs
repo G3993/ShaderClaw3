@@ -29,7 +29,7 @@
     { "NAME": "color5", "LABEL": "Bubble 5", "TYPE": "color", "DEFAULT": [0.65, 0.20, 1.00, 1.0] },
     { "NAME": "color6", "LABEL": "Bubble 6", "TYPE": "color", "DEFAULT": [0.10, 0.95, 0.95, 1.0] },
     { "NAME": "manualTextColor", "LABEL": "Manual Text", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent BG", "TYPE": "bool", "DEFAULT": 0.0 }
+    { "NAME": "transparentBg", "LABEL": "Transparent BG", "TYPE": "bool", "DEFAULT": 1.0 }
   ]
 }*/
 

@@ -9,7 +9,7 @@
     { "NAME": "brightness", "LABEL": "Brightness", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.1, "MAX": 2.0 },
     { "NAME": "reflections", "LABEL": "Reflections", "TYPE": "bool", "DEFAULT": true },
     { "NAME": "shadows", "LABEL": "Shadows", "TYPE": "bool", "DEFAULT": true },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
   ]
 }*/
 

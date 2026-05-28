@@ -16,7 +16,7 @@
     { "NAME": "centerX",     "LABEL": "Center X",    "TYPE": "float", "DEFAULT": 0.9,  "MIN": -1.0, "MAX": 2.0 },
     { "NAME": "centerY",     "LABEL": "Center Y",    "TYPE": "float", "DEFAULT": 0.5,  "MIN": -1.0, "MAX": 2.0 },
     { "NAME": "audioReact",  "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 2.0 },
-    { "NAME": "transparentBg","LABEL": "Transparent","TYPE": "bool",  "DEFAULT": 0.0 }
+    { "NAME": "transparentBg","LABEL": "Transparent","TYPE": "bool",  "DEFAULT": 1.0 }
   ]
 }*/
 

@@ -10,7 +10,7 @@
     { "NAME": "bgColor", "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.05, 1.0] },
     { "NAME": "textScale", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
     { "NAME": "shineWidth", "TYPE": "float", "MIN": 0.05, "MAX": 0.5, "DEFAULT": 0.15 },
-    { "NAME": "transparentBg", "TYPE": "bool", "DEFAULT": false }
+    { "NAME": "transparentBg", "TYPE": "bool", "DEFAULT": true }
   ]
 }
 */

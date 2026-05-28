@@ -35,7 +35,7 @@
     { "NAME": "bgMode", "LABEL": "Outside Lens", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Source", "Black", "Transparent", "Dispersion"] },
     { "NAME": "dispersionHue", "LABEL": "Dispersion Hue", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "dispersionIntensity", "LABEL": "Dispersion Intensity", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
   ]
 }*/
 

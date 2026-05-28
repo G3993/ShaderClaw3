@@ -27,7 +27,7 @@
     { "NAME": "highlightColor",  "LABEL": "Glaze",          "TYPE": "color", "DEFAULT": [1.00, 0.92, 0.65, 1.0] },
     { "NAME": "seedColor",       "LABEL": "Sesame",         "TYPE": "color", "DEFAULT": [0.96, 0.91, 0.78, 1.0] },
     { "NAME": "bgColor",         "LABEL": "Background",     "TYPE": "color", "DEFAULT": [0.05, 0.04, 0.06, 1.0] },
-    { "NAME": "transparentBg",   "LABEL": "Transparent BG", "TYPE": "bool",  "DEFAULT": 0.0  }
+    { "NAME": "transparentBg",   "LABEL": "Transparent BG", "TYPE": "bool",  "DEFAULT": 1.0  }
   ]
 }*/
 

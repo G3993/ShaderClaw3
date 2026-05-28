@@ -18,7 +18,7 @@
     { "NAME": "colorMix", "LABEL": "Color Mix", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Overlay","Multiply","Screen","Replace"], "DEFAULT": 0 },
     { "NAME": "texScale", "LABEL": "Tex Scale", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 5.0 },
     { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
   ],
   "PASSES": [
     { "TARGET": "simBuf", "PERSISTENT": true },

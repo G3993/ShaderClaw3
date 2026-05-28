@@ -5,7 +5,7 @@
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": "BUBBLES APPEAR AS YOU SPEAK", "MAX_LENGTH": 48 },
     { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Inter","Times","Caslon","Outfit"] },
-    { "NAME": "textScale", "LABEL": "Text Size", "TYPE": "float", "DEFAULT": 0.020, "MIN": 0.010, "MAX": 0.06 },
+    { "NAME": "textScale", "LABEL": "Cluster Text Size", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.5, "MAX": 2.0 },
     { "NAME": "kerning", "LABEL": "Kerning", "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.55, "MAX": 1.4 },
     { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 0.7, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "autoTextColor", "LABEL": "Auto Text Color", "TYPE": "bool", "DEFAULT": 1.0 },
@@ -105,6 +105,71 @@ int charCount() {
     return n;
 }
 
+// Count whitespace-delimited words in [0,total). A run of one or more
+// SPACE_CH separates words; leading/trailing spaces don't make empty
+// words. Returns at least 1 when there's any non-space content.
+int wordCount(int total) {
+    int words = 0;
+    bool inWord = false;
+    for (int i = 0; i < 48; i++) {
+        if (i >= total) break;
+        int ch = getChar(i);
+        bool isSpace = (ch == SPACE_CH || ch < 0 || ch > 36);
+        if (!isSpace && !inWord) { words++; inWord = true; }
+        else if (isSpace)        { inWord = false; }
+    }
+    return words;
+}
+
+// Resolve cluster `c`'s character range [outStart,outEnd) by handing it
+// `wordsPer` whole words (skipping separating/leading spaces). Words are
+// never split across bubbles. If the cluster is past the end of the
+// message, outEnd <= outStart (caller skips it).
+void clusterRange(int c, int total, int wordsPer,
+                  out int outStart, out int outEnd) {
+    int wordsSkip = c * wordsPer;   // words owned by earlier clusters
+    int wordsTake = wordsPer;       // words this cluster shows
+    int idx = 0;
+    // Skip the leading whitespace + `wordsSkip` complete words.
+    int skipped = 0;
+    bool inWord = false;
+    for (int i = 0; i < 48; i++) {
+        if (idx >= total) break;
+        if (skipped >= wordsSkip && !inWord) break;
+        int ch = getChar(idx);
+        bool isSpace = (ch == SPACE_CH || ch < 0 || ch > 36);
+        if (!isSpace && !inWord) { inWord = true; }
+        else if (isSpace && inWord) { inWord = false; skipped++; }
+        idx++;
+    }
+    // Skip whitespace before this cluster's first word.
+    for (int i = 0; i < 48; i++) {
+        if (idx >= total) break;
+        int ch = getChar(idx);
+        bool isSpace = (ch == SPACE_CH || ch < 0 || ch > 36);
+        if (!isSpace) break;
+        idx++;
+    }
+    outStart = idx;
+    // Take `wordsTake` words (including the single spaces between them).
+    int taken = 0;
+    inWord = false;
+    int end = idx;
+    for (int i = 0; i < 48; i++) {
+        if (idx >= total) break;
+        if (taken >= wordsTake && !inWord) break;
+        int ch = getChar(idx);
+        bool isSpace = (ch == SPACE_CH || ch < 0 || ch > 36);
+        if (!isSpace) { inWord = true; idx++; end = idx; }
+        else {
+            if (inWord) { inWord = false; taken++; }
+            if (taken >= wordsTake) break;
+            idx++;   // keep single separating space inside the chunk
+        }
+    }
+    outEnd = end;
+}
+
 float hash11(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 vec2  hash21(float n) { return vec2(hash11(n), hash11(n + 17.31)); }
 
@@ -161,7 +226,16 @@ void main() {
     int   nodesEach = int(nodesPerCluster);
     if (nodesEach > MAX_NODES) nodesEach = MAX_NODES;
     int   total     = charCount();
-    float charH     = textScale;
+    // User-facing "Cluster Text Size" is now a relative multiplier
+    // (0.5×–2.0×, 1.0 = the auto-fit baseline look). The auto-fit
+    // block below computes a baseline glyph size that fits the whole
+    // word-wrapped sentence inside each bubble; `sizeFactor` scales
+    // that baseline. Larger → fewer chars/row → more rows (still
+    // inside the bubble); smaller → smaller, centered text.
+    float sizeFactor = clamp(textScale, 0.5, 2.0);
+    // Absolute glyph-height reference for the legibility cap, derived
+    // from the old default (0.020) so the cap tracks the slider too.
+    float charH     = 0.020 * sizeFactor;
     float charW     = charH * (5.0 / 7.0);
     float kern      = charW * kerning;
 
@@ -177,11 +251,16 @@ void main() {
     }
     bool liveUtterance = msgAge >= 0.0;
 
-    // Each cluster owns a contiguous chunk of the message. As the
-    // typewriter reveal pushes new chars, clusters spawn one after
-    // another — each born when its first char is about to land.
-    int chunkLen = (total + clusters - 1) / clusters;
-    if (chunkLen < 1) chunkLen = 1;
+    // Every cluster shows the ENTIRE message — each bubble word-wraps
+    // the full sentence. `clusters` controls how many bubbles appear;
+    // the word-slice split is neutralized (no per-cluster word range).
+    // All clusters are "used" — none are skipped for being past the
+    // words. The whole-sentence chunk is [0, total) for every bubble.
+    int usedClusters = clusters;
+    // Per-cluster spawn stagger (live mode): bubbles still pop in
+    // progressively rather than all at once, even though each holds
+    // the full message. Small fixed offset per cluster index.
+    const float CLUSTER_STAGGER = 0.22;   // seconds between bubble births
 
     // Per-cluster lifecycle durations (seconds). Tuned so the curtain
     // of speech bubbles lasts ~6-7s after the utterance finishes
@@ -217,10 +296,13 @@ void main() {
         if (c >= clusters) break;
         float fc = float(c);
 
-        // Each cluster covers chars [chunkStart, chunkEnd) of the message.
-        // Cluster c only exists if its chunk has at least one char.
-        int chunkStart = c * chunkLen;
-        if (chunkStart >= total) continue;
+        // Every cluster covers the ENTIRE message [0, total) — the whole
+        // sentence word-wraps inside each bubble. No per-cluster word
+        // slice; no cluster is skipped for being "past the words".
+        if (c >= usedClusters) continue;
+        int chunkStart = 0;
+        int chunkEnd   = total;
+        if (chunkEnd <= chunkStart) continue;
 
         // Two lifecycle modes:
         //   LIVE (msgAge ≥ 0): each cluster is born when the typewriter
@@ -231,7 +313,10 @@ void main() {
         //     preview the shader without a live transcript.
         float tAge, popIn, exitT;
         if (liveUtterance) {
-            float tBirth = float(chunkStart) / CPS_EST;
+            // chunkStart is now always 0, so stagger births by cluster
+            // index instead — bubbles pop in progressively, not all at
+            // once. Each holds the full message once born.
+            float tBirth = fc * CLUSTER_STAGGER;
             tAge = msgAge - tBirth;
             if (tAge < 0.0) continue;
             if (tAge > SPAWN_DUR + HOLD_DUR + EXIT_DUR) continue;
@@ -389,49 +474,155 @@ void main() {
         if (nearestNode != 0) continue;
         vec2 localP = p - nearestPos;
 
-        // Inscribed box: 62% of node radius keeps a margin so text
-        // doesn't kiss the bubble silhouette.
-        float boxHalf = nearestRad * 0.62;
+        // Inscribed square that fits inside the circular bubble: side
+        // 2·boxHalf with boxHalf = r·0.70 (0.70 < 1/√2 ≈ 0.707, so the
+        // whole text box stays inside the silhouette — no glyphs land in
+        // the corners outside the blob where fill→0 and they'd vanish).
+        float boxHalf = nearestRad * 0.70;
 
-        float effCharH = min(charH, nearestRad * 0.22);
-        float effCharW = effCharH * (5.0 / 7.0);
-        float effKern  = effCharW * kerning;
-        float lineH    = effCharH * 1.30;
+        // This bubble shows the WHOLE message [chunkStart, chunkEnd) =
+        // [0, total). The full sentence word-wraps inside the box.
+        int chunkN = chunkEnd - chunkStart;
+        if (chunkN < 1) chunkN = 1;
 
-        int charsPerRow = int(floor((boxHalf * 2.0) / effKern));
-        int maxRows     = int(floor((boxHalf * 2.0) / lineH));
+        float boxW = boxHalf * 2.0;
+
+        // Longest whitespace-delimited word in [chunkStart,chunkEnd):
+        // tracks the max run of non-space glyphs (same SPACE_CH==26 /
+        // out-of-range test wordCount uses). The row width must be at
+        // least this wide so a whole word never splits mid-word.
+        int longestWord = 0;
+        {
+            int run = 0;
+            for (int i = 0; i < MAX_WALK; i++) {
+                int gIdx = chunkStart + i;
+                if (gIdx >= chunkEnd) break;
+                int ch = getChar(gIdx);
+                bool isSpace = (ch == SPACE_CH || ch < 0 || ch > 36);
+                if (isSpace) { run = 0; }
+                else { run++; if (run > longestWord) longestWord = run; }
+            }
+        }
+        // Absolute legibility cap on the row width. If a single token is
+        // longer than this, that token (only) is allowed to hard-wrap so
+        // glyphs stay readable instead of shrinking to nothing.
+        int rowCap = (total + 47) / 48 + 24;   // ~24 for ≤48-char msgs
+        if (rowCap > 48) rowCap = 48;
+        if (rowCap < 1)  rowCap = 1;
+
+        // Pick a column count for a roughly square block, then widen it
+        // so the LONGEST WORD fits on one row → words wrap only at word
+        // boundaries, never split (unless a lone word exceeds rowCap, in
+        // which case that token hard-wraps). A word-wrap PRE-PASS then
+        // counts the rows the full message needs at that width; glyphs
+        // are sized so ALL rows fit vertically — never clipped.
+        // Baseline column count for a roughly square block at 1.0×.
+        // The size slider scales glyphs by shrinking the column count:
+        // bigger text (sizeFactor>1) → fewer chars/row → more rows,
+        // each glyph wider/taller but still inside the same box.
+        // Smaller text (sizeFactor<1) → more chars/row → fewer rows →
+        // smaller, centered glyphs. Division can't be zero (sizeFactor
+        // clamped ≥ 0.5). longestWord/rowCap clamps below still keep
+        // whole words intact and enforce the legibility floor.
+        float baseCols  = ceil(sqrt(float(chunkN) * 1.6));
+        int charsPerRow = int(ceil(baseCols / sizeFactor));
+        if (charsPerRow < longestWord) charsPerRow = longestWord;
+        if (charsPerRow > rowCap) charsPerRow = rowCap;
         if (charsPerRow < 1) charsPerRow = 1;
-        if (maxRows     < 1) maxRows     = 1;
+        if (charsPerRow > 48) charsPerRow = 48;
+
+        // Pre-pass: simulate the same word-wrap the render walk does and
+        // count total rows used (usedRows = last cursorR + 1).
+        int usedRows = 1;
+        {
+            int preR = 0;
+            int preC = 0;
+            for (int i = 0; i < MAX_WALK; i++) {
+                int gIdx = chunkStart + i;
+                if (gIdx >= chunkEnd) break;
+                int ch = getChar(gIdx);
+                if (ch == SPACE_CH) {
+                    int wlen = 0;
+                    for (int j = 1; j < MAX_WALK; j++) {
+                        int gj = chunkStart + i + j;
+                        if (gj >= chunkEnd) break;
+                        int chj = getChar(gj);
+                        if (chj == SPACE_CH || chj < 0 || chj > 36) break;
+                        wlen++;
+                    }
+                    if (preC > 0 && preC + 1 + wlen > charsPerRow) {
+                        preR++; preC = 0;
+                    } else if (preC > 0) {
+                        preC++;
+                    }
+                } else if (ch >= 0 && ch <= 36) {
+                    preC++;
+                    if (preC >= charsPerRow) { preR++; preC = 0; }
+                }
+            }
+            usedRows = preR + 1;
+            if (usedRows < 1) usedRows = 1;
+        }
+        int maxRows = usedRows;
+
+        // Size glyphs to fit the box WIDTH per the charsPerRow/word-wrap
+        // logic. Height no longer spreads rows across the whole box —
+        // instead each line gets a tight pitch derived from the glyph
+        // height (glyph + a small gap), so wrapped lines sit close
+        // together (snug leading) rather than far apart.
+        float effKern  = boxW / float(charsPerRow);
+        float effCharW = effKern / max(kerning, 0.55);
+        float effCharH = effCharW * (7.0 / 5.0);
+        effCharH = min(effCharH, charH * 6.0);
+
+        // Tight leading: line pitch = glyph height × LEADING (glyph +
+        // a small inter-line gap), DECOUPLED from boxW/maxRows. This is
+        // what packs the wrapped rows closer together.
+        const float LEADING = 1.18;
+        float linePitch = effCharH * LEADING;
+
+        // Overflow guard: if many rows make the tight block taller than
+        // the box, scale the glyph (and pitch with it) down so it still
+        // fits — never clip, never overflow the bubble. No div-by-zero:
+        // maxRows ≥ 1, LEADING > 0, effCharH > 0.
+        float blockH = float(maxRows) * linePitch;
+        if (blockH > boxW) {
+            float shrink = boxW / blockH;
+            effCharH  *= shrink;
+            effCharW  *= shrink;
+            linePitch *= shrink;
+            blockH     = boxW;
+        }
+        effCharW = min(effCharW, effCharH * (5.0 / 7.0));
+
+        // Vertically center the (now shorter) tight block in the box.
+        float lineH = linePitch;          // row stride for the walk below
+        float yOff  = (boxW - blockH) * 0.5;
 
         // Pixel position inside the text box. Top-left origin so rows
         // read top→bottom and columns read left→right (left-aligned).
         float lx = localP.x + boxHalf;
-        float ly = boxHalf - localP.y;
-        if (lx < 0.0 || lx > boxHalf * 2.0) continue;
-        if (ly < 0.0 || ly > boxHalf * 2.0) continue;
+        float ly = (boxHalf - localP.y) - yOff;   // shift into centered block
+        if (lx < 0.0 || lx > boxW) continue;
+        if (ly < 0.0 || ly > blockH) continue;     // clip to actual block only
 
         int targetCol = int(floor(lx / effKern));
         int targetRow = int(floor(ly / lineH));
         if (targetCol >= charsPerRow) continue;
         if (targetRow >= maxRows)     continue;
 
-        // Row band gap — only the upper effCharH of the lineH strip
-        // carries the glyph; the remainder is inter-line whitespace.
-        float yInRow = ly - float(targetRow) * lineH;
-        if (yInRow > effCharH) continue;
+        // Center the glyph vertically within its lineH strip (the
+        // remainder is inter-line whitespace). yInRow is the offset
+        // from the glyph's top edge.
+        float rowPad = (lineH - effCharH) * 0.5;
+        float yInRow = (ly - float(targetRow) * lineH) - rowPad;
+        if (yInRow < 0.0 || yInRow > effCharH) continue;
 
-        // Cluster-scoped chunk: the contiguous slice of the message that
-        // this bubble owns. budget caps how much of the chunk can fit
-        // in the bubble's char grid; anything beyond is just clipped
-        // (no wrap to the next bubble).
-        int budget    = charsPerRow * maxRows;
-        int chunkRun  = min(chunkLen, budget);
-        int chunkEnd  = chunkStart + chunkRun;
-        if (chunkEnd > total) chunkEnd = total;
-
-        // Word-wrap walk. Maintain (cursorR, cursorC); a word that
-        // won't fit wraps as a unit. outCh is filled when the walk
-        // reaches the target cell.
+        // Full message [chunkStart, chunkEnd) = [0, total). The pre-pass
+        // above sized the grid to hold every row the word-wrap needs, so
+        // this walk just lays the whole sentence onto that grid with the
+        // SAME wrap rules (whole words wrap as a unit; over-long word
+        // hard-wraps). outCh is filled when the walk reaches targetCell.
         int cursorR = 0;
         int cursorC = 0;
         int outCh = -1;
@@ -482,9 +673,11 @@ void main() {
         // Space cells render nothing (atlas idx 26 is blank); skip.
         if (outCh < 0 || outCh > 35 || outCh == SPACE_CH) continue;
 
-        // V flipped: ly grows top→bottom on screen, atlas glyphs are stored
-        // with V=1 at top (matches OpenGL texture origin at bottom-left).
-        vec2 cellLocal = vec2((lx - float(targetCol) * effKern) / effCharW,
+        // Glyph centered in its effKern-wide column. V flipped: ly grows
+        // top→bottom on screen, atlas glyphs are stored with V=1 at top
+        // (matches OpenGL texture origin at bottom-left).
+        float colPad = (effKern - effCharW) * 0.5;
+        vec2 cellLocal = vec2((lx - float(targetCol) * effKern - colPad) / effCharW,
                               1.0 - yInRow / effCharH);
         float s = sampleChar(outCh, cellLocal);
         s = smoothstep(0.18, 0.55, s);

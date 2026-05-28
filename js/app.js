@@ -7716,6 +7716,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
       ws.onopen = async () => {
         if (reconnectTimer) { clearInterval(reconnectTimer); reconnectTimer = null; }
         _ndiWs = ws;
+        window._ndiWs = ws;
         // Auto-start NDI send on connect (or resume after disconnect)
         const shouldStart = _ndiAutoStartOnConnect || ndiSendingActive;
         if (shouldStart) {
@@ -7739,6 +7740,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         // from killing a newer connection (race with bridge.attach closing old WS)
         if (_ndiWs !== ws) return;
         _ndiWs = null;
+        window._ndiWs = null;
         // Pause capture loop but keep UI state — reconnect will resume
         if (ndiSendingActive) {
           pauseNdiSend();

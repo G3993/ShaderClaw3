@@ -9,7 +9,7 @@
     { "NAME": "flowSpeed", "LABEL": "Speed", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "contrastAmt", "LABEL": "Contrast", "TYPE": "float", "DEFAULT": 12.0, "MIN": 1.0, "MAX": 30.0 },
     { "NAME": "causticStrength", "LABEL": "Caustics", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.5 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 1.0 }
   ],
   "PASSES": [
     { "TARGET": "dispBuf", "PERSISTENT": true },

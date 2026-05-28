@@ -9,7 +9,7 @@
     { "NAME": "density", "TYPE": "float", "MIN": 0.1, "MAX": 1.0, "DEFAULT": 0.27 },
     { "NAME": "charColor", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
     { "NAME": "bgColor", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "TYPE": "bool", "DEFAULT": false }
+    { "NAME": "transparentBg", "TYPE": "bool", "DEFAULT": true }
   ]
 }*/
 

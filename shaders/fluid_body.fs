@@ -21,7 +21,7 @@
     { "NAME": "lowColor",      "LABEL": "Low Color",      "TYPE": "color", "DEFAULT": [0.05, 0.0, 0.1, 1.0] },
     { "NAME": "highColor",     "LABEL": "High Color",     "TYPE": "color", "DEFAULT": [1.0, 0.6, 0.1, 1.0] },
     { "NAME": "limitColors",   "LABEL": "Limit Colors",   "TYPE": "bool",  "DEFAULT": false },
-    { "NAME": "transparentBg", "LABEL": "Transparent",    "TYPE": "bool",  "DEFAULT": false }
+    { "NAME": "transparentBg", "LABEL": "Transparent",    "TYPE": "bool",  "DEFAULT": true }
   ],
   "PASSES": [
     { "TARGET": "fluidBuf", "PERSISTENT": true },

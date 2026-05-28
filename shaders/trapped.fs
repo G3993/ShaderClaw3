@@ -13,7 +13,7 @@
     { "NAME": "colorMix", "LABEL": "Color Mix", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "roughness", "LABEL": "Roughness", "TYPE": "float", "DEFAULT": 0.57, "MIN": 0.05, "MAX": 1.0 },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 1.0 }
   ]
 }*/
 

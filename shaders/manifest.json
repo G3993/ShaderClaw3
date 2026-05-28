@@ -27,7 +27,7 @@
       "Generator",
       "Nature"
     ],
-    "description": "TDM Seascape — procedural ocean with volumetric waves",
+    "description": "TDM Seascape \u2014 procedural ocean with volumetric waves",
     "file": "st_ms2sd1fs.fs",
     "hasVertex": true,
     "id": 14,
@@ -146,7 +146,7 @@
     "categories": [
       "3D"
     ],
-    "description": "4D hypercube — 16 vertices and 32 edges rotating through four-dimensional space, projected to 3D",
+    "description": "4D hypercube \u2014 16 vertices and 32 edges rotating through four-dimensional space, projected to 3D",
     "file": "tesseract.scene.js",
     "folder": "scenes",
     "id": 103,
@@ -168,7 +168,7 @@
     "categories": [
       "Generator"
     ],
-    "description": "Falling columns of ASCII characters — matrix rain with density-mapped glyphs",
+    "description": "Falling columns of ASCII characters \u2014 matrix rain with density-mapped glyphs",
     "file": "ascii_shader.fs",
     "id": 38,
     "title": "ASCII Matrix",
@@ -179,7 +179,7 @@
       "Generator",
       "Text"
     ],
-    "description": "Typewriter — characters appear one by one with a blinking cursor",
+    "description": "Typewriter \u2014 characters appear one by one with a blinking cursor",
     "file": "text_typewriter.fs",
     "id": 39,
     "title": "Typewriter",
@@ -190,7 +190,7 @@
       "Generator",
       "Text"
     ],
-    "description": "Falling columns of your custom message text — matrix rain using your words",
+    "description": "Falling columns of your custom message text \u2014 matrix rain using your words",
     "file": "text_ascii.fs",
     "hasVertex": true,
     "id": 42,
@@ -201,7 +201,7 @@
     "categories": [
       "Generator"
     ],
-    "description": "RGB laser globe — swirling neon light blobs with separate R/G/B interference patterns",
+    "description": "RGB laser globe \u2014 swirling neon light blobs with separate R/G/B interference patterns",
     "file": "laser.fs",
     "hasVertex": true,
     "id": 43,
@@ -235,7 +235,7 @@
       "Generator",
       "3D"
     ],
-    "description": "Morphing 3D shape — box, prism, torus, knots with refraction and mouse orbit",
+    "description": "Morphing 3D shape \u2014 box, prism, torus, knots with refraction and mouse orbit",
     "file": "color_cube.fs",
     "hasVertex": true,
     "id": 50,
@@ -246,7 +246,7 @@
     "categories": [
       "Generator"
     ],
-    "description": "Electric arc — simplex noise plasma with glowing discharge line",
+    "description": "Electric arc \u2014 simplex noise plasma with glowing discharge line",
     "file": "electricity.fs",
     "hasVertex": true,
     "id": 51,
@@ -257,7 +257,7 @@
     "categories": [
       "Generator"
     ],
-    "description": "2-link inverse kinematics robot arm — follows hand tracking or mouse, pinch to grip",
+    "description": "2-link inverse kinematics robot arm \u2014 follows hand tracking or mouse, pinch to grip",
     "file": "robot_arm.fs",
     "hasVertex": true,
     "id": 59,
@@ -269,7 +269,7 @@
       "Generator",
       "Text"
     ],
-    "description": "Never-ending love letter — multi-line text reveals char by char, blooms with warm glow, lingers, dissolves, loops infinitely",
+    "description": "Never-ending love letter \u2014 multi-line text reveals char by char, blooms with warm glow, lingers, dissolves, loops infinitely",
     "file": "text_la_bloom.fs",
     "hasVertex": true,
     "id": 62,
@@ -281,7 +281,7 @@
       "Generator",
       "3D"
     ],
-    "description": "Metallic spheres with selective Unreal-style bloom — raymarched icosahedron-like balls orbiting in 3D with mouse camera and audio reactivity",
+    "description": "Metallic spheres with selective Unreal-style bloom \u2014 raymarched icosahedron-like balls orbiting in 3D with mouse camera and audio reactivity",
     "file": "balls.fs",
     "hasVertex": true,
     "id": 63,
@@ -292,7 +292,7 @@
     "categories": [
       "3D"
     ],
-    "description": "75K instanced billboard particles — rainbow HSL cloud with quaternion rotation, sine-wave pulsing, and orbiting camera",
+    "description": "75K instanced billboard particles \u2014 rainbow HSL cloud with quaternion rotation, sine-wave pulsing, and orbiting camera",
     "file": "particles.scene.js",
     "folder": "scenes",
     "id": 64,
@@ -303,7 +303,7 @@
     "categories": [
       "Generator"
     ],
-    "description": "Recursive black hole — fractal tiled glow rings with cosine palette, depth iterations, mouse warp, and audio reactivity",
+    "description": "Recursive black hole \u2014 fractal tiled glow rings with cosine palette, depth iterations, mouse warp, and audio reactivity",
     "file": "lightning.fs",
     "id": 107,
     "title": "Lightning"
@@ -312,7 +312,7 @@
     "categories": [
       "3D"
     ],
-    "description": "Audio-reactive exploding cube grid — 276 cubes with beat detection, bass pump, and scatter physics",
+    "description": "Audio-reactive exploding cube grid \u2014 276 cubes with beat detection, bass pump, and scatter physics",
     "file": "cube_explosion.scene.js",
     "folder": "scenes",
     "id": 110,
@@ -323,7 +323,7 @@
     "categories": [
       "Effect"
     ],
-    "description": "Chromatic dispersion — refractive color separation driven by animated flow noise, with texture input",
+    "description": "Chromatic dispersion \u2014 refractive color separation driven by animated flow noise, with texture input",
     "file": "dispersion.fs",
     "hasVertex": true,
     "id": 113,
@@ -354,7 +354,7 @@
     "categories": [
       "Generator"
     ],
-    "description": "Carbon-fiber 2x2 weave geometry rendered as deep red velvet — oxblood/crimson warp-and-weft, anisotropic fiber-streak specular, pile shimmer, slow light drift",
+    "description": "Carbon-fiber 2x2 weave geometry rendered as deep red velvet \u2014 oxblood/crimson warp-and-weft, anisotropic fiber-streak specular, pile shimmer, slow light drift",
     "file": "red_carpet.fs",
     "hasVertex": true,
     "id": 202,
@@ -385,7 +385,7 @@
       "3D",
       "Generator"
     ],
-    "description": "Phase 1 proof of concept — ISF metaballs shader running inside Three.js via RawShaderMaterial alongside a 3D torus knot, composited in the same WebGL context",
+    "description": "Phase 1 proof of concept \u2014 ISF metaballs shader running inside Three.js via RawShaderMaterial alongside a 3D torus knot, composited in the same WebGL context",
     "file": "isf_threejs_poc.scene.js",
     "folder": "scenes",
     "hidden": true,
@@ -398,7 +398,7 @@
       "3D",
       "Simulation"
     ],
-    "description": "Phase 2 — 8-pass Navier-Stokes fluid simulation running in Three.js via ISFThreeRuntime with ping-pong WebGLRenderTargets",
+    "description": "Phase 2 \u2014 8-pass Navier-Stokes fluid simulation running in Three.js via ISFThreeRuntime with ping-pong WebGLRenderTargets",
     "file": "isf_multipass_poc.scene.js",
     "folder": "scenes",
     "hidden": true,
@@ -429,7 +429,7 @@
       "Generator",
       "3D"
     ],
-    "description": "Floating rotating glass cubes — bass pulses size, texture revealed through faces",
+    "description": "Floating rotating glass cubes \u2014 bass pulses size, texture revealed through faces",
     "file": "crystal_cubes.fs",
     "id": 410,
     "title": "Crystal Cubes"
@@ -439,7 +439,7 @@
       "Generator",
       "3D"
     ],
-    "description": "Fly-through polygon tunnel — video on walls, neon edges, bass pulses walls",
+    "description": "Fly-through polygon tunnel \u2014 video on walls, neon edges, bass pulses walls",
     "file": "geometric_tunnel.fs",
     "id": 413,
     "title": "Geometric Tunnel"
@@ -449,7 +449,7 @@
       "Generator",
       "Simulation"
     ],
-    "description": "Computational fluid dynamics — ink-in-water swirling paint with specular lighting",
+    "description": "Computational fluid dynamics \u2014 ink-in-water swirling paint with specular lighting",
     "file": "cfd_paint.fs",
     "id": 426,
     "title": "CFD Paint"
@@ -458,7 +458,7 @@
     "categories": [
       "VFX"
     ],
-    "description": "Recursive mirror folds — iterative reflections that create fractal kaleidoscope patterns",
+    "description": "Recursive mirror folds \u2014 iterative reflections that create fractal kaleidoscope patterns",
     "file": "mirror_fractal.fs",
     "id": 437,
     "title": "Mirror Fractal"
@@ -477,7 +477,7 @@
       "Generator",
       "3D"
     ],
-    "description": "Raymarched grid of thousands of cubes flowing like fluid — input an image or video and it sculpts into a 3D data landscape",
+    "description": "Raymarched grid of thousands of cubes flowing like fluid \u2014 input an image or video and it sculpts into a 3D data landscape",
     "file": "data_sculpture.fs",
     "id": 427,
     "title": "Data Sculpture"
@@ -487,7 +487,7 @@
       "Generator",
       "Simulation"
     ],
-    "description": "Bismuth-like liquid metal — rotational CFD with environmental reflection, mouse-interactive, audio-reactive",
+    "description": "Bismuth-like liquid metal \u2014 rotational CFD with environmental reflection, mouse-interactive, audio-reactive",
     "file": "liquid_metal.fs",
     "id": 443,
     "title": "Liquid Metal"
@@ -497,7 +497,7 @@
       "VFX",
       "Simulation"
     ],
-    "description": "UV-advection fluid sim — warp any image/video with fluid dynamics, image stays crisp and returns when fluid settles",
+    "description": "UV-advection fluid sim \u2014 warp any image/video with fluid dynamics, image stays crisp and returns when fluid settles",
     "file": "fluid_image.fs",
     "id": 442,
     "title": "Fluid Image"
@@ -506,7 +506,7 @@
     "categories": [
       "Effect"
     ],
-    "description": "Oil paint brush effect — multi-layer brush strokes with relief lighting and vignette",
+    "description": "Oil paint brush effect \u2014 multi-layer brush strokes with relief lighting and vignette",
     "file": "oil_paint.fs",
     "id": 444,
     "title": "Oil Paint"
@@ -516,7 +516,7 @@
       "Effect",
       "Text"
     ],
-    "description": "ASCII art filter — converts any image/video to colored ASCII characters with ANSI palette matching",
+    "description": "ASCII art filter \u2014 converts any image/video to colored ASCII characters with ANSI palette matching",
     "file": "ascii_filter.fs",
     "id": 445,
     "title": "ASCII Filter"
@@ -525,7 +525,7 @@
     "categories": [
       "Effect"
     ],
-    "description": "Polka dot pixel tiles — flipping mosaic that reveals image through animated circular pixels with specular highlights",
+    "description": "Polka dot pixel tiles \u2014 flipping mosaic that reveals image through animated circular pixels with specular highlights",
     "file": "polka_dotz.fs",
     "id": 446,
     "title": "Polka Dotz"
@@ -534,7 +534,7 @@
     "categories": [
       "Text"
     ],
-    "description": "Variable typographic ASCII — particle-driven brightness field rendered with variable font weight characters via @chenglou/pretext",
+    "description": "Variable typographic ASCII \u2014 particle-driven brightness field rendered with variable font weight characters via @chenglou/pretext",
     "file": "pretext_ascii.scene.js",
     "folder": "scenes",
     "id": 447,
@@ -546,7 +546,7 @@
       "Generator",
       "Simulation"
     ],
-    "description": "Gravity streams — particle gravity simulation with glowing trails, deferred lighting, and texture-mapped streams",
+    "description": "Gravity streams \u2014 particle gravity simulation with glowing trails, deferred lighting, and texture-mapped streams",
     "file": "flow.fs",
     "id": 448,
     "title": "Flow"
@@ -556,7 +556,7 @@
       "Generator",
       "3D"
     ],
-    "description": "Soft 3D gradient orb with drifting color stops, rim glow, and optional wireframe ground grid — four pickable colors",
+    "description": "Soft 3D gradient orb with drifting color stops, rim glow, and optional wireframe ground grid \u2014 four pickable colors",
     "file": "soph_orb.fs",
     "id": 449,
     "title": "Soph Orb"
@@ -579,7 +579,7 @@
       "Geometric",
       "Audio Reactive"
     ],
-    "description": "Sottsass / Memphis Group postcard come alive — checkered grids, polka dots, primary triangles rearranging on the beat. Bauhaus + Memphis 1981 colour discipline, no gradients.",
+    "description": "Sottsass / Memphis Group postcard come alive \u2014 checkered grids, polka dots, primary triangles rearranging on the beat. Bauhaus + Memphis 1981 colour discipline, no gradients.",
     "file": "memphis_primitives.fs",
     "id": 460,
     "title": "Memphis Primitives",
@@ -591,7 +591,7 @@
       "Audio Reactive",
       "Radial"
     ],
-    "description": "Octagonal sound temple — eight frequency bands circle you in synchronised pulses. Designed for multi-channel installations where light orbits the listener like a Turrell apse.",
+    "description": "Octagonal sound temple \u2014 eight frequency bands circle you in synchronised pulses. Designed for multi-channel installations where light orbits the listener like a Turrell apse.",
     "file": "sound_temple_octagon.fs",
     "id": 461,
     "title": "Sound Temple",
@@ -602,7 +602,7 @@
       "Generator",
       "Ambient"
     ],
-    "description": "Breathing volume of pure colour-light — almost no motion, just slow chromatic drift. Architectural light, not screen content. Aten Reign / Skyspace.",
+    "description": "Breathing volume of pure colour-light \u2014 almost no motion, just slow chromatic drift. Architectural light, not screen content. Aten Reign / Skyspace.",
     "file": "turrell_chroma.fs",
     "id": 467,
     "title": "Turrell Chroma",
@@ -638,7 +638,7 @@
       "Generator",
       "Audio Reactive"
     ],
-    "description": "A signal trying to hold itself together — scanlines, RGB shift, vertical tear, EMI bursts. Blade Runner 2049 + Nam June Paik.",
+    "description": "A signal trying to hold itself together \u2014 scanlines, RGB shift, vertical tear, EMI bursts. Blade Runner 2049 + Nam June Paik.",
     "file": "hologram_glitch.fs",
     "id": 470,
     "title": "Hologram Glitch",
@@ -661,7 +661,7 @@
       "Art Movement",
       "Audio Reactive"
     ],
-    "description": "Sinuous whiplash tendrils flowing over a pastel cream/rose/sage field, framing an oval portrait that breathes with audio. Decorative, ornamental — after Mucha c.1900.",
+    "description": "Sinuous whiplash tendrils flowing over a pastel cream/rose/sage field, framing an oval portrait that breathes with audio. Decorative, ornamental \u2014 after Mucha c.1900.",
     "file": "art_nouveau_mucha.fs",
     "id": 474,
     "title": "Art Nouveau (Mucha)",
@@ -673,7 +673,7 @@
       "Art Movement",
       "Audio Reactive"
     ],
-    "description": "Pure unmodulated colour blocks slammed against each other — hot pink water, orange masts, lime sky. After Matisse 1905, Derain 1906. Joy as a colour wheel.",
+    "description": "Pure unmodulated colour blocks slammed against each other \u2014 hot pink water, orange masts, lime sky. After Matisse 1905, Derain 1906. Joy as a colour wheel.",
     "file": "fauvism_matisse.fs",
     "id": 475,
     "title": "Fauvism (Matisse)",
@@ -685,7 +685,7 @@
       "Art Movement",
       "Audio Reactive"
     ],
-    "description": "Jagged Worley warp + acid LUT + ink-line edges — Berlin street through nervous breakdown. After Kirchner Potsdamer Platz (1914) and Munch.",
+    "description": "Jagged Worley warp + acid LUT + ink-line edges \u2014 Berlin street through nervous breakdown. After Kirchner Potsdamer Platz (1914) and Munch.",
     "file": "expressionism_kirchner.fs",
     "id": 477,
     "title": "Expressionism (Kirchner)",
@@ -698,7 +698,7 @@
       "Art Movement",
       "Audio Reactive"
     ],
-    "description": "Stylized humanoid SDF stutter-cloned along a velocity vector — true Futurist motion phases (lines of force) without frame-feedback. Force rays burst from a wandering origin; divisionist dabs streak the wake; warm sienna palette; lateral camera pan. After Dynamism of a Cyclist (1913) and Unique Forms of Continuity in Space (1913).",
+    "description": "Stylized humanoid SDF stutter-cloned along a velocity vector \u2014 true Futurist motion phases (lines of force) without frame-feedback. Force rays burst from a wandering origin; divisionist dabs streak the wake; warm sienna palette; lateral camera pan. After Dynamism of a Cyclist (1913) and Unique Forms of Continuity in Space (1913).",
     "file": "futurism_boccioni.fs",
     "id": 478,
     "title": "Futurism (Boccioni)",
@@ -722,10 +722,10 @@
       "Art Movement",
       "Audio Reactive"
     ],
-    "description": "Photomontage — irregular patches of input video at random angles and scales, halftoned, on warm paper, with red ink stamps. Cut with the Dada Kitchen Knife (1919).",
+    "description": "Photomontage \u2014 irregular patches of input video at random angles and scales, halftoned, on warm paper, with red ink stamps. Cut with the Dada Kitchen Knife (1919).",
     "file": "dada_hoch.fs",
     "id": 480,
-    "title": "Dada (Höch)",
+    "title": "Dada (H\u00f6ch)",
     "type": "generator"
   },
   {
@@ -734,7 +734,7 @@
       "Art Movement",
       "Audio Reactive"
     ],
-    "description": "All-over drip skein — N drippers wander via curl-noise advection, depositing thick paint to a persistent buffer that fades slowly. Black, white, silver, cadmium red on raw canvas. After Pollock Number 1A (1948).",
+    "description": "All-over drip skein \u2014 N drippers wander via curl-noise advection, depositing thick paint to a persistent buffer that fades slowly. Black, white, silver, cadmium red on raw canvas. After Pollock Number 1A (1948).",
     "file": "abex_pollock.fs",
     "id": 481,
     "title": "Action Painting (Pollock)",
@@ -746,7 +746,7 @@
       "Art Movement",
       "Audio Reactive"
     ],
-    "description": "Picasso analytic phase — N translucent rectangular planes alpha-stacked, each rotated and sampling the source from its own viewpoint with per-plane gradient shading. Near-monochrome ochre. After Portrait of Kahnweiler (1910) and Ma Jolie (1912).",
+    "description": "Picasso analytic phase \u2014 N translucent rectangular planes alpha-stacked, each rotated and sampling the source from its own viewpoint with per-plane gradient shading. Near-monochrome ochre. After Portrait of Kahnweiler (1910) and Ma Jolie (1912).",
     "file": "cubism_picasso.fs",
     "id": 476,
     "title": "Cubism (Picasso)",
@@ -758,7 +758,7 @@
       "Art Movement",
       "Audio Reactive"
     ],
-    "description": "Mondrian's Broadway Boogie Woogie — orthogonal lanes carrying marching coloured pulses, bright primary squares glowing at intersections. No subdivision tree, no Voronoi.",
+    "description": "Mondrian's Broadway Boogie Woogie \u2014 orthogonal lanes carrying marching coloured pulses, bright primary squares glowing at intersections. No subdivision tree, no Voronoi.",
     "file": "destijl_mondrian.fs",
     "id": 482,
     "title": "De Stijl (Boogie Woogie)",
@@ -770,7 +770,7 @@
       "Art Movement",
       "Audio Reactive"
     ],
-    "description": "Kandinsky Composition VIII / Several Circles — geometric SDF primitives floating on white, strict colour-shape pairing (yellow=triangle, red=square, blue=circle), Lissajous orbits with weighted-circle halos.",
+    "description": "Kandinsky Composition VIII / Several Circles \u2014 geometric SDF primitives floating on white, strict colour-shape pairing (yellow=triangle, red=square, blue=circle), Lissajous orbits with weighted-circle halos.",
     "file": "bauhaus_kandinsky.fs",
     "id": 483,
     "title": "Bauhaus (Kandinsky)",
@@ -794,7 +794,7 @@
       "Art Movement",
       "Audio Reactive"
     ],
-    "description": "Rothko Orange Red Yellow / Chapel — stacked Gaussian-blurred rectangles on coloured ground, deeply feathered edges, slow shimmer. Audio influence hard-capped.",
+    "description": "Rothko Orange Red Yellow / Chapel \u2014 stacked Gaussian-blurred rectangles on coloured ground, deeply feathered edges, slow shimmer. Audio influence hard-capped.",
     "file": "abex_rothko.fs",
     "id": 485,
     "title": "Color Field (Rothko)",
@@ -806,7 +806,7 @@
       "Art Movement",
       "Audio Reactive"
     ],
-    "description": "Magritte Empire of Light / Golconda — procedural sky with illustrative clouds, floating SDF object (apple/bowler/rock/pipe), long hard-light shadow, ghost duplicates on bass.",
+    "description": "Magritte Empire of Light / Golconda \u2014 procedural sky with illustrative clouds, floating SDF object (apple/bowler/rock/pipe), long hard-light shadow, ghost duplicates on bass.",
     "file": "surrealism_magritte.fs",
     "id": 486,
     "title": "Surrealism (Magritte)",
@@ -818,7 +818,7 @@
       "Art Movement",
       "Audio Reactive"
     ],
-    "description": "Vasarely Vega series — concentric ribbed rings warped by spherical bulge, two-tone hue rotation across canvas. Pure radial-phase modulation, no checkerboard.",
+    "description": "Vasarely Vega series \u2014 concentric ribbed rings warped by spherical bulge, two-tone hue rotation across canvas. Pure radial-phase modulation, no checkerboard.",
     "file": "opart_vasarely.fs",
     "id": 487,
     "title": "Op Art (Vasarely)",
@@ -830,7 +830,7 @@
       "Art Movement",
       "Audio Reactive"
     ],
-    "description": "Lichtenstein Whaam! / Drowning Girl — input posterized to comic primaries, Ben-Day dot grid replaces shadow zone, thick black outlines, speech bubble flashes sound-word on bass.",
+    "description": "Lichtenstein Whaam! / Drowning Girl \u2014 input posterized to comic primaries, Ben-Day dot grid replaces shadow zone, thick black outlines, speech bubble flashes sound-word on bass.",
     "file": "popart_lichtenstein.fs",
     "id": 488,
     "title": "Pop Art (Lichtenstein)",
@@ -842,7 +842,7 @@
       "Art Movement",
       "Audio Reactive"
     ],
-    "description": "Macintosh Plus Floral Shoppe — pink/teal sky, perspective grid floor receding to vanishing point, sun with bars, marble bust SDF, scanlines, katakana, CRT bloom.",
+    "description": "Macintosh Plus Floral Shoppe \u2014 pink/teal sky, perspective grid floor receding to vanishing point, sun with bars, marble bust SDF, scanlines, katakana, CRT bloom.",
     "file": "vaporwave_floral_shoppe.fs",
     "id": 489,
     "title": "Vaporwave (Floral Shoppe)",
@@ -854,7 +854,7 @@
       "Glitch",
       "Audio Reactive"
     ],
-    "description": "Frame-feedback datamosh — buffer pulled along motion vectors, per-row tear, RGB channel split, 8x8 DCT-block corruption, burst rainbow garbage on bass. Menkman / Murata / JODI tradition.",
+    "description": "Frame-feedback datamosh \u2014 buffer pulled along motion vectors, per-row tear, RGB channel split, 8x8 DCT-block corruption, burst rainbow garbage on bass. Menkman / Murata / JODI tradition.",
     "file": "glitch_datamosh.fs",
     "id": 490,
     "title": "Glitch / Datamosh",
@@ -876,7 +876,7 @@
     "categories": [
       "Generator"
     ],
-    "description": "Stained glass â€” adaptive Voronoi subdivision with glass refraction, 3D lead cames, and backlit luminance",
+    "description": "Stained glass \u00e2\u20ac\u201d adaptive Voronoi subdivision with glass refraction, 3D lead cames, and backlit luminance",
     "file": "stained_glass.fs",
     "hasVertex": true,
     "id": 48,
@@ -898,7 +898,7 @@
     "categories": [
       "3D"
     ],
-    "description": "3D glass Voronoi sphere â€” morphing panels with neon gradient edges, refraction, image texture, and color control",
+    "description": "3D glass Voronoi sphere \u00e2\u20ac\u201d morphing panels with neon gradient edges, refraction, image texture, and color control",
     "file": "veroni3.scene.js",
     "folder": "scenes",
     "id": 109,
@@ -910,7 +910,7 @@
       "Generator",
       "3D"
     ],
-    "description": "Mirror-tile grid that explodes on bass â€” each tile reveals a piece of the texture",
+    "description": "Mirror-tile grid that explodes on bass \u00e2\u20ac\u201d each tile reveals a piece of the texture",
     "file": "shatter_grid.fs",
     "id": 414,
     "title": "Shatter Grid"
@@ -920,7 +920,7 @@
       "Generator",
       "Nature"
     ],
-    "description": "Sonoluminescence â€” glowing bubble in water with concentric ripples, glass vessel, and audio-reactive pulse",
+    "description": "Sonoluminescence \u00e2\u20ac\u201d glowing bubble in water with concentric ripples, glass vessel, and audio-reactive pulse",
     "file": "sonoluminescence.fs",
     "id": 492,
     "title": "Sonoluminescence"
@@ -965,7 +965,7 @@
       "3D",
       "Audio Reactive"
     ],
-    "description": "Twin suns sinking into a Tron grid horizon with 3-5 raymarched chrome SDF primitives (sphere, cube, pyramid, torus) drifting on independent orbits. Hot pink → magenta → indigo sky. HDR sun discs and grid lines, sun reflections off chrome, scanlines, chromatic aberration. Single-pass linear HDR.",
+    "description": "Twin suns sinking into a Tron grid horizon with 3-5 raymarched chrome SDF primitives (sphere, cube, pyramid, torus) drifting on independent orbits. Hot pink \u2192 magenta \u2192 indigo sky. HDR sun discs and grid lines, sun reflections off chrome, scanlines, chromatic aberration. Single-pass linear HDR.",
     "file": "vapor_hologram.fs",
     "id": 497,
     "title": "Vaporwave Hologram 3D",
@@ -977,7 +977,7 @@
       "Generator",
       "Audio Reactive"
     ],
-    "description": "Reference 3D scene — raymarched SDF primitives (sphere, cube, pyramid, torus, capsule) on a turntable. Selectable lighting model: Studio / Cinematic / Painterly / Neon. Depth fog. Foundation template for all future 3D shaders in Easel.",
+    "description": "Reference 3D scene \u2014 raymarched SDF primitives (sphere, cube, pyramid, torus, capsule) on a turntable. Selectable lighting model: Studio / Cinematic / Painterly / Neon. Depth fog. Foundation template for all future 3D shaders in Easel.",
     "file": "basic_shapes_3d.fs",
     "id": 498,
     "title": "Basic Shapes 3D",
@@ -989,7 +989,7 @@
       "Generator",
       "Audio Reactive"
     ],
-    "description": "Volumetric raymarched clouds — single-scatter integration through procedural noise field. Beer-Lambert extinction, Henyey-Greenstein phase, sun + sky gradient. Bass swells density.",
+    "description": "Volumetric raymarched clouds \u2014 single-scatter integration through procedural noise field. Beer-Lambert extinction, Henyey-Greenstein phase, sun + sky gradient. Bass swells density.",
     "file": "volumetric_clouds_3d.fs",
     "id": 499,
     "title": "Volumetric Clouds 3D",
@@ -1013,7 +1013,7 @@
       "Generator",
       "Audio Reactive"
     ],
-    "description": "Physically-based reference template — Cook-Torrance GGX BRDF, Schlick Fresnel, energy-conserving direct + IBL on raymarched SDF scene. Copy this for any 3D shader needing physical look.",
+    "description": "Physically-based reference template \u2014 Cook-Torrance GGX BRDF, Schlick Fresnel, energy-conserving direct + IBL on raymarched SDF scene. Copy this for any 3D shader needing physical look.",
     "file": "pbr_reference_3d.fs",
     "id": 501,
     "title": "PBR Reference 3D",
@@ -1025,7 +1025,7 @@
       "Generator",
       "Audio Reactive"
     ],
-    "description": "Refractive crystal sculpture with per-channel index of refraction — prism-style chromatic dispersion through SDF glass over a colored grid floor. Fresnel mix between reflected sky and refracted floor; specular highlight + rim halo. Audio modulates twist + dispersion.",
+    "description": "Refractive crystal sculpture with per-channel index of refraction \u2014 prism-style chromatic dispersion through SDF glass over a colored grid floor. Fresnel mix between reflected sky and refracted floor; specular highlight + rim halo. Audio modulates twist + dispersion.",
     "file": "pbr_glass_dispersion.fs",
     "id": 502,
     "title": "PBR Glass Dispersion 3D",
@@ -1037,7 +1037,7 @@
       "Generator",
       "Audio Reactive"
     ],
-    "description": "Gothic cathedral interior — pointed-arch window emits HDR sun core with per-channel chromatic dispersion through stained-glass panes. Volumetric god-rays sweep cobalt/ruby/emerald/gold beams; ink tracery silhouette; refracted color pools wash the floor. Audio bass pulses sun, mid sways rays, treble sparkles dust motes.",
+    "description": "Gothic cathedral interior \u2014 pointed-arch window emits HDR sun core with per-channel chromatic dispersion through stained-glass panes. Volumetric god-rays sweep cobalt/ruby/emerald/gold beams; ink tracery silhouette; refracted color pools wash the floor. Audio bass pulses sun, mid sways rays, treble sparkles dust motes.",
     "file": "prism_basilica.fs",
     "id": 503,
     "title": "Prism Basilica",
@@ -1048,7 +1048,7 @@
       "Generator",
       "Audio Reactive"
     ],
-    "description": "Sumi-e mountain landscape — calligraphic black ink dragon coils through layered fog past three painted ridges; HDR sun disk burns through bone-white sky; gold-leaf eye and vermillion seal punctuate. Audio bass tremors the mountain, mid coils the dragon, treble flares the sun.",
+    "description": "Sumi-e mountain landscape \u2014 calligraphic black ink dragon coils through layered fog past three painted ridges; HDR sun disk burns through bone-white sky; gold-leaf eye and vermillion seal punctuate. Audio bass tremors the mountain, mid coils the dragon, treble flares the sun.",
     "file": "inkwash_dragon.fs",
     "id": 504,
     "title": "Inkwash Dragon",
@@ -1118,7 +1118,7 @@
       "3D",
       "Audio Reactive"
     ],
-    "description": "3D braided challah loaf — 3 to 6 strands woven around a central axis, golden crust with optional sesame seeds, smooth end-cap rolls, orbiting camera. Audio drives loaf swelling, braid spin, and high-frequency glaze shimmer.",
+    "description": "3D braided challah loaf \u2014 3 to 6 strands woven around a central axis, golden crust with optional sesame seeds, smooth end-cap rolls, orbiting camera. Audio drives loaf swelling, braid spin, and high-frequency glaze shimmer.",
     "file": "challah.fs",
     "id": 510,
     "title": "Challah",
@@ -1141,7 +1141,7 @@
       "Generator",
       "3D"
     ],
-    "description": "NYC — procedural 3D city flythrough. Raymarched building grid with lit windows and LED ad walls (ad1/ad2/ad3 sample user textures). Time of day, mood, speed, drive/fly height, variety, ad brightness all exposed.",
+    "description": "NYC \u2014 procedural 3D city flythrough. Raymarched building grid with lit windows and LED ad walls (ad1/ad2/ad3 sample user textures). Time of day, mood, speed, drive/fly height, variety, ad brightness all exposed.",
     "file": "NYC.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1153,7 +1153,7 @@
     "categories": [
       "Generator"
     ],
-    "description": "American Flag — 13 stripes + 50-star canton with billowing wind, fabric shading, and audio-reactive gusts",
+    "description": "American Flag \u2014 13 stripes + 50-star canton with billowing wind, fabric shading, and audio-reactive gusts",
     "file": "american_flag.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1181,7 +1181,7 @@
       "VFX",
       "Simulation"
     ],
-    "description": "Body Fluid — liquid metal that clings to your skeleton. Fluid is attracted toward body bones, forming a moving liquid figure. Optimized for pose tracking.",
+    "description": "Body Fluid \u2014 liquid metal that clings to your skeleton. Fluid is attracted toward body bones, forming a moving liquid figure. Optimized for pose tracking.",
     "file": "body_fluid.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1219,7 +1219,7 @@
     "categories": [
       "Generator"
     ],
-    "description": "Checkers — audio-reactive 3D checkerboard with metallic or gradient palettes, bevel lighting, brushed noise, and optional texture on tiles",
+    "description": "Checkers \u2014 audio-reactive 3D checkerboard with metallic or gradient palettes, bevel lighting, brushed noise, and optional texture on tiles",
     "file": "checkers.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1246,7 +1246,7 @@
       "3D",
       "Audio Reactive"
     ],
-    "description": "Soap Bubble Iridescence — 3D raymarched glass sphere with thin-film rainbow interference. Hue sweeps around the surface with viewing angle; HDR specular peaks on twin glints. Calm orbital camera. LINEAR HDR out, no tonemap.",
+    "description": "Soap Bubble Iridescence \u2014 3D raymarched glass sphere with thin-film rainbow interference. Hue sweeps around the surface with viewing angle; HDR specular peaks on twin glints. Calm orbital camera. LINEAR HDR out, no tonemap.",
     "file": "color_picker.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1260,7 +1260,7 @@
       "Nature",
       "Audio Reactive"
     ],
-    "description": "Underwater coral reef — branching coral skeletons in coral pink/yellow/purple, schooling fish particles weaving between them, sunbeam caustics from above, gentle current sway. Bass triggers coordinated fish-school direction reversal; treble shimmers caustics.",
+    "description": "Underwater coral reef \u2014 branching coral skeletons in coral pink/yellow/purple, schooling fish particles weaving between them, sunbeam caustics from above, gentle current sway. Bass triggers coordinated fish-school direction reversal; treble shimmers caustics.",
     "file": "coral_reef.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1274,7 +1274,7 @@
       "Audio Reactive",
       "Generative"
     ],
-    "description": "Cymatics — sand on a vibrating plate. True Chladni eigenmodes of a square plate (sin(mπx)sin(nπy) ± sin(nπx)sin(mπy)) driven by FFT bins: bass swells macro lobes, mids carve crosshatch, treble shatters into fine grids. Three-mode interference produces nodal lines (sand) and antinodes (sand-jumping fizz). Plate disc rotates with bevel and Tyndall haze drift outside.",
+    "description": "Cymatics \u2014 sand on a vibrating plate. True Chladni eigenmodes of a square plate (sin(m\u03c0x)sin(n\u03c0y) \u00b1 sin(n\u03c0x)sin(m\u03c0y)) driven by FFT bins: bass swells macro lobes, mids carve crosshatch, treble shatters into fine grids. Three-mode interference produces nodal lines (sand) and antinodes (sand-jumping fizz). Plate disc rotates with bevel and Tyndall haze drift outside.",
     "file": "cymatics_chladni.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1300,7 +1300,7 @@
       "Effect",
       "3D"
     ],
-    "description": "3D Fisheye Sphere — glass ball centered on screen (diameter locked to screen height) that refracts the source image/layer below with chromatic dispersion",
+    "description": "3D Fisheye Sphere \u2014 glass ball centered on screen (diameter locked to screen height) that refracts the source image/layer below with chromatic dispersion",
     "file": "fisheye_sphere.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1327,7 +1327,7 @@
       "Text",
       "Audio Reactive"
     ],
-    "description": "Solari split-flap departures board — grid of mechanical flap cells animating between glyphs with the iconic mid-flip blur. Cells stagger their flips so the board 'wakes' row-by-row when a new message arrives. Audio-bass triggers a fresh flip cycle; the board feels alive and busy. Yellow-on-charcoal is the canonical Solari di Udine palette.",
+    "description": "Solari split-flap departures board \u2014 grid of mechanical flap cells animating between glyphs with the iconic mid-flip blur. Cells stagger their flips so the board 'wakes' row-by-row when a new message arrives. Audio-bass triggers a fresh flip cycle; the board feels alive and busy. Yellow-on-charcoal is the canonical Solari di Udine palette.",
     "file": "flip_board.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1340,7 +1340,7 @@
       "Generator",
       "Simulation"
     ],
-    "description": "Fluid Body — organic fluid simulation with chromatic aberration, color rotation, and audio-reactive momentum. Inspired by Synesthesia's Fluid Body.",
+    "description": "Fluid Body \u2014 organic fluid simulation with chromatic aberration, color rotation, and audio-reactive momentum. Inspired by Synesthesia's Fluid Body.",
     "file": "fluid_body.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1354,7 +1354,7 @@
       "Atmospheric",
       "Audio Reactive"
     ],
-    "description": "Volumetric fog machine — domain-warped fbm rolling forward, with an optional input texture sampled through the warp so the image itself becomes the fog. Audio-reactive density pulse on bass.",
+    "description": "Volumetric fog machine \u2014 domain-warped fbm rolling forward, with an optional input texture sampled through the warp so the image itself becomes the fog. Audio-reactive density pulse on bass.",
     "file": "fog_machine.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1368,7 +1368,7 @@
       "Generator",
       "Audio Reactive"
     ],
-    "description": "Volumetric gradient — two-stop color sampled through a 3D fbm noise field. Camera flies through the field giving depth and parallax. Bright crests punch into HDR (linear). Audio drives flow speed and crest intensity. Output linear HDR.",
+    "description": "Volumetric gradient \u2014 two-stop color sampled through a 3D fbm noise field. Camera flies through the field giving depth and parallax. Bright crests punch into HDR (linear). Audio drives flow speed and crest intensity. Output linear HDR.",
     "file": "gradient_example.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1409,7 +1409,7 @@
       "Fluid",
       "Audio Reactive"
     ],
-    "description": "Drops of colored ink dispersing through clear water — curl-noise advected blooms with branching tendrils, slow rotational vortex, and pigment density decreasing as it spreads. Audio bass triggers new ink drops at hashed positions; treble drives fine turbulence detail. The Sunday-afternoon kitchen experiment as music visualizer.",
+    "description": "Drops of colored ink dispersing through clear water \u2014 curl-noise advected blooms with branching tendrils, slow rotational vortex, and pigment density decreasing as it spreads. Audio bass triggers new ink drops at hashed positions; treble drives fine turbulence detail. The Sunday-afternoon kitchen experiment as music visualizer.",
     "file": "ink_in_water.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1462,7 +1462,7 @@
       "Generator",
       "Audio Reactive"
     ],
-    "description": "Sound made literally visible — concentric ripples rolling across stacked depth-planes, audio frequencies sculpting cymatic interference patterns in 3D space.",
+    "description": "Sound made literally visible \u2014 concentric ripples rolling across stacked depth-planes, audio frequencies sculpting cymatic interference patterns in 3D space.",
     "file": "liquid_ripples_3d.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1487,7 +1487,7 @@
     "categories": [
       "Generator"
     ],
-    "description": "Marble — swirling wisps with custom texture vein color",
+    "description": "Marble \u2014 swirling wisps with custom texture vein color",
     "file": "marble.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1501,7 +1501,7 @@
       "Text",
       "Audio Reactive"
     ],
-    "description": "Wachowski Matrix code rain — vertical columns of bright green pseudo-glyphs falling at column-specific speeds, leading head-glyph blown out white, trailing characters fading to dark green. Random glyph mutation per frame so the code reads as live data. Audio-reactive: bass spawns new columns, treble accelerates the fall.",
+    "description": "Wachowski Matrix code rain \u2014 vertical columns of bright green pseudo-glyphs falling at column-specific speeds, leading head-glyph blown out white, trailing characters fading to dark green. Random glyph mutation per frame so the code reads as live data. Audio-reactive: bass spawns new columns, treble accelerates the fall.",
     "file": "matrix_rain.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1515,7 +1515,7 @@
       "Atmospheric",
       "Audio Reactive"
     ],
-    "description": "Perseid-style radiant meteor shower — bright streaks of varying intensity radiating outward from a single radiant point in the sky, with persistent twinkling stars, milky-way band, and audio-bass triggering bright fireball bolides. Each meteor has a hot leading edge and a glowing trail that fades, plus occasional rare sub-branching",
+    "description": "Perseid-style radiant meteor shower \u2014 bright streaks of varying intensity radiating outward from a single radiant point in the sky, with persistent twinkling stars, milky-way band, and audio-bass triggering bright fireball bolides. Each meteor has a hot leading edge and a glowing trail that fades, plus occasional rare sub-branching",
     "file": "meteor_shower.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1552,7 +1552,7 @@
       "Generator",
       "Projection"
     ],
-    "description": "Multi-GPU Tiled Particles — spatial tiling for multi-GPU projection. Each GPU renders a tile of a larger virtual canvas. All particles exist in the full space; each GPU sees its slice. 3 GPUs at 832x480 = 2496x480 seamless output.",
+    "description": "Multi-GPU Tiled Particles \u2014 spatial tiling for multi-GPU projection. Each GPU renders a tile of a larger virtual canvas. All particles exist in the full space; each GPU sees its slice. 3 GPUs at 832x480 = 2496x480 seamless output.",
     "file": "multi_layer_particles.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1566,7 +1566,7 @@
       "Atmospheric",
       "Audio Reactive"
     ],
-    "description": "Thin-film interference colours on a flowing surface — rainbow patches that shift hue as the film thickness varies, computed from real Fresnel-ish thin-film equations. Like a soap bubble or oil-on-water in slow flow, with audio-driven thickness modulation",
+    "description": "Thin-film interference colours on a flowing surface \u2014 rainbow patches that shift hue as the film thickness varies, computed from real Fresnel-ish thin-film equations. Like a soap bubble or oil-on-water in slow flow, with audio-driven thickness modulation",
     "file": "oil_slick_iridescence.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1608,7 +1608,7 @@
       "3D",
       "Particles"
     ],
-    "description": "3D instanced billboard particles — rainbow HSL cloud orbiting in perspective",
+    "description": "3D instanced billboard particles \u2014 rainbow HSL cloud orbiting in perspective",
     "file": "particles.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1622,7 +1622,7 @@
       "Stylized",
       "Audio Reactive"
     ],
-    "description": "Pen & ink stylizer — converts an input image (or generates a procedural tone) into pen-and-ink illustration. Four modes: Cross-Hatch, Stippling, Contour, Sumi-e Brush. Input texture luminance drives line density. Bass thickens strokes, treble adds spatter. Inspired by Shadertoy XlKBzc.",
+    "description": "Pen & ink stylizer \u2014 converts an input image (or generates a procedural tone) into pen-and-ink illustration. Four modes: Cross-Hatch, Stippling, Contour, Sumi-e Brush. Input texture luminance drives line density. Bass thickens strokes, treble adds spatter. Inspired by Shadertoy XlKBzc.",
     "file": "pen_ink.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1636,7 +1636,7 @@
       "Atmospheric",
       "Audio Reactive"
     ],
-    "description": "Underwater caustic light patterns — focused sun rays refracting through wave-rippled water and projecting bright dancing curves onto a tile floor below. Real-pool aesthetic with cyan tint, slow drift, audio-bass driving wave amplitude. Hypnotic, calming, instantly recognisable",
+    "description": "Underwater caustic light patterns \u2014 focused sun rays refracting through wave-rippled water and projecting bright dancing curves onto a tile floor below. Real-pool aesthetic with cyan tint, slow drift, audio-bass driving wave amplitude. Hypnotic, calming, instantly recognisable",
     "file": "pool_caustics.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1650,7 +1650,7 @@
       "Optical",
       "Audio Reactive"
     ],
-    "description": "White-light beam striking a triangular glass prism and splitting into a continuous rainbow spectrum on the other side — Snell's law refraction with wavelength-dependent index gives the iconic Pink Floyd Dark Side cover. The beam can be redirected by audio bass; treble shifts the dispersion factor",
+    "description": "White-light beam striking a triangular glass prism and splitting into a continuous rainbow spectrum on the other side \u2014 Snell's law refraction with wavelength-dependent index gives the iconic Pink Floyd Dark Side cover. The beam can be redirected by audio bass; treble shifts the dispersion factor",
     "file": "prism_dispersion.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1676,7 +1676,7 @@
       "3D",
       "Audio Reactive"
     ],
-    "description": "Volcanic Caldera — 3D raymarched molten lava landscape. Domain-warped FBM terrain with glowing obsidian rock and HDR lava channels flowing through deep rifts. Camera orbits the caldera rim at dusk. LINEAR HDR out, no tonemap.",
+    "description": "Volcanic Caldera \u2014 3D raymarched molten lava landscape. Domain-warped FBM terrain with glowing obsidian rock and HDR lava channels flowing through deep rifts. Camera orbits the caldera rim at dusk. LINEAR HDR out, no tonemap.",
     "file": "random_freeze.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1689,7 +1689,7 @@
       "Generator",
       "Text"
     ],
-    "description": "Text with moving highlight sweep — chrome-like shine effect",
+    "description": "Text with moving highlight sweep \u2014 chrome-like shine effect",
     "file": "shine_text.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1701,7 +1701,7 @@
     "categories": [
       "Generator"
     ],
-    "description": "SketchPad — animated sketch on paper: rough circles, drifting lines/rectangles, scribble hatching, with outline or filled-color modes and halftone screen-print overlap blending",
+    "description": "SketchPad \u2014 animated sketch on paper: rough circles, drifting lines/rectangles, scribble hatching, with outline or filled-color modes and halftone screen-print overlap blending",
     "file": "sketchpad.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1715,7 +1715,7 @@
       "Atmospheric",
       "Audio Reactive"
     ],
-    "description": "Earth from orbit — rotating globe with day/night terminator line, city lights blooming across the dark side, atmospheric scattering halo at the limb. Bass kicks accelerate rotation, treble drives auroras at the poles. The blue-marble shot every space film loves",
+    "description": "Earth from orbit \u2014 rotating globe with day/night terminator line, city lights blooming across the dark side, atmospheric scattering halo at the limb. Bass kicks accelerate rotation, treble drives auroras at the poles. The blue-marble shot every space film loves",
     "file": "solar_terminator.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1740,7 +1740,7 @@
     "categories": [
       "GENERATOR"
     ],
-    "description": "A star-forming nebula like Carina or Orion — pillars of dust with hot young stars igniting inside, ionised hydrogen glowing red, oxygen glowing teal, with subtle dust-lane occlusion. Bass triggers proto-star ignition events that flash and persist as new bright pinpoints",
+    "description": "A star-forming nebula like Carina or Orion \u2014 pillars of dust with hot young stars igniting inside, ionised hydrogen glowing red, oxygen glowing teal, with subtle dust-lane occlusion. Bass triggers proto-star ignition events that flash and persist as new bright pinpoints",
     "file": "stellar_nursery.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1754,7 +1754,7 @@
       "Text",
       "Audio Reactive"
     ],
-    "description": "Bloomberg / Reuters terminal — multiple horizontal lanes of scrolling stock-ticker glyphs, real numerals for prices, up/down delta arrows in green/red, and a market-crash glitch on bass kicks where rows desync, flicker red, and corrupt pixel-blocks. CRT phosphor green on charcoal, with a bottom-row volume waveform.",
+    "description": "Bloomberg / Reuters terminal \u2014 multiple horizontal lanes of scrolling stock-ticker glyphs, real numerals for prices, up/down delta arrows in green/red, and a market-crash glitch on bass kicks where rows desync, flicker red, and corrupt pixel-blocks. CRT phosphor green on charcoal, with a bottom-row volume waveform.",
     "file": "terminal_ticker.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1768,7 +1768,7 @@
       "Text",
       "3D"
     ],
-    "description": "3D extruded text — rotating block letters with Phong lighting and cycling fill patterns",
+    "description": "3D extruded text \u2014 rotating block letters with Phong lighting and cycling fill patterns",
     "file": "text_3d.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1781,7 +1781,7 @@
       "Generator",
       "Text"
     ],
-    "description": "Matrix rain — falling character columns with embedded message text",
+    "description": "Matrix rain \u2014 falling character columns with embedded message text",
     "file": "text_matrix.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1808,7 +1808,7 @@
       "3D",
       "Audio Reactive"
     ],
-    "description": "Neon Circuit Board — 3D raymarched PCB surface. SDF circuit traces (copper extrusions) on dark substrate, RGB data pulses traveling along horizontal and vertical routes. Low-angle orbit camera. LINEAR HDR out, no tonemap.",
+    "description": "Neon Circuit Board \u2014 3D raymarched PCB surface. SDF circuit traces (copper extrusions) on dark substrate, RGB data pulses traveling along horizontal and vertical routes. Low-angle orbit camera. LINEAR HDR out, no tonemap.",
     "file": "time_glitch_rgbfs.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1834,7 +1834,7 @@
       "3D",
       "Audio Reactive"
     ],
-    "description": "Crystal Cave Formations — 3D raymarched cave interior with hexagonal emerald and amethyst crystal columns growing from floor and ceiling. Cinematic low-angle camera slowly drifts through the cavern. LINEAR HDR out, no tonemap.",
+    "description": "Crystal Cave Formations \u2014 3D raymarched cave interior with hexagonal emerald and amethyst crystal columns growing from floor and ceiling. Cinematic low-angle camera slowly drifts through the cavern. LINEAR HDR out, no tonemap.",
     "file": "vishes.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1861,7 +1861,7 @@
       "Physical",
       "Audio Reactive"
     ],
-    "description": "Wave Interference Field — Multiple point-source ripples on a water surface — concentric wavefronts radiating from N sources, summing constructively + destructively into shimmering moiré patterns. Bass kicks add new sources at hashed positions; treble shortens wavelength; the grid is a real PHYSICAL standing-wave field.",
+    "description": "Wave Interference Field \u2014 Multiple point-source ripples on a water surface \u2014 concentric wavefronts radiating from N sources, summing constructively + destructively into shimmering moir\u00e9 patterns. Bass kicks add new sources at hashed positions; treble shortens wavelength; the grid is a real PHYSICAL standing-wave field.",
     "file": "wave_interference.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1874,7 +1874,7 @@
       "Generator",
       "Text"
     ],
-    "description": "Text waving like a flag — sine wave displacement per letter",
+    "description": "Text waving like a flag \u2014 sine wave displacement per letter",
     "file": "wave_text.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1887,7 +1887,7 @@
       "Generator",
       "Audio Reactive"
     ],
-    "description": "Geo — 2D path-traced circle-circle intersection. Two orbiting circles compute their algebraic intersection points in real time; a 68-sample radial path tracer accumulates global illumination across the canvas. Ported from Yusef28 Shadertoy 7l2XDm.",
+    "description": "Geo \u2014 2D path-traced circle-circle intersection. Two orbiting circles compute their algebraic intersection points in real time; a 68-sample radial path tracer accumulates global illumination across the canvas. Ported from Yusef28 Shadertoy 7l2XDm.",
     "file": "geo.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1901,7 +1901,7 @@
       "3D",
       "Audio Reactive"
     ],
-    "description": "Underwater — looking up from the deep. Volumetric god rays pierce down through dancing caustics, rising bubbles trail upward toward the rippling surface. HDR linear output for bloom-catching highlights.",
+    "description": "Underwater \u2014 looking up from the deep. Volumetric god rays pierce down through dancing caustics, rising bubbles trail upward toward the rippling surface. HDR linear output for bloom-catching highlights.",
     "file": "underwater.fs",
     "hasVertex": false,
     "hidden": false,
@@ -1914,7 +1914,7 @@
       "Generator",
       "Audio Reactive"
     ],
-    "description": "Color Frames — a bento poster of rounded panels on warm paper, each filled with a domain-warped iridescent liquid marble. Solid accent panels carry black cut-out glyphs; a blue crosshair plate and grainy disc round out the grid. Soft drop shadows, hairline ink outlines, audio-swelled flow.",
+    "description": "Color Frames \u2014 a bento poster of rounded panels on warm paper, each filled with a domain-warped iridescent liquid marble. Solid accent panels carry black cut-out glyphs; a blue crosshair plate and grainy disc round out the grid. Soft drop shadows, hairline ink outlines, audio-swelled flow.",
     "file": "color_frames.fs",
     "hasVertex": false,
     "hidden": false,
@@ -2335,7 +2335,7 @@
       "3D",
       "Abstract"
     ],
-    "description": "Shape Rotator — a single glossy, wet oxblood blob raymarched in real 3D. A sphere SDF domain-warped by low-frequency fbm slowly morphs and rotates, lit like a museum glass sculpture: smeared white speculars, a sharp horizontal specular stre",
+    "description": "Shape Rotator \u2014 a single glossy, wet oxblood blob raymarched in real 3D. A sphere SDF domain-warped by low-frequency fbm slowly morphs and rotates, lit like a museum glass sculpture: smeared white speculars, a sharp horizontal specular stre",
     "file": "shape_rotator.fs",
     "title": "Shape Rotator",
     "type": "fs"
@@ -2346,7 +2346,7 @@
       "Glitch",
       "Audio Reactive"
     ],
-    "description": "GLITCH GOD — every glitch-art + analog-degradation technique in one shader (52 modules). A single GOD SEED hashes into a recipe picking which modules fire and how hard. Digital: chromatic aberration, pixel-sort, datamosh, 8x8 macroblock corruption, kaleido, sine warp, slice, sync tear, block-jump, jitter, mosaic, posterize, hue-rotate, channel swap, solarize, static, dither, ghost echo, sobel edges, strobe, HDR bloom. Analog (research-authentic): VHS color-under smear, head-switch tear, dropout, tracking roll, time-base wobble, generation loss, RF snow; NTSC dot-crawl, cross-color rainbow, PAL Hanover bars, ringing, interlace combing, shadow-mask scanlines, phosphor persistence, vertical-hold roll; RF ghosting, hum bars, herringbone, ignition sparkle; video-synth Rutt-Etra terrain, feedback tunnel, Sandin colorizer, Paik-Abe hue, wobbulator, chroma bloom. 2^52 configurations. CHAOS stacks modules, MUTATE auto-cycles recipes, bass/mid/treble drive corruption. Linear HDR out.",
+    "description": "GLITCH GOD \u2014 every glitch-art + analog-degradation technique in one shader (52 modules). A single GOD SEED hashes into a recipe picking which modules fire and how hard. Digital: chromatic aberration, pixel-sort, datamosh, 8x8 macroblock corruption, kaleido, sine warp, slice, sync tear, block-jump, jitter, mosaic, posterize, hue-rotate, channel swap, solarize, static, dither, ghost echo, sobel edges, strobe, HDR bloom. Analog (research-authentic): VHS color-under smear, head-switch tear, dropout, tracking roll, time-base wobble, generation loss, RF snow; NTSC dot-crawl, cross-color rainbow, PAL Hanover bars, ringing, interlace combing, shadow-mask scanlines, phosphor persistence, vertical-hold roll; RF ghosting, hum bars, herringbone, ignition sparkle; video-synth Rutt-Etra terrain, feedback tunnel, Sandin colorizer, Paik-Abe hue, wobbulator, chroma bloom. 2^52 configurations. CHAOS stacks modules, MUTATE auto-cycles recipes, bass/mid/treble drive corruption. Linear HDR out.",
     "file": "glitch_god.fs",
     "id": 1024,
     "title": "Glitch God",
@@ -2358,10 +2358,25 @@
       "Glitch",
       "Audio Reactive"
     ],
-    "description": "DAN DAN — Tachyon+ inspired circuit-bend signal mangler. Three sliders (Corruption / Signal Freq / Circuit Bend), Glitch Seed, palette dropdown (Original/Purple/Mono/Cyberpunk/Corporate/Nightclub Red/Random), NEW GLITCH tap button (random seed each press), GLITCH HIT momentary button (press-and-hold to slam Corruption + Bend).",
+    "description": "DAN DAN \u2014 Tachyon+ inspired circuit-bend signal mangler. Three sliders (Corruption / Signal Freq / Circuit Bend), Glitch Seed, palette dropdown (Original/Purple/Mono/Cyberpunk/Corporate/Nightclub Red/Random), NEW GLITCH tap button (random seed each press), GLITCH HIT momentary button (press-and-hold to slam Corruption + Bend).",
     "file": "dan_dan.fs",
     "id": 1025,
     "title": "Dan Dan",
     "type": "generator"
+  },
+  {
+    "id": 1026,
+    "file": "emoji_swarm.fs",
+    "title": "Emoji Swarm",
+    "description": "Voice-driven flock of REAL emoji glyphs (16 Twemoji in a 4\u00d74 atlas). Speak and the swarm comes alive; what you say seeds which emojis appear. Bind the included emoji_swarm_atlas.png as the Atlas image input.",
+    "categories": [
+      "Text",
+      "Generator",
+      "Voice",
+      "Fun"
+    ],
+    "type": "generator",
+    "hasVertex": false,
+    "hidden": false
   }
 ]

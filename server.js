@@ -21,6 +21,20 @@ import Anthropic from "@anthropic-ai/sdk";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+function liveInputDirective(liveInputs, intent) {
+  if (!Array.isArray(liveInputs) || liveInputs.length === 0) return "";
+  const specs = {
+    mouse:  '`{ "NAME": "mouse", "TYPE": "point2D", "DEFAULT": [0.5, 0.5], "LABEL": "Mouse" }` — cursor position in 0..1. Use it to drive position-based effects (cluster center, distortion origin, hover field).',
+    audio:  '`{ "NAME": "fft", "TYPE": "audioFFT" }` and `{ "NAME": "audio", "TYPE": "audio" }` — sample with `IMG_NORM_PIXEL(fft, vec2(band, 0.5)).a` for frequency bands and `IMG_NORM_PIXEL(audio, vec2(t, 0.5)).a` for waveform. Drive scale, color shift, energy, displacement.',
+    touch:  '`{ "NAME": "touch1", "TYPE": "point2D", "DEFAULT": [0.5, 0.5], "LABEL": "Touch" }` — primary touch point in 0..1. Treat similarly to mouse but expect rapid changes; use for ripples, trails, paint-style interaction.',
+    camera: '`{ "NAME": "inputImage", "TYPE": "image", "LABEL": "Camera" }` — webcam frame. Sample with `IMG_NORM_PIXEL(inputImage, uv)`. Drive feedback, color sampling, edge detection, or texture mixing.',
+    voice:  '`{ "NAME": "voiceLevel", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Voice" }` — instantaneous voice loudness 0..1. Use for pulse, breath, intensity that follows speech.',
+  };
+  const lines = liveInputs.filter(k => specs[k]).map(k => `  • ${k}: ${specs[k]}`);
+  if (!lines.length) return "";
+  return `\n\nINTERACTIVE INPUTS (REQUIRED):\nThis shader MUST declare and meaningfully use the following ISF inputs in addition to its tweakable parameters. Each one must visibly affect the output — they are the point of the shader, not decoration.\n${lines.join("\n")}\n${intent ? `\nUser-stated mapping intent: ${intent}\n` : ""}\nDo NOT skip any of these inputs. Do NOT replace them with TIME-only animation. The shader must look meaningfully different when the input changes.`;
+}
+
 // Load .env file (inline, no dependency)
 try {
   const envPath = join(dirname(fileURLToPath(import.meta.url)), ".env");
@@ -239,7 +253,7 @@ class BrowserBridge {
   }
 
   async _handleChat(ws, msg) {
-    const { message, referenceImage } = msg;
+    const { message, referenceImage, liveInputs, intent } = msg;
     const chatId = msg.chatId || Date.now().toString();
 
     // Check for API key
@@ -308,7 +322,7 @@ For multi-pass shaders (feedback, blur, particles), use PASSES:
 ]
 Access previous pass output via texture2D(bufferName, uv).
 
-QUALITY: Write production-quality shader code. Use smooth math, anti-aliasing where appropriate, and create visually striking results. Avoid flat/boring outputs.${exampleShaders}
+QUALITY: Write production-quality shader code. Use smooth math, anti-aliasing where appropriate, and create visually striking results. Avoid flat/boring outputs.${liveInputDirective(liveInputs, intent)}${exampleShaders}
 
 OUTPUT: Return ONLY the complete ISF shader source code. No markdown, no explanation, no code fences. Just the raw shader starting with /*{ and ending with the GLSL code.`;
 

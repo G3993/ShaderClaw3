@@ -23,7 +23,7 @@
     { "NAME": "textA", "LABEL": "Tip Color", "TYPE": "color", "DEFAULT": [1.00, 1.00, 1.00, 1.0] },
     { "NAME": "textB", "LABEL": "Mid Color", "TYPE": "color", "DEFAULT": [0.20, 0.95, 1.00, 1.0] },
     { "NAME": "textC", "LABEL": "Tail Color", "TYPE": "color", "DEFAULT": [0.60, 0.20, 1.00, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent BG", "TYPE": "bool", "DEFAULT": 0.0 }
+    { "NAME": "transparentBg", "LABEL": "Transparent BG", "TYPE": "bool", "DEFAULT": 1.0 }
   ]
 }*/
 

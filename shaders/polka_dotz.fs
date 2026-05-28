@@ -17,7 +17,7 @@
     { "NAME": "vignetteAmt", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "gapShade", "LABEL": "Gap Shade", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 0.5 },
     { "NAME": "bgColor", "LABEL": "Gap Color", "TYPE": "color", "DEFAULT": [0.2, 0.3, 0.4, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 0.0 },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 1.0 },
     { "NAME": "dotShape", "LABEL": "Dot Shape", "TYPE": "long",
       "VALUES": [0, 1, 2, 3],
       "LABELS": ["Circle", "Star", "Square", "Hexagon"],
