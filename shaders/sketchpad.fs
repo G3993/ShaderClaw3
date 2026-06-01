@@ -6,7 +6,7 @@
     { "NAME": "paperType", "LABEL": "Paper", "TYPE": "long", "DEFAULT": 2,
       "VALUES": [0, 1, 2, 3],
       "LABELS": ["Plain", "Dot Grid", "Graph Paper", "Lined Paper"] },
-    { "NAME": "paperColor", "LABEL": "Paper Color", "TYPE": "color", "DEFAULT": [0.05, 0.18, 0.38, 1.0] },
+    { "NAME": "paperColor", "LABEL": "Paper Color", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
     { "NAME": "inkColor", "LABEL": "Ink Color", "TYPE": "color", "DEFAULT": [0.95, 0.97, 1.0, 1.0] },
     { "NAME": "gridSize", "LABEL": "Grid Size", "TYPE": "float", "DEFAULT": 40.0, "MIN": 8.0, "MAX": 120.0 },
     { "NAME": "gridLineStrength", "LABEL": "Grid Strength", "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0, "MAX": 1.0 },

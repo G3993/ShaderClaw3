@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Light", "Audio Reactive"],
-  "DESCRIPTION": "Turrell Chroma — pure colored light as material. Slowly evolving Ganzfeld fields cycle through curated triads (Roden Crater Dawn, Skyspace Twilight, Aten Reign Ascension, Ganzfeld Mint, Wedgework Bruise, Notion Motion Aqua, Tate Modern Sunrise, plus the originals). The wedge axis slowly drifts ±30° across the cycle for almost-imperceptible motion. cycleDuration controls pace (20–120s). Output LINEAR HDR.",
+  "DESCRIPTION": "Turrell Chroma — pure colored light as material. Slowly evolving Ganzfeld fields cycle through curated triads. Added organic breathing movement, subtle vignette, and cinematic film grain for depth and atmosphere. cycleDuration controls pace (20–120s). Output LINEAR HDR.",
   "INPUTS": [
     { "NAME": "mood",           "LABEL": "Mood",            "TYPE": "long",  "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Aten Reign","Wedgework","Ganzfeld","Skyspace"] },
     { "NAME": "cycleDuration",  "LABEL": "Cycle (s)",       "TYPE": "float", "MIN": 20.0, "MAX": 120.0, "DEFAULT": 50.0 },
@@ -8,98 +8,74 @@
     { "NAME": "wedgeStrength",  "LABEL": "Wedge Strength",  "TYPE": "float", "MIN": 0.0,  "MAX": 0.35, "DEFAULT": 0.16 },
     { "NAME": "vignette",       "LABEL": "Edge Falloff",    "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.42 },
     { "NAME": "luminance",      "LABEL": "Luminance",       "TYPE": "float", "MIN": 0.4,  "MAX": 1.6,  "DEFAULT": 1.0 },
-    { "NAME": "audioReact",     "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 }
+    { "NAME": "audioReact",     "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
+    { "NAME": "organicStrength","LABEL": "Organic Movement","TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.38 },
+    { "NAME": "grainStrength",  "LABEL": "Film Grain",      "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.32 },
+    { "NAME": "vignetteDepth",  "LABEL": "Vignette Depth",  "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.55 }
   ]
 }*/
 
 // ════════════════════════════════════════════════════════════════════════
-//  Turrell Chroma — Light & Space
-//  No objects, no patterns. The CANVAS IS THE LIGHT. A primary hue field
-//  drifts between curated triads over a long cycle (default ~50s); a
-//  Wedgework gradient gives the architectural-wall illusion; corners fall
-//  into the dark of the surrounding room. Audio is a whisper, not a voice.
-//  Turrell pieces are about staring at a single color for minutes — the
-//  calmness is the point. Transitions sit at the edge of perception.
+//  Turrell Chroma — Light & Space (Cinematic Edition)
+//  Added:
+//   • Organic breathing: layered domain-warped slow noise displaces the
+//     field center, making the light feel alive without obvious motion.
+//   • Cinematic vignette: multi-layer oval falloff (not just r²) that
+//     mimics a lens barrel, deeper in corners than sides.
+//   • Film grain: temporally varying per-pixel noise, luma-weighted so
+//     highlights stay clean and shadows carry the grain (photographic).
 // ════════════════════════════════════════════════════════════════════════
 
-// Eight curated triads — each a color story we ease through (A → B → C → A …).
-// Stored as 8 × 3 = 24 vec3s.
-//   0  Aten Reign Ascension      — red → orange → gold
-//   1  Wedgework cool            — cobalt → cyan → mint
-//   2  Skyspace Twilight         — indigo → magenta → ivory
-//   3  Roden Crater Dawn         — cobalt → coral → bone
-//   4  Ganzfeld Mint             — sage → teal → cream
-//   5  Wedgework Bruise          — purple → violet → rose
-//   6  Notion Motion Aqua        — turquoise → cyan → pearl
-//   7  Tate Modern Sunrise       — warm gold → amber → ivory
+// ── Palette ───────────────────────────────────────────────────────────
 vec3 paletteA(int idx) {
-    // 0 Aten Reign Ascension — red → orange → gold
-    if (idx == 0) return vec3(0.86, 0.18, 0.16);
-    if (idx == 1) return vec3(0.96, 0.46, 0.18);
-    if (idx == 2) return vec3(0.98, 0.80, 0.30);
-    // 3 Wedgework cool — cobalt → cyan → mint
-    if (idx == 3) return vec3(0.10, 0.28, 0.78);
-    if (idx == 4) return vec3(0.18, 0.62, 0.86);
-    if (idx == 5) return vec3(0.46, 0.86, 0.74);
-    // 6 Skyspace Twilight — indigo → magenta → ivory
-    if (idx == 6) return vec3(0.16, 0.14, 0.46);
-    if (idx == 7) return vec3(0.74, 0.30, 0.62);
-    if (idx == 8) return vec3(0.96, 0.92, 0.86);
-    // 9 Roden Crater Dawn — cobalt → coral → bone
+    if (idx == 0)  return vec3(0.86, 0.18, 0.16);
+    if (idx == 1)  return vec3(0.96, 0.46, 0.18);
+    if (idx == 2)  return vec3(0.98, 0.80, 0.30);
+    if (idx == 3)  return vec3(0.10, 0.28, 0.78);
+    if (idx == 4)  return vec3(0.18, 0.62, 0.86);
+    if (idx == 5)  return vec3(0.46, 0.86, 0.74);
+    if (idx == 6)  return vec3(0.16, 0.14, 0.46);
+    if (idx == 7)  return vec3(0.74, 0.30, 0.62);
+    if (idx == 8)  return vec3(0.96, 0.92, 0.86);
     if (idx == 9)  return vec3(0.16, 0.30, 0.62);
     if (idx == 10) return vec3(0.94, 0.50, 0.42);
     if (idx == 11) return vec3(0.96, 0.92, 0.82);
-    // 12 Ganzfeld Mint — sage → teal → cream
     if (idx == 12) return vec3(0.58, 0.78, 0.62);
     if (idx == 13) return vec3(0.22, 0.66, 0.62);
     if (idx == 14) return vec3(0.96, 0.94, 0.82);
-    // 15 Wedgework Bruise — purple → violet → rose
     if (idx == 15) return vec3(0.34, 0.16, 0.52);
     if (idx == 16) return vec3(0.58, 0.28, 0.78);
     if (idx == 17) return vec3(0.92, 0.52, 0.66);
-    // 18 Notion Motion Aqua — turquoise → cyan → pearl
     if (idx == 18) return vec3(0.20, 0.74, 0.70);
     if (idx == 19) return vec3(0.30, 0.82, 0.92);
     if (idx == 20) return vec3(0.94, 0.96, 0.94);
-    // 21 Tate Modern Sunrise — warm gold → amber → ivory
     if (idx == 21) return vec3(0.94, 0.72, 0.30);
     if (idx == 22) return vec3(0.96, 0.56, 0.22);
     return vec3(0.98, 0.94, 0.84);
 }
 
-// Mood routing — which triads does each mood draw from, and in what order?
-// Each mood has a 6-slot ring (two triads chained). Ganzfeld is a curated
-// random walk through all 8 triads (one color per triad) for max variety.
 int moodRing(int mood, int slot) {
-    // Aten Reign — Aten Reign Ascension + Tate Modern Sunrise (warm)
     if (mood == 0) {
         if (slot == 0) return 0;  if (slot == 1) return 1;  if (slot == 2) return 2;
         if (slot == 3) return 21; if (slot == 4) return 22; return 23;
     }
-    // Wedgework — cool wedgework + bruise wedgework
     if (mood == 1) {
         if (slot == 0) return 3;  if (slot == 1) return 4;  if (slot == 2) return 5;
         if (slot == 3) return 15; if (slot == 4) return 16; return 17;
     }
-    // Ganzfeld — random walk: one peak from each of 6 different triads
     if (mood == 2) {
         if (slot == 0) return 1;  if (slot == 1) return 4;  if (slot == 2) return 7;
         if (slot == 3) return 10; if (slot == 4) return 13; return 19;
     }
-    // Skyspace — Skyspace Twilight + Roden Crater Dawn (dwell longer)
     if (slot == 0) return 6;  if (slot == 1) return 7;  if (slot == 2) return 8;
     if (slot == 3) return 9;  if (slot == 4) return 10; return 11;
 }
 
-// Smooth ease: smootherstep — Ken Perlin's quintic. Slower at endpoints
-// than smoothstep, which matters because Turrell transitions live in
-// the endpoints. Combined with a long cycle this becomes invisible.
 float smoother(float x) {
     x = clamp(x, 0.0, 1.0);
     return x * x * x * (x * (x * 6.0 - 15.0) + 10.0);
 }
 
-// RGB → HSV → RGB so we can do a saturation lift on bass.
 vec3 rgb2hsv(vec3 c) {
     vec4 K = vec4(0.0, -1.0/3.0, 2.0/3.0, -1.0);
     vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
@@ -115,9 +91,62 @@ vec3 hsv2rgb(vec3 c) {
     return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 
-// 1D hash for the treble shimmer — keep it minimal; corners only.
+// ── Hash / noise utilities ─────────────────────────────────────────────
 float hash21(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+float hash11(float p) {
+    return fract(sin(p * 127.1) * 43758.5453);
+}
+
+// 2D value noise — smooth interpolation between random lattice points
+float vnoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    float a = hash21(i);
+    float b = hash21(i + vec2(1.0, 0.0));
+    float c = hash21(i + vec2(0.0, 1.0));
+    float d = hash21(i + vec2(1.0, 1.0));
+    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+
+// Layered (fractal) smooth noise — 3 octaves, kept cheap
+float fbm(vec2 p) {
+    float v = 0.0;
+    float amp = 0.5;
+    float freq = 1.0;
+    for (int i = 0; i < 3; i++) {
+        v   += amp * vnoise(p * freq);
+        amp  *= 0.5;
+        freq *= 2.1;
+    }
+    return v; // roughly [0,1]
+}
+
+// Domain-warped fbm — the warp makes the noise curl organically
+float warpFbm(vec2 p) {
+    vec2 q = vec2(fbm(p + vec2(0.0, 0.0)),
+                  fbm(p + vec2(5.2, 1.3)));
+    vec2 r = vec2(fbm(p + 4.0 * q + vec2(1.7, 9.2)),
+                  fbm(p + 4.0 * q + vec2(8.3, 2.8)));
+    return fbm(p + 4.0 * r);
+}
+
+// ── Film grain ────────────────────────────────────────────────────────
+// Temporally varying grain. Uses a hash over (uv-cell, frame-bucket) so
+// it changes every frame but is spatially correlated at sub-pixel scale.
+float filmGrain(vec2 uv, float t) {
+    // Randomise per-frame with a coarse time bucket so it flickers at
+    // ~24 fps feel regardless of actual render rate.
+    float timeSeed = floor(t * 24.0);
+    // Two-sample hash for a roughly Gaussian distribution via Box-Muller.
+    float u1 = hash21(uv * RENDERSIZE.xy + timeSeed * 17.3);
+    float u2 = hash21(uv * RENDERSIZE.xy * 1.3 + timeSeed * 31.7 + 7.0);
+    // Approximate Gaussian: average of uniforms (central limit theorem, 2 samples)
+    float g = (u1 + u2) * 0.5 - 0.5; // [-0.5, 0.5], roughly bell-shaped
+    return g;
 }
 
 void main() {
@@ -125,97 +154,141 @@ void main() {
     vec2 ndc = uv * 2.0 - 1.0;
     float t  = TIME;
 
-    int mood = int(clamp(float(mood), 0.0, 3.0) + 0.5);
+    int moodI = int(clamp(float(mood), 0.0, 3.0) + 0.5);
 
     // ── Audio split ────────────────────────────────────────────────────
-    // Split the single audioReact scalar into bass/mid/treble bands using
-    // three different time-shaped envelopes so the shader behaves musically
-    // even from a single input. Each band stays whisper-quiet — Turrell
-    // would never tolerate a kick-pumping wall. (Slowed slightly to match
-    // the calmer cycle.)
-    float a   = clamp(audioReact, 0.0, 2.0);
-    float bass = a * (0.55 + 0.45 * sin(t * 0.7));      // slow swell
-    float mid  = a * (0.50 + 0.50 * sin(t * 0.36 + 1.3)); // medium
-    float treb = a * (0.50 + 0.50 * sin(t * 2.1 + 2.1));  // gentle flicker
+    float a    = clamp(audioReact, 0.0, 2.0);
+    float bass = a * (0.55 + 0.45 * sin(t * 0.7));
+    float mid  = a * (0.50 + 0.50 * sin(t * 0.36 + 1.3));
+    float treb = a * (0.50 + 0.50 * sin(t * 2.1 + 2.1));
     bass = max(bass, 0.0);
     mid  = max(mid,  0.0);
     treb = max(treb, 0.0);
 
     // ── Cycle position ─────────────────────────────────────────────────
-    // cycleDuration is the full ring period (20–120s). Skyspace dwells
-    // 1.6× longer per color than the others. Mid subtly modulates the
-    // rate (within ±5%, slowed from ±12% — keep it serene).
-    float transitionScale = (mood == 3) ? 1.6 : 1.0;
+    float transitionScale = (moodI == 3) ? 1.6 : 1.0;
     float period = max(cycleDuration, 20.0) * transitionScale;
     float rate   = 1.0 / period * (1.0 + 0.05 * (mid - 0.5));
-    float phase  = t * rate;                      // continuous
-    float ringF  = phase * 6.0;                   // 6 slots per full ring
+    float phase  = t * rate;
+    float ringF  = phase * 6.0;
     float slotF  = floor(ringF);
-    float frac   = smoother(ringF - slotF);       // ease this slot
+    float frac   = smoother(ringF - slotF);
     int   sA     = int(mod(slotF,       6.0));
     int   sB     = int(mod(slotF + 1.0, 6.0));
 
-    int   idxA   = moodRing(mood, sA);
-    int   idxB   = moodRing(mood, sB);
+    int   idxA   = moodRing(moodI, sA);
+    int   idxB   = moodRing(moodI, sB);
     vec3  cA     = paletteA(idxA);
     vec3  cB     = paletteA(idxB);
 
-    // Primary Ganzfeld field — eased mix between the two curated hues.
-    vec3 field = mix(cA, cB, frac);
+    // ── Organic breathing — domain warp the sample coordinate ──────────
+    // Two nested slow waves displace the "color sample point" so the
+    // field breathes and ripples as if made of light passing through warm
+    // air. The displacement is kept tiny (≤ organicStrength * 0.18 NDC)
+    // so it reads as atmosphere rather than animation.
+    float orgS = clamp(organicStrength, 0.0, 1.0);
 
-    // ── Wedgework gradient wash ────────────────────────────────────────
-    // A direction across the canvas (wedgeAngle radians from +x), with a
-    // slow drift of ±30° (≈0.524 rad) over the full cycle so the gradient
-    // direction never sits still — but the motion is below the threshold
-    // of conscious perception, like a sundial.
-    float drift     = 0.5236 * sin(phase * 6.2832); // ±30° over one cycle
-    float angleNow  = wedgeAngle + drift;
+    // Primary slow breathing: a gentle oscillating warp center
+    float breathA = sin(t * 0.11) * 0.5 + 0.5;   // 0..1, ~57s period
+    float breathB = sin(t * 0.073 + 1.9) * 0.5 + 0.5; // orthogonal phase
+
+    // Domain warp sample — we sample the warp function at a slow-moving
+    // version of the fragment coordinate. The result offsets the color
+    // mixing weight spatially.
+    vec2 warpSeed = ndc * 0.55 + vec2(t * 0.007, t * 0.0043);
+    float warpVal  = warpFbm(warpSeed);                // [0, 1]
+    float warpVal2 = warpFbm(warpSeed.yx + vec2(3.7, 1.1)); // orthogonal
+
+    // Slow pulsing displacement (sub-pixel feel, ±organicStrength * 0.18)
+    vec2 disp = vec2(warpVal - 0.5, warpVal2 - 0.5) * orgS * 0.18;
+
+    // Breathing scale: the field expands and contracts very slowly
+    // (±1.5% max), like lungs, so bright areas gently pulsate.
+    float breathScale = 1.0 + orgS * 0.015 * sin(t * 0.094 + warpVal * 2.0);
+
+    // Apply organic displacement to NDC for wedge + color mixing
+    vec2 ndcOrg = ndc * breathScale + disp;
+
+    // Secondary slow "shimmer plane" — a second lower-frequency warp
+    // modulates the interpolation fraction slightly per pixel.
+    float shimmerWarp = vnoise(ndc * 1.8 + vec2(t * 0.019, t * 0.013)) - 0.5;
+    float fracOrg = clamp(frac + shimmerWarp * orgS * 0.06, 0.0, 1.0);
+
+    // Primary Ganzfeld field with organic frac
+    vec3 field = mix(cA, cB, fracOrg);
+
+    // ── Wedgework gradient ─────────────────────────────────────────────
+    float drift    = 0.5236 * sin(phase * 6.2832);
+    float angleNow = wedgeAngle + drift;
     vec2  wDir = vec2(cos(angleNow), sin(angleNow));
-    float wT   = dot(ndc, wDir);                       // [-~1.4, +~1.4]
-    wT         = clamp(0.5 + 0.5 * wT, 0.0, 1.0);      // [0,1]
-    // Asymmetric: brighter on one edge, dimmer on the other. Gentle.
+    float wT   = dot(ndcOrg, wDir);
+    wT         = clamp(0.5 + 0.5 * wT, 0.0, 1.0);
     float wedge = mix(1.0 - wedgeStrength, 1.0 + wedgeStrength, wT);
     field *= wedge;
 
-    // Faint chromatic crossfade across the wedge — the bright side leans
-    // toward the NEXT color in the ring; the dim side toward the previous.
-    // This is the Turrell trick: edges of the field already read as the
-    // hue you're transitioning into, so the eye can't fix the moment.
+    // Chromatic edge bleed
     int   sPrev = int(mod(slotF + 5.0, 6.0));
-    vec3  cPrev = paletteA(moodRing(mood, sPrev));
+    vec3  cPrev = paletteA(moodRing(moodI, sPrev));
     field = mix(field, mix(cPrev, cB, wT), 0.10);
 
-    // ── Audio: bass saturation lift, treble corner shimmer ─────────────
-    // Bass: 5–10% saturation lift (HSV). Barely perceptible.
+    // ── Bass saturation lift ───────────────────────────────────────────
     vec3 hsv = rgb2hsv(field);
     hsv.y    = clamp(hsv.y + 0.05 + 0.05 * bass, 0.0, 1.0);
-    // tiny hue nudge from bass — keeps it alive without "moving"
     hsv.x    = fract(hsv.x + 0.004 * bass);
     field    = hsv2rgb(hsv);
 
-    // Treble: chromatic shimmer ONLY at corners — mist effect. The center
-    // stays silent. Slowed (was 6.0 — now 2.4) to match the new pace.
-    float r2  = dot(ndc, ndc);                    // 0 center, ~2 corner
+    // ── Treble corner shimmer ──────────────────────────────────────────
+    float r2     = dot(ndcOrg, ndcOrg);
     float corner = smoothstep(0.6, 1.6, r2);
     float shimmerN = hash21(floor(uv * RENDERSIZE.xy * 0.5) + floor(t * 2.4));
     vec3  shimmer  = vec3(shimmerN, hash21(uv + 13.7), hash21(uv + 91.1)) - 0.5;
     field += shimmer * corner * treb * 0.018;
 
-    // ── Skyspace sun-arc — only when mood == 3, very subtle ────────────
-    // A barely-there warm tint that travels across the wedge axis on a
-    // very slow cycle, like the sun moving over a Skyspace oculus.
-    if (mood == 3) {
-        float arc = 0.5 + 0.5 * sin(t * 0.0084);  // ~12 minute cycle
+    // ── Skyspace sun-arc ───────────────────────────────────────────────
+    if (moodI == 3) {
+        float arc = 0.5 + 0.5 * sin(t * 0.0084);
         float arcMask = exp(-pow((wT - arc) * 2.6, 2.0));
         field += vec3(0.06, 0.04, 0.01) * arcMask;
     }
 
-    // ── Vignette — corners fall into the surrounding room ──────────────
-    // Soft, smooth, never crushing. vignette param sets the depth.
-    float falloff = 1.0 - vignette * smoothstep(0.2, 1.8, r2);
+    // ── Organic slow-pulse luminance modulation ────────────────────────
+    // A very gentle (≤1.4%) luma pulse drifts across the field following
+    // the warp — feels like the light source itself is breathing.
+    float lumPulse = 1.0 + orgS * 0.014 * (warpVal - 0.5);
+    field *= lumPulse;
+
+    // ── Cinematic vignette ─────────────────────────────────────────────
+    // Multi-layer: an elliptical outer crush + a soft inner glow roll-off.
+    // This mimics a film lens barrel more faithfully than a radial r² term.
+    // vignetteDepth controls the cinema crush independently of the original
+    // vignette (edge falloff) parameter which remains as architectural trim.
+    vec2 ndcAsp  = vec2(ndc.x, ndc.y * (RENDERSIZE.y / max(RENDERSIZE.x, 1.0)));
+    float vigR   = length(ndcAsp);                      // aspect-corrected radius
+    // Outer barrel crush — strong at extreme corners
+    float barrelV = smoothstep(0.55, 1.35, vigR);
+    // Inner roll-off — very gentle, starts at center edge
+    float innerV  = smoothstep(0.0, 0.8, vigR) * 0.18;
+    float cinemaVig = 1.0 - clamp(vignetteDepth, 0.0, 1.0) * (barrelV * 0.85 + innerV);
+    field *= cinemaVig;
+
+    // Original architectural edge falloff (separate from cinema vignette)
+    float r2raw  = dot(ndc, ndc);
+    float falloff = 1.0 - vignette * smoothstep(0.2, 1.8, r2raw);
     field *= falloff;
 
-    // Overall luminance — Light & Space rooms run bright but never harsh.
+    // ── Film grain ─────────────────────────────────────────────────────
+    // Luma-weighted: shadows carry more grain (photographic silver-halide
+    // behaviour). Highlights stay clean. Grain is added post-vignette so
+    // dark corners have appropriately noisy blacks like film.
+    float luma    = dot(field, vec3(0.299, 0.587, 0.114));
+    // Shadow weight: more grain in darker areas
+    float shadowW = 1.0 - smoothstep(0.0, 0.65, luma);
+    float grainW  = mix(0.4, 1.0, shadowW);             // 0.4 in highlights, 1.0 in shadows
+    float grain   = filmGrain(uv, t);
+    float grainAmt = clamp(grainStrength, 0.0, 1.0) * 0.028 * grainW;
+    field += grain * grainAmt;
+
+    // Overall luminance
     field *= luminance;
 
     // The output is LINEAR HDR; host applies tone mapping.

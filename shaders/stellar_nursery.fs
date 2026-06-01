@@ -142,8 +142,13 @@ void main(){
         float mag = baseMag*twinkle + 2.5*ignEnv;
 
         float d = length(p - sp);
+        vec2 rel = p - sp;
         // sharp core
         float core = exp(-d*d*9000.0/(1.0+8.0*ignEnv));
+        // 4-point diffraction spikes — the lens-flare cue that sells bright
+        // stars (gated to the brighter ones so faint stars stay pinpoints).
+        float spike = (exp(-abs(rel.x)*170.0) + exp(-abs(rel.y)*170.0))
+                    * exp(-d*d*45.0) * smoothstep(0.5, 1.0, baseMag + ignEnv);
         // halo
         float halo = exp(-d*d*55.0)*0.35;
 
@@ -157,20 +162,30 @@ void main(){
         float haloStrength = (0.5 + ignEnv*1.5) * ionisationGlow;
 
         col += starCol * core * mag * starBrightness;
+        col += starCol * spike * mag * starBrightness * 0.5;
         col += starCol * halo * mag * starBrightness * 0.6;
         col += nebHalo * halo * haloStrength * (0.3 + ignEnv);
     }
 
     // soft vignette
-    float vig = smoothstep(1.6, 0.4, length(p));
-    col *= mix(0.7, 1.05, vig);
-
-    // gentle global lift on bass
+    float vig = smoothstep(1.7, 0.35, length(p));
+    col *= mix(0.62, 1.08, vig);
     col *= 1.0 + 0.15*bass;
 
-    // tonemap-ish
-    col = col / (1.0 + col*0.55);
-    col = pow(max(col, 0.0), vec3(0.95));
+    // ACES-style filmic tonemap — richer contrast + highlight rolloff than the
+    // old Reinhard, and what gives the stars/gas that lit "engine" punch.
+    col *= 1.6;                                   // expose into the curve
+    vec3 ta = col*(col + 0.0245786) - 0.000090537;
+    vec3 tb = col*(0.983729*col + 0.4329510) + 0.238081;
+    col = clamp(ta / tb, 0.0, 1.0);
+    // gentle cool-shadow / warm-highlight grade
+    col = mix(col, col*vec3(0.93,0.97,1.06), 0.3);
+    col = pow(col, vec3(0.92));
 
-    gl_FragColor = vec4(col, 1.0);
+    // Dithering — destroys the 8-bit gradient banding that reads as "cheap"
+    // on smooth nebula falloffs.
+    float dn = hash12(gl_FragCoord.xy + fract(t)*71.0);
+    col += (dn - 0.5) / 255.0;
+
+    gl_FragColor = vec4(max(col, 0.0), 1.0);
 }

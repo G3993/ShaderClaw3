@@ -1,6 +1,6 @@
 /*{
-  "DESCRIPTION": "Underwater — looking up from the deep. Volumetric god rays pierce down through dancing caustics, rising bubbles trail upward toward the rippling surface. Deep-to-aqua depth gradient, HDR linear output so the sun disc and brightest caustic peaks catch bloom.",
-  "CREDIT": "ShaderClaw — original underwater god-ray composition",
+  "DESCRIPTION": "Underwater — looking up from the deep. Volumetric god rays pierce down through dancing caustics, rising bubbles trail upward toward the rippling surface. Slow parallax drift adds depth; soft directional light/shadow planes give the water column a 3D feel. Deep-to-aqua depth gradient, HDR linear output so the sun disc and brightest caustic peaks catch bloom.",
+  "CREDIT": "ShaderClaw — original underwater god-ray composition, depth/light extensions",
   "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
   "INPUTS": [
     { "NAME": "sunPosX",          "LABEL": "Sun X",            "TYPE": "float", "DEFAULT": 0.50, "MIN": 0.0,  "MAX": 1.0 },
@@ -13,6 +13,11 @@
     { "NAME": "causticScale",     "LABEL": "Caustic Scale",    "TYPE": "float", "DEFAULT": 4.0,  "MIN": 1.0,  "MAX": 10.0 },
     { "NAME": "bubbleCount",      "LABEL": "Bubbles",          "TYPE": "long",  "DEFAULT": 24,   "VALUES": [0,12,24,48,96],      "LABELS": ["0","12","24","48","96"] },
     { "NAME": "bubbleRise",       "LABEL": "Bubble Rise",      "TYPE": "float", "DEFAULT": 0.12, "MIN": 0.0,  "MAX": 0.6 },
+    { "NAME": "driftSpeed",       "LABEL": "Drift Speed",      "TYPE": "float", "DEFAULT": 0.04, "MIN": 0.0,  "MAX": 0.2 },
+    { "NAME": "driftAmount",      "LABEL": "Drift Amount",     "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0,  "MAX": 2.0 },
+    { "NAME": "lightAngle",       "LABEL": "Light Angle",      "TYPE": "float", "DEFAULT": 0.35, "MIN": -1.57,"MAX": 1.57 },
+    { "NAME": "shadowSoftness",   "LABEL": "Shadow Softness",  "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0,  "MAX": 1.0 },
+    { "NAME": "shadowDepth",      "LABEL": "Shadow Depth",     "TYPE": "float", "DEFAULT": 0.40, "MIN": 0.0,  "MAX": 1.0 },
     { "NAME": "depthColor",       "LABEL": "Deep Color",       "TYPE": "color", "DEFAULT": [0.015, 0.045, 0.115, 1.0] },
     { "NAME": "surfaceColor",     "LABEL": "Surface Color",    "TYPE": "color", "DEFAULT": [0.20,  0.65,  0.85,  1.0] },
     { "NAME": "sunColor",         "LABEL": "Sun Color",        "TYPE": "color", "DEFAULT": [1.00,  0.95,  0.80,  1.0] },
@@ -24,36 +29,40 @@
 // ====================================================================
 // Underwater — looking up from the deep.
 //
-// Screen-space composition (no raymarching needed for this view):
 //   • Depth gradient → fake 3D depth
 //   • Animated caustics → wavy light refraction patterns
 //   • Volumetric god rays → radial brightness march toward the sun
-//   • Rising bubbles → upward-drifting particles with rim highlights
-//   • Drifting motes → ambient particulate
-//   • Surface ripple haze at the top of the frame
+//   • Directional water-column light/shadow planes (new)
+//   • Slow parallax drift on multiple depth layers (new)
+//   • Ambient occlusion-style depth darkening (new)
+//   • Rising bubbles with rim highlights
+//   • Drifting motes / particulate
+//   • Surface ripple haze
 //
-// HDR linear output — peaks at the sun disc, caustic crests, and
-// bubble rims exceed 1.0 so Easel's bloom pass catches them.
+// HDR linear output — peaks > 1.0 intentional for bloom.
 // ====================================================================
 
 #define PI 3.14159265
 
-float h11(float x) { return fract(sin(x * 127.1) * 43758.5453); }
-float h12(vec2 p)  { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+// ─── Utility hashes ───────────────────────────────────────────────
+float h11(float x)  { return fract(sin(x * 127.1) * 43758.5453); }
+float h12(vec2 p)   { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
+// Value noise
 float vnoise(vec2 p) {
     vec2 i = floor(p), f = fract(p);
     f = f * f * (3.0 - 2.0 * f);
-    float a = h12(i);
-    float b = h12(i + vec2(1.0, 0.0));
-    float c = h12(i + vec2(0.0, 1.0));
-    float d = h12(i + vec2(1.0, 1.0));
-    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+    return mix(mix(h12(i),               h12(i + vec2(1,0)), f.x),
+               mix(h12(i + vec2(0,1)),   h12(i + vec2(1,1)), f.x), f.y);
 }
 
-// Sharp caustic field — 4 oriented sin layers with sharpened peaks,
-// warped by a low-frequency distortion so cells dance organically
-// rather than tile rigidly.
+// Two-octave fbm for drift/warp
+float fbm2(vec2 p) {
+    return 0.5 * vnoise(p) + 0.25 * vnoise(p * 2.03 + 5.7);
+}
+
+// ─── Caustics ─────────────────────────────────────────────────────
+// Sharp caustic field — 4 oriented sin layers with sharpened peaks.
 float caustic(vec2 p, float t) {
     vec2 q = p;
     q.x += sin(p.y * 1.5 + t * 0.7) * 0.45;
@@ -69,46 +78,122 @@ float caustic(vec2 p, float t) {
     return c * 0.6;
 }
 
-// Cheap sin-grid caustic used inside the god-ray loop (full caustic
-// is too costly to call 64-128 times per pixel).
+// Cheap version for the god-ray loop.
 float causticFast(vec2 p, float t) {
     float a = 0.5 + 0.5 * sin(p.x * 12.0 + t * 1.5);
     float b = 0.5 + 0.5 * sin(p.y * 14.0 - t * 1.1);
     return pow(a * b, 3.0);
 }
 
-void main() {
-    vec2 res    = RENDERSIZE;
-    vec2 uv     = gl_FragCoord.xy / res;
-    float aspect = res.x / res.y;
-    float audio = clamp(audioReact, 0.0, 2.0);
-    float t     = TIME;
+// ─── Directional light / shadow planes ────────────────────────────
+// Simulates shafts of shadow cast by unseen surface debris / waves.
+// We build several soft "shadow bands" perpendicular to the light
+// direction and fade them with depth so they appear to originate near
+// the surface and dissolve before they reach the abyss.
+float shadowPlanes(vec2 uv, float aspect, float t) {
+    // Light direction vector in screen space, derived from lightAngle.
+    vec2 ldir = vec2(sin(lightAngle), cos(lightAngle));
+    // Project uv onto the perpendicular axis to get band coordinate.
+    vec2 uvA = vec2(uv.x * aspect, uv.y);
+    float proj = dot(uvA, vec2(-ldir.y, ldir.x));
+    // Slowly drifting band offset (very slow — almost imperceptible but
+    // adds that sense of the surface moving far above).
+    float offset = t * driftSpeed * 0.4;
+    // Three overlapping bands at different frequencies / speeds.
+    float bands =
+        0.50 * (0.5 + 0.5 * sin((proj * 3.1 + offset * 1.0) * 4.0))
+      + 0.30 * (0.5 + 0.5 * sin((proj * 5.3 - offset * 0.7) * 6.5))
+      + 0.20 * (0.5 + 0.5 * sin((proj * 8.7 + offset * 1.3) * 9.0));
+    // Shadow is strongest near the surface, fades toward the deep.
+    float depthFade = smoothstep(0.0, 0.75, uv.y);
+    // Softness control: low = crisp bands, high = barely visible.
+    float sharpness = mix(12.0, 1.5, shadowSoftness);
+    float shadow = pow(bands, sharpness);
+    return shadow * depthFade * shadowDepth;
+}
 
-    // ─── Depth gradient — dark abyss below, surface light above ───
-    float depth = pow(uv.y, 1.15);
+// ─── Parallax drift layers ─────────────────────────────────────────
+// Returns a soft volumetric haze contribution from "depth layer" i,
+// with a slow organic drift. Layering creates parallax depth cues.
+vec3 driftLayer(vec2 uv, float aspect, float t, float layerIndex,
+                vec3 tint, float brightness) {
+    float li = layerIndex;
+    // Each layer drifts at a slightly different speed and direction —
+    // slower layers appear further away (parallax).
+    float speed  = driftSpeed * (0.3 + li * 0.25);
+    vec2  drift  = vec2(sin(t * speed + li * 2.3),
+                        cos(t * speed * 0.7 + li * 1.7)) * driftAmount * 0.06;
+    // Scale and warp the noise lookup per layer.
+    float sc = 2.8 + li * 1.6;
+    vec2  p  = uv * vec2(aspect, 1.0) * sc + drift + li * vec2(3.1, 7.4);
+    float n  = fbm2(p + fbm2(p * 0.6) * 0.5);
+    // A soft blob shape — pow sharpens so we get distinct cloudy pockets.
+    float blob = pow(clamp(n, 0.0, 1.0), 3.5);
+    // Fade toward the top (absorbed by surface light) and at the very bottom.
+    float depthFade = smoothstep(0.0, 0.2, uv.y) * smoothstep(1.0, 0.55, uv.y);
+    return tint * blob * brightness * depthFade;
+}
+
+void main() {
+    vec2  res    = RENDERSIZE;
+    vec2  uv     = gl_FragCoord.xy / res;
+    float aspect = res.x / res.y;
+    float audio  = clamp(audioReact, 0.0, 2.0);
+    float t      = TIME;
+
+    // ─── Slow global drift — gentle horizontal sway of the whole
+    // scene, as if we ourselves are drifting with the current.
+    float driftX = sin(t * driftSpeed * 0.8)        * driftAmount * 0.012;
+    float driftY = sin(t * driftSpeed * 0.53 + 1.2) * driftAmount * 0.006;
+    vec2  uvD    = uv + vec2(driftX, driftY);
+    // Clamp so sampling stays sane near edges.
+    uvD = clamp(uvD, 0.001, 0.999);
+
+    // Aspect-corrected spatial UV for features.
+    vec2 puv = vec2(uvD.x * aspect, uvD.y);
+
+    // ─── Depth gradient ───────────────────────────────────────────
+    float depth = pow(uvD.y, 1.15);
     vec3 col = mix(depthColor.rgb, surfaceColor.rgb, depth);
 
-    // Aspect-corrected UV for spatial features (caustics, bubbles).
-    vec2 puv = vec2(uv.x * aspect, uv.y);
+    // ─── Ambient-occlusion-style depth darkening ──────────────────
+    // Water absorbs light; the deeper we look the darker it gets.
+    // This is separate from the gradient — it's a multiplicative term
+    // so colours stay physically plausible rather than just shifting hue.
+    float aoDepth = mix(0.55, 1.0, pow(uvD.y, 0.7));
+    col *= aoDepth;
 
-    // ─── Caustics — strongest near the surface, fade with depth ───
-    float surfaceProx = smoothstep(0.0, 0.85, uv.y);
+    // ─── Volumetric drift / haze layers ──────────────────────────
+    // Three parallax layers of soft particulate/haze tinted to the
+    // water column colour.  Brightness is kept subtle.
+    vec3 hazeCol = mix(depthColor.rgb, surfaceColor.rgb, 0.5);
+    col += driftLayer(uvD, aspect, t, 0.0, hazeCol, 0.06);
+    col += driftLayer(uvD, aspect, t, 1.0, hazeCol * 1.1, 0.04);
+    col += driftLayer(uvD, aspect, t, 2.0, hazeCol * 0.9, 0.03);
+
+    // ─── Directional shadow planes ────────────────────────────────
+    float shad = shadowPlanes(uvD, aspect, t);
+    col *= 1.0 - shad * 0.6;  // Darken — never go fully black.
+
+    // ─── Caustics ─────────────────────────────────────────────────
+    float surfaceProx = smoothstep(0.0, 0.85, uvD.y);
     float c1 = caustic(puv * causticScale,                              t * causticSpeed);
     float c2 = caustic(puv * causticScale * 1.7 + vec2(5.3, 2.1),       t * causticSpeed * 1.3);
     float c  = max(c1, c2 * 0.7) * surfaceProx;
     c *= 1.0 + audioMid * audio * 0.7;
+    // Caustics also respect the shadow planes — bright patches sit
+    // between shadow bands, mimicking real underwater light.
+    c *= 0.65 + shad * 0.35;
     col += sunColor.rgb * c * causticIntensity * 0.55;
 
-    // ─── God rays — radial march toward the sun, accumulating
-    // brightness through a soft sun mask and a cheap surface-refraction
-    // mask that makes rays "shimmer" through the wavy water surface.
+    // ─── God rays ─────────────────────────────────────────────────
     vec2 sunUV = vec2(sunPosX, sunPosY);
     int N = int(godraySamples);
     if (N < 4)   N = 4;
     if (N > 256) N = 256;
     float Nf = float(N);
-    vec2 deltaUV = (uv - sunUV) / Nf;
-    vec2 samplePos = uv;
+    vec2 deltaUV   = (uvD - sunUV) / Nf;
+    vec2 samplePos = uvD;
     float illum  = 0.0;
     float weight = 1.0;
     for (int i = 0; i < 256; i++) {
@@ -126,14 +211,26 @@ void main() {
     illum *= 1.0 + audioBass * audio * 1.3;
     col += sunColor.rgb * illum * 2.4;
 
-    // ─── Sun disc + halo ─────────────────────────────────────────
-    float sunDist = length((uv - sunUV) * vec2(aspect, 1.0));
+    // ─── Sun disc + halo ──────────────────────────────────────────
+    float sunDist = length((uvD - sunUV) * vec2(aspect, 1.0));
     float sunDisc = smoothstep(0.12, 0.02, sunDist);
     col += sunColor.rgb * sunDisc * 2.0;
     float halo = exp(-sunDist * 2.6);
     col += sunColor.rgb * halo * 0.45;
 
-    // ─── Bubbles — rising motes with a bright rim ─────────────────
+    // ─── Directional side-light scattering ───────────────────────
+    // A soft glow coming from the light direction, giving the water
+    // column a sense of being lit from one side (like sunlight entering
+    // at an angle).  Very gentle — just enough to notice.
+    vec2 ldir2D = normalize(vec2(sin(lightAngle), cos(lightAngle)));
+    float sideLight = dot(normalize(vec2(uvD.x * aspect - sunPosX * aspect,
+                                         uvD.y - sunPosY)), ldir2D);
+    sideLight = clamp(sideLight, 0.0, 1.0);
+    sideLight = pow(sideLight, 3.0);
+    sideLight *= smoothstep(1.0, 0.3, uvD.y); // only below surface
+    col += sunColor.rgb * sideLight * 0.08 * (1.0 - aoDepth + 0.5);
+
+    // ─── Bubbles ──────────────────────────────────────────────────
     int B = int(bubbleCount);
     if (B > 96) B = 96;
     for (int i = 0; i < 96; i++) {
@@ -144,30 +241,36 @@ void main() {
         float size = mix(0.003, 0.014, h11(fi * 23.7));
         float life = mix(4.0, 12.0, h11(fi * 31.1));
         float phase = fract((t + seed.y * 100.0) * bubbleRise / life * 8.0);
+        // Gentle lateral drift on bubbles too — they follow the current.
         bx += sin(t * 0.5 + fi * 2.1) * 0.018;
+        bx += driftX * 0.5;
         vec2 bp = vec2(bx, phase);
         float bd = length(puv - bp);
         float fill = smoothstep(size, size * 0.4, bd);
         float rim  = smoothstep(size * 0.95, size * 0.75, bd) -
-                     smoothstep(size * 0.75, size * 0.5, bd);
+                     smoothstep(size * 0.75, size * 0.5,  bd);
         float lifeFade = smoothstep(0.0, 0.10, phase) *
-                        smoothstep(1.0, 0.85, phase);
-        col += vec3(0.65, 0.85, 0.95) * fill * lifeFade * 0.22;
+                         smoothstep(1.0, 0.85, phase);
+        // Bubbles are slightly brighter on the side facing the light.
+        float bubbleLit = 0.7 + 0.3 * sin(lightAngle + atan(bp.y - 0.5, bp.x - sunPosX * aspect));
+        col += vec3(0.65, 0.85, 0.95) * fill * lifeFade * 0.22 * bubbleLit;
         col += vec3(1.30, 1.55, 1.70) * rim  * lifeFade * 0.65;
     }
 
     // ─── Drifting motes / particulate ────────────────────────────
-    float motes = pow(vnoise(uv * 90.0 + vec2(0.0, t * 0.06)), 9.0);
+    // UV offset so motes drift slowly with the current.
+    vec2 moteUV = uv * 90.0 + vec2(driftX * 12.0, t * 0.06 + driftY * 8.0);
+    float motes = pow(vnoise(moteUV), 9.0);
     col += vec3(0.45, 0.65, 0.85) * motes * 0.45;
 
-    // ─── Surface ripple band at the very top ─────────────────────
-    if (uv.y > 0.90) {
-        float ripple = 0.5 + 0.5 * sin(uv.x * 80.0 * aspect + t * 3.5);
-        ripple *= smoothstep(0.90, 1.0, uv.y);
+    // ─── Surface ripple band ──────────────────────────────────────
+    if (uvD.y > 0.90) {
+        float ripple = 0.5 + 0.5 * sin(uvD.x * 80.0 * aspect + t * 3.5);
+        ripple *= smoothstep(0.90, 1.0, uvD.y);
         col += sunColor.rgb * ripple * 0.20;
     }
 
-    // ─── Vignette ────────────────────────────────────────────────
+    // ─── Vignette ─────────────────────────────────────────────────
     vec2 vuv = uv * (1.0 - uv.yx);
     float vig = pow(max(vuv.x * vuv.y * 16.0, 0.0), max(vignette, 0.001));
     col *= mix(1.0, vig, clamp(vignette, 0.0, 1.0));

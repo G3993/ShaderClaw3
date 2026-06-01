@@ -1,44 +1,40 @@
 /*{
   "CATEGORIES": ["Generator", "Art Movement", "Audio Reactive"],
-  "DESCRIPTION": "Color-field after Rothko's Orange Red Yellow (1961) and the Chapel paintings (1971) — stacked Gaussian-blurred rectangles floating on a coloured ground, edges deeply feathered, very slow shimmer. Meditative, never crisp. The breath is gentle even when audio is loud — the painting refuses to be hurried.",
+  "DESCRIPTION": "Rothko color-field — luminous stacked bands that breathe, melt, and bleed into one another like pigment dissolving in warm light. Mood-first, movement-second.",
   "INPUTS": [
-    { "NAME": "rothkoWork", "LABEL": "Painting", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Orange Red Yellow (1961)", "No.61 Rust+Blue (1953)", "White Center (1950)", "Seagram Maroon (1958)", "Black on Maroon (1959)"] },
-    { "NAME": "bandCount", "LABEL": "Bands", "TYPE": "float", "MIN": 2.0, "MAX": 4.0, "DEFAULT": 3.0 },
-    { "NAME": "feather", "LABEL": "Feather", "TYPE": "float", "MIN": 0.04, "MAX": 0.30, "DEFAULT": 0.16 },
-    { "NAME": "innerInset", "LABEL": "Rectangle Inset", "TYPE": "float", "MIN": 0.0, "MAX": 0.18, "DEFAULT": 0.06 },
-    { "NAME": "groundColor", "LABEL": "Ground Color", "TYPE": "color", "DEFAULT": [0.32, 0.10, 0.10, 1.0] },
-    { "NAME": "topColor", "LABEL": "Top Band", "TYPE": "color", "DEFAULT": [0.92, 0.50, 0.22, 1.0] },
-    { "NAME": "midColor", "LABEL": "Middle Band", "TYPE": "color", "DEFAULT": [0.85, 0.20, 0.14, 1.0] },
-    { "NAME": "botColor", "LABEL": "Bottom Band", "TYPE": "color", "DEFAULT": [0.95, 0.78, 0.30, 1.0] },
-    { "NAME": "shimmer", "LABEL": "Shimmer", "TYPE": "float", "MIN": 0.0, "MAX": 0.12, "DEFAULT": 0.04 },
-    { "NAME": "shimmerSpeed", "LABEL": "Shimmer Speed", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.04 },
-    { "NAME": "bandBleed",   "LABEL": "Band Bleed",      "TYPE": "float", "MIN": 0.0, "MAX": 0.50, "DEFAULT": 0.18 },
-    { "NAME": "groundMix",   "LABEL": "Ground Mix",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.20 },
-    { "NAME": "colorBreath", "LABEL": "Color Breath",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.30 },
-    { "NAME": "breathSpeed", "LABEL": "Breath Speed",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.10 },
-    { "NAME": "rotation",    "LABEL": "Rotation",        "TYPE": "float", "MIN": -0.5,"MAX": 0.5,  "DEFAULT": 0.0 },
-    { "NAME": "vignette", "LABEL": "Vignette", "TYPE": "float", "MIN": 0.0, "MAX": 0.5, "DEFAULT": 0.22 },
-    { "NAME": "grain", "LABEL": "Film Grain", "TYPE": "float", "MIN": 0.0, "MAX": 0.04, "DEFAULT": 0.012 },
-    { "NAME": "audioInfluence", "LABEL": "Audio Influence (capped)", "TYPE": "float", "MIN": 0.0, "MAX": 0.10, "DEFAULT": 0.04 },
-    { "NAME": "useTex", "LABEL": "Sample Tex for Bands", "TYPE": "bool", "DEFAULT": false },
-    { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" }
+    { "NAME": "rothkoWork",    "LABEL": "Painting",          "TYPE": "long",  "DEFAULT": 0, "VALUES": [0,1,2,3,4], "LABELS": ["Orange Red Yellow","No.61 Rust+Blue","White Center","Seagram Maroon","Black on Maroon"] },
+    { "NAME": "topColor",      "LABEL": "Top Color",         "TYPE": "color", "DEFAULT": [0.92,0.50,0.22,1.0] },
+    { "NAME": "midColor",      "LABEL": "Mid Color",         "TYPE": "color", "DEFAULT": [0.85,0.20,0.14,1.0] },
+    { "NAME": "botColor",      "LABEL": "Bot Color",         "TYPE": "color", "DEFAULT": [0.95,0.78,0.30,1.0] },
+    { "NAME": "groundColor",   "LABEL": "Ground",            "TYPE": "color", "DEFAULT": [0.28,0.08,0.08,1.0] },
+    { "NAME": "breathSpeed",   "LABEL": "Breath Speed",      "TYPE": "float", "MIN": 0.0,  "MAX": 0.6,  "DEFAULT": 0.09 },
+    { "NAME": "meltDepth",     "LABEL": "Melt / Bleed",      "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.72 },
+    { "NAME": "feather",       "LABEL": "Edge Feather",      "TYPE": "float", "MIN": 0.05, "MAX": 0.55, "DEFAULT": 0.28 },
+    { "NAME": "innerInset",    "LABEL": "Rectangle Inset",   "TYPE": "float", "MIN": 0.0,  "MAX": 0.18, "DEFAULT": 0.05 },
+    { "NAME": "bandCount",     "LABEL": "Bands",             "TYPE": "float", "MIN": 2.0,  "MAX": 4.0,  "DEFAULT": 3.0 },
+    { "NAME": "waveAmount",    "LABEL": "Edge Waviness",     "TYPE": "float", "MIN": 0.0,  "MAX": 0.04, "DEFAULT": 0.010 },
+    { "NAME": "shimmer",       "LABEL": "Surface Shimmer",   "TYPE": "float", "MIN": 0.0,  "MAX": 0.18, "DEFAULT": 0.05 },
+    { "NAME": "shimmerScale",  "LABEL": "Shimmer Scale",     "TYPE": "float", "MIN": 0.5,  "MAX": 8.0,  "DEFAULT": 2.2 },
+    { "NAME": "paintTexture",  "LABEL": "Paint Texture",     "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.38 },
+    { "NAME": "textureScale",  "LABEL": "Texture Scale",     "TYPE": "float", "MIN": 1.0,  "MAX": 16.0, "DEFAULT": 4.5 },
+    { "NAME": "chrShimmer",    "LABEL": "Chromatic Edge",    "TYPE": "float", "MIN": 0.0,  "MAX": 0.025,"DEFAULT": 0.008 },
+    { "NAME": "vignette",      "LABEL": "Vignette",          "TYPE": "float", "MIN": 0.0,  "MAX": 0.8,  "DEFAULT": 0.30 },
+    { "NAME": "grain",         "LABEL": "Film Grain",        "TYPE": "float", "MIN": 0.0,  "MAX": 0.05, "DEFAULT": 0.014 },
+    { "NAME": "audioInfluence","LABEL": "Audio Influence",   "TYPE": "float", "MIN": 0.0,  "MAX": 0.12, "DEFAULT": 0.04 },
+    { "NAME": "useTex",        "LABEL": "Sample Texture",    "TYPE": "bool",  "DEFAULT": false },
+    { "NAME": "inputTex",      "LABEL": "Texture",           "TYPE": "image" }
   ]
 }*/
 
-// Rothko's chapel surfaces look luminous because the bands are stacked
-// over a chromatic GROUND (not white) and their edges are *much* more
-// feathered than they look — the eye reads the soft transition as glow.
-// We model each band as a smoothstep-bounded vertical slab with a small
-// horizontal inset, low-amplitude noise breathing it, and a very slow
-// shimmer ripple. Audio influence is hard-capped because Rothko's whole
-// argument is patience.
+// ── low-level noise ───────────────────────────────────────────────────────────
 
 float hash21(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 }
 
 float vnoise(vec2 p) {
-    vec2 ip = floor(p), fp = fract(p);
+    vec2 ip = floor(p);
+    vec2 fp = fract(p);
     fp = fp * fp * (3.0 - 2.0 * fp);
     float a = hash21(ip);
     float b = hash21(ip + vec2(1.0, 0.0));
@@ -47,150 +43,210 @@ float vnoise(vec2 p) {
     return mix(mix(a, b, fp.x), mix(c, d, fp.x), fp.y);
 }
 
-float bandShape(vec2 uv, float yLo, float yHi, float xInset, float feath) {
-    // Slow horizontal undulation on band edges — Rothko's edges aren't
-    // axis-aligned; they have organic micro-wobble.
-    float edgeULo = 0.005 * sin(uv.x * 8.0 + TIME * 0.03);
-    float edgeUHi = 0.005 * cos(uv.x * 7.0 + TIME * 0.04);
-    yLo += edgeULo;
-    yHi += edgeUHi;
-    float yMask = smoothstep(yLo - feath, yLo + feath, uv.y)
-                * (1.0 - smoothstep(yHi - feath, yHi + feath, uv.y));
-    float xMask = smoothstep(xInset, xInset + feath * 0.6, uv.x)
-                * (1.0 - smoothstep(1.0 - xInset - feath * 0.6,
-                                    1.0 - xInset, uv.x));
-    // Painterly inner glow — band centres slightly brighter than edges
-    // so each rectangle reads as having internal radiance, not flat fill.
-    // The chapel-painting "light from within" Rothko quality.
-    float bandCenterY  = (yLo + yHi) * 0.5;
-    float dyFromCenter = abs(uv.y - bandCenterY)
-                       / max((yHi - yLo) * 0.5, 1e-4);
-    yMask *= 1.0 + 0.08 * (1.0 - dyFromCenter * dyFromCenter);
-    return yMask * xMask;
+// 5-octave fBm — used for paint texture & melt fields
+float fbm(vec2 p) {
+    float v = 0.0, a = 0.52;
+    for (int i = 0; i < 5; i++) {
+        v += a * vnoise(p);
+        p  = p * 2.03 + vec2(3.7, 1.9);
+        a *= 0.5;
+    }
+    return v;
 }
+
+// Smooth colour ramp across three anchors
+vec3 triGrad(float t, vec3 cA, vec3 cB, vec3 cC) {
+    t = clamp(t, 0.0, 1.0);
+    return (t < 0.5) ? mix(cA, cB, t * 2.0) : mix(cB, cC, (t - 0.5) * 2.0);
+}
+
+// ── band mask (feathered rect with wavy edges) ────────────────────────────────
+
+float bandMask(vec2 uv, float yLo, float yHi, float xIn, float fth, float wave) {
+    float wx = wave * sin(uv.x * 11.0 + TIME * 0.07);
+    float wy = wave * cos(uv.x *  7.3 - TIME * 0.05);
+    float ym = smoothstep(yLo - fth + wx, yLo + fth + wx, uv.y)
+             * (1.0 - smoothstep(yHi - fth + wy, yHi + fth + wy, uv.y));
+    float xm = smoothstep(xIn, xIn + fth * 0.5, uv.x)
+             * (1.0 - smoothstep(1.0 - xIn - fth * 0.5, 1.0 - xIn, uv.x));
+    return ym * xm;
+}
+
+// ── main ──────────────────────────────────────────────────────────────────────
 
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
 
-    // Ground — chromatic, never neutral. Subtle vertical gradient so it
-    // doesn't read as flat digital fill.
-    vec3 col = groundColor.rgb
-             * (0.95 + 0.10 * smoothstep(0.0, 1.0, uv.y));
+    // ── resolve palette ───────────────────────────────────────────────────────
+    int rw = int(rothkoWork);
 
-    int N = int(clamp(bandCount, 2.0, 4.0));
-
-    // Per-painting band palette — five canonical Rothko colour worlds.
-    // User colour pickers (topColor/midColor/botColor) override only
-    // when rothkoWork == 0 (default), preserving manual control.
     vec3 cTop = topColor.rgb;
     vec3 cMid = midColor.rgb;
     vec3 cBot = botColor.rgb;
-    int rw = int(rothkoWork);
-    if      (rw == 1) { cTop = vec3(0.55, 0.18, 0.18); cMid = vec3(0.20, 0.22, 0.45); cBot = vec3(0.40, 0.16, 0.20); }
-    else if (rw == 2) { cTop = vec3(0.92, 0.86, 0.78); cMid = vec3(0.85, 0.32, 0.20); cBot = vec3(0.55, 0.18, 0.40); }
-    else if (rw == 3) { cTop = vec3(0.30, 0.05, 0.06); cMid = vec3(0.18, 0.04, 0.05); cBot = vec3(0.10, 0.03, 0.04); }
-    else if (rw == 4) { cTop = vec3(0.05, 0.02, 0.03); cMid = vec3(0.28, 0.05, 0.06); cBot = vec3(0.10, 0.03, 0.04); }
-    if (useTex && IMG_SIZE_inputTex.x > 0.0) {
-        cTop = texture(inputTex, vec2(0.5, 0.85)).rgb;
-        cMid = texture(inputTex, vec2(0.5, 0.50)).rgb;
-        cBot = texture(inputTex, vec2(0.5, 0.15)).rgb;
+    vec3 cGnd = groundColor.rgb;
+
+    if      (rw == 1) { cTop = vec3(0.52,0.16,0.16); cMid = vec3(0.18,0.20,0.44); cBot = vec3(0.38,0.14,0.20); cGnd = vec3(0.06,0.04,0.12); }
+    else if (rw == 2) { cTop = vec3(0.93,0.87,0.79); cMid = vec3(0.84,0.30,0.18); cBot = vec3(0.52,0.16,0.38); cGnd = vec3(0.18,0.09,0.14); }
+    else if (rw == 3) { cTop = vec3(0.28,0.04,0.05); cMid = vec3(0.16,0.03,0.04); cBot = vec3(0.08,0.02,0.03); cGnd = vec3(0.05,0.01,0.02); }
+    else if (rw == 4) { cTop = vec3(0.04,0.01,0.02); cMid = vec3(0.26,0.04,0.05); cBot = vec3(0.08,0.02,0.03); cGnd = vec3(0.02,0.01,0.01); }
+
+    if (useTex) {
+        cTop = IMG_NORM_PIXEL(inputTex, vec2(0.5, 0.85)).rgb;
+        cMid = IMG_NORM_PIXEL(inputTex, vec2(0.5, 0.50)).rgb;
+        cBot = IMG_NORM_PIXEL(inputTex, vec2(0.5, 0.15)).rgb;
     }
 
-    // Color breath — slowly cross-fade band colors among themselves so
-    // the painting is never literally still. Three independent phases.
-    if (colorBreath > 0.001) {
-        float bt = TIME * breathSpeed;
-        vec3 bTop = mix(cTop, mix(cMid, cBot, 0.5), 0.5 + 0.5 * sin(bt * 0.7));
-        vec3 bMid = mix(cMid, cTop, 0.5 + 0.5 * sin(bt * 0.5 + 1.7));
-        vec3 bBot = mix(cBot, cMid, 0.5 + 0.5 * sin(bt * 0.6 + 3.1));
-        cTop = mix(cTop, bTop, colorBreath);
-        cMid = mix(cMid, bMid, colorBreath);
-        cBot = mix(cBot, bBot, colorBreath);
-    }
+    // ── breathing / melting ───────────────────────────────────────────────────
+    // Three phase-offset sinusoids drive slow cross-colour cycling.
+    // Each band inhales from its neighbour, exhales back — never mechanical.
+    float bt = TIME * breathSpeed;
 
-    // Blend each band with ground for that subdued chapel feel
-    cTop = mix(cTop, groundColor.rgb, groundMix);
-    cMid = mix(cMid, groundColor.rgb, groundMix);
-    cBot = mix(cBot, groundColor.rgb, groundMix);
+    float ph0 = sin(bt * 0.53)              * 0.5 + 0.5;
+    float ph1 = sin(bt * 0.41 + 1.8)        * 0.5 + 0.5;
+    float ph2 = sin(bt * 0.37 + 3.5)        * 0.5 + 0.5;
+    float ph3 = sin(bt * 0.29 + 5.1)        * 0.5 + 0.5;
+    float ph4 = sin(bt * 0.61 + 2.4)        * 0.5 + 0.5;
+    float ph5 = sin(bt * 0.47 + 4.7)        * 0.5 + 0.5;
 
-    // Slow rotation — a gentle drift keyed off rotation slider
-    if (rotation != 0.0) {
-        vec2 c = uv - 0.5;
-        float a = TIME * rotation * 0.05;
-        float ca = cos(a), sa = sin(a);
-        uv = 0.5 + vec2(ca * c.x - sa * c.y, sa * c.x + ca * c.y);
-    }
+    // Each colour breathes toward its neighbour band *and* toward ground
+    vec3 bTop = mix(cTop, mix(cMid, cGnd, 0.25), ph0);
+    vec3 bMid = mix(cMid, mix(cBot, cTop, ph1),  ph2);
+    vec3 bBot = mix(cBot, mix(cTop, cGnd, 0.15), ph3);
 
-    // Band layout — top band tallest, middle smaller, bottom small.
-    // Insets give the floating-rectangle feel. Feather is large.
-    float xIn = clamp(innerInset, 0.0, 0.4);
-    float fth = feather;
+    cTop = mix(cTop, bTop, meltDepth);
+    cMid = mix(cMid, bMid, meltDepth);
+    cBot = mix(cBot, bBot, meltDepth);
 
-    // bandBleed widens the feather for cross-band color bleed
-    float fthB = fth * (1.0 + bandBleed * 4.0);
+    // Secondary slow "tide" — overall hue drift all three bands together
+    float tide = sin(bt * 0.19) * 0.5 + 0.5;
+    cTop = mix(cTop, mix(cTop, cBot, 0.30), tide * meltDepth * 0.5);
+    cMid = mix(cMid, mix(cMid, cTop, 0.30), (1.0 - tide) * meltDepth * 0.5);
+    cBot = mix(cBot, mix(cBot, cMid, 0.30), ph4 * meltDepth * 0.5);
 
-    // Vertical color flow — colors slowly travel up and down the canvas
-    // over time, swapping between bands so the painting feels alive
-    // (still respecting Rothko's slow tempo). breathSpeed drives this.
-    float flowPhase = TIME * breathSpeed * 0.15;
-    float flowSin   = sin(flowPhase) * 0.5 + 0.5;       // 0..1
-    float flowCos   = sin(flowPhase + 2.094) * 0.5 + 0.5;
-    float flowThree = sin(flowPhase + 4.188) * 0.5 + 0.5;
-    // Crossfade band colors smoothly through each other on a 3-stage
-    // cycle so each band rotates through Top/Mid/Bot positions.
-    vec3 flowTop = cTop * flowSin   + cMid * (1.0 - flowSin);
-    vec3 flowMid = cMid * flowCos   + cBot * (1.0 - flowCos);
-    vec3 flowBot = cBot * flowThree + cTop * (1.0 - flowThree);
-    // Mix flow into the originals so it adds to (not replaces) breath
-    cTop = mix(cTop, flowTop, colorBreath * 0.6);
-    cMid = mix(cMid, flowMid, colorBreath * 0.6);
-    cBot = mix(cBot, flowBot, colorBreath * 0.6);
+    // ── ground with vertical luminosity gradient ──────────────────────────────
+    // Ground subtly transitions from the base tone to a slightly warmer top.
+    vec3 col = mix(cGnd * 0.82, cGnd * 1.08, uv.y);
 
-    // Band positions also drift vertically so colors physically move
-    // between zones, not just shift hue in place.
-    float bDrift = sin(TIME * breathSpeed * 0.20) * 0.04 * colorBreath;
+    // Soft large-scale noise wash that bleeds ground into bands
+    float gBleed = fbm(uv * 1.4 + vec2(bt * 0.07, bt * 0.04));
+    col = mix(col, mix(cGnd, cMid, 0.35), gBleed * meltDepth * 0.28);
+
+    // ── parameters ───────────────────────────────────────────────────────────
+    int N    = int(clamp(bandCount, 2.0, 4.0));
+    float xI = clamp(innerInset, 0.0, 0.38);
+    // Feather expands with meltDepth for more painterly bleed
+    float fth = feather * (1.0 + meltDepth * 1.8);
+    float wav = waveAmount;
+
+    // Slow vertical drift of band positions — bands float up/down gently
+    float drift = sin(bt * 0.17) * 0.025 * meltDepth;
+
+    // ── chromatic edge offset ─────────────────────────────────────────────────
+    float cOff = chrShimmer * (0.6 + 0.4 * sin(TIME * 0.41));
+
+    // ── band painting ─────────────────────────────────────────────────────────
+    // Bands are blended per-channel with a tiny chromatic offset for spectral
+    // fringing at the edges — one of Rothko's signature optical effects.
 
     if (N >= 3) {
-        // 3-band Orange/Red/Yellow layout, drifting vertically
-        float t1 = bandShape(uv, 0.62 + bDrift, 0.92 + bDrift, xIn, fthB);
-        float t2 = bandShape(uv, 0.34 - bDrift, 0.58 - bDrift, xIn, fthB);
-        float t3 = bandShape(uv, 0.08 + bDrift * 0.5, 0.30 + bDrift * 0.5, xIn, fthB);
-        col = mix(col, cTop, t1);
-        col = mix(col, cMid, t2);
-        col = mix(col, cBot, t3);
+        // Top band
+        float y1L = 0.60 + drift;
+        float y1H = 0.92 + drift * 0.5;
+        float mR1 = bandMask(uv + vec2(cOff, 0.0), y1L, y1H, xI, fth, wav);
+        float mG1 = bandMask(uv,                   y1L, y1H, xI, fth, wav);
+        float mB1 = bandMask(uv - vec2(cOff, 0.0), y1L, y1H, xI, fth, wav);
+
+        // Mid band
+        float y2L = 0.32 - drift;
+        float y2H = 0.58 - drift * 0.5;
+        float mR2 = bandMask(uv + vec2(cOff, 0.0), y2L, y2H, xI, fth, wav);
+        float mG2 = bandMask(uv,                   y2L, y2H, xI, fth, wav);
+        float mB2 = bandMask(uv - vec2(cOff, 0.0), y2L, y2H, xI, fth, wav);
+
+        // Bot band
+        float y3L = 0.06 + drift * 0.3;
+        float y3H = 0.28 + drift * 0.3;
+        float mR3 = bandMask(uv + vec2(cOff, 0.0), y3L, y3H, xI, fth, wav);
+        float mG3 = bandMask(uv,                   y3L, y3H, xI, fth, wav);
+        float mB3 = bandMask(uv - vec2(cOff, 0.0), y3L, y3H, xI, fth, wav);
+
+        col.r = mix(col.r, cTop.r, mR1); col.g = mix(col.g, cTop.g, mG1); col.b = mix(col.b, cTop.b, mB1);
+        col.r = mix(col.r, cMid.r, mR2); col.g = mix(col.g, cMid.g, mG2); col.b = mix(col.b, cMid.b, mB2);
+        col.r = mix(col.r, cBot.r, mR3); col.g = mix(col.g, cBot.g, mG3); col.b = mix(col.b, cBot.b, mB3);
+
     } else {
-        // 2-band layout
-        float t1 = bandShape(uv, 0.55 + bDrift, 0.92 + bDrift, xIn, fthB);
-        float t2 = bandShape(uv, 0.10 - bDrift, 0.46 - bDrift, xIn, fthB);
-        col = mix(col, cTop, t1);
-        col = mix(col, cBot, t2);
+        float y1L = 0.53 + drift;
+        float y1H = 0.92 + drift * 0.3;
+        float mR1 = bandMask(uv + vec2(cOff, 0.0), y1L, y1H, xI, fth, wav);
+        float mG1 = bandMask(uv,                   y1L, y1H, xI, fth, wav);
+        float mB1 = bandMask(uv - vec2(cOff, 0.0), y1L, y1H, xI, fth, wav);
+
+        float y2L = 0.08 - drift;
+        float y2H = 0.46 - drift * 0.3;
+        float mR2 = bandMask(uv + vec2(cOff, 0.0), y2L, y2H, xI, fth, wav);
+        float mG2 = bandMask(uv,                   y2L, y2H, xI, fth, wav);
+        float mB2 = bandMask(uv - vec2(cOff, 0.0), y2L, y2H, xI, fth, wav);
+
+        col.r = mix(col.r, cTop.r, mR1); col.g = mix(col.g, cTop.g, mG1); col.b = mix(col.b, cTop.b, mB1);
+        col.r = mix(col.r, cBot.r, mR2); col.g = mix(col.g, cBot.g, mG2); col.b = mix(col.b, cBot.b, mB2);
     }
 
-    // Slow noise breath — symmetric around 1.0 so bands brighten and
-    // darken equally rather than always trending toward darker.
-    float n = vnoise(uv * 2.6 + TIME * shimmerSpeed)
-            + 0.5 * vnoise(uv * 5.3 - TIME * shimmerSpeed * 0.7);
-    col *= 1.0 + (n - 0.5) * shimmer;
+    // ── paint texture ─────────────────────────────────────────────────────────
+    // Two fBm layers at different scales and drift speeds create the sense of
+    // impasto — thick paint with micro-ridges catching light differently.
+    if (paintTexture > 0.001) {
+        float tScale = textureScale;
+        float tT     = TIME * breathSpeed * 0.12;
 
-    // Vignette — corners darker, the painting is centred.
-    float vig = pow(length(uv - 0.5) * 1.4, 3.0) * vignette;
+        float tex1 = fbm(uv * tScale            + vec2(tT * 0.23,  tT * 0.17));
+        float tex2 = fbm(uv * tScale * 1.8      + vec2(-tT * 0.19, tT * 0.31) + vec2(4.1, 2.3));
+        float tex3 = fbm(uv * tScale * 0.45     + vec2(tT * 0.11, -tT * 0.14) + vec2(1.7, 6.1));
+
+        float tex  = tex1 * 0.55 + tex2 * 0.28 + tex3 * 0.17;
+
+        // Modulate brightness — brighter at peaks, slightly darker in troughs
+        float modulate = 1.0 + (tex - 0.48) * paintTexture * 1.6;
+        col = clamp(col * modulate, 0.0, 1.0);
+
+        // Colour-tinted lift at luminous peaks (warm/cool depending on phase)
+        float tintPhase = sin(bt * 0.31) * 0.5 + 0.5;
+        vec3  tint      = mix(cTop * 1.1, cBot * 0.9, tintPhase);
+        float lift      = max(0.0, tex - 0.60) * paintTexture * 0.22;
+        col = clamp(col + tint * lift, 0.0, 1.0);
+    }
+
+    // ── surface shimmer ───────────────────────────────────────────────────────
+    // A two-octave noise rides on top as a fine luminous tremor.
+    if (shimmer > 0.001) {
+        float sc = shimmerScale;
+        float n1 = vnoise(uv * sc           + vec2(TIME * breathSpeed * 0.55, TIME * breathSpeed * 0.40));
+        float n2 = vnoise(uv * sc * 2.1     - vec2(TIME * breathSpeed * 0.42, TIME * breathSpeed * 0.31));
+        float shm = (n1 * 0.65 + n2 * 0.35);
+        col *= 1.0 + (shm - 0.5) * shimmer * 2.0;
+    }
+
+    // ── inner luminous centre glow ────────────────────────────────────────────
+    // Each Rothko painting has a warm inner luminosity — slightly brighter
+    // near the vertical centre of the canvas, as if lit from within.
+    float centreGlow = exp(-pow((uv.x - 0.5) * 2.8, 2.0))
+                     * exp(-pow((uv.y - 0.5) * 1.4, 2.0));
+    centreGlow *= 0.18 * (0.7 + 0.3 * sin(bt * 0.23));
+    col += col * centreGlow;
+
+    // ── vignette ──────────────────────────────────────────────────────────────
+    float d   = length((uv - 0.5) * vec2(1.0, 1.15));
+    float vig = pow(d * 1.35, 3.0) * vignette;
     col *= 1.0 - vig;
 
-    // Film grain so the surface doesn't read as digital.
-    col += (hash21(uv * RENDERSIZE) - 0.5) * grain;
+    // ── film grain ────────────────────────────────────────────────────────────
+    float g = hash21(uv * RENDERSIZE + vec2(float(FRAMEINDEX) * 0.317, 0.0));
+    col += (g - 0.5) * grain;
 
-    // Audio capped low — bass nudges luminance ≤ audioInfluence.
-    col *= 1.0 + audioBass * audioInfluence * 0.7
-              + audioLevel * audioInfluence;
+    // ── audio ─────────────────────────────────────────────────────────────────
+    float audioMod = 1.0 + audioBass  * audioInfluence * 0.80
+                        + audioMid   * audioInfluence * 0.40
+                        + audioLevel * audioInfluence * 0.30;
+    col *= audioMod;
 
-    // Surprise: once every ~47 seconds, a single horizontal "memory line"
-    // ghosts across the canvas — the trace of a previous painting on the
-    // same canvas. Visible for ~3 seconds, very faint.
-    float gPhase = fract(TIME / 47.0);
-    float gFade = smoothstep(0.0, 0.05, gPhase) * smoothstep(0.20, 0.10, gPhase);
-    float gY = 0.30 + 0.40 * hash21(vec2(floor(TIME / 47.0), 0.0));
-    float gLine = exp(-pow((uv.y - gY) * 80.0, 2.0));
-    col += vec3(0.20, 0.15, 0.10) * gLine * gFade * 0.25;
-
-    gl_FragColor = vec4(col, 1.0);
+    gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

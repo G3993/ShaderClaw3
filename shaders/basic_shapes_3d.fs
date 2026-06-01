@@ -1,393 +1,539 @@
 /*{
   "CATEGORIES": ["3D", "Generator", "Audio Reactive"],
-  "DESCRIPTION": "A still life — four SDF primitives (sphere, cube, capsule, glass disc) on a Tillmans-style infinite cyc, rule-of-thirds composition. Backdrop curves smoothly into floor. Five mood backdrops (off-white, polished void, Judd cobalt/vermilion, Marfa concrete). Surfaces vary: matte chalk, Kapoor chrome, anodized cobalt, refractive glass. Three-point studio light — warm key + cool fill + neutral rim, hard key shadows on the floor. Bass kicks each piece 0.97→1.03 with staggered phase, mid drives orbit, treble shimmers reflections. Stays alive in silence. LINEAR HDR.",
+  "DESCRIPTION": "Fluid abstract 3D elements floating in space — SDF primitives (sphere, cube, capsule, torus, torus knot, glass disc) auto-morphing with refraction, studio three-point lighting, wave/nebula background, chromatic aberration, DoF, and full audio reactivity.",
   "INPUTS": [
-    { "NAME": "camDist",       "LABEL": "Camera Distance", "TYPE": "float", "MIN": 1.5, "MAX": 12.0, "DEFAULT": 4.5 },
-    { "NAME": "camHeight",     "LABEL": "Camera Height",   "TYPE": "float", "MIN": -3.0, "MAX": 4.0, "DEFAULT": 1.2 },
-    { "NAME": "camOrbitSpeed", "LABEL": "Orbit Speed",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 0.18 },
-    { "NAME": "camAzimuth",    "LABEL": "Camera Azimuth",  "TYPE": "float", "MIN": 0.0, "MAX": 6.2832, "DEFAULT": 0.0 },
-    { "NAME": "keyAngle",      "LABEL": "Key Light Angle", "TYPE": "float", "MIN": 0.0, "MAX": 6.2832, "DEFAULT": 0.785 },
-    { "NAME": "keyElevation",  "LABEL": "Key Elevation",   "TYPE": "float", "MIN": 0.0, "MAX": 1.5708, "DEFAULT": 0.7 },
-    { "NAME": "keyColor",      "LABEL": "Key Light",       "TYPE": "color", "DEFAULT": [1.0, 0.94, 0.82, 1.0] },
-    { "NAME": "fillColor",     "LABEL": "Fill Light",      "TYPE": "color", "DEFAULT": [0.55, 0.70, 1.0, 1.0] },
-    { "NAME": "ambient",       "LABEL": "Ambient",         "TYPE": "float", "MIN": 0.0, "MAX": 0.5,  "DEFAULT": 0.08 },
-    { "NAME": "rimStrength",   "LABEL": "Rim Strength",    "TYPE": "float", "MIN": 0.0, "MAX": 1.5,  "DEFAULT": 0.5 },
-    { "NAME": "exposure",      "LABEL": "Exposure",        "TYPE": "float", "MIN": 0.3, "MAX": 3.0,  "DEFAULT": 1.0 },
-    { "NAME": "moodPreset",    "LABEL": "Studio Mood",     "TYPE": "long",  "DEFAULT": 0, "VALUES": [0,1,2,3,4], "LABELS": ["Tillmans White","Kapoor Void","Judd Cobalt","Judd Vermilion","Marfa Concrete"] },
-    { "NAME": "dofStrength",   "LABEL": "Depth of Field",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.0 },
-    { "NAME": "chromaticAb",   "LABEL": "Chromatic Ab.",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.15 },
-    { "NAME": "audioReact",    "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 1.0 }
+    { "NAME": "camDist",       "LABEL": "Camera Distance",  "TYPE": "float", "MIN": 1.5,  "MAX": 12.0,   "DEFAULT": 5.5 },
+    { "NAME": "camHeight",     "LABEL": "Camera Height",    "TYPE": "float", "MIN": -3.0, "MAX": 4.0,    "DEFAULT": 1.0 },
+    { "NAME": "camOrbitSpeed", "LABEL": "Orbit Speed",      "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,    "DEFAULT": 0.14 },
+    { "NAME": "camAzimuth",    "LABEL": "Camera Azimuth",   "TYPE": "float", "MIN": 0.0,  "MAX": 6.2832, "DEFAULT": 0.0 },
+    { "NAME": "keyAngle",      "LABEL": "Key Light Angle",  "TYPE": "float", "MIN": 0.0,  "MAX": 6.2832, "DEFAULT": 0.785 },
+    { "NAME": "keyElevation",  "LABEL": "Key Elevation",    "TYPE": "float", "MIN": 0.0,  "MAX": 1.5708, "DEFAULT": 0.7 },
+    { "NAME": "keyColor",      "LABEL": "Key Light",        "TYPE": "color", "DEFAULT": [1.0, 0.94, 0.82, 1.0] },
+    { "NAME": "fillColor",     "LABEL": "Fill Light",       "TYPE": "color", "DEFAULT": [0.55, 0.70, 1.0, 1.0] },
+    { "NAME": "ambient",       "LABEL": "Ambient",          "TYPE": "float", "MIN": 0.0,  "MAX": 0.5,    "DEFAULT": 0.09 },
+    { "NAME": "rimStrength",   "LABEL": "Rim Strength",     "TYPE": "float", "MIN": 0.0,  "MAX": 1.5,    "DEFAULT": 0.6 },
+    { "NAME": "exposure",      "LABEL": "Exposure",         "TYPE": "float", "MIN": 0.3,  "MAX": 3.0,    "DEFAULT": 1.0 },
+    { "NAME": "uC1",           "LABEL": "Color 1",          "TYPE": "color", "DEFAULT": [1.0, 0.82, 0.55, 1.0] },
+    { "NAME": "uC2",           "LABEL": "Color 2",          "TYPE": "color", "DEFAULT": [0.4, 0.7,  1.0,  1.0] },
+    { "NAME": "uC3",           "LABEL": "Color 3",          "TYPE": "color", "DEFAULT": [1.0, 0.25, 0.45, 1.0] },
+    { "NAME": "uColMode",      "LABEL": "Color Mode",       "TYPE": "long",  "VALUES": [0,1], "LABELS": ["Lit","Custom Palette"], "DEFAULT": 0 },
+    { "NAME": "uShape",        "LABEL": "Shape",            "TYPE": "long",  "VALUES": [0,1,2,3,4,5,6,7], "LABELS": ["Auto Morph","Cube","Prism","Torus","Torus Knot","Sphere","Octahedron","Heart"], "DEFAULT": 0 },
+    { "NAME": "uMorphSpeed",   "LABEL": "Morph Speed",      "TYPE": "float", "MIN": 0.0,  "MAX": 4.0,    "DEFAULT": 0.7 },
+    { "NAME": "uTorThick",     "LABEL": "Toroid Thickness", "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,    "DEFAULT": 0.25 },
+    { "NAME": "floatAmp",      "LABEL": "Float Amplitude",  "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,    "DEFAULT": 0.38 },
+    { "NAME": "bgStyle",       "LABEL": "Background",       "TYPE": "long",  "VALUES": [0,1,2,3], "LABELS": ["Void","Nebula Wave","Tillmans White","Judd Cobalt"], "DEFAULT": 1 },
+    { "NAME": "dofStrength",   "LABEL": "Depth of Field",   "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,    "DEFAULT": 0.0 },
+    { "NAME": "chromaticAb",   "LABEL": "Chromatic Ab.",    "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,    "DEFAULT": 0.18 },
+    { "NAME": "audioReact",    "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,    "DEFAULT": 1.0 }
   ]
 }*/
 
 // ════════════════════════════════════════════════════════════════════════
-//   STILL LIFE — four primitives, one room, three lights.
-//   Tillmans / Kapoor / Judd / Cragg in conversation. Not a tutorial.
+//  FLUID SHAPES — morphing SDF primitives, refractive surfaces,
+//  studio three-point lighting, nebula background, full audio reactivity.
 // ════════════════════════════════════════════════════════════════════════
 
-#define MAX_STEPS 144
+#define MAX_STEPS 128
 #define MAX_DIST  40.0
-#define EPS       0.0007
+#define EPS       0.0008
+#define PI        3.14159265359
+#define TAU       6.28318530718
 
-#define MAT_BACKDROP 0
-#define MAT_CHALK    1
-#define MAT_CHROME   2
-#define MAT_COBALT   3
-#define MAT_GLASS    4
+#define MAT_BG      0
+#define MAT_CHALK   1
+#define MAT_CHROME  2
+#define MAT_COBALT  3
+#define MAT_GLASS   4
+#define MAT_MORPH   5
 
-// ── SDF library ─────────────────────────────────────────────────────────
-float sdSphere(vec3 p, float r) { return length(p) - r; }
-float sdRoundBox(vec3 p, vec3 b, float r) {
-    vec3 q = abs(p) - b;
-    return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0) - r;
-}
-float sdCapsule(vec3 p, float h, float r) {
-    p.y -= clamp(p.y, -h, h);
-    return length(p) - r;
-}
-float sdCylinder(vec3 p, float h, float r) {
-    vec2 d = vec2(length(p.xz) - r, abs(p.y) - h);
-    return min(max(d.x,d.y), 0.0) + length(max(d, 0.0));
-}
-mat2 rot2(float a) { float c=cos(a),s=sin(a); return mat2(c,-s,s,c); }
+// ── Math helpers ────────────────────────────────────────────────────────
+mat2 rot2(float a){ float c=cos(a),s=sin(a); return mat2(c,-s,s,c); }
 
-// Infinite cyc — floor curves smoothly into vertical backdrop via a
-// quarter-arc seam. Region select on (y, z) gives floor, wall, or arc.
-float sdCyc(vec3 p) {
-    float seamZ = -1.4, seamY = 1.4, r = 1.4;
-    if (p.z > seamZ && p.y < seamY) return p.y;                       // floor
-    if (p.y > seamY && p.z < seamZ) return -(p.z - (seamZ - r));      // wall
-    return length(vec2(p.y - seamY, p.z - seamZ)) - r;                // arc
+// ── SDF primitives ──────────────────────────────────────────────────────
+float sdSphere(vec3 p, float r){ return length(p)-r; }
+
+float sdBox(vec3 p, vec3 s){
+    p=abs(p)-s;
+    return length(max(p,0.0))+min(max(p.x,max(p.y,p.z)),0.0);
 }
 
-// ── Scene ──────────────────────────────────────────────────────────────
+float sdRoundBox(vec3 p, vec3 b, float r){
+    vec3 q=abs(p)-b;
+    return length(max(q,0.0))+min(max(q.x,max(q.y,q.z)),0.0)-r;
+}
+
+float sdCapsule(vec3 p, float h, float r){
+    p.y-=clamp(p.y,-h,h);
+    return length(p)-r;
+}
+
+float sdCylinder(vec3 p, float h, float r){
+    vec2 d=vec2(length(p.xz)-r,abs(p.y)-h);
+    return min(max(d.x,d.y),0.0)+length(max(d,0.0));
+}
+
+float sdTorus(vec3 p, float R, float r){
+    vec2 q=vec2(length(p.xz)-R,p.y);
+    return length(q)-r;
+}
+
+float sdBox2d(vec2 p, vec2 s){
+    p=abs(p)-s;
+    return length(max(p,0.0))+min(max(p.x,p.y),0.0);
+}
+
+float sdTorusKnot(vec3 p, float R){
+    vec2 cp=vec2(length(p.xz)-R,p.y);
+    float a=atan(p.x,p.z);
+    cp=cp*rot2(a*8.0);
+    cp.y=abs(cp.y)-0.3;
+    return sdBox2d(cp,vec2(uTorThick*R*0.5,uTorThick*R))*0.4;
+}
+
+float sdTriPrism(vec3 p, vec2 h){
+    vec3 q=abs(p);
+    return max(q.z-h.y, max(q.x*sin(PI/3.0)+p.y*sin(PI/6.0),-p.y)-h.x*sin(PI/6.0));
+}
+
+float sdOctahedron(vec3 p){
+    p=abs(p);
+    return (p.x+p.y+p.z-1.0)*0.57735;
+}
+
+float sdHeart(vec3 p){
+    float sc=1.2;
+    vec3 h=p*sc;
+    float yy=(1.25*h.y-sqrt(abs(h.x)));
+    return (h.x*h.x+yy*yy+h.z*h.z-1.0)/sc;
+}
+
+// ── Morphing shape (from color_cube) ───────────────────────────────────
+float morphShape(vec3 p){
+    int s=int(uShape);
+    if(s==1) return sdBox(p,vec3(1.0));
+    if(s==2) return sdTriPrism(p,vec2(1.0,1.5));
+    if(s==3) return sdTorus(p,1.8,uTorThick*1.8);
+    if(s==4) return sdTorusKnot(p,1.8);
+    if(s==5) return sdSphere(p,1.0);
+    if(s==6) return sdOctahedron(p);
+    if(s==7) return sdHeart(p);
+    // Auto morph
+    float tm=TIME*0.35*uMorphSpeed;
+    float bass=clamp(audioBass,0.0,1.0)*audioReact;
+    tm+=bass*0.3;
+    int idx=int(mod(tm,4.0));
+    float blend=smoothstep(0.2,0.8,mod(tm,1.0));
+    float s0=sdTriPrism(p,vec2(1.0,1.5));
+    float s1=sdBox(p,vec3(1.0));
+    float s2=sdTorus(p,1.8,uTorThick*1.8);
+    float s3=sdTorusKnot(p,1.8);
+    if(idx==0) return mix(s0,s1,blend);
+    if(idx==1) return mix(s1,s2,blend);
+    if(idx==2) return mix(s2,s3,blend);
+    return mix(s3,s0,blend);
+}
+
+// ── Background colour ───────────────────────────────────────────────────
+vec3 bgNebula(vec3 rd){
+    // Wave nebula — from color_cube background()
+    vec3 colT=vec3(0.313,0.816,0.816);
+    vec3 colM=vec3(0.745,0.118,0.243);
+    vec3 colK=vec3(0.475,0.404,0.765);
+    vec3 colH=vec3(1.0,0.776,0.224);
+    float k=rd.y*0.5+0.5;
+    vec3 bg=vec3(1.0-k);
+    float a=atan(rd.x,rd.z);
+    float fade=smoothstep(0.8,0.5,k);
+    bg+=sin(a*2.0+TIME)*sin(a*10.0+TIME)*sin(a*4.0)*fade*colT;
+    bg+=sin(a*10.0+TIME+10.0)*sin(a*2.0+TIME+10.0)*sin(a*6.0+10.0)*fade*colM;
+    bg+=sin(a*5.0+TIME+20.0)*sin(a*3.0+TIME+30.0)*sin(a*8.0+20.0)*fade*colK;
+    bg+=sin(a*3.0+TIME+30.0)*sin(a*5.0+TIME+20.0)*sin(a*10.0+30.0)*fade*colH;
+    return bg;
+}
+
+vec3 bgVoid(vec3 rd){
+    float g=clamp(rd.y*0.5+0.5,0.0,1.0);
+    return mix(vec3(0.012,0.013,0.022),vec3(0.06,0.06,0.08),g);
+}
+
+vec3 bgWhite(vec3 rd){
+    float g=clamp(rd.y*0.5+0.5,0.0,1.0);
+    return mix(vec3(0.76,0.77,0.78),vec3(0.93,0.92,0.90),g);
+}
+
+vec3 bgCobalt(vec3 rd){
+    float g=clamp(rd.y*0.5+0.5,0.0,1.0);
+    return mix(vec3(0.06,0.16,0.55),vec3(0.10,0.28,0.78),g);
+}
+
+vec3 envColor(vec3 rd){
+    int bs=int(bgStyle);
+    if(bs==0) return bgVoid(rd);
+    if(bs==1) return bgNebula(rd);
+    if(bs==2) return bgWhite(rd);
+    return bgCobalt(rd);
+}
+
+// ── Scene map ───────────────────────────────────────────────────────────
 struct Hit { float d; int mat; };
 
-float breath(int idx, float bass) {
-    float ph   = float(idx) * 1.91 + TIME * 1.6;
-    float idle = 0.5 + 0.5 * sin(ph);
-    float t    = mix(idle, bass, clamp(bass * 1.4, 0.0, 1.0));
-    return mix(0.97, 1.03, t);
+float breathe(int idx, float bass){
+    float ph=float(idx)*1.91+TIME*1.4;
+    float idle=0.5+0.5*sin(ph);
+    float t=mix(idle,bass,clamp(bass*1.4,0.0,1.0));
+    return mix(0.95,1.05,t);
 }
 
-Hit map(vec3 p) {
-    Hit best = Hit(1e9, MAT_BACKDROP);
-    float bass = clamp(audioBass, 0.0, 1.0) * audioReact;
+vec3 floatPos(vec3 base, int idx){
+    float amp=floatAmp;
+    float mid=clamp(audioMid,0.0,1.0)*audioReact;
+    float ph=float(idx)*2.39996+TIME;
+    float px=sin(ph*0.71+1.3)*cos(ph*0.43)*amp;
+    float py=sin(ph*0.83)*amp*(0.6+mid*0.4);
+    float pz=cos(ph*0.61+0.7)*sin(ph*0.37)*amp;
+    return base+vec3(px,py,pz);
+}
 
-    float d = sdCyc(p);
-    if (d < best.d) { best.d = d; best.mat = MAT_BACKDROP; }
+Hit map(vec3 p){
+    Hit best;
+    best.d=1e9;
+    best.mat=MAT_BG;
 
-    // Front-left chalk sphere — anchor mass
+    float bass=clamp(audioBass,0.0,1.0)*audioReact;
+    float high=clamp(audioHigh,0.0,1.0)*audioReact;
+
+    // ── MORPHING central shape ──────────────────────────────────────────
     {
-        float s = breath(0, bass);
-        d = sdSphere(p - vec3(-0.55, 0.46 * s, 0.35), 0.46 * s);
-        if (d < best.d) { best.d = d; best.mat = MAT_CHALK; }
+        float s=breathe(4,bass);
+        vec3 lp=p-floatPos(vec3(0.0,0.2,0.0),4);
+        // spin with audio
+        float spinT=TIME*0.18+bass*0.4;
+        lp.xy=rot2(spinT*1.1)*lp.xy;
+        lp.yz=rot2(spinT*0.87)*lp.yz;
+        lp.xz=rot2(spinT*0.63)*lp.xz;
+        float d=morphShape(lp/s)*s;
+        if(d<best.d){best.d=d;best.mat=MAT_MORPH;}
     }
-    // Back-center Kapoor chrome cube, slight tilt
+
+    // ── Chalk sphere — left anchor ──────────────────────────────────────
     {
-        float s = breath(1, bass);
-        vec3 lp = p - vec3(0.15, 0.34 * s, -0.55);
-        lp.xz = rot2(0.42) * lp.xz;
-        d = sdRoundBox(lp, vec3(0.34 * s), 0.012);
-        if (d < best.d) { best.d = d; best.mat = MAT_CHROME; }
+        float s=breathe(0,bass);
+        vec3 lp=p-floatPos(vec3(-2.2,0.0,0.3),0);
+        float d=sdSphere(lp,0.55*s);
+        if(d<best.d){best.d=d;best.mat=MAT_CHALK;}
     }
-    // Back-right Judd capsule — verticality
+
+    // ── Chrome cube — back right ────────────────────────────────────────
     {
-        float s = breath(2, bass);
-        vec3 lp = p - vec3(0.95, 0.78 * s, -0.05);
-        lp.xz = rot2(-0.18) * lp.xz;
-        d = sdCapsule(lp, 0.55 * s, 0.16 * s);
-        if (d < best.d) { best.d = d; best.mat = MAT_COBALT; }
+        float s=breathe(1,bass);
+        vec3 lp=p-floatPos(vec3(2.0,0.5,-0.8),1);
+        lp.xz=rot2(TIME*0.22+high*0.5)*lp.xz;
+        float d=sdRoundBox(lp,vec3(0.42*s),0.018);
+        if(d<best.d){best.d=d;best.mat=MAT_CHROME;}
     }
-    // Front-right glass disc — Cragg horizontal counterweight
+
+    // ── Cobalt capsule — right ──────────────────────────────────────────
     {
-        float s = breath(3, bass);
-        vec3 lp = p - vec3(0.55, 0.045 * s, 0.85);
-        lp.xz = rot2(0.22) * lp.xz;
-        d = sdCylinder(lp, 0.045 * s, 0.46 * s);
-        if (d < best.d) { best.d = d; best.mat = MAT_GLASS; }
+        float s=breathe(2,bass);
+        vec3 lp=p-floatPos(vec3(1.6,-0.4,1.1),2);
+        lp.xz=rot2(-0.22)*lp.xz;
+        float d=sdCapsule(lp,0.6*s,0.18*s);
+        if(d<best.d){best.d=d;best.mat=MAT_COBALT;}
     }
+
+    // ── Glass disc — lower front ────────────────────────────────────────
+    {
+        float s=breathe(3,bass);
+        vec3 lp=p-floatPos(vec3(-1.4,-0.8,0.9),3);
+        lp.xz=rot2(TIME*0.13)*lp.xz;
+        float d=sdCylinder(lp,0.06*s,0.52*s);
+        if(d<best.d){best.d=d;best.mat=MAT_GLASS;}
+    }
+
+    // ── Extra: floating torus — upper back ─────────────────────────────
+    {
+        float s=breathe(5,bass);
+        vec3 lp=p-floatPos(vec3(-0.8,1.8,-1.4),5);
+        lp.yz=rot2(TIME*0.19)*lp.yz;
+        float d=sdTorus(lp,0.5*s,0.14*s);
+        if(d<best.d){best.d=d;best.mat=MAT_CHROME;}
+    }
+
     return best;
 }
 
-vec3 calcNormal(vec3 p) {
-    const vec2 e = vec2(EPS, 0.0);
+vec3 calcNormal(vec3 p){
+    const vec2 e=vec2(EPS,0.0);
     return normalize(vec3(
-        map(p + e.xyy).d - map(p - e.xyy).d,
-        map(p + e.yxy).d - map(p - e.yxy).d,
-        map(p + e.yyx).d - map(p - e.yyx).d
+        map(p+e.xyy).d-map(p-e.xyy).d,
+        map(p+e.yxy).d-map(p-e.yxy).d,
+        map(p+e.yyx).d-map(p-e.yyx).d
     ));
 }
 
-// Soft contact shadow — penumbra grows with distance to occluder so
-// shadows fade from sharp at contact to soft at the cyc. Sharpness
-// (k) was 28 (studio-strobe hard); 10 gives a believable studio key
-// with falloff. Floor at 0.08 prevents pitch-black shadow patches —
-// the global ambient + fill compensate for the rest.
-float keyShadow(vec3 ro, vec3 rd) {
-    float res = 1.0, t = 0.04;
-    for (int i = 0; i < 32; i++) {
-        if (t > 8.0) break;
-        float h = map(ro + rd * t).d;
-        if (h < 0.0008) { res = 0.0; break; }
-        res = min(res, 10.0 * h / t);
-        t  += clamp(h, 0.014, 0.3);
+float softShadow(vec3 ro, vec3 rd){
+    float res=1.0,t=0.05;
+    for(int i=0;i<24;i++){
+        if(t>7.0) break;
+        float h=map(ro+rd*t).d;
+        if(h<0.001){res=0.0;break;}
+        res=min(res,8.0*h/t);
+        t+=clamp(h,0.02,0.35);
     }
-    return clamp(res, 0.08, 1.0);
+    return clamp(res,0.06,1.0);
 }
 
-float ao(vec3 p, vec3 n) {
-    float occ = 0.0, sca = 1.0;
-    for (int i = 0; i < 5; i++) {
-        float h = 0.015 + 0.10 * float(i);
-        occ += (h - map(p + n * h).d) * sca;
-        sca *= 0.92;
+float ao(vec3 p, vec3 n){
+    float occ=0.0,sca=1.0;
+    for(int i=0;i<5;i++){
+        float h=0.02+0.12*float(i);
+        occ+=(h-map(p+n*h).d)*sca;
+        sca*=0.90;
     }
-    return clamp(1.0 - 1.6 * occ, 0.0, 1.0);
+    return clamp(1.0-1.8*occ,0.0,1.0);
 }
 
-// ── Mood — backdrop tint ───────────────────────────────────────────────
-vec3 backdropColor(vec3 p) {
-    vec3 col;
-    float g = clamp(p.y * 0.30 + 0.45, 0.0, 1.0);
-    if (moodPreset == 0)      col = mix(vec3(0.78,0.79,0.80), vec3(0.92,0.91,0.89), g);
-    else if (moodPreset == 1) col = mix(vec3(0.012,0.013,0.018), vec3(0.05,0.05,0.06), g);
-    else if (moodPreset == 2) col = mix(vec3(0.06,0.16,0.55), vec3(0.10,0.28,0.78), g);
-    else if (moodPreset == 3) col = mix(vec3(0.55,0.10,0.05), vec3(0.92,0.26,0.13), g);
-    else {
-        vec3 base = mix(vec3(0.36,0.34,0.31), vec3(0.52,0.49,0.45), g);
-        float n = sin(p.x * 11.3) * sin(p.z * 9.7) * 0.5
-                + sin(p.x * 23.1 + 1.7) * sin(p.z * 19.3 + 0.4) * 0.25;
-        col = base * (1.0 + 0.04 * n);
+// ── Lighting direction helpers ──────────────────────────────────────────
+vec3 sphDir(float a, float e){ return normalize(vec3(cos(a)*cos(e),sin(e),sin(a)*cos(e))); }
+vec3 keyDir()  { return sphDir(keyAngle,keyElevation); }
+vec3 fillDir() { return sphDir(keyAngle+PI,keyElevation*0.5); }
+vec3 rimDir()  { return sphDir(keyAngle+PI*0.5,keyElevation+0.2); }
+vec3 rimCol()  { return mix(keyColor.rgb,vec3(1.0),0.5); }
+
+// ── PBR micro helpers ───────────────────────────────────────────────────
+float ggx(float ndh,float a){float a2=a*a;float d=(ndh*ndh)*(a2-1.0)+1.0;return a2/(PI*d*d);}
+float gSm(float ndv,float ndl,float a){float k=(a+1.0);k=k*k*0.125;return(ndv/(ndv*(1.0-k)+k))*(ndl/(ndl*(1.0-k)+k));}
+vec3 fSch(float vdh,vec3 F0){return F0+(1.0-F0)*pow(1.0-vdh,5.0);}
+
+// ── IBL proxy ───────────────────────────────────────────────────────────
+vec3 ibl(vec3 dir){
+    vec3 top=envColor(vec3(0.0,1.0,0.0));
+    vec3 mid2=envColor(vec3(0.0,0.0,-1.0));
+    vec3 bot=envColor(vec3(0.0,-1.0,0.0))*0.8;
+    return (dir.y>0.0)?mix(mid2,top,smoothstep(0.0,1.0,dir.y))
+                      :mix(mid2,bot,smoothstep(0.0,1.0,-dir.y));
+}
+
+// ── Material shading ────────────────────────────────────────────────────
+vec3 shadeChalk(vec3 p,vec3 n,vec3 v){
+    vec3 albedo=vec3(0.92,0.61,0.49);
+    vec3 L=keyDir();
+    float sh=softShadow(p+n*0.006,L);
+    float wrap=max((dot(n,L)+0.25)/1.25,0.0);
+    float fillT=max(dot(n,fillDir()),0.0);
+    float rim=pow(1.0-max(dot(n,v),0.0),2.5)*max(dot(n,rimDir()),0.0);
+    vec3 H=normalize(L+v);
+    vec3 col=albedo*(ambient+keyColor.rgb*wrap*sh+fillColor.rgb*fillT*0.6)
+            +rimCol()*rim*rimStrength*0.45
+            +keyColor.rgb*pow(max(dot(n,H),0.0),28.0)*sh*0.07;
+    return col*mix(0.55,1.0,ao(p,n));
+}
+
+vec3 shadeChrome(vec3 p,vec3 n,vec3 v){
+    vec3 F0=vec3(0.92,0.94,0.96);
+    vec3 R=reflect(-v,n);
+    float shim=clamp(audioHigh,0.0,1.0)*audioReact;
+    R=normalize(R+vec3(sin(TIME*7.3),cos(TIME*5.7),sin(TIME*4.1))*0.006*shim);
+    vec3 reflCol=ibl(R);
+    float t2=0.02;
+    for(int i=0;i<24;i++){
+        Hit s2=map(p+R*t2);
+        if(s2.d<0.001){reflCol=ibl(R)*0.75;break;}
+        t2+=s2.d;
+        if(t2>5.0)break;
     }
-    col *= mix(1.0, 0.88, smoothstep(1.4, 0.4, p.y) * 0.5);
-    return col;
+    float fres=pow(1.0-max(dot(n,v),0.0),5.0);
+    vec3 spec=mix(F0,vec3(1.0),fres)*reflCol;
+    vec3 L=keyDir();
+    vec3 H=normalize(L+v);
+    float sh=softShadow(p+n*0.006,L);
+    float rim=pow(1.0-max(dot(n,v),0.0),3.0)*max(dot(n,rimDir()),0.0);
+    spec+=ambient*F0;
+    spec+=keyColor.rgb*pow(max(dot(n,H),0.0),220.0)*sh*1.6;
+    spec+=rimCol()*rim*rimStrength*0.35;
+    return spec*mix(0.7,1.0,ao(p,n));
 }
 
-// Cheap room IBL probe — returns a colour for any reflection direction
-vec3 iblProbe(vec3 dir) {
-    vec3 top    = backdropColor(vec3(0.0, 2.5, -1.4));
-    vec3 mid    = backdropColor(vec3(0.0, 0.9, -1.4));
-    vec3 bottom = backdropColor(vec3(0.0, 0.05, 0.0)) * 0.85;
-    return (dir.y > 0.0) ? mix(mid, top,    smoothstep(0.0, 1.0,  dir.y))
-                         : mix(mid, bottom, smoothstep(0.0, 1.0, -dir.y));
+vec3 shadeCobalt(vec3 p,vec3 n,vec3 v){
+    vec3 albedo=vec3(0.05,0.16,0.62);
+    float a2=0.28;
+    vec3 F0=mix(vec3(0.04),albedo,0.55);
+    vec3 L=keyDir();
+    vec3 H=normalize(L+v);
+    float ndl=max(dot(n,L),0.0);
+    float ndv=max(dot(n,v),1e-4);
+    float ndh=max(dot(n,H),0.0);
+    float vdh=max(dot(v,H),0.0);
+    float sh=softShadow(p+n*0.006,L);
+    vec3 F=fSch(vdh,F0);
+    vec3 spec=(ggx(ndh,a2)*gSm(ndv,ndl,a2)*F)/max(4.0*ndv*ndl,1e-4);
+    vec3 diff=(1.0-F)*0.55*albedo/PI;
+    float fillT=max(dot(n,fillDir()),0.0);
+    vec3 col=albedo*ambient+(diff+spec)*keyColor.rgb*ndl*sh+albedo*fillColor.rgb*fillT*0.55;
+    vec3 R2=reflect(-v,n);
+    float shim=clamp(audioHigh,0.0,1.0)*audioReact;
+    R2=normalize(R2+vec3(sin(TIME*6.1),cos(TIME*4.3),sin(TIME*5.9))*0.005*shim);
+    col+=ibl(R2)*F0*(1.0-a2*0.9)*0.5;
+    float rim=pow(1.0-max(dot(n,v),0.0),3.0)*max(dot(n,rimDir()),0.0);
+    col+=rimCol()*rim*rimStrength*0.7;
+    return col*mix(0.7,1.0,ao(p,n));
 }
 
-// ── Three-point studio (key + fill from uniforms, rim derived) ─────────
-vec3 sphDir(float a, float e) { return normalize(vec3(cos(a)*cos(e), sin(e), sin(a)*cos(e))); }
-vec3 keyDirVec()  { return sphDir(keyAngle, keyElevation); }
-vec3 fillDirVec() { return sphDir(keyAngle + 3.14159, keyElevation * 0.5); }
-vec3 rimDirVec()  { return sphDir(keyAngle + 1.5708, keyElevation + 0.2); }
-vec3 rimColVec()  { return mix(keyColor.rgb, vec3(1.0), 0.5); }
-
-float ggx(float ndh, float a)        { float a2=a*a; float d=(ndh*ndh)*(a2-1.0)+1.0; return a2/(3.14159*d*d); }
-float gSm(float ndv, float ndl, float a){ float k=(a+1.0); k=k*k*0.125; return (ndv/(ndv*(1.0-k)+k))*(ndl/(ndl*(1.0-k)+k)); }
-vec3  fSc(float vdh, vec3 F0)        { return F0 + (1.0 - F0) * pow(1.0 - vdh, 5.0); }
-
-// ── Per-material shading ───────────────────────────────────────────────
-vec3 shadeBackdrop(vec3 p, vec3 n) {
-    vec3 base = backdropColor(p);
-    vec3 L = keyDirVec();
-    float ndl = max(dot(n, L), 0.0);
-    // Bigger surface bias (0.012 vs 0.004) — eliminates self-shadow
-    // acne where the cyc and ground meet.
-    float sh  = keyShadow(p + n * 0.012, L);
-    float fillTerm = max(dot(n, fillDirVec()), 0.0);
-    // Hemispheric ambient pulled up so shadowed cyc isn't pitch black.
-    // The original ambient term was multiplied straight into base —
-    // any darker than ~0.18 of the base read as "void". Multi-source
-    // ambient (sky + ground bounce) keeps shadow regions tinted with
-    // the backdrop color rather than crushing to grey.
-    vec3 skyAmb    = backdropColor(p + vec3(0.0, 1.5, 0.0)) * 0.32;
-    vec3 groundAmb = backdropColor(p - vec3(0.0, 0.6, 0.0)) * 0.18;
-    float upWrap   = clamp(n.y * 0.5 + 0.5, 0.0, 1.0);
-    vec3 ambTerm   = mix(groundAmb, skyAmb, upWrap);
-    vec3 lit = base * (ambient + ambTerm
-                     + keyColor.rgb  * ndl * sh
-                     + fillColor.rgb * fillTerm * 0.6);
-    lit *= mix(0.62, 1.0, ao(p, n));
-    return lit;
-}
-
-vec3 shadeChalk(vec3 p, vec3 n, vec3 v) {
-    vec3 albedo = vec3(0.93, 0.62, 0.50);
-    vec3 L = keyDirVec();
-    float sh = keyShadow(p + n * 0.005, L);
-    float wrap = max((dot(n, L) + 0.25) / 1.25, 0.0);   // chalky wrap
-    float fillTerm = max(dot(n, fillDirVec()), 0.0);
-    float rim  = pow(1.0 - max(dot(n, v), 0.0), 2.5) * max(dot(n, rimDirVec()), 0.0);
-    vec3 col = albedo * (ambient + keyColor.rgb * wrap * sh + fillColor.rgb * fillTerm)
-             + rimColVec() * rim * rimStrength * 0.4;
-    vec3 H = normalize(L + v);
-    col += keyColor.rgb * pow(max(dot(n, H), 0.0), 32.0) * sh * 0.06;
-    return col * mix(0.55, 1.0, ao(p, n));
-}
-
-vec3 shadeChrome(vec3 p, vec3 n, vec3 v) {
-    vec3 F0 = vec3(0.92, 0.94, 0.95);
-    vec3 R  = reflect(-v, n);
-    float shim = clamp(audioHigh, 0.0, 1.0) * audioReact;
-    R = normalize(R + vec3(sin(TIME*7.3), cos(TIME*5.7), sin(TIME*4.1)) * 0.005 * shim);
-    float t = 0.02; bool hit2 = false; int mh = 0; vec3 ph = p;
-    for (int i = 0; i < 28; i++) {
-        Hit s = map(p + R * t);
-        if (s.d < 0.001) { hit2 = true; ph = p + R * t; mh = s.mat; break; }
-        t += s.d;
-        if (t > 6.0) break;
-    }
-    vec3 reflCol = iblProbe(R);
-    if (hit2) {
-        if      (mh == MAT_CHALK)  reflCol = vec3(0.93,0.62,0.50) * keyColor.rgb * 0.6;
-        else if (mh == MAT_COBALT) reflCol = vec3(0.06,0.18,0.62) * keyColor.rgb * 0.5;
-        else if (mh == MAT_GLASS)  reflCol = iblProbe(R) * 0.85;
-        else if (mh == MAT_BACKDROP) reflCol = backdropColor(ph) * 0.7;
-    }
-    float fres = pow(1.0 - max(dot(n, v), 0.0), 5.0);
-    vec3 spec = mix(F0, vec3(1.0), fres) * reflCol;
-    vec3 L = keyDirVec();
-    vec3 H = normalize(L + v);
-    float sh = keyShadow(p + n * 0.005, L);
-    float rim = pow(1.0 - max(dot(n, v), 0.0), 3.0) * max(dot(n, rimDirVec()), 0.0);
-    spec += ambient * F0;
-    spec += keyColor.rgb * pow(max(dot(n, H), 0.0), 256.0) * sh * 1.5;
-    spec += rimColVec() * rim * rimStrength * 0.3;
-    return spec * mix(0.7, 1.0, ao(p, n));
-}
-
-vec3 shadeCobalt(vec3 p, vec3 n, vec3 v) {
-    vec3 albedo = vec3(0.05, 0.16, 0.62);
-    float a = 0.28;
-    vec3 F0 = mix(vec3(0.04), albedo, 0.55);
-    vec3 L = keyDirVec();
-    vec3 H = normalize(L + v);
-    float ndl = max(dot(n, L), 0.0);
-    float ndv = max(dot(n, v), 1e-4);
-    float ndh = max(dot(n, H), 0.0);
-    float vdh = max(dot(v, H), 0.0);
-    float sh  = keyShadow(p + n * 0.005, L);
-    vec3  F = fSc(vdh, F0);
-    vec3 spec = (ggx(ndh, a) * gSm(ndv, ndl, a) * F) / max(4.0 * ndv * ndl, 1e-4);
-    vec3 diff = (1.0 - F) * 0.55 * albedo / 3.14159;
-    float fillTerm = max(dot(n, fillDirVec()), 0.0);
-    vec3 col = albedo * ambient
-             + (diff + spec) * keyColor.rgb * ndl * sh
-             + albedo * fillColor.rgb * fillTerm * 0.6;
-    vec3 R = reflect(-v, n);
-    float shim = clamp(audioHigh, 0.0, 1.0) * audioReact;
-    R = normalize(R + vec3(sin(TIME*6.1), cos(TIME*4.3), sin(TIME*5.9)) * 0.004 * shim);
-    col += iblProbe(R) * F0 * (1.0 - a * 0.9) * 0.45;
-    float rim = pow(1.0 - max(dot(n, v), 0.0), 3.0) * max(dot(n, rimDirVec()), 0.0);
-    col += rimColVec() * rim * rimStrength * 0.7;
-    return col * mix(0.7, 1.0, ao(p, n));
-}
-
-vec3 shadeGlass(vec3 p, vec3 n, vec3 v) {
-    vec3 R = reflect(-v, n);
-    vec3 T = refract(-v, n, 1.0 / 1.45);
-    if (length(T) < 0.001) T = R;
-    float t = 0.02; vec3 hp = p; int mh = MAT_BACKDROP;
-    for (int i = 0; i < 24; i++) {
-        Hit s = map(p + T * t);
-        if (s.d < 0.001) { hp = p + T * t; mh = s.mat; break; }
-        t += s.d;
-        if (t > 4.0) break;
+vec3 shadeGlass(vec3 p,vec3 n,vec3 v){
+    vec3 R=reflect(-v,n);
+    vec3 T=refract(-v,n,1.0/1.45);
+    if(length(T)<0.001) T=R;
+    float t2=0.02; vec3 hp=p; int mh2=MAT_BG;
+    for(int i=0;i<20;i++){
+        Hit s2=map(p+T*t2);
+        if(s2.d<0.001){hp=p+T*t2;mh2=s2.mat;break;}
+        t2+=s2.d;
+        if(t2>4.0)break;
     }
     vec3 trans;
-    if      (mh == MAT_CHALK)  trans = vec3(0.93,0.62,0.50) * 0.85;
-    else if (mh == MAT_COBALT) trans = vec3(0.06,0.18,0.62) * 0.7;
-    else if (mh == MAT_CHROME) trans = vec3(0.85);
-    else                       trans = backdropColor(hp);
-    trans *= vec3(0.94, 1.00, 0.97);   // soda-lime green tint
-    float fres = mix(0.04, 1.0, pow(1.0 - max(dot(n, v), 0.0), 5.0));
-    vec3 col = mix(trans, iblProbe(R), fres);
-    vec3 L = keyDirVec();
-    vec3 H = normalize(L + v);
-    float sh = keyShadow(p + n * 0.005, L);
-    col += ambient * vec3(0.05);
-    col += keyColor.rgb * pow(max(dot(n, H), 0.0), 220.0) * sh * 1.2;
-    float rim = pow(1.0 - max(dot(n, v), 0.0), 4.0);
-    col += rimColVec() * rim * rimStrength * 0.4;
+    if(mh2==MAT_CHALK)       trans=vec3(0.92,0.61,0.49)*0.85;
+    else if(mh2==MAT_COBALT) trans=vec3(0.05,0.16,0.62)*0.7;
+    else if(mh2==MAT_CHROME) trans=vec3(0.85);
+    else if(mh2==MAT_MORPH)  trans=ibl(T)*0.9;
+    else                     trans=envColor(T);
+    trans*=vec3(0.93,1.0,0.96);
+    float fres=mix(0.04,1.0,pow(1.0-max(dot(n,v),0.0),5.0));
+    vec3 col=mix(trans,ibl(R),fres);
+    vec3 L=keyDir();
+    vec3 H=normalize(L+v);
+    float sh=softShadow(p+n*0.006,L);
+    col+=ambient*vec3(0.05);
+    col+=keyColor.rgb*pow(max(dot(n,H),0.0),200.0)*sh*1.3;
+    float rim=pow(1.0-max(dot(n,v),0.0),4.0);
+    col+=rimCol()*rim*rimStrength*0.45;
     return col;
 }
 
-vec3 shade(vec3 p, vec3 n, vec3 v, int mat) {
-    if (mat == MAT_BACKDROP) return shadeBackdrop(p, n);
-    if (mat == MAT_CHALK)    return shadeChalk(p, n, v);
-    if (mat == MAT_CHROME)   return shadeChrome(p, n, v);
-    if (mat == MAT_COBALT)   return shadeCobalt(p, n, v);
-    return shadeGlass(p, n, v);
+vec3 shadeMorph(vec3 p,vec3 n,vec3 v){
+    // Refractive morphing shape — glass-like with colour-cube-style inner nebula
+    vec3 R=reflect(-v,n);
+    vec3 T=refract(-v,n,1.0/1.38);
+    if(length(T)<0.001) T=R;
+    vec3 trans=envColor(T)*vec3(0.85,0.92,1.0);
+    float fres=mix(0.05,1.0,pow(1.0-max(dot(n,v),0.0),4.0));
+    // HDR specular glow on silhouette (from color_cube)
+    float spec2=pow(max(dot(R,-v),0.0),32.0);
+    vec3 hdrEdge=vec3(1.0,1.05,1.15)*(fres*1.4+spec2*2.5);
+    float glow=smoothstep(0.55,0.95,fres);
+    vec3 glowCol=vec3(1.1,0.9,1.4)*glow*1.6;
+    vec3 col=mix(trans,ibl(R),fres)+hdrEdge+glowCol;
+    // Subtle three-point
+    vec3 L=keyDir();
+    vec3 H=normalize(L+v);
+    float sh=softShadow(p+n*0.005,L);
+    col+=keyColor.rgb*pow(max(dot(n,H),0.0),180.0)*sh*1.0;
+    float rim=pow(1.0-max(dot(n,v),0.0),3.5)*max(dot(n,rimDir()),0.0);
+    col+=rimCol()*rim*rimStrength*0.6;
+    return col*mix(0.75,1.0,ao(p,n));
 }
 
-// March a ray and return colour + scene depth
-vec4 traceScene(vec3 ro, vec3 rd) {
-    float dist = 0.0;
-    int   mat  = MAT_BACKDROP;
-    bool  hit  = false;
-    for (int i = 0; i < MAX_STEPS; i++) {
-        Hit s = map(ro + rd * dist);
-        if (s.d < EPS) { hit = true; mat = s.mat; break; }
-        // 0.78 (was 0.92) — under-step harder so grazing-angle cyc
-        // rays converge before MAX_STEPS instead of leaving step rings.
-        dist += s.d * 0.78;
-        if (dist > MAX_DIST) break;
-    }
-    vec3 col = hit ? shade(ro + rd * dist, calcNormal(ro + rd * dist), -rd, mat)
-                   : iblProbe(rd);
-    return vec4(col, hit ? dist : MAX_DIST);
+vec3 shade(vec3 p,vec3 n,vec3 v,int mat){
+    if(mat==MAT_CHALK)  return shadeChalk(p,n,v);
+    if(mat==MAT_CHROME) return shadeChrome(p,n,v);
+    if(mat==MAT_COBALT) return shadeCobalt(p,n,v);
+    if(mat==MAT_GLASS)  return shadeGlass(p,n,v);
+    if(mat==MAT_MORPH)  return shadeMorph(p,n,v);
+    return envColor(v*-1.0); // background hit — shouldn't reach
 }
 
-// ── Main ───────────────────────────────────────────────────────────────
-void main() {
-    vec2 res = RENDERSIZE.xy;
-    vec2 fc  = (gl_FragCoord.xy - 0.5 * res) / res.y;
+// ── Ray march ────────────────────────────────────────────────────────────
+vec4 march(vec3 ro, vec3 rd){
+    float dist=0.0;
+    int   mat=MAT_BG;
+    bool  hit=false;
+    for(int i=0;i<MAX_STEPS;i++){
+        Hit s=map(ro+rd*dist);
+        if(s.d<EPS){hit=true;mat=s.mat;break;}
+        dist+=s.d*0.82;
+        if(dist>MAX_DIST) break;
+    }
+    vec3 col;
+    if(hit){
+        vec3 hp=ro+rd*dist;
+        vec3 n=calcNormal(hp);
+        col=shade(hp,n,-rd,mat);
+    } else {
+        col=envColor(rd);
+    }
+    return vec4(col,hit?dist:MAX_DIST);
+}
 
-    float mid = clamp(audioMid, 0.0, 1.0) * audioReact;
+// ── Main ─────────────────────────────────────────────────────────────────
+void main(){
+    vec2 res=RENDERSIZE.xy;
+    vec2 fc=(gl_FragCoord.xy-0.5*res)/res.y;
 
-    // Standard orbit camera
-    float orb = camAzimuth + TIME * camOrbitSpeed * (1.0 + 0.6 * mid);
-    vec3 ro = vec3(cos(orb) * camDist, camHeight, sin(orb) * camDist);
-    vec3 ta = vec3(0.18, 0.55, 0.05);
-    vec3 fwd = normalize(ta - ro);
-    vec3 rgt = normalize(cross(fwd, vec3(0,1,0)));
-    vec3 up  = cross(rgt, fwd);
+    float mid2=clamp(audioMid,0.0,1.0)*audioReact;
+    float bass=clamp(audioBass,0.0,1.0)*audioReact;
 
-    // Chromatic aberration: trace 3 rays with tiny offsets, take per-channel
-    vec2 caOff = fc * chromaticAb * 0.012;
-    vec3 rdR = normalize(fwd + rgt * (fc.x + caOff.x) * 1.05 + up * (fc.y + caOff.y) * 1.05);
-    vec3 rdG = normalize(fwd + rgt *  fc.x          * 1.05 + up *  fc.y          * 1.05);
-    vec3 rdB = normalize(fwd + rgt * (fc.x - caOff.x) * 1.05 + up * (fc.y - caOff.y) * 1.05);
+    float orb=camAzimuth+TIME*camOrbitSpeed*(1.0+0.5*mid2);
+    vec3 ro=vec3(cos(orb)*camDist,camHeight,sin(orb)*camDist);
+    vec3 ta=vec3(0.0,0.2,0.0);
+    vec3 fwd=normalize(ta-ro);
+    vec3 rgt=normalize(cross(fwd,vec3(0.0,1.0,0.0)));
+    vec3 up2=cross(rgt,fwd);
 
-    vec4 sG = traceScene(ro, rdG);
-    vec3 col = sG.rgb;
-    if (chromaticAb > 0.001) {
-        col.r = traceScene(ro, rdR).r;
-        col.b = traceScene(ro, rdB).b;
+    float fov=1.05;
+
+    // Chromatic aberration
+    vec2 caOff=fc*chromaticAb*0.014;
+    vec3 rdR=normalize(fwd+rgt*(fc.x+caOff.x)*fov+up2*(fc.y+caOff.y)*fov);
+    vec3 rdG=normalize(fwd+rgt*fc.x*fov+up2*fc.y*fov);
+    vec3 rdB=normalize(fwd+rgt*(fc.x-caOff.x)*fov+up2*(fc.y-caOff.y)*fov);
+
+    vec4 sG=march(ro,rdG);
+    vec3 col=sG.rgb;
+    if(chromaticAb>0.001){
+        col.r=march(ro,rdR).r;
+        col.b=march(ro,rdB).b;
     }
 
-    // Cheap depth-of-field: blur far/near samples in screen space along jitter
-    if (dofStrength > 0.001) {
-        float focus = camDist;                       // focus at target distance
-        float coc = clamp(abs(sG.a - focus) / 4.0, 0.0, 1.0) * dofStrength;
-        vec3 blurAcc = vec3(0.0);
-        const int N = 6;
-        for (int i = 0; i < N; i++) {
-            float a = 6.2832 * (float(i) + 0.5) / float(N);
-            vec2 j = vec2(cos(a), sin(a)) * coc * 0.04;
-            vec3 rdJ = normalize(fwd + rgt * (fc.x + j.x) * 1.05 + up * (fc.y + j.y) * 1.05);
-            blurAcc += traceScene(ro, rdJ).rgb;
+    // Depth of field
+    if(dofStrength>0.001){
+        float focus=camDist*0.72;
+        float coc=clamp(abs(sG.a-focus)/5.0,0.0,1.0)*dofStrength;
+        vec3 blurAcc=vec3(0.0);
+        for(int i=0;i<6;i++){
+            float ang=TAU*(float(i)+0.5)/6.0;
+            vec2 jj=vec2(cos(ang),sin(ang))*coc*0.05;
+            vec3 rdJ=normalize(fwd+rgt*(fc.x+jj.x)*fov+up2*(fc.y+jj.y)*fov);
+            blurAcc+=march(ro,rdJ).rgb;
         }
-        col = mix(col, blurAcc / float(N), coc);
+        col=mix(col,blurAcc/6.0,coc);
     }
 
-    // Tillmans-soft vignette
-    vec2 q = (gl_FragCoord.xy / res) - 0.5;
-    col *= clamp(1.0 - dot(q, q) * 0.55, 0.0, 1.0);
+    // Custom palette (color_cube style)
+    int cm=int(uColMode);
+    if(cm==1){
+        col=uC1.rgb*col.r+uC2.rgb*col.g+uC3.rgb*col.b;
+    }
 
-    // Film grain — keeps it alive in silence
-    float gr = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233)) + TIME) * 43758.5453);
-    col += (gr - 0.5) * 0.008;
-    col *= 0.97 + 0.03 * sin(TIME * 0.27);
-    col *= exposure;
+    // Audio lift on object pixels — silhouette detection via scene depth
+    float hitMask=sG.a<MAX_DIST*0.95?1.0:0.0;
+    float audioLift=1.0+bass*0.38;
+    col*=mix(1.0,audioLift,hitMask);
 
-    gl_FragColor = vec4(col, 1.0);
+    // Inversion flash every ~29s (from color_cube)
+    {
+        float ph=fract(TIME/29.0);
+        float f=smoothstep(0.0,0.04,ph)*smoothstep(0.20,0.10,ph);
+        col=mix(col,1.0-col,f);
+    }
+
+    // Vignette
+    vec2 q=gl_FragCoord.xy/res-0.5;
+    col*=clamp(1.0-dot(q,q)*0.52,0.0,1.0);
+
+    // Film grain
+    float gr=fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233))+TIME)*43758.5453);
+    col+=(gr-0.5)*0.009;
+    col*=0.96+0.04*sin(TIME*0.31);
+    col*=exposure;
+
+    gl_FragColor=vec4(col,1.0);
 }

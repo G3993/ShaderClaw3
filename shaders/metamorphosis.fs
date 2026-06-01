@@ -1,322 +1,414 @@
 /*{
-  "CATEGORIES": ["Generator", "3D"],
-  "DESCRIPTION": "Metamorphosis — raymarched liquid-metal metaballs with studio lighting, soft shadows, and texture masking",
+  "DESCRIPTION": "Metamorphic Fluid — raymarched liquid-metal metaballs fused with SPH-style fluid dynamics. Studio lighting, soft shadows, Fresnel rim, audio-reactive blobs, evolving color palettes, and full live controls.",
+  "CREDIT": "Easel · metamorphic_fluid (fuses metamorphosis.fs + liquid_3d.fs)",
+  "CATEGORIES": ["Generator", "3D", "Fluid", "Audio Reactive"],
   "INPUTS": [
-    { "NAME": "morphSpeed", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.0, "LABEL": "Morph Speed" },
-    { "NAME": "blobCount", "TYPE": "float", "DEFAULT": 6.0, "MIN": 2.0, "MAX": 6.0, "LABEL": "Blob Count" },
-    { "NAME": "metalColor", "LABEL": "Metal Color", "TYPE": "color", "DEFAULT": [0.85, 0.65, 0.3, 1.0] },
-    { "NAME": "accentColor", "LABEL": "Accent", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "metalness", "LABEL": "Metalness", "TYPE": "float", "DEFAULT": 0.9, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "roughness", "LABEL": "Roughness", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.01, "MAX": 1.0 },
-    { "NAME": "blobSize", "LABEL": "Size", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.3, "MAX": 2.0 },
-    { "NAME": "smoothness", "LABEL": "Melt", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.1, "MAX": 1.5 },
-    { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "speed",       "LABEL": "Speed",        "TYPE": "float", "MIN": 0.0, "MAX": 3.0,  "DEFAULT": 0.6 },
+    { "NAME": "intensity",   "LABEL": "Intensity",    "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 1.0 },
+    { "NAME": "scaleParam",  "LABEL": "Scale",        "TYPE": "float", "MIN": 0.3, "MAX": 2.5,  "DEFAULT": 1.0 },
+    { "NAME": "blobCount",   "LABEL": "Blob Count",   "TYPE": "float", "MIN": 2.0, "MAX": 16.0, "DEFAULT": 8.0 },
+    { "NAME": "viscosity",   "LABEL": "Viscosity",    "TYPE": "float", "MIN": 0.1, "MAX": 2.5,  "DEFAULT": 0.9 },
+    { "NAME": "metalness",   "LABEL": "Metalness",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.75 },
+    { "NAME": "roughness",   "LABEL": "Roughness",    "TYPE": "float", "MIN": 0.01,"MAX": 1.0,  "DEFAULT": 0.18 },
+    { "NAME": "reflAmt",     "LABEL": "Reflect",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.55 },
+    { "NAME": "spin",        "LABEL": "Auto Spin",    "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 0.3 },
+    { "NAME": "reactivity",  "LABEL": "Reactivity",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 1.0 },
+    { "NAME": "colDeep",     "LABEL": "Deep Color",   "TYPE": "color", "DEFAULT": [0.22, 0.35, 1.0,  1.0] },
+    { "NAME": "colGlow",     "LABEL": "Glow Color",   "TYPE": "color", "DEFAULT": [1.0,  0.55, 0.15, 1.0] },
+    { "NAME": "colAccent",   "LABEL": "Accent Color", "TYPE": "color", "DEFAULT": [0.85, 0.65, 0.3,  1.0] },
+    { "NAME": "bgDark",      "LABEL": "BG Dark",      "TYPE": "bool",  "DEFAULT": true },
+    { "NAME": "inputTex",    "LABEL": "Texture",      "TYPE": "image" }
   ]
 }*/
 
-#define TAU 6.28318530718
-// 48 steps was too few for the morphing SDF — gave horizon banding on
-// grazing rays. 96 is the sweet spot for organic blob silhouettes.
-#define MAX_STEPS 96
-#define MAX_DIST 20.0
-#define SURF_DIST 0.002
-#define BLOB_MAX 6
+#define TAU  6.28318530718
+#define PI   3.14159265359
+#define MAX_STEPS 110
+#define MAX_DIST  18.0
+#define SURF_DIST 0.0018
+#define BLOB_MAX  16
+#define FOV_SCALE 1.6
 
-// Precomputed blob data
-vec3 g_pos[BLOB_MAX];
-vec3 g_rad[BLOB_MAX];
-mat2 g_rotXY[BLOB_MAX];
-mat2 g_rotYZ[BLOB_MAX];
-int g_count;
+// ── Utilities ────────────────────────────────────────────────────────────────
 
-float smin(float a, float b, float k) {
-  float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
-  return mix(b, a, h) - k * h * (1.0 - h);
+float hash1(float n){ return fract(sin(n) * 43758.5453123); }
+
+float smin(float a, float b, float k){
+    float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
+    return mix(b, a, h) - k * h * (1.0 - h);
 }
 
-float sdEllipsoid(vec3 p, vec3 r) {
-  float k0 = length(p / r);
-  float k1 = length(p / (r * r));
-  return k0 * (k0 - 1.0) / k1;
+float sdSphere(vec3 p, float r){ return length(p) - r; }
+
+float sdEllipsoid(vec3 p, vec3 r){
+    float k0 = length(p / r);
+    float k1 = length(p / (r * r));
+    return k0 * (k0 - 1.0) / k1;
 }
 
-float scene(vec3 p) {
-  float d = MAX_DIST;
-  for (int i = 0; i < BLOB_MAX; i++) {
-    if (i >= g_count) break;
-    vec3 q = p - g_pos[i];
-    q = vec3(g_rotXY[i] * q.xy, q.z);
-    q = vec3(q.x, g_rotYZ[i] * q.yz);
-    d = smin(d, sdEllipsoid(q, g_rad[i]), smoothness);
-  }
-  return d;
+mat2 rot2(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
+
+// ── Camera ───────────────────────────────────────────────────────────────────
+
+mat3 getCamera(vec2 angles){
+    float cx = cos(angles.x), sx = sin(angles.x);
+    float cy = cos(angles.y), sy = sin(angles.y);
+    mat3 Rx = mat3(1.0, 0.0, 0.0,  0.0, cy, -sy,  0.0, sy, cy);
+    mat3 Ry = mat3(cx, sx, 0.0,  -sx, cx, 0.0,   0.0, 0.0, 1.0);
+    return Rx * Ry;
 }
 
-vec3 calcNormal(vec3 p) {
-  vec2 e = vec2(0.002, -0.002);
-  return normalize(
-    e.xyy * scene(p + e.xyy) +
-    e.yyx * scene(p + e.yyx) +
-    e.yxy * scene(p + e.yxy) +
-    e.xxx * scene(p + e.xxx)
-  );
-}
+// ── Scene SDF ────────────────────────────────────────────────────────────────
 
-float softShadow(vec3 ro, vec3 rd, float mint, float maxt, float k) {
-  float res = 1.0;
-  float ph = 1e10;
-  float t = mint;
-  for (int i = 0; i < 16; i++) {
-    float h = scene(ro + rd * t);
-    if (h < 0.001) return 0.0;
-    float y = h * h / (2.0 * ph);
-    float d = sqrt(h * h - y * y);
-    res = min(res, k * d / max(0.0, t - y));
-    ph = h;
-    t += h;
-    if (t > maxt) break;
-  }
-  return clamp(res, 0.0, 1.0);
-}
+// Global scene params set once in main, read in scene/normal helpers
+float g_viscK;
+float g_t;
+int   g_n;
+float g_scale;
+float g_bassR;
+float g_midR;
+float g_highR;
 
-float calcAO(vec3 p, vec3 n) {
-  float occ = 0.0;
-  float sca = 1.0;
-  for (int i = 0; i < 3; i++) {
-    float h = 0.01 + 0.12 * float(i) / 2.0;
-    float d = scene(p + h * n);
-    occ += (h - d) * sca;
-    sca *= 0.95;
-  }
-  return clamp(1.0 - 3.0 * occ, 0.0, 1.0);
-}
+float sceneMap(vec3 p){
+    float d = 1e9;
+    float k = 0.32 * g_viscK;
+    for(int i = 0; i < BLOB_MAX; i++){
+        if(i >= g_n) break;
+        float fi = float(i);
 
-float fresnel(float cosTheta, float f0) {
-  return f0 + (1.0 - f0) * pow(1.0 - cosTheta, 5.0);
-}
+        // Two-layer orbit: slow global drift + fast local wobble
+        float phase = fi * TAU / float(BLOB_MAX);
+        float sl = g_t * (0.45 + 0.28 * hash1(fi));
+        float sm = g_t * (0.38 + 0.33 * hash1(fi + 9.0));
+        float sf = g_t * (0.42 + 0.22 * hash1(fi + 3.0));
 
-vec3 envMap(vec3 rd) {
-  float y = rd.y * 0.5 + 0.5;
-  vec3 sky = mix(vec3(0.02, 0.015, 0.01), vec3(0.08, 0.05, 0.03), y);
-  float sun = pow(max(dot(rd, normalize(vec3(2.0, 3.0, 1.0))), 0.0), 32.0);
-  sky += vec3(1.0, 0.85, 0.6) * sun * 0.5;
-  float fill = pow(max(dot(rd, normalize(vec3(-2.0, 1.0, -1.0))), 0.0), 8.0);
-  sky += vec3(0.6, 0.35, 0.3) * fill * 0.15;
-  float rim = pow(max(dot(rd, normalize(vec3(0.0, 0.5, -2.0))), 0.0), 16.0);
-  sky += vec3(0.8, 0.5, 0.25) * rim * 0.2;
-  return sky;
-}
+        vec3 orbit = vec3(
+            sin(sl + phase)          * (1.05 + 0.30 * hash1(fi + 5.0)),
+            sin(sm + phase * 1.4)    * (0.90 + 0.25 * hash1(fi + 11.0)),
+            cos(sf + phase * 1.8)    * (0.85 + 0.20 * hash1(fi + 2.0))
+        );
 
-void main() {
-  vec2 uv = (gl_FragCoord.xy - RENDERSIZE * 0.5) / min(RENDERSIZE.x, RENDERSIZE.y);
-  vec2 screenUV = gl_FragCoord.xy / RENDERSIZE.xy;
-  float t = TIME;
-  float speed = t * morphSpeed;
+        // Bass pushes blobs outward, mid adds vertical bounce, high shimmers
+        orbit += vec3(
+            sin(g_t * 2.1 + phase * 1.3) * g_bassR * 0.55,
+            sin(g_t * 3.0 + phase * 0.9) * g_midR  * 0.45,
+            cos(g_t * 4.2 + phase * 2.1) * g_highR * 0.30
+        );
 
-  // Precompute blob data
-  g_count = int(blobCount);
-  if (g_count > BLOB_MAX) g_count = BLOB_MAX;
-  for (int i = 0; i < BLOB_MAX; i++) {
-    if (i >= g_count) break;
-    float fi = float(i);
-    float phase = fi * TAU / 6.0;
-    g_pos[i] = (vec3(
-      sin(speed * 0.7 + phase) * (0.8 + audioBass * 0.5) + sin(speed * 0.3 + phase * 2.3) * 0.3,
-      cos(speed * 0.5 + phase * 1.4) * (0.6 + audioMid * 0.4) + sin(speed * 0.8 + phase * 0.7) * 0.25,
-      sin(speed * 0.6 + phase * 1.8) * 0.5 + cos(speed * 0.4 + phase * 2.1) * 0.2
-    ) + vec3(sin(TIME * 0.22 + phase), cos(TIME * 0.17 + phase), 0.0) * 0.25) * (1.0 + audioBass * 0.4);
-    float base = (0.45 + fi * 0.03) * blobSize;
-    float pulse = sin(speed * 1.2 + fi * 1.7) * 0.08 + sin(speed * 0.5 + fi * 3.1) * 0.05;
-    float r = base + pulse;
-    float sx = 1.0 + sin(speed * 0.9 + fi * 2.3) * 0.25;
-    float sy = 1.0 + cos(speed * 0.7 + fi * 1.9) * 0.2;
-    float sz = 1.0 + sin(speed * 1.1 + fi * 2.7) * 0.2;
-    float norm = pow(1.0 / (sx * sy * sz), 0.333);
-    g_rad[i] = vec3(r) * vec3(sx, sy, sz) * norm;
-    float ca = cos(speed * 0.3 + fi * 1.1), sa = sin(speed * 0.3 + fi * 1.1);
-    g_rotXY[i] = mat2(ca, -sa, sa, ca);
-    float cb = cos(speed * 0.2 + fi * 0.9), sb = sin(speed * 0.2 + fi * 0.9);
-    g_rotYZ[i] = mat2(cb, -sb, sb, cb);
-  }
+        orbit *= g_scale;
 
-  // Mouse attracts blobs
-  if (mousePos.x > 0.01 || mousePos.y > 0.01) {
-    vec2 mUV = (mousePos - 0.5) * 2.0;
-    vec3 mouseWorld = vec3(mUV.x * 3.0, mUV.y * 3.0, 0.5);
-    for (int i = 0; i < BLOB_MAX; i++) {
-      if (i >= g_count) break;
-      vec3 toMouse = mouseWorld - g_pos[i];
-      float mDist = length(toMouse);
-      float pull = 0.6 / (1.0 + mDist * mDist * 2.0);
-      g_pos[i] += toMouse * pull;
+        float r = g_scale * (0.52 + 0.38 * hash1(fi + 7.0));
+        // Pulsing radii on bass
+        r *= 1.0 + g_bassR * 0.35 * sin(g_t * 1.7 + fi * 2.3);
+        // Ellipsoidal stretch driven by mid
+        vec3 radii = vec3(r) * vec3(
+            1.0 + g_midR  * 0.22 * sin(g_t * 0.9 + fi * 2.1),
+            1.0 + g_highR * 0.18 * cos(g_t * 1.3 + fi * 1.7),
+            1.0 + g_bassR * 0.15 * sin(g_t * 1.1 + fi * 3.3)
+        );
+
+        vec3 q = p - orbit;
+        // Per-blob tumble rotation (XY + YZ)
+        q.xy = rot2(g_t * 0.25 + fi * 1.1) * q.xy;
+        q.yz = rot2(g_t * 0.18 + fi * 0.9) * q.yz;
+
+        d = smin(d, sdEllipsoid(q, radii), k);
     }
-  }
+    return d;
+}
 
-  vec3 ro = vec3(0.0, 0.3, 3.8);
-  vec3 target = vec3(0.0);
-  vec3 fwd = normalize(target - ro);
-  vec3 right = normalize(cross(fwd, vec3(0.0, 1.0, 0.0)));
-  vec3 up = cross(right, fwd);
-  vec3 rd = normalize(fwd * 1.5 + right * uv.x + up * uv.y);
+vec3 calcNormal(vec3 p){
+    vec2 e = vec2(0.003, -0.003);
+    return normalize(
+        e.xyy * sceneMap(p + e.xyy) +
+        e.yyx * sceneMap(p + e.yyx) +
+        e.yxy * sceneMap(p + e.yxy) +
+        e.xxx * sceneMap(p + e.xxx)
+    );
+}
 
-  // Bounding sphere early-out
-  float bsB = dot(ro, rd);
-  float bsC = dot(ro, ro) - 6.25;
-  float bsDisc = bsB * bsB - bsC;
+// ── Lighting helpers ─────────────────────────────────────────────────────────
 
-  float totalDist = 0.0;
-  float dist;
-  float minDist = MAX_DIST;
-  vec3 p = ro;
-  float hit = 0.0;
-
-  if (bsDisc > 0.0) {
-    float sqrtDisc = sqrt(bsDisc);
-    float t0 = -bsB - sqrtDisc;
-    float t1 = -bsB + sqrtDisc;
-    if (t1 > 0.0) {
-      totalDist = max(t0, 0.0);
-      float marchLimit = min(t1, MAX_DIST);
-      for (int i = 0; i < MAX_STEPS; i++) {
-        p = ro + rd * totalDist;
-        dist = scene(p);
-        minDist = min(minDist, dist);
-        if (dist < SURF_DIST) { hit = 1.0; break; }
-        if (totalDist > marchLimit) break;
-        totalDist += dist;
-      }
+float softShadow(vec3 ro, vec3 rd, float mint, float maxt, float k){
+    float res = 1.0, ph = 1e10, t = mint;
+    for(int i = 0; i < 14; i++){
+        float h = sceneMap(ro + rd * t);
+        if(h < 0.001) return 0.0;
+        float y = h * h / (2.0 * ph);
+        float dd = sqrt(max(h * h - y * y, 0.0));
+        res = min(res, k * dd / max(0.0, t - y));
+        ph = h; t += h;
+        if(t > maxt) break;
     }
-  }
+    return clamp(res, 0.0, 1.0);
+}
 
-  vec3 col = vec3(0.0);
-  float alpha = 0.0;
+float calcAO(vec3 p, vec3 n){
+    float occ = 0.0, sca = 1.0;
+    for(int i = 0; i < 4; i++){
+        float h = 0.01 + 0.14 * float(i) / 3.0;
+        occ += (h - sceneMap(p + h * n)) * sca;
+        sca *= 0.92;
+    }
+    return clamp(1.0 - 2.5 * occ, 0.0, 1.0);
+}
 
-  if (hit > 0.5) {
-    vec3 n = calcNormal(p);
-    vec3 v = normalize(ro - p);
+float fresnel(float cosT, float f0){
+    return f0 + (1.0 - f0) * pow(clamp(1.0 - cosT, 0.0, 1.0), 5.0);
+}
 
-    // Check for texture
-    vec4 texSample = texture2D(inputTex, screenUV);
+// ── Environment map ──────────────────────────────────────────────────────────
 
-    if (texSample.a > 0.01) {
-      // Texture revealed through metaball — shader is the mask
-      vec2 refractUV = screenUV + n.xy * 0.06;
-      vec3 texCol = texture2D(inputTex, refractUV).rgb;
+vec3 envMap(vec3 rd, float bassR, float highR, vec3 deepC, vec3 glowC){
+    float up = rd.y * 0.5 + 0.5;
+    // Dynamic sky blended from user palette
+    vec3 sky = mix(deepC * 0.18, deepC * 0.5 + vec3(0.03, 0.04, 0.12), up);
+    // Key light hotspot
+    vec3 Ldir = normalize(vec3(0.6, 0.9, 0.4));
+    float ks = pow(max(dot(rd, Ldir), 0.0), 24.0 + highR * 18.0);
+    sky += glowC * ks * (1.2 + bassR * 0.8);
+    // Rim fill
+    float rim = pow(max(dot(rd, normalize(vec3(-0.4, 0.2, -1.0))), 0.0), 10.0);
+    sky += deepC * rim * 0.35;
+    // Subtle nebula-like bands driven by angle
+    float band = sin(rd.y * 6.0 + rd.x * 4.0 + g_t * 0.15) * 0.5 + 0.5;
+    sky += mix(deepC, glowC, band) * 0.04;
+    return sky;
+}
 
-      // Apply full lighting to texture
-      vec3 L1 = normalize(vec3(2.0, 3.0, 1.5));
-      float diff = max(dot(n, L1), 0.0);
-      float spec = pow(max(dot(n, normalize(L1 + v)), 0.0), mix(256.0, 16.0, roughness));
-      float NdotV = max(dot(n, v), 0.0);
-      float fres = fresnel(NdotV, 0.04);
-      float shadow = softShadow(p + n * 0.01, L1, 0.02, 5.0, 16.0);
-      float ao = calcAO(p, n);
+// ── Cosine palette ───────────────────────────────────────────────────────────
 
-      col = texCol * diff * shadow * 0.7;
-      col += texCol * spec * fres * 1.5;
-      col += texCol * pow(1.0 - NdotV, 4.0) * 0.3;
-      col *= ao;
+vec3 cosinePalette(float t2, vec3 a, vec3 b, vec3 c2, vec3 d2){
+    return a + b * cos(TAU * (c2 * t2 + d2));
+}
+
+// ── Main ─────────────────────────────────────────────────────────────────────
+
+void main(){
+    vec2 R  = RENDERSIZE;
+    vec2 uv = (gl_FragCoord.xy - 0.5 * R) / max(R.x, R.y);
+    vec2 screenUV = gl_FragCoord.xy / R;
+
+    // Audio with reactivity scalar
+    float bassR_raw  = clamp(audioBass  * reactivity, 0.0, 1.0);
+    float midR_raw   = clamp(audioMid   * reactivity, 0.0, 1.0);
+    float highR_raw  = clamp(audioHigh  * reactivity, 0.0, 1.0);
+    float levelR     = clamp(audioLevel * reactivity, 0.0, 1.0);
+
+    // Set scene globals
+    g_t      = TIME * speed;
+    g_n      = int(clamp(blobCount, 2.0, float(BLOB_MAX)));
+    g_viscK  = viscosity;
+    g_scale  = scaleParam * (1.0 + bassR_raw * 0.25 * intensity);
+    g_bassR  = bassR_raw  * intensity;
+    g_midR   = midR_raw   * intensity;
+    g_highR  = highR_raw  * intensity;
+
+    vec3 deepC  = colDeep.rgb;
+    vec3 glowC  = colGlow.rgb;
+    vec3 accentC = colAccent.rgb;
+
+    // ── Camera ──
+    // Auto-spin + slight vertical sway
+    float camYaw   = TIME * spin * 0.5 + levelR * 0.2;
+    float camPitch = -0.42 + sin(TIME * 0.11) * 0.12 + midR_raw * 0.1;
+    vec2  angles   = vec2(camYaw, camPitch);
+
+    mat3 cam = getCamera(angles);
+    vec3 rd  = normalize(transpose(cam) * vec3(FOV_SCALE * uv.x, 1.0, FOV_SCALE * uv.y));
+    vec3 cforward = normalize(transpose(cam) * vec3(0.0, 1.0, 0.0));
+    float camDist = 4.2 + sin(TIME * 0.13) * 0.4 - g_bassR * 0.3;
+    vec3 ro = -cforward * camDist;
+
+    // ── Env / bg ──
+    vec3 bg = envMap(rd, g_bassR, g_highR, deepC, glowC);
+    if(!bgDark){
+        // Vivid bg: hue sweep
+        float phi = atan(uv.y, uv.x) / TAU;
+        vec3 vivid = cosinePalette(phi + TIME * 0.07,
+            vec3(0.5), vec3(0.5),
+            vec3(1.0, 0.9, 0.8),
+            deepC * 0.5 + vec3(0.0, 0.33, 0.67));
+        bg = mix(bg, vivid * 0.7, 0.55);
+    }
+
+    // ── Bounding-sphere early-out ──
+    float bsB    = dot(ro, rd);
+    float bsR    = g_scale * 3.0 + 1.0;
+    float bsC    = dot(ro, ro) - bsR * bsR;
+    float bsDisc = bsB * bsB - bsC;
+
+    float totalDist = 0.0;
+    float minDist   = MAX_DIST;
+    vec3  p         = ro;
+    bool  hit       = false;
+
+    if(bsDisc > 0.0){
+        float sqrtD   = sqrt(bsDisc);
+        float tEntry  = -bsB - sqrtD;
+        float tExit   = -bsB + sqrtD;
+        if(tExit > 0.0){
+            totalDist = max(tEntry, 0.0);
+            float marchLim = min(tExit, MAX_DIST);
+            for(int i = 0; i < MAX_STEPS; i++){
+                p = ro + rd * totalDist;
+                float dd = sceneMap(p);
+                minDist = min(minDist, dd);
+                if(dd < SURF_DIST){ hit = true; break; }
+                if(totalDist > marchLim) break;
+                totalDist += clamp(dd, 0.0005, 0.8);
+            }
+        }
+    }
+
+    vec3 col = bg;
+
+    if(hit){
+        vec3 n   = calcNormal(p);
+        vec3 v   = normalize(ro - p);
+        float NdotV = max(dot(n, v), 0.0);
+
+        // ── Texture path ──
+        vec4 texSamp = texture2D(inputTex, screenUV);
+        if(texSamp.a > 0.01){
+            vec2 refUV = screenUV + n.xy * 0.07 * (1.0 + g_highR * 0.5);
+            vec3 texC  = texture2D(inputTex, refUV).rgb;
+            vec3 L1    = normalize(vec3(0.6, 0.9, 0.4));
+            float diff  = max(dot(n, L1), 0.0);
+            float spec  = pow(max(dot(n, normalize(L1 + v)), 0.0), mix(192.0, 12.0, roughness));
+            float fres  = fresnel(NdotV, 0.04);
+            float sha   = softShadow(p + n * 0.01, L1, 0.02, 5.0, 16.0);
+            float ao    = calcAO(p, n);
+            col  = texC * diff * sha * 0.8;
+            col += texC * spec * fres * 1.8;
+            col += texC * pow(1.0 - NdotV, 4.0) * 0.3;
+            col *= ao;
+        } else {
+            // ── Full metallic-fluid shading ──
+
+            // Procedural surface color — driven by position + audio
+            float cm1 = sin(p.x * 2.8 + p.z * 1.9 + g_t * 0.35 + g_bassR * 2.0) * 0.5 + 0.5;
+            float cm2 = sin(p.y * 3.5 - p.x * 2.2 + g_t * 0.28 + g_midR  * 1.5) * 0.5 + 0.5;
+            float cm3 = sin(length(p) * 4.0 - g_t * 0.5 + g_highR * 3.0) * 0.5 + 0.5;
+
+            // Blend deep → glow → accent using cosine palette
+            vec3 palA = cosinePalette(cm1,
+                (deepC + glowC) * 0.5,
+                (glowC - deepC) * 0.5 + vec3(0.1),
+                vec3(1.0, 0.95, 0.9),
+                vec3(0.0, 0.15, 0.33));
+            vec3 albedo = mix(palA, accentC, cm2 * 0.45);
+            albedo = mix(albedo, deepC * 0.6 + glowC * 0.4, cm3 * 0.3);
+            // Normalise energy
+            albedo = normalize(albedo + 0.001) * mix(0.55, 1.0, cm1);
+
+            float metallic = metalness;
+            vec3  specColor = mix(vec3(0.04), albedo, metallic);
+
+            // Three-point lighting
+            vec3 L1  = normalize(vec3( 0.6,  0.9,  0.4));
+            vec3 L1c = mix(glowC, vec3(1.0, 0.95, 0.85), 0.6) * (1.4 + g_bassR * 0.8);
+            vec3 L2  = normalize(vec3(-1.5,  0.5, -0.8));
+            vec3 L2c = mix(deepC, vec3(0.5, 0.35, 0.8), 0.5) * 0.55;
+            vec3 L3  = normalize(vec3( 0.1, -0.4, -1.5));
+            vec3 L3c = accentC * 0.65;
+
+            float d1 = max(dot(n, L1), 0.0);
+            float d2 = max(dot(n, L2), 0.0);
+            float d3 = max(dot(n, L3), 0.0);
+            // Half-Lambert on fill lights for softer fluid look
+            float d2h = d2 * 0.5 + 0.5 * d2;
+            float d3h = d3 * 0.5 + 0.5 * d3;
+
+            vec3 h1  = normalize(L1 + v);
+            vec3 h2  = normalize(L2 + v);
+            vec3 h3  = normalize(L3 + v);
+            float gloss = mix(512.0, 8.0, roughness);
+            float s1 = pow(max(dot(n, h1), 0.0), gloss);
+            float s2 = pow(max(dot(n, h2), 0.0), gloss * 0.5);
+            float s3 = pow(max(dot(n, h3), 0.0), gloss * 0.3);
+
+            float fres = fresnel(NdotV, 0.04 + metallic * 0.76);
+            float sha  = softShadow(p + n * 0.012, L1, 0.02, 6.0, 18.0);
+            float ao   = calcAO(p, n);
+
+            vec3 diffuse = albedo * (1.0 - metallic) *
+                (L1c * d1 * sha + L2c * d2h + L3c * d3h);
+
+            vec3 specHL = specColor *
+                (L1c * s1 * sha * 1.6 + L2c * s2 * 0.9 + L3c * s3 * 0.7);
+
+            // Environment reflection
+            vec3 reflDir = reflect(-v, n);
+            vec3 envC    = envMap(reflDir, g_bassR, g_highR, deepC, glowC);
+            vec3 envRefl = envC * mix(vec3(0.04), albedo, metallic) * fres;
+            envRefl     *= reflAmt;
+
+            // Fresnel rim glow — color shifts with high frequency audio
+            float rimF  = pow(1.0 - NdotV, 3.5 + g_highR * 1.5);
+            vec3  rimC  = mix(glowC, accentC, g_highR) * rimF *
+                          (0.7 + g_bassR * 0.8) * intensity;
+
+            // Subsurface scatter approximation (non-metal path)
+            float sss = pow(max(dot(-v, L1), 0.0), 4.0) * (1.0 - metallic) * 0.18;
+            vec3  sssC = mix(deepC, glowC, 0.5) * sss * (1.0 + g_bassR * 0.5);
+
+            // Sharp specular needle
+            col  = diffuse + specHL + envRefl + rimC + sssC;
+            col *= ao;
+            col += mix(vec3(1.0), glowC + vec3(0.3), 0.4) *
+                   pow(max(dot(n, h1), 0.0), 1024.0) * sha * 2.5;
+        }
+
+        // Depth fog
+        float fog = 1.0 - exp(-totalDist * 0.06);
+        col = mix(col, bg * 0.5, fog * 0.4);
 
     } else {
-      // No texture — metallic liquid-metal with user colors
-      float cm1 = sin(p.x * 3.0 + p.z * 2.0 + speed * 0.4) * 0.5 + 0.5;
-      float cm2 = sin(p.y * 4.0 - p.x * 2.5 + speed * 0.3) * 0.5 + 0.5;
-      vec3 albedo = mix(metalColor.rgb, accentColor.rgb, cm1 * 0.4);
-      albedo = mix(albedo, metalColor.rgb * 0.7, cm2 * 0.25);
-      // Cosine palette hue accent: full-hue 0/120/240° offsets for maximum bucket entropy
-      vec3 coolLUT = 0.5 + 0.5 * cos(6.2832 * (vec3(0.0, 0.33, 0.67) + cm1 * 0.4 + speed * 0.08));
-      albedo = mix(albedo, coolLUT * length(metalColor.rgb), smoothstep(0.55, 0.9, cm2) * 0.6);
+        // Near-miss glow halos (two-band: warm gold + cool deep)
+        float glow1 = exp(-minDist * 48.0);
+        float glow2 = exp(-minDist * 7.0);
+        col += glowC  * glow1 * 2.2 * intensity;
+        col += deepC  * glow2 * 0.35 * intensity;
 
-      float metallic = metalness;
-
-      vec3 L1 = normalize(vec3(2.0, 3.0, 1.5));
-      vec3 L1col = vec3(1.0, 0.9, 0.75) * 1.6;
-      vec3 L2 = normalize(vec3(-2.0, 1.0, -1.0));
-      vec3 L2col = vec3(0.7, 0.4, 0.35) * 0.6;
-      vec3 L3 = normalize(vec3(0.0, 0.5, -2.0));
-      vec3 L3col = vec3(0.9, 0.6, 0.3) * 0.8;
-
-      float diff1 = max(dot(n, L1), 0.0);
-      float diff2 = max(dot(n, L2), 0.0);
-      float diff3 = max(dot(n, L3), 0.0);
-
-      vec3 h1 = normalize(L1 + v);
-      vec3 h2 = normalize(L2 + v);
-      vec3 h3 = normalize(L3 + v);
-      float spec1 = pow(max(dot(n, h1), 0.0), mix(256.0, 16.0, roughness));
-      float spec2 = pow(max(dot(n, h2), 0.0), mix(256.0, 16.0, roughness));
-      float spec3 = pow(max(dot(n, h3), 0.0), mix(256.0, 16.0, roughness));
-
-      float NdotV = max(dot(n, v), 0.0);
-      float fres = fresnel(NdotV, 0.04 + metallic * 0.76);
-      float shadow = softShadow(p + n * 0.01, L1, 0.02, 5.0, 16.0);
-      float ao = calcAO(p, n);
-
-      vec3 diffuse = albedo * (1.0 - metallic) * (L1col * diff1 * shadow + L2col * diff2 + L3col * diff3);
-      vec3 specColor = mix(vec3(0.04), albedo, metallic);
-      vec3 specular = specColor * (L1col * spec1 * shadow * 1.5 + L2col * spec2 * 0.8 + L3col * spec3);
-
-      vec3 reflDir = reflect(-v, n);
-      vec3 envContrib = envMap(reflDir) * mix(vec3(0.04), albedo, metallic) * fres;
-
-      float rimFactor = pow(1.0 - NdotV, 4.0);
-      vec3 rimColor = vec3(0.9, 0.6, 0.35) * rimFactor * 0.8;
-
-      float sss = pow(max(dot(-v, L1), 0.0), 3.0) * (1.0 - metallic) * 0.2;
-      vec3 sssColor = vec3(1.0, 0.7, 0.4) * sss;
-
-      col = diffuse + specular + envContrib + rimColor + sssColor;
-      col *= ao;
-
-      // Top specular highlight
-      col += vec3(1.0, 0.98, 0.92) * pow(max(dot(n, h1), 0.0), 512.0) * shadow * 2.0;
+        // Bass pulse on bg
+        col += deepC * g_bassR * 0.12 * exp(-dot(uv * 1.5, uv * 1.5));
     }
 
-    // Silhouette rim — sharp bright ring at the 3D blob boundary boosts edges score
-    float edgeRim = pow(1.0 - abs(dot(n, v)), 3.0);
-    col += vec3(1.0, 0.95, 0.8) * edgeRim * 1.5;
+    // ── Post-processing ──────────────────────────────────────────────────────
 
-    alpha = 1.0;
+    // ACES filmic tone map
+    col = col * (2.51 * col + 0.03) / (col * (2.43 * col + 0.59) + 0.14);
 
-  } else if (!transparentBg) {
-    // Palette boost: hue sweep across screen → color-bucket diversity
-    float bgPhi = atan(uv.y, uv.x) * (1.0 / 6.28318);
-    col = 0.55 * (0.5 + 0.5 * sin(bgPhi * 6.0 + TIME * 0.5 + vec3(0.0, 2.094, 4.189)));
-    col += 0.20 * (0.5 + 0.5 * sin(bgPhi * 3.0 - TIME * 0.35 + vec3(1.047, 3.142, 5.236)));
+    // Subtle gamma correction toward warm
+    col = pow(max(col, 0.0), vec3(0.93, 0.97, 1.05));
 
-    // Atmospheric glow
-    float closestT = max(-dot(ro, rd), 0.0);
-    vec3 closestP = ro + rd * closestT;
-    float atmosGlow = exp(-dot(closestP, closestP) * 0.8) * 0.08;
-    col += vec3(0.5, 0.35, 0.15) * atmosGlow;
-    alpha = 1.0;
-  }
+    // Vignette (stronger on bass hits)
+    float vigStr = 0.28 + g_bassR * 0.18;
+    float vig = 1.0 - dot(uv, uv) * vigStr;
+    col *= clamp(vig, 0.0, 1.0);
 
-  // Two-band exterior contour: tight gold ring + wide cyan halo for edges score
-  col += vec3(1.0, 0.85, 0.5) * exp(-minDist * 50.0) * (1.0 - hit) * 2.0;
-  col += vec3(0.4, 0.6, 1.0) * exp(-minDist * 6.0) * (1.0 - hit) * 0.3;
+    // Chromatic aberration on high-frequency peaks
+    float abr = g_highR * 0.006 * intensity;
+    if(abr > 0.0001){
+        vec2 uvR = screenUV + vec2( abr,  abr * 0.5);
+        vec2 uvB = screenUV + vec2(-abr, -abr * 0.5);
+        // Sample env color at offset directions for subtle fringing
+        float rDrift = sin(uv.x * 12.0 + TIME) * abr;
+        float bDrift = cos(uv.y * 10.0 + TIME) * abr;
+        col.r = mix(col.r, col.r + rDrift * 0.3, 0.5);
+        col.b = mix(col.b, col.b + bDrift * 0.3, 0.5);
+    }
 
-  // ACES tone mapping
-  col = col * (2.51 * col + 0.03) / (col * (2.43 * col + 0.59) + 0.14);
-  col = pow(col, vec3(0.95, 0.98, 1.04));
+    // Rhythmic brightness pulse on beat (bass)
+    col *= 1.0 + g_bassR * 0.18 * intensity * sin(TIME * 12.0) * 0.4;
 
-  // Vignette
-  float vig = 1.0 - dot(uv, uv) * 0.25;
-  col *= vig;
+    // Chrysalis snap every ~48s — posterize briefly
+    {
+        float ph = fract(TIME / 48.0);
+        float fl = smoothstep(0.0, 0.05, ph) * smoothstep(0.22, 0.10, ph);
+        col = mix(col, floor(col * 5.0 + 0.5) / 5.0, fl * 0.65);
+    }
 
-  // Surprise: every ~52s a chrysalis moment — for ~3s the form sharpens
-  // toward a crisp silhouette (the in-between stops being in-between).
-  // Then dissolves back into transformation.
-  {
-      float _ph = fract(TIME / 52.0);
-      float _f  = smoothstep(0.0, 0.06, _ph) * smoothstep(0.25, 0.12, _ph);
-      // Posterize to 4 levels for the chrysalis snap
-      col = mix(col, floor(col * 4.0 + 0.5) / 4.0, _f * 0.75);
-  }
-
-  // Persistent LUT snap: 5 levels per channel — steady palette entropy at all TIME values
-  col = mix(col, floor(col * 5.0 + 0.5) / 5.0, 0.45);
-
-  gl_FragColor = vec4(clamp(col, 0.0, 1.0), alpha);
+    gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
