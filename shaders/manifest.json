@@ -2248,5 +2248,18 @@
    "Atmospheric"
   ],
   "description": "Single-pass procedural volumetric cloud \u2014 a rotating self-shadowing fBm blob with coloured scattering."
+ },
+ {
+  "id": 1040,
+  "file": "follow.fs",
+  "title": "Follow",
+  "type": "generator",
+  "hasVertex": false,
+  "categories": [
+   "Simulation",
+   "Generator",
+   "Abstract"
+  ],
+  "description": "Self-organizing particle flow \u2014 mass/velocity cells chase a centre-of-mass gradient and clump into travelling points."
  }
 ]
