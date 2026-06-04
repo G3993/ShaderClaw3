@@ -1,11 +1,18 @@
 /*{
-  "DESCRIPTION": "Follow — a self-organizing particle flow. Each cell carries mass + velocity; mass is pushed along its velocity toward the local centre-of-mass gradient while a 1/r^2 gravity clumps the streams into travelling points, so a field of drifting specks continuously chases, merges and scatters. A side force feeds new mass from the left so it never settles. Palette-coloured with an additive glow. Ported from Cole Peterson's multi-buffer Shadertoy; texelFetch feedback -> resolution-independent buffer sampling, mouse/keyboard interaction dropped for autonomous motion.",
-  "CREDIT": "Cole Peterson (Plento) — ISF port for Easel",
+  "DESCRIPTION": "Follow — a self-organizing particle flow. Each cell carries mass + velocity; mass is pushed along its velocity toward the local centre-of-mass gradient while a 1/r^2 gravity clumps the streams into travelling points. Movement drivers (like the fluid sim): a left-edge Feed, a rotational Swirl, a wandering Turbulence, and a 'Dual Cursors' dance — two invisible cursors that orbit, twirl around each other and weave in and out, dragging the particles as if two hands were playing with the field. Palette-coloured with an additive glow. Ported from Cole Peterson's Shadertoy.",
+  "CREDIT": "Cole Peterson (Plento) — ISF port + movement drivers for Easel",
   "CATEGORIES": ["Simulation", "Generator", "Abstract"],
   "INPUTS": [
-    { "NAME": "sideForce", "LABEL": "Feed",      "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0 },
-    { "NAME": "gravity",   "LABEL": "Clump",     "TYPE": "float", "MIN": 0.5, "MAX": 3.0, "DEFAULT": 1.0 },
-    { "NAME": "glowAmt",   "LABEL": "Glow",      "TYPE": "float", "MIN": 0.0, "MAX": 0.4, "DEFAULT": 0.08 }
+    { "NAME": "movement",     "LABEL": "Movement",   "TYPE": "long",  "DEFAULT": 2, "VALUES": [0,1,2], "LABELS": ["Side Feed","Dual Cursors","Both"] },
+    { "NAME": "speed",        "LABEL": "Speed",      "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0 },
+    { "NAME": "sideForce",    "LABEL": "Feed",       "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0 },
+    { "NAME": "danceStrength","LABEL": "Dance",      "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.2 },
+    { "NAME": "danceSpeed",   "LABEL": "Dance Speed","TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 1.0 },
+    { "NAME": "danceScale",   "LABEL": "Dance Range","TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
+    { "NAME": "swirl",        "LABEL": "Swirl",      "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.0 },
+    { "NAME": "turb",         "LABEL": "Turbulence", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.0 },
+    { "NAME": "gravity",      "LABEL": "Clump",      "TYPE": "float", "MIN": 0.5, "MAX": 3.0, "DEFAULT": 1.0 },
+    { "NAME": "glowAmt",      "LABEL": "Glow",       "TYPE": "float", "MIN": 0.0, "MAX": 0.4, "DEFAULT": 0.08 }
   ],
   "PASSES": [
     { "TARGET": "bufA", "PERSISTENT": true },
@@ -14,12 +21,13 @@
 }*/
 
 // ════════════════════════════════════════════════════════════════════════
-//  FOLLOW — Easel ISF port of Cole Peterson's particle-flow Shadertoy.
-//    iChannel0 (Buffer A self-feedback) -> bufA
-//    texelFetch(ivec2(p))               -> texture(bufA, p/RENDERSIZE)  (res-independent)
-//    iMouse / keyboard / Buffer C       -> dropped (autonomous side-force drive)
-//    iFrame -> FRAMEINDEX, iResolution -> RENDERSIZE, iTime -> TIME
-//  Pass order: bufA (sim, PASSINDEX 0), image (colour+glow, PASSINDEX 1).
+//  FOLLOW — Easel ISF port of Cole Peterson's particle-flow Shadertoy, with
+//  fluid-style movement drivers added.
+//    iChannel0 Buffer A self-feedback -> bufA;  texelFetch -> texture(bufA,p/R)
+//    Mouse drag -> autonomous "Dual Cursors": two invisible cursors orbit and
+//      twirl around each other (and pulse in/out), each dragging the field the
+//      same way the original mouse did (push along motion + deposit mass).
+//    Plus Swirl (rotational), Turbulence (wandering), Speed, Feed (side force).
 // ════════════════════════════════════════════════════════════════════════
 
 #define R RENDERSIZE.xy
@@ -45,12 +53,10 @@ float hash12(vec2 p) {
     p3 += dot(p3, p3.yzx + 33.33);
     return fract((p3.x + p3.y) * p3.z);
 }
-
 vec3 pal(float t) {
     return 0.5 + 0.44 * cos(vec3(1.4, 1.1, 1.4) * t + vec3(1.1, 6.1, 4.4) + .5);
 }
 
-// ── Buffer A helpers (neighbourhood gradients) ─────────────────────────
 vec4 Grad(vec2 u) {
     vec4 up = A(u + UP), down = A(u + DOWN), left = A(u + LEFT), right = A(u + RIGHT);
     vec4 upl = A(u + UPL), downl = A(u + DOWNL), upr = A(u + UPR), downr = A(u + DOWNR);
@@ -58,27 +64,43 @@ vec4 Grad(vec2 u) {
 }
 vec2 massGrad(vec2 u) {
     vec2 cm = vec2(0.);
-    cm += A(u + UP).x    * UP;
-    cm += A(u + DOWN).x  * DOWN;
-    cm += A(u + LEFT).x  * LEFT;
-    cm += A(u + RIGHT).x * RIGHT;
-    cm += A(u + UPL).x   * UPL;
-    cm += A(u + DOWNL).x * DOWNL;
-    cm += A(u + UPR).x   * UPR;
-    cm += A(u + DOWNR).x * DOWNR;
+    cm += A(u + UP).x    * UP;    cm += A(u + DOWN).x  * DOWN;
+    cm += A(u + LEFT).x  * LEFT;  cm += A(u + RIGHT).x * RIGHT;
+    cm += A(u + UPL).x   * UPL;   cm += A(u + DOWNL).x * DOWNL;
+    cm += A(u + UPR).x   * UPR;   cm += A(u + DOWNR).x * DOWNR;
     return cm;
 }
 
-// ── image helpers ───────────────────────────────────────────────────────
+// ── Dual-cursor "dance": two invisible cursors that orbit a wandering centre,
+//    sit 180° apart so they twirl AROUND each other, and pulse in/out. ───────
+vec2 cursorPos(float t, float sgn) {
+    float mn = min(R.x, R.y);
+    vec2 ctr = 0.5 * R + vec2(0.22 * R.x * sin(t * 0.31 + 1.7),
+                              0.22 * R.y * cos(t * 0.27));
+    float orbit = (0.10 + 0.085 * sin(t * 0.6)) * mn * danceScale; // in/out
+    float ang = t * 1.3 + 0.6 * sin(t * 0.9);                      // twirl wobble
+    ang += (sgn > 0.0) ? 0.0 : 3.14159265;                         // opposite sides
+    return ctr + orbit * vec2(cos(ang), sin(ang));
+}
+void applyCursor(inout vec4 bA, vec2 u, float t, float sgn) {
+    float dtv = 1.0 / 60.0;
+    vec2 c    = cursorPos(t, sgn);
+    vec2 cvel = c - cursorPos(t - dtv * max(danceSpeed, 0.001), sgn); // per-frame motion
+    float mn  = min(R.x, R.y);
+    float d   = length(c - u);
+    float frc = danceStrength * 0.065 * exp2(-d * (28.0 / mn));      // res-relative falloff
+    bA.zw += frc * cvel * 60.0;   // push particles in the cursor's direction
+    bA.x  += 0.08 * frc;          // deposit mass under the cursor
+}
+
 vec3 color(vec4 bA) {
-    float t = abs(bA.z * 2.) + abs(bA.w * 4.) + 3.6 * length(bA.zw);
-    vec3 col = vec3(clamp(bA.x, 0., 1.)) * pal(t * .2 + .3);
+    float tt = abs(bA.z * 2.) + abs(bA.w * 4.) + 3.6 * length(bA.zw);
+    vec3 col = vec3(clamp(bA.x, 0., 1.)) * pal(tt * .2 + .3);
     return col * 3.6;
 }
 float glow(vec2 u) {
     vec2 uv = u / R;
-    float blur = 0.;
-    const float N = 3.;
+    float blur = 0.; const float N = 3.;
     for (float i = 0.; i < N; i++) {
         blur += texture(bufA, uv + vec2(i * .001, 0.)).x;
         blur += texture(bufA, uv - vec2(i * .001, 0.)).x;
@@ -91,14 +113,10 @@ float glow(vec2 u) {
 void main() {
     vec2 u = gl_FragCoord.xy;
 
-    // ── Buffer A: the mass/velocity simulation ───────────────────────────
     if (PASSINDEX == 0) {
         vec4 bA = A(u);
-
         vec4 grad = Grad(u);
-        vec2 vAvg = grad.zw;
-        vec2 acc = clamp(vAvg - bA.zw, -1., 1.);
-
+        vec2 acc = clamp(grad.zw - bA.zw, -1., 1.);
         bA = mix(bA, grad, .02);
 
         vec2 mg = massGrad(u);
@@ -107,20 +125,47 @@ void main() {
         float dp = dot(mg, bA.zw);
         bA.x -= dp * massAvg;
         bA.x += .999 * dp * massDif;
-
         bA.zw += acc;
 
-        // 1/r^2 gravity toward the mass gradient — clumps streams into points.
         float r = max(length(mg), 1.);
         float grav = -(3.5 * gravity * massAvg * bA.x) / (r * r);
         bA.zw -= mg * grav;
 
-        // Side force: keep feeding mass + push from the left so it never settles.
-        float sf = sideForce * .002 * ss(R.x, 0., u.x * 0.9);
-        bA.zw += sf * vec2(1., 0.);
-        bA.x  += .06 * sf;
+        bool useFeed    = (movement < 0.5) || (movement > 1.5);   // Side Feed or Both
+        bool useCursors = (movement > 0.5);                       // Cursors or Both
 
-        // Seed random specks on the first frames so there's motion immediately.
+        // Side feed (force + mass from the left edge).
+        if (useFeed) {
+            float sf = sideForce * .002 * ss(R.x, 0., u.x * 0.9);
+            bA.zw += sf * vec2(1., 0.);
+            bA.x  += .06 * sf;
+        }
+
+        // Dual invisible cursors dancing around each other.
+        if (useCursors && danceStrength > 0.0) {
+            float t = TIME * danceSpeed;
+            applyCursor(bA, u, t,  1.0);
+            applyCursor(bA, u, t, -1.0);
+        }
+
+        // Swirl — a rotational push around screen centre (fluid-style vortex).
+        if (swirl > 0.0) {
+            vec2 rc = u - 0.5 * R;
+            float rl = max(length(rc), 1.);
+            bA.zw += swirl * 0.5 * vec2(-rc.y, rc.x) / rl;
+        }
+        // Turbulence — wandering divergence-free-ish jitter.
+        if (turb > 0.0) {
+            float mn = min(R.x, R.y);
+            vec2 q = u / mn * 6.0;
+            bA.zw += turb * 0.5 * vec2(sin(q.y + TIME * 0.7), sin(q.x - TIME * 0.6));
+        }
+
+        // Overall speed: scale velocity around 1.0 (Speed=1 neutral, >1 livelier,
+        // <1 calmer). Bounded near 1 so it can't blow the sim up.
+        bA.zw *= 0.97 + 0.03 * speed;
+
+        // Seed random specks so there's motion from frame 0.
         if (FRAMEINDEX < 8) {
             bA = vec4(0.);
             if (hash12(u * 343. + 232.) < .1) {
@@ -135,10 +180,8 @@ void main() {
         return;
     }
 
-    // ── Image: palette colour + additive glow ─────────────────────────────
     vec4 bA = A(u);
     vec3 col = color(bA);
-    float g = glow(u);
-    col += glowAmt * g * pal(1.5 * length(bA.zw));
+    col += glowAmt * glow(u) * pal(1.5 * length(bA.zw));
     gl_FragColor = vec4(sqrt(clamp(col, 0.0, 1.0)), 1.0);
 }
