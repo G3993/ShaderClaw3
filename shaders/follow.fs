@@ -3,6 +3,9 @@
   "CREDIT": "Cole Peterson (Plento) — ISF port + movement drivers for Easel",
   "CATEGORIES": ["Simulation", "Generator", "Abstract"],
   "INPUTS": [
+    { "NAME": "inputImage",   "LABEL": "Texture",    "TYPE": "image" },
+    { "NAME": "textureMix",   "LABEL": "Tex Color",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.7 },
+    { "NAME": "textureFeed",  "LABEL": "Tex Feed",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.0 },
     { "NAME": "movement",     "LABEL": "Movement",   "TYPE": "long",  "DEFAULT": 2, "VALUES": [0,1,2], "LABELS": ["Side Feed","Dual Cursors","Both"] },
     { "NAME": "speed",        "LABEL": "Speed",      "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0 },
     { "NAME": "sideForce",    "LABEL": "Feed",       "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0 },
@@ -141,6 +144,14 @@ void main() {
             bA.x  += .06 * sf;
         }
 
+        // Texture feed: deposit mass where the bound image is bright, so the
+        // particles gather into the picture (then the movement animates it).
+        if (textureFeed > 0.0 && IMG_SIZE_inputImage.x > 0.0) {
+            vec3 img = texture(inputImage, u / R).rgb;
+            float b = dot(img, vec3(0.299, 0.587, 0.114));
+            bA.x += textureFeed * 0.03 * b;
+        }
+
         // Dual invisible cursors dancing around each other.
         if (useCursors && danceStrength > 0.0) {
             float t = TIME * danceSpeed;
@@ -183,5 +194,15 @@ void main() {
     vec4 bA = A(u);
     vec3 col = color(bA);
     col += glowAmt * glow(u) * pal(1.5 * length(bA.zw));
+
+    // Texture: tint the particles with the bound image — the image appears
+    // "made of" the moving particles. Mass/velocity still drive brightness.
+    if (textureMix > 0.0 && IMG_SIZE_inputImage.x > 0.0) {
+        vec3 img = texture(inputImage, u / R).rgb;
+        float lum = dot(col, vec3(0.299, 0.587, 0.114));   // particle brightness
+        vec3 imgCol = img * (0.35 + 2.4 * lum);            // image lit by the particles
+        col = mix(col, imgCol, textureMix);
+    }
+
     gl_FragColor = vec4(sqrt(clamp(col, 0.0, 1.0)), 1.0);
 }
