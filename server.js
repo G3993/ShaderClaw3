@@ -6,13 +6,14 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { createServer } from "http";
-import { readFile, readdir, writeFile, mkdir, unlink } from "fs/promises";
+import { readFile, readdir, writeFile, mkdir, unlink, stat } from "fs/promises";
 import { join, extname, basename } from "path";
 import { WebSocketServer } from "ws";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import { spawn } from "child_process";
 import { existsSync } from "fs";
+import { homedir, platform } from "os";
 import grandi from "grandi";
 import sharp from "sharp";
 import Anthropic from "@anthropic-ai/sdk";
@@ -36,8 +37,29 @@ try {
 } catch {}
 
 const PORT = parseInt(process.env.PORT || process.env.SHADERCLAW_PORT || "7778", 10);
+const OPEN_VOXTERM_DISPLAY =
+  process.argv.includes("--voxterm") ||
+  process.argv.includes("--voxterm-display") ||
+  process.env.SHADERCLAW_VOXTERM_DISPLAY === "1";
 
 const log = (...args) => process.stderr.write(`[ShaderClaw] ${args.join(" ")}\n`);
+
+function openBrowser(url) {
+  if (process.env.SHADERCLAW_NO_OPEN === "1") return;
+  const currentPlatform = platform();
+  const command = currentPlatform === "darwin"
+    ? "open"
+    : currentPlatform === "win32"
+      ? "cmd"
+      : "xdg-open";
+  const args = currentPlatform === "win32" ? ["/c", "start", "", url] : [url];
+  try {
+    const child = spawn(command, args, { detached: true, stdio: "ignore" });
+    child.unref();
+  } catch (e) {
+    log(`Could not open browser: ${e.message}`);
+  }
+}
 
 // v2 layer IDs
 const LAYER_IDS = ['background', 'media', '3d', 'av', 'effects', 'text', 'overlay'];
@@ -572,9 +594,172 @@ process.on("exit", ndiCleanup);
 // ============================================================
 
 let _lastDiag = null;
+
+function defaultVoxTermLiveDir() {
+  const home = homedir();
+  if (platform() === "darwin") return join(home, "Documents", "voxterm-transcripts", ".live");
+  if (platform() === "win32") return join(home, "Documents", "voxterm", ".live");
+  return join(process.env.XDG_DATA_HOME || join(home, ".local", "share"), "voxterm", ".live");
+}
+
+function parseVoxTermMarkdownLine(line) {
+  const trimmed = line.trim();
+  if (!trimmed || trimmed === "---" || trimmed.startsWith("#") || trimmed.startsWith("- ")) return null;
+  const match = trimmed.match(/^\*\*\[(\d{2}:\d{2}:\d{2})\]\*\*\s+(?:\*\*(.+?):\*\*\s+)?(.+?)\s*$/);
+  if (!match) return null;
+  const text = (match[3] || "").trim();
+  if (!text) return null;
+  return {
+    timestampLabel: match[1] || "",
+    speaker: (match[2] || "").trim(),
+    text,
+  };
+}
+
+async function latestVoxTermLiveFile(liveDir = defaultVoxTermLiveDir()) {
+  try {
+    const entries = await readdir(liveDir, { withFileTypes: true });
+    const files = [];
+    for (const entry of entries) {
+      if (!entry.isFile() || !entry.name.endsWith(".md")) continue;
+      const file = join(liveDir, entry.name);
+      const info = await stat(file).catch(() => null);
+      if (info?.isFile()) files.push({ file, mtimeMs: info.mtimeMs, size: info.size });
+    }
+    files.sort((a, b) => b.mtimeMs - a.mtimeMs);
+    return files[0] || null;
+  } catch {
+    return null;
+  }
+}
+
+async function readVoxTermSnapshot(liveDir = defaultVoxTermLiveDir()) {
+  const latest = await latestVoxTermLiveFile(liveDir);
+  if (!latest) {
+    return {
+      ok: true,
+      liveDir,
+      file: null,
+      fileName: null,
+      size: 0,
+      transcript: "",
+      latest: null,
+      segments: [],
+    };
+  }
+
+  const content = await readFile(latest.file, "utf-8").catch(() => "");
+  const segments = [];
+  for (const line of content.split(/\r?\n/)) {
+    const parsed = parseVoxTermMarkdownLine(line);
+    if (parsed) segments.push(parsed);
+  }
+  return {
+    ok: true,
+    liveDir,
+    file: latest.file,
+    fileName: basename(latest.file),
+    size: latest.size,
+    transcript: segments.map((segment) => segment.text).join(" "),
+    latest: segments.at(-1) || null,
+    segments: segments.slice(-40),
+  };
+}
+
+function writeSse(res, event, data) {
+  res.write(`event: ${event}\n`);
+  res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
 const httpServer = createServer(async (req, res) => {
   let urlPath = req.url.split("?")[0];
   if (urlPath === "/") urlPath = "/index.html";
+  if (urlPath === "/voxterm" || urlPath === "/voxterm/") urlPath = "/index.html";
+
+  if (urlPath === "/api/voxterm/status" && req.method === "GET") {
+    const qs = new URL(req.url, `http://localhost:${PORT}`).searchParams;
+    const liveDir = qs.get("liveDir") || process.env.VOXTERM_LIVE_DIR || defaultVoxTermLiveDir();
+    const snapshot = await readVoxTermSnapshot(liveDir);
+    res.writeHead(200, {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-cache",
+      "Access-Control-Allow-Origin": "*",
+    });
+    res.end(JSON.stringify(snapshot));
+    return;
+  }
+
+  if (urlPath === "/api/voxterm/events" && req.method === "GET") {
+    const qs = new URL(req.url, `http://localhost:${PORT}`).searchParams;
+    const liveDir = qs.get("liveDir") || process.env.VOXTERM_LIVE_DIR || defaultVoxTermLiveDir();
+    const pollMs = Math.max(100, Math.min(5000, parseInt(qs.get("pollMs") || "300", 10) || 300));
+    let currentFile = "";
+    let cursor = 0;
+    let pending = "";
+    let closed = false;
+
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      "Connection": "keep-alive",
+      "Access-Control-Allow-Origin": "*",
+      "X-Accel-Buffering": "no",
+    });
+    res.write(": shaderclaw voxterm stream\n\n");
+
+    const tick = async () => {
+      if (closed) return;
+      const latest = await latestVoxTermLiveFile(liveDir);
+      if (!latest) {
+        writeSse(res, "waiting", { liveDir, at: Date.now() });
+        return;
+      }
+
+      if (latest.file !== currentFile) {
+        currentFile = latest.file;
+        cursor = latest.size;
+        pending = "";
+        const snapshot = await readVoxTermSnapshot(liveDir);
+        writeSse(res, "snapshot", snapshot);
+        return;
+      }
+
+      if (latest.size < cursor) {
+        cursor = 0;
+        pending = "";
+      }
+      if (latest.size === cursor) return;
+
+      const buffer = await readFile(latest.file).catch(() => null);
+      if (!buffer) return;
+      const chunk = buffer.subarray(cursor).toString("utf-8");
+      cursor = buffer.length;
+
+      const combined = pending + chunk;
+      const complete = combined.endsWith("\n") || combined.endsWith("\r");
+      const lines = combined.split(/\r?\n/);
+      pending = complete ? "" : lines.pop() || "";
+
+      for (const line of lines) {
+        const parsed = parseVoxTermMarkdownLine(line);
+        if (!parsed) continue;
+        writeSse(res, "transcript", {
+          ...parsed,
+          file: currentFile,
+          fileName: basename(currentFile),
+          at: Date.now(),
+        });
+      }
+    };
+
+    const timer = setInterval(() => tick().catch((e) => writeSse(res, "error", { error: e.message })), pollMs);
+    req.on("close", () => {
+      closed = true;
+      clearInterval(timer);
+    });
+    tick().catch((e) => writeSse(res, "error", { error: e.message }));
+    return;
+  }
 
   // Shadertoy proxy — GET /api/shadertoy/:id → fetch shader JSON
   if (urlPath.startsWith("/api/shadertoy/") && req.method === "GET") {
@@ -1990,6 +2175,11 @@ async function main() {
   // Start HTTP + WS server
   httpServer.listen(PORT, () => {
     log(`HTTP + WS server listening on port ${PORT}`);
+    if (OPEN_VOXTERM_DISPLAY) {
+      const displayUrl = `http://localhost:${PORT}/voxterm`;
+      log(`VoxTerm display mode: ${displayUrl}`);
+      openBrowser(displayUrl);
+    }
   });
 
   httpServer.on("error", (err) => {
@@ -2018,4 +2208,3 @@ main().catch((err) => {
   log("Fatal:", err.message);
   process.exit(1);
 });
-

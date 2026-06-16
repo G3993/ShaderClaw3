@@ -1,0 +1,890 @@
+[
+  {
+    "shader": "color_picker",
+    "density": 0.0,
+    "movement": 0.0,
+    "palette": 0.0,
+    "edges": 0.0,
+    "overall": 0.0
+  },
+  {
+    "shader": "edges",
+    "density": 0.0,
+    "movement": 0.0,
+    "palette": 0.0,
+    "edges": 0.0,
+    "overall": 0.0
+  },
+  {
+    "shader": "oil_paint",
+    "density": 0.0,
+    "movement": 0.0,
+    "palette": 0.0,
+    "edges": 0.0,
+    "overall": 0.0
+  },
+  {
+    "shader": "random_freeze",
+    "density": 0.0,
+    "movement": 0.0,
+    "palette": 0.0,
+    "edges": 0.0,
+    "overall": 0.0
+  },
+  {
+    "shader": "reverse_flow_field",
+    "density": 0.0,
+    "movement": 0.0,
+    "palette": 0.0,
+    "edges": 0.0,
+    "overall": 0.0
+  },
+  {
+    "shader": "text_bricks",
+    "density": 0.0,
+    "movement": 0.0,
+    "palette": 0.0,
+    "edges": 0.0,
+    "overall": 0.0
+  },
+  {
+    "shader": "text_cascade",
+    "density": 0.0,
+    "movement": 0.0,
+    "palette": 0.0,
+    "edges": 0.0,
+    "overall": 0.0
+  },
+  {
+    "shader": "text_digifade",
+    "density": 0.0,
+    "movement": 0.0,
+    "palette": 0.0,
+    "edges": 0.0,
+    "overall": 0.0
+  },
+  {
+    "shader": "text_spacy",
+    "density": 0.0,
+    "movement": 0.0,
+    "palette": 0.0,
+    "edges": 0.0,
+    "overall": 0.0
+  },
+  {
+    "shader": "time_glitch_rgbfs",
+    "density": 0.0,
+    "movement": 0.0,
+    "palette": 0.0,
+    "edges": 0.0,
+    "overall": 0.0
+  },
+  {
+    "shader": "vapor_hologram",
+    "density": 0.0,
+    "movement": 0.0,
+    "palette": 0.0,
+    "edges": 0.0,
+    "overall": 0.0
+  },
+  {
+    "shader": "vishes",
+    "density": 0.0,
+    "movement": 0.0,
+    "palette": 0.0,
+    "edges": 0.0,
+    "overall": 0.0
+  },
+  {
+    "shader": "metamorphosis",
+    "density": 0.2,
+    "movement": 0.1,
+    "palette": 0.0,
+    "edges": 0.0,
+    "overall": 0.1
+  },
+  {
+    "shader": "swirl_spin",
+    "density": 0.4,
+    "movement": 0.0,
+    "palette": 0.0,
+    "edges": 0.0,
+    "overall": 0.1
+  },
+  {
+    "shader": "liquid_ripples_3d",
+    "density": 0.7,
+    "movement": 0.2,
+    "palette": 0.0,
+    "edges": 0.0,
+    "overall": 0.2
+  },
+  {
+    "shader": "particle_grid",
+    "density": 0.5,
+    "movement": 0.3,
+    "palette": 0.0,
+    "edges": 0.2,
+    "overall": 0.2
+  },
+  {
+    "shader": "sonoluminescence",
+    "density": 1.1,
+    "movement": 0.1,
+    "palette": 0.0,
+    "edges": 0.2,
+    "overall": 0.3
+  },
+  {
+    "shader": "text_typewriter",
+    "density": 0.9,
+    "movement": 0.0,
+    "palette": 0.0,
+    "edges": 0.1,
+    "overall": 0.3
+  },
+  {
+    "shader": "text_3d",
+    "density": 1.7,
+    "movement": 0.3,
+    "palette": 0.0,
+    "edges": 0.1,
+    "overall": 0.5
+  },
+  {
+    "shader": "abex_pollock",
+    "density": 1.0,
+    "movement": 1.4,
+    "palette": 0.0,
+    "edges": 0.1,
+    "overall": 0.6
+  },
+  {
+    "shader": "laser_labyrinth",
+    "density": 1.6,
+    "movement": 0.5,
+    "palette": 0.0,
+    "edges": 0.2,
+    "overall": 0.6
+  },
+  {
+    "shader": "gradient_example",
+    "density": 2.7,
+    "movement": 0.0,
+    "palette": 0.0,
+    "edges": 0.0,
+    "overall": 0.7
+  },
+  {
+    "shader": "text_james",
+    "density": 2.1,
+    "movement": 0.4,
+    "palette": 0.0,
+    "edges": 0.4,
+    "overall": 0.7
+  },
+  {
+    "shader": "text_wave",
+    "density": 2.0,
+    "movement": 0.5,
+    "palette": 0.0,
+    "edges": 0.3,
+    "overall": 0.7
+  },
+  {
+    "shader": "chladni_figures",
+    "density": 1.7,
+    "movement": 0.9,
+    "palette": 0.0,
+    "edges": 0.7,
+    "overall": 0.8
+  },
+  {
+    "shader": "interactive_particles",
+    "density": 1.7,
+    "movement": 0.7,
+    "palette": 0.0,
+    "edges": 0.9,
+    "overall": 0.8
+  },
+  {
+    "shader": "sound_temple_octagon",
+    "density": 1.8,
+    "movement": 1.0,
+    "palette": 0.0,
+    "edges": 0.3,
+    "overall": 0.8
+  },
+  {
+    "shader": "marble",
+    "density": 3.2,
+    "movement": 0.4,
+    "palette": 0.0,
+    "edges": 0.2,
+    "overall": 0.9
+  },
+  {
+    "shader": "data_sculpture",
+    "density": 0.9,
+    "movement": 1.7,
+    "palette": 0.0,
+    "edges": 1.4,
+    "overall": 1.0
+  },
+  {
+    "shader": "flow",
+    "density": 2.2,
+    "movement": 1.6,
+    "palette": 0.0,
+    "edges": 0.3,
+    "overall": 1.0
+  },
+  {
+    "shader": "popart_lichtenstein",
+    "density": 3.5,
+    "movement": 0.4,
+    "palette": 0.0,
+    "edges": 0.3,
+    "overall": 1.0
+  },
+  {
+    "shader": "text_3dtype",
+    "density": 3.5,
+    "movement": 0.1,
+    "palette": 0.0,
+    "edges": 0.4,
+    "overall": 1.0
+  },
+  {
+    "shader": "hologram_glitch",
+    "density": 0.3,
+    "movement": 4.0,
+    "palette": 0.0,
+    "edges": 0.1,
+    "overall": 1.1
+  },
+  {
+    "shader": "gradient_mapping2",
+    "density": 4.7,
+    "movement": 0.0,
+    "palette": 0.0,
+    "edges": 0.1,
+    "overall": 1.2
+  },
+  {
+    "shader": "james",
+    "density": 3.7,
+    "movement": 0.6,
+    "palette": 0.0,
+    "edges": 0.6,
+    "overall": 1.2
+  },
+  {
+    "shader": "shine_text",
+    "density": 4.3,
+    "movement": 0.0,
+    "palette": 0.0,
+    "edges": 0.5,
+    "overall": 1.2
+  },
+  {
+    "shader": "wave_text",
+    "density": 3.7,
+    "movement": 0.9,
+    "palette": 0.0,
+    "edges": 0.4,
+    "overall": 1.3
+  },
+  {
+    "shader": "ascii_shader",
+    "density": 2.5,
+    "movement": 1.5,
+    "palette": 0.0,
+    "edges": 1.5,
+    "overall": 1.4
+  },
+  {
+    "shader": "balls",
+    "density": 3.6,
+    "movement": 2.1,
+    "palette": 0.0,
+    "edges": 0.4,
+    "overall": 1.5
+  },
+  {
+    "shader": "memphis_primitives",
+    "density": 4.5,
+    "movement": 1.1,
+    "palette": 0.0,
+    "edges": 1.1,
+    "overall": 1.7
+  },
+  {
+    "shader": "text_ascii",
+    "density": 2.9,
+    "movement": 1.5,
+    "palette": 0.0,
+    "edges": 2.5,
+    "overall": 1.7
+  },
+  {
+    "shader": "layers_text",
+    "density": 4.9,
+    "movement": 1.7,
+    "palette": 0.0,
+    "edges": 0.6,
+    "overall": 1.8
+  },
+  {
+    "shader": "liquid_metal",
+    "density": 3.6,
+    "movement": 0.4,
+    "palette": 3.7,
+    "edges": 0.1,
+    "overall": 1.9
+  },
+  {
+    "shader": "polka_dotz",
+    "density": 2.3,
+    "movement": 1.5,
+    "palette": 0.0,
+    "edges": 3.6,
+    "overall": 1.9
+  },
+  {
+    "shader": "crystal_cubes",
+    "density": 0.8,
+    "movement": 7.4,
+    "palette": 0.0,
+    "edges": 0.0,
+    "overall": 2.1
+  },
+  {
+    "shader": "electricity",
+    "density": 4.5,
+    "movement": 0.8,
+    "palette": 2.6,
+    "edges": 0.6,
+    "overall": 2.1
+  },
+  {
+    "shader": "sketchpad",
+    "density": 2.9,
+    "movement": 0.9,
+    "palette": 2.8,
+    "edges": 2.1,
+    "overall": 2.2
+  },
+  {
+    "shader": "digifade_text",
+    "density": 6.1,
+    "movement": 2.3,
+    "palette": 0.0,
+    "edges": 0.7,
+    "overall": 2.3
+  },
+  {
+    "shader": "text_la_bloom",
+    "density": 3.3,
+    "movement": 0.0,
+    "palette": 5.6,
+    "edges": 0.4,
+    "overall": 2.3
+  },
+  {
+    "shader": "text_coil",
+    "density": 9.3,
+    "movement": 0.0,
+    "palette": 0.0,
+    "edges": 0.4,
+    "overall": 2.4
+  },
+  {
+    "shader": "laser",
+    "density": 3.6,
+    "movement": 1.2,
+    "palette": 5.0,
+    "edges": 0.2,
+    "overall": 2.5
+  },
+  {
+    "shader": "trapped",
+    "density": 4.3,
+    "movement": 2.4,
+    "palette": 3.1,
+    "edges": 0.2,
+    "overall": 2.5
+  },
+  {
+    "shader": "ramp_sinus_gradient",
+    "density": 4.6,
+    "movement": 0.0,
+    "palette": 5.6,
+    "edges": 0.0,
+    "overall": 2.6
+  },
+  {
+    "shader": "carbon_fiber",
+    "density": 2.1,
+    "movement": 3.1,
+    "palette": 4.2,
+    "edges": 1.3,
+    "overall": 2.7
+  },
+  {
+    "shader": "no_mans_sky_gradients",
+    "density": 2.6,
+    "movement": 5.3,
+    "palette": 2.8,
+    "edges": 0.0,
+    "overall": 2.7
+  },
+  {
+    "shader": "red_carpet",
+    "density": 3.0,
+    "movement": 0.2,
+    "palette": 6.4,
+    "edges": 1.7,
+    "overall": 2.8
+  },
+  {
+    "shader": "text_matrix",
+    "density": 4.7,
+    "movement": 3.0,
+    "palette": 0.0,
+    "edges": 3.3,
+    "overall": 2.8
+  },
+  {
+    "shader": "abex_rothko",
+    "density": 4.7,
+    "movement": 0.1,
+    "palette": 7.0,
+    "edges": 0.2,
+    "overall": 3.0
+  },
+  {
+    "shader": "fluid_body",
+    "density": 4.2,
+    "movement": 1.1,
+    "palette": 5.3,
+    "edges": 1.3,
+    "overall": 3.0
+  },
+  {
+    "shader": "multi_gradient",
+    "density": 6.3,
+    "movement": 0.0,
+    "palette": 6.1,
+    "edges": 0.1,
+    "overall": 3.1
+  },
+  {
+    "shader": "ai_latent_drift",
+    "density": 4.1,
+    "movement": 3.0,
+    "palette": 5.2,
+    "edges": 0.3,
+    "overall": 3.2
+  },
+  {
+    "shader": "futurism_boccioni",
+    "density": 4.5,
+    "movement": 3.0,
+    "palette": 4.8,
+    "edges": 0.4,
+    "overall": 3.2
+  },
+  {
+    "shader": "moveable_gradient",
+    "density": 8.2,
+    "movement": 0.0,
+    "palette": 4.3,
+    "edges": 0.3,
+    "overall": 3.2
+  },
+  {
+    "shader": "ascii_filter",
+    "density": 5.6,
+    "movement": 0.1,
+    "palette": 4.4,
+    "edges": 3.1,
+    "overall": 3.3
+  },
+  {
+    "shader": "fisheye_sphere",
+    "density": 6.0,
+    "movement": 0.0,
+    "palette": 6.4,
+    "edges": 0.6,
+    "overall": 3.3
+  },
+  {
+    "shader": "soph_orb",
+    "density": 6.4,
+    "movement": 0.5,
+    "palette": 5.9,
+    "edges": 0.3,
+    "overall": 3.3
+  },
+  {
+    "shader": "turrell_chroma",
+    "density": 4.5,
+    "movement": 1.1,
+    "palette": 7.4,
+    "edges": 0.2,
+    "overall": 3.3
+  },
+  {
+    "shader": "expressionism_kirchner",
+    "density": 4.2,
+    "movement": 4.9,
+    "palette": 3.6,
+    "edges": 0.8,
+    "overall": 3.4
+  },
+  {
+    "shader": "text_3d_aurora",
+    "density": 4.4,
+    "movement": 3.6,
+    "palette": 5.1,
+    "edges": 1.0,
+    "overall": 3.5
+  },
+  {
+    "shader": "NYC",
+    "density": 4.5,
+    "movement": 9.0,
+    "palette": 0.0,
+    "edges": 0.7,
+    "overall": 3.6
+  },
+  {
+    "shader": "fauvism_matisse",
+    "density": 4.7,
+    "movement": 3.0,
+    "palette": 5.3,
+    "edges": 1.6,
+    "overall": 3.6
+  },
+  {
+    "shader": "cubism_picasso",
+    "density": 5.7,
+    "movement": 1.9,
+    "palette": 6.3,
+    "edges": 0.8,
+    "overall": 3.7
+  },
+  {
+    "shader": "art_nouveau_mucha",
+    "density": 8.2,
+    "movement": 0.4,
+    "palette": 5.4,
+    "edges": 1.2,
+    "overall": 3.8
+  },
+  {
+    "shader": "vaporwave_floral_shoppe",
+    "density": 4.5,
+    "movement": 3.5,
+    "palette": 6.6,
+    "edges": 0.8,
+    "overall": 3.8
+  },
+  {
+    "shader": "black_hole_sun",
+    "density": 8.2,
+    "movement": 2.5,
+    "palette": 2.6,
+    "edges": 2.5,
+    "overall": 3.9
+  },
+  {
+    "shader": "particles",
+    "density": 5.1,
+    "movement": 4.0,
+    "palette": 5.8,
+    "edges": 0.8,
+    "overall": 3.9
+  },
+  {
+    "shader": "solar_flare_corona",
+    "density": 8.0,
+    "movement": 1.6,
+    "palette": 5.6,
+    "edges": 0.4,
+    "overall": 3.9
+  },
+  {
+    "shader": "constructivism_lissitzky",
+    "density": 8.6,
+    "movement": 1.9,
+    "palette": 4.3,
+    "edges": 1.5,
+    "overall": 4.1
+  },
+  {
+    "shader": "ether",
+    "density": 5.0,
+    "movement": 6.4,
+    "palette": 5.7,
+    "edges": 0.3,
+    "overall": 4.4
+  },
+  {
+    "shader": "geometric_tunnel",
+    "density": 4.1,
+    "movement": 7.5,
+    "palette": 3.4,
+    "edges": 3.3,
+    "overall": 4.6
+  },
+  {
+    "shader": "surrealism_magritte",
+    "density": 9.5,
+    "movement": 0.6,
+    "palette": 8.0,
+    "edges": 0.3,
+    "overall": 4.6
+  },
+  {
+    "shader": "cfd_paint",
+    "density": 5.6,
+    "movement": 2.1,
+    "palette": 10.0,
+    "edges": 0.9,
+    "overall": 4.7
+  },
+  {
+    "shader": "liquid_warp",
+    "density": 7.9,
+    "movement": 10.0,
+    "palette": 1.1,
+    "edges": 0.5,
+    "overall": 4.9
+  },
+  {
+    "shader": "destijl_mondrian",
+    "density": 8.5,
+    "movement": 4.8,
+    "palette": 6.5,
+    "edges": 1.1,
+    "overall": 5.2
+  },
+  {
+    "shader": "glitch_datamosh",
+    "density": 5.0,
+    "movement": 10.0,
+    "palette": 3.3,
+    "edges": 3.1,
+    "overall": 5.3
+  },
+  {
+    "shader": "mirror_fractal",
+    "density": 9.3,
+    "movement": 10.0,
+    "palette": 0.0,
+    "edges": 2.0,
+    "overall": 5.3
+  },
+  {
+    "shader": "bars",
+    "density": 4.8,
+    "movement": 10.0,
+    "palette": 7.0,
+    "edges": 0.3,
+    "overall": 5.5
+  },
+  {
+    "shader": "raining_spheres",
+    "density": 7.1,
+    "movement": 8.5,
+    "palette": 4.6,
+    "edges": 2.6,
+    "overall": 5.7
+  },
+  {
+    "shader": "color_cube",
+    "density": 5.7,
+    "movement": 10.0,
+    "palette": 7.1,
+    "edges": 0.2,
+    "overall": 5.8
+  },
+  {
+    "shader": "untitled_shader",
+    "density": 8.6,
+    "movement": 8.0,
+    "palette": 6.4,
+    "edges": 0.1,
+    "overall": 5.8
+  },
+  {
+    "shader": "bricks_text",
+    "density": 10.0,
+    "movement": 0.3,
+    "palette": 3.2,
+    "edges": 10.0,
+    "overall": 5.9
+  },
+  {
+    "shader": "rainbow_flower",
+    "density": 8.3,
+    "movement": 6.2,
+    "palette": 7.1,
+    "edges": 2.3,
+    "overall": 6.0
+  },
+  {
+    "shader": "dada_hoch",
+    "density": 6.0,
+    "movement": 10.0,
+    "palette": 6.0,
+    "edges": 3.0,
+    "overall": 6.3
+  },
+  {
+    "shader": "bauhaus_kandinsky",
+    "density": 7.7,
+    "movement": 9.3,
+    "palette": 7.4,
+    "edges": 1.4,
+    "overall": 6.5
+  },
+  {
+    "shader": "text_flag",
+    "density": 10.0,
+    "movement": 10.0,
+    "palette": 5.8,
+    "edges": 0.6,
+    "overall": 6.6
+  },
+  {
+    "shader": "phipiplanet",
+    "density": 4.9,
+    "movement": 8.5,
+    "palette": 8.3,
+    "edges": 5.2,
+    "overall": 6.7
+  },
+  {
+    "shader": "st_ms2sd1fs",
+    "density": 9.7,
+    "movement": 6.8,
+    "palette": 8.0,
+    "edges": 2.3,
+    "overall": 6.7
+  },
+  {
+    "shader": "american_flag",
+    "density": 9.9,
+    "movement": 9.2,
+    "palette": 5.7,
+    "edges": 2.3,
+    "overall": 6.8
+  },
+  {
+    "shader": "oooofs",
+    "density": 8.3,
+    "movement": 8.6,
+    "palette": 3.2,
+    "edges": 7.1,
+    "overall": 6.8
+  },
+  {
+    "shader": "coil_text",
+    "density": 8.7,
+    "movement": 6.4,
+    "palette": 2.7,
+    "edges": 10.0,
+    "overall": 6.9
+  },
+  {
+    "shader": "minimalism_stella",
+    "density": 7.6,
+    "movement": 10.0,
+    "palette": 7.5,
+    "edges": 3.0,
+    "overall": 7.0
+  },
+  {
+    "shader": "opart_vasarely",
+    "density": 7.7,
+    "movement": 10.0,
+    "palette": 10.0,
+    "edges": 0.8,
+    "overall": 7.1
+  },
+  {
+    "shader": "checkers",
+    "density": 9.1,
+    "movement": 10.0,
+    "palette": 6.2,
+    "edges": 3.5,
+    "overall": 7.2
+  },
+  {
+    "shader": "spacy_text",
+    "density": 9.7,
+    "movement": 10.0,
+    "palette": 2.6,
+    "edges": 6.7,
+    "overall": 7.3
+  },
+  {
+    "shader": "flag_text",
+    "density": 8.5,
+    "movement": 10.0,
+    "palette": 4.6,
+    "edges": 6.3,
+    "overall": 7.4
+  },
+  {
+    "shader": "dispersion",
+    "density": 9.2,
+    "movement": 10.0,
+    "palette": 10.0,
+    "edges": 1.5,
+    "overall": 7.7
+  },
+  {
+    "shader": "cascade_text",
+    "density": 10.0,
+    "movement": 10.0,
+    "palette": 3.1,
+    "edges": 10.0,
+    "overall": 8.3
+  },
+  {
+    "shader": "blobscillator",
+    "density": 9.8,
+    "movement": 10.0,
+    "palette": 4.1,
+    "edges": 10.0,
+    "overall": 8.5
+  },
+  {
+    "shader": "lightning",
+    "density": 7.6,
+    "movement": 10.0,
+    "palette": 10.0,
+    "edges": 7.1,
+    "overall": 8.7
+  },
+  {
+    "shader": "fluid_pixels",
+    "density": 9.8,
+    "movement": 10.0,
+    "palette": 5.4,
+    "edges": 10.0,
+    "overall": 8.8
+  },
+  {
+    "shader": "opart_riley_waves",
+    "density": 9.9,
+    "movement": 10.0,
+    "palette": 6.2,
+    "edges": 9.3,
+    "overall": 8.9
+  }
+]

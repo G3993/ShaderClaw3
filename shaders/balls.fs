@@ -5,6 +5,11 @@
   "INPUTS": [
     { "NAME": "ballCount", "LABEL": "Count", "TYPE": "float", "DEFAULT": 25.0, "MIN": 5.0, "MAX": 50.0 },
     { "NAME": "ballSize", "LABEL": "Size", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.05, "MAX": 1.0 },
+    { "NAME": "sizeVariance", "LABEL": "Size Variance", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "movementMode", "LABEL": "Movement", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Orbit", "Heart Pump", "Morph Center", "Dance Around", "Swarm"] },
+    { "NAME": "noiseTexture", "LABEL": "Surface Noise", "TYPE": "float", "DEFAULT": 0.30, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "rimLight", "LABEL": "Rim Light", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 2.0 },
+    { "NAME": "shadowSoftness", "LABEL": "Shadow Soft", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "bloomStr", "LABEL": "Bloom", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
     { "NAME": "bloomRadius", "LABEL": "Blur Size", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 3.0 },
     { "NAME": "rotSpeed", "LABEL": "Orbit Speed", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 2.0 },
@@ -48,16 +53,57 @@ vec2 mapScene(vec3 p, float count) {
         float r = 2.0 + hash1(i * 3.91) * 4.0;
         vec3 center = normalize(h) * r;
 
-        // Gentle orbit rotation
+        // ── Movement modes ────────────────────────────────────────────
         float orbitAngle = TIME * rotSpeed * (0.5 + hash1(i * 5.17) * 0.5);
         float sa = sin(orbitAngle), ca = cos(orbitAngle);
-        center.xz = mat2(ca, -sa, sa, ca) * center.xz;
+
+        if (movementMode < 0.5) {
+            // 0: ORBIT — original behavior
+            center.xz = mat2(ca, -sa, sa, ca) * center.xz;
+        } else if (movementMode < 1.5) {
+            // 1: HEART PUMP — radius pulses with bass like a heartbeat
+            float beat = pow(audioBass, 0.6) * audioDrive;
+            float bpm  = 0.5 + 0.5 * sin(TIME * 4.0 + hash1(i * 5.17) * 6.28);
+            float pump = 1.0 + (beat * 0.30 + bpm * 0.10) * (0.5 + hash1(i * 7.7));
+            center *= pump;
+            // Slow rotation around y
+            center.xz = mat2(ca * 0.5, -sa * 0.5, sa * 0.5, ca * 0.5) * center.xz;
+        } else if (movementMode < 2.5) {
+            // 2: MORPH CENTER — balls migrate slowly toward origin then back
+            float morph = 0.5 + 0.5 * sin(TIME * rotSpeed * 0.7 + hash1(i * 3.1) * 6.28);
+            center = mix(center, vec3(0.0), morph * 0.7);
+            center.xz = mat2(ca, -sa, sa, ca) * center.xz;
+        } else if (movementMode < 3.5) {
+            // 3: DANCE AROUND — Lissajous in three planes per ball
+            float a1 = TIME * rotSpeed * (0.6 + hash1(i * 7.13));
+            float a2 = TIME * rotSpeed * (0.4 + hash1(i * 11.7));
+            float a3 = TIME * rotSpeed * (0.5 + hash1(i * 13.3));
+            center += vec3(sin(a1) * 1.0, sin(a2) * 0.6, sin(a3) * 0.8) * 0.5;
+            center.xz = mat2(ca, -sa, sa, ca) * center.xz;
+        } else {
+            // 4: SWARM — all balls drift toward a moving target
+            vec3 swarmTarget = vec3(sin(TIME * 0.3) * 2.5,
+                                    cos(TIME * 0.4) * 1.5,
+                                    sin(TIME * 0.5) * 2.5);
+            center = mix(center, swarmTarget + (h * 1.2), 0.4);
+            center.xz = mat2(ca, -sa, sa, ca) * center.xz;
+        }
 
         // Audio pulse: expand radius on beat
         float pulse = 1.0 + audioBass * audioDrive * 0.3 * hash1(i * 11.3);
 
-        float sz = ballSize * (0.5 + hash1(i * 2.37) * 0.7) * pulse;
+        // Wider size variance per user feedback
+        float szJit = mix(1.0, 0.20 + hash1(i * 2.37) * 1.6, sizeVariance);
+        float sz = ballSize * szJit * pulse;
         float d = length(p - center) - sz;
+
+        // Optional surface noise — bumps the SDF so balls can read as
+        // textured rocks, gnarled fruit, etc.
+        if (noiseTexture > 0.0) {
+            float bump = sin(p.x * 12.0 + i) * sin(p.y * 11.0 + i * 1.7) * sin(p.z * 13.0 + i * 2.3);
+            d -= bump * noiseTexture * sz * 0.05;
+        }
+
         if (d < res.x) {
             res = vec2(d, i);
         }

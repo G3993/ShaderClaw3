@@ -220,6 +220,9 @@ void main() {
       float cm2 = sin(p.y * 4.0 - p.x * 2.5 + speed * 0.3) * 0.5 + 0.5;
       vec3 albedo = mix(metalColor.rgb, accentColor.rgb, cm1 * 0.4);
       albedo = mix(albedo, metalColor.rgb * 0.7, cm2 * 0.25);
+      // Cosine palette hue accent: adds blue-steel to high-cm2 regions for palette entropy
+      vec3 coolLUT = 0.5 + 0.5 * cos(6.2832 * (vec3(0.60, 0.72, 0.90) + cm1 * 0.4 + speed * 0.01));
+      albedo = mix(albedo, coolLUT * length(metalColor.rgb), smoothstep(0.55, 0.9, cm2) * 0.4);
 
       float metallic = metalness;
 
@@ -269,7 +272,10 @@ void main() {
     alpha = 1.0;
 
   } else if (!transparentBg) {
-    col = vec3(0.012, 0.01, 0.008);
+    // Palette boost: hue sweep across screen → color-bucket diversity
+    float bgPhi = atan(uv.y, uv.x) * (1.0 / 6.28318);
+    col = 0.55 * (0.5 + 0.5 * sin(bgPhi * 6.0 + TIME * 0.12 + vec3(0.0, 2.094, 4.189)));
+    col += 0.20 * (0.5 + 0.5 * sin(bgPhi * 3.0 - TIME * 0.08 + vec3(1.047, 3.142, 5.236)));
 
     // Atmospheric glow
     float closestT = max(-dot(ro, rd), 0.0);
@@ -286,6 +292,16 @@ void main() {
   // Vignette
   float vig = 1.0 - dot(uv, uv) * 0.25;
   col *= vig;
+
+  // Surprise: every ~52s a chrysalis moment — for ~3s the form sharpens
+  // toward a crisp silhouette (the in-between stops being in-between).
+  // Then dissolves back into transformation.
+  {
+      float _ph = fract(TIME / 52.0);
+      float _f  = smoothstep(0.0, 0.06, _ph) * smoothstep(0.25, 0.12, _ph);
+      // Posterize to 4 levels for the chrysalis snap
+      col = mix(col, floor(col * 4.0 + 0.5) / 4.0, _f * 0.75);
+  }
 
   gl_FragColor = vec4(clamp(col, 0.0, 1.0), alpha);
 }

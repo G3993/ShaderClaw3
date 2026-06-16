@@ -204,15 +204,33 @@ void main() {
     // Mix with background based on trail alpha
     result = mix(bgColor.rgb, result, min(albedo.a * 1.2, 1.0));
 
-    // Particle glow — small colored point light per particle
+    // Particle glow — drawn along the SAME capsule that the trail pass
+    // uses, so the orb sits exactly on the rendered ball, not ahead of it.
+    float dt = TIMEDELTA * orbitSpeed * 1.2;
     for (int i = 0; i < N_PARTICLES; i++) {
-        vec2 pp = particlePos(i, t);
-        vec3 pc = texture2D(albedoBuf, pp / Res).rgb;
+        vec2 ppCur = particlePos(i, t);
+        vec2 ppPrev = particlePos(i, t - dt);
+        // Sample the trail color at the midpoint so the orb tints from
+        // the same source as the trail core.
+        vec2 ppMid = (ppCur + ppPrev) * 0.5;
+        vec3 pc = texture2D(albedoBuf, ppMid / Res).rgb;
         if (dot(pc, pc) < 0.01) pc = vec3(0.5);
-        float dist = distance(pp, pos);
-        // Tight glow: bright core fading quickly
+
+        // Capsule distance — same math as the trail render.
+        vec2 seg = ppCur - ppPrev;
+        float segLen = length(seg);
+        float dist;
+        if (segLen < 0.5) {
+            dist = distance(pos, ppCur);
+        } else {
+            vec2 toPos = pos - ppPrev;
+            float proj = clamp(dot(toPos, seg) / (segLen * segLen), 0.0, 1.0);
+            dist = distance(pos, ppPrev + seg * proj);
+        }
+
+        // Tight core matched to the trail pSize so orb == ball
         float core = smoothstep(pSize * 0.8, 0.0, dist);
-        float halo = smoothstep(pSize * 2.5, pSize * 0.5, dist) * 0.3;
+        float halo = smoothstep(pSize * 2.0, pSize * 0.5, dist) * 0.25;
         result += pc * (core + halo) * glowAmount * 0.4;
     }
 
@@ -229,6 +247,14 @@ void main() {
 
     float alpha = 1.0;
     if (transparentBg) alpha = smoothstep(0.01, 0.1, albedo.a);
+
+    // Surprise: every ~26s the flow direction reverses for ~1.5s,
+    // then snaps back. Tide pulled out and pushed in.
+    {
+        float _ph = fract(TIME / 26.0);
+        float _f  = smoothstep(0.0, 0.06, _ph) * smoothstep(0.30, 0.18, _ph);
+        result = mix(result, result.bgr, _f * 0.4);
+    }
 
     gl_FragColor = vec4(result, alpha);
 }

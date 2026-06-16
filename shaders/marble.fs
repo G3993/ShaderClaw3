@@ -181,5 +181,16 @@ void main() {
         alpha = clamp(intensity * 0.8, 0.0, 1.0);
     }
 
+    // Surprise: every ~45s a single gold vein breaks through the marble
+    // — a brief metallic streak (Kintsugi/Pietra Dura inlay) ~1s.
+    {
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        float _ph = fract(TIME / 45.0);
+        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.20, 0.10, _ph);
+        float _y = 0.3 + 0.4 * fract(floor(TIME / 45.0) * 0.71);
+        float _vein = exp(-pow((_suv.y - _y - 0.04 * sin(_suv.x * 18.0 + TIME)) * 200.0, 2.0));
+        marble = mix(marble, vec3(1.0, 0.82, 0.30), _vein * _f * 0.85);
+    }
+
     gl_FragColor = vec4(marble, alpha);
 }

@@ -108,5 +108,17 @@ void main() {
         }
     }
 
+    // Surprise: every ~18s a sudden swarm convergence — for ~0.8s all
+    // particles bloom toward the screen center as if pulled by gravity.
+    // Visualized as a bright radial pulse from middle.
+    {
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        float _ph = fract(TIME / 18.0);
+        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.20, 0.10, _ph);
+        float _r  = length(_suv - 0.5);
+        float _pulse = exp(-_r * 8.0) * exp(-pow(_ph * 5.0 - 0.5, 2.0));
+        col += vec3(0.7, 0.85, 1.0) * _pulse * _f * 1.2;
+    }
+
     gl_FragColor = vec4(col, 1.0);
 }

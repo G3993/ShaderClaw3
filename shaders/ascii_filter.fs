@@ -4,8 +4,12 @@
   "INPUTS": [
     { "NAME": "inputTex", "LABEL": "Source", "TYPE": "image" },
     { "NAME": "cellSize", "LABEL": "Cell Size", "TYPE": "float", "DEFAULT": 8.0, "MIN": 4.0, "MAX": 32.0 },
-    { "NAME": "charSet", "LABEL": "Character Set", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2], "LABELS": ["Simple", "Extended", "Blocks"] },
-    { "NAME": "colorMode", "LABEL": "Color Mode", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["ANSI 16", "Mono", "Custom Duo", "Full Color"] },
+    { "NAME": "charSet", "LABEL": "Character Set", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4, 5, 6], "LABELS": ["Simple", "Extended", "Blocks", "Binary 01", "Hex", "Matrix Glyphs", "Geometric"] },
+    { "NAME": "colorMode", "LABEL": "Color Mode", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4, 5], "LABELS": ["ANSI 16", "Mono", "Custom Duo", "Full Color", "Heatmap", "Cyberpunk"] },
+    { "NAME": "depth", "LABEL": "Depth (Zoom Center)", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "depthFalloff", "LABEL": "Depth Falloff", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.2, "MAX": 4.0 },
+    { "NAME": "charCycle", "LABEL": "Charset Cycle", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 4.0 },
+    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "fgColor", "LABEL": "Foreground", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
     { "NAME": "contrast", "LABEL": "Contrast", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.5, "MAX": 3.0 },
@@ -149,9 +153,16 @@ void main() {
     vec2 px = gl_FragCoord.xy;
     vec2 uv = isf_FragNormCoord;
 
-    // Cell grid
-    float cW = cellSize;
-    float cH = cellSize * 1.4; // 5:7 aspect ratio
+    // Cell grid — depth modulates cell size based on distance to canvas
+    // center, giving an "into the depth" feel where the center has tiny
+    // characters (close-up) and the edges have larger ones.
+    vec2 cuv01 = uv;
+    float depthR = length(cuv01 - 0.5) * 2.0;          // 0..1.4ish
+    float dScale = mix(1.0,
+                       mix(2.5, 0.4, smoothstep(0.0, 1.0, depthR * depthFalloff)),
+                       depth);
+    float cW = cellSize * dScale;
+    float cH = cellSize * 1.4 * dScale;
     vec2 cell = floor(px / vec2(cW, cH));
     vec2 cellUV = mod(px, vec2(cW, cH)) / vec2(cW, cH);
 
@@ -180,19 +191,42 @@ void main() {
     float lum = dot(sampleCol, vec3(0.299, 0.587, 0.114));
     if (invert) lum = 1.0 - lum;
 
+    // Optional charset cycling — animate between charsets per cell over time
+    float cs = charSet + sin(TIME * charCycle * 0.5 + cell.x * 0.13 + cell.y * 0.17) * (charCycle * 0.5);
+    cs = clamp(cs, 0.0, 6.99);
+    int csI = int(cs);
+
     // Select character by luminance
     int numChars;
-    if (charSet < 0.5)      numChars = 10; // Simple
-    else if (charSet < 1.5) numChars = 15; // Extended
-    else                    numChars = 10; // Blocks
+    if (csI == 0)      numChars = 10; // Simple
+    else if (csI == 1) numChars = 15; // Extended
+    else if (csI == 2) numChars = 10; // Blocks
+    else if (csI == 3) numChars = 4;  // Binary 01 — sparse 0/1
+    else if (csI == 4) numChars = 12; // Hex — 0..F via extended subset
+    else if (csI == 5) numChars = 14; // Matrix Glyphs — extended cycled
+    else               numChars = 10; // Geometric — blocks
 
-    int charIdx = int(clamp(lum * float(numChars - 1) + 0.5, 0.0, float(numChars - 1)));
+    int charIdx;
+    if (csI == 3) {
+        // Binary: pick 0 or 1 by luminance threshold; index 0/1 in simple
+        charIdx = lum > 0.5 ? 1 : 0;
+    } else if (csI == 5) {
+        // Matrix glyphs: rotate the index over time so chars stream
+        int base = int(clamp(lum * float(numChars - 1) + 0.5, 0.0, float(numChars - 1)));
+        charIdx = int(mod(float(base) + TIME * 6.0 + cell.y * 0.5, float(numChars)));
+    } else {
+        charIdx = int(clamp(lum * float(numChars - 1) + 0.5, 0.0, float(numChars - 1)));
+    }
 
-    // Get bitmap
+    // Get bitmap — route new charsets to existing tables
     vec2 bitmap;
-    if (charSet < 0.5)      bitmap = charBitmap_simple(charIdx);
-    else if (charSet < 1.5) bitmap = charBitmap_ext(charIdx);
-    else                    bitmap = charBitmap_block(charIdx);
+    if (csI == 0)      bitmap = charBitmap_simple(charIdx);
+    else if (csI == 1) bitmap = charBitmap_ext(charIdx);
+    else if (csI == 2) bitmap = charBitmap_block(charIdx);
+    else if (csI == 3) bitmap = charBitmap_simple(charIdx);
+    else if (csI == 4) bitmap = charBitmap_ext(charIdx);
+    else if (csI == 5) bitmap = charBitmap_ext(charIdx);
+    else               bitmap = charBitmap_block(charIdx);
 
     // Sample the character glyph at this pixel's position within the cell
     // Map cellUV to 5x7 grid with slight padding
@@ -230,10 +264,26 @@ void main() {
             fg = bg;
             bg = tmp;
         }
-    } else {
+    } else if (colorMode < 3.5) {
         // Full Color — use actual image color as foreground
         fg = sampleCol;
         bg = sampleCol * 0.15;
+    } else if (colorMode < 4.5) {
+        // Heatmap — luminance maps to thermal LUT
+        vec3 c0 = vec3(0.05, 0.0, 0.15);
+        vec3 c1 = vec3(0.45, 0.0, 0.25);
+        vec3 c2 = vec3(0.95, 0.30, 0.05);
+        vec3 c3 = vec3(1.00, 0.92, 0.20);
+        if      (lum < 0.33) fg = mix(c0, c1, lum / 0.33);
+        else if (lum < 0.66) fg = mix(c1, c2, (lum - 0.33) / 0.33);
+        else                 fg = mix(c2, c3, (lum - 0.66) / 0.34);
+        bg = c0 * 0.6;
+    } else {
+        // Cyberpunk — magenta/cyan/yellow on near-black with audio glow
+        float h = fract(lum + TIME * 0.05);
+        vec3 cyber = 0.5 + 0.5 * cos(6.28318 * h + vec3(0.0, 2.094, 4.188));
+        fg = cyber * (0.7 + audioBass * audioReact * 0.5);
+        bg = vec3(0.02, 0.0, 0.04);
     }
 
     // Mix character foreground/background
@@ -249,6 +299,17 @@ void main() {
     float alpha = 1.0;
     if (transparentBg) {
         alpha = charAlpha * 0.9 + 0.1 * step(0.05, lum);
+    }
+
+    // Surprise: every ~13s the entire field briefly translates to one
+    // line of katakana that scrolls horizontally for ~0.6s — the
+    // matrix ghost crossing through the ASCII.
+    {
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        float _ph = fract(TIME / 13.0);
+        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.20, 0.10, _ph);
+        float _band = exp(-pow((_suv.y - 0.5) * 30.0, 2.0));
+        result = mix(result, vec3(0.20, 0.95, 0.40), _f * _band * 0.5);
     }
 
     gl_FragColor = vec4(result, alpha);

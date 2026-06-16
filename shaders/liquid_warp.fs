@@ -64,5 +64,18 @@ void main() {
     if (transparentBg) {
         alpha = smoothstep(0.02, 0.15, dot(col, vec3(0.299, 0.587, 0.114)));
     }
+
+    // Surprise: every ~25s the liquid briefly crystallizes — the warp
+    // freezes into hexagonal facets for ~1s, like ice forming on a
+    // film of water, then thaws.
+    {
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        float _ph = fract(TIME / 25.0);
+        float _f  = smoothstep(0.0, 0.05, _ph) * smoothstep(0.22, 0.12, _ph);
+        // Hex grid quantize
+        vec2 _h = _suv * 18.0;
+        vec2 _hi = floor(_h + 0.5);
+        col = mix(col, vec3(0.85, 0.92, 1.0) * (0.4 + 0.6 * fract(sin(dot(_hi, vec2(12.9898, 78.233))) * 43758.5453)), _f * 0.65);
+    }
     gl_FragColor = vec4(col, alpha);
 }

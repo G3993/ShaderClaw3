@@ -37,7 +37,7 @@
   left: calc(var(--sc-toolbar-w) + var(--sc-panel-gap) + var(--sc-panel-gap));
   top: calc(var(--sc-topbar-h) + var(--sc-panel-gap));
   bottom: var(--sc-panel-gap);
-  width: 260px;
+  width: var(--sc-sources-w);
   background: rgba(28, 28, 30, 0.72);
   backdrop-filter: blur(var(--sc-glass-blur)) saturate(1.8);
   -webkit-backdrop-filter: blur(var(--sc-glass-blur)) saturate(1.8);

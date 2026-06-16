@@ -283,10 +283,34 @@ void main() {
 
         } else {
             // ---- Raised layer ----
-            col = albedo * (diff + 0.08);
-            col += spec * mix(vec3(1.0), albedo, 0.3) * 0.5;
-            col += fres * baseColor.rgb * 0.12;
-            col += albedo * (hn * hn * 0.2 + audioBass * 0.08);
+            // Two-light setup for real volumetric depth.
+            vec3 ld1 = normalize(vec3(-0.45, 0.85, 0.30));   // primary key
+            vec3 ld2 = normalize(vec3( 0.55, 0.40, -0.65));  // fill
+            float diff1 = clamp(dot(n, ld1), 0.0, 1.0);
+            float diff2 = clamp(dot(n, ld2), 0.0, 1.0) * 0.4;
+
+            // Ambient occlusion proxy — taller (closer to top) cubes get
+            // more light, lower cubes are AO-darkened.
+            float ao = clamp(0.4 + hn * 0.7, 0.3, 1.0);
+
+            // Cast-shadow approximation: short march toward primary light.
+            // If we hit something within 0.6, this cube is shadowed.
+            float sh = 1.0;
+            {
+                float st = 0.05;
+                for (int s = 0; s < 6; s++) {
+                    vec3 sp = p + ld1 * st;
+                    float sd = scene(sp);
+                    if (sd < 0.005) { sh = 0.35; break; }
+                    st += sd;
+                    if (st > 0.6) break;
+                }
+            }
+
+            col = albedo * (diff1 * sh + diff2 + 0.06) * ao;
+            col += spec * mix(vec3(1.0), albedo, 0.3) * 0.7 * sh;
+            col += fres * baseColor.rgb * 0.18;
+            col += albedo * (hn * hn * 0.18 + audioBass * 0.08);
         }
 
         // Fog
@@ -306,6 +330,17 @@ void main() {
     } else if (!hit) {
         col = max(col, vec3(0.01, 0.01, 0.02));
         alpha = 1.0;
+    }
+
+    // Surprise: every ~32s a single horizontal scan-line cuts across,
+    // marking the moment a measurement is taken — the data is observed.
+    {
+        vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+        float _ph = fract(TIME / 32.0);
+        float _y  = (_ph - 0.04) / 0.30;
+        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.34, 0.18, _ph);
+        float _line = exp(-pow((_suv.y - _y) * 200.0, 2.0));
+        col += vec3(0.4, 1.0, 0.8) * _line * _f;
     }
 
     gl_FragColor = vec4(col, alpha);

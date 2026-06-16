@@ -76,7 +76,23 @@ vec3 sampleWeights(float i) {
 
 #define SAMPLES 16
 
+// Procedural starter texture — used when no inputImage is bound. Gives
+// the dispersion effect something rich to bend so the canvas isn't black.
+vec3 starterTex(vec2 uv) {
+    // High-contrast colorful pattern: rotating cosine palette with bands
+    vec2 c = uv - 0.5;
+    float r = length(c);
+    float a = atan(c.y, c.x);
+    float bands = sin(r * 18.0 - TIME * 0.4) * 0.5 + 0.5;
+    float sweep = sin(a * 6.0 + TIME * 0.3) * 0.5 + 0.5;
+    vec3 grad = 0.5 + 0.5 * cos(6.28318 *
+                (uv.x * 2.0 + uv.y * 1.3 + TIME * 0.05) +
+                vec3(0.0, 2.094, 4.188));
+    return mix(grad, vec3(1.0, 0.95, 0.85), bands * sweep * 0.4);
+}
+
 vec3 sampleDisp(vec2 uv, vec2 dispNorm, float disp) {
+    bool hasInput = IMG_SIZE_inputImage.x > 0.0;
     vec3 col = vec3(0.0);
     vec3 denom = vec3(0.0);
     float sd = 1.0 / float(SAMPLES);
@@ -84,7 +100,9 @@ vec3 sampleDisp(vec2 uv, vec2 dispNorm, float disp) {
     for (int i = 0; i < SAMPLES; i++) {
         vec3 sw = sampleWeights(wl);
         denom += sw;
-        col += sw * texture2D(inputImage, uv + dispNorm * disp * wl).rgb;
+        vec2 sUV = uv + dispNorm * disp * wl;
+        vec3 src = hasInput ? texture2D(inputImage, sUV).rgb : starterTex(sUV);
+        col += sw * src;
         wl += sd;
     }
     return col / denom;
@@ -130,6 +148,16 @@ void main() {
     float alpha = 1.0;
     if (transparentBg) {
         alpha = dot(col, vec3(0.299, 0.587, 0.114));
+    }
+
+    // Surprise: every ~22s a complete spectrum splits dramatically —
+    // for ~0.5s the dispersion blows wide and rejoins. Newton's prism.
+    {
+        float _ph = fract(TIME / 22.0);
+        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.18, 0.10, _ph);
+        // Push channels apart based on luminance
+        float _l = dot(col, vec3(0.299, 0.587, 0.114));
+        col = mix(col, vec3(col.r * 1.4, col.g, col.b * 0.8) * (0.5 + _l), _f * 0.4);
     }
 
     gl_FragColor = vec4(col, alpha);

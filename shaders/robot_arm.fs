@@ -66,6 +66,21 @@ vec3 shadeSphere(vec2 p, vec2 c, float r, vec3 color, vec3 accent, vec3 L, float
     return base * (0.10 + 0.55 * diff) + base * spec * 0.9 + base * pow(1.0 - nz, 2.0) * 0.35;
 }
 
+void drawSphereChain(vec2 p, vec2 a, vec2 b, int count, float rStart, float rEnd,
+                     vec3 color, vec3 accent, vec3 L, float px,
+                     inout vec3 col, inout float armMask) {
+    float mask;
+    vec3 ec;
+    for (int i = 0; i < 8; i++) {
+        if (i >= count) break;
+        float t = float(i) / float(count - 1);
+        vec2 center = mix(a, b, t);
+        float r = mix(rStart, rEnd, t);
+        ec = shadeSphere(p, center, r, color, accent, L, px, mask);
+        col = mix(col, ec, mask); armMask = max(armMask, mask);
+    }
+}
+
 void drawArm(vec2 p, vec2 base, vec2 target, float grip, float sc, float sw,
              vec4 aCol, vec4 accCol, vec3 L, float px, float elbowSign,
              inout vec3 col, inout float armMask,
@@ -94,16 +109,12 @@ void drawArm(vec2 p, vec2 base, vec2 target, float grip, float sc, float sw,
     vec2 elbow = base + L1 * vec2(cos(theta1), sin(theta1));
     vec2 wrist = elbow + L2 * vec2(cos(theta1 + theta2f), sin(theta1 + theta2f));
 
-    // Claw geometry -- 2-segment tapered talons
+    // Claw geometry — claws grow slightly when gripping (powering up)
     vec2 fDir_ = normalize(target - base);
     float fAngle = atan(fDir_.y, fDir_.x);
-    // Claws grow slightly when gripping (powering up)
     float gripScale = 1.0 + grip * 0.15;
     float clawBase = 0.042 * sc * gripScale;
     float clawTip  = 0.036 * sc * gripScale;
-    float baseW = 0.013 * sw;
-    float tipW  = 0.005 * sw;
-    // Claws stay open — no closing animation. Just scale up on grip.
     float openA = 0.40;
     float hookA = 0.22;
 
@@ -117,77 +128,43 @@ void drawArm(vec2 p, vec2 base, vec2 target, float grip, float sc, float sw,
     outWrist = wrist; outFDir = fDir_;
     outF1 = f1End; outF2 = f2End; outF3 = f3End;
 
-    // Piston geometry -- single piston per segment
-    vec2 ax1 = normalize(elbow - base);
-    vec2 perp1 = vec2(-ax1.y, ax1.x);
-    vec2 pA1 = base + ax1 * L1 * 0.18 + perp1 * w1 * 0.55;
-    vec2 pB1 = elbow - ax1 * L1 * 0.12 + perp1 * w1 * 0.55;
-    vec2 ax2 = normalize(wrist - elbow);
-    vec2 perp2 = vec2(-ax2.y, ax2.x);
-    vec2 pA2 = elbow + ax2 * L2 * 0.2 + perp2 * w2 * 0.6;
-    vec2 pB2 = wrist - ax2 * L2 * 0.15 + perp2 * w2 * 0.6;
-
     vec3 acc = accCol.rgb;
-
-    // No glow on joints
-
     float mask;
     vec3 ec;
-    vec3 pistonCol = aCol.rgb * 0.7;
 
-    // Base mount
-    ec = shadeCapsule(p, base - vec2(0.045, 0.0), base + vec2(0.045, 0.0), 0.032, aCol.rgb * 0.45, acc, L, px, mask);
+    // Base mount sphere
+    ec = shadeSphere(p, base, jR * 1.3, aCol.rgb * 0.45, acc, L, px, mask);
     col = mix(col, ec, mask); armMask = max(armMask, mask);
 
-    // Upper arm piston
-    ec = shadeCapsule(p, pA1, pB1, w1 * 0.18, pistonCol, acc, L, px, mask);
-    col = mix(col, ec, mask); armMask = max(armMask, mask);
-
-    // Upper arm
-    ec = shadeCapsule(p, base, elbow, w1, aCol.rgb, acc, L, px, mask);
-    col = mix(col, ec, mask); armMask = max(armMask, mask);
+    // Upper arm — sphere chain
+    drawSphereChain(p, base, elbow, 6, w1 * 1.1, w1 * 0.9, aCol.rgb, acc, L, px, col, armMask);
 
     // Shoulder joint
     ec = shadeSphere(p, base, jR, mix(aCol.rgb, acc, 0.35), acc, L, px, mask);
     col = mix(col, ec, mask); armMask = max(armMask, mask);
 
-    // Forearm piston
-    ec = shadeCapsule(p, pA2, pB2, w2 * 0.2, pistonCol, acc, L, px, mask);
-    col = mix(col, ec, mask); armMask = max(armMask, mask);
-
-    // Forearm
-    ec = shadeCapsule(p, elbow, wrist, w2, aCol.rgb * 0.95, acc, L, px, mask);
-    col = mix(col, ec, mask); armMask = max(armMask, mask);
+    // Forearm — sphere chain
+    drawSphereChain(p, elbow, wrist, 5, w2 * 1.0, w2 * 0.8, aCol.rgb * 0.95, acc, L, px, col, armMask);
 
     // Elbow joint
     ec = shadeSphere(p, elbow, jR, mix(aCol.rgb, acc, 0.5), acc, L, px, mask);
     col = mix(col, ec, mask); armMask = max(armMask, mask);
 
-    // No wrist glow
-
-    // Claw bases (thicker)
+    // Claw bases — sphere chains (3 spheres each)
     vec3 clawCol = mix(aCol.rgb, acc, 0.45);
-    ec = shadeCapsule(p, wrist, f1Mid, baseW, clawCol, acc, L, px, mask);
-    col = mix(col, ec, mask); armMask = max(armMask, mask);
-    ec = shadeCapsule(p, wrist, f2Mid, baseW, clawCol, acc, L, px, mask);
-    col = mix(col, ec, mask); armMask = max(armMask, mask);
-    ec = shadeCapsule(p, wrist, f3Mid, baseW, clawCol, acc, L, px, mask);
-    col = mix(col, ec, mask); armMask = max(armMask, mask);
+    drawSphereChain(p, wrist, f1Mid, 3, w2 * 0.7, w2 * 0.5, clawCol, acc, L, px, col, armMask);
+    drawSphereChain(p, wrist, f2Mid, 3, w2 * 0.7, w2 * 0.5, clawCol, acc, L, px, col, armMask);
+    drawSphereChain(p, wrist, f3Mid, 3, w2 * 0.7, w2 * 0.5, clawCol, acc, L, px, col, armMask);
 
-    // Claw tips (thin, sharp)
-    vec3 tipCol = aCol.rgb * 0.85;
-    ec = shadeCapsule(p, f1Mid, f1End, tipW, tipCol, acc, L, px, mask);
-    col = mix(col, ec, mask); armMask = max(armMask, mask);
-    ec = shadeCapsule(p, f2Mid, f2End, tipW, tipCol, acc, L, px, mask);
-    col = mix(col, ec, mask); armMask = max(armMask, mask);
-    ec = shadeCapsule(p, f3Mid, f3End, tipW, tipCol, acc, L, px, mask);
-    col = mix(col, ec, mask); armMask = max(armMask, mask);
+    // Claw tips — sphere chains (3 spheres each, tapered)
+    vec3 tipCol = acc * 0.9;
+    drawSphereChain(p, f1Mid, f1End, 3, w2 * 0.5, w2 * 0.25, tipCol, acc, L, px, col, armMask);
+    drawSphereChain(p, f2Mid, f2End, 3, w2 * 0.5, w2 * 0.25, tipCol, acc, L, px, col, armMask);
+    drawSphereChain(p, f3Mid, f3End, 3, w2 * 0.5, w2 * 0.25, tipCol, acc, L, px, col, armMask);
 
     // Wrist joint (on top of claws)
     ec = shadeSphere(p, wrist, jR * 0.75, mix(aCol.rgb, acc, 0.6), acc, L, px, mask);
     col = mix(col, ec, mask); armMask = max(armMask, mask);
-
-    // No tip or joint glow
 }
 
 void drawLaser(vec2 p, vec2 origin, vec2 dir, float grip, vec3 beamColor, float px,

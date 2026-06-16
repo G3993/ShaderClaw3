@@ -363,3 +363,126 @@ export function autoBindTextures() {
     }
   }
 }
+
+// ============================================================
+// Per-Layer FBO Export — streams individual layers for multi-GPU
+// ============================================================
+
+const _exports = {};       // layerId → { canvas, ctx, stream, imageData, pixelBuf }
+let _exportsActive = false;
+
+/**
+ * Initialize per-layer export streams at a fixed resolution.
+ * Each exported layer gets its own offscreen canvas + captureStream.
+ * @param {string[]} layerIds - which layers to export (e.g., ['background', 'media', 'av'])
+ * @param {number} width - export width (default 832)
+ * @param {number} height - export height (default 480)
+ */
+export function initLayerExports(layerIds, width = 832, height = 480) {
+  // Clean up any previous exports
+  destroyLayerExports();
+
+  for (const id of layerIds) {
+    const layer = getLayer(id);
+    if (!layer) continue;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d', { willReadFrequently: false });
+
+    // captureStream(0) = manual frame push via requestFrame()
+    const stream = canvas.captureStream(0);
+    const track = stream.getVideoTracks()[0];
+
+    // Pre-allocate pixel buffer and ImageData for readPixels
+    const pixelBuf = new Uint8ClampedArray(width * height * 4);
+    const imageData = new ImageData(pixelBuf, width, height);
+
+    _exports[id] = { canvas, ctx, stream, track, imageData, pixelBuf, width, height };
+  }
+
+  _exportsActive = true;
+
+  // Expose on window for cross-app access (Etherea dashboard reads this)
+  window.layerExportStreams = {};
+  for (const [id, exp] of Object.entries(_exports)) {
+    window.layerExportStreams[id] = exp.stream;
+  }
+
+  console.log(`[LayerExport] initialized ${layerIds.length} layer streams at ${width}x${height}`);
+}
+
+/**
+ * Per-frame: read each exported layer's FBO and push to its stream.
+ * Call after renderComposition() in the composition loop.
+ * @param {Renderer} renderer - the WebGL renderer (needs .gl)
+ */
+export function updateLayerExports(renderer) {
+  if (!_exportsActive) return;
+
+  const gl = renderer.gl;
+
+  for (const [id, exp] of Object.entries(_exports)) {
+    const layer = getLayer(id);
+    if (!layer || !layer.fbo) continue;
+
+    // Bind the layer's FBO and read pixels
+    gl.bindFramebuffer(gl.FRAMEBUFFER, layer.fbo.fbo);
+    gl.readPixels(0, 0, exp.width, exp.height, gl.RGBA, gl.UNSIGNED_BYTE, exp.pixelBuf);
+
+    // WebGL readPixels gives bottom-up rows — flip vertically
+    const w4 = exp.width * 4;
+    const half = exp.height >> 1;
+    for (let y = 0; y < half; y++) {
+      const topOff = y * w4;
+      const botOff = (exp.height - 1 - y) * w4;
+      for (let x = 0; x < w4; x++) {
+        const tmp = exp.pixelBuf[topOff + x];
+        exp.pixelBuf[topOff + x] = exp.pixelBuf[botOff + x];
+        exp.pixelBuf[botOff + x] = tmp;
+      }
+    }
+
+    // Write to the export canvas
+    exp.ctx.putImageData(exp.imageData, 0, 0);
+
+    // Push frame to the MediaStream
+    if (exp.track && exp.track.readyState === 'live') {
+      exp.track.requestFrame();
+    }
+  }
+
+  // Unbind FBO — restore to screen
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+}
+
+/**
+ * Get the MediaStream for a specific layer
+ * @param {string} layerId
+ * @returns {MediaStream|null}
+ */
+export function getLayerStream(layerId) {
+  return _exports[layerId]?.stream || null;
+}
+
+/**
+ * Check if layer exports are active
+ * @returns {boolean}
+ */
+export function isExportActive() {
+  return _exportsActive;
+}
+
+/**
+ * Tear down all exports
+ */
+export function destroyLayerExports() {
+  for (const [id, exp] of Object.entries(_exports)) {
+    if (exp.track) exp.track.stop();
+  }
+  for (const key of Object.keys(_exports)) delete _exports[key];
+  _exportsActive = false;
+  if (window.layerExportStreams) delete window.layerExportStreams;
+  console.log('[LayerExport] destroyed');
+}

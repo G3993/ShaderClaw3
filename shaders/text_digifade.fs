@@ -148,7 +148,7 @@ vec4 effectDigifade(vec2 uv, int sub) {
             float gc = (clx/cf)*5.0, gr = (ry/cH)*7.0;
             if (gc >= 0.0 && gc < 5.0 && gr >= 0.0 && gr < 7.0) {
                 int ch = getChar(slot);
-                if (ch >= 0 && ch <= 25) textHit = max(textHit, charPixel(ch, gc, gr));
+                if (ch >= 0 && ch <= 36 && ch != 26) textHit = max(textHit, charPixel(ch, gc, gr));
             }
         }
     }

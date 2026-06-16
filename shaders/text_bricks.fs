@@ -138,7 +138,7 @@ vec4 effectBricks(vec2 uv, int sub) {
         if (gc >= 0.0 && gc < 5.0 && gr >= 0.0 && gr < 7.0) {
             int ci2 = int(mod(float(charIdx), float(numChars)));
             int ch = getChar(ci2);
-            if (ch >= 0 && ch <= 25) textHit = charPixel(ch, gc, gr);
+            if (ch >= 0 && ch <= 36 && ch != 26) textHit = charPixel(ch, gc, gr);
         }
     }
 

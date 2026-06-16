@@ -159,7 +159,7 @@ vec4 effectCoil(vec2 uv, int sub) {
     float textHit = 0.0;
     if (cellUV.x >= 0.0 && cellUV.x <= 1.0 && cellUV.y >= 0.0 && cellUV.y <= 1.0) {
         int ch = getChar(ti);
-        if (ch >= 0 && ch <= 25) textHit = sampleChar(ch, cellUV);
+        if (ch >= 0 && ch <= 36 && ch != 26) textHit = sampleChar(ch, cellUV);
     }
 
     bool inv = mod(ringIdx, 2.0) < 1.0;

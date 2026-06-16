@@ -168,5 +168,13 @@ void main() {
         finalCol = textColor.rgb;
     }
 
+    // Surprise: every ~17s the cascade momentarily reverses — letters
+    // climb upward for ~0.4s. Gravity blink.
+    {
+        float _ph = fract(TIME / 17.0);
+        float _f  = smoothstep(0.0, 0.03, _ph) * smoothstep(0.15, 0.08, _ph);
+        finalCol = mix(finalCol, finalCol.gbr * 1.15, _f * 0.55);
+    }
+
     gl_FragColor = vec4(finalCol, alpha);
 }

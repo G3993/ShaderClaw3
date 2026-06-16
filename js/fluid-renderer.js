@@ -783,6 +783,60 @@ class FluidRenderer {
       }
     }
 
+    // MediaPipe pose splats — skeleton joints drive fluid just like mouse/hand
+    if (mediaPipe && mediaPipe.active && mediaPipe.modes && mediaPipe.modes.pose
+        && mediaPipe._lastPoseLandmarks && mediaPipe._lastPoseLandmarks.length > 28) {
+      const pl = mediaPipe._lastPoseLandmarks;
+      // Key joints: nose(0), shoulders(11,12), elbows(13,14), wrists(15,16),
+      //             hips(23,24), knees(25,26), ankles(27,28)
+      const POSE_JOINTS = [0, 11,12, 13,14, 15,16, 23,24, 25,26, 27,28];
+      // Per-joint color palette for visual variety
+      const JOINT_COLORS = [
+        {r:1.0, g:0.8, b:0.3},  // nose — gold
+        {r:0.3, g:0.7, b:1.0},  // L shoulder — cyan
+        {r:0.3, g:0.7, b:1.0},  // R shoulder
+        {r:0.2, g:1.0, b:0.6},  // L elbow — green
+        {r:0.2, g:1.0, b:0.6},  // R elbow
+        {r:0.9, g:0.3, b:1.0},  // L wrist — purple
+        {r:0.9, g:0.3, b:1.0},  // R wrist
+        {r:1.0, g:0.4, b:0.2},  // L hip — orange
+        {r:1.0, g:0.4, b:0.2},  // R hip
+        {r:0.3, g:0.4, b:1.0},  // L knee — blue
+        {r:0.3, g:0.4, b:1.0},  // R knee
+        {r:1.0, g:0.2, b:0.4},  // L ankle — red-pink
+        {r:1.0, g:0.2, b:0.4},  // R ankle
+      ];
+
+      if (!this._lastPosePos) this._lastPosePos = {};
+
+      for (let i = 0; i < POSE_JOINTS.length; i++) {
+        const ji = POSE_JOINTS[i];
+        const lm = pl[ji];
+        if (!lm || (lm.visibility !== undefined && lm.visibility < 0.3)) continue;
+
+        // Mirror X (selfie view), Y is already 1-y from gesture.js
+        const jx = 1.0 - lm.x;
+        const jy = lm.y;
+        const key = 'pose_' + ji;
+
+        if (this._lastPosePos[key] !== undefined) {
+          const prevX = this._lastPosePos[key][0];
+          const prevY = this._lastPosePos[key][1];
+          const jdx = (jx - prevX) * this.config.SPLAT_FORCE * 0.6;
+          const jdy = (jy - prevY) * this.config.SPLAT_FORCE * 0.6;
+          // Lower threshold than hand — pose tracks slower so deltas are smaller
+          if (Math.abs(jdx) > 0.2 || Math.abs(jdy) > 0.2) {
+            const color = this.config.COLORFUL ? this._randomColor() : JOINT_COLORS[i];
+            this.addSplat(jx, jy, jdx, jdy, color);
+          }
+        }
+        this._lastPosePos[key] = [jx, jy];
+      }
+    } else if (this._lastPosePos) {
+      // Pose turned off — clear tracked positions so we don't get a teleport on re-enable
+      this._lastPosePos = null;
+    }
+
     // Pinch-to-fade: any hand pinching triggers opacity decay
     const anyPinch = mediaPipe && mediaPipe.active && (mediaPipe.isPinching || mediaPipe.isPinching2);
     if (anyPinch) {
@@ -795,7 +849,10 @@ class FluidRenderer {
     }
 
     // Movement patterns — virtual cursors that simulate continuous mouse movement
-    if (this.config.MOVEMENT) {
+    // Skip when pose tracking is active: body becomes the sole source of fluid.
+    const _poseActive = mediaPipe && mediaPipe.active && mediaPipe.modes && mediaPipe.modes.pose
+        && mediaPipe._lastPoseLandmarks && mediaPipe._lastPoseLandmarks.length > 28;
+    if (this.config.MOVEMENT && !_poseActive) {
       const t = performance.now() * 0.001 * this.config.MOVE_SPEED;
       const spread = this.config.MOVE_SPREAD * 0.42;
       const forceScale = this.config.MOVE_INTENSITY * this.config.SPLAT_FORCE * 0.8;

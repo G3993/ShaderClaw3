@@ -211,5 +211,19 @@ void main() {
     alpha = 0.0;
   }
 
+  // Surprise: every ~42s the tunnel briefly turns into a stained-glass
+  // window — the geometric facets fill with saturated jewel tones for
+  // ~1s then return to neutral.
+  {
+    float _ph = fract(TIME / 42.0);
+    float _f  = smoothstep(0.0, 0.05, _ph) * smoothstep(0.20, 0.10, _ph);
+    if (hit) {
+      vec3 _jewel = 0.5 + 0.5 * cos(6.28318 *
+                          dot(col, vec3(0.41, 0.31, 0.27)) +
+                          vec3(0.0, 2.094, 4.188));
+      col = mix(col, _jewel * (0.5 + dot(col, vec3(0.5))), _f * 0.7);
+    }
+  }
+
   gl_FragColor = vec4(col, alpha);
 }

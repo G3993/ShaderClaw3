@@ -162,5 +162,17 @@ void main() {
         col *= baseColor.rgb;
     }
 
+  // Surprise: every ~15s the labyrinth solves itself — for ~0.5s a
+  // single straight horizontal beam cuts through everything, the
+  // shortest path revealed.
+  {
+      vec2 _suv = gl_FragCoord.xy / RENDERSIZE;
+      float _ph = fract(TIME / 15.0);
+      float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.16, 0.08, _ph);
+      float _y  = 0.5 + 0.20 * sin(floor(TIME / 15.0));
+      float _beam = exp(-pow((_suv.y - _y) * 320.0, 2.0));
+      col += vec3(1.0, 0.6, 0.2) * _beam * _f * 1.5;
+  }
+
   gl_FragColor = vec4(col, 1.0);
 }

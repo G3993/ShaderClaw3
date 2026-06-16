@@ -221,5 +221,15 @@ void main() {
         alpha = smoothstep(0.02, 0.15, lum);
     }
 
+    // Surprise: every ~33s gravity briefly suspends — for ~1s the rain
+    // freezes mid-air, then resumes. A breath in the storm.
+    {
+        float _ph = fract(TIME / 33.0);
+        float _f  = smoothstep(0.0, 0.05, _ph) * smoothstep(0.18, 0.08, _ph);
+        // Tint shift toward silver during the freeze
+        float _lum = dot(col, vec3(0.299, 0.587, 0.114));
+        col = mix(col, vec3(_lum) * vec3(0.92, 0.95, 1.05), _f * 0.55);
+    }
+
     gl_FragColor = vec4(col, alpha);
 }

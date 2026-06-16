@@ -13,7 +13,9 @@
         { "NAME": "uTorThick", "LABEL": "Toroid Thickness", "TYPE": "float", "MAX": 1.0, "MIN": 0.0, "DEFAULT": 0.25 },
         { "NAME": "uDisplay", "LABEL": "Display", "TYPE": "long", "VALUES": [0, 1, 2], "LABELS": ["Object + BG", "Object Only", "Background Only"], "DEFAULT": 0 },
         { "NAME": "uColMode", "LABEL": "Color Mode", "TYPE": "long", "VALUES": [0, 1], "LABELS": ["Default", "Custom Palette"], "DEFAULT": 0 },
-        { "NAME": "uIntensity", "LABEL": "Intensity", "TYPE": "float", "MAX": 4.0, "MIN": 0.0, "DEFAULT": 1.0 }
+        { "NAME": "uIntensity", "LABEL": "Intensity", "TYPE": "float", "MAX": 4.0, "MIN": 0.0, "DEFAULT": 1.0 },
+        { "NAME": "uShape",     "LABEL": "Shape",     "TYPE": "long",  "VALUES": [0, 1, 2, 3, 4, 5, 6, 7], "LABELS": ["Auto Morph", "Cube", "Prism", "Torus", "Torus Knot", "Sphere", "Octahedron", "Heart"], "DEFAULT": 0 },
+        { "NAME": "uMorphSpeed","LABEL": "Morph Speed","TYPE": "float", "MAX": 4.0, "MIN": 0.0, "DEFAULT": 1.0 }
     ]
 }*/
 
@@ -52,6 +54,30 @@ float sdTriPrism(vec3 p, vec2 h) {
 
 float morphing(vec3 p) {
     float tm = TIME / 18.0 + audioBass * 0.5;
+    // Shape override — uShape != 0 forces a single primitive.
+    int s = int(uShape);
+    if (s > 0) {
+        if (s == 1) return sdBox(p, vec3(1.0));
+        if (s == 2) return sdTriPrism(p, vec2(1.0, 1.5));
+        if (s == 3) return sdTorus(p, 2.0);
+        if (s == 4) return sdTorusKnots(p, 2.0) * 0.4;
+        if (s == 5) return length(p) - 1.0;                     // sphere
+        if (s == 6) {
+            // Octahedron
+            p = abs(p);
+            return (p.x + p.y + p.z - 1.0) * 0.57735;
+        }
+        // Heart shape (s == 7) — implicit (x^2 + (5y/4 - sqrt|x|)^2 + z^2 - 1)
+        float scale = 1.2;
+        vec3 h = p * scale;
+        float xx = h.x * h.x;
+        float zz = h.z * h.z;
+        float yy = (1.25 * h.y - sqrt(abs(h.x))) * (1.25 * h.y - sqrt(abs(h.x)));
+        return (xx + yy + zz - 1.0) / scale;
+    }
+
+    // Auto-morph default
+    tm = TIME * 0.4 * uMorphSpeed;
     int idx = int(mod(tm, 4.0));
     float a = smoothstep(0.2, 0.8, mod(tm, 1.0));
     if (idx == 0) return mix(sdTriPrism(p, vec2(1.0, 1.5)), sdBox(p, vec3(1.0)), a);
@@ -136,6 +162,14 @@ void main() {
         cOut = uC1.rgb * color.r + uC2.rgb * color.g + uC3.rgb * color.b;
     }
     cOut *= uIntensity;
+
+    // Surprise: every ~29s the color basis briefly inverts — the cube
+    // turns inside-out for ~0.6s, mapping each axis to its complement.
+    {
+        float _ph = fract(TIME / 29.0);
+        float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.20, 0.10, _ph);
+        cOut = mix(cOut, 1.0 - cOut, _f);
+    }
 
     gl_FragColor = vec4(cOut, 1.0);
 }

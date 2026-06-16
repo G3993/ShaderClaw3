@@ -8,6 +8,11 @@
     { "NAME": "flipSpeed", "LABEL": "Flip Speed", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 5.0 },
     { "NAME": "flipInterval", "LABEL": "Flip Interval", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.2, "MAX": 4.0 },
     { "NAME": "dotSize", "LABEL": "Dot Size", "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.1, "MAX": 0.5 },
+    { "NAME": "dotPulse",  "LABEL": "Dot Pulse",  "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "scrollX",   "LABEL": "Scroll X",   "TYPE": "float", "DEFAULT": 0.0,  "MIN": -1.0,"MAX": 1.0 },
+    { "NAME": "scrollY",   "LABEL": "Scroll Y",   "TYPE": "float", "DEFAULT": 0.0,  "MIN": -1.0,"MAX": 1.0 },
+    { "NAME": "rotateGrid","LABEL": "Rotate Grid","TYPE": "float", "DEFAULT": 0.0,  "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "audioReact","LABEL": "Audio React","TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "specAmt", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "vignetteAmt", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "gapShade", "LABEL": "Gap Shade", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 0.5 },
@@ -103,12 +108,23 @@ void main() {
     int actFrame = (iFrame / DFrame) * DFrame;
     int prevFrame = ((iFrame / DFrame) - 1) * DFrame;
 
+    // Optional grid rotation + scroll — adds the dynamic motion the user wants.
+    vec2 mUV = pos / RENDERSIZE;
+    if (rotateGrid > 0.001) {
+        vec2 c = mUV - 0.5;
+        float ra = TIME * rotateGrid * 0.10;
+        float ca = cos(ra), sa = sin(ra);
+        mUV = 0.5 + vec2(ca * c.x - sa * c.y, sa * c.x + ca * c.y);
+    }
+    mUV += vec2(scrollX * TIME * 0.05, scrollY * TIME * 0.05);
+    vec2 movedPos = mUV * RENDERSIZE;
+
     // Per-tile random (seeded by tile position + frame cycle)
-    vec2 tileIdx = floor(pos / TileSize + float(iFrame / DFrame) * 13.0) + 0.5;
+    vec2 tileIdx = floor(movedPos / TileSize + float(iFrame / DFrame) * 13.0) + 0.5;
     vec4 rand = hash42(tileIdx);
 
-    vec2 uvQ = floor(pos / TileSize) * TileSize / RENDERSIZE;
-    vec2 uv = pos / RENDERSIZE;
+    vec2 uvQ = floor(movedPos / TileSize) * TileSize / RENDERSIZE;
+    vec2 uv = movedPos / RENDERSIZE;
     vec2 duv = (uv - uvQ) * RENDERSIZE / TileSize;
 
     vec4 c1 = getColor(actFrame, uvQ);
@@ -119,8 +135,11 @@ void main() {
     y = clamp(y, 0.0, 1.0);
     y *= y;
 
-    float r1 = dotSize;
-    float r2 = dotSize;
+    // Pulsing dot size — bass and time both modulate the radius.
+    float pulse = 1.0 + sin(TIME * 2.5 + rand.x * 6.28) * dotPulse * 0.4
+                + audioBass * audioReact * dotPulse * 0.3;
+    float r1 = dotSize * pulse;
+    float r2 = dotSize * pulse;
 
     // Mix between current and previous frame
     vec4 col = mix(c1, c2, smoothstep(y - 0.1, y + 0.1, 1.0 - duv.y));

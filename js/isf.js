@@ -335,6 +335,7 @@ function buildFragmentShader(source) {
     cond('uniform float mpHandCount;', 'mpHandCount'),
     cond('uniform vec3 mpHandPos;', 'mpHandPos'),
     cond('uniform vec3 mpHandPos2;', 'mpHandPos2'),
+    cond('uniform float mpPoseActive;', 'mpPoseActive'),
     // Layer compositing
     'uniform float _transparentBg;',
     ...uniformLines,

@@ -59,7 +59,8 @@ vec2 texUV(vec2 coord, float canvasAspect) {
     else             st.y /= ratio;
     st /= texScale;
     st += 0.5;
-    if (_flip_inputTex) st.y = 1.0 - st.y;
+    // Texture orientation is normalized by the renderer during upload
+    // (UNPACK_FLIP_Y_WEBGL), so the shader must NOT apply its own Y-flip here.
     return fract(st);
 }
 
