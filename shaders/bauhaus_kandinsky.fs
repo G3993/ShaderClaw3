@@ -14,7 +14,7 @@
     { "NAME": "lineMotion", "LABEL": "Line Motion", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.45 },
     { "NAME": "patternBands", "LABEL": "Pattern Bands", "TYPE": "float", "MIN": 0.0, "MAX": 6.0, "DEFAULT": 3.0 },
     { "NAME": "patternFlow", "LABEL": "Pattern Flow", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.50 },
-    { "NAME": "springReact", "LABEL": "Bass Spring", "TYPE": "float", "MIN": 0.0, "MAX": 0.4, "DEFAULT": 0.12 },
+    { "NAME": "springReact", "LABEL": "Bass Spring", "TYPE": "float", "MIN": 0.0, "MAX": 0.3, "DEFAULT": 0.12 },
     { "NAME": "strictPairing", "LABEL": "Strict Pairing", "TYPE": "bool", "DEFAULT": true },
     { "NAME": "useTexPalette", "LABEL": "Sample Tex for Palette", "TYPE": "bool", "DEFAULT": false },
     { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
@@ -145,8 +145,8 @@ void main() {
         float sz = shapeSize * (0.7 + hash11(fi * 5.3) * 0.6)
                  * (1.0 + audioLevel * audioReact * 0.08);
 
-        // Per-shape rotation
-        float rot = TIME * audioMid * audioReact * 0.4
+        // Per-shape rotation: base 0.15 rad/s, audio adds ≤K=1.0 at audioReact MAX
+        float rot = TIME * 0.15 * (1.0 + audioMid * audioReact * 0.5)
                   + hash11(fi * 7.7) * 6.28;
         float ca = cos(-rot), sa = sin(-rot);
         vec2 lp = vec2(ca * (P.x - ctr.x) - sa * (P.y - ctr.y),
@@ -173,6 +173,8 @@ void main() {
     }
     float fillMask = 1.0 - smoothstep(0.0, 0.0025, bestSD);
     col = mix(col, bestCol, fillMask);
+    // HDR: additive shape-core radiance so bloom catches Bauhaus primaries
+    col += bestCol * fillMask * 1.0;
 
     // Pass 3 — thin black support lines — diagonal scaffolds across
     // the canvas, characteristic of Composition VIII. Each line drifts.
