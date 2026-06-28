@@ -1,17 +1,17 @@
 /*{
-  "DESCRIPTION": "Interactive Particles — infinite procedural particle field. Multiple streams of particles loop forever by drifting across the canvas via fract(time*speed+seed); no accumulating state means no decay. mouseX/mouseY (-1..1) steer the field — bind from MIDI/OSC/another source to let collaborators edit the flow live. Audio modulates density and glow (never gates). Outputs LINEAR HDR; host applies tonemap.",
-  "CREDIT": "Reimagined as a procedural infinite field by Easel/ShaderClaw3",
+  "DESCRIPTION": "Interactive Particles — a lightweight, transparent particle field built as an OVERLAY. Uses a spatial grid so every pixel only ever evaluates its 9 nearest cells (not all particles) — cost is constant no matter how dense you make it, so it stays real-time stacked on top of other effects. Empty space is fully transparent (alpha = particle brightness); set the layer Blend Mode to Add or Screen for emissive glow. mouseX/mouseY (-1..1) or the held mouse steer particles toward a point — bind from MIDI/OSC to sprinkle touches live. Audio modulates brightness/jitter (never gates). LINEAR HDR out.",
+  "CREDIT": "Procedural spatial-grid particle field by Easel/ShaderClaw3",
   "CATEGORIES": ["Generator", "Particles", "Interactive", "Audio Reactive"],
   "INPUTS": [
-    { "NAME": "streamCount",    "LABEL": "Streams",         "TYPE": "long",  "DEFAULT": 3, "VALUES": [1,2,3,4,5], "LABELS": ["1","2","3","4","5"] },
-    { "NAME": "particlesPerStream","LABEL": "Density",      "TYPE": "long",  "DEFAULT": 2, "VALUES": [0,1,2,3],   "LABELS": ["Sparse","Med","Dense","Storm"] },
+    { "NAME": "streamCount",    "LABEL": "Field Layers",    "TYPE": "long",  "DEFAULT": 3, "VALUES": [1,2,3,4,5], "LABELS": ["1","2","3","4","5"] },
+    { "NAME": "particlesPerStream","LABEL": "Density",      "TYPE": "long",  "DEFAULT": 1, "VALUES": [0,1,2,3],   "LABELS": ["Sparse","Med","Dense","Storm"] },
     { "NAME": "flowSpeed",      "LABEL": "Flow Speed",      "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.0,  "MAX": 1.5 },
     { "NAME": "flowAngle",      "LABEL": "Flow Angle",      "TYPE": "float", "DEFAULT": 0.0,  "MIN": 0.0,  "MAX": 6.2832 },
-    { "NAME": "spread",         "LABEL": "Stream Spread",   "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0,  "MAX": 1.0 },
+    { "NAME": "spread",         "LABEL": "Scatter",         "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0,  "MAX": 1.0 },
     { "NAME": "swirl",          "LABEL": "Swirl",           "TYPE": "float", "DEFAULT": 0.6,  "MIN": 0.0,  "MAX": 2.0 },
-    { "NAME": "particleSize",   "LABEL": "Particle Size",   "TYPE": "float", "DEFAULT": 0.0014, "MIN": 0.0003, "MAX": 0.005 },
-    { "NAME": "intensity",      "LABEL": "Intensity",       "TYPE": "float", "DEFAULT": 1.7,  "MIN": 0.5,  "MAX": 3.0 },
-    { "NAME": "exposure",       "LABEL": "Exposure",        "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.2,  "MAX": 3.0 },
+    { "NAME": "particleSize",   "LABEL": "Particle Size",   "TYPE": "float", "DEFAULT": 0.0016, "MIN": 0.0003, "MAX": 0.006 },
+    { "NAME": "intensity",      "LABEL": "Glow Falloff",    "TYPE": "float", "DEFAULT": 1.5,  "MIN": 0.5,  "MAX": 3.0 },
+    { "NAME": "exposure",       "LABEL": "Brightness",      "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.2,  "MAX": 3.0 },
     { "NAME": "hueShift",       "LABEL": "Hue",             "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0,  "MAX": 1.0 },
     { "NAME": "hueSpread",      "LABEL": "Hue Spread",      "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0,  "MAX": 1.0 },
     { "NAME": "mouseX",         "LABEL": "Mouse X (-1..1)", "TYPE": "float", "DEFAULT": 0.0,  "MIN": -1.0, "MAX": 1.0 },
@@ -22,134 +22,127 @@
   ]
 }*/
 
-// INTERACTIVE PARTICLES — fully procedural; no buffers, no state, no decay.
-// Each particle's position is f(streamIndex, particleIndex, TIME) so the field
-// is INFINITE BY DESIGN — every frame is computed fresh from TIME. Collaborators
-// can bind mouseX / mouseY (and any of the float inputs) from MIDI/OSC/another
-// source to "edit" the flow live without ever respawning anything.
-// LINEAR HDR out; host applies tonemap.
+// ════════════════════════════════════════════════════════════════════════
+//  INTERACTIVE PARTICLES — spatial-grid edition (cheap, transparent overlay)
+//
+//  WHY THIS IS FAST:
+//   The old version looped over EVERY particle (up to 480) for EVERY pixel,
+//   so cost = pixels × particles ≈ a billion evaluations/frame. Unusable.
+//
+//   This version places one particle per grid cell. A pixel only ever looks
+//   at the 9 cells around it (its own + 8 neighbours). Per-pixel work is
+//   therefore CONSTANT — 9 particles — no matter how high you push Density.
+//   Each particle stays within ~1 cell of its home (drift/swirl/steer are all
+//   bounded) so the 3×3 neighbourhood is guaranteed to catch every particle
+//   that could touch this pixel. This is the standard trick for real-time
+//   procedural particle fields.
+//
+//  WHY IT OVERLAYS CLEANLY:
+//   Output alpha = particle brightness. Empty space → alpha 0 → fully
+//   transparent, so whatever is beneath shows through untouched. Set the
+//   layer's Blend Mode to Add or Screen for emissive glow on top.
+// ════════════════════════════════════════════════════════════════════════
 
 #define PI 3.14159265359
-#define TWO_PI 6.28318530718
-#define MAX_PARTICLES 96
 
 float h11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
 vec2  h21(float n) { return vec2(h11(n), h11(n + 17.31)); }
 
-// HSV → RGB (for HDR-friendly emissive colors).
 vec3 hsv2rgb(vec3 c) {
     vec3 p = abs(fract(c.xxx + vec3(0.0, 2.0/3.0, 1.0/3.0)) * 6.0 - 3.0);
     return c.z * mix(vec3(1.0), clamp(p - 1.0, 0.0, 1.0), c.y);
 }
 
-int particleTier(int t) {
-    return t == 0 ? 24 : t == 1 ? 48 : t == 2 ? 72 : MAX_PARTICLES;
-}
-
-// Compute a particle's procedural position in [0,1]^2.
-// (streamIdx, partIdx) seed; TIME drives wrap; mouseX/Y steers when bound.
-vec2 particlePos(int streamIdx, int partIdx, float t, float audio,
-                 vec2 steerTarget, float steerW) {
-    float sf = float(streamIdx);
-    float pf = float(partIdx);
-    float seed = pf * 0.137 + sf * 7.91;
-
-    // Per-stream direction & speed (small variance per particle).
-    float a   = flowAngle + sf * 1.21 + (h11(seed + 3.7) - 0.5) * 0.6;
-    float spd = flowSpeed * (0.55 + 0.9 * h11(seed + 9.1)) * (1.0 + 0.25 * sf);
-    vec2  dir = vec2(cos(a), sin(a));
-
-    // Phase wraps forever via fract — INFINITE LOOP BY DESIGN.
-    float phase = fract(t * spd + h11(seed));
-
-    // Lateral offset across the stream's perpendicular axis.
-    vec2  perp = vec2(-dir.y, dir.x);
-    float lat  = (h11(seed + 1.3) - 0.5) * 2.0 * spread;
-
-    // Base linear flow centered on (0.5, 0.5).
-    vec2 base = vec2(0.5) + dir * (phase - 0.5) * 1.6 + perp * lat * 0.5;
-
-    // Swirl: a slow rotational wobble around screen center, per-particle phase.
-    float swA = t * (0.15 + 0.35 * h11(seed + 4.2)) + seed * 1.7;
-    vec2  sw  = vec2(cos(swA), sin(swA)) * (0.04 + 0.06 * h11(seed + 5.5)) * swirl;
-    base += sw;
-
-    // Steer toward an external target (mouseX/Y or held mouse). Falloff with
-    // distance — particles outside steerRadius are barely affected; this keeps
-    // the global flow intact while letting the user "edit" a region.
-    vec2 toT = steerTarget - base;
-    float d  = length(toT);
-    float w  = exp(-(d * d) / max(mouseRadius * mouseRadius, 1e-4)) * steerW;
-    base += toT * clamp(w, 0.0, 0.85);
-
-    // Wrap back into [0,1]^2 so streams seamlessly replace themselves.
-    base = fract(base);
-
-    // Audio-modulated micro-jitter (modulator, NEVER a gate — works at audio=0).
-    float jA = t * 2.3 + seed * 11.0;
-    base += (vec2(sin(jA), cos(jA * 1.3))) * 0.004 * (0.4 + audio);
-
-    return base;
-}
-
 void main() {
-    vec2 fragCoord = gl_FragCoord.xy;
-    vec2 uv = fragCoord / RENDERSIZE.xy;
-    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    vec2  uv     = gl_FragCoord.xy / RENDERSIZE.xy;
+    float aspect = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
+    float t      = TIME;
 
-    // Audio: pure modulator. audio=0 means a slightly less dense / less bright
-    // field — never an empty one. Bass dominates density, mid/high add shimmer.
-    float audio = clamp(audioBass * 1.0 + audioMid * 0.5 + audioHigh * 0.3, 0.0, 2.0);
+    // Audio is a pure modulator — at 0 the field is simply calmer/dimmer.
+    float audio = clamp(audioBass + audioMid * 0.5 + audioHigh * 0.3, 0.0, 2.0);
     audio *= clamp(audioReact, 0.0, 2.0);
 
-    // External steer target: prefer host mousePos when held, else mouseX/Y.
-    // mouseX/Y are -1..1 so a MIDI knob centered at 0 means "no steering bias".
-    vec2 mxy01 = vec2(mouseX, mouseY) * 0.5 + 0.5;     // -1..1 → 0..1
-    vec2 steer = mix(mxy01, mousePos, step(0.5, mouseDown));
-    float steerW = mouseInfluence * (0.35 + 0.65 * step(0.5, mouseDown)
-                                    + 0.65 * step(0.001, length(vec2(mouseX, mouseY))));
+    // Steer target in 0..1 space. Prefer the held mouse; otherwise use the
+    // bound mouseX/mouseY (-1..1, centred at 0 = no bias) from MIDI/OSC.
+    vec2  mxy01 = vec2(mouseX, mouseY) * 0.5 + 0.5;
+    vec2  steer = mix(mxy01, mousePos, step(0.5, mouseDown));
+    float steerW = mouseInfluence * (0.35
+                   + 0.65 * step(0.5, mouseDown)
+                   + 0.65 * step(0.001, length(vec2(mouseX, mouseY))));
 
-    int sCount = clamp(int(streamCount), 1, 5);
-    int pCount = particleTier(int(particlesPerStream));
-    // Audio adds up to +50% density without ever subtracting.
-    int activeCount = clamp(pCount + int(float(pCount) * 0.5 * audio), 1, MAX_PARTICLES);
+    // Density → grid resolution. Per-pixel cost is FIXED (9 cells) regardless
+    // of this, so "Storm" is just as cheap as "Sparse".
+    int   tier  = clamp(int(particlesPerStream), 0, 3);
+    float base  = tier == 0 ? 5.0 : tier == 1 ? 8.0 : tier == 2 ? 12.0 : 17.0;
+    float gridN = base + float(clamp(int(streamCount), 1, 5) - 1) * 1.5;
+    // Square-ish cells: more columns on wide canvases.
+    vec2  gdim  = vec2(gridN * aspect, gridN);
 
     float drawSize = particleSize * aspect;
-    vec3 color = vec3(0.0);
+    float swl      = clamp(swirl, 0.0, 2.0);
+    float scat     = clamp(spread, 0.0, 1.0);
 
-    for (int s = 0; s < 5; s++) {
-        if (s >= sCount) break;
-        float sf = float(s);
-        for (int i = 0; i < MAX_PARTICLES; i++) {
-            if (i >= activeCount) break;
+    vec3  color = vec3(0.0);
+    vec2  cell  = floor(uv * gdim);
 
-            vec2 p = particlePos(s, i, TIME, audio, steer, steerW);
+    // Only the 3×3 cells around this pixel — the whole optimisation.
+    for (int dy = -1; dy <= 1; dy++) {
+        for (int dx = -1; dx <= 1; dx++) {
+            vec2  cid  = cell + vec2(float(dx), float(dy));
+            float seed = h11(cid.x * 57.0 + cid.y * 131.7 + 1.3);
 
+            // ── Local offset, in CELL units, kept inside ±0.95 so the
+            //    particle never escapes the 3×3 search window. ──
+            // Static scatter from cell centre.
+            vec2  jit = (h21(seed * 91.0) - 0.5) * scat;
+
+            // Directional drift that wraps within the cell (infinite flow).
+            float ang = flowAngle + (h11(seed + 3.7) - 0.5) * 0.7;
+            vec2  dir = vec2(cos(ang), sin(ang));
+            float spd = flowSpeed * (0.5 + h11(seed + 9.1));
+            float ph  = fract(t * spd + seed) - 0.5;          // -0.5..0.5
+            vec2  drift = dir * ph * 0.9;
+
+            // Per-particle swirl wobble.
+            float swA = t * (0.2 + 0.5 * h11(seed + 4.2)) + seed * 6.2831;
+            vec2  sw  = vec2(cos(swA), sin(swA)) * 0.16 * swl;
+
+            vec2 local = jit + drift + sw;
+
+            // ── Steer: nudge particles near the target toward it. Gaussian
+            //    falloff by distance, bounded so it can't leave the window. ──
+            vec2  home = (cid + 0.5) / gdim;
+            float dh   = length(steer - home);
+            float w    = exp(-(dh * dh) / max(mouseRadius * mouseRadius, 1e-4)) * steerW;
+            local += (steer - home) * gdim * clamp(w, 0.0, 0.8);
+
+            // Audio micro-jitter (modulator, alive even at audio=0).
+            local += vec2(sin(t * 2.3 + seed * 11.0),
+                          cos(t * 1.9 + seed * 7.0)) * 0.05 * (0.4 + audio);
+
+            local = clamp(local, vec2(-0.95), vec2(0.95));
+            vec2 p = home + local / gdim;
+
+            // ── Splat ──
             vec2 d = uv - p;
             d.x *= aspect;
             float r = length(d);
+            float c = pow(drawSize / max(r, 1e-4), intensity);
 
-            // Soft glow kernel — smooth 1/r falloff, never produces NaN.
-            float c = drawSize / max(r, 1e-4);
-            c = pow(c, intensity);
-
-            // Per-particle hue: stream + index + a slow time drift for variety.
-            float hue = fract(hueShift
-                              + sf * 0.13
-                              + h11(float(i) * 0.07 + sf * 3.1) * hueSpread
-                              + TIME * 0.015);
-            float sat = 0.7 + 0.25 * h11(float(i) * 0.31 + sf);
-            float val = 0.6 + 0.6 * audio;
-            vec3  col = hsv2rgb(vec3(hue, sat, val));
-
-            color += c * col;
+            float hue = fract(hueShift + h11(seed * 5.3) * hueSpread + t * 0.015);
+            float sat = 0.7 + 0.25 * h11(seed * 0.31);
+            float val = 0.65 + 0.55 * audio;
+            color += c * hsv2rgb(vec3(hue, sat, val));
         }
     }
 
-    // Subtle ambient floor so audio=0 still has presence (modulator, not gate).
-    color += vec3(0.012, 0.014, 0.020);
-
-    // LINEAR HDR out — host applies tonemap.
     color *= exposure;
-    gl_FragColor = vec4(color, 1.0);
+
+    // OVERLAY: alpha tracks brightness so empty space is transparent. Use a
+    // soft knee so faint particle halos still feather in instead of clipping.
+    float bright = max(color.r, max(color.g, color.b));
+    float alpha  = clamp(bright * 1.2, 0.0, 1.0);
+
+    // LINEAR HDR out — host applies tonemap. Premultiply-friendly emissive.
+    gl_FragColor = vec4(color, alpha);
 }

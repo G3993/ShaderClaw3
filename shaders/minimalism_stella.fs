@@ -10,6 +10,9 @@
     { "NAME": "breathDepth",   "LABEL": "Breath Depth",    "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.55 },
     { "NAME": "canvasTooth",   "LABEL": "Canvas Tooth",    "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.5 },
     { "NAME": "audioReact",    "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
+    { "NAME": "pointillism",   "LABEL": "Pointillism",     "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.0 },
+    { "NAME": "dotScale",      "LABEL": "Dot Scale",       "TYPE": "float", "MIN": 0.3,  "MAX": 2.0,  "DEFAULT": 1.0 },
+    { "NAME": "dotBreak",      "LABEL": "Colour Break",    "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.5 },
     { "NAME": "showDebug",     "LABEL": "Show Debug Strip","TYPE": "bool",  "DEFAULT": 1 },
 
     { "NAME": "stripeCount",   "LABEL": "BP — Stripe Count",  "TYPE": "long",  "DEFAULT": 1,
@@ -351,6 +354,75 @@ vec3 debugStrip(vec2 uv, int m, float spCount, float spMul,
     return col;
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+//  POINTILLISM — Seurat / Signac broken-colour overlay.
+//  Re-renders whichever mood is active as a field of small round dots on
+//  bare canvas, sampling the composition at each dot's centre and giving
+//  every dot its own slight hue/value vibration so the colour "mixes in the
+//  eye" (optical mixing) — the divisionist technique, laid over the
+//  minimalist compositions.
+// ═══════════════════════════════════════════════════════════════════════
+
+// One wrapper so the dot sampler can evaluate the active mood at any point.
+vec3 composeMood(vec2 uv, int m, float spCount, float spMul, float gp,
+                 float arcN, float arcRot, float gridN, float pencilM,
+                 vec3 cA, vec3 cB, vec3 cC, int dirMode,
+                 float bass, float mid) {
+    if      (m == 0) return blackPaintings(uv, spCount, spMul, gp, bass, mid);
+    else if (m == 1) return protractor    (uv, arcN, arcRot, gp, bass, mid);
+    else if (m == 2) return agnesMartin   (uv, gridN, pencilM, bass, mid);
+    else if (m == 3) return ellsworthKelly(uv, cA, cB, cC, bass, mid);
+    else             return lewitt260     (uv, gridN, dirMode, bass, mid);
+}
+
+// Per-dot broken colour: small value + warm/cool vibration so adjacent dots
+// shimmer instead of reading as flat fill.
+vec3 brokenColor(vec3 c, float seed, float amt) {
+    float v = 0.82 + 0.36 * fract(seed * 7.13);
+    vec3  chroma = vec3(fract(seed * 3.7) - 0.5,
+                        fract(seed * 9.1) - 0.5,
+                        fract(seed * 5.3) - 0.5);
+    return max(c * mix(1.0, v, amt) + chroma * (0.10 * amt), 0.0);
+}
+
+vec3 pointillize(vec2 uv, float amount, float scale, float brk,
+                 int m, float spCount, float spMul, float gp,
+                 float arcN, float arcRot, float gridN, float pencilM,
+                 vec3 cA, vec3 cB, vec3 cC, int dirMode,
+                 float bass, float mid, vec3 baseCol) {
+    float aspect = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
+    float grid   = clamp(80.0 / max(scale, 0.05), 18.0, 320.0);   // dots down the short axis
+    vec2  gscale = vec2(grid * aspect, grid);
+    vec2  guv    = uv * gscale;
+    vec2  base   = floor(guv);
+
+    vec3  acc = vec3(0.0);
+    float wsum = 0.0;
+    // 3×3 neighbourhood so dots from adjacent cells overlap and optically mix.
+    for (int dy = -1; dy <= 1; dy++) {
+        for (int dx = -1; dx <= 1; dx++) {
+            vec2 cell = base + vec2(float(dx), float(dy));
+            float seed = hash21(cell + 11.3);
+            float seed2 = hash21(cell + 47.9);
+            vec2 jit = (vec2(seed, seed2) - 0.5) * 0.55;       // stagger the lattice
+            vec2 center = cell + 0.5 + jit;
+            vec2 sampleUV = center / gscale;
+            vec3 dotCol = composeMood(sampleUV, m, spCount, spMul, gp,
+                                      arcN, arcRot, gridN, pencilM,
+                                      cA, cB, cC, dirMode, bass, mid);
+            dotCol = brokenColor(dotCol, seed + seed2, brk);
+            float dotR = (0.30 + 0.16 * fract(seed * 2.1));
+            float d = length(guv - center);
+            float disc = smoothstep(dotR, dotR * 0.45, d);
+            acc  += dotCol * disc;
+            wsum += disc;
+        }
+    }
+    float cov = clamp(wsum, 0.0, 1.0);
+    vec3 dots = mix(CREAM, acc / max(wsum, 1e-3), cov);   // bare canvas between dots
+    return mix(baseCol, dots, clamp(amount, 0.0, 1.0));
+}
+
 // ─── main ────────────────────────────────────────────────────────────────
 void main() {
     vec2  uv = isf_FragNormCoord.xy;
@@ -376,12 +448,19 @@ void main() {
     float pencilM = clamp(pencilWeight, 0.2, 3.0);
     int   dirMode = int(lineDirection + 0.5);
 
-    vec3 col;
-    if      (m == 0) col = blackPaintings(uv, spCount, spMul, gp, bass, mid);
-    else if (m == 1) col = protractor    (uv, arcN, arcRot, gp, bass, mid);
-    else if (m == 2) col = agnesMartin   (uv, gridN, pencilM, bass, mid);
-    else if (m == 3) col = ellsworthKelly(uv, colorA.rgb, colorB.rgb, colorC.rgb, bass, mid);
-    else             col = lewitt260     (uv, gridN, dirMode, bass, mid);
+    vec3 col = composeMood(uv, m, spCount, spMul, gp, arcN, arcRot,
+                           gridN, pencilM, colorA.rgb, colorB.rgb, colorC.rgb,
+                           dirMode, bass, mid);
+
+    // Pointillism overlay — divisionist broken-colour dots over the mood.
+    float pz = clamp(pointillism, 0.0, 1.0);
+    if (pz > 0.001) {
+        col = pointillize(uv, pz, clamp(dotScale, 0.3, 2.0),
+                          clamp(dotBreak, 0.0, 1.0),
+                          m, spCount, spMul, gp, arcN, arcRot, gridN, pencilM,
+                          colorA.rgb, colorB.rgb, colorC.rgb, dirMode,
+                          bass, mid, col);
+    }
 
     col += canvasGrain(uv, treb) * clamp(canvasTooth, 0.0, 1.0);
 

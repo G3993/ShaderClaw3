@@ -12,6 +12,8 @@
     { "NAME": "starSize",        "LABEL": "Star Size",        "TYPE": "float", "MIN": 0.5,   "MAX": 4.0,    "DEFAULT": 1.4 },
     { "NAME": "nebulaIntensity", "LABEL": "Nebula",           "TYPE": "float", "MIN": 0.0,   "MAX": 2.0,    "DEFAULT": 0.85 },
     { "NAME": "haloDensity",     "LABEL": "Halo Stars",       "TYPE": "float", "MIN": 0.0,   "MAX": 1.0,    "DEFAULT": 0.55 },
+    { "NAME": "inclination",     "LABEL": "Disc Tilt",        "TYPE": "float", "MIN": 0.0,   "MAX": 1.0,    "DEFAULT": 0.55 },
+    { "NAME": "dustLanes",       "LABEL": "Dust Lanes",       "TYPE": "float", "MIN": 0.0,   "MAX": 1.0,    "DEFAULT": 0.6 },
     { "NAME": "supernovaProb",   "LABEL": "Supernova Prob",   "TYPE": "float", "MIN": 0.0,   "MAX": 0.20,   "DEFAULT": 0.04 },
     { "NAME": "hueRotate",       "LABEL": "Hue Rotate",       "TYPE": "float", "MIN": -1.0,  "MAX": 1.0,    "DEFAULT": 0.0 },
     { "NAME": "audioReact",      "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0,   "MAX": 2.0,    "DEFAULT": 1.0 },
@@ -93,8 +95,18 @@ void main() {
     vec2 uv  = (gl_FragCoord.xy - 0.5 * res) / min(res.x, res.y);
     // 'uv' is centred, isotropic, ~[-0.5, 0.5] short edge.
 
-    float r  = length(uv);
-    float th = atan(uv.y, uv.x);
+    // ---- Disc inclination: view the galaxy plane at an angle (real 3D) ----
+    // The flat disc lives in its own plane; tilting the camera compresses the
+    // screen-Y axis by cos(inc). We de-project the pixel into disc-plane coords
+    // (uvD) for all the planar fields, and re-project particle positions back
+    // to screen with *cosInc. nearSide brightens the rim tilted toward us.
+    float inc     = clamp(inclination, 0.0, 1.0) * 1.15;     // up to ~66°
+    float cosInc  = max(cos(inc), 0.18);
+    vec2  uvD     = vec2(uv.x, uv.y / cosInc);               // screen → disc plane
+    float nearSide = clamp(0.5 - uv.y / cosInc * 0.9, 0.0, 1.0); // lower rim = near
+
+    float r  = length(uvD);
+    float th = atan(uvD.y, uvD.x);
 
     vec3 col = bgColor.rgb;
 
@@ -130,7 +142,7 @@ void main() {
 
     // ---- Nebular gas (fbm masked by arm density) ----
     if (nebulaIntensity > 0.0) {
-        vec2 nq = uv * 4.5;
+        vec2 nq = uvD * 4.5;
         // Co-rotate noise slowly with the disc.
         float ca = cos(baseRot * 0.5), sa = sin(baseRot * 0.5);
         nq = mat2(ca, -sa, sa, ca) * nq;
@@ -187,6 +199,7 @@ void main() {
         thetaI += sin(TIME * (0.5 + h4 * 1.5) + fi * 0.7) * 0.015;
 
         vec2 pos = vec2(cos(thetaI), sin(thetaI)) * ri;
+        pos.y *= cosInc;                 // project disc plane → tilted screen
         vec2 d = uv - pos;
         float d2 = dot(d, d);
 
@@ -209,7 +222,8 @@ void main() {
         // Brightness — inner stars a touch brighter, fades at disc edge.
         float bright = blob * tw
                      * (0.55 + 0.7 * (1.0 - radT))
-                     * smoothstep(diskRadius * 1.05, diskRadius * 0.85, ri);
+                     * smoothstep(diskRadius * 1.05, diskRadius * 0.85, ri)
+                     * (0.80 + 0.35 * nearSide);   // near rim reads brighter (depth)
 
         // Supernova: rare per-star flash on bass.
         // Uses a TIME-windowed hash so different stars trigger at different bursts.
@@ -244,6 +258,18 @@ void main() {
     // ---- Disc glow underlay (so arms have some diffuse light) ----
     float discGlow = exp(-r * r * 6.0) * 0.25;
     col += vec3(0.55, 0.45, 0.75) * discGlow * 0.6;
+
+    // ---- Dust lanes: dark absorption ribbons along the near-side arms ----
+    // Real spiral galaxies show silhouetted dust threading the arms on the rim
+    // tilted toward us, occluding the glow behind. Strongest where arm density
+    // is high, broken up by fbm, and gated to the near side for a depth read.
+    if (dustLanes > 0.0) {
+        float dq = fbm(uvD * 7.0 + vec2(baseRot * 0.3, -baseRot * 0.2));
+        float lane = pow(armDensity, 3.0) * smoothstep(0.35, 0.7, dq);
+        lane *= discMask * (0.35 + 0.65 * nearSide);     // bias to the near rim
+        lane *= smoothstep(bulgeRadius * 0.8, diskRadius, r); // spare the bright core
+        col *= 1.0 - clamp(lane * dustLanes * 0.9, 0.0, 0.88);
+    }
 
     // ---- Hue rotate global ----
     col = hueShift(col, hueRotate);

@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "3D Liquid — a self-contained, single-pass raymarched violet metaball fluid in the spirit of Wyatt's 3D SPH shader (shadertoy.com/view/mstfzS). The original is a multi-buffer particle simulation; this is a procedural approximation of the LOOK: an orbiting liquid blob raymarched with diffuse + procedural-environment reflection + fresnel rim, in the original's exact camera rig and palette. Knobs: BLOBS, VISCOSITY (merge smoothness), SPEED, SIZE, REFLECT, AUTO SPIN, and two liquid colors. All sliders are audio-bindable.",
+  "DESCRIPTION": "3D Liquid — a self-contained, single-pass raymarched violet metaball fluid in the spirit of Wyatt's 3D SPH shader (shadertoy.com/view/mstfzS). An orbiting liquid blob raymarched with diffuse + environment reflection + fresnel rim. Drop in YOUR OWN image as the background: 'Wrap Environment' wraps it around the scene so the liquid genuinely reflects/refracts your picture, or 'Backdrop' places it flat behind the blob. Knobs: BLOBS, VISCOSITY (merge smoothness), SPEED, SIZE, REFLECT, AUTO SPIN, two liquid colors, BACKGROUND MIX/MODE/SPIN, RIM GLOW, and live SOUND REACTIVITY (bass swells the droplets, mid makes them merge gooier).",
   "CREDIT": "Easel · liquid_3d  (after Wyatt 'SPH 3D', shadertoy.com/view/mstfzS)",
   "CATEGORIES": ["Generator", "3D", "Fluid"],
   "INPUTS": [
@@ -10,11 +10,24 @@
     { "NAME": "reflAmt",   "LABEL": "Reflect",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.6 },
     { "NAME": "spin",      "LABEL": "Auto Spin", "TYPE": "float", "MIN": 0.0, "MAX": 1.5,  "DEFAULT": 0.25 },
     { "NAME": "colA", "LABEL": "Deep", "TYPE": "color", "DEFAULT": [0.220, 0.349, 1.000, 1.0] },
-    { "NAME": "colB", "LABEL": "Glow", "TYPE": "color", "DEFAULT": [0.420, 0.302, 0.996, 1.0] }
+    { "NAME": "colB", "LABEL": "Glow", "TYPE": "color", "DEFAULT": [0.420, 0.302, 0.996, 1.0] },
+
+    { "NAME": "inputImage",  "LABEL": "Your Background", "TYPE": "image" },
+    { "NAME": "bgMix",       "LABEL": "Background Mix",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
+    { "NAME": "bgMode",      "LABEL": "Background Mode", "TYPE": "long",  "VALUES": [0, 1], "LABELS": ["Backdrop (flat)", "Wrap Environment"], "DEFAULT": 1 },
+    { "NAME": "bgSpin",      "LABEL": "Background Spin", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.05 },
+    { "NAME": "rimGlow",     "LABEL": "Rim Glow",        "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.40 },
+    { "NAME": "audioReact",  "LABEL": "Sound Reactivity","TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
 #define FOV 2.5
+#define PI  3.14159265359
+#define TAU 6.28318530718
+
+// Audio pulse globals — set in main() from the live audio bus, read inside map().
+float gAudioSize = 1.0;   // bass swells droplet radius
+float gAudioVisc = 1.0;   // mid loosens the merge (gooier)
 
 // ── Camera rig — verbatim from the original (theta/phi rotation) ─────
 mat3 getCamera(vec2 a){
@@ -41,12 +54,12 @@ float smin(float a, float b, float k){
 }
 
 // Metaball fluid field. Up to 16 animated droplets orbiting/bobbing inside
-// a ~unit sphere, smooth-unioned by VISCOSITY.
+// a ~unit sphere, smooth-unioned by VISCOSITY (with a live audio nudge).
 float map(vec3 p){
     float t = TIME * speed;
     float d = 1e9;
     int   n = int(blobs);
-    float k = 0.35 * viscosity;
+    float k = 0.35 * viscosity * gAudioVisc;
     for (int i = 0; i < 16; i++){
         if (i >= n) break;
         float fi = float(i);
@@ -55,7 +68,7 @@ float map(vec3 p){
             sin(t * (0.40 + 0.35 * hash(fi + 9.0))  + fi * 2.3),
             cos(t * (0.45 + 0.25 * hash(fi + 3.0))  + fi * 1.1)
         ) * (1.10 + 0.30 * hash(fi + 5.0));
-        float r = blobSize * (0.55 + 0.40 * hash(fi + 7.0));
+        float r = blobSize * gAudioSize * (0.55 + 0.40 * hash(fi + 7.0));
         d = smin(d, length(p - c) - r, k);
     }
     return d;
@@ -69,8 +82,8 @@ vec3 calcNormal(vec3 p){
         map(p + e.yyx) - map(p - e.yyx)));
 }
 
-// Procedural environment — stands in for the original's iChannel3 cubemap.
-vec3 env(vec3 d){
+// Procedural environment — the original violet studio sky + key-light hotspot.
+vec3 proceduralSky(vec3 d){
     float up  = d.y * 0.5 + 0.5;
     vec3  sky = mix(vec3(0.03, 0.04, 0.09), vec3(0.28, 0.42, 0.85), up);
     float s   = pow(max(dot(d, normalize(vec3(0.5, 0.8, 0.3))), 0.0), 18.0);
@@ -78,9 +91,47 @@ vec3 env(vec3 d){
     return sky;
 }
 
+// Direction → equirectangular UV (lets a flat image wrap the whole scene).
+vec2 dirToEquirect(vec3 d){
+    return vec2(atan(d.z, d.x) / TAU + 0.5,
+                acos(clamp(d.y, -1.0, 1.0)) / PI);
+}
+
+// The environment the liquid lives in AND reflects. When a background image is
+// mixed in (bgMix>0) it's sampled equirectangularly so reflections pick it up.
+vec3 envSample(vec3 d){
+    vec3 sky = proceduralSky(d);
+    if (bgMix > 0.0){
+        vec2 euv = dirToEquirect(d);
+        euv.x += TIME * bgSpin * 0.08;             // slow drift so reflections shimmer
+        sky = mix(sky, texture2D(inputImage, fract(euv)).rgb, bgMix);
+    }
+    return sky;
+}
+
+// Flat backdrop: the image sized to "cover" the frame, behind the blob.
+vec3 backdrop(vec3 rd, vec2 fragUV, vec2 res){
+    vec3 base = proceduralSky(rd);
+    if (bgMix > 0.0){
+        vec2 isz = max(IMG_SIZE_inputImage, vec2(1.0));
+        float sa = res.x / res.y;
+        float ia = isz.x / isz.y;
+        vec2  sc = (sa > ia) ? vec2(1.0, ia / sa) : vec2(sa / ia, 1.0);
+        vec2  iuv = (fragUV - 0.5) / sc + 0.5;
+        base = mix(base, texture2D(inputImage, iuv).rgb, bgMix);
+    }
+    return base;
+}
+
 void main(){
     vec2 R  = RENDERSIZE;
     vec2 uv = (gl_FragCoord.xy - 0.5 * R) / max(R.x, R.y);
+
+    // Live audio bus → droplet swell + merge (calm: bass K=0.30, mid K=0.40).
+    float bAud = audioBass * audioReact;
+    float mAud = audioMid  * audioReact;
+    gAudioSize = 1.0 + 0.30 * bAud;
+    gAudioVisc = 1.0 + 0.40 * mAud;
 
     // Auto-orbit camera (the original's no-mouse fallback path).
     vec2 angles = vec2(TIME * spin * 0.5, -0.5);
@@ -88,7 +139,10 @@ void main(){
     vec3 crd = getRay(angles, vec2(0.0));
     vec3 ro  = -crd * 4.5;
 
-    vec3 col = env(rd);
+    // Background — flat backdrop or wrapped environment.
+    vec3 col = (bgMode < 0.5)
+        ? backdrop(rd, gl_FragCoord.xy / R, R)
+        : envSample(rd);
 
     // Sphere-march the metaball field.
     float t = 0.0; bool hit = false; vec3 p = ro;
@@ -105,13 +159,13 @@ void main(){
         vec3  L    = normalize(vec3(0.5, 0.8, 0.3));
         float diff = clamp(dot(nrm, L) * 0.5 + 0.5, 0.0, 1.0);   // half-Lambert
         vec3  refl = reflect(rd, nrm);
-        vec3  envR = env(refl);
+        vec3  envR = envSample(refl);                            // reflects your image
         float fres = pow(1.0 - max(dot(nrm, -rd), 0.0), 3.0);
         float grad = clamp(length(p) * 0.32, 0.0, 1.0);
         vec3  albedo = mix(colA.rgb, colB.rgb, grad);
         col  = albedo * (0.25 + 1.60 * diff);
         col  = mix(col, envR, reflAmt * (0.25 + 0.75 * fres));
-        col += colB.rgb * fres * 0.40;                            // fresnel rim glow
+        col += colB.rgb * fres * rimGlow;                        // fresnel rim glow
     }
 
     // Tonemap + gamma.

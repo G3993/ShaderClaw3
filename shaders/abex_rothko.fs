@@ -1,6 +1,6 @@
 /*{
-  "CATEGORIES": ["Generator", "Art Movement", "Audio Reactive"],
-  "DESCRIPTION": "Rothko color-field — luminous stacked bands that breathe, melt, and bleed into one another like pigment dissolving in warm light. Mood-first, movement-second.",
+  "CATEGORIES": ["Generator", "Art Movement", "Audio Reactive", "VFX", "Simulation"],
+  "DESCRIPTION": "Rothko color-field painting dissolved by a UV-advection fluid simulation. Luminous stacked bands breathe and melt while fluid dynamics warp the canvas like pigment dissolving in warm, living light.",
   "INPUTS": [
     { "NAME": "rothkoWork",    "LABEL": "Painting",          "TYPE": "long",  "DEFAULT": 0, "VALUES": [0,1,2,3,4], "LABELS": ["Orange Red Yellow","No.61 Rust+Blue","White Center","Seagram Maroon","Black on Maroon"] },
     { "NAME": "topColor",      "LABEL": "Top Color",         "TYPE": "color", "DEFAULT": [0.92,0.50,0.22,1.0] },
@@ -21,15 +21,46 @@
     { "NAME": "vignette",      "LABEL": "Vignette",          "TYPE": "float", "MIN": 0.0,  "MAX": 0.8,  "DEFAULT": 0.30 },
     { "NAME": "grain",         "LABEL": "Film Grain",        "TYPE": "float", "MIN": 0.0,  "MAX": 0.05, "DEFAULT": 0.014 },
     { "NAME": "audioInfluence","LABEL": "Audio Influence",   "TYPE": "float", "MIN": 0.0,  "MAX": 0.12, "DEFAULT": 0.04 },
-    { "NAME": "useTex",        "LABEL": "Sample Texture",    "TYPE": "bool",  "DEFAULT": false },
-    { "NAME": "inputTex",      "LABEL": "Texture",           "TYPE": "image" }
+    { "NAME": "fluidSpeed",    "LABEL": "Fluid Speed",       "TYPE": "float", "DEFAULT": 5.0,  "MIN": 0.5,  "MAX": 20.0 },
+    { "NAME": "advectSpeed",   "LABEL": "Advect Speed",      "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.1,  "MAX": 5.0 },
+    { "NAME": "returnRate",    "LABEL": "Return Rate",       "TYPE": "float", "DEFAULT": 0.005,"MIN": 0.0,  "MAX": 0.05 },
+    { "NAME": "vorticity",     "LABEL": "Vorticity",         "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 5.0 },
+    { "NAME": "viscosity",     "LABEL": "Viscosity",         "TYPE": "float", "DEFAULT": 0.0,  "MIN": 0.0,  "MAX": 1.0 },
+    { "NAME": "splatForce",    "LABEL": "Splat Force",       "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.1,  "MAX": 10.0 },
+    { "NAME": "splatRadius",   "LABEL": "Splat Radius",      "TYPE": "float", "DEFAULT": 0.05, "MIN": 0.01, "MAX": 0.2 },
+    { "NAME": "bumpHeight",    "LABEL": "Surface Depth",     "TYPE": "float", "DEFAULT": 80.0, "MIN": 0.0,  "MAX": 300.0 },
+    { "NAME": "specAmount",    "LABEL": "Specular",          "TYPE": "float", "DEFAULT": 1.5,  "MIN": 0.0,  "MAX": 5.0 },
+    { "NAME": "specPow",       "LABEL": "Spec Power",        "TYPE": "float", "DEFAULT": 36.0, "MIN": 4.0,  "MAX": 128.0 },
+    { "NAME": "moveMode",      "LABEL": "Movement",          "TYPE": "long",  "VALUES": [0,1,2,3,4], "LABELS": ["None","Freeform","Center","Wave","Vortex"], "DEFAULT": 2 },
+    { "NAME": "moveSpeed",     "LABEL": "Move Speed",        "TYPE": "float", "DEFAULT": 0.3,  "MIN": 0.05, "MAX": 2.0 },
+    { "NAME": "moveSpread",    "LABEL": "Move Spread",       "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0,  "MAX": 1.0 },
+    { "NAME": "moveIntensity", "LABEL": "Move Intensity",    "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0,  "MAX": 1.0 },
+    { "NAME": "fluidAudio",    "LABEL": "Fluid Audio React", "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0,  "MAX": 1.0 }
+  ],
+  "PASSES": [
+    { "TARGET": "velBuf", "PERSISTENT": true },
+    { "TARGET": "uvBuf",  "PERSISTENT": true },
+    { "TARGET": "rothkoBuf", "PERSISTENT": false },
+    {}
   ]
 }*/
 
-// ── low-level noise ───────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────
+// PASS 0  — velocity field (rotational curl + movement patterns + audio)
+// PASS 1  — UV advection buffer
+// PASS 2  — Rothko painting render  (into rothkoBuf)
+// PASS 3  — composite: sample Rothko at warped UVs + surface lighting
+// ────────────────────────────────────────────────────────────────────────────
+
+#define PI2 6.283185307
+#define RotNum 5
+
+// ── shared helpers ────────────────────────────────────────────────────────────
 
 float hash21(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
 }
 
 float vnoise(vec2 p) {
@@ -43,7 +74,6 @@ float vnoise(vec2 p) {
     return mix(mix(a, b, fp.x), mix(c, d, fp.x), fp.y);
 }
 
-// 5-octave fBm — used for paint texture & melt fields
 float fbm(vec2 p) {
     float v = 0.0, a = 0.52;
     for (int i = 0; i < 5; i++) {
@@ -54,13 +84,32 @@ float fbm(vec2 p) {
     return v;
 }
 
-// Smooth colour ramp across three anchors
 vec3 triGrad(float t, vec3 cA, vec3 cB, vec3 cC) {
     t = clamp(t, 0.0, 1.0);
     return (t < 0.5) ? mix(cA, cB, t * 2.0) : mix(cB, cC, (t - 0.5) * 2.0);
 }
 
-// ── band mask (feathered rect with wavy edges) ────────────────────────────────
+// ── fluid helpers ─────────────────────────────────────────────────────────────
+
+float _ang = PI2 / float(RotNum);
+
+vec2 rot2(vec2 v, float a) {
+    float c = cos(a), s = sin(a);
+    return vec2(c * v.x - s * v.y, s * v.x + c * v.y);
+}
+
+float getRot(vec2 pos, vec2 b, vec2 Res) {
+    vec2 p = b;
+    float rotSum = 0.0;
+    for (int i = 0; i < RotNum; i++) {
+        vec2 samp = IMG_PIXEL(velBuf, fract((pos + p) / Res) * Res).xy - vec2(0.5);
+        rotSum += dot(samp, p.yx * vec2(1.0, -1.0));
+        p = rot2(p, _ang);
+    }
+    return rotSum / float(RotNum) / dot(b, b);
+}
+
+// ── Rothko band mask ──────────────────────────────────────────────────────────
 
 float bandMask(vec2 uv, float yLo, float yHi, float xIn, float fth, float wave) {
     float wx = wave * sin(uv.x * 11.0 + TIME * 0.07);
@@ -72,12 +121,9 @@ float bandMask(vec2 uv, float yLo, float yHi, float xIn, float fth, float wave) 
     return ym * xm;
 }
 
-// ── main ──────────────────────────────────────────────────────────────────────
+// ── Rothko painting ───────────────────────────────────────────────────────────
 
-void main() {
-    vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
-
-    // ── resolve palette ───────────────────────────────────────────────────────
+vec4 rothkoPaint(vec2 uv) {
     int rw = int(rothkoWork);
 
     vec3 cTop = topColor.rgb;
@@ -90,15 +136,6 @@ void main() {
     else if (rw == 3) { cTop = vec3(0.28,0.04,0.05); cMid = vec3(0.16,0.03,0.04); cBot = vec3(0.08,0.02,0.03); cGnd = vec3(0.05,0.01,0.02); }
     else if (rw == 4) { cTop = vec3(0.04,0.01,0.02); cMid = vec3(0.26,0.04,0.05); cBot = vec3(0.08,0.02,0.03); cGnd = vec3(0.02,0.01,0.01); }
 
-    if (useTex) {
-        cTop = IMG_NORM_PIXEL(inputTex, vec2(0.5, 0.85)).rgb;
-        cMid = IMG_NORM_PIXEL(inputTex, vec2(0.5, 0.50)).rgb;
-        cBot = IMG_NORM_PIXEL(inputTex, vec2(0.5, 0.15)).rgb;
-    }
-
-    // ── breathing / melting ───────────────────────────────────────────────────
-    // Three phase-offset sinusoids drive slow cross-colour cycling.
-    // Each band inhales from its neighbour, exhales back — never mechanical.
     float bt = TIME * breathSpeed;
 
     float ph0 = sin(bt * 0.53)              * 0.5 + 0.5;
@@ -106,9 +143,7 @@ void main() {
     float ph2 = sin(bt * 0.37 + 3.5)        * 0.5 + 0.5;
     float ph3 = sin(bt * 0.29 + 5.1)        * 0.5 + 0.5;
     float ph4 = sin(bt * 0.61 + 2.4)        * 0.5 + 0.5;
-    float ph5 = sin(bt * 0.47 + 4.7)        * 0.5 + 0.5;
 
-    // Each colour breathes toward its neighbour band *and* toward ground
     vec3 bTop = mix(cTop, mix(cMid, cGnd, 0.25), ph0);
     vec3 bMid = mix(cMid, mix(cBot, cTop, ph1),  ph2);
     vec3 bBot = mix(cBot, mix(cTop, cGnd, 0.15), ph3);
@@ -117,55 +152,35 @@ void main() {
     cMid = mix(cMid, bMid, meltDepth);
     cBot = mix(cBot, bBot, meltDepth);
 
-    // Secondary slow "tide" — overall hue drift all three bands together
     float tide = sin(bt * 0.19) * 0.5 + 0.5;
     cTop = mix(cTop, mix(cTop, cBot, 0.30), tide * meltDepth * 0.5);
     cMid = mix(cMid, mix(cMid, cTop, 0.30), (1.0 - tide) * meltDepth * 0.5);
     cBot = mix(cBot, mix(cBot, cMid, 0.30), ph4 * meltDepth * 0.5);
 
-    // ── ground with vertical luminosity gradient ──────────────────────────────
-    // Ground subtly transitions from the base tone to a slightly warmer top.
     vec3 col = mix(cGnd * 0.82, cGnd * 1.08, uv.y);
 
-    // Soft large-scale noise wash that bleeds ground into bands
     float gBleed = fbm(uv * 1.4 + vec2(bt * 0.07, bt * 0.04));
     col = mix(col, mix(cGnd, cMid, 0.35), gBleed * meltDepth * 0.28);
 
-    // ── parameters ───────────────────────────────────────────────────────────
     int N    = int(clamp(bandCount, 2.0, 4.0));
     float xI = clamp(innerInset, 0.0, 0.38);
-    // Feather expands with meltDepth for more painterly bleed
     float fth = feather * (1.0 + meltDepth * 1.8);
     float wav = waveAmount;
-
-    // Slow vertical drift of band positions — bands float up/down gently
     float drift = sin(bt * 0.17) * 0.025 * meltDepth;
-
-    // ── chromatic edge offset ─────────────────────────────────────────────────
-    float cOff = chrShimmer * (0.6 + 0.4 * sin(TIME * 0.41));
-
-    // ── band painting ─────────────────────────────────────────────────────────
-    // Bands are blended per-channel with a tiny chromatic offset for spectral
-    // fringing at the edges — one of Rothko's signature optical effects.
+    float cOff  = chrShimmer * (0.6 + 0.4 * sin(TIME * 0.41));
 
     if (N >= 3) {
-        // Top band
-        float y1L = 0.60 + drift;
-        float y1H = 0.92 + drift * 0.5;
+        float y1L = 0.60 + drift;       float y1H = 0.92 + drift * 0.5;
         float mR1 = bandMask(uv + vec2(cOff, 0.0), y1L, y1H, xI, fth, wav);
         float mG1 = bandMask(uv,                   y1L, y1H, xI, fth, wav);
         float mB1 = bandMask(uv - vec2(cOff, 0.0), y1L, y1H, xI, fth, wav);
 
-        // Mid band
-        float y2L = 0.32 - drift;
-        float y2H = 0.58 - drift * 0.5;
+        float y2L = 0.32 - drift;       float y2H = 0.58 - drift * 0.5;
         float mR2 = bandMask(uv + vec2(cOff, 0.0), y2L, y2H, xI, fth, wav);
         float mG2 = bandMask(uv,                   y2L, y2H, xI, fth, wav);
         float mB2 = bandMask(uv - vec2(cOff, 0.0), y2L, y2H, xI, fth, wav);
 
-        // Bot band
-        float y3L = 0.06 + drift * 0.3;
-        float y3H = 0.28 + drift * 0.3;
+        float y3L = 0.06 + drift * 0.3; float y3H = 0.28 + drift * 0.3;
         float mR3 = bandMask(uv + vec2(cOff, 0.0), y3L, y3H, xI, fth, wav);
         float mG3 = bandMask(uv,                   y3L, y3H, xI, fth, wav);
         float mB3 = bandMask(uv - vec2(cOff, 0.0), y3L, y3H, xI, fth, wav);
@@ -173,16 +188,13 @@ void main() {
         col.r = mix(col.r, cTop.r, mR1); col.g = mix(col.g, cTop.g, mG1); col.b = mix(col.b, cTop.b, mB1);
         col.r = mix(col.r, cMid.r, mR2); col.g = mix(col.g, cMid.g, mG2); col.b = mix(col.b, cMid.b, mB2);
         col.r = mix(col.r, cBot.r, mR3); col.g = mix(col.g, cBot.g, mG3); col.b = mix(col.b, cBot.b, mB3);
-
     } else {
-        float y1L = 0.53 + drift;
-        float y1H = 0.92 + drift * 0.3;
+        float y1L = 0.53 + drift;       float y1H = 0.92 + drift * 0.3;
         float mR1 = bandMask(uv + vec2(cOff, 0.0), y1L, y1H, xI, fth, wav);
         float mG1 = bandMask(uv,                   y1L, y1H, xI, fth, wav);
         float mB1 = bandMask(uv - vec2(cOff, 0.0), y1L, y1H, xI, fth, wav);
 
-        float y2L = 0.08 - drift;
-        float y2H = 0.46 - drift * 0.3;
+        float y2L = 0.08 - drift;       float y2H = 0.46 - drift * 0.3;
         float mR2 = bandMask(uv + vec2(cOff, 0.0), y2L, y2H, xI, fth, wav);
         float mG2 = bandMask(uv,                   y2L, y2H, xI, fth, wav);
         float mB2 = bandMask(uv - vec2(cOff, 0.0), y2L, y2H, xI, fth, wav);
@@ -191,62 +203,313 @@ void main() {
         col.r = mix(col.r, cBot.r, mR2); col.g = mix(col.g, cBot.g, mG2); col.b = mix(col.b, cBot.b, mB2);
     }
 
-    // ── paint texture ─────────────────────────────────────────────────────────
-    // Two fBm layers at different scales and drift speeds create the sense of
-    // impasto — thick paint with micro-ridges catching light differently.
     if (paintTexture > 0.001) {
         float tScale = textureScale;
         float tT     = TIME * breathSpeed * 0.12;
-
-        float tex1 = fbm(uv * tScale            + vec2(tT * 0.23,  tT * 0.17));
-        float tex2 = fbm(uv * tScale * 1.8      + vec2(-tT * 0.19, tT * 0.31) + vec2(4.1, 2.3));
-        float tex3 = fbm(uv * tScale * 0.45     + vec2(tT * 0.11, -tT * 0.14) + vec2(1.7, 6.1));
-
+        float tex1 = fbm(uv * tScale           + vec2(tT * 0.23,  tT * 0.17));
+        float tex2 = fbm(uv * tScale * 1.8     + vec2(-tT * 0.19, tT * 0.31) + vec2(4.1, 2.3));
+        float tex3 = fbm(uv * tScale * 0.45    + vec2(tT * 0.11, -tT * 0.14) + vec2(1.7, 6.1));
         float tex  = tex1 * 0.55 + tex2 * 0.28 + tex3 * 0.17;
-
-        // Modulate brightness — brighter at peaks, slightly darker in troughs
         float modulate = 1.0 + (tex - 0.48) * paintTexture * 1.6;
         col = clamp(col * modulate, 0.0, 1.0);
-
-        // Colour-tinted lift at luminous peaks (warm/cool depending on phase)
         float tintPhase = sin(bt * 0.31) * 0.5 + 0.5;
         vec3  tint      = mix(cTop * 1.1, cBot * 0.9, tintPhase);
         float lift      = max(0.0, tex - 0.60) * paintTexture * 0.22;
         col = clamp(col + tint * lift, 0.0, 1.0);
     }
 
-    // ── surface shimmer ───────────────────────────────────────────────────────
-    // A two-octave noise rides on top as a fine luminous tremor.
     if (shimmer > 0.001) {
         float sc = shimmerScale;
-        float n1 = vnoise(uv * sc           + vec2(TIME * breathSpeed * 0.55, TIME * breathSpeed * 0.40));
-        float n2 = vnoise(uv * sc * 2.1     - vec2(TIME * breathSpeed * 0.42, TIME * breathSpeed * 0.31));
-        float shm = (n1 * 0.65 + n2 * 0.35);
+        float n1 = vnoise(uv * sc       + vec2(TIME * breathSpeed * 0.55, TIME * breathSpeed * 0.40));
+        float n2 = vnoise(uv * sc * 2.1 - vec2(TIME * breathSpeed * 0.42, TIME * breathSpeed * 0.31));
+        float shm = n1 * 0.65 + n2 * 0.35;
         col *= 1.0 + (shm - 0.5) * shimmer * 2.0;
     }
 
-    // ── inner luminous centre glow ────────────────────────────────────────────
-    // Each Rothko painting has a warm inner luminosity — slightly brighter
-    // near the vertical centre of the canvas, as if lit from within.
     float centreGlow = exp(-pow((uv.x - 0.5) * 2.8, 2.0))
                      * exp(-pow((uv.y - 0.5) * 1.4, 2.0));
     centreGlow *= 0.18 * (0.7 + 0.3 * sin(bt * 0.23));
     col += col * centreGlow;
 
-    // ── vignette ──────────────────────────────────────────────────────────────
     float d   = length((uv - 0.5) * vec2(1.0, 1.15));
     float vig = pow(d * 1.35, 3.0) * vignette;
     col *= 1.0 - vig;
 
-    // ── film grain ────────────────────────────────────────────────────────────
     float g = hash21(uv * RENDERSIZE + vec2(float(FRAMEINDEX) * 0.317, 0.0));
     col += (g - 0.5) * grain;
 
-    // ── audio ─────────────────────────────────────────────────────────────────
     float audioMod = 1.0 + audioBass  * audioInfluence * 0.80
                         + audioMid   * audioInfluence * 0.40
                         + audioLevel * audioInfluence * 0.30;
     col *= audioMod;
+
+    return vec4(clamp(col, 0.0, 1.0), 1.0);
+}
+
+// ── main ──────────────────────────────────────────────────────────────────────
+
+void main() {
+    vec2 Res = RENDERSIZE;
+    vec2 pos = gl_FragCoord.xy;
+    vec2 uv  = isf_FragNormCoord;
+    float aspect = Res.x / Res.y;
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // PASS 0 — Velocity field
+    // ═════════════════════════════════════════════════════════════════════════
+    if (PASSINDEX == 0) {
+        vec2 b = cos(float(FRAMEINDEX) * 0.3 - vec2(0.0, 1.57));
+        vec2 v = vec2(0.0);
+        float bbMax = 0.5 * Res.y;
+        bbMax *= bbMax;
+
+        for (int l = 0; l < 20; l++) {
+            if (dot(b, b) > bbMax) break;
+            vec2 p = b;
+            for (int i = 0; i < RotNum; i++) {
+                v += p.yx * getRot(pos + p, -rot2(b, _ang * 0.5), Res);
+                p = rot2(p, _ang);
+            }
+            b *= 2.0;
+        }
+
+        v *= mix(0.5, 2.0, vorticity / 5.0);
+
+        float speedScale = fluidSpeed * sqrt(Res.x / 600.0);
+        vec2 advUV = fract((pos - v * vec2(-1.0, 1.0) * speedScale) / Res);
+        vec4 col = IMG_PIXEL(velBuf, advUV * Res);
+
+        col.xy = mix(col.xy, vec2(0.5), viscosity * 0.02);
+
+        float edgeDist = min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y));
+        float edgeForce = smoothstep(0.05, 0.0, edgeDist);
+        if (edgeForce > 0.0) {
+            vec2 edgeNormal = vec2(0.0);
+            if (uv.x < 0.05) edgeNormal.x =  1.0;
+            if (uv.x > 0.95) edgeNormal.x = -1.0;
+            if (uv.y < 0.05) edgeNormal.y =  1.0;
+            if (uv.y > 0.95) edgeNormal.y = -1.0;
+            edgeNormal = normalize(edgeNormal + 0.001);
+            vec2 vel2 = (col.xy - 0.5) * 2.0;
+            float into = dot(vel2, -edgeNormal);
+            if (into > 0.0) {
+                vel2 += edgeNormal * into * 2.0 * edgeForce;
+                col.xy = vel2 * 0.5 + 0.5;
+            }
+        }
+
+        // Mouse splat
+        float interacting = max(mouseDown, pinchHold);
+        if (interacting > 0.3) {
+            vec2 mDiff = uv - mousePos;
+            mDiff.x *= aspect;
+            float dist2 = dot(mDiff, mDiff);
+            float r2 = splatRadius * splatRadius;
+            if (dist2 < r2 * 12.0) {
+                float falloff = exp(-dist2 / r2);
+                vec2 force = mouseDelta * Res * splatForce * 0.0003 * interacting;
+                if (dot(force, force) < 0.000001)
+                    force = normalize(mDiff + 0.001) * 0.02 * interacting * splatForce;
+                force = clamp(force, vec2(-0.3), vec2(0.3));
+                col.xy += force * falloff;
+                col.xy = clamp(col.xy, 0.0, 1.0);
+            }
+        }
+
+        // Movement patterns
+        float t = TIME * moveSpeed;
+        float spread   = mix(0.05, 0.42, moveSpread);
+        float intensity = moveIntensity * 0.15;
+        float splatR  = splatRadius * 2.5;
+        float splatR2 = splatR * splatR;
+        float cutoff2 = splatR2 * 12.0;
+        int mMode = int(moveMode);
+
+        if (mMode == 1) {
+            for (int s = 0; s < 3; s++) {
+                float fs = float(s);
+                float phase = t * (0.5 + fs * 0.3) + fs * 1.257;
+                vec2 splatPos = vec2(
+                    0.5 + spread * sin(phase) * cos(phase * 0.7 + fs),
+                    0.5 + spread * cos(phase * 0.8) * sin(phase * 0.5 + fs * 1.5)
+                );
+                vec2 mDiff = uv - splatPos; mDiff.x *= aspect;
+                float dist2 = dot(mDiff, mDiff);
+                if (dist2 < cutoff2)
+                    col.xy += vec2(cos(phase * 1.3 + fs), sin(phase * 0.9 + fs * 2.0))
+                              * intensity * exp(-dist2 / splatR2);
+            }
+        } else if (mMode == 2) {
+            for (int s = 0; s < 3; s++) {
+                float fs = float(s);
+                float phase = t * (0.8 + fs * 0.25) + fs * 1.257;
+                float r = spread * 0.5 * (0.3 + 0.7 * abs(sin(phase * 0.5)));
+                float a = phase * 0.7 + fs * 1.257;
+                vec2 splatPos = vec2(0.5 + cos(a) * r, 0.5 + sin(a) * r);
+                vec2 mDiff = uv - splatPos; mDiff.x *= aspect;
+                float dist2 = dot(mDiff, mDiff);
+                if (dist2 < cutoff2) {
+                    vec2 dir = normalize(splatPos - 0.5 + 0.001);
+                    col.xy += dir * sin(phase * 1.5) * intensity * 1.5 * exp(-dist2 / splatR2);
+                }
+            }
+            vec2 cDiff = uv - 0.5; cDiff.x *= aspect;
+            float cf = exp(-dot(cDiff, cDiff) / (spread * spread * 0.3));
+            col.xy += vec2(-cDiff.y, cDiff.x) * sin(t * 0.6) * intensity * 0.5 * cf;
+        } else if (mMode == 3) {
+            for (int s = 0; s < 3; s++) {
+                float fs = float(s);
+                float wavePhase = t * 0.8 + fs * 0.7;
+                vec2 splatPos = vec2(
+                    0.5 + spread * sin(wavePhase * 0.6 + fs * 0.8),
+                    0.5 + spread * 0.7 * sin(wavePhase * 1.1 + fs * 1.7)
+                );
+                vec2 mDiff = uv - splatPos; mDiff.x *= aspect;
+                float dist2 = dot(mDiff, mDiff);
+                if (dist2 < cutoff2)
+                    col.xy += vec2(
+                        cos(wavePhase * 0.6 + fs * 0.8) * intensity * 1.2,
+                        sin(wavePhase * 2.2 + fs) * intensity * 0.6
+                    ) * exp(-dist2 / splatR2);
+            }
+            col.xy += vec2(
+                sin(uv.x * 8.0 + t * 1.5) * sin(uv.y * 6.0 - t * 0.8),
+                cos(uv.x * 5.0 - t)
+            ) * intensity * 0.1;
+        } else if (mMode == 4) {
+            for (int s = 0; s < 3; s++) {
+                float fs = float(s);
+                float vortexPhase = t * (0.6 + fs * 0.2);
+                float r = spread * (0.15 + fs * 0.15);
+                vec2 center = vec2(
+                    0.5 + spread * 0.3 * sin(t * 0.3 + fs),
+                    0.5 + spread * 0.3 * cos(t * 0.25 + fs * 1.5)
+                );
+                vec2 splatPos = center + vec2(cos(vortexPhase), sin(vortexPhase)) * r;
+                vec2 mDiff = uv - splatPos; mDiff.x *= aspect;
+                float dist2 = dot(mDiff, mDiff);
+                if (dist2 < cutoff2) {
+                    vec2 radial = splatPos - center;
+                    col.xy += vec2(-radial.y, radial.x) * intensity * 2.0
+                              / (r + 0.05) * exp(-dist2 / splatR2);
+                }
+            }
+            vec2 gDiff = uv - 0.5; gDiff.x *= aspect;
+            float rotFalloff = exp(-dot(gDiff, gDiff) / (spread * spread));
+            float rotSign = (sin(t * 0.4) > 0.0) ? 1.0 : -1.0;
+            col.xy += vec2(-gDiff.y, gDiff.x) * rotSign * intensity * 0.3 * rotFalloff;
+        }
+
+        // Audio splats — bass creates fluid bursts
+        if (audioBass > 0.2 && fluidAudio > 0.01) {
+            float at = float(FRAMEINDEX) * 0.1;
+            vec2 splatPos = vec2(hash21(vec2(at, 1.0)), hash21(vec2(at, 2.0)));
+            vec2 mDiff = uv - splatPos; mDiff.x *= aspect;
+            float dist2 = dot(mDiff, mDiff);
+            float ar = splatRadius * (1.0 + audioBass * 3.0 * fluidAudio);
+            if (dist2 < ar * ar * 12.0) {
+                float falloff = exp(-dist2 / (ar * ar));
+                float splatAngle = hash21(vec2(at, 3.0)) * PI2;
+                col.xy += vec2(cos(splatAngle), sin(splatAngle))
+                          * audioBass * 0.3 * splatForce * fluidAudio * falloff;
+                col.xy = clamp(col.xy, 0.0, 1.0);
+            }
+        }
+        // audioMid: global swirl boost
+        if (audioMid > 0.15 && fluidAudio > 0.01) {
+            vec2 cd = uv - 0.5; cd.x *= aspect;
+            float swAmp = audioMid * fluidAudio * 0.08;
+            col.xy += vec2(-cd.y, cd.x) * swAmp * exp(-dot(cd,cd) * 8.0);
+            col.xy = clamp(col.xy, 0.0, 1.0);
+        }
+
+        // Initialise
+        if (FRAMEINDEX < 4) {
+            col = vec4(0.5, 0.5, 0.0, 1.0);
+            vec2 d = uv - 0.5;
+            col.xy = vec2(0.5 - d.y * 0.2, 0.5 + d.x * 0.2);
+        }
+
+        gl_FragColor = col;
+        return;
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // PASS 1 — UV advection
+    // ═════════════════════════════════════════════════════════════════════════
+    if (PASSINDEX == 1) {
+        if (FRAMEINDEX < 4) {
+            gl_FragColor = vec4(uv, 0.0, 1.0);
+            return;
+        }
+
+        vec2 vel = (IMG_PIXEL(velBuf, pos).xy - 0.5) * 2.0;
+        vec2 advUV  = fract(uv - vel * advectSpeed * 0.003);
+        vec2 stored = IMG_PIXEL(uvBuf, advUV * Res).rg;
+        stored = mix(stored, uv, returnRate);
+        gl_FragColor = vec4(stored, 0.0, 1.0);
+        return;
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // PASS 2 — Render Rothko painting into rothkoBuf
+    // ═════════════════════════════════════════════════════════════════════════
+    if (PASSINDEX == 2) {
+        gl_FragColor = rothkoPaint(uv);
+        return;
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // PASS 3 — Composite: sample Rothko at warped UVs + surface lighting
+    // ═════════════════════════════════════════════════════════════════════════
+    vec2 warpedUV = IMG_PIXEL(uvBuf, pos).rg;
+
+    // Sample the Rothko painting at the fluid-warped UV coordinates
+    vec3 col = IMG_NORM_PIXEL(rothkoBuf, warpedUV).rgb;
+
+    // ── Surface lighting from UV displacement gradient ─────────────────────
+    if (bumpHeight > 0.0) {
+        float delta = max(1.0 / Res.x, 1.0 / Res.y);
+
+        vec2 uvL = IMG_PIXEL(uvBuf, pos + vec2(-delta * Res.x, 0.0)).rg;
+        vec2 uvR = IMG_PIXEL(uvBuf, pos + vec2( delta * Res.x, 0.0)).rg;
+        vec2 uvU = IMG_PIXEL(uvBuf, pos + vec2(0.0,  delta * Res.y)).rg;
+        vec2 uvD = IMG_PIXEL(uvBuf, pos + vec2(0.0, -delta * Res.y)).rg;
+
+        float hL = length(uvL - (uv + vec2(-delta, 0.0)));
+        float hR = length(uvR - (uv + vec2( delta, 0.0)));
+        float hU = length(uvU - (uv + vec2(0.0,  delta)));
+        float hD = length(uvD - (uv + vec2(0.0, -delta)));
+
+        vec3 n = normalize(vec3(
+            (hR - hL) * bumpHeight,
+            (hU - hD) * bumpHeight,
+            1.0
+        ));
+
+        // Warm raking light — angle evokes museum spotlight
+        vec3 lightDir = normalize(vec3(0.4, 0.7, 1.0));
+        float diff = clamp(dot(n, lightDir), 0.35, 1.0);
+
+        vec2 sc = (gl_FragCoord.xy - Res * 0.5) / Res.x;
+        vec3 viewDir = normalize(vec3(sc, -1.0));
+        vec3 halfVec = normalize(lightDir - viewDir);
+        float specRaw = pow(max(dot(n, halfVec), 0.0), specPow);
+
+        float ridgeMag = length(vec2(hR - hL, hU - hD)) * bumpHeight;
+        float aaW = max(fwidth(ridgeMag), 0.0001);
+        float ridgeMask = smoothstep(0.0, aaW * 4.0, ridgeMag);
+        float spec = specRaw * specAmount * ridgeMask;
+
+        // Warm specular that echoes the painting's palette
+        float srcBright = max(max(col.r, col.g), col.b);
+        float hdrGate   = smoothstep(0.45, 0.85, srcBright)
+                        * smoothstep(0.04, 0.20, ridgeMag)
+                        * specRaw;
+        vec3 hdrPeak = vec3(1.0, 0.95, 0.82) * hdrGate * 1.5;
+
+        col = col * diff + vec3(spec) + hdrPeak;
+    }
 
     gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

@@ -1,7 +1,11 @@
 /*{
   "CATEGORIES": ["Generator", "Atmospheric", "Audio Reactive"],
-  "DESCRIPTION": "Thin-film interference colours on a flowing surface — rainbow patches that shift hue as the film thickness varies, computed from real Fresnel-ish thin-film equations. Like a soap bubble or oil-on-water in slow flow, with audio-driven thickness modulation",
+  "DESCRIPTION": "Thin-film interference colours on a flowing surface — rainbow patches that shift hue as the film thickness varies, computed from real Fresnel-ish thin-film equations. Like a soap bubble or oil-on-water in slow flow. Drop an image in: its luminance moulds the film thickness so the iridescence crawls over the picture, and the image bleeds through the slick. Audio-driven thickness modulation.",
   "INPUTS": [
+    { "NAME": "inputTex",           "LABEL": "Texture",             "TYPE": "image" },
+    { "NAME": "imageThickness",     "LABEL": "Image → Film",        "TYPE": "float", "MIN": 0.0,   "MAX": 1.0,   "DEFAULT": 0.6 },
+    { "NAME": "imageBleed",         "LABEL": "Image Bleed",         "TYPE": "float", "MIN": 0.0,   "MAX": 1.0,   "DEFAULT": 0.30 },
+    { "NAME": "imageWarp",          "LABEL": "Image Warp",          "TYPE": "float", "MIN": 0.0,   "MAX": 1.0,   "DEFAULT": 0.35 },
     { "NAME": "filmScale",          "LABEL": "Film Scale",          "TYPE": "float", "MIN": 0.5,   "MAX": 8.0,   "DEFAULT": 2.4 },
     { "NAME": "filmDriftSpeed",     "LABEL": "Drift Speed",         "TYPE": "float", "MIN": 0.0,   "MAX": 1.0,   "DEFAULT": 0.18 },
     { "NAME": "filmThicknessBase",  "LABEL": "Thickness Base (nm)", "TYPE": "float", "MIN": 100.0, "MAX": 900.0, "DEFAULT": 420.0 },
@@ -122,6 +126,21 @@ void main() {
     vec2 flow = curl(p * (filmScale * 0.7) + vec2(t * 0.6, -t * 0.4));
     vec2 advected = p + flow * 0.18;
 
+    // ── Optional input image ──────────────────────────────────────────
+    // When a texture is bound, sample it through the curl flow so the picture
+    // appears to live UNDER the moving oil. Its luminance moulds the film
+    // thickness (so iridescent bands wrap the image's forms) and its colour
+    // bleeds up through the slick.
+    bool  hasTex = IMG_SIZE_inputTex.x > 0.5 && IMG_SIZE_inputTex.y > 0.5;
+    vec3  imgCol = vec3(0.0);
+    float imgLum = 0.5;
+    if (hasTex) {
+        vec2 suv = uv + flow * (0.006 + 0.03 * imageWarp);
+        suv = clamp(suv, 0.0, 1.0);
+        imgCol = texture(inputTex, suv).rgb;
+        imgLum = dot(imgCol, vec3(0.299, 0.587, 0.114));
+    }
+
     // Layered thickness fbm: large patches + fine swirl + treble ripple.
     float baseN   = fbm(advected * filmScale + vec2(0.0, t * 1.3));
     vec2  q       = advected * filmScale * 3.1 + curl(advected * filmScale * 1.8 + t) * 0.3;
@@ -132,8 +151,10 @@ void main() {
                   + (detailN - 0.5) * secondaryNoise * 0.9
                   + (ripple  - 0.5) * (0.15 + trbl * 0.6);
 
-    // Map to nanometres; bass thickens the film globally.
+    // Map to nanometres; bass thickens the film globally. Image luminance
+    // pushes thickness up/down so the interference bands contour the picture.
     float t_nm = filmThicknessBase + (thick01 - 0.5) * filmThicknessRange + bass * 140.0;
+    if (hasTex) t_nm += (imgLum - 0.5) * imageThickness * 420.0;
     t_nm = max(t_nm, 60.0);
 
     // viewAngle controls cos(theta_t) inside the film -> blue-shifts bands.
@@ -152,7 +173,13 @@ void main() {
     // Vignette + audio-mid-modulated film coverage over dark water.
     float vig   = smoothstep(1.05, 0.25, length(p));
     float cover = clamp(0.55 + 0.45 * baseN + midA * 0.15, 0.0, 1.0);
-    vec3 col    = mix(bgColor.rgb, film, cover * vig);
+    // The "water" beneath the slick: dark bg, or the image bled up through it.
+    vec3 base   = hasTex ? mix(bgColor.rgb, imgCol, imageBleed) : bgColor.rgb;
+    // Iridescence rides on top; where the image is bled in we keep some of its
+    // colour visible even through the film (multiply tint) so it reads as oil
+    // ON the picture, not a flat overlay.
+    vec3 film2  = hasTex ? film * mix(vec3(1.0), imgCol * 1.6 + 0.3, imageBleed * 0.5) : film;
+    vec3 col    = mix(base, film2, cover * vig);
     col += spec * vec3(0.85, 0.95, 1.0);
 
     // Black band where film is very thin (< ~120 nm) — the dark fringe

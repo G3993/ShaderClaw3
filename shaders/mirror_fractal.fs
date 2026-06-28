@@ -11,6 +11,9 @@
     { "NAME": "seamGlint",    "LABEL": "Seam Glint",   "TYPE": "float", "MIN": 0.0,  "MAX": 1.5,  "DEFAULT": 0.85 },
     { "NAME": "leadWeight",   "LABEL": "Lead / Edge",  "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.55 },
     { "NAME": "depth3D",      "LABEL": "3D Depth",     "TYPE": "float", "MIN": 0.0,  "MAX": 1.5,  "DEFAULT": 0.85 },
+    { "NAME": "tunnelLayers", "LABEL": "Tunnel Depth", "TYPE": "long",  "DEFAULT": 3,
+      "VALUES": [0,1,2,3,4,5], "LABELS": ["Flat","2","3","4","5","6"] },
+    { "NAME": "tunnelSpeed",  "LABEL": "Fly Speed",    "TYPE": "float", "MIN": -1.0, "MAX": 1.0,  "DEFAULT": 0.25 },
     { "NAME": "orbitSpeed",   "LABEL": "Camera Orbit", "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.35 },
     { "NAME": "exposure",     "LABEL": "Exposure",     "TYPE": "float", "MIN": 0.4,  "MAX": 2.0,  "DEFAULT": 1.05 },
     { "NAME": "audioReact",   "LABEL": "Audio React",  "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 }
@@ -211,6 +214,30 @@ vec2 perspective3D(vec2 ra, float depth, float orbitT) {
     return vec2(rW, aW);
 }
 
+// ─── ONE WEDGE LAYER ──────────────────────────────────────────────────
+//  kaleido → perspective foreshorten → palette → depth shade. Factored out
+//  so the tunnel can stack many receding copies of it.
+vec3 wedgeColor(vec2 p, float N, float t, int pal, float lead,
+                float bass, float depth, float orbitT) {
+    vec2 ra = kaleido(p, N);
+    ra = perspective3D(ra, depth, orbitT);
+    vec3 col;
+    if      (pal == 0) col = paletteCathedral(ra, t, lead, bass);
+    else if (pal == 1) col = paletteKusama   (ra, t, bass);
+    else if (pal == 2) col = paletteEliasson (ra, t, bass);
+    else if (pal == 3) col = paletteBauhaus  (ra, t, lead, bass);
+    else               col = palettePollock  (ra, t, bass);
+
+    float r = ra.x;
+    float depthShade = mix(1.0,
+                           mix(0.55, 1.25, smoothstep(0.9, 0.0, r)),
+                           clamp(depth, 0.0, 1.0));
+    col *= depthShade;
+    float rim = exp(-r * 9.0) * (0.4 + 0.6 * bass);
+    col += vec3(1.20, 1.05, 0.78) * rim * 0.30 * depth;
+    return col;
+}
+
 // ─── MAIN ─────────────────────────────────────────────────────────────
 void main() {
     vec2  uv  = isf_FragNormCoord.xy;
@@ -247,33 +274,39 @@ void main() {
     float orbitT = t * orbitSpeed;
     p += depth3D * 0.025 * vec2(sin(orbitT), cos(orbitT * 0.83));
 
-    // Project into wedge coordinates (TRUE mirror at boundary)
-    vec2 ra = kaleido(p, N);
+    int pal = int(clamp(float(palette), 0.0, 4.0));
 
-    // Apply 3D-feel perspective foreshortening to the wedge content
-    ra = perspective3D(ra, depth3D, orbitT);
-
-    // ── Palette dispatch ──────────────────────────────────────────
-    int   pal = int(clamp(float(palette), 0.0, 4.0));
-    vec3  col;
-    if      (pal == 0) col = paletteCathedral(ra, t, leadWeight, bass);
-    else if (pal == 1) col = paletteKusama   (ra, t, bass);
-    else if (pal == 2) col = paletteEliasson (ra, t, bass);
-    else if (pal == 3) col = paletteBauhaus  (ra, t, leadWeight, bass);
-    else               col = palettePollock  (ra, t, bass);
-
-    // ── Depth shading — far rings darker, near rings brighter ────
-    //  Reads as a lit tunnel rather than a flat wheel.
-    {
-        float r = ra.x;
-        float depthShade = mix(1.0,
-                               mix(0.55, 1.25, smoothstep(0.9, 0.0, r)),
-                               clamp(depth3D, 0.0, 1.0));
-        col *= depthShade;
-        // Rim-light at the vanishing pole — a soft HDR highlight
-        float rim = exp(-r * 9.0) * (0.4 + 0.6 * bass);
-        col += vec3(1.20, 1.05, 0.78) * rim * 0.30 * depth3D;
+    // ── 3D TUNNEL — stack receding, parallax-scaled copies of the wedge ──
+    //  Each deeper layer is zoomed-out (content recedes toward the pole),
+    //  twisted, and fogged dimmer; layers continuously fly toward the camera
+    //  (tunnelSpeed) so the kaleidoscope becomes a glass tunnel with real
+    //  depth & parallax instead of a single warped plane. Layer 0 is the
+    //  crisp foreground; the rest are additive glowing echoes behind it.
+    int   L = int(clamp(float(tunnelLayers) + 1.0, 1.0, 6.0));   // enum 0→"Flat"(1 layer)
+    float zMotion = t * tunnelSpeed;
+    vec3  col = vec3(0.0);
+    float wsum = 0.0;
+    for (int i = 0; i < 6; i++) {
+        if (i >= L) break;
+        float fi = float(i);
+        // Depth fraction 0(near)…1(far), cycling so layers recycle as we fly.
+        float z = fract((fi + zMotion) / float(L));
+        // Recede: deeper layers see a zoomed-out (smaller) slice of the wedge.
+        float scl = mix(1.0, 3.4, z);
+        // Twist each depth a little for a spiral tunnel.
+        float tw  = z * 1.7 * sign(tunnelSpeed + 0.0001);
+        float cz = cos(tw), sz = sin(tw);
+        vec2  lp = (mat2(cz, -sz, sz, cz) * p) * scl;
+        vec3  lc = wedgeColor(lp, N, t, pal, leadWeight, bass, depth3D, orbitT);
+        // Fog: far layers dim & cool. Birth/death fade so recycling is seamless.
+        float fog = mix(1.0, 0.16, z);
+        float a   = smoothstep(0.0, 0.10, z) * smoothstep(1.0, 0.80, z);
+        if (i == 0) a = max(a, smoothstep(0.45, 0.0, z));   // keep a solid foreground
+        col  += lc * fog * a;
+        wsum += fog * a;
     }
+    // Normalise so adding layers doesn't blow exposure (keeps HDR peaks sane).
+    col /= max(1.0, wsum * 0.7);
 
     // ── SEAM GLINT — light catching the mirror edges ───────────────
     {

@@ -1,34 +1,39 @@
 /*{
-  "DESCRIPTION": "Shape Rotator — a single glossy, wet oxblood blob raymarched in real 3D. A sphere SDF domain-warped by low-frequency fbm slowly morphs and rotates, lit like a museum glass sculpture: smeared white speculars, a sharp horizontal specular streak, soft crimson subsurface depth (dark core, bright rim) and a gentle Fresnel halo, floating in a near-black warm-red radial vignette. Supply a TEXTURE and it skins the sculpture (triplanar) while keeping the wet gloss; unbound falls back to procedural oxblood. No hard edges, no pixels. Returns LINEAR HDR — host applies ACES.",
+  "DESCRIPTION": "Fluid Oxblood Blob — a glossy, wet, ultra-smooth raymarched sculpture. Multiple metaballs smooth-unioned with high viscosity create genuinely fluid, melting forms. Domain-warped by low-frequency fbm for organic morphing. Lit like a museum glass sculpture: smeared white speculars, sharp horizontal streak, soft crimson subsurface, Fresnel halo, warm radial vignette. Optional texture skin via triplanar mapping. Audio-reactive breathing.",
   "CREDIT": "ShaderClaw",
-  "CATEGORIES": ["Generator", "3D", "Abstract"],
+  "CATEGORIES": ["Generator", "3D", "Abstract", "Fluid"],
   "INPUTS": [
     { "NAME": "inputImage",   "LABEL": "Texture",          "TYPE": "image" },
-    { "NAME": "morphSpeed",   "LABEL": "Morph Speed",      "TYPE": "float", "MIN": 0.0,  "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "displaceAmt",  "LABEL": "Displacement",     "TYPE": "float", "MIN": 0.0,  "MAX": 1.0, "DEFAULT": 0.42 },
-    { "NAME": "glossiness",   "LABEL": "Glossiness",       "TYPE": "float", "MIN": 0.0,  "MAX": 1.5, "DEFAULT": 1.0 },
-    { "NAME": "redTint",      "LABEL": "Red Tint",         "TYPE": "float", "MIN": -0.5, "MAX": 0.5, "DEFAULT": 0.0 },
-    { "NAME": "subsurface",   "LABEL": "Subsurface Depth", "TYPE": "float", "MIN": 0.0,  "MAX": 1.5, "DEFAULT": 0.9 },
-    { "NAME": "fresnelAmt",   "LABEL": "Fresnel Rim",      "TYPE": "float", "MIN": 0.0,  "MAX": 2.0, "DEFAULT": 0.85 },
-    { "NAME": "vignette",     "LABEL": "Vignette",         "TYPE": "float", "MIN": 0.0,  "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "texAmount",    "LABEL": "Texture Skin",     "TYPE": "float", "MIN": 0.0,  "MAX": 1.0, "DEFAULT": 0.85 },
-    { "NAME": "audioReact",   "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0,  "MAX": 2.0, "DEFAULT": 0.25 }
+    { "NAME": "morphSpeed",   "LABEL": "Morph Speed",      "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.4 },
+    { "NAME": "displaceAmt",  "LABEL": "Displacement",     "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.32 },
+    { "NAME": "glossiness",   "LABEL": "Glossiness",       "TYPE": "float", "MIN": 0.0,  "MAX": 1.5,  "DEFAULT": 1.0 },
+    { "NAME": "redTint",      "LABEL": "Red Tint",         "TYPE": "float", "MIN": -0.5, "MAX": 0.5,  "DEFAULT": 0.0 },
+    { "NAME": "subsurface",   "LABEL": "Subsurface Depth", "TYPE": "float", "MIN": 0.0,  "MAX": 1.5,  "DEFAULT": 0.9 },
+    { "NAME": "fresnelAmt",   "LABEL": "Fresnel Rim",      "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.85 },
+    { "NAME": "vignette",     "LABEL": "Vignette",         "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
+    { "NAME": "texAmount",    "LABEL": "Texture Skin",     "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.85 },
+    { "NAME": "audioReact",   "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.25 },
+    { "NAME": "blobCount",    "LABEL": "Blob Count",       "TYPE": "float", "MIN": 2.0,  "MAX": 10.0, "DEFAULT": 5.0 },
+    { "NAME": "viscosity",    "LABEL": "Viscosity",        "TYPE": "float", "MIN": 0.1,  "MAX": 2.0,  "DEFAULT": 0.85 },
+    { "NAME": "spin",         "LABEL": "Auto Spin",        "TYPE": "float", "MIN": 0.0,  "MAX": 1.5,  "DEFAULT": 0.22 }
   ]
 }*/
 
 // ════════════════════════════════════════════════════════════════════════
-//  SHAPE ROTATOR · raymarched glossy oxblood blob · wet glass sculpture
+//  FLUID OXBLOOD BLOB · multi-metaball smooth-union · wet glass sculpture
 //
-//  One sphere SDF, domain-warped by slow low-frequency fbm and rotated
-//  about a drifting axis. Smooth tetrahedral normals, a procedural
-//  studio environment reflection, strong smeared specular + a sharp
-//  horizontal streak, deep crimson subsurface gradient (dark core →
-//  bright rim), Fresnel halo, and a warm near-black radial vignette.
-//  Optional user TEXTURE triplanar-skins the surface as albedo while
-//  keeping the wet gloss. Smooth only — no hard edges, no pixels.
+//  Multiple crimson metaballs orbiting and merging via smooth-union
+//  (liquid_3d technique), additionally domain-warped by low-freq fbm.
+//  Smooth tetrahedral normals, procedural studio environment reflection,
+//  strong smeared specular + sharp horizontal streak, deep crimson
+//  subsurface gradient, Fresnel halo, warm near-black radial vignette.
+//  Optional user TEXTURE triplanar-skins the surface. No hard edges.
 // ════════════════════════════════════════════════════════════════════════
 
 const float TAU = 6.28318530718;
+
+// ── Hash / noise ─────────────────────────────────────────────────────
+float hash1(float n){ return fract(sin(n)*43758.5453); }
 
 float h31(vec3 p){
     p = fract(p*vec3(0.1031,0.1030,0.0973));
@@ -38,19 +43,21 @@ float h31(vec3 p){
 float vnoise(vec3 p){
     vec3 i = floor(p), f = fract(p);
     f = f*f*(3.0-2.0*f);
-    float n000=h31(i),                 n100=h31(i+vec3(1,0,0));
-    float n010=h31(i+vec3(0,1,0)),     n110=h31(i+vec3(1,1,0));
-    float n001=h31(i+vec3(0,0,1)),     n101=h31(i+vec3(1,0,1));
-    float n011=h31(i+vec3(0,1,1)),     n111=h31(i+vec3(1,1,1));
-    return mix(mix(mix(n000,n100,f.x), mix(n010,n110,f.x), f.y),
-               mix(mix(n001,n101,f.x), mix(n011,n111,f.x), f.y), f.z);
+    float n000=h31(i),             n100=h31(i+vec3(1,0,0));
+    float n010=h31(i+vec3(0,1,0)), n110=h31(i+vec3(1,1,0));
+    float n001=h31(i+vec3(0,0,1)), n101=h31(i+vec3(1,0,1));
+    float n011=h31(i+vec3(0,1,1)), n111=h31(i+vec3(1,1,1));
+    return mix(mix(mix(n000,n100,f.x),mix(n010,n110,f.x),f.y),
+               mix(mix(n001,n101,f.x),mix(n011,n111,f.x),f.y),f.z);
 }
 float fbm3(vec3 p){
-    float s=0.0, a=0.55;
-    for(int i=0;i<4;i++){ s+=a*vnoise(p); p=p*1.92+7.0; a*=0.5; }
+    float s=0.0, a=0.5;
+    // Only 3 octaves for softer, lower-freq warp
+    for(int i=0;i<3;i++){ s+=a*vnoise(p); p=p*1.88+vec3(7.3,2.1,5.7); a*=0.5; }
     return s;
 }
 
+// ── Rotation ──────────────────────────────────────────────────────────
 mat3 rotAxis(vec3 ax, float a){
     ax = normalize(ax);
     float c=cos(a), s=sin(a), t=1.0-c;
@@ -60,47 +67,83 @@ mat3 rotAxis(vec3 ax, float a){
         t*ax.x*ax.z-s*ax.y, t*ax.y*ax.z+s*ax.x, t*ax.z*ax.z+c);
 }
 
-float gT, gAud;
-mat3  gRot, gRotInv;
-
-// blob distance field: rotated sphere displaced by low-frequency fbm
-float mapBlob(vec3 p){
-    vec3 q = gRot * p;                                  // slow rotation
-    float r = 1.15 + 0.06*gAud;
-    // low-frequency lumpy morph (two octaves, time-evolving)
-    float n  = fbm3(q*1.05 + vec3(0.0, 0.0, gT*0.35));
-    n += 0.5*fbm3(q*2.1 - vec3(gT*0.22, 4.0, 0.0));
-    float disp = (n - 0.75) * (0.55 + 1.0*displaceAmt);
-    return (length(q) - r - disp) * 0.6;                // Lipschitz-safe
+// ── Smooth min (liquid merging) ───────────────────────────────────────
+float smin(float a, float b, float k){
+    float h = clamp(0.5 + 0.5*(b-a)/k, 0.0, 1.0);
+    return mix(b, a, h) - k*h*(1.0-h);
 }
 
+// ── Globals ───────────────────────────────────────────────────────────
+float gT, gAud;
+mat3  gRot;
+
+// ── The fluid blob SDF ───────────────────────────────────────────────
+// Multiple metaballs (liquid_3d style orbits) + fbm warp (shape_rotator style)
+float mapBlob(vec3 p){
+    // Gentle low-freq fbm warp applied in world space before rotation
+    vec3 warpOff = vec3(
+        fbm3(p*0.7 + vec3(0.0, 0.0, gT*0.18)) - 0.5,
+        fbm3(p*0.7 + vec3(3.7, 0.0, gT*0.14)) - 0.5,
+        fbm3(p*0.7 + vec3(0.0, 5.1, gT*0.16)) - 0.5
+    );
+    vec3 wp = p + warpOff * (0.22 + 0.45*displaceAmt);
+
+    // Apply global slow rotation
+    vec3 q = gRot * wp;
+
+    float t  = gT;
+    float d  = 1e9;
+    int   nb = int(clamp(blobCount, 2.0, 10.0));
+    float k  = 0.55 * viscosity;  // generous merge radius = very soft blobs
+
+    for(int i = 0; i < 10; i++){
+        if(i >= nb) break;
+        float fi = float(i);
+        // Slow, organic orbits — different freq per blob
+        float sa = 0.30 + 0.22*hash1(fi);
+        float sb = 0.25 + 0.20*hash1(fi+9.0);
+        float sc = 0.28 + 0.18*hash1(fi+3.0);
+        float rad = 0.55 + 0.50*hash1(fi+5.0);
+        // Scale orbit radius so blobs stay close and merge well
+        rad *= 1.0 + 0.18*gAud;
+        vec3 center = vec3(
+            sin(t*sa + fi*2.39) * rad,
+            sin(t*sb + fi*1.71) * rad * 0.85,
+            cos(t*sc + fi*1.13) * rad * 0.90
+        );
+        // Each blob slightly different size
+        float r = (0.62 + 0.32*hash1(fi+7.0)) * (0.90 + 0.25*gAud);
+        d = smin(d, length(q - center) - r, k);
+    }
+
+    return d * 0.65; // Lipschitz-safe scale
+}
+
+// ── Smooth normal via tetrahedral finite difference ───────────────────
 vec3 calcNormal(vec3 p){
-    vec2 e = vec2(1.0,-1.0)*0.0014;
+    vec2 e = vec2(1.0,-1.0)*0.0018;
     return normalize(
         e.xyy*mapBlob(p+e.xyy) + e.yyx*mapBlob(p+e.yyx) +
         e.yxy*mapBlob(p+e.yxy) + e.xxx*mapBlob(p+e.xxx));
 }
 
-// procedural museum studio environment for reflections
+// ── Procedural museum studio environment ──────────────────────────────
 vec3 envMap(vec3 r){
     float y = clamp(r.y*0.5+0.5, 0.0, 1.0);
     vec3 base = mix(vec3(0.06,0.012,0.02), vec3(0.55,0.16,0.14),
                     smoothstep(0.15,0.95,y));
     float key  = exp(-pow(length(r.xz-vec2( 0.35, 0.45)),2.0)*4.0);
     float fill = exp(-pow(length(r.xz-vec2(-0.55,-0.15)),2.0)*8.0);
-    base += key *vec3(1.0,0.95,0.90)*1.10;              // big soft key
-    base += fill*vec3(0.55,0.10,0.10)*0.45;             // dim warm fill
+    base += key *vec3(1.0,0.95,0.90)*1.10;
+    base += fill*vec3(0.55,0.10,0.10)*0.45;
     return base;
 }
 
-// triplanar sample of the user texture using object-space position p.
-// Blend weights come from the object-space surface normal (rotate the
-// world normal back into object space so the skin stays glued as the
-// blob rotates).
+// ── Triplanar texture skin ────────────────────────────────────────────
 vec3 triplanar(vec3 worldP, vec3 worldN){
     vec3 op = gRot * worldP;
     vec3 on = normalize(gRot * worldN);
-    vec3 w = abs(on);
+    vec3 w  = abs(on);
     w /= max(w.x+w.y+w.z, 1e-3);
     vec3 sp = op*0.38 + 0.5;
     vec3 cx = texture(inputImage, sp.zy).rgb;
@@ -113,115 +156,122 @@ void main(){
     vec2 res = RENDERSIZE;
     vec2 uv  = (gl_FragCoord.xy - 0.5*res) / res.y;
 
+    // Globals
     gT   = TIME * morphSpeed;
     gAud = clamp(audioLevel*audioReact, 0.0, 1.0);
     float pb = audioBass*audioReact;
 
-    // slow drifting rotation axis + angle
-    float ang = gT*0.6 + 0.25*sin(gT*0.27);
-    vec3  ax  = normalize(vec3(0.35, 1.0, 0.22 + 0.25*sin(gT*0.15)));
-    gRot    = rotAxis(ax,  ang);
-    gRotInv = rotAxis(ax, -ang);
+    // Slow drifting rotation — very gentle so the fluid motion reads
+    float ang = TIME*spin*0.55 + 0.18*sin(TIME*spin*0.19);
+    vec3  ax  = normalize(vec3(0.30 + 0.15*sin(TIME*spin*0.11),
+                                1.0,
+                                0.20 + 0.18*cos(TIME*spin*0.08)));
+    gRot = rotAxis(ax, ang);
 
-    // fixed contemplative camera
-    vec3 ro = vec3(0.0, 0.0, 3.7);
-    vec3 ta = vec3(0.0, 0.0, 0.0);
-    vec3 ww = normalize(ta-ro);
-    vec3 uuv= normalize(cross(ww, vec3(0,1,0)));
-    vec3 vv = cross(uuv, ww);
-    vec3 rd = normalize(uv.x*uuv + uv.y*vv + 1.7*ww);
+    // Fixed contemplative camera
+    vec3 ro  = vec3(0.0, 0.0, 4.2);
+    vec3 ta  = vec3(0.0, 0.0, 0.0);
+    vec3 ww  = normalize(ta-ro);
+    vec3 uu  = normalize(cross(ww, vec3(0,1,0)));
+    vec3 vv  = cross(uu, ww);
+    vec3 rd  = normalize(uv.x*uu + uv.y*vv + 1.75*ww);
 
-    // ── warm near-black radial vignette background ──
+    // Warm near-black radial vignette background
     float rad = length(uv);
     vec3 bg = mix(vec3(0.085,0.012,0.018), vec3(0.012,0.002,0.004),
                   smoothstep(0.0, 1.05, rad*vignette));
     bg *= 1.0 - 0.35*vignette*smoothstep(0.2,1.3,rad);
 
-    // ── raymarch the blob ──
-    float tt = 0.0; bool hit=false;
-    for (int i=0;i<96;i++){
-        vec3 p = ro + rd*tt;
+    // ── Raymarch the fluid blob ──
+    // Adaptive step: smaller near the surface for smoothness
+    float tt  = 0.0;
+    bool  hit = false;
+    float prevD = 1e9;
+    for(int i = 0; i < 120; i++){
+        vec3  p = ro + rd*tt;
         float d = mapBlob(p);
-        if (d < 0.0006){ hit=true; break; }
-        tt += d*0.9;
-        if (tt > 8.0) break;
+        if(d < 0.0004){ hit=true; break; }
+        // Relax step slightly to avoid overstepping soft blobs
+        tt += d * 0.72;
+        if(tt > 9.0) break;
+        prevD = d;
     }
 
     vec3 col = bg;
-    if (hit){
-        vec3 p = ro + rd*tt;
-        vec3 n = calcNormal(p);
-        vec3 v = normalize(ro - p);
-        vec3 rfl = reflect(-v, n);
-        float ndv  = clamp(dot(n,v), 0.0, 1.0);
-        float fres = pow(1.0 - ndv, 4.0);
+    if(hit){
+        vec3  p   = ro + rd*tt;
+        vec3  n   = calcNormal(p);
+        vec3  v   = normalize(ro - p);
+        vec3  rfl = reflect(-v, n);
+        float ndv = clamp(dot(n,v), 0.0, 1.0);
+        float fres= pow(1.0 - ndv, 4.0);
 
-        // crimson subsurface: dark oxblood core → bright crimson rim
-        vec3 deep   = vec3(0.12, 0.006, 0.012);
-        vec3 mid    = vec3(0.55, 0.04,  0.05);
+        // Crimson subsurface: dark oxblood core → bright crimson rim
+        vec3 deep   = vec3(0.10, 0.005, 0.010);
+        vec3 mid    = vec3(0.50, 0.035, 0.045);
         vec3 bright = vec3(0.95, 0.18,  0.16);
-        float depth = pow(ndv, 1.4);
-        vec3 albedo = mix(bright, mid, depth);
-        albedo = mix(albedo, deep, smoothstep(0.55,1.0,depth)*0.85);
-        albedo += bright*pow(1.0-ndv,2.2)*0.6*subsurface;          // rim glow
-        // hue/tint trim
-        albedo.r = clamp(albedo.r + redTint, 0.0, 1.2);
+        float depth = pow(ndv, 1.3);
+        vec3  albedo = mix(bright, mid, depth);
+        albedo = mix(albedo, deep, smoothstep(0.50,1.0,depth)*0.80);
+        albedo += bright*pow(1.0-ndv,2.0)*0.65*subsurface;
+
+        // Hue / tint
+        albedo.r  = clamp(albedo.r + redTint, 0.0, 1.2);
         albedo.gb *= clamp(1.0 - redTint*0.8, 0.4, 1.0);
 
-        // optional user texture skin (triplanar, object space).
-        // Convention: an unbound ISF image input reports IMG_SIZE == 0
-        // (see soph_orb.fs: `bool hasVideo = IMG_SIZE_inputTex.x > 0.0;`).
+        // Optional texture skin
         bool hasTex = IMG_SIZE_inputImage.x > 0.0;
-        if (hasTex){
-            vec3 tx = triplanar(p, n);
-            // keep the crimson wet character: tint the skin by depth
+        if(hasTex){
+            vec3 tx      = triplanar(p, n);
             vec3 skinned = tx * mix(vec3(1.05,0.85,0.85), bright*1.4, depth*0.5);
             skinned *= 0.55 + 0.9*ndv;
             albedo = mix(albedo, skinned, texAmount);
         }
 
-        // environment reflection + Fresnel weighting
-        vec3 env = envMap(rfl);
+        // Environment reflection + Fresnel
+        vec3  env   = envMap(rfl);
         float gloss = glossiness;
 
-        // smeared upper specular (soft, broad)
-        vec3  L1 = normalize(vec3(0.45, 0.85, 0.55));
-        vec3  H1 = normalize(v + L1);
-        float sBroad = pow(clamp(dot(n,H1),0.0,1.0), 28.0);
-        // sharp horizontal specular streak across the middle
-        vec3  L2 = normalize(vec3(-0.6, 0.05, 0.7));
-        vec3  H2 = normalize(v + L2);
-        float streak = pow(clamp(dot(n,H2),0.0,1.0), 240.0);
-        streak *= smoothstep(0.34, 0.0, abs(n.y));      // band it horizontally
+        // Smeared upper specular (soft, broad)
+        vec3  L1     = normalize(vec3(0.45, 0.85, 0.55));
+        vec3  H1     = normalize(v + L1);
+        float sBroad = pow(clamp(dot(n,H1),0.0,1.0), 22.0);
 
-        // soft ambient occlusion from the field
-        float ao = clamp(mapBlob(p + n*0.22)/0.22, 0.0, 1.0);
-        ao = 0.4 + 0.6*ao;
+        // Sharp horizontal specular streak
+        vec3  L2     = normalize(vec3(-0.6, 0.05, 0.7));
+        vec3  H2     = normalize(v + L2);
+        float streak = pow(clamp(dot(n,H2),0.0,1.0), 200.0);
+        streak *= smoothstep(0.38, 0.0, abs(n.y));
 
-        vec3 surf = albedo * (0.45 + 0.55*ndv) * ao;
-        surf = mix(surf, env, (0.16 + 0.55*fres) * clamp(gloss,0.0,1.0));
-        surf += sBroad * vec3(1.0,0.97,0.93) * 1.5  * gloss;
-        surf += streak * vec3(1.0,0.98,0.95) * 2.4  * gloss;
-        surf += fres   * vec3(0.95,0.30,0.26) * fresnelAmt;        // crimson Fresnel halo
-        surf += pow(fres,1.5)*vec3(1.0,0.85,0.80)*0.35*fresnelAmt; // cool white edge kiss
+        // Soft ambient occlusion
+        float ao = clamp(mapBlob(p + n*0.28)/0.28, 0.0, 1.0);
+        ao = 0.35 + 0.65*ao;
 
-        surf *= 1.0 + 0.12*pb;                          // gentle bass breathe
-        col = surf;
+        // Compose surface
+        vec3 surf = albedo * (0.40 + 0.60*ndv) * ao;
+        surf = mix(surf, env, (0.18 + 0.55*fres) * clamp(gloss,0.0,1.0));
+        surf += sBroad * vec3(1.0,0.97,0.93) * 1.6  * gloss;
+        surf += streak * vec3(1.0,0.98,0.95) * 2.6  * gloss;
+        surf += fres   * vec3(0.95,0.30,0.26) * fresnelAmt;
+        surf += pow(fres,1.5)*vec3(1.0,0.85,0.80)*0.38*fresnelAmt;
 
-        // soft contact shadow / fade into the vignette at silhouette
-        col = mix(col, bg, smoothstep(0.0,1.0,fres)*0.10);
+        // Bass breathe
+        surf *= 1.0 + 0.14*pb;
+
+        // Soft silhouette fade into vignette
+        col = mix(surf, bg, smoothstep(0.0,1.0,fres)*0.08);
     }
 
-    // warm central glow lifting the sculpture off the black
-    col += exp(-rad*rad*3.0) * vec3(0.16,0.02,0.02) * vignette;
+    // Warm central glow
+    col += exp(-rad*rad*3.0) * vec3(0.18,0.022,0.022) * vignette;
 
-    // bloom on the speculars
+    // Specular bloom
     float Llum = dot(col, vec3(0.299,0.587,0.114));
-    col += 0.18 * smoothstep(0.65,1.6,Llum) * col;
+    col += 0.20 * smoothstep(0.60,1.5,Llum) * col;
 
-    // continuous fine grain so gradients never band into a grid
-    float g = fbm3(vec3(uv*res.y*0.013, gT*0.5));
-    col *= 1.0 + (g-0.5)*0.035;
+    // Subtle grain — dithers banding in smooth gradients
+    float g = fbm3(vec3(uv*res.y*0.011, gT*0.4));
+    col *= 1.0 + (g-0.5)*0.028;
 
     col = max(col, 0.0);
     gl_FragColor = vec4(col, 1.0);

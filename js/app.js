@@ -2390,7 +2390,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   let gestureEnabled = false;
   let handAsMouseEnabled = false;
   let btOverlayEnabled = false;
-  const mpModeState = { hand: true, face: false, pose: false, segment: false };
+  // "Body Tracking" tracks hands AND body pose by default — pose drives the
+  // arm-angle signals (leftArmAngle/rightArmAngle/bodyLean/shoulderWidth) that
+  // power arm-driven shaders. Without pose on, those signals never update.
+  const mpModeState = { hand: true, face: false, pose: true, segment: false };
 
   // === Skeleton Overlay: landmark drawing constants ===
   const HAND_CONNECTIONS = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[0,9],[9,10],[10,11],[11,12],[0,13],[13,14],[14,15],[15,16],[0,17],[17,18],[18,19],[19,20],[5,9],[9,13],[13,17]];
@@ -2899,7 +2902,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         document.getElementById('cam-webcam-btn').classList.add('active');
         const cd = document.getElementById('camera-detail');
         if (cd) cd.classList.add('visible');
-      } catch (e) { console.warn('Webcam needed for MediaPipe:', e.message); return; }
+      } catch (e) {
+        console.warn('Webcam needed for MediaPipe:', e.message);
+        errorBar.textContent = 'Camera needed for Body Tracking: ' + e.message;
+        errorBar.classList.add('show');
+        return;
+      }
     }
     try {
       await mediaPipeMgr.init(mpModeState);
@@ -2920,6 +2928,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
       renderLinksDashboard();
     } catch (e) {
       console.warn('MediaPipe init failed:', e.message);
+      errorBar.textContent = 'Body Tracking failed to start: ' + e.message;
+      errorBar.classList.add('show');
     }
   }
 

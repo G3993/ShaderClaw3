@@ -1,9 +1,11 @@
 /*{
   "CATEGORIES": ["Generator", "Light", "Audio Reactive"],
-  "DESCRIPTION": "Turrell Chroma — pure colored light as material. Slowly evolving Ganzfeld fields cycle through curated triads. Added organic breathing movement, subtle vignette, and cinematic film grain for depth and atmosphere. cycleDuration controls pace (20–120s). Output LINEAR HDR.",
+  "DESCRIPTION": "Turrell Chroma — pure colored light as material. Slowly evolving Ganzfeld fields cycle through curated triads. cycleDuration sets pace (20–600s). colorHold gives each hue a steady dwell before it changes; transitionEase softens the crossfade in/out. Organic breathing, cinematic vignette, and film grain add atmosphere. Output LINEAR HDR.",
   "INPUTS": [
     { "NAME": "mood",           "LABEL": "Mood",            "TYPE": "long",  "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Aten Reign","Wedgework","Ganzfeld","Skyspace"] },
-    { "NAME": "cycleDuration",  "LABEL": "Cycle (s)",       "TYPE": "float", "MIN": 20.0, "MAX": 120.0, "DEFAULT": 50.0 },
+    { "NAME": "cycleDuration",  "LABEL": "Cycle (s)",       "TYPE": "float", "MIN": 20.0, "MAX": 600.0, "DEFAULT": 90.0 },
+    { "NAME": "colorHold",      "LABEL": "Color Hold",      "TYPE": "float", "MIN": 0.0,  "MAX": 0.95, "DEFAULT": 0.55 },
+    { "NAME": "transitionEase", "LABEL": "Transition Ease", "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.6 },
     { "NAME": "wedgeAngle",     "LABEL": "Wedge Angle",     "TYPE": "float", "MIN": 0.0,  "MAX": 6.2832, "DEFAULT": 1.05 },
     { "NAME": "wedgeStrength",  "LABEL": "Wedge Strength",  "TYPE": "float", "MIN": 0.0,  "MAX": 0.35, "DEFAULT": 0.16 },
     { "NAME": "vignette",       "LABEL": "Edge Falloff",    "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.42 },
@@ -168,13 +170,29 @@ void main() {
     // ── Cycle position ─────────────────────────────────────────────────
     float transitionScale = (moodI == 3) ? 1.6 : 1.0;
     float period = max(cycleDuration, 20.0) * transitionScale;
-    float rate   = 1.0 / period * (1.0 + 0.05 * (mid - 0.5));
+    // Audio modulation of pace is now very gentle (±2% and scaled by the
+    // audioReact amount) so the cycle timing stays predictable and under
+    // the user's control rather than wobbling every frame.
+    float rate   = 1.0 / period * (1.0 + 0.02 * (mid - 0.5) * a);
     float phase  = t * rate;
     float ringF  = phase * 6.0;
     float slotF  = floor(ringF);
-    float frac   = smoother(ringF - slotF);
+    float raw    = ringF - slotF;              // 0..1 position within this slot
     int   sA     = int(mod(slotF,       6.0));
     int   sB     = int(mod(slotF + 1.0, 6.0));
+
+    // ── Hold-then-transition ────────────────────────────────────────────
+    // Dwell on the current colour for `colorHold` of each slot, then ease
+    // into the next over the remaining time. This gives the field a calm
+    // resting state on a pure hue instead of perpetually crossfading.
+    //   colorHold = 0    → old always-fading behaviour
+    //   colorHold = 0.55 → just over half the slot is a steady hold
+    float hold  = clamp(colorHold, 0.0, 0.95);
+    float tNorm = clamp((raw - hold) / max(1.0 - hold, 1e-3), 0.0, 1.0);
+    // Transition Ease softens the in/out further: 0 = single smootherstep,
+    // 1 = double-eased (very gradual departure and arrival on each colour).
+    float frac  = smoother(tNorm);
+    frac        = mix(frac, smoother(frac), clamp(transitionEase, 0.0, 1.0));
 
     int   idxA   = moodRing(moodI, sA);
     int   idxB   = moodRing(moodI, sB);
