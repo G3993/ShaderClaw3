@@ -307,7 +307,7 @@ vec4 dragStack(vec2 p, vec2 origin, vec2 dir, float trailLen,
     for (int i = 0; i < MAX_STAMPS; i++) {
         if (i >= stamps) break;
         float fi  = float(i);
-        float u   = fi / float(max(stamps - 1, 1));   // 0 = front, 1 = back
+        float u   = fi / max(float(stamps - 1), 1.0);   // 0 = front, 1 = back
         // Stamp offset along the drag direction.
         vec2 off  = dir * trailLen * u;
         // Tiny per-stamp jitter (treble-driven) — never enough to break the staircase.

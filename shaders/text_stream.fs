@@ -43,6 +43,16 @@ float sampleChar(int ch, vec2 uv) {
     return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
 }
 
+// Accept both atlas indices (0-36, fed by the app) and raw ASCII codes
+// (fed by some hosts): map ASCII letters/digits/space onto atlas indices.
+int normChar(int c) {
+    if (c >= 65 && c <= 90) return c - 65;      // ASCII 'A'-'Z'
+    if (c >= 97 && c <= 122) return c - 97;     // ASCII 'a'-'z'
+    if (c == 32) return 26;                     // ASCII space
+    if (c >= 48 && c <= 57) return c - 48 + 27; // ASCII '0'-'9'
+    return c;                                    // already an atlas index
+}
+
 int getChar(int slot) {
     if (slot ==  0) return int(msg_0);
     if (slot ==  1) return int(msg_1);
@@ -133,6 +143,7 @@ void main() {
 
     int total      = charCount();
     int ribbons    = int(ribbonCount);
+    if (ribbons <= 0) ribbons = 11;   // host left it unset — use the default
     if (ribbons > MAX_RIBBONS) ribbons = MAX_RIBBONS;
     float charH    = textScale;
     float charW    = charH * (5.0 / 7.0);
@@ -192,7 +203,7 @@ void main() {
         float cellF    = scrolled / vStep;
         int   slot     = int(floor(mod(cellF, ftotal)));
         if (slot < 0) slot += total;
-        int   ch       = getChar(slot);
+        int   ch       = normChar(getChar(slot));
 
         // Cell-local UV: x within ribbon band → centered on char width.
         // y within current cell.
@@ -217,7 +228,7 @@ void main() {
 
         // Treble shimmer per char — random sparkle when bright treble.
         float sparkle = 1.0 + 0.45 * treb * audio
-                      * step(0.93 - 0.05 * treb * audio, hash11(slot * 11.7 + fri));
+                      * step(0.93 - 0.05 * treb * audio, hash11(float(slot) * 11.7 + fri));
 
         // 3-stop color along the ribbon (head → mid → tail). Gives the
         // ribbon a depth-by-color feel like a tentacle gradient.

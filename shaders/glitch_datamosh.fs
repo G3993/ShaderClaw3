@@ -55,16 +55,16 @@ vec3 etraPattern(vec2 uv, float t) {
     vec2 q = fract(uv);
     // SMPTE-ish 7-bar color field
     float bar = floor(q.x * 7.0);
-    vec3 bars[7];
-    bars[0] = vec3(0.75, 0.75, 0.75); // gray
-    bars[1] = vec3(0.75, 0.75, 0.00); // yellow
-    bars[2] = vec3(0.00, 0.75, 0.75); // cyan
-    bars[3] = vec3(0.00, 0.75, 0.00); // green
-    bars[4] = vec3(0.75, 0.00, 0.75); // magenta
-    bars[5] = vec3(0.75, 0.00, 0.00); // red
-    bars[6] = vec3(0.00, 0.00, 0.75); // blue
+    // GLSL ES 1.0: no dynamic array indexing — select via if/else chain.
     int bi = int(clamp(bar, 0.0, 6.0));
-    vec3 col = bars[bi];
+    vec3 col;
+    if      (bi == 0) col = vec3(0.75, 0.75, 0.75); // gray
+    else if (bi == 1) col = vec3(0.75, 0.75, 0.00); // yellow
+    else if (bi == 2) col = vec3(0.00, 0.75, 0.75); // cyan
+    else if (bi == 3) col = vec3(0.00, 0.75, 0.00); // green
+    else if (bi == 4) col = vec3(0.75, 0.00, 0.75); // magenta
+    else if (bi == 5) col = vec3(0.75, 0.00, 0.00); // red
+    else              col = vec3(0.00, 0.00, 0.75); // blue
 
     // Lower band: pluge-ish black-white step
     if (q.y < 0.25) {

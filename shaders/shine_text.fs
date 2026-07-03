@@ -59,13 +59,25 @@ float charPixel(int ch, float col, float row) {
     return mod(floor(rowVal / pow(2.0, 4.0 - floor(col))), 2.0);
 }
 
+// Accept both atlas indices (0-36, fed by the app) and raw ASCII codes
+// (fed by some hosts): map ASCII letters/digits/space onto atlas indices.
+int normChar(int c) {
+    if (c >= 65 && c <= 90) return c - 65;      // ASCII 'A'-'Z'
+    if (c >= 97 && c <= 122) return c - 97;     // ASCII 'a'-'z'
+    if (c == 32) return 26;                     // ASCII space
+    if (c >= 48 && c <= 57) return c - 48 + 27; // ASCII '0'-'9'
+    return c;                                    // already an atlas index
+}
+
 int getChar(int slot) {
-    if (slot == 0) return int(msg_0); if (slot == 1) return int(msg_1);
-    if (slot == 2) return int(msg_2); if (slot == 3) return int(msg_3);
-    if (slot == 4) return int(msg_4); if (slot == 5) return int(msg_5);
-    if (slot == 6) return int(msg_6); if (slot == 7) return int(msg_7);
-    if (slot == 8) return int(msg_8); if (slot == 9) return int(msg_9);
-    if (slot == 10) return int(msg_10); return int(msg_11);
+    int c;
+    if (slot == 0) c = int(msg_0); else if (slot == 1) c = int(msg_1);
+    else if (slot == 2) c = int(msg_2); else if (slot == 3) c = int(msg_3);
+    else if (slot == 4) c = int(msg_4); else if (slot == 5) c = int(msg_5);
+    else if (slot == 6) c = int(msg_6); else if (slot == 7) c = int(msg_7);
+    else if (slot == 8) c = int(msg_8); else if (slot == 9) c = int(msg_9);
+    else if (slot == 10) c = int(msg_10); else c = int(msg_11);
+    return normChar(c);
 }
 
 int charCount() { int n = int(msg_len); return n > 0 ? n : 1; }

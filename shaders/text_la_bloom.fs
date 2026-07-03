@@ -151,8 +151,12 @@ void main() {
 
     // ─── 2) Bloom waves ──────────────────────────────────────────────
     int total      = charCount();
+    // Long-typed inputs can arrive unset (0) on the mobile/eval path —
+    // fall back to their documented defaults (app never sends 0).
     int petalsI    = int(petals);
+    if (petalsI < 3) petalsI = 6;
     int waves      = int(waveCount);
+    if (waves < 1) waves = 3;
     float fpetals  = float(petalsI);
     float fwaves   = float(waves);
     float ftotal   = float(total);

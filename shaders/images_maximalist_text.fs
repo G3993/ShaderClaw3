@@ -421,14 +421,14 @@ float renderHeadline(vec2 p, float aspect, float baseCharH, out float inkAlpha) 
         if (cursorR == maxRows) break;
         // Cycle through the message; insert a single space between cycles
         // so the wrap algorithm sees a separator.
-        int cyc = i % (total + 1);
+        int cyc = int(mod(float(i), float(total + 1)));
         int ch = (cyc == total) ? 26 /*SPACE*/ : getChar(cyc);
 
         if (ch == 26) {
             // Look ahead to next word length in the cycled stream.
             int wlen = 0;
             for (int j = 1; j < MAX_WALK; j++) {
-                int cycJ = (i + j) % (total + 1);
+                int cycJ = int(mod(float(i + j), float(total + 1)));
                 int chj = (cycJ == total) ? 26 : getChar(cycJ);
                 if (chj == 26 || chj < 0 || chj > 35) break;
                 wlen++;

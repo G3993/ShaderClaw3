@@ -258,7 +258,7 @@ void main(){
     float eB  = clamp(energyB * mix(0.35, 1.0, clamp(activeB, 0.0, 1.0)), 0.0, 1.0);
     float eC  = clamp(energyC, 0.0, 1.0);   // player[3] only binds energy here
     float bass = clamp(bassDepth, 0.0, 2.0);
-    int   oct = clamp(int(octaves), 3, 6);
+    int   oct = int(clamp(float(octaves), 3.0, 6.0));
 
     // Each player owns a column anchor on x; y drifts so the warp
     // sources don't all live on the same horizon.
@@ -280,7 +280,7 @@ void main(){
     vec2 camOffset = (mousePos - 0.5) * 0.18 + vec2(sin(t*0.13), cos(t*0.11)) * 0.04;
     vec2 backUv    = uv * 0.95 - camOffset * zParallax;
     vec3 back      = morphField(backUv * 1.05 + vec2(3.1, -2.3),
-                                t * 0.7, max(oct - 1, 3),
+                                t * 0.7, int(max(float(oct - 1), 3.0)),
                                 wA * 0.5, wB * 0.5, wC * 0.5, warp * 0.7);
 
     // ─── Pseudo-3D normals from gain gradient ────────────────────────
@@ -297,7 +297,7 @@ void main(){
     vec3 H    = normalize(L + vec3(0.0, 0.0, 1.0));
     float spec = pow(clamp(dot(nrm, H), 0.0, 1.0), 28.0);
 
-    int pal = clamp(int(palette), 0, 3);
+    int pal = int(clamp(float(palette), 0.0, 3.0));
 
     // Compose back layer (further phase, dimmer, softer)
     vec3 backCol = paletteLookup(pal, back.y, back.z) * (0.55 + 0.10 * bass);
@@ -344,7 +344,7 @@ void main(){
         float scale = clamp(textScale, 0.5, 2.0);
         float baseH = 0.062 * scale;
         // Auto-shrink so long lines still fit the row width.
-        float charsForFit = float(max(reveal, 1));
+        float charsForFit = max(float(reveal), 1.0);
         // each cell is glyph height * 5/7 * kerning(0.95)
         float cellW = baseH * (5.0/7.0) * 0.95;
         float maxLineW = 0.84 * aspect;

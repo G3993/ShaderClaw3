@@ -446,8 +446,11 @@ void main() {
 
             // Pick player stripe for this column.
             int stripe = int(floor((fc + 0.5) * 3.0 / fcols));
-            stripe = clamp(stripe, 0, 2);
-            float pe = playerEnergies[stripe];
+            if (stripe < 0) stripe = 0;
+            if (stripe > 2) stripe = 2;
+            float pe = playerEnergies[0];
+            if (stripe == 1) pe = playerEnergies[1];
+            if (stripe == 2) pe = playerEnergies[2];
 
             float seed = fr * 11.0 + fc * 7.0 + 0.13;
             float zPop = mix(0.0, 0.18, pe) + 0.04 * hash11(seed);
@@ -495,8 +498,11 @@ void main() {
             if (abs(diag) > corridor) continue;
 
             int stripe = int(floor((fc + 0.5) * 3.0 / fcols));
-            stripe = clamp(stripe, 0, 2);
-            float pe = playerEnergies[stripe];
+            if (stripe < 0) stripe = 0;
+            if (stripe > 2) stripe = 2;
+            float pe = playerEnergies[0];
+            if (stripe == 1) pe = playerEnergies[1];
+            if (stripe == 2) pe = playerEnergies[2];
 
             float seed = fr * 11.0 + fc * 7.0 + 0.13;
             float zPop = mix(0.0, 0.18, pe) + 0.04 * hash11(seed);

@@ -420,7 +420,7 @@ void main(){
             if (bb <= a) continue;
             // alternate horizontal alignment so ridges and words trade
             // positions across lines (matches reference cadence).
-            float ax = ((li & 1) == 0) ? -0.32 * asp : -0.14 * asp;
+            float ax = (mod(float(li), 2.0) < 0.5) ? -0.32 * asp : -0.14 * asp;
             // top-of-glyph y
             float topGlyph = baseY + gh * 0.85;
             float m = renderLine(p, a, bb, ax, topGlyph, gh, kern);

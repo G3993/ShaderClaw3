@@ -322,7 +322,7 @@ void main() {
 
     int   moodA, moodB;
     float blend;
-    if (moodOverride < 0) {
+    if (moodOverride < -0.5) {
         float dur   = max(panelDuration, 0.5);
         float pT    = t / dur;
         float idxA  = floor(pT);

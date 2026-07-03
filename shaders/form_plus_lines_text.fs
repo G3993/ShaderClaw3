@@ -416,7 +416,7 @@ vec3 calcNormal(vec3 p, int variant){
 // ════════════════════════════════════════════════════════════════════════
 float lineSDF_concentric(vec2 q, int idx, int n, float t, float tilt){
     // Concentric ellipses around the form center; idx 0..n-1
-    float fi = float(idx) / float(max(n, 1));
+    float fi = float(idx) / max(float(n), 1.0);
     // Rotate the field a touch — line cage tilts with bass and energyB
     float c = cos(tilt), s = sin(tilt);
     vec2 r = vec2(c * q.x - s * q.y, s * q.x + c * q.y);
@@ -431,7 +431,7 @@ float lineSDF_concentric(vec2 q, int idx, int n, float t, float tilt){
 float lineSDF_hatch(vec2 q, int idx, int n, float t, float tilt){
     // Cross-hatch: alternating diagonal lines through the form box
     float fi = float(idx);
-    float angle = mix(-0.9, 0.9, float(idx) / float(max(n - 1, 1))) + tilt * 0.5;
+    float angle = mix(-0.9, 0.9, float(idx) / max(float(n - 1), 1.0)) + tilt * 0.5;
     float c = cos(angle), s = sin(angle);
     float u = c * q.x - s * q.y;        // distance along normal
     float v = s * q.x + c * q.y;        // along line

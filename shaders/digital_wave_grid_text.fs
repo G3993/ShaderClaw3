@@ -230,13 +230,13 @@ float vnoise(vec2 p) {
 
 // Palette swap. `variant`: 0 Tide, 1 Magenta, 2 Mono.
 vec3 bandColor(int band, vec3 cA, vec3 cB, vec3 cC) {
-    if (variant == 1) {
+    if (variant == 1.0) {
         // Magenta-night — each band still distinct.
         if (band == 0) return vec3(1.00, 0.32, 0.78);
         if (band == 1) return vec3(0.62, 0.36, 1.00);
         return vec3(0.30, 0.90, 1.00);
     }
-    if (variant == 2) {
+    if (variant == 2.0) {
         // Monochrome — brightness separates bands.
         if (band == 0) return vec3(0.94);
         if (band == 1) return vec3(0.74);

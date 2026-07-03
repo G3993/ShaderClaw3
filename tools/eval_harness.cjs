@@ -14,7 +14,8 @@ const puppeteer = require('puppeteer-core');
 
 const ROOT = path.join(__dirname, '..');
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const PORT = 7799;
+// Port 0 = OS-assigned free port, so parallel harness runs never collide
+const PORT = process.env.EVAL_PORT ? Number(process.env.EVAL_PORT) : 0;
 
 const args = process.argv.slice(2);
 function argVal(flag, dflt) {
@@ -42,6 +43,7 @@ const server = http.createServer((req, res) => {
 
 async function main() {
   await new Promise((r) => server.listen(PORT, r));
+  const port = server.address().port;
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'shaders', 'manifest.json'), 'utf8'));
   let files = manifest.map((e) => e.file).filter((f) => f && f.endsWith('.fs'));
   if (only) {
@@ -60,7 +62,7 @@ async function main() {
     });
     page = await browser.newPage();
     page.on('pageerror', (e) => console.error('  [pageerror]', e.message));
-    await page.goto(`http://localhost:${PORT}/tools/eval_page.html`, { waitUntil: 'load' });
+    await page.goto(`http://localhost:${port}/tools/eval_page.html`, { waitUntil: 'load' });
     await page.waitForFunction('window.__harnessReady === true', { timeout: 10000 });
   }
   await boot();

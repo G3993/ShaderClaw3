@@ -50,6 +50,13 @@ mat2 rot2(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 
 // ── Camera ───────────────────────────────────────────────────────────────────
 
+// GLSL ES 1.0 has no transpose() — build it manually.
+mat3 transpose3(mat3 m){
+    return mat3(m[0][0], m[1][0], m[2][0],
+                m[0][1], m[1][1], m[2][1],
+                m[0][2], m[1][2], m[2][2]);
+}
+
 mat3 getCamera(vec2 angles){
     float cx = cos(angles.x), sx = sin(angles.x);
     float cy = cos(angles.y), sy = sin(angles.y);
@@ -215,8 +222,9 @@ void main(){
     vec2  angles   = vec2(camYaw, camPitch);
 
     mat3 cam = getCamera(angles);
-    vec3 rd  = normalize(transpose(cam) * vec3(FOV_SCALE * uv.x, 1.0, FOV_SCALE * uv.y));
-    vec3 cforward = normalize(transpose(cam) * vec3(0.0, 1.0, 0.0));
+    mat3 camT = transpose3(cam);
+    vec3 rd  = normalize(camT * vec3(FOV_SCALE * uv.x, 1.0, FOV_SCALE * uv.y));
+    vec3 cforward = normalize(camT * vec3(0.0, 1.0, 0.0));
     float camDist = 4.2 + sin(TIME * 0.13) * 0.4 - g_bassR * 0.3;
     vec3 ro = -cforward * camDist;
 

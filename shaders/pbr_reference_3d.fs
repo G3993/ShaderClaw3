@@ -51,7 +51,7 @@ float opSU(float a, float b, float k) {
 }
 
 struct Hit { float d; float id; };
-Hit closer(Hit a, Hit b) { return (a.d < b.d) ? a : b; }
+Hit closer(Hit a, Hit b) { if (a.d < b.d) { return a; } return b; }
 
 // ─── Scenes (id 0 = pedestal/ground, 1+ = primary art) ─────────────────
 

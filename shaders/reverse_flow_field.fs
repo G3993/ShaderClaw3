@@ -114,8 +114,13 @@ vec3 holoSpectrum(float t) {
     float fr = fract(s);
     // smooth cubic blend
     float sm = fr * fr * (3.0 - 2.0 * fr);
-    vec3 ca = stops[ia];
-    vec3 cb = stops[ia + 1];
+    // GLSL ES 1.0: no dynamic array indexing — select via constant loop.
+    vec3 ca = stops[0];
+    vec3 cb = stops[0];
+    for (int k = 0; k < 6; k++) {
+        if (k == ia)     ca = stops[k];
+        if (k == ia + 1) cb = stops[k];
+    }
     return mix(ca, cb, sm);
 }
 

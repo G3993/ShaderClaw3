@@ -255,7 +255,7 @@ void main() {
     vec2 uv = centred * 10.0 * scaleParam;
     uv += drift * 10.0 * scaleParam;
 
-    int N = samples;
+    int N = int(samples + 0.5);
     if (N < 4)   N = 4;
     if (N > 128) N = 128;
     float Nf = float(N);
@@ -287,9 +287,9 @@ void main() {
     float particleAlpha = 0.0;
 
     int NP = int(particleCount);
-    if (NP > 400) NP = 400;
+    if (NP > 256) NP = 256;   // mobile-safe loop cap (default 200 unaffected)
 
-    for (int i = 0; i < 400; i++) {
+    for (int i = 0; i < 256; i++) {
         if (i >= NP) break;
         float fi = float(i);
 

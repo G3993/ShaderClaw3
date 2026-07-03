@@ -397,7 +397,7 @@ void main() {
 
         // Fade-in based on whether this line is "alive" at current visLines.
         float alive = smoothstep(fi + 0.0, fi + 0.6, visLines);
-        vec3 ink = (i % 7 == 3) ? mix(P.ink, P.accent, 0.35) : P.ink;
+        vec3 ink = (mod(fi, 7.0) == 3.0) ? mix(P.ink, P.accent, 0.35) : P.ink;
         inkOver(col, d2, ink, 0.85 * alive * (0.55 + 0.55 * (0.5 + eA * 0.5)));
     }
 
@@ -428,7 +428,7 @@ void main() {
         for (int j = 0; j < 3; j++) {
             float fj = float(j);
             vec2  off = vec2(spacing * (fj - 1.0), 0.0);
-            int   k  = (kind + j) % 7;
+            int   k  = int(mod(float(kind + j), 7.0));
             float d  = asemicMark(p, base + off, size, k);
             vec3 ink = (h11(fi * 0.71 + fj) < 0.15) ? P.accent : P.ink;
             inkOver(col, d, ink, 0.88 * clusterFade);

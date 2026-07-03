@@ -258,17 +258,18 @@ void main() {
     // ============================================================
     vec3 foil = bgColor.rgb;
     if (useFoil) {
-        if (foilPattern == 0) {
+        int FP = int(foilPattern + 0.5);
+        if (FP == 0) {
             float h = uv.x * stripeFreq + tilt * 4.0;
             foil = hsv2rgb(vec3(fract(h * 0.06 + hueOff), saturation, 1.0));
             float stripe = 0.5 + 0.5 * cos(h * 6.2831 / 12.0);
             foil *= 0.7 + 0.3 * stripe;
-        } else if (foilPattern == 1) {
+        } else if (FP == 1) {
             float h = length(uv - 0.5) * stripeFreq * 0.6 - tilt * 4.0;
             foil = hsv2rgb(vec3(fract(h * 0.08 + hueOff), saturation, 1.0));
             float ring = 0.5 + 0.5 * cos(h * 6.2831 / 8.0);
             foil *= 0.65 + 0.35 * ring;
-        } else if (foilPattern == 2) {
+        } else if (FP == 2) {
             foil = patternCrystal(uv, stripeFreq * 0.4 + 4.0, tilt, hueOff, saturation);
         } else {
             foil = patternGlitter(uv, stripeFreq * 0.8 + 6.0, tilt, hueOff, saturation, sparkleSize);

@@ -433,7 +433,7 @@ void main() {
     float eC = clamp(energyC, 0.0, 1.0);
     float aAact = max(activeA, eA);
     float aBact = max(activeB, eB);
-    int paletteMode = clamp(int(palette), 0, 3);
+    int paletteMode = int(clamp(floor(palette), 0.0, 3.0));
 
     // ── Paper backdrop (subtle warm) ──────────────────────────────────
     vec3 paper = paperColor.rgb;
@@ -445,7 +445,7 @@ void main() {
     // Each band has its own cell count, offset, and player owner. Back
     // largest cells (sparse), Front smallest cells (dense). Bands are
     // drawn back→front and composited with alpha so depth reads.
-    int baseCells = clamp(int(cellCount), 3, 8);
+    int baseCells = int(clamp(floor(cellCount), 3.0, 8.0));
 
     // Per-band parameters: bandScale (cell size), bandShift (parallax px),
     // bandTint (color bias toward palette index), bandOwner energy/active.

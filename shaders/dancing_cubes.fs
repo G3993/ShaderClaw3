@@ -63,12 +63,13 @@ float tileH(vec2 cell) {
 }
 
 float tile(vec3 p) {
-    float N = ACCURACY;
+    // WebGL1: loop indices must init/compare against constant expressions,
+    // so the -ACCURACY..ACCURACY loops use literal bounds (ACCURACY == 1.0).
     vec2 id = floor(p.xz);
     p.xz = fract(p.xz) - 0.5;
     float d = 100.0;
-    for (float i = -N; i <= N; i++) {
-        for (float j = -N; j <= N; j++) {
+    for (float i = -1.0; i <= 1.0; i += 1.0) {
+        for (float j = -1.0; j <= 1.0; j += 1.0) {
             vec2 n = vec2(i, j);
             float h = tileH(floor(id + n));
             float minD = dieAbgerundeteBox(p - vec3(n.x, -3.0 + h, n.y), vec3(0.45, 0.08, 0.45), 0.019);

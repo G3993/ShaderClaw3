@@ -300,9 +300,9 @@ void main() {
     float gT     = TIME * 0.6 * motion;
     float gAud   = clamp(audioDepth, 0.0, 2.0);
     float bass   = clamp(bassPulse, 0.0, 2.0);
-    int   cols   = clamp(int(gridCols), 2, MAX_COLS);
-    int   rows   = clamp(int(gridRows), 2, MAX_ROWS);
-    int   nLines = clamp(int(lineDensity), 2, MAX_LINES);
+    int   cols   = int(clamp(floor(gridCols), 2.0, float(MAX_COLS)));
+    int   rows   = int(clamp(floor(gridRows), 2.0, float(MAX_ROWS)));
+    int   nLines = int(clamp(floor(lineDensity), 2.0, float(MAX_LINES)));
     int   pal    = int(palette);
 
     // ── 1. Warm paper backdrop with subtle vignette ─────────────────
@@ -447,7 +447,7 @@ void main() {
         vec2 titleAnchor = vec2(aspect*0.18, 0.10);
         // Slow typewriter reveal driven by msgAge if live; else show all
         bool live = msgAge >= 0.0;
-        int reveal = live ? clamp(int(msgAge * 22.0), 0, total) : total;
+        int reveal = live ? int(clamp(msgAge * 22.0, 0.0, float(total))) : total;
 
         // Multi-line wrap — break on spaces, ~10 chars/row
         const int ROW_CAP = 11;

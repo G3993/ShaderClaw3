@@ -74,13 +74,15 @@ float cubeWire(vec2 p, float r, float t) {
         else if (i < 8) { int j = i - 4; a = j * 2; b = j * 2 + 1; }  // along x within faces
         else { int j = i - 8;
                int base = (j < 2) ? 0 : 4;
-               a = base + (j & 1); b = a + 2; }                       // along y
-        vec3 va = vec3(float(a & 1) - 0.5,
-                       float((a >> 1) & 1) - 0.5,
-                       float((a >> 2) & 1) - 0.5);
-        vec3 vb = vec3(float(b & 1) - 0.5,
-                       float((b >> 1) & 1) - 0.5,
-                       float((b >> 2) & 1) - 0.5);
+               a = base + (j - (j / 2) * 2); b = a + 2; }             // along y
+        // Bit extraction via float mod (GLSL ES 1.0: no bitwise ops)
+        float fa = float(a), fb = float(b);
+        vec3 va = vec3(mod(fa, 2.0) - 0.5,
+                       mod(floor(fa / 2.0), 2.0) - 0.5,
+                       mod(floor(fa / 4.0), 2.0) - 0.5);
+        vec3 vb = vec3(mod(fb, 2.0) - 0.5,
+                       mod(floor(fb / 2.0), 2.0) - 0.5,
+                       mod(floor(fb / 4.0), 2.0) - 0.5);
         // Rotate around Y then X, project orthographic.
         va.xz = mat2(ca, -sa, sa, ca) * va.xz;
         vb.xz = mat2(ca, -sa, sa, ca) * vb.xz;

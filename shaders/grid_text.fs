@@ -274,12 +274,12 @@ vec4 renderPlane(int planeIdx, vec2 planeUv, float planeAge,
             if (slot >= revealCap) continue;
             int ch = getChar(slot);
             // Numerals variant prefers 27..36; broadside prefers letters.
-            if (variant == 1) {
+            if (variant == 1.0) {
                 if (ch >= 0 && ch < 26) {
                     // remap letters → digits deterministically
                     ch = 27 + int(mod(float(ch), 10.0));
                 }
-            } else if (variant == 2) {
+            } else if (variant == 2.0) {
                 // Drift: include space-ish gaps more often
                 if (hash11(seedBase + 3.1) < 0.18) continue;
             }
@@ -314,7 +314,7 @@ vec4 renderPlane(int planeIdx, vec2 planeUv, float planeAge,
             float gW = cellW * 0.62 * planeScale * swell;
             float gH = gW * (7.0 / 5.0);
             // Numeral variant — slimmer character cell, fewer per row.
-            if (variant == 1) { gW *= 1.15; gH *= 1.15; }
+            if (variant == 1.0) { gW *= 1.15; gH *= 1.15; }
 
             // Local glyph UV (0..1 across the glyph box). planeUv is
             // y-UP world coords; d.y grows up from glyph center. The

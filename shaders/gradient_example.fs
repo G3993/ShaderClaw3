@@ -236,17 +236,18 @@ void main() {
 
     // ── Foil pattern ─────────────────────────────────────
     vec3 foilCol = vec3(0.0);
-    if (foilPattern == 0) {
+    int foilPatternI = int(foilPattern + 0.5);
+    if (foilPatternI == 0) {
         float h = uv.x * stripeFreq + tilt * 4.0;
         foilCol = hsv2rgb(vec3(fract(h * 0.06 + hueOff), saturation, 1.0));
         float stripe = 0.5 + 0.5 * cos(h * 6.2831 / 12.0);
         foilCol *= 0.7 + 0.3 * stripe;
-    } else if (foilPattern == 1) {
+    } else if (foilPatternI == 1) {
         float h = length(uv - 0.5) * stripeFreq * 0.6 - tilt * 4.0;
         foilCol = hsv2rgb(vec3(fract(h * 0.08 + hueOff), saturation, 1.0));
         float ring = 0.5 + 0.5 * cos(h * 6.2831 / 8.0);
         foilCol *= 0.65 + 0.35 * ring;
-    } else if (foilPattern == 2) {
+    } else if (foilPatternI == 2) {
         foilCol = patternCrystal(uv, stripeFreq * 0.4 + 4.0, tilt, hueOff, saturation);
     } else {
         foilCol = patternGlitter(uv, stripeFreq * 0.8 + 6.0, tilt, hueOff, saturation, sparkleSize);

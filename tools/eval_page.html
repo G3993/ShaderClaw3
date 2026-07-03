@@ -260,9 +260,19 @@ window.evalShader = async function(file, opts) {
     for (const inp of parsed.inputs || []) {
       inputDefaults[inp.NAME] = inp;
       if (inp.TYPE === 'text') {
-        const msg = (typeof inp.DEFAULT === 'string' && inp.DEFAULT) || 'ETHEREA';
-        for (let i = 0; i < msg.length; i++) textUniformVals[inp.NAME + '_' + i] = msg.charCodeAt(i);
-        textUniformVals[inp.NAME + '_len'] = msg.length;
+        // App convention (js/app.js): chars are ATLAS INDICES, not char codes:
+        // A-Z -> 0-25, space -> 26, 0-9 -> 27-36
+        const msg = ((typeof inp.DEFAULT === 'string' && inp.DEFAULT.trim()) || 'ETHEREA').toUpperCase();
+        const c2c = (ch) => {
+          if (!ch || ch === ' ') return 26;
+          const code = ch.charCodeAt(0);
+          if (code >= 65 && code <= 90) return code - 65;
+          if (code >= 48 && code <= 57) return code - 48 + 27;
+          return 26;
+        };
+        const maxLen = inp.MAX_LENGTH || 12;
+        for (let i = 0; i < maxLen; i++) textUniformVals[inp.NAME + '_' + i] = c2c(msg[i]);
+        textUniformVals[inp.NAME + '_len'] = Math.min(msg.replace(/\s+$/, '').length, maxLen);
       }
     }
 

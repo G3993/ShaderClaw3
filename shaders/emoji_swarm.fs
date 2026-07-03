@@ -29,7 +29,7 @@ mat2  rot(float a) { float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 // + msg_len. We aggregate them into a single hashed seed (msgSeed) that
 // shifts the swarm's emoji distribution AND an activity factor (vox) that
 // fades the swarm in/out with speech.
-int msgChar(int i) {
+float msgChar(int i) {
     if (i ==  0) return msg_0;  if (i ==  1) return msg_1;  if (i ==  2) return msg_2;
     if (i ==  3) return msg_3;  if (i ==  4) return msg_4;  if (i ==  5) return msg_5;
     if (i ==  6) return msg_6;  if (i ==  7) return msg_7;  if (i ==  8) return msg_8;
@@ -46,38 +46,58 @@ int msgChar(int i) {
 float computeMsgSeed() {
     // FNV-ish accumulation over the live characters — small, fast, fine
     // for picking emoji indices. Returns a 0..1 float seed.
-    float acc = 2166136261.0;
-    int n = msg_len; if (n > 32) n = 32;
+    float acc = 216613.0;
+    float n = min(msg_len, 32.0);
     for (int i = 0; i < 32; i++) {
-        if (i >= n) break;
-        acc = mod(acc * 16777619.0 + float(msgChar(i)) * 131.0, 4294967.0);
+        if (float(i) >= n) break;
+        acc = mod(acc * 167.0 + msgChar(i) * 131.0, 65521.0);
     }
-    return fract(acc * 0.00000023283064);
+    return fract(acc / 65521.0);
 }
 
 // 0 when silent, 1 when actively speaking. Saturates quickly so any speech
 // instantly lights up the swarm, then `silentFade` controls how much the
 // idle swarm collapses back when msg_len drops to 0.
 float voiceLevel() {
-    float l = float(msg_len);
-    return mix(1.0 - silentFade, 1.0, smoothstep(0.0, 6.0, l));
+    return mix(1.0 - silentFade, 1.0, smoothstep(0.0, 6.0, msg_len));
 }
 
 // Sample one tile (id 0..15) from the 4×4 atlas. Atlas convention:
 // row 0 is the TOP row in source PNG; ISF samplers use bottom-left
 // origin, so flip v inside the tile to keep glyphs upright.
+// Set once in main(): 1.0 when a real atlas image is bound, else 0.0.
+float atlasLive;
+
 vec4 sampleEmoji(int id, vec2 local) {
     // local in [-1,1] centered. Map to tile uv [0,1].
     vec2 t = local * 0.5 + 0.5;        // [0,1] inside tile
     if (any(lessThan(t, vec2(0.0))) || any(greaterThan(t, vec2(1.0)))) {
         return vec4(0.0);
     }
-    int col = id & 3;                  // id % 4
-    int row = (id >> 2) & 3;           // id / 4
+    if (atlasLive < 0.5) {
+        // Procedural fallback glyph (no atlas bound): a glossy smiley ball
+        // tinted per id so the swarm still reads as emoji.
+        float r = length(local);
+        float a = smoothstep(0.95, 0.80, r);
+        if (a <= 0.001) return vec4(0.0);
+        vec3 tint = 0.55 + 0.45 * cos(6.2831 * (float(id) / 16.0) + vec3(0.0, 2.1, 4.2));
+        float hl = smoothstep(0.9, 0.0, length(local - vec2(-0.35, 0.40)));
+        vec3 c = tint * (0.72 + 0.5 * hl);
+        float eyes = smoothstep(0.15, 0.09, length(local - vec2(-0.30, 0.18)))
+                   + smoothstep(0.15, 0.09, length(local - vec2( 0.30, 0.18)));
+        float mouth = smoothstep(0.10, 0.04, abs(length(local - vec2(0.0, 0.10)) - 0.48))
+                    * smoothstep(-0.10, -0.28, local.y);
+        c = mix(c, vec3(0.08, 0.06, 0.05), clamp(eyes + mouth, 0.0, 1.0));
+        return vec4(c, a);
+    }
+    // WebGL1: no bitwise ops — derive col/row with float math.
+    float fid  = float(id);
+    float colF = mod(fid, 4.0);        // id % 4
+    float rowF = floor(fid * 0.25);    // id / 4
     // Flip row to compensate for ISF (origin bottom-left) vs atlas (top-left).
-    row = 3 - row;
+    rowF = 3.0 - rowF;
     vec2 tileSize = vec2(0.25);
-    vec2 origin   = vec2(float(col), float(row)) * tileSize;
+    vec2 origin   = vec2(colF, rowF) * tileSize;
     // Flip v inside the tile so the glyph reads upright.
     vec2 uv = origin + vec2(t.x, 1.0 - t.y) * tileSize;
     return IMG_NORM_PIXEL(atlas, uv);
@@ -85,16 +105,23 @@ vec4 sampleEmoji(int id, vec2 local) {
 
 // ── main ────────────────────────────────────────────────────────────
 void main() {
+    // Detect whether a real atlas is bound (size set AND texels non-empty);
+    // otherwise sampleEmoji falls back to procedural glyphs.
+    vec4 probe = IMG_NORM_PIXEL(atlas, vec2(0.125, 0.875))
+               + IMG_NORM_PIXEL(atlas, vec2(0.5, 0.5));
+    atlasLive = (IMG_SIZE_atlas.x > 1.0 && (probe.a > 0.01 || dot(probe.rgb, vec3(1.0)) > 0.01)) ? 1.0 : 0.0;
+
     vec2  uv     = isf_FragNormCoord;
     float aspect = RENDERSIZE.x / max(1.0, RENDERSIZE.y);
     vec2  p      = (uv - 0.5) * vec2(aspect, 1.0);
 
     vec3  col = vec3(0.0);
     float bgA = 1.0;
-    if (bg == 0)      { bgA = 0.0; }
-    else if (bg == 1) { col = vec3(0.02, 0.03, 0.06); }
-    else              { col = mix(vec3(0.06, 0.04, 0.18),
-                                  vec3(0.18, 0.06, 0.22), uv.y); }
+    float bgMode = float(bg);   // 'long' inputs arrive as float uniforms
+    if (bgMode < 0.5)      { bgA = 0.0; }
+    else if (bgMode < 1.5) { col = vec3(0.02, 0.03, 0.06); }
+    else                   { col = mix(vec3(0.06, 0.04, 0.18),
+                                       vec3(0.18, 0.06, 0.22), uv.y); }
 
     float t    = TIME;
     float vox  = voiceLevel();                          // 0..1 speech activity

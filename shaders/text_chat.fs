@@ -143,7 +143,10 @@ void main() {
     float bass  = audioBass;
 
     int total       = charCount();
+    // Long-typed inputs can arrive unset (0) on the mobile/eval path —
+    // fall back to their documented defaults (app never sends 0).
     int bubbles     = int(bubbleCount);
+    if (bubbles < 1) bubbles = 3;
     if (bubbles > MAX_BUBBLES) bubbles = MAX_BUBBLES;
     float charH     = textScale;
     float charW     = charH * (5.0 / 7.0);
@@ -228,6 +231,7 @@ void main() {
         // fits inside one bubble instead of being split across many.
         float kernX        = charW * kerning;
         int   charsPerRow  = int(wrapAt);
+        if (charsPerRow < 1)        charsPerRow = 14;   // unset long fallback
         if (charsPerRow > chunkLen) charsPerRow = chunkLen;
         if (charsPerRow < 1)        charsPerRow = 1;
         int   numRows      = (chunkLen + charsPerRow - 1) / charsPerRow;

@@ -633,7 +633,7 @@ void main() {
                 int n = total;
                 if (n > 16) n = 16;
                 float colH  = colTop - colBot;
-                float cellH = colH / float(max(n, 1));
+                float cellH = colH / max(float(n), 1.0);
                 // Each char's vertical slot
                 int row = int(floor((colTop - p.y) / cellH));
                 if (row >= 0 && row < n) {

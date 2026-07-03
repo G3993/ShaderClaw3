@@ -217,15 +217,16 @@ vec4 renderFace(vec2 luv, float pseed, int arche, float pTime,
     // talkPhase oscillates open/closed; charCode personalises rhythm
     float talkPhase = sin(TIME * 6.0 + pseed * 1.7 + charCode * 0.4);
     bool talking = false;
-    if (mouthMode == 1) {
+    int mouthModeI = int(mouthMode + 0.5);
+    if (mouthModeI == 1) {
         talking = talkPhase > 0.0;                       // always talking
-    } else if (mouthMode == 2) {
+    } else if (mouthModeI == 2) {
         bool textPresent = charCode > 0.5;
         bool bassHit = audBass > 0.45;
         talking = (textPresent && talkPhase > -0.2) || bassHit;
     }
     bool mouthOpen = inMouth && talking;
-    bool mouthClosed = inMouth && !talking && mouthMode != 0;
+    bool mouthClosed = inMouth && !talking && mouthModeI != 0;
 
     // ── Accessories (per-player, stable by seed) ──────────────
     bool inAntenna = false;

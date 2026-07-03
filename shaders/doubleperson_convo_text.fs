@@ -462,7 +462,7 @@ void main(){
         // Word-wrap target width — slimmer when on the right, so it
         // doesn't fall off canvas.
         float boxW  = 0.34;
-        int   charsPerRow = max(1, int(floor(boxW / kern)));
+        int   charsPerRow = int(max(1.0, floor(boxW / kern)));
         if (charsPerRow > 24) charsPerRow = 24;
 
         // Pre-walk: count rows used by reveal chars under word-wrap.

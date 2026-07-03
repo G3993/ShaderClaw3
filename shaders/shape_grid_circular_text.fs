@@ -357,9 +357,9 @@ void main() {
     vec2 uv01 = frag / res;
     float aspect = res.x / res.y;
 
-    int rowsN = clamp(int(rows), 3, 7);
-    int colsN = clamp(int(cols), 3, 7);
-    int mode  = clamp(int(paletteMode), 0, 3);
+    int rowsN = int(clamp(floor(rows), 3.0, 7.0));
+    int colsN = int(clamp(floor(cols), 3.0, 7.0));
+    int mode  = int(clamp(floor(paletteMode), 0.0, 3.0));
 
     float t   = TIME * motionSpeed;
     float eA  = clamp(energyA, 0.0, 1.0);
@@ -538,7 +538,7 @@ void main() {
         // Reveal cap from msgAge (≈28 cps), full when static.
         const float CPS = 28.0;
         float reveal = live ? floor(msgAge * CPS) : float(total);
-        int shown = clamp(int(reveal), 0, total);
+        int shown = int(clamp(reveal, 0.0, float(total)));
 
         // Caption band: from gridBot down to ~0.025.
         float capTopN = CAPTION_FRAC;

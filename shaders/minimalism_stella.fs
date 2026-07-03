@@ -140,14 +140,14 @@ vec3 protractor(vec2 uv, float arcs, float rotation, float gapPx,
     if (idx < 0) idx += 6;
     if (idx >= 6) idx -= 6;
 
-    vec3 pal[6];
-    pal[0] = vec3(0.880, 0.090, 0.085);
-    pal[1] = vec3(0.040, 0.420, 0.330);
-    pal[2] = vec3(0.040, 0.110, 0.430);
-    pal[3] = vec3(0.960, 0.500, 0.080);
-    pal[4] = vec3(0.970, 0.870, 0.380);
-    pal[5] = vec3(0.820, 0.140, 0.520);
-    vec3 pigment = pal[idx];
+    // GLSL ES 1.0: no dynamic array indexing — select via if/else chain.
+    vec3 pigment;
+    if      (idx == 0) pigment = vec3(0.880, 0.090, 0.085);
+    else if (idx == 1) pigment = vec3(0.040, 0.420, 0.330);
+    else if (idx == 2) pigment = vec3(0.040, 0.110, 0.430);
+    else if (idx == 3) pigment = vec3(0.960, 0.500, 0.080);
+    else if (idx == 4) pigment = vec3(0.970, 0.870, 0.380);
+    else               pigment = vec3(0.820, 0.140, 0.520);
 
     float fb    = fract(bf);
     float gapU  = (gapPx / RENDERSIZE.y) * spacing;

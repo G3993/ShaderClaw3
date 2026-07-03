@@ -321,8 +321,9 @@ void orbAnchor(int idx, int variant, float aspect, out vec2 c, out float zPlane,
         radius = 0.15 + 0.05 * hash11(fi * 5.7);
     } else {
         // 0 — triad below (matches the reference's grid of forms under the headline)
-        float xs[3]; xs[0] = -0.46; xs[1] = 0.00; xs[2] = 0.46;
-        c = vec2(xs[idx] * 1.10, -0.30 + 0.05 * sin(TIME * 0.4 + fi * 1.7));
+        // xs = {-0.46, 0.00, 0.46} == (fi - 1.0) * 0.46 (GLSL ES 1.0: no dynamic index)
+        float xsv = (fi - 1.0) * 0.46;
+        c = vec2(xsv * 1.10, -0.30 + 0.05 * sin(TIME * 0.4 + fi * 1.7));
         zPlane = 0.10 + 0.32 * hash11(fi * 11.7);
         radius = 0.16 + 0.04 * hash11(fi * 4.1);
     }
@@ -513,10 +514,16 @@ void main() {
         radii[i]    = rr;
     }
     // bubble sort by descending zPlane (back first → drawn first)
+    // GLSL ES 1.0: arrays may only be indexed by loop indices/constants, so
+    // swap the parallel data arrays in lockstep instead of indirecting.
     for (int a = 0; a < 3; a++) {
-        for (int b = a + 1; b < 3; b++) {
-            if (zPlanes[idxOrder[b]] > zPlanes[idxOrder[a]]) {
-                int tmp = idxOrder[a]; idxOrder[a] = idxOrder[b]; idxOrder[b] = tmp;
+        for (int b = 0; b < 3; b++) {
+            if (b <= a) continue;
+            if (zPlanes[b] > zPlanes[a]) {
+                int   ti = idxOrder[a]; idxOrder[a] = idxOrder[b]; idxOrder[b] = ti;
+                float tz = zPlanes[a];  zPlanes[a]  = zPlanes[b];  zPlanes[b]  = tz;
+                vec2  tc = centers[a];  centers[a]  = centers[b];  centers[b]  = tc;
+                float tr = radii[a];    radii[a]    = radii[b];    radii[b]    = tr;
             }
         }
     }
@@ -524,13 +531,13 @@ void main() {
         int i = idxOrder[k];
         float energy = orbEnergyOf(i);
         // energy pushes orb forward → reduce its zPlane (parallax kick)
-        float zEff   = clamp(zPlanes[i] - 0.25 * energy, 0.0, 1.0);
+        float zEff   = clamp(zPlanes[k] - 0.25 * energy, 0.0, 1.0);
         // parallax offset — back orbs drift less, front orbs more
         vec2 par = (vec2(sin(TIME * 0.16 + float(i) * 2.1),
                          cos(TIME * 0.13 + float(i) * 1.7))
                    * 0.030 * (1.0 - zEff));
-        vec2 anchor = centers[i] + par;
-        float radius = radii[i] * (1.0 + 0.18 * energy);
+        vec2 anchor = centers[k] + par;
+        float radius = radii[k] * (1.0 + 0.18 * energy);
         // skip pixels far from this orb
         vec2 dxy = p - anchor;
         if (abs(dxy.x) > radius * 2.2) continue;

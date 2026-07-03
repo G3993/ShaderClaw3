@@ -69,7 +69,7 @@ void main() {
     float camAngleY = t * rotateSpeed * 0.5;
     float camAngleX = sin(t * rotateSpeed * 0.2) * 0.3;
 
-    for (int i = 0; i < 500; i++) {
+    for (int i = 0; i < 240; i++) {   // mobile cap (was 500)
         if (i >= N) break;
         float fi = float(i);
 

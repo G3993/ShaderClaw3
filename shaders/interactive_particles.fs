@@ -72,9 +72,9 @@ void main() {
 
     // Density → grid resolution. Per-pixel cost is FIXED (9 cells) regardless
     // of this, so "Storm" is just as cheap as "Sparse".
-    int   tier  = clamp(int(particlesPerStream), 0, 3);
+    int   tier  = int(clamp(float(particlesPerStream), 0.0, 3.0));
     float base  = tier == 0 ? 5.0 : tier == 1 ? 8.0 : tier == 2 ? 12.0 : 17.0;
-    float gridN = base + float(clamp(int(streamCount), 1, 5) - 1) * 1.5;
+    float gridN = base + (clamp(float(streamCount), 1.0, 5.0) - 1.0) * 1.5;
     // Square-ish cells: more columns on wide canvases.
     vec2  gdim  = vec2(gridN * aspect, gridN);
 

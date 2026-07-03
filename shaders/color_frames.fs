@@ -82,7 +82,14 @@ vec3 PAL(float t) {
     int i = int(x);
     float f = x - float(i);
     f = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);   // quintic — silkier ramps
-    vec3 col = mix(S[i], S[(i + 1) & 7], f);
+    int j = i + 1;
+    if (j > 7) j = 0;                                 // (i + 1) & 7 without bitwise ops
+    vec3 Sa = S[0], Sb = S[0];
+    for (int k = 0; k < 8; k++) {                     // constant-loop lookup (ES 1.0 safe)
+        if (k == i) Sa = S[k];
+        if (k == j) Sb = S[k];
+    }
+    vec3 col = mix(Sa, Sb, f);
 
     // Thin-film iridescence: a low-amplitude spectral shimmer that keeps
     // the gradients reading as a premium oil-slick rather than flat candy.

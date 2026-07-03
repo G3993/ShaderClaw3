@@ -605,7 +605,8 @@ void main(){
             // is a different slice of the masthead.
             int total = charCount();
             if (total <= 0) continue;
-            int offset = (i * 3) - ((i * 3) / max(total,1)) * max(total,1);
+            int mt = (total < 1) ? 1 : total;
+            int offset = (i * 3) - ((i * 3) / mt) * mt;
             float gw = 0.014;
             float gh = bandH * 1.6;
             gw = min(gw, gh * (5.0/7.0));

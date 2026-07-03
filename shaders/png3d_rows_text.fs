@@ -516,7 +516,7 @@ void main() {
     bool liveUtterance = msgAge >= 0.0;
     float cps = 28.0;
     int   revealed = liveUtterance
-        ? clamp(int(floor(msgAge * cps)), 0, total)
+        ? int(clamp(floor(msgAge * cps), 0.0, float(total)))
         : total;
 
     // ─── paper backdrop ─────────────────────────────────────────────────
@@ -599,7 +599,7 @@ void main() {
             int cellId = firstWrap + ii;
             float cellCX = -aspect*0.5 + 0.05 +
                            (float(ii) + 0.5) * cellW
-                           + (firstWrap * cellW)
+                           + (float(firstWrap) * cellW)
                            - wrapScroll;
             vec2 cellLocal = vec2(p.x - cellCX, p.y - rowCY);
             // bail if pixel is well outside this cell horizontally and
@@ -640,7 +640,7 @@ void main() {
             if (isText) {
                 // pick which word this cell shows: cellId-derived index
                 // mod wordCount so cells reuse words as we scroll
-                int wIdx = int(mod(float(cellId) * 1.0, float(max(wordsAvail, 1))));
+                int wIdx = int(mod(float(cellId) * 1.0, max(float(wordsAvail), 1.0)));
                 if (wIdx < 0) wIdx = 0;
                 int wS, wE;
                 getWord(wIdx, total, wS, wE);

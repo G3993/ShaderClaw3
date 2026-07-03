@@ -119,8 +119,8 @@ vec3 gaussianBloomSample(vec2 uv, float t, float mr) {
     // 3×3 kernel
     for (int dy = -1; dy <= 1; dy++) {
         for (int dx = -1; dx <= 1; dx++) {
-            float w = (abs(dx) + abs(dy) == 0) ? 4.0
-                    : (abs(dx) + abs(dy) == 1) ? 2.0 : 1.0;
+            float w = (dx == 0 && dy == 0) ? 4.0
+                    : (dx == 0 || dy == 0) ? 2.0 : 1.0;
             vec2 off = vec2(float(dx), float(dy)) * r;
             vec2 sUV = uv + off;
             acc += w * carbonSurface(sUV, t, mr, weaveScale);

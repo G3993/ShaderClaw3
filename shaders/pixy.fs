@@ -57,17 +57,14 @@ void main() {
     if (PASSINDEX == 0) {
         vec3 boy = srcTex(uv0 * vec2(1.2, 1.0) - vec2(0.1, 0.0));
         // 3x3 gaussian blur of the PREVIOUS Buffer A → a soft trailing copy.
-        float kern[9];
-        kern[0] = 1.0; kern[1] = 2.0; kern[2] = 1.0;
-        kern[3] = 2.0; kern[4] = 4.0; kern[5] = 2.0;
-        kern[6] = 1.0; kern[7] = 2.0; kern[8] = 1.0;
-        vec3 agg = vec3(0.0); float tw = 0.0; int k = 0;
+        // Kernel 1 2 1 / 2 4 2 / 1 2 1 is separable: w = (2-|i|)*(2-|j|).
+        vec3 agg = vec3(0.0); float tw = 0.0;
         for (int i = -1; i <= 1; i++)
         for (int j = -1; j <= 1; j++) {
             vec2 off = vec2(float(i), float(j)) * 0.01;
-            agg += texture(bufA, uv0 + off).rgb * kern[k];
-            tw  += kern[k];
-            k++;
+            float w = (2.0 - abs(float(i))) * (2.0 - abs(float(j)));
+            agg += texture(bufA, uv0 + off).rgb * w;
+            tw  += w;
         }
         vec3 blurred = agg / tw;
         if (FRAMEINDEX < 4) { gl_FragColor = vec4(boy, 1.0); return; }  // seed

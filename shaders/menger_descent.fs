@@ -37,7 +37,7 @@ mat2 rot(float a){ float c=cos(a), s=sin(a); return mat2(c,-s,s,c); }
 
 // scene wrapper: slowly rotate the whole sponge with mid
 float map(vec3 p){
-  float ang = TIME*0.04 + mid*0.6;        // calm rotation, mid eases it
+  float ang = TIME*0.04 + (audioMid*audioReact)*0.6;  // calm rotation, mid eases it
   p.xz = rot(ang) * p.xz;
   p.xy = rot(ang*0.5) * p.xy;
   return mengerDE(p);

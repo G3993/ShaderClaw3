@@ -382,7 +382,7 @@ void main() {
     // reserved for header/footer strips).
     float topY    =  0.40;
     float botY    = -0.40;
-    float rowsF   = float(max(rows - 1, 1));
+    float rowsF   = max(float(rows - 1), 1.0);
 
     // Highest charMask seen across all rows wins the ink at that fragment.
     float charMask = 0.0;

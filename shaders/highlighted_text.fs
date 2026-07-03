@@ -333,11 +333,17 @@ void main() {
             } else {
                 if (inWord) {
                     if (wordCount < MAX_WORDS) {
-                        wordStart[wordCount] = wStartIdx;
-                        wordEnd  [wordCount] = idx;
-                        wordRow  [wordCount] = curRow;
-                        wordCol  [wordCount] = wStartCol;
-                        wordLen  [wordCount] = idx - wStartIdx;
+                        // (GLSL ES 1.0: array writes need const/loop indices.)
+                        for (int s = 0; s < MAX_WORDS; s++) {
+                            if (s == wordCount) {
+                                wordStart[s] = wStartIdx;
+                                wordEnd  [s] = idx;
+                                wordRow  [s] = curRow;
+                                wordCol  [s] = wStartCol;
+                                wordLen  [s] = idx - wStartIdx;
+                                break;
+                            }
+                        }
                         wordCount++;
                     }
                     inWord = false;
@@ -348,11 +354,16 @@ void main() {
             }
         }
         if (inWord && wordCount < MAX_WORDS) {
-            wordStart[wordCount] = wStartIdx;
-            wordEnd  [wordCount] = idx;
-            wordRow  [wordCount] = curRow;
-            wordCol  [wordCount] = wStartCol;
-            wordLen  [wordCount] = idx - wStartIdx;
+            for (int s = 0; s < MAX_WORDS; s++) {
+                if (s == wordCount) {
+                    wordStart[s] = wStartIdx;
+                    wordEnd  [s] = idx;
+                    wordRow  [s] = curRow;
+                    wordCol  [s] = wStartCol;
+                    wordLen  [s] = idx - wStartIdx;
+                    break;
+                }
+            }
             wordCount++;
         }
     }
@@ -578,9 +589,8 @@ void main() {
     if (wordCount > 0) {
         // Start dot
         {
-            int w = 0;
-            float rowY = blockTopY - (float(wordRow[w]) + 0.5) * lineH;
-            float x0 = -pageHalfW + (float(wordCol[w])) * kern;
+            float rowY = blockTopY - (float(wordRow[0]) + 0.5) * lineH;
+            float x0 = -pageHalfW + (float(wordCol[0])) * kern;
             float halfH = charH * 0.62;
             vec2 dpos = vec2(x0 - kern * 0.25, rowY + halfH + 0.018);
             dpos += vec2(0.003 * sin(TIME * 0.7),
@@ -596,9 +606,16 @@ void main() {
         }
         // End dot
         {
-            int w = wordCount - 1;
-            float rowY = blockTopY - (float(wordRow[w]) + 0.5) * lineH;
-            float x1 = -pageHalfW + (float(wordCol[w] + wordLen[w])) * kern;
+            // (GLSL ES 1.0: fetch last word's fields via const-bounded loop.)
+            int lastRow = 0, lastCol = 0, lastLen = 0;
+            for (int k = 0; k < MAX_WORDS; k++) {
+                if (k == wordCount - 1) {
+                    lastRow = wordRow[k]; lastCol = wordCol[k]; lastLen = wordLen[k];
+                    break;
+                }
+            }
+            float rowY = blockTopY - (float(lastRow) + 0.5) * lineH;
+            float x1 = -pageHalfW + (float(lastCol + lastLen)) * kern;
             float halfH = charH * 0.62;
             vec2 dpos = vec2(x1 + kern * 0.25, rowY - halfH - 0.018);
             dpos += vec2(0.003 * cos(TIME * 0.6),

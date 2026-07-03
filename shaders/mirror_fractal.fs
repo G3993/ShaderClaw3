@@ -253,11 +253,13 @@ void main() {
 
     float t = TIME;
 
-    // N-fold count
-    float Nset[5];
-    Nset[0] = 3.0; Nset[1] = 5.0; Nset[2] = 6.0; Nset[3] = 8.0; Nset[4] = 12.0;
+    // N-fold count (GLSL ES 1.0: no dynamic array indexing)
     int   ni = int(clamp(float(foldIndex), 0.0, 4.0));
-    float N  = Nset[ni];
+    float N  = 3.0;
+    if      (ni == 1) N = 5.0;
+    else if (ni == 2) N = 6.0;
+    else if (ni == 3) N = 8.0;
+    else if (ni == 4) N = 12.0;
 
     // Slow rotation
     float rot = (rotateBase + 0.05 * mid) * t * 0.6;

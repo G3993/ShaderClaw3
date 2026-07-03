@@ -125,9 +125,11 @@ vec3 boltSDF(vec2 uv, float seed, float depth, float jitter, float life01) {
         minDS = min(minDS, ds);
 
         // Stash a few pivots for branch spawning.
+        // (GLSL ES 1.0: array writes need const/loop indices — store via const loop.)
         if (pivotCount < 6 && hash11(seed * 5.0 + float(i) * 2.13) > 0.55) {
-            segPivots[pivotCount] = cur;
-            segPivotT[pivotCount] = t;
+            for (int s = 0; s < 6; s++) {
+                if (s == pivotCount) { segPivots[s] = cur; segPivotT[s] = t; break; }
+            }
             pivotCount++;
         }
 
@@ -177,7 +179,9 @@ vec3 boltSDF(vec2 uv, float seed, float depth, float jitter, float life01) {
             minDS = min(minDS, ds);
 
             if (subCount < 3 && hash11(bs + float(j) * 7.7) > 0.72) {
-                subPivots[subCount] = bcur;
+                for (int s = 0; s < 3; s++) {
+                    if (s == subCount) { subPivots[s] = bcur; break; }
+                }
                 subCount++;
             }
             bprev = bcur;

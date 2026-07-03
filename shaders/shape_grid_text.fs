@@ -333,10 +333,9 @@ void main() {
     float eC = clamp(energyC, 0.0, 1.0);
     float aA = clamp(activeA, 0.0, 1.0);
     float aB = clamp(activeB, 0.0, 1.0);
-    float bandE[3];
-    bandE[0] = eA * mix(0.5, 1.0, aA);
-    bandE[1] = eB * mix(0.5, 1.0, aB);
-    bandE[2] = eC;
+    float bandE0 = eA * mix(0.5, 1.0, aA);
+    float bandE1 = eB * mix(0.5, 1.0, aB);
+    float bandE2 = eC;
     float audAct  = clamp(audioDepth, 0.0, 2.0);
     float bass    = clamp(bassDrive, 0.0, 1.0);
     float midF    = clamp(midDrive,  0.0, 1.0);
@@ -419,9 +418,9 @@ void main() {
         float cellHash = hash12(vec2(float(cxF) * 13.7, float(cyF) * 7.21));
         // Deterministic but varied variant assignment — never repeats two
         // adjacent cells (xor with neighbour hash bumps the index).
-        int variant = int(floor(cellHash * float(VARIANT_N) * clamp(variantMix, 0.0, 1.5))) % VARIANT_N;
+        int variant = int(mod(floor(cellHash * float(VARIANT_N) * clamp(variantMix, 0.0, 1.5)), float(VARIANT_N)));
         int band    = cellBand(cxF, cyF, Rc, Cc);
-        float e     = bandE[band] * audAct;
+        float e     = ((band == 0) ? bandE0 : ((band == 1) ? bandE1 : bandE2)) * audAct;
 
         // Parallax: band depth pushes cells forward toward the camera.
         // bandZ in [-1,1], -1 = Back (further), +1 = Front (closer). Local
@@ -484,7 +483,7 @@ void main() {
         // is the cell's running number (1..R*C). Corner picked deterministic-
         // ally from the cell hash so the layout reads as designed-on-paper.
         int idxNum = cellIdx + 1;
-        int cornerSel = int(floor(cellHash * 4.0)) % 4;
+        int cornerSel = int(mod(floor(cellHash * 4.0), 4.0));
         float numH = cellH * 0.12;
         float numW = numH * (5.0 / 7.0);
         float pad = cellH * 0.07;
@@ -542,7 +541,7 @@ void main() {
                 for (int cx = 0; cx < 6; cx++) {
                     if (cx >= Cc) break;
                     int band = cellBand(cx, cy, Rc, Cc);
-                    float e = bandE[band] * audAct;
+                    float e = ((band == 0) ? bandE0 : ((band == 1) ? bandE1 : bandE2)) * audAct;
                     if (e > bestE) {
                         bestE = e;
                         bestX0 = gridLeft + float(cx) * cellW;
@@ -560,7 +559,7 @@ void main() {
         float baseY   = gridBot - capSlabH * 0.55;        // centred in slab
 
         // Slab background — soft rounded box anchored to anchorX
-        float slabW = capKern * float(min(total, 36)) + capH * 1.4;
+        float slabW = capKern * min(float(total), 36.0) + capH * 1.4;
         slabW = min(slabW, aspect - 2.0 * margin);
         float slabH = capH * 1.8;
         float slabHalfW = 0.5 * slabW;

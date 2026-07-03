@@ -221,9 +221,13 @@ void main() {
     float audio = clamp(audioReact, 0.0, 2.0);
     float bass  = audioBass;
 
+    // Long-typed inputs can arrive unset (0) on the mobile/eval path —
+    // fall back to their documented defaults (app never sends 0).
     int   clusters = int(clusterCount);
+    if (clusters < 1) clusters = 9;
     if (clusters > MAX_CLUSTERS) clusters = MAX_CLUSTERS;
     int   nodesEach = int(nodesPerCluster);
+    if (nodesEach < 1) nodesEach = 1;
     if (nodesEach > MAX_NODES) nodesEach = MAX_NODES;
     int   total     = charCount();
     // User-facing "Cluster Text Size" is now a relative multiplier

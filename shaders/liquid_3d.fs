@@ -39,9 +39,15 @@ mat3 getCamera(vec2 a){
                   0.0, 0.0, 1.0);
     return t * p;
 }
+// GLSL ES 1.0 has no transpose() — build it manually.
+mat3 transpose3(mat3 m){
+    return mat3(m[0][0], m[1][0], m[2][0],
+                m[0][1], m[1][1], m[2][1],
+                m[0][2], m[1][2], m[2][2]);
+}
 vec3 getRay(vec2 a, vec2 pos){
     mat3 cam = getCamera(a);
-    return normalize(transpose(cam) * vec3(FOV * pos.x, 1.0, FOV * pos.y));
+    return normalize(transpose3(cam) * vec3(FOV * pos.x, 1.0, FOV * pos.y));
 }
 
 float hash(float n){ return fract(sin(n) * 43758.5453); }

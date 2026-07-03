@@ -13,47 +13,49 @@
   ]
 }*/
 
-// ---- Font engine: 5x7 bitmap font packed into two floats ----
+// ---- Font engine: 5x7 bitmap font, 2 rows packed per float ----
+// (values stay <= 1023 so decoding is exact even in mediump/fp16 on mobile)
 
-vec2 charData(int ch) {
-    if (ch == 0)  return vec2(1033777.0, 14897.0);
-    if (ch == 1)  return vec2(1001022.0, 31281.0);
-    if (ch == 2)  return vec2(541230.0, 14896.0);
-    if (ch == 3)  return vec2(575068.0, 29265.0);
-    if (ch == 4)  return vec2(999967.0, 32272.0);
-    if (ch == 5)  return vec2(999952.0, 32272.0);
-    if (ch == 6)  return vec2(771630.0, 14896.0);
-    if (ch == 7)  return vec2(1033777.0, 17969.0);
-    if (ch == 8)  return vec2(135310.0, 14468.0);
-    if (ch == 9)  return vec2(68172.0, 7234.0);
-    if (ch == 10) return vec2(807505.0, 18004.0);
-    if (ch == 11) return vec2(541215.0, 16912.0);
-    if (ch == 12) return vec2(706097.0, 18293.0);
-    if (ch == 13) return vec2(640561.0, 18229.0);
-    if (ch == 14) return vec2(575022.0, 14897.0);
-    if (ch == 15) return vec2(999952.0, 31281.0);
-    if (ch == 16) return vec2(579149.0, 14897.0);
-    if (ch == 17) return vec2(1004113.0, 31281.0);
-    if (ch == 18) return vec2(460334.0, 14896.0);
-    if (ch == 19) return vec2(135300.0, 31876.0);
-    if (ch == 20) return vec2(575022.0, 17969.0);
-    if (ch == 21) return vec2(567620.0, 17969.0);
-    if (ch == 22) return vec2(710513.0, 17969.0);
-    if (ch == 23) return vec2(141873.0, 17962.0);
-    if (ch == 24) return vec2(135300.0, 17962.0);
-    if (ch == 25) return vec2(139807.0, 31778.0);
-    return vec2(0.0, 0.0);
+vec4 charData(int ch) {
+    if (ch == 0)  return vec4(561.0, 1009.0, 561.0, 14.0);
+    if (ch == 1)  return vec4(574.0, 977.0, 561.0, 30.0);
+    if (ch == 2)  return vec4(558.0, 528.0, 560.0, 14.0);
+    if (ch == 3)  return vec4(604.0, 561.0, 593.0, 28.0);
+    if (ch == 4)  return vec4(543.0, 976.0, 528.0, 31.0);
+    if (ch == 5)  return vec4(528.0, 976.0, 528.0, 31.0);
+    if (ch == 6)  return vec4(558.0, 753.0, 560.0, 14.0);
+    if (ch == 7)  return vec4(561.0, 1009.0, 561.0, 17.0);
+    if (ch == 8)  return vec4(142.0, 132.0, 132.0, 14.0);
+    if (ch == 9)  return vec4(588.0, 66.0, 66.0, 7.0);
+    if (ch == 10) return vec4(593.0, 788.0, 596.0, 17.0);
+    if (ch == 11) return vec4(543.0, 528.0, 528.0, 16.0);
+    if (ch == 12) return vec4(561.0, 689.0, 885.0, 17.0);
+    if (ch == 13) return vec4(561.0, 625.0, 821.0, 17.0);
+    if (ch == 14) return vec4(558.0, 561.0, 561.0, 14.0);
+    if (ch == 15) return vec4(528.0, 976.0, 561.0, 30.0);
+    if (ch == 16) return vec4(589.0, 565.0, 561.0, 14.0);
+    if (ch == 17) return vec4(593.0, 980.0, 561.0, 30.0);
+    if (ch == 18) return vec4(558.0, 449.0, 560.0, 14.0);
+    if (ch == 19) return vec4(132.0, 132.0, 132.0, 31.0);
+    if (ch == 20) return vec4(558.0, 561.0, 561.0, 17.0);
+    if (ch == 21) return vec4(324.0, 554.0, 561.0, 17.0);
+    if (ch == 22) return vec4(881.0, 693.0, 561.0, 17.0);
+    if (ch == 23) return vec4(561.0, 138.0, 554.0, 17.0);
+    if (ch == 24) return vec4(132.0, 132.0, 554.0, 17.0);
+    if (ch == 25) return vec4(543.0, 136.0, 34.0, 31.0);
+    return vec4(0.0, 0.0, 0.0, 0.0);
 }
 
 float charPixel(int ch, float col, float row) {
-    vec2 data = charData(ch);
+    vec4 data = charData(ch);
     float rowIdx = floor(row);
-    float rowVal;
-    if (rowIdx < 4.0) {
-        rowVal = mod(floor(data.x / pow(32.0, rowIdx)), 32.0);
-    } else {
-        rowVal = mod(floor(data.y / pow(32.0, rowIdx - 4.0)), 32.0);
-    }
+    // Pick the packed pair (2 rows per component, w holds row 6)
+    float packed2;
+    if (rowIdx < 2.0)      packed2 = data.x;
+    else if (rowIdx < 4.0) packed2 = data.y;
+    else if (rowIdx < 6.0) packed2 = data.z;
+    else                   packed2 = data.w;
+    float rowVal = mod(floor(packed2 / pow(32.0, mod(rowIdx, 2.0))), 32.0);
     return mod(floor(rowVal / pow(2.0, 4.0 - floor(col))), 2.0);
 }
 

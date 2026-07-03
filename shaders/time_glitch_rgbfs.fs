@@ -25,7 +25,7 @@ float sdBoard(vec3 p) { return abs(p.y + 0.025) - 0.025; }
 
 // Horizontal trace at quantised Z position; extends full X range
 float sdHTrace(vec3 p, float sp) {
-    float zSlot  = round(p.z / sp);
+    float zSlot  = floor(p.z / sp + 0.5);
     float actv   = step(0.45, h11(zSlot * 5.37 + 11.0));    // ~55% present
     float dz     = abs(p.z - zSlot * sp) - 0.012;
     float dy     = abs(p.y - 0.038) - 0.016;
@@ -34,7 +34,7 @@ float sdHTrace(vec3 p, float sp) {
 
 // Vertical trace at quantised X position; extends full Z range
 float sdVTrace(vec3 p, float sp) {
-    float xSlot  = round(p.x / sp);
+    float xSlot  = floor(p.x / sp + 0.5);
     float actv   = step(0.45, h11(xSlot * 7.13 + 23.0));    // ~55% present
     float dx     = abs(p.x - xSlot * sp) - 0.012;
     float dy     = abs(p.y - 0.038) - 0.016;
@@ -43,8 +43,8 @@ float sdVTrace(vec3 p, float sp) {
 
 // Via pad at trace intersections (small disc extrusion)
 float sdVia(vec3 p, float sp) {
-    float xSlot = round(p.x / sp);
-    float zSlot = round(p.z / sp);
+    float xSlot = floor(p.x / sp + 0.5);
+    float zSlot = floor(p.z / sp + 0.5);
     bool  hPresent = h11(zSlot*5.37+11.0) > 0.45;
     bool  vPresent = h11(xSlot*7.13+23.0) > 0.45;
     if (!hPresent && !vPresent) return 1e4;

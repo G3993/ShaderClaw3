@@ -26,9 +26,10 @@
 
 #define R   RENDERSIZE.xy
 #define ss(a, b, t) smoothstep(a, b, t)
-#define A(p) texelFetch(bufA, ivec2(p), 0)
+// WebGL1: texelFetch unavailable — sample texel centers via texture2D.
+#define A(p) texture2D(bufA, (vec2(p) + 0.5) / R)
 
-const int   nParticles = 280;
+const int   nParticles = 200;
 const float minSep     = 33.0;
 const float rad        = 0.0075;
 const float obRad      = 45.0;

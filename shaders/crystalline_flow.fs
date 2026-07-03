@@ -36,7 +36,7 @@
 #define R    RENDERSIZE.xy
 #define ASP  (RENDERSIZE.x / RENDERSIZE.y)
 #define PI   3.1415926535
-#define COUNT 600
+#define COUNT 200
 
 // ---- hashing / noise (folded in from the original 'common' tab) ----
 vec2 hash22(vec2 p) {
@@ -63,7 +63,7 @@ float vnoise(vec3 x) {
 
 // glowing point kernel — the 1/dist falloff that gives sharp luminous cores
 float drawPoint(vec2 uv, vec2 p, float g, float sharp) {
-    return pow((0.005 * g) / max(length(uv - p), 1e-4), sharp);
+    return pow((0.0065 * g) / max(length(uv - p), 1e-4), sharp);
 }
 
 // reacts: movement, flow, energy, grain, palette, build-up, texture
@@ -80,8 +80,7 @@ void main() {
 
     // ───────── PASS 0 — particle simulation (simBuf) ─────────
     if (PASSINDEX == 0) {
-        ivec2 ip = ivec2(gl_FragCoord.xy);
-        vec4 s   = texelFetch(simBuf, ip, 0);
+        vec4 s = texture2D(simBuf, gl_FragCoord.xy / R);
 
         // seed: random position in centred aspect space, marked not-yet-alive
         if (FRAMEINDEX < 1) {
@@ -126,7 +125,7 @@ void main() {
 
         for (int i = 0; i < COUNT; i++) {
             if (float(i) >= nActive) break;
-            vec4 t = texelFetch(simBuf, ivec2(0, i), 0);
+            vec4 t = texture2D(simBuf, vec2(0.5, float(i) + 0.5) / R);
             vec2 p   = t.rg;
             float ang = t.b;
             float alive = t.a;

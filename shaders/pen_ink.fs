@@ -210,7 +210,8 @@ void main() {
     }
 
     // ── Watercolour mode (0) returns full colour and skips the ink path ──
-    if (inkMode == 0) {
+    int IM = int(inkMode + 0.5);
+    if (IM == 0) {
         vec3 wcol = watercolor(cc, uv, tone, imgCol, hasTex, t,
                                clamp(wetness, 0.0, 1.0),
                                clamp(edgeDarken, 0.0, 1.0),
@@ -234,7 +235,7 @@ void main() {
     float phase = t * (0.10 + drift * 0.4);
 
     float ink = 0.0;
-    if (inkMode == 1) {
+    if (IM == 1) {
         float h1 = hatchBand(driftUV, 0.0,       dens, phase,       thick);
         float h2 = hatchBand(driftUV, 0.7853981, dens, phase * 1.2, thick);
         float h3 = hatchBand(driftUV, 1.5707963, dens, phase * 0.8, thick);
@@ -244,9 +245,9 @@ void main() {
         float k3 = smoothstep(0.50, 0.70, tone);
         float k4 = smoothstep(0.70, 0.90, tone);
         ink = max(max(h1 * k1, h2 * k2), max(h3 * k3, h4 * k4));
-    } else if (inkMode == 2) {
+    } else if (IM == 2) {
         ink = stippleField(driftUV, dens * 1.2, tone, phase);
-    } else if (inkMode == 3) {
+    } else if (IM == 3) {
         ink = contourField(tone, dens * 0.9, thick) * (0.2 + tone * 0.8);
     } else {
         float wash = smoothstep(0.45, 0.95, tone) * 0.55;

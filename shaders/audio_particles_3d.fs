@@ -21,13 +21,14 @@
 
 // AUDIO PARTICLES 3D — Anadol/Gursky/Memo/Onformative references. Single-
 // pass ray-vs-particle field; universal camera + key/fill/amb/rim. LINEAR HDR.
-#define MAX_CLOUD 2000
-#define MAX_FORM  512
+// Mobile-safe loop caps (were 2000/512); point size + weight compensated below.
+#define MAX_CLOUD 240
+#define MAX_FORM  256
 #define MAX_STARS 180
 
-int   cloudCount(int t) { return t == 0 ? 600 : t == 1 ? 1100 : t == 2 ? 1600 : MAX_CLOUD; }
+int   cloudCount(int t) { return t == 0 ? 90 : t == 1 ? 140 : t == 2 ? 190 : MAX_CLOUD; }
 ivec3 gridDims  (int t) { return t == 0 ? ivec3(7,4,4) : t == 1 ? ivec3(8,5,5) : t == 2 ? ivec3(9,6,6) : ivec3(10,7,7); }
-int   formCount (int t) { return t == 0 ? 220 : t == 1 ? 320 : t == 2 ? 420 : MAX_FORM; }
+int   formCount (int t) { return t == 0 ? 140 : t == 1 ? 180 : t == 2 ? 220 : MAX_FORM; }
 int   starCount (int t) { return t == 0 ?  80 : t == 1 ? 120 : t == 2 ? 150 : MAX_STARS; }
 
 float h11(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
@@ -148,7 +149,7 @@ vec3 shade(vec3 base, vec3 n, vec3 v, vec3 kDir, vec3 kC, vec3 fC, float amb, fl
 vec3 evalCloud(vec3 ro, vec3 rd, float t, vec3 a, int N,
                vec3 kDir, vec3 kC, vec3 fC, float amb, float rimK) {
     vec3 emit = vec3(0.0);
-    float ps = 0.024, ps2 = ps * ps, cut = ps2 * 24.0;
+    float ps = 0.052, ps2 = ps * ps, cut = ps2 * 24.0;   // larger points compensate reduced count
     float sh = 1.0 + a.z * 1.4 * (0.5 + 0.5 * sin(t * 11.0 + ro.x * 2.0));
     for (int i = 0; i < MAX_CLOUD; i++) {
         if (i >= N) break;
@@ -159,7 +160,7 @@ vec3 evalCloud(vec3 ro, vec3 rd, float t, vec3 a, int N,
         float w  = exp(-d2 / (ps2 * 4.5)) * exp(-tca * 0.07);
         vec3 ct  = anadol(h11(fi * 3.7) + t * 0.012) * (0.7 + 0.6 * h11(fi * 1.91));
         vec3 lit = shade(ct * 0.6, pNormal(ro, rd, pp, tca), -rd, kDir, kC, fC, amb, rimK);
-        emit += (ct * 1.4 + lit) * w * sh;
+        emit += (ct * 1.4 + lit) * w * sh * 1.6;   // brightness compensation for lower count
     }
     return emit;
 }
@@ -186,7 +187,7 @@ vec3 evalGrid(vec3 ro, vec3 rd, float t, vec3 a, ivec3 dims,
 vec3 evalMemo(vec3 ro, vec3 rd, float t, vec3 a, int N,
               vec3 kDir, vec3 kC, vec3 fC, float amb, float rimK) {
     vec3 emit = vec3(0.0);
-    float ps = 0.028, ps2 = ps * ps, cut = ps2 * 22.0;
+    float ps = 0.036, ps2 = ps * ps, cut = ps2 * 22.0;   // compensate reduced form count
     float aAll = (a.x + a.y + a.z) * 0.33;
     for (int i = 0; i < MAX_FORM; i++) {
         if (i >= N) break;
@@ -224,15 +225,16 @@ vec3 evalConstellation(vec3 ro, vec3 rd, float t, vec3 a, int N) {
     float lb = 0.3 + a.y * 1.4 + a.x * 0.4;
     for (int i = 0; i < MAX_STARS; i++) {
         if (i >= N) break;
-        float bestD = 1e9; int bestJ = -1;
+        float bestD = 1e9; bool found = false;
+        vec3 bestP = vec3(0.0); vec3 bestT = vec3(0.0);
         for (int j = 0; j < MAX_STARS; j++) {
             if (j >= N) break;
             if (j <= i) continue;
             vec3 dp = pos[j] - pos[i]; float dd = dot(dp, dp);
-            if (dd < bestD) { bestD = dd; bestJ = j; }
+            if (dd < bestD) { bestD = dd; found = true; bestP = pos[j]; bestT = tnt[j]; }
         }
-        if (bestJ < 0 || bestD > 0.55 * 0.55) continue;
-        vec3 p0 = pos[i]; vec3 bv = pos[bestJ] - p0;
+        if (!found || bestD > 0.55 * 0.55) continue;
+        vec3 p0 = pos[i]; vec3 bv = bestP - p0;
         vec3 ao = p0 - ro; vec3 cr = cross(rd, bv);
         float den = dot(cr, cr);
         if (den < 1e-6) continue;
@@ -244,7 +246,7 @@ vec3 evalConstellation(vec3 ro, vec3 rd, float t, vec3 a, int N) {
         float lw = 0.0035;
         if (dseg2 > lw * 14.0) continue;
         float w = exp(-dseg2 / (lw * 1.4)) * exp(-s * 0.05);
-        emit += mix(tnt[i], tnt[bestJ], 0.5) * w * 0.42 * lb;
+        emit += mix(tnt[i], bestT, 0.5) * w * 0.42 * lb;
     }
     return emit;
 }

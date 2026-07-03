@@ -373,22 +373,24 @@ void main() {
         for (int i = 0; i < MAX_NODES; i++) {
             if (i >= planeN) break;
             // Find two nearest neighbours j > i (avoids double-segment).
+            // (GLSL ES 1.0: capture neighbour positions in-loop — no dynamic index.)
             float d1 = 1e6, d2 = 1e6;
             int   k1 = -1, k2 = -1;
+            vec2  p1 = vec2(0.0), p2 = vec2(0.0);
             for (int j = 0; j < MAX_NODES; j++) {
                 if (j >= planeN) break;
                 if (j == i) continue;
                 float dd = length(pos[i] - pos[j]);
-                if (dd < d1) { d2 = d1; k2 = k1; d1 = dd; k1 = j; }
-                else if (dd < d2) { d2 = dd; k2 = j; }
+                if (dd < d1) { d2 = d1; k2 = k1; p2 = p1; d1 = dd; k1 = j; p1 = pos[j]; }
+                else if (dd < d2) { d2 = dd; k2 = j; p2 = pos[j]; }
             }
             // Only draw j>i to avoid duplicates.
             if (k1 > i) {
-                float ds = segDist(p, pos[i], pos[k1]) - lw;
+                float ds = segDist(p, pos[i], p1) - lw;
                 planeEdge = smin(planeEdge, ds, lw * 1.4);
             }
             if (k2 > i) {
-                float ds = segDist(p, pos[i], pos[k2]) - lw;
+                float ds = segDist(p, pos[i], p2) - lw;
                 planeEdge = smin(planeEdge, ds, lw * 1.4);
             }
         }
@@ -478,7 +480,7 @@ void main() {
             // Glyph metrics — fit shown chars across most of the canvas.
             float pad  = 0.04 * aspect;
             float boxW = aspect * 0.92;
-            int   maxRow = min(shown, 36);
+            int   maxRow = int(min(float(shown), 36.0));
             float gw   = boxW / float(maxRow);
             float gh   = gw * (7.0 / 5.0);
             // Band is sized to FULLY contain the glyph cell (was 0.05

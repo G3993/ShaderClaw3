@@ -2,7 +2,7 @@
   "CATEGORIES": ["Generator", "Atmospheric", "Audio Reactive"],
   "DESCRIPTION": "Spiral galaxy disc with N rotating star particles plotted along log-spiral arms. Stars get blue-O type at the disc outskirts and yellow-G type near the bulge. Bass kicks ignite supernova flashes; treble drives nebular gas glow. Bulge is a hot warm-tinted core; halo is a faint diffuse Hubble-deep-field star field",
   "INPUTS": [
-    { "NAME": "particleCount",   "LABEL": "Particles",        "TYPE": "float", "MIN": 50.0,  "MAX": 2000.0, "DEFAULT": 600.0 },
+    { "NAME": "particleCount",   "LABEL": "Particles",        "TYPE": "float", "MIN": 50.0,  "MAX": 240.0, "DEFAULT": 200.0 },
     { "NAME": "armCount",        "LABEL": "Arms",             "TYPE": "float", "MIN": 2.0,   "MAX": 4.0,    "DEFAULT": 2.0 },
     { "NAME": "spiralTightness", "LABEL": "Spiral Tightness", "TYPE": "float", "MIN": 0.10,  "MAX": 0.60,   "DEFAULT": 0.28 },
     { "NAME": "rotationSpeed",   "LABEL": "Rotation Speed",   "TYPE": "float", "MIN": 0.0,   "MAX": 1.0,    "DEFAULT": 0.18 },
@@ -160,12 +160,13 @@ void main() {
     }
 
     // ---- Star particles ----
-    int N = int(clamp(particleCount, 50.0, 2000.0));
+    // Mobile cap: 240 stars max (was 2000); bigger star radius keeps density.
+    int N = int(clamp(particleCount, 50.0, 240.0));
     float invMin = 1.0 / min(res.x, res.y);
-    float pixSize = starSize * 1.6 * invMin;     // base star radius in uv units
+    float pixSize = starSize * 2.4 * invMin;     // base star radius in uv units
     float pixSize2 = pixSize * pixSize;
 
-    for (int i = 0; i < 2000; i++) {
+    for (int i = 0; i < 240; i++) {
         if (i >= N) break;
         float fi = float(i);
 

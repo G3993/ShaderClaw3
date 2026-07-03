@@ -189,7 +189,7 @@ void main() {
             int  digIdx = sub - 6;
             float d = hash11(tSeed * 23.7 + float(sub)
                            + floor(TIME * 1.5));
-            a = drawDigit(cuv, int(d * 10.0) % 10);
+            a = drawDigit(cuv, int(mod(floor(d * 10.0), 10.0)));
         }
 
         // Tint by direction
