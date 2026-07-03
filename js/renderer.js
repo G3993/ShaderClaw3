@@ -5,9 +5,29 @@
 function _tryGetWebGL(canvas) {
   const isMobile = window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
   const power = isMobile ? 'default' : 'high-performance';
-  return canvas.getContext('webgl', { antialias: false, preserveDrawingBuffer: true, powerPreference: power, failIfMajorPerformanceCaveat: false })
+  const gl = canvas.getContext('webgl', { antialias: false, preserveDrawingBuffer: true, powerPreference: power, failIfMajorPerformanceCaveat: false })
       || canvas.getContext('webgl', { antialias: false, preserveDrawingBuffer: true, failIfMajorPerformanceCaveat: false })
       || canvas.getContext('experimental-webgl', { antialias: false, preserveDrawingBuffer: true });
+  // fwidth/dFdx/dFdy support (shaders opt in with #extension via isf.js header)
+  if (gl) gl.getExtension('OES_standard_derivatives');
+  return gl;
+}
+
+// Upload the Audio Feature Bus (computed in audio.js) + msgAge to whichever
+// program the caller's loc-resolver points at. Cheap: only sets uniforms the
+// shader actually declares (loc lookup is cached by the resolvers).
+function _uploadAudioBus(gl, locFn) {
+  const bus = (typeof window !== 'undefined' && window._audioBus) || null;
+  if (bus) {
+    const fl = bus.floats;
+    for (const k in fl) { const loc = locFn(k); if (loc) gl.uniform1f(loc, fl[k]); }
+    for (const k in bus.vec2) { const loc = locFn(k); if (loc) gl.uniform2fv(loc, bus.vec2[k]); }
+    for (const k in bus.vec3) { const loc = locFn(k); if (loc) gl.uniform3fv(loc, bus.vec3[k]); }
+    for (const k in bus.vec4) { const loc = locFn(k); if (loc) gl.uniform4fv(loc, bus.vec4[k]); }
+  }
+  // msgAge: -1 = static message (no live utterance)
+  const mLoc = locFn('msgAge');
+  if (mLoc) gl.uniform1f(mLoc, (typeof window !== 'undefined' && typeof window._msgAge === 'number') ? window._msgAge : -1.0);
 }
 
 async function _getWebGLWithRetry(canvas, maxRetries, dbg) {
@@ -319,13 +339,8 @@ class Renderer {
     if (bgAm) gl.uniform1f(bgAm, audioMid);
     const bgAh = this._getBgLoc('audioHigh');
     if (bgAh) gl.uniform1f(bgAh, audioHigh);
-    // Advanced audio uniforms
-    const bgBh = this._getBgLoc('audioBassHit'); if (bgBh) gl.uniform1f(bgBh, typeof audioBassHit !== 'undefined' ? audioBassHit : 0);
-    const bgMh = this._getBgLoc('audioMidHit');  if (bgMh) gl.uniform1f(bgMh, typeof audioMidHit !== 'undefined' ? audioMidHit : 0);
-    const bgHh = this._getBgLoc('audioHighHit'); if (bgHh) gl.uniform1f(bgHh, typeof audioHighHit !== 'undefined' ? audioHighHit : 0);
-    const bgBt = this._getBgLoc('audioBassTime'); if (bgBt) gl.uniform1f(bgBt, typeof audioBassTime !== 'undefined' ? audioBassTime : 0);
-    const bgMt = this._getBgLoc('audioMidTime');  if (bgMt) gl.uniform1f(bgMt, typeof audioMidTime !== 'undefined' ? audioMidTime : 0);
-    const bgHt = this._getBgLoc('audioHighTime'); if (bgHt) gl.uniform1f(bgHt, typeof audioHighTime !== 'undefined' ? audioHighTime : 0);
+    // Audio Feature Bus (native parity) + msgAge
+    _uploadAudioBus(gl, (n) => this._getBgLoc(n));
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuf);
     gl.enableVertexAttribArray(0);
@@ -429,13 +444,8 @@ class Renderer {
     if (amLoc) gl.uniform1f(amLoc, audioMid);
     const ahLoc = this._getLoc('audioHigh');
     if (ahLoc) gl.uniform1f(ahLoc, audioHigh);
-    // Advanced audio uniforms
-    const bh2 = this._getLoc('audioBassHit'); if (bh2) gl.uniform1f(bh2, typeof audioBassHit !== 'undefined' ? audioBassHit : 0);
-    const mh2 = this._getLoc('audioMidHit');  if (mh2) gl.uniform1f(mh2, typeof audioMidHit !== 'undefined' ? audioMidHit : 0);
-    const hh2 = this._getLoc('audioHighHit'); if (hh2) gl.uniform1f(hh2, typeof audioHighHit !== 'undefined' ? audioHighHit : 0);
-    const bt2 = this._getLoc('audioBassTime'); if (bt2) gl.uniform1f(bt2, typeof audioBassTime !== 'undefined' ? audioBassTime : 0);
-    const mt2 = this._getLoc('audioMidTime');  if (mt2) gl.uniform1f(mt2, typeof audioMidTime !== 'undefined' ? audioMidTime : 0);
-    const ht2 = this._getLoc('audioHighTime'); if (ht2) gl.uniform1f(ht2, typeof audioHighTime !== 'undefined' ? audioHighTime : 0);
+    // Audio Feature Bus (native parity) + msgAge
+    _uploadAudioBus(gl, (n) => this._getLoc(n));
 
     // Variable font texture (for Text shader effects 20 + 22)
     const vfLoc = this._getLoc('varFontTex');
@@ -979,13 +989,8 @@ class Renderer {
     if (amLoc) gl.uniform1f(amLoc, audioMid);
     const ahLoc = this._getLayerLoc(layer, 'audioHigh');
     if (ahLoc) gl.uniform1f(ahLoc, audioHigh);
-    // Advanced audio uniforms
-    const bh3 = this._getLayerLoc(layer, 'audioBassHit'); if (bh3) gl.uniform1f(bh3, typeof audioBassHit !== 'undefined' ? audioBassHit : 0);
-    const mh3 = this._getLayerLoc(layer, 'audioMidHit');  if (mh3) gl.uniform1f(mh3, typeof audioMidHit !== 'undefined' ? audioMidHit : 0);
-    const hh3 = this._getLayerLoc(layer, 'audioHighHit'); if (hh3) gl.uniform1f(hh3, typeof audioHighHit !== 'undefined' ? audioHighHit : 0);
-    const bt3 = this._getLayerLoc(layer, 'audioBassTime'); if (bt3) gl.uniform1f(bt3, typeof audioBassTime !== 'undefined' ? audioBassTime : 0);
-    const mt3 = this._getLayerLoc(layer, 'audioMidTime');  if (mt3) gl.uniform1f(mt3, typeof audioMidTime !== 'undefined' ? audioMidTime : 0);
-    const ht3 = this._getLayerLoc(layer, 'audioHighTime'); if (ht3) gl.uniform1f(ht3, typeof audioHighTime !== 'undefined' ? audioHighTime : 0);
+    // Audio Feature Bus (native parity) + msgAge
+    _uploadAudioBus(gl, (n) => this._getLayerLoc(layer, n));
 
     // Variable font texture (effects 20 + 22)
     const vfLoc = this._getLayerLoc(layer, 'varFontTex');
@@ -1124,12 +1129,7 @@ class Renderer {
     const mpAbLoc = this._getLayerLoc(layer, 'audioBass');  if (mpAbLoc) gl.uniform1f(mpAbLoc, audioBass);
     const mpAmLoc = this._getLayerLoc(layer, 'audioMid');   if (mpAmLoc) gl.uniform1f(mpAmLoc, audioMid);
     const mpAhLoc = this._getLayerLoc(layer, 'audioHigh');  if (mpAhLoc) gl.uniform1f(mpAhLoc, audioHigh);
-    const mpBhLoc = this._getLayerLoc(layer, 'audioBassHit');  if (mpBhLoc) gl.uniform1f(mpBhLoc, typeof audioBassHit !== 'undefined' ? audioBassHit : 0);
-    const mpMhLoc = this._getLayerLoc(layer, 'audioMidHit');   if (mpMhLoc) gl.uniform1f(mpMhLoc, typeof audioMidHit !== 'undefined' ? audioMidHit : 0);
-    const mpHhLoc = this._getLayerLoc(layer, 'audioHighHit');  if (mpHhLoc) gl.uniform1f(mpHhLoc, typeof audioHighHit !== 'undefined' ? audioHighHit : 0);
-    const mpBtLoc = this._getLayerLoc(layer, 'audioBassTime'); if (mpBtLoc) gl.uniform1f(mpBtLoc, typeof audioBassTime !== 'undefined' ? audioBassTime : 0);
-    const mpMtLoc = this._getLayerLoc(layer, 'audioMidTime');  if (mpMtLoc) gl.uniform1f(mpMtLoc, typeof audioMidTime !== 'undefined' ? audioMidTime : 0);
-    const mpHtLoc = this._getLayerLoc(layer, 'audioHighTime'); if (mpHtLoc) gl.uniform1f(mpHtLoc, typeof audioHighTime !== 'undefined' ? audioHighTime : 0);
+    _uploadAudioBus(gl, (n) => this._getLayerLoc(layer, n));
     // FFT texture
     const mpFftLoc = this._getLayerLoc(layer, 'audioFFT');
     if (mpFftLoc && audioFFTGLTexture) {

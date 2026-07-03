@@ -293,11 +293,57 @@ function buildFragmentShader(source) {
 
   // Conditionally declare ALL uniforms — only if the shader body references them
   // This minimizes uniform count for mobile GPUs
-  const cond = (decl, name) => glslBody.includes(name) ? decl : '';
+  // Helper functions imply their dependency uniforms; inputs already declare
+  // their own uniform, so bus names that collide with an INPUT are skipped.
+  let _implied = '';
+  if (/\baudioSpectrum\s*\(/.test(glslBody)) _implied += ' audioFFT';
+  if (/\baudioKick\s*\(/.test(glslBody)) _implied += ' audioBeatPulse';
+  if (/\baudioHit\s*\(/.test(glslBody)) _implied += ' audioOnset';
+  if (/\baudioBreath\s*\(/.test(glslBody)) _implied += ' audioLevel';
+  if (/\baudioPalette\s*\(/.test(glslBody)) _implied += ' audioPalShadow audioPalMid audioPalHigh audioPalAccent audioBeat';
+  const _refText = glslBody + _implied;
+  const _inputNames = new Set((parsed.inputs || []).map((i) => i.NAME));
+  const cond = (decl, name) => (_refText.includes(name) && !_inputNames.has(name)) ? decl : '';
+
+  // GLSL ES 1.0 needs an explicit extension for fwidth/dFdx/dFdy
+  const usesDerivatives = /\b(fwidth|dFdx|dFdy)\s*\(/.test(glslBody);
+  // Shaders written against desktop GLSL 330 (native Easel) call texture();
+  // map the 2-arg form onto texture2D for WebGL1.
+  const usesGL3Texture = /\btexture\s*\(/.test(glslBody);
+
+  // Audio Feature Bus — parity with native Easel (ShaderSource.cpp).
+  // Declared conditionally so mobile uniform counts stay minimal.
+  const AUDIO_BUS_FLOATS = [
+    'audioSub', 'audioLowMid', 'audioHighMid', 'audioTreble', 'audioPunch',
+    'audioBeat', 'audioBeatPhase', 'audioBeatPulse', 'audioBarPhase', 'audioBPM', 'audioTempo01',
+    'audioBrightness', 'audioSpread', 'audioRolloff', 'audioFlatness', 'audioTexture',
+    'audioFlux', 'audioOnset', 'audioOnsetRate', 'audioTilt', 'audioZCR',
+    'audioValence', 'audioArousal', 'audioTension', 'audioWarmth', 'audioSoftness', 'audioRoughness', 'audioCharm',
+    'audioEnergy', 'audioEnergyVel', 'audioEnergyAcc', 'audioBuildup', 'audioBuildupRate', 'audioDrop',
+    'audioNovelty', 'audioSectionPhase', 'audioSectionAge', 'audioLayers', 'audioDensity',
+    'audioPalTemp', 'audioPalSat', 'audioDominantPitch', 'audioMajorMinor', 'audioHCDF',
+    'audioBassHit', 'audioMidHit', 'audioHighHit', 'audioBassTime', 'audioMidTime', 'audioHighTime',
+  ];
+  const AUDIO_BUS_VECS = [
+    ['vec2', 'audioMood'], ['vec4', 'audioPresence'], ['vec2', 'audioFlow'],
+    ['vec3', 'audioPalShadow'], ['vec3', 'audioPalMid'], ['vec3', 'audioPalHigh'], ['vec3', 'audioPalAccent'],
+  ];
+
+  // Audio helper functions (native parity) — injected only when referenced
+  const audioHelperFns = [];
+  if (/\baudioSpectrum\s*\(/.test(glslBody)) audioHelperFns.push('float audioSpectrum(float f){ return texture2D(audioFFT, vec2(clamp(f,0.0,1.0),0.5)).r; }');
+  if (/\baudioKick\s*\(/.test(glslBody)) audioHelperFns.push('float audioKick(){ return audioBeatPulse; }');
+  if (/\baudioHit\s*\(/.test(glslBody)) audioHelperFns.push('float audioHit(){ return audioOnset; }');
+  if (/\baudioBreath\s*\(/.test(glslBody)) audioHelperFns.push('float audioBreath(){ return pow(max(audioLevel,0.0),0.6); }');
+  if (/\baudioAlive\s*\(/.test(glslBody)) audioHelperFns.push('float audioAlive(float rest,float drive,float amount){ return rest+drive*amount; }');
+  if (/\baudioPalette\s*\(/.test(glslBody)) audioHelperFns.push('vec3 audioPalette(float t){ t=clamp(t,0.0,1.0); vec3 c=(t<0.5)?mix(audioPalShadow,audioPalMid,t*2.0):mix(audioPalMid,audioPalHigh,t*2.0-1.0); return mix(c,audioPalAccent,audioBeat*smoothstep(0.6,1.0,t)*0.6); }');
 
   const headerParts = [
+    usesDerivatives ? '#extension GL_OES_standard_derivatives : enable' : '',
     'precision mediump float;',
     'precision mediump int;',
+    usesGL3Texture ? '#define texture(s, c) texture2D(s, c)' : '',
+    glslBody.includes('IMG_SIZE(') ? '#define IMG_SIZE(img) RENDERSIZE' : '',
     'uniform float TIME;',
     'uniform float TIMEDELTA;',
     'uniform vec2 RENDERSIZE;',
@@ -321,6 +367,11 @@ function buildFragmentShader(source) {
     cond('uniform float audioBass;', 'audioBass'),
     cond('uniform float audioMid;', 'audioMid'),
     cond('uniform float audioHigh;', 'audioHigh'),
+    // Audio Feature Bus (native Easel parity) — see AudioFeatures in easel/src
+    ...AUDIO_BUS_FLOATS.map((n) => cond(`uniform float ${n};`, n)),
+    ...AUDIO_BUS_VECS.map(([t, n]) => cond(`uniform ${t} ${n};`, n)),
+    // Voice / cue message age (native parity; -1 = static, >=0 = live utterance)
+    cond('uniform float msgAge;', 'msgAge'),
     // Font textures
     cond('uniform sampler2D varFontTex;', 'varFontTex'),
     cond('uniform sampler2D fontAtlasTex;', 'fontAtlasTex'),
@@ -339,6 +390,8 @@ function buildFragmentShader(source) {
     // Layer compositing
     'uniform float _transparentBg;',
     ...uniformLines,
+    // Audio helper functions (native parity) — after uniforms so deps resolve
+    ...audioHelperFns,
     ''
   ].filter(Boolean);
 

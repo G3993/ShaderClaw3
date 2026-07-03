@@ -2386,5 +2386,31 @@
     "id": 1212,
     "title": "Grass Wave 3D",
     "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "3D",
+      "Nature",
+      "Audio Reactive"
+    ],
+    "description": "Water Drop — a single droplet bobs and merges into a calm pool, sending soft concentric ripples across a raymarched water surface that reflects and refracts the sky. Grayscale-elegant by default; tint to color it. Bass punches the drop impact + ripple amplitude, mid agitates the surface, treble shimmers the specular. Optional image becomes the equirectangular sky the water reflects/refracts.",
+    "file": "water_drop.fs",
+    "id": 1213,
+    "title": "Water Drop",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "3D",
+      "Abstract",
+      "Audio Reactive"
+    ],
+    "description": "Turbulence Flight — a glowing volumetric ride through a rotating turbulent field (after a Xor commented raymarcher). 100 raymarch steps accumulate neon glow off a sine-warped plane; nested doubling frequencies fold the space while a slow rotation tumbles it. Bass swells the warp + glow, mid spins it faster, treble shimmers the detail. Optional image tints the glow in screen space.",
+    "file": "turbulence_flight.fs",
+    "id": 1214,
+    "title": "Turbulence Flight",
+    "type": "generator"
   }
 ]
