@@ -57,7 +57,7 @@ float sdCrystals(vec3 p, float bass) {
             float r = 0.06 + h21(cell + vec2(1.1, 2.3)) * 0.08;
             float grow = 0.4 + h21(cell + vec2(3.7, 1.5)) * 0.55;
             // Audio breathing: crystal height pulses with bass
-            grow *= 1.0 + bass * 0.12;
+            grow *= 1.0 + bass * 0.35;
 
             // Floor column (growing up)
             {
@@ -77,7 +77,7 @@ float sdCrystals(vec3 p, float bass) {
                 float cx2 = (fx + 0.5) * sp + (h21(cell2 + vec2(0.4,1.6)) - 0.5) * 0.4;
                 float cz2 = (fz + 0.5) * sp + (h21(cell2 + vec2(2.2,0.7)) - 0.5) * 0.4;
                 float r2  = 0.05 + h21(cell2 + vec2(4.1,0.2)) * 0.07;
-                float grow2 = (0.3 + h21(cell2 + vec2(1.8,3.3)) * 0.45) * (1.0 + bass*0.10);
+                float grow2 = (0.3 + h21(cell2 + vec2(1.8,3.3)) * 0.45) * (1.0 + bass*0.30);
                 vec3 q2 = p - vec3(cx2, caveHeight, cz2);
                 // flip Y for ceiling crystal
                 q2.y = -q2.y;
@@ -169,7 +169,7 @@ void main() {
             lit += crystalCol * sss * (1.0 + bass * 0.5);
             // Audio-reactive rim
             float rim = pow(1.0 - max(dot(n, v), 0.0), 2.0);
-            lit += crystalCol * rim * 0.6 * (1.0 + high * 0.5);
+            lit += crystalCol * rim * 0.6 * (1.0 + high * 1.4);
             col = lit;
         } else {
             // Cave wall: dark wet rock, slight green bioluminescent tint
@@ -193,7 +193,8 @@ void main() {
 
     // Ambient crystal light — faint emerald/amethyst breath
     float breath = 0.5 + 0.5 * sin(TIME * 0.5);
-    col += mix(crystalColor1.rgb, crystalColor2.rgb, breath) * 0.018 * (1.0 + bass * 0.5);
+    col += mix(crystalColor1.rgb, crystalColor2.rgb, breath) * 0.018 * (1.0 + bass * 2.0);
+    col *= 1.0 + bass * 0.18;
 
     // LINEAR HDR — no tonemap, no clamp
     gl_FragColor = vec4(col, 1.0);

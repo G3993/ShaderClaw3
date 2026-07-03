@@ -137,17 +137,17 @@ void main() {
         // Core injection near each seed centre (the original's smoothstep
         // ridge) — scaled by audio so beats deposit fresh mass.
         float core = smoothstep(4.0, 0.0, length(U - c));
-        Q.zw = max(Q.zw, vec2(2.0, 1.0) * core * (1.0 + 1.2 * aB));
+        Q.zw = max(Q.zw, vec2(2.0, 1.0) * core * (1.0 + 2.4 * aB));
 
         // Global audio pump: louder = more energy everywhere (whole-field pulse).
-        Q.w += aL * 0.04;
+        Q.w += aL * 0.10;
 
         // Advect the seed along the mass gradient → organic wobble.
         Q.xy -= advect * g;
 
         // Continuous flow field — drift + swirl the seeds every frame so the
         // whole cell field churns instead of settling. Bass surges the flow.
-        Q.xy += flow * (1.0 + 1.5 * aB) * flowField(U, TIME);
+        Q.xy += flow * (1.0 + 2.8 * aB) * flowField(U, TIME);
         Q.xy = clamp(Q.xy, vec2(1.0), R - 1.0);
 
         gl_FragColor = Q;
@@ -180,6 +180,10 @@ void main() {
     Q *= 0.85 + 0.30 * exp(-4.0 * d * d);
 
     vec3 col = clamp(Q.rgb, 0.0, 4.0);
+
+    // Audio punch: direct energy lift so a beat reads immediately on screen,
+    // independent of how far the sim buffer's mass has propagated yet.
+    col *= 1.0 + 0.55 * aB + 0.35 * aL;
 
     // ── USER IMAGE MOSAIC ──────────────────────────────────────────────
     // Each cell samples the image at its OWN seed coordinate (a.xy), so the

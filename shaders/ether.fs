@@ -67,7 +67,7 @@ vec3 chromaticShimmer(vec2 uv, float t) {
 
 void main() {
     // ── Audio ──────────────────────────────────────────────────────────
-    float audioPulse = 1.0 + audioBass * audioReact * 0.25;
+    float audioPulse = 1.0 + audioBass * audioReact * 0.6;
     float t = TIME * speed * audioPulse;
 
     vec2 uv = gl_FragCoord.xy / RENDERSIZE;
@@ -150,11 +150,11 @@ void main() {
     }
 
     // ── Audio brightness & HDR peaks ─────────────────────────────────
-    cl *= brightness * (0.85 + audioLevel * audioReact * 0.30);
+    cl *= brightness * (0.85 + audioLevel * audioReact * 0.55);
 
     float lum = dot(cl, vec3(0.299, 0.587, 0.114));
     float peakMask    = smoothstep(0.55, 1.1, lum);
-    float audioPeakLift = 1.0 + audioBass * audioReact * 0.45 * peakMask;
+    float audioPeakLift = 1.0 + audioBass * audioReact * 0.85 * peakMask;
     cl *= 1.0 + peakMask * 0.85;
     cl *= audioPeakLift;
 

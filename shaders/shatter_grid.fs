@@ -99,6 +99,15 @@ void main() {
     float burst    = clamp(kick * accent * audio, 0.0, 2.0);
     float ease     = burst * explodeStrength;
 
+    // ── Real audio drive — layered on top of the synthetic kick so the
+    // grid still shatters on its own four-on-the-floor pulse in silence,
+    // but genuinely responds (bigger, more frequent bursts) to actual
+    // bass hits / beat pulses when audio is present.
+    float realKick = clamp(audioBass, 0.0, 1.0) * 1.4
+                   + clamp(audioBeatPulse, 0.0, 1.0) * 1.1
+                   + clamp(audioLevel, 0.0, 1.0) * 0.4;
+    ease += realKick * explodeStrength * audio;
+
     // ── Continuous slow drift (keeps grid alive in silence) ──────────
     float driftAmp = 0.004;
     vec2  drift    = vec2(sin(t * 0.31), cos(t * 0.27)) * driftAmp;

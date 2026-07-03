@@ -5,9 +5,9 @@
   "INPUTS": [
     { "NAME": "msg", "TYPE": "text", "DEFAULT": "DESIGN DEMOCRACY", "MAX_LENGTH": 48, "BIND": "cue.latest" },
 
-    { "NAME": "cardA",   "LABEL": "Card A · Stem",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "BIND": "player[1].energy" },
-    { "NAME": "cardB",   "LABEL": "Card B · Cherry", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "BIND": "player[2].energy" },
-    { "NAME": "cardC",   "LABEL": "Card C · Ticket", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "BIND": "player[3].active" },
+    { "NAME": "cardA",   "LABEL": "Card A · Stem",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.3, "BIND": "player[1].energy" },
+    { "NAME": "cardB",   "LABEL": "Card B · Cherry", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.3, "BIND": "player[2].energy" },
+    { "NAME": "cardC",   "LABEL": "Card C · Ticket", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "BIND": "player[3].active" },
     { "NAME": "bassPulse","LABEL": "Cone · Bass Breath","TYPE": "float","MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.8, "BIND": "audio.bass" },
 
     { "NAME": "shapeVariant","LABEL": "Hero Shape", "TYPE": "long", "DEFAULT": 0, "VALUES": [0,1,2], "LABELS": ["Cone","Capsule","Prism"] },
@@ -380,7 +380,10 @@ void main(){
 
     gT      = TIME * motion;
     gMotion = motion;
-    gBass   = clamp(bassPulse * audioDepth, 0.0, 2.5);
+    // bassPulse is host-BIND'd (audio.bass) — wire the engine's live bass
+    // uniform in directly too so the cone breathes out of the box even
+    // without the host BIND (preview/eval).
+    gBass   = clamp((bassPulse + audioBass * 0.9) * audioDepth, 0.0, 2.5);
     gSpin   = coneSpin;
     gShape  = int(shapeVariant);
 
@@ -435,10 +438,13 @@ void main(){
 
         // Audio-channel routing — first three cards bind to player[1..3],
         // remaining cards inherit the bass pulse so they breathe in time.
+        // cardA/cardB/cardC are host-BIND'd (player[n].energy/active) — wire
+        // the engine's own bands in as a fallback so cards visibly separate
+        // with the mix out of the box, not just with a mic'd player.
         float energy = 0.0;
-        if (i == 0) energy = cardA;
-        else if (i == 1) energy = cardB;
-        else if (i == 2) energy = cardC;
+        if (i == 0) energy = clamp(cardA + audioBass * 0.5, 0.0, 1.5);
+        else if (i == 1) energy = clamp(cardB + audioMid  * 0.5, 0.0, 1.5);
+        else if (i == 2) energy = clamp(cardC + audioHigh * 0.5, 0.0, 1.5);
         else energy = 0.4 * gBass;
 
         // Spawn-in pop: cards with low energy idle small; loud energy
@@ -590,6 +596,10 @@ void main(){
     // gentle bloom on near-white card highlights
     float L = dot(col, vec3(0.299,0.587,0.114));
     col += smoothstep(0.78, 1.20, L) * 0.20 * col;
+
+    // Audio-bound global pulse — the whole collage visibly breathes with
+    // the live bass band, not just the cone's own breathing above.
+    col *= 1.0 + 0.34 * clamp(gBass, 0.0, 2.5);
 
     // tone
     col = col / (1.0 + 0.55*col);

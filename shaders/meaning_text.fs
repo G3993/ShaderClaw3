@@ -458,7 +458,9 @@ float renderUnderline(vec2 p, float xMin, float xMax, float baseY) {
     // wavy displacement — low-freq sine + small noise wobble, driven
     // by audio.bass × underlineWave so the line breathes audibly.
     float t = TIME * 0.8;
-    float amp = 0.010 + 0.014 * underlineWave * clamp(bassDrive, 0.0, 1.5);
+    // bassDrive is the breathe-amount knob; audioBass is the live engine
+    // audio-bus signal, so the wobble actually tracks the real mix.
+    float amp = 0.010 + 0.014 * underlineWave * clamp(bassDrive * (0.3 + 0.7 * audioBass), 0.0, 1.5);
     float wave = amp * sin((p.x - xMin) * 9.0 + t)
                + 0.6 * amp * sin((p.x - xMin) * 23.0 - t * 1.7);
     // also dotted in places — emulate the reference's broken underline
@@ -492,8 +494,8 @@ void main() {
     float vig = 1.0 - 0.20 * dot(p, p);
     paper *= vig;
     // bass-driven warm tint — when the room is loud, the page warms
-    float warm = clamp(bassDrive, 0.0, 1.5);
-    paper = mix(paper, paper * vec3(1.04, 1.00, 0.96), warm * 0.18);
+    float warm = clamp(bassDrive * (0.3 + 0.7 * audioBass), 0.0, 1.5);
+    paper = mix(paper, paper * vec3(1.04, 1.00, 0.96), warm * 0.42);
 
     vec3 col = paper;
     float bloomMask = 0.0;
@@ -650,6 +652,9 @@ void main() {
     // soft global vignette
     col *= 1.0 - 0.10 * dot(p * vec2(1.0 / max(aspect, 0.5), 1.0),
                             p * vec2(1.0 / max(aspect, 0.5), 1.0));
+
+    // bass punch — the whole page warms/lifts a touch louder than the room
+    col *= 1.0 + 1.9 * (warm - 0.24);
 
     // tonemap + slight gamma
     col = col / (1.0 + 0.55 * col);

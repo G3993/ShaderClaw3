@@ -475,9 +475,13 @@ void main() {
 
     float speed   = max(motionSpeed, 0.0);
     float tilt    = max(tiltAmount, 0.0);
+    // Routing fix: bassDrive/midDrive are BIND'd knobs (audio.bass/audio.mid)
+    // that only move when a host wires live audio into them. Fold in the
+    // raw engine audioBass/audioMid bus directly so tilt-shudder + palette
+    // swap rate respond out of the box.
     float swap    = max(swapRate, 0.0)
-                  + 0.4 * clamp(midDrive, 0.0, 1.0);
-    float bassA   = clamp(bassDrive * audioDepth, 0.0, 1.0);
+                  + 0.4 * clamp(max(midDrive, audioMid), 0.0, 1.0);
+    float bassA   = clamp(max(bassDrive, audioBass) * audioDepth, 0.0, 1.0);
 
     // ── Paper backdrop (warm, slightly vignetted, faint tooth) ──
     vec3 paper = paperColor.rgb;

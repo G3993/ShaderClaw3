@@ -256,7 +256,7 @@ void main() {
     shaded *= mix(0.25, 1.0, gutter);
 
     // ===== Audio level overall gain =====
-    shaded *= (1.0 + level * 0.3);
+    shaded *= (1.0 + level * 0.5);
 
     // ===== Sunken tile floor: blend toward background =====
     float sunken = 1.0 - parity;

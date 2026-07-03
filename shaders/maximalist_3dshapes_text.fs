@@ -222,7 +222,7 @@ float shapeMapOne(int i, vec3 p, out float mOut){
     // independent rotation per shape
     q.xz = rot2(t*0.6 + fi)*q.xz;
     q.yz = rot2(t*0.4 + fi*0.7)*q.yz;
-    float scale = mix(0.28, 0.62, s1.y) * (1.0 + 0.10*gBass);
+    float scale = mix(0.28, 0.62, s1.y) * (1.0 + 0.70*gBass);
     float d;
     if (kind == 0)      d = sdSphere(q, scale);
     else if (kind == 1) d = sdTorus(q, vec2(scale*0.85, scale*0.32));
@@ -436,7 +436,7 @@ float lightning(vec2 p){
     halo *= smoothstep(0.60, 0.32, p.y);
     float intensity = core + halo;
     // bass-driven double pulse
-    intensity *= (0.85 + 0.5*gBass);
+    intensity *= (0.60 + 1.5*gBass);
     return clamp(intensity, 0.0, 1.0);
 }
 
@@ -494,7 +494,7 @@ void main() {
     // ─── raymarch the 3D shape swarm (BEHIND the cutouts) ───
     // Camera at z=4 looking at origin; orthographic-ish narrow FOV
     // to keep shapes filling the frame without extreme perspective.
-    vec3 ro = vec3(0.0, 0.0, 4.2);
+    vec3 ro = vec3(0.0, 0.0, 4.2 - 1.6*gBass);
     vec3 rd = normalize(vec3(p.x*1.3, p.y*1.3, -1.5));
     float tt = 0.0;
     bool hit = false;
@@ -726,6 +726,9 @@ void main() {
             }
         }
     }
+
+    // ─── bass punch — whole-poster exposure lift that breathes with the mix ───
+    col *= 1.0 + 1.6 * (gBass - 0.10);
 
     // ─── grain + vignette ───
     float gn = (h12(gl_FragCoord.xy + gT) - 0.5) * 0.10 * grain;

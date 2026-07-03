@@ -354,7 +354,7 @@ void main(){
             float bell = 1.0 - pow(abs(t - 0.5)*2.0, 1.7);
             float r = 0.030 * blobSize * mix(0.85, 1.35, bell);
             // breathe on player B energy & audio level
-            r *= 1.0 + 0.18*eB + 0.10*aud*lvl;
+            r *= 1.0 + 0.18*eB + 0.55*aud*lvl;
             // oval (slightly taller than wide — the reference shape)
             vec2 rad = vec2(r * 0.92, r * 1.18);
             float di = sdOval(p - vec2(bx, by), rad);
@@ -441,12 +441,12 @@ void main(){
     // ── FOREGROUND ATMOSPHERE: subtle paper sheen + audio-depth fog ──
     // Audio level pushes a soft luminous wash forward (depth cue)
     float sheen = pow(smoothstep(-0.5, 0.5, p.x + p.y * 0.4), 3.0);
-    col += sheen * 0.025 * accent * (0.4 + 1.2 * aud * lvl);
+    col += sheen * 0.025 * accent * (0.4 + 3.2 * aud * lvl);
 
     // bass tick — a single horizontal accent bar far back (not a bar viz)
     float bk = bass * aud;
     float bandY = -0.46;
-    float bandSdf = sdRect(vec2(p.x, p.y - bandY), vec2(0.32*asp, 0.004 + 0.006*bk));
+    float bandSdf = sdRect(vec2(p.x, p.y - bandY), vec2(0.32*asp, 0.004 + 0.05*bk));
     float bfw = fwidth(bandSdf);
     float bandMask = 1.0 - smoothstep(-bfw, bfw, bandSdf);
     col = mix(col, mix(col, accent, 0.55), bandMask * smoothstep(0.05, 0.35, bk));

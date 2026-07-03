@@ -71,19 +71,19 @@ void main(){
     vec3 ink = inkCol.rgb, red = redCol.rgb, acc = accentCol.rgb;
 
     // ── Drop shadows first (so shapes sit above them) ──
-    float discR = discScale * (1.0 + 0.06 * bass);
+    float discR = discScale * (1.0 + 0.16 * bass);
     vec2  discC = vec2(-0.28, 0.10) + 0.02 * vec2(sin(t * 0.5), cos(t * 0.43));
     col = shadowSDF(col, sdCircle(p - discC - vec2(0.03, -0.03), discR), 0.9);
 
     // Heavy diagonal beam (slides along its axis).
-    float beamAng = 0.9 + 0.12 * sin(t * 0.5 + mid);
+    float beamAng = 0.9 + 0.12 * sin(t * 0.5 + mid) + 0.10 * mid;
     vec2  bp = rot(-beamAng) * (p - vec2(0.18, -0.05));
     float slide = 0.16 * sin(t * 0.6);
     float beam = sdBox(bp - vec2(slide, 0.0), vec2(0.95, 0.075));
     col = shadowSDF(col, sdBox(rot(-beamAng) * (p - vec2(0.18, -0.05)) - vec2(slide + 0.03, -0.03), vec2(0.95, 0.075)), 0.85);
 
     // Thrusting black wedge (swings with mid).
-    float sw = 0.18 * sin(t * 0.7) + 0.12 * mid;
+    float sw = 0.18 * sin(t * 0.7) + 0.30 * mid;
     vec2 wc = vec2(0.34, 0.30);
     vec2 t0 = wc + rot(sw) * vec2(-0.05, -0.34);
     vec2 t1 = wc + rot(sw) * vec2(-0.05,  0.34);

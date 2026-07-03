@@ -8,7 +8,7 @@
     { "NAME": "energyA", "LABEL": "Arm 1 Energy", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[1].energy" },
     { "NAME": "energyB", "LABEL": "Arm 2 Energy", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[2].energy" },
     { "NAME": "energyC", "LABEL": "Arm 3 Energy", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[3].energy" },
-    { "NAME": "bassPull", "LABEL": "Bass Vortex Pull", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 1.5, "BIND": "audio.bass" },
+    { "NAME": "bassPull", "LABEL": "Bass Vortex Pull", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 1.5 },
 
     { "NAME": "armCount", "LABEL": "Arms", "TYPE": "long", "DEFAULT": 3, "VALUES": [1,2,3,4,5,6], "LABELS": ["1","2","3","4","5","6"] },
     { "NAME": "coilRate", "LABEL": "Coil Rate (log b)", "TYPE": "float", "DEFAULT": 0.22, "MIN": 0.05, "MAX": 0.55 },
@@ -217,10 +217,11 @@ void main() {
     bool hasText = (total > 0);
 
     // ── Camera zoom: bass pulls you into the vortex eye ─────────────
-    // bassPull is BIND'd to audio.bass; the zoom factor maps that to a
-    // gentle z-dolly so silence reads as a calm spiral, bass-hits as
-    // genuine forward motion. Counter-rotating arms make the depth read.
-    float bp     = clamp(bassPull, 0.0, 1.5);
+    // bassPull is a gain on the live audioBass uniform; the zoom factor
+    // maps that to a gentle z-dolly so silence reads as a calm spiral,
+    // bass-hits as genuine forward motion. Counter-rotating arms make
+    // the depth read.
+    float bp     = clamp(audioBass * bassPull, 0.0, 1.5);
     float zoom   = 1.0 - 0.18 * bp - 0.06 * sin(TIME * 0.7);
     zoom         = clamp(zoom, 0.55, 1.4);
     vec2  pView  = uv / zoom;
@@ -460,6 +461,10 @@ void main() {
     // Paper-tooth micro-modulation, never a pixel grid.
     float tooth = vnoise(uv * res.y * 0.018);
     col *= 1.0 + (tooth - 0.5) * 0.04;
+
+    // Audio pulse — bass swells the whole page's exposure so a hit reads
+    // even where the spiral itself is thin, on top of the eye-glow bp cue.
+    col *= 1.0 + audioBass * 0.28;
 
     // Final tone curve — gentle.
     col = col / (1.0 + 0.10 * col);

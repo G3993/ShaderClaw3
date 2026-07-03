@@ -66,7 +66,7 @@ vec3 fidApply(vec3 col, vec2 frag) {
     float edge = clamp(length(lg) * 7.0, 0.0, 1.0);
     col += col * edge * fidEdgeGlow * 1.50;
     float headroom = smoothstep(0.28, 0.95, l);
-    col += col * headroom * fidBloom * 1.80;
+    col += col * headroom * (fidBloom + 0.6*audioBass) * 1.80;
     vec2  uvN = frag / RENDERSIZE - 0.5;
     float vig = 1.0 - dot(uvN, uvN) * 1.80 * fidVignette;
     col *= clamp(vig, 0.0, 1.0);
@@ -364,7 +364,7 @@ float formEnergy(int idx) {
     else if (idx == 2) energy = energyC;
     else if (idx == 3) energy = energyD;
     else if (idx == 4) energy = energyE;
-    else if (idx == 5) energy = clamp(bassDrive, 0.0, 1.0);
+    else if (idx == 5) energy = clamp(bassDrive + 0.6*audioBass, 0.0, 1.4);
     else {
         // beat-pulsed idle for the trailing forms (so silence doesn't kill
         // them; tiny amplitude — they breathe via 'breathe' uniform).

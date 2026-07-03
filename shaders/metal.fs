@@ -9,7 +9,10 @@
     { "NAME": "dissipation", "LABEL": "Dissipation",  "TYPE": "float", "MIN": 0.95, "MAX": 1.0, "DEFAULT": 0.997 },
     { "NAME": "flowSpeed",   "LABEL": "Flow Speed",   "TYPE": "float", "MIN": 0.2, "MAX": 4.0, "DEFAULT": 1.6 },
     { "NAME": "viewMode",    "LABEL": "View (0 shaded,1 conc,2 vel,3 pressure)", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 0.0 },
-    { "NAME": "exposure",    "LABEL": "Exposure",     "TYPE": "float", "MIN": 0.3, "MAX": 2.5, "DEFAULT": 1.0 }
+    { "NAME": "exposure",    "LABEL": "Exposure",     "TYPE": "float", "MIN": 0.3, "MAX": 2.5, "DEFAULT": 1.0 },
+    { "NAME": "audioReact",  "LABEL": "Audio React",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.35 },
+    { "NAME": "inputTex",    "TYPE": "image", "LABEL": "Texture" },
+    { "NAME": "texMix",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "LABEL": "Texture Mix" }
   ],
   "PASSES": [
     { "TARGET": "velBuf", "PERSISTENT": true },
@@ -29,6 +32,12 @@
 //    Pass 3 image  : metallic visualization of the concentration field.
 //  Half-float buffers store signed velocity / pressure directly.
 // ════════════════════════════════════════════════════════════════════════
+
+// ── Audio conditioning (playbook: soft knees + floors, never linear) ─────
+float aKnee(float x, float lo, float hi) { return smoothstep(lo, hi, x); }
+float aBassP()  { return pow(aKnee(audioBass, 0.05, 0.85), 1.6); }  // structural weight
+float aHighP()  { return pow(aKnee(audioHigh, 0.10, 0.90), 1.2); }  // sparkle
+float aBeatP()  { return audioBeatPulse * audioBeatPulse; }         // decaying accent
 
 vec3 hsv2rgb_smooth(vec3 c) {
     vec3 rgb = clamp(abs(mod(c.x * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
@@ -87,8 +96,12 @@ void main() {
         vec2 rel = (uv - m) * aspect;
         float fall = exp(-dot(rel, rel) / (0.11 * 0.11));
         vec2 tangent = normalize(vec2(-rel.y, rel.x) + 1e-5);
-        vel += (stirVel() + tangent * 1.5) * force * fall;
-        conc += dye * fall;
+        // Audio: bass adds weight to the stir (the dominant structure) and
+        // pours in extra dye; a beat kicks a brief extra shove. Idle floor:
+        // audio 0 leaves the sim exactly as authored.
+        float stirGain = 1.0 + audioReact * (1.7 * aBassP() + 1.1 * aBeatP());
+        vel += (stirVel() + tangent * 1.5) * force * fall * stirGain;
+        conc += dye * fall * (1.0 + audioReact * 1.4 * aBassP());
 
         // Vorticity confinement: push velocity toward swirl centers so the
         // flow forms wispy curling filaments instead of smearing flat.
@@ -166,12 +179,41 @@ void main() {
         float ct = texture(velBuf, uv - vec2(0.0, texel.y)).z;
         float cb = texture(velBuf, uv + vec2(0.0, texel.y)).z;
         vec2 grad = vec2(cr - cl, cb - ct);
+        // Bass deepens the molten relief (the dominant structure): the
+        // amplified gradient literally gets heavier with low end.
+        float relief = 4.0 + audioReact * 9.0 * aBassP();
         float shade = 0.3 + 0.7 * max(dot(normalize(vec3(0.0, 1.0, 1.0)),
-                      normalize(vec3(grad.x * 4.0, 0.05, grad.y * 4.0))), 0.0);
-        vec3 metal = mix(vec3(0.14, 0.17, 0.22), vec3(0.85, 0.9, 1.0),
-                         clamp(concentration, 0.0, 1.0));
+                      normalize(vec3(grad.x * relief, 0.05, grad.y * relief))), 0.0);
+        // Bass "heats" the metal: cold chrome-blue runs toward molten gold —
+        // a temperature shift on the dominant structure, not a hue cycle.
+        float heat = clamp(audioReact * 3.2 * aBassP(), 0.0, 1.0);
+        vec3 hiTone = mix(vec3(0.85, 0.9, 1.0), vec3(1.05, 0.74, 0.38), heat);
+        vec3 loTone = mix(vec3(0.14, 0.17, 0.22), vec3(0.26, 0.15, 0.09), heat);
+        vec3 metal = mix(loTone, hiTone, clamp(concentration, 0.0, 1.0));
         col = metal * shade;
+
+        // Highs: sparse specular glints riding the molten relief — only where
+        // the surface gradient is steep, so silence keeps the clean chrome.
+        float spec = pow(max(dot(normalize(vec3(0.35, 1.0, 0.8)),
+                       normalize(vec3(grad.x * relief, 0.05, grad.y * relief))), 0.0), 16.0);
+        col += vec3(0.75, 0.85, 1.0) * spec * concentration
+               * audioReact * 4.0 * aHighP();
     }
 
-    gl_FragColor = vec4(col * exposure, 1.0);
+    // Bass warms/brightens the whole pour; a beat lands a short decaying
+    // gleam. Idle floor: audio 0 -> exactly the authored look.
+    float aGain = 1.0 + audioReact * (2.6 * aBassP() + 1.8 * aBeatP());
+
+    if (texMix > 0.001) {
+        // Pour the texture into the melt: refract the lookup by the dye
+        // gradient (the same relief the metal shading uses) so it reads as
+        // molten-etched into the surface rather than pasted flat on top,
+        // strongest where concentration/pressure actually carry detail.
+        vec2 texUV = clamp(uv + fld.xy * 0.05, 0.0, 1.0);
+        vec3 texCol = texture2D(inputTex, texUV).rgb;
+        vec3 modCol = col * mix(vec3(1.0), texCol * 1.5, clamp(concentration + abs(pressure) * 2.0, 0.0, 1.0));
+        col = mix(col, modCol, texMix);
+    }
+
+    gl_FragColor = vec4(col * aGain * exposure, 1.0);
 }

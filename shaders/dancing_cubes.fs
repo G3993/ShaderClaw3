@@ -7,7 +7,8 @@
     { "NAME": "scale",      "LABEL": "Scale",      "TYPE": "float", "MIN": 20.0, "MAX": 100.0, "DEFAULT": 60.0 },
     { "NAME": "height",     "LABEL": "Height",     "TYPE": "float", "MIN": 0.0,  "MAX": 16.0,  "DEFAULT": 8.0 },
     { "NAME": "dance",      "LABEL": "Dance",      "TYPE": "float", "MIN": 0.0,  "MAX": 3.0,   "DEFAULT": 1.0 },
-    { "NAME": "danceSpeed", "LABEL": "Dance Speed","TYPE": "float", "MIN": 0.0,  "MAX": 4.0,   "DEFAULT": 1.5 }
+    { "NAME": "danceSpeed", "LABEL": "Dance Speed","TYPE": "float", "MIN": 0.0,  "MAX": 4.0,   "DEFAULT": 1.5 },
+    { "NAME": "audioReact", "LABEL": "Audio React","TYPE": "float", "MIN": 0.0,  "MAX": 2.0,   "DEFAULT": 0.35 }
   ]
 }*/
 
@@ -22,6 +23,13 @@
 #define FAR 100.0
 #define ASP (RENDERSIZE.x / RENDERSIZE.y)
 #define ACCURACY 1.0
+
+// Audio state, set once per-fragment in main() before the raymarch — tileH()
+// and lighting() (called many times from trace/normal/AO) read these globals
+// rather than recomputing knees every call. Non-gating: 0.0 at rest.
+float gBassBoost = 0.0;   // bass -> skyline height (dominant structure)
+float gBeatBoost = 0.0;   // beat -> a decaying spike on a sparse subset of cubes
+float gHighBoost = 0.0;   // highs -> sparkle on a sparse subset of cube tops
 
 float rnd(vec2 p) {
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -59,7 +67,13 @@ vec3 env(vec3 d) {
 float tileH(vec2 cell) {
     float g = getGrey(srcTex(cell * vec2(1.0, ASP) / scale));
     float wob = dance * 0.5 * (0.5 + 0.5 * sin(TIME * danceSpeed + (cell.x * 0.7 + cell.y * 1.3)));
-    return g * height + wob;
+    float cellRnd = rnd(cell);
+    // Bass breathes the whole skyline (each cube weighted a little differently
+    // so it doesn't pump in lockstep — law 3: give each element its own phase).
+    float bassMod = 1.0 + gBassBoost * (0.55 + 0.45 * cellRnd);
+    // Beat: a brief height spike on a sparse subset of cubes, decays with the pulse.
+    float beatSpike = gBeatBoost * step(0.55, cellRnd);
+    return (g * height + wob) * bassMod + beatSpike;
 }
 
 float tile(vec3 p) {
@@ -122,12 +136,23 @@ vec3 lighting(vec3 sp, vec3 sn, vec3 lp, vec3 rd) {
     vec3 reflColor = env(refl);
     vec3 hotSpec = vec3(0.9, 0.5, 0.2);
     vec3 color = (diff * color2 + spec * hotSpec + reflColor * 0.05) * atte;
+    // Highs: fine sparkle on a sparse subset of cube tops (fine detail, not global).
+    float sparkleCell = rnd(floor(sp.xz) * 3.7 + 11.0);
+    color += vec3(gHighBoost) * step(0.82, sparkleCell) * clamp(sn.y, 0.0, 1.0);
     return clamp(color * ao, 0.0, 1.0);
 }
 
 void main() {
     vec2 fragCoord = gl_FragCoord.xy;
     vec2 uv = (fragCoord - RENDERSIZE.xy * 0.5) / RENDERSIZE.y;
+
+    // Non-gating audio: alive at audio=0; audioReact only adds on top.
+    float bassP = pow(smoothstep(0.05, 0.85, audioBass), 1.6);
+    float highP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+    float beatP = audioBeatPulse * audioBeatPulse;
+    gBassBoost = audioReact * 0.55 * bassP;   // skyline breathes up to ~+19% at DEFAULT
+    gBeatBoost = audioReact * 2.2  * beatP;   // sparse height spikes on the beat
+    gHighBoost = audioReact * 0.6  * highP;   // sparkle glints on cube tops
 
     float gridW = scale;
     vec3 lk = vec3(gridW * 0.5, 0.0, gridW * 0.33);

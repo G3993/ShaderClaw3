@@ -14,7 +14,9 @@
     { "NAME": "audioDrive", "LABEL": "Audio Drive", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 5.0 },
     { "NAME": "colorMode", "LABEL": "Color Mode", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "accentColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.7, 0.3, 1.0] },
-    { "NAME": "syncTime", "TYPE": "float", "DEFAULT": -1.0, "MIN": -1.0, "MAX": 99999.0 }
+    { "NAME": "syncTime", "TYPE": "float", "DEFAULT": -1.0, "MIN": -1.0, "MAX": 99999.0 },
+    { "NAME": "inputTex", "TYPE": "image", "LABEL": "Texture" },
+    { "NAME": "texMix", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "LABEL": "Texture Mix" }
   ],
   "PASSES": [
     { "TARGET": "trail", "PERSISTENT": true },
@@ -130,7 +132,8 @@ vec4 passTrail(vec2 uv) {
     float t = baseTime * speed;
     float count = floor(particleCount);
 
-    float audioPulse = 1.0 + audioBass * audioDrive * 0.5;
+    float audioPulse = 1.0 + audioBass * audioDrive * 0.9;
+    float depositGain = 1.0 + audioBass * audioDrive * 1.6;
 
     // Map this pixel to global virtual canvas coordinates
     vec2 globalUV = uvToGlobal(uv);
@@ -170,7 +173,7 @@ vec4 passTrail(vec2 uv) {
 
         vec3 pCol = particleColor(i);
 
-        col += pCol * (core + glow);
+        col += pCol * (core + glow) * depositGain;
         alpha += core + glow * 0.5;
     }
 
@@ -184,6 +187,19 @@ vec4 passTrail(vec2 uv) {
 vec4 passFinal(vec2 uv) {
     vec4 trailCol = texture2D(trail, uv);
     vec3 col = trailCol.rgb / (1.0 + trailCol.rgb);
+    // Whole field swells with the music; a soft ambient glow rides on top so
+    // the effect reads even over the empty (near-black) canvas, not just the trails.
+    float drive = audioLevel * audioDrive;
+    col = col * (1.0 + drive * 2.2) + drive * 0.55;
+
+    // Optional texture — particles reveal/tint it, they don't flatly crossfade over it
+    if (texMix > 0.001) {
+        vec3 texCol = texture2D(inputTex, uv).rgb;
+        float glow = clamp(max(max(col.r, col.g), col.b), 0.0, 1.0);
+        vec3 texBlend = texCol * (0.15 + glow * 1.85) + col * glow * 0.4;
+        col = mix(col, texBlend, texMix);
+    }
+
     return vec4(col, 1.0);
 }
 

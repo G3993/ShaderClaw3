@@ -149,11 +149,14 @@ void main() {
             }
         }
 
-        // Audio — bass drives radial push
-        if (audioBass > 0.2) {
+        // Audio — bass drives radial push. Knee'd so it stays a texture-level
+        // nudge in quiet passages but reads clearly against the swirl/pulse/
+        // chaos baseline motion once bass is driving (house law: never silent-dead).
+        {
+            float bassP = smoothstep(0.05, 0.85, audioBass);
             vec2 scr = fract((pos / Res) - 0.5 + 0.5) - 0.5;
             float pushAngle = hash21(vec2(float(FRAMEINDEX) * 0.1, 1.0)) * PI2;
-            col.xy += vec2(cos(pushAngle), sin(pushAngle)) * audioBass * 0.003 / (dot(scr, scr) / 0.04 + 0.06);
+            col.xy += vec2(cos(pushAngle), sin(pushAngle)) * bassP * 0.009 / (dot(scr, scr) / 0.04 + 0.06);
         }
 
         // Surface grain — "crunchy drops" from high-freq noise
@@ -291,7 +294,7 @@ void main() {
     finalCol += specHDR * metalColor.rgb;
 
     // Audio-reactive brightness pulse (non-gating: present at audio=0)
-    finalCol += metalColor.rgb * audioBass * 0.1;
+    finalCol += metalColor.rgb * audioBass * 0.22;
 
     float alpha = 1.0;
     if (transparentBg) {

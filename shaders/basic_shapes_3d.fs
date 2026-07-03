@@ -515,8 +515,14 @@ void main(){
 
     // Audio lift on object pixels — silhouette detection via scene depth
     float hitMask=sG.a<MAX_DIST*0.95?1.0:0.0;
-    float audioLift=1.0+bass*0.38;
+    float audioLift=1.0+bass*2.6;
     col*=mix(1.0,audioLift,hitMask);
+
+    // Whole-frame audio pulse (background included) — bass/high are 0 in
+    // silence so this is a no-op sound-off; gives the scene a musical
+    // breathing lift on top of the object-only boost above.
+    float high2=clamp(audioHigh,0.0,1.0)*audioReact;
+    col*=(1.0+bass*2.6+high2*1.1);
 
     // Inversion flash every ~29s (from color_cube)
     {

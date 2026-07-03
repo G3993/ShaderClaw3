@@ -35,7 +35,9 @@
     { "NAME": "moveSpeed",     "LABEL": "Move Speed",        "TYPE": "float", "DEFAULT": 0.3,  "MIN": 0.05, "MAX": 2.0 },
     { "NAME": "moveSpread",    "LABEL": "Move Spread",       "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0,  "MAX": 1.0 },
     { "NAME": "moveIntensity", "LABEL": "Move Intensity",    "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "fluidAudio",    "LABEL": "Fluid Audio React", "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0,  "MAX": 1.0 }
+    { "NAME": "fluidAudio",    "LABEL": "Fluid Audio React", "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0,  "MAX": 1.0 },
+    { "NAME": "inputTex",      "TYPE": "image", "LABEL": "Texture" },
+    { "NAME": "texMix",        "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "LABEL": "Texture Mix" }
   ],
   "PASSES": [
     { "TARGET": "velBuf", "PERSISTENT": true },
@@ -238,9 +240,9 @@ vec4 rothkoPaint(vec2 uv) {
     float g = hash21(uv * RENDERSIZE + vec2(float(FRAMEINDEX) * 0.317, 0.0));
     col += (g - 0.5) * grain;
 
-    float audioMod = 1.0 + audioBass  * audioInfluence * 0.80
-                        + audioMid   * audioInfluence * 0.40
-                        + audioLevel * audioInfluence * 0.30;
+    float audioMod = 1.0 + audioBass  * audioInfluence * 3.2
+                        + audioMid   * audioInfluence * 1.6
+                        + audioLevel * audioInfluence * 1.2;
     col *= audioMod;
 
     return vec4(clamp(col, 0.0, 1.0), 1.0);
@@ -411,14 +413,14 @@ void main() {
                 float falloff = exp(-dist2 / (ar * ar));
                 float splatAngle = hash21(vec2(at, 3.0)) * PI2;
                 col.xy += vec2(cos(splatAngle), sin(splatAngle))
-                          * audioBass * 0.3 * splatForce * fluidAudio * falloff;
+                          * audioBass * 0.9 * splatForce * fluidAudio * falloff;
                 col.xy = clamp(col.xy, 0.0, 1.0);
             }
         }
         // audioMid: global swirl boost
         if (audioMid > 0.15 && fluidAudio > 0.01) {
             vec2 cd = uv - 0.5; cd.x *= aspect;
-            float swAmp = audioMid * fluidAudio * 0.08;
+            float swAmp = audioMid * fluidAudio * 0.22;
             col.xy += vec2(-cd.y, cd.x) * swAmp * exp(-dot(cd,cd) * 8.0);
             col.xy = clamp(col.xy, 0.0, 1.0);
         }
@@ -466,6 +468,14 @@ void main() {
 
     // Sample the Rothko painting at the fluid-warped UV coordinates
     vec3 col = IMG_NORM_PIXEL(rothkoBuf, warpedUV).rgb;
+
+    // ── Optional texture input — dissolved into the paint by the same fluid warp ──
+    if (texMix > 0.001) {
+        vec3 texCol = texture2D(inputTex, warpedUV).rgb;
+        vec3 softLit = 1.0 - (1.0 - col) * (1.0 - texCol);
+        vec3 blended = mix(col * (0.6 + 0.4 * texCol), softLit, 0.5);
+        col = mix(col, blended, texMix);
+    }
 
     // ── Surface lighting from UV displacement gradient ─────────────────────
     if (bumpHeight > 0.0) {

@@ -359,7 +359,7 @@ void main(){
 
         vec4 face = renderFace(luv, pseed, pArche, pTime, mid, high, bass, charCode);
         if (face.a > 0.5) {
-            finalCol  = face.rgb * (1.0 + lvl * 0.10);
+            finalCol  = face.rgb * (1.0 + lvl * 0.22);
             anyPlayer = 1.0;
         }
     }

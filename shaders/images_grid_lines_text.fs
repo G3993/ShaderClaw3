@@ -299,7 +299,9 @@ void main() {
 
     float gT     = TIME * 0.6 * motion;
     float gAud   = clamp(audioDepth, 0.0, 2.0);
-    float bass   = clamp(bassPulse, 0.0, 2.0);
+    // Live audioBass tops up the bassPulse baseline so the line cage
+    // actually breathes with the track, not just its idle knob value.
+    float bass   = clamp(bassPulse + audioBass * 0.6, 0.0, 2.0);
     int   cols   = int(clamp(floor(gridCols), 2.0, float(MAX_COLS)));
     int   rows   = int(clamp(floor(gridRows), 2.0, float(MAX_ROWS)));
     int   nLines = int(clamp(floor(lineDensity), 2.0, float(MAX_LINES)));
@@ -586,6 +588,10 @@ void main() {
         float xR = smoothstep(0.90, 0.94, uv.x);
         col = mix(col, vec3(0.10,0.10,0.12), yEdge * (xL+xR) * 0.35);
     }
+
+    // Bass breath — the page is bright paper near white, so a darkening
+    // pulse (not a lift) reads clearly instead of clipping at 1.0.
+    col *= 1.0 - 0.16 * clamp(bass, 0.0, 1.4);
 
     col *= mkFlicker(gl_FragCoord.xy / RENDERSIZE - 0.5, TIME);
     gl_FragColor = vec4(fidApply(col, gl_FragCoord.xy), 1.0);

@@ -289,6 +289,12 @@ void main() {
     // Mix character foreground/background
     vec3 result = mix(bg, fg, charAlpha);
 
+    // Global audio pulse — bass lifts overall brightness a touch in every
+    // color mode (previously audio only reached the Cyberpunk branch, so
+    // the default ANSI 16 mode never moved with the track at all).
+    float bassP = smoothstep(0.05, 0.85, audioBass);
+    result *= 1.0 + bassP * audioReact * 0.28;
+
     // Scanline effect
     if (scanlines > 0.001) {
         float scanline = sin(px.y * 3.14159 / (cH * 0.5)) * 0.5 + 0.5;

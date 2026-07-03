@@ -379,7 +379,9 @@ void main() {
 
     float T   = TIME * motionSpeed;
     float aud = clamp(audioDepth, 0.0, 2.0);
-    float bs  = clamp(groundPulse * aud, 0.0, 2.0);
+    // groundPulse is the bass-hue intensity knob; audioLevel is the live
+    // engine audio-bus signal, so the ground actually pulses with the mix.
+    float bs  = clamp(groundPulse * aud * (0.3 + 0.7 * audioLevel), 0.0, 2.0);
     float lvl = clamp(audioLevel * aud, 0.0, 1.0);
 
     int rows = int(tileRows); if (rows > MAX_ROWS) rows = MAX_ROWS; if (rows < 2) rows = 2;
@@ -391,7 +393,7 @@ void main() {
     int bgIdx         = int(bgMode);
 
     // ── Ground (saturated bold color) ──────────────────────────────
-    vec3 col = groundColor(bgIdx, T, bs * 0.35);
+    vec3 col = groundColor(bgIdx, T, bs * 0.65);
     // Subtle paper noise on the ground so it isn't a flat block.
     float pn = fbm2(p * 1.4 + T * 0.05);
     col *= 1.0 + (pn - 0.5) * 0.05;
@@ -640,6 +642,9 @@ void main() {
     // ── Gentle vignette + chromatic edge to settle the poster ───────
     float vig = 1.0 - 0.22 * dot(p, p);
     col *= vig;
+
+    // bass punch — whole-poster exposure lift that breathes with the mix
+    col *= 1.0 + 2.1 * (bs - 0.20);
 
     // Soft tonemap (the host applies final ACES on linear HDR).
     col = col / (1.0 + 0.55 * col);

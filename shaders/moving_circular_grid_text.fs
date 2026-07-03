@@ -423,8 +423,8 @@ void main() {
     p.y = (fragUV.y - 0.5);
 
     float t = TIME * max(motionSpeed, 0.0);
-    float bass  = clamp(bassDrive,  0.0, 1.0);
-    float high  = clamp(highDrive,  0.0, 1.0);
+    float bass  = clamp(bassDrive + 0.6*audioBass, 0.0, 1.0);
+    float high  = clamp(highDrive + 0.6*audioHigh, 0.0, 1.0);
     float aDep  = clamp(audioDepth, 0.0, 2.0);
     float seed  = randomSeed;
 

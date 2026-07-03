@@ -13,7 +13,9 @@
     { "NAME": "sharpness",  "LABEL": "Glow Sharpness","TYPE": "float", "MIN": 1.0,   "MAX": 2.2,   "DEFAULT": 1.4 },
     { "NAME": "hueSpeed",   "LABEL": "Hue Cycle",     "TYPE": "float", "MIN": 0.0,   "MAX": 3.0,   "DEFAULT": 1.0 },
     { "NAME": "saturation", "LABEL": "Saturation",    "TYPE": "float", "MIN": 0.0,   "MAX": 1.5,   "DEFAULT": 1.0 },
-    { "NAME": "audioReact", "LABEL": "Audio React",   "TYPE": "float", "MIN": 0.0,   "MAX": 1.0,   "DEFAULT": 0.0 }
+    { "NAME": "audioReact", "LABEL": "Audio React",   "TYPE": "float", "MIN": 0.0,   "MAX": 1.0,   "DEFAULT": 0.35 },
+    { "NAME": "inputTex",   "TYPE": "image", "LABEL": "Texture" },
+    { "NAME": "texMix",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "LABEL": "Texture Mix" }
   ],
   "PASSES": [
     { "TARGET": "simBuf",   "PERSISTENT": true },
@@ -70,13 +72,16 @@ float drawPoint(vec2 uv, vec2 p, float g, float sharp) {
 // emphasis: flow
 void main() {
     // --- Audio Feature Bus coupling. Living baseline: the manual INPUTS are
-    // the rest state; the bus modulates around them, scaled by audioReact. ---
+    // the rest state; the bus modulates around them, scaled by audioReact.
+    // Uses only the guaranteed core/feature-bus uniforms (audioFlux/audioFlow/
+    // audioTension/audioTexture/audioDrop/audioArousal are not host-driven and
+    // previously left these terms permanently dead). ---
     float amt      = audioReact;
-    float flowMul  = 1.0 + amt * (0.4*audioArousal + 0.8*audioFlux + 0.6*length(audioFlow)); // movement+flow
-    float glowMul  = 1.0 + amt * (1.2*audioPunch + 0.6*audioBreath());                       // grain+energy
+    float flowMul  = 1.0 + amt * (0.5*audioLevel + 0.7*audioMid + 0.5*audioHigh);            // movement+flow
+    float glowMul  = 1.0 + amt * (2.0*audioPunch + 1.0*audioLevel + 0.6*audioBreath());       // grain+energy
     float trailAdd = amt * 0.025 * audioEnergy;                                              // build-up lengthens trails
-    float facetsA  = facets + amt * 8.0 * audioTension;                                      // tension -> more crystalline channels
-    float sharpA   = sharpness + amt * 0.5 * (audioTexture - 0.5);                            // crispy(+) / smooth(-) point cores
+    float facetsA  = facets + amt * 8.0 * audioMid;                                          // mid detail -> more crystalline channels
+    float sharpA   = sharpness + amt * 0.5 * (audioHigh - 0.5);                               // crispy(+) / smooth(-) point cores
 
     // ───────── PASS 0 — particle simulation (simBuf) ─────────
     if (PASSINDEX == 0) {
@@ -140,15 +145,42 @@ void main() {
             col = mix(col, pal, drawPoint(uv, p, glow * glowMul, sharpA) * alive);
         }
 
-        // long-exposure: build-ups lengthen the trails; drops flash the field
+        // long-exposure: build-ups lengthen the trails; drops flash the field.
+        // The trail persistence itself breathes with the music (mirrors the house
+        // feedback-warp playbook) so louder passages genuinely unlock more
+        // accumulated glow instead of a max()-dominated history masking any
+        // per-frame brightness nudge.
         vec3 prev = texture(trailBuf, gl_FragCoord.xy / R).rgb;
-        col = max(col, prev * min(trail + trailAdd, 0.995));
-        col *= 1.0 + amt * audioDrop * 0.8;
+        float trailCeil  = min(trail + trailAdd, 0.995);
+        float trailFloor = trailCeil - 0.10;
+        float trailDecay = mix(trailCeil, mix(trailFloor, trailCeil, clamp(audioLevel, 0.0, 1.0)), amt);
+        col = max(col, prev * trailDecay);
+        col *= 1.0 + amt * (audioBuildup * 0.8 + audioLevel * 0.5);
 
         gl_FragColor = vec4(col, 1.0);
         return;
     }
 
     // ───────── PASS 2 — image ─────────
-    gl_FragColor = vec4(texture(trailBuf, gl_FragCoord.xy / R).rgb, 1.0);
+    vec2 uv2 = gl_FragCoord.xy / R;
+    vec3 trailCol = texture(trailBuf, uv2).rgb;
+    vec3 col2 = trailCol;
+
+    if (texMix > 0.001) {
+        // Shatter the texture through the crystalline trail field: use the
+        // trail's local luminance gradient as a facet-refraction displacement,
+        // then screen-blend the texture so it reads as lit from within the
+        // glowing rivers rather than flatly crossfaded on top.
+        vec2 e = 1.5 / R;
+        float lC = dot(trailCol, vec3(0.299, 0.587, 0.114));
+        float lX = dot(texture(trailBuf, uv2 + vec2(e.x, 0.0)).rgb, vec3(0.299, 0.587, 0.114));
+        float lY = dot(texture(trailBuf, uv2 + vec2(0.0, e.y)).rgb, vec3(0.299, 0.587, 0.114));
+        vec2 grad = vec2(lX - lC, lY - lC);
+        vec2 warpedUV = clamp(uv2 + grad * 6.0, 0.0, 1.0);
+        vec3 texCol = texture2D(inputTex, warpedUV).rgb;
+        vec3 screenBlend = 1.0 - (1.0 - trailCol) * (1.0 - texCol);
+        col2 = mix(trailCol, screenBlend, texMix);
+    }
+
+    gl_FragColor = vec4(col2, 1.0);
 }

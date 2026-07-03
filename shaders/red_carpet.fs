@@ -282,8 +282,10 @@ void main() {
     col *= mix(1.0, sideVig, 0.38 * lightDepth);
 
     // ── Audio react ──────────────────────────────────────────────────
-    col *= 1.0 + audio * 0.08;
-    col += vec3(2.0, 2.1, 2.4) * audioHigh * audioReact * 0.05;
+    float audioKnee = pow(smoothstep(0.05, 0.85, audio), 1.4);
+    col *= 1.0 + audioKnee * 0.45;
+    col += vec3(2.0, 2.1, 2.4) * audioHigh * audioReact * audioKnee * 0.6;
+    col += vec3(1.10, 0.45, 0.32) * spotPool * carpetMask * audioKnee * 0.8;
 
     // Ambient floor.
     col += vec3(0.01, 0.003, 0.003);

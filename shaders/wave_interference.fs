@@ -92,8 +92,8 @@ void main() {
     float mids = audioMid * audioReact;
 
     float baseN = clamp(sourceCount, 1.0, float(MAX_SOURCES));
-    float freq = waveFrequency * (1.0 + 0.9 * treb);
-    float speed = waveSpeed * (1.0 + 0.25 * mids);
+    float freq = waveFrequency * (1.0 + 1.7 * treb);
+    float speed = waveSpeed * (1.0 + 0.6 * mids);
 
     // Sum waves from all potential sources.
     float amp = 0.0;
@@ -117,6 +117,12 @@ void main() {
     // Normalize so the field stays roughly in [-1, 1] regardless of N.
     if (energy > 1e-4) amp /= max(energy * 0.6, 0.5);
 
+    // Bass punch: an audible kick swells the whole field's crest/trough
+    // contrast so the surface visibly "breathes" with the beat, on top of
+    // the transient-source spawning above.
+    amp += 2.4 * bass * sin(TIME * 3.0 + p.x * 6.0);
+    amp *= 1.0 + 1.4 * treb;
+
     // Tonemap and palette.
     vec3 col = palette(amp, troughColor.rgb, deepColor.rgb, midColor.rgb, peakColor.rgb);
 
@@ -124,6 +130,10 @@ void main() {
     vec2 vc = uv - 0.5;
     float vig = 1.0 - 0.35 * dot(vc, vc);
     col *= vig;
+
+    // Direct energy punch: loud bass brightens the whole field so the
+    // audio response is felt, not just seen in source spawning.
+    col *= 1.0 + 1.4 * bass;
 
     // Optional source markers — bright dots at each active emitter.
     if (sourceMarkers) {

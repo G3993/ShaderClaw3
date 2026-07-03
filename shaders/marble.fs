@@ -154,7 +154,8 @@ void main() {
         uv.y += sin(sin(uv.x + i * mod1 + (scroll * TWO_PI)) * amp + (mod2 * PI) + TIME / 4.2);
 
         if (lines * linesStartOffset - 1.0 <= i) {
-            wave_width = abs(1.0 / (50.0 * uv.y * glowAmt * (1.0 + audioLevel * 2.0)));
+            // Audio brightens the veins (was inside the divisor, which inverted it)
+            wave_width = abs(1.0 / (50.0 * uv.y * glowAmt)) * (1.0 + audioLevel * 2.0);
             totalGlow += wave_width;
         }
     }
@@ -166,6 +167,8 @@ void main() {
     vec3 marble = mix(baseColor.rgb, veinColor.rgb, intensity / 3.0);
     // Add the bright glow on top
     marble += veinColor.rgb * intensity * 0.4;
+    // Gentle whole-stone breathing with the music
+    marble *= 1.0 + audioLevel * 0.25;
 
     // Blend in custom texture on the vein areas
     if (texMix > 0.001) {

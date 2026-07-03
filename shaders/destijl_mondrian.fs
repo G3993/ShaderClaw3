@@ -140,11 +140,11 @@ vec3 lineSquares(float along, float coord, float lineSalt, float t,
         float trebKick = audioTreble * audioReact;
         // Default: 1/3 each among R/B/Y.
         int sqIdx;
-        if (colSel < 0.33 + 0.20 * bassKick)        sqIdx = 1; // RED
-        else if (colSel < 0.66 - 0.10 * trebKick)   sqIdx = 2; // BLUE
+        if (colSel < 0.33 + 0.38 * bassKick)        sqIdx = 1; // RED
+        else if (colSel < 0.66 - 0.20 * trebKick)   sqIdx = 2; // BLUE
         else                                        sqIdx = 3; // YELLOW
         // Treble overrides occasional non-yellows to yellow.
-        if (h11(lineSalt * 53.7 + fk * 3.3) < trebKick * 0.30) sqIdx = 3;
+        if (h11(lineSalt * 53.7 + fk * 3.3) < trebKick * 0.55) sqIdx = 3;
 
         // Square drawn iff |dA| < SQUARE and |dCross| < SQUARE — caller
         // already guarantees |dCross| < small via line proximity. We
@@ -155,7 +155,7 @@ vec3 lineSquares(float along, float coord, float lineSalt, float t,
     }
     // Audio-bass extra-red sprinkle: occasional bonus square mid-line.
     // Gated by pulseAmt so a fully muted boogie stays bare.
-    if (audioBass * audioReact > 0.35 && pulseAmt > 0.05) {
+    if (audioBass * audioReact > 0.18 && pulseAmt > 0.05) {
         float bspawn = fract(t * 0.22 + lineSalt * 1.11);
         float dA = abs(along - bspawn);
         dA = min(dA, 1.0 - dA);
@@ -182,16 +182,17 @@ void main() {
     int activeLinesV = (dIdx == 0) ? 3 : (dIdx == 1) ? 5 : (dIdx == 2) ? 6 : 8;
     int activeLinesH = (dIdx == 0) ? 2 : (dIdx == 1) ? 4 : (dIdx == 2) ? 5 : 7;
 
-    // Audio: split full-band react into pseudo-bass (slow) and pseudo-
-    // treble (fast) using TIME modulation when no real audio is wired.
-    float audioBass   = 0.5 + 0.5 * sin(t * 1.7);    // 0..1, slow
-    float audioTreble = 0.5 + 0.5 * sin(t * 4.3 + 1.3); // 0..1, fast
-    audioBass   *= aR;
-    audioTreble *= aR;
+    // Audio: real feature bus (bass throws reds, highs throw yellows),
+    // blended with a gentle TIME idle so the boogie never dies in silence.
+    float idleB = 0.5 + 0.5 * sin(t * 1.7);       // 0..1, slow
+    float idleT = 0.5 + 0.5 * sin(t * 4.3 + 1.3); // 0..1, fast
+    float bassSig   = clamp(idleB * 0.30 + audioBass * 1.0
+                            + audioBeatPulse * 0.35, 0.0, 1.3) * aR;
+    float trebleSig = clamp(idleT * 0.30 + audioHigh * 1.1, 0.0, 1.3) * aR;
 
     // Rare cell-colour swap key — bass-triggered, holds for several
     // seconds so the swap reads as a "decision" not a strobe.
-    float swapKey = floor(t / 7.0 + audioBass * 0.5);
+    float swapKey = floor(t / 7.0 + bassSig * 0.6);
 
     // ─── compute current line positions (with smoothstep repartition) ─
     // Arrays are sized to LINES_V/LINES_H maxima; only the first
@@ -235,6 +236,13 @@ void main() {
         col = clamp(col + shift * wSat * abs(tintDir), 0.0, 1.0);
     }
 
+    // Colour pulse: loud music lifts the primaries (never the cream canvas
+    // or the black lines) — the painting itself plays along with the band.
+    if (cIdx == 1 || cIdx == 2 || cIdx == 3) {
+        col *= 1.0 + 1.8 * clamp(audioLevel, 0.0, 1.0)
+                   * min(aR, 2.0) * pulseAmt;
+    }
+
     // ─── horizontal lines: black baseline + marching squares ─────────
     for (int i = 0; i < LINES_H; i++) {
         if (i >= activeLinesH) break;
@@ -246,7 +254,7 @@ void main() {
         if (ady < SQUARE) {
             float salt = float(i) * 11.13 + 3.7;
             vec3 sq = lineSquares(uv.x, dy, salt, t,
-                                  audioBass, audioTreble, aR, pulseAmt);
+                                  bassSig, trebleSig, aR, pulseAmt);
             if (sq != PAL_BLACK) col = sq;
         }
     }
@@ -262,7 +270,7 @@ void main() {
         if (adx < SQUARE) {
             float salt = float(j) * 13.71 + 17.3;
             vec3 sq = lineSquares(uv.y, dx, salt, t,
-                                  audioBass, audioTreble, aR, pulseAmt);
+                                  bassSig, trebleSig, aR, pulseAmt);
             if (sq != PAL_BLACK) col = sq;
         }
     }

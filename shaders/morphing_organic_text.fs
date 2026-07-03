@@ -10,6 +10,7 @@
     { "NAME": "activeA",      "LABEL": "Player A Active", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "BIND": "player[1].active" },
     { "NAME": "activeB",      "LABEL": "Player B Active", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "BIND": "player[2].active" },
     { "NAME": "bassDepth",    "LABEL": "Audio Depth",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.7,  "BIND": "audio.bass" },
+    { "NAME": "audioReact",   "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.35 },
     { "NAME": "morphSpeed",   "LABEL": "Morph Speed",     "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0 },
     { "NAME": "warpAmp",      "LABEL": "Warp Amplitude",  "TYPE": "float", "MIN": 0.0, "MAX": 2.5, "DEFAULT": 1.1 },
     { "NAME": "octaves",      "LABEL": "Octaves",         "TYPE": "long",  "DEFAULT": 5, "VALUES": [3,4,5,6], "LABELS": ["3","4","5","6"] },
@@ -260,6 +261,12 @@ void main(){
     float bass = clamp(bassDepth, 0.0, 2.0);
     int   oct = int(clamp(float(octaves), 3.0, 6.0));
 
+    // ─── Native audio bus (soft-kneed, idle-floor safe) ───────────────
+    float aReact = clamp(audioReact, 0.0, 2.0);
+    float aBassP = pow(smoothstep(0.05, 0.85, audioBass), 1.6);
+    float aHighP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+    float aBeat  = audioBeatPulse * audioBeatPulse;
+
     // Each player owns a column anchor on x; y drifts so the warp
     // sources don't all live on the same horizon.
     vec2 anchorA = vec2(-0.55 * aspect, sin(t * 0.31) * 0.18);
@@ -271,7 +278,7 @@ void main(){
     vec2 wC = playerWarp(uv, anchorC, 3.4,  t * 0.5, eC);
 
     // Hero field (front shell)
-    float warp = warpAmp * (0.85 + 0.25 * bass);
+    float warp = warpAmp * (0.85 + 0.25 * bass + 2.1 * aReact * aBassP);
     vec3 front = morphField(uv * 1.45, t, oct, wA, wB, wC, warp);
 
     // ─── z-parallax back shell ───────────────────────────────────────
@@ -305,12 +312,15 @@ void main(){
     // Compose front layer with normal lighting
     vec3 frontCol = paletteLookup(pal, front.y, front.z);
     frontCol = mix(frontCol * 0.55, frontCol * (0.6 + 0.6 * diff), 0.8);
-    frontCol += spec * vec3(1.0, 0.97, 0.85) * (0.35 + 0.45 * bass) * (1.0 - front.z);
+    frontCol += spec * vec3(1.0, 0.97, 0.85) * (0.35 + 0.45 * bass + 0.9 * aReact * aHighP) * (1.0 - front.z);
 
     // Mask between layers — the front shell occludes the back where the
     // morph "fills"; fwidth-AA over the gain seam keeps it pixel-free.
     float fw = fwidth(front.x);
-    float coverage = smoothstep(0.35 - fw, 0.65 + fw, front.x);
+    // Bass nudges the fuse/split threshold itself — the seam visibly
+    // advances or retreats with the beat, a structural (not just tonal) cue.
+    float seamShift = 0.10 * aReact * (aBassP - 0.5);
+    float coverage = smoothstep(0.35 - fw + seamShift, 0.65 + fw + seamShift, front.x);
 
     // Player tint glints — each player adds a low-saturation halo near
     // their anchor when energetic. Visibly distinct per-player response.
@@ -324,6 +334,14 @@ void main(){
     col += vec3(0.30, 0.70, 0.95) * gC * 0.18;   // C — sky
     // Inter-player fusion ridge: where two halos overlap, brighten.
     col += vec3(1.0) * (gA*gB + gB*gC + gA*gC) * 0.25;
+
+    // Beat accent — decaying event lit along the seam ridge, never a strobe.
+    col += vec3(1.0, 0.98, 0.92) * aBeat * aReact * 0.60 * front.z;
+
+    // Whole-field energy breathing — a soft global lift so the field
+    // visibly "inhales" with the music, idle floor keeps silence untouched.
+    float aGlow = smoothstep(0.10, 0.85, audioLevel);
+    col *= 1.0 + 1.25 * aReact * aGlow;
 
     // Gentle vignette + paper warmth
     col *= 1.0 - 0.22 * dot(uv, uv);

@@ -5,11 +5,11 @@
   "INPUTS": [
     { "NAME": "msg", "LABEL": "Caption", "TYPE": "text", "DEFAULT": "CIRCULAR FORMS · RESEARCH PLATE 03", "MAX_LENGTH": 48, "BIND": "cue.latest" },
 
-    { "NAME": "energyA", "LABEL": "Player 1 (Back)",  "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[1].energy" },
-    { "NAME": "energyB", "LABEL": "Player 2 (Mid)",   "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[2].energy" },
-    { "NAME": "energyC", "LABEL": "Player 3 (Front)", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[3].energy" },
-    { "NAME": "activeA", "LABEL": "Player 1 Active",  "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[1].active" },
-    { "NAME": "activeB", "LABEL": "Player 2 Active",  "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[2].active" },
+    { "NAME": "energyA", "LABEL": "Player 1 (Back)",  "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 1.0, "BIND": "player[1].energy" },
+    { "NAME": "energyB", "LABEL": "Player 2 (Mid)",   "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 1.0, "BIND": "player[2].energy" },
+    { "NAME": "energyC", "LABEL": "Player 3 (Front)", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 1.0, "BIND": "player[3].energy" },
+    { "NAME": "activeA", "LABEL": "Player 1 Active",  "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[1].active" },
+    { "NAME": "activeB", "LABEL": "Player 2 Active",  "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[2].active" },
 
     { "NAME": "bassDrive", "LABEL": "Bass (Stroke)",  "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "audio.bass" },
     { "NAME": "midDrive",  "LABEL": "Mid (Orbits)",   "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "audio.mid" },
@@ -362,14 +362,22 @@ void main() {
     int mode  = int(clamp(floor(paletteMode), 0.0, 3.0));
 
     float t   = TIME * motionSpeed;
-    float eA  = clamp(energyA, 0.0, 1.0);
-    float eB  = clamp(energyB, 0.0, 1.0);
-    float eC  = clamp(energyC, 0.0, 1.0);
+    // energyA/B/C are host-BIND'd (player[n].energy) — the per-cell "pop"
+    // mechanic that reads them was otherwise dead without a live player,
+    // so wire the engine's own band bus in as a fallback (back band ↔
+    // bass, mid band ↔ mid, front band ↔ high) so the sheet visibly pops
+    // with the mix out of the box, not just with a mic'd player.
+    float eA  = clamp(energyA + audioBass * 0.6, 0.0, 1.0);
+    float eB  = clamp(energyB + audioMid  * 0.6, 0.0, 1.0);
+    float eC  = clamp(energyC + audioHigh * 0.6, 0.0, 1.0);
     float aAv = clamp(activeA, 0.0, 1.0);
     float aBv = clamp(activeB, 0.0, 1.0);
-    float bD  = clamp(bassDrive, 0.0, 1.0);
-    float mD  = clamp(midDrive,  0.0, 1.0);
-    float hD  = clamp(highDrive, 0.0, 1.0);
+    // bassDrive/midDrive/highDrive are host-BIND'd (audio.bass/mid/high) —
+    // wire the engine's live audio bus in directly too so stroke/orbit/crisp
+    // respond out of the box even without the host BIND (preview/eval).
+    float bD  = clamp(bassDrive + audioBass * 0.7, 0.0, 1.0);
+    float mD  = clamp(midDrive  + audioMid  * 0.6, 0.0, 1.0);
+    float hD  = clamp(highDrive + audioHigh * 0.7, 0.0, 1.0);
 
     // ── Background paper (so the grid lives on a sheet, not a clearcolor) ──
     vec3 paper = paperColor.rgb;
@@ -606,7 +614,7 @@ void main() {
     col *= 1.0 + grain * 0.045;
 
     // ── Bass-lift global luminance bump ──
-    col *= 1.0 + 0.05 * bD * audioDepth;
+    col *= 1.0 + 0.22 * (bD + 0.6 * hD) * audioDepth;
 
     // Soft tone curve so highlights don't clip.
     col = col / (1.0 + 0.20 * col);

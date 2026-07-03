@@ -132,7 +132,7 @@ void main() {
     float audio = clamp(audioReact, 0.0, 2.0);
     float bass  = audioBass;
     float treb  = audioHigh;
-    float pulse = 1.0 + 0.18 * bass * audio;
+    float pulse = 1.0 + 0.55 * bass * audio;
 
     // ─── 1) Background — deep gradient + soft pistil glow at center ──
     vec3 col = bgColor.rgb;
@@ -142,7 +142,7 @@ void main() {
     col *= mix(0.55, 1.0, vig);
 
     // Pistil — a soft warm core that pulses with bass, sits behind petals.
-    float pistilR  = 0.085 + 0.025 * bass * audio;
+    float pistilR  = 0.085 + 0.07 * bass * audio;
     float pistil   = exp(-pow(r / pistilR, 2.0));
     col += centerColor.rgb * pistil * 2.2 * pulse;
     // Halo around pistil that the bloom waves rise out of.
@@ -177,7 +177,7 @@ void main() {
         // Bell envelope: bloom is brightest when half-grown.
         float env     = sin(phase * 3.14159);
         // Mid-burst HDR push when treble spikes.
-        env = pow(env, 0.85) * (1.0 + 0.6 * treb * audio * (1.0 - phase));
+        env = pow(env, 0.85) * (1.0 + 1.4 * treb * audio * (1.0 - phase));
         if (env < 0.01) continue;
 
         // Wave-specific spin so successive blooms aren't aligned.

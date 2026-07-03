@@ -101,28 +101,26 @@ void main() {
 
     float gridWav = sin(gridTheta - txwav1.x * PI * 0.2) * 0.5 + 0.5;
     // Bass also breathes the grid line thickness — the dominant structure.
-    float lineW   = mix(0.2, 0.7, gridWav) - audioReact * 0.08 * bassP;
+    float lineW   = mix(0.2, 0.7, gridWav) - audioReact * 0.10 * bassP;
     float grid    = 1.0 - step(clamp(lineW, 0.04, 0.9), max(abs(p.y), abs(p.x)));
 
     // Bass breathes the warp amount (structure, not position).
-    float warpEff = warpAmt * (1.0 + audioReact * 0.5 * bassP);
+    float warpEff = warpAmt * (1.0 + audioReact * 1.3 * bassP);
     vec3 tx  = srcTex(uv0 + txwav1 * warpEff);                 // fresh, inverted
     vec3 tx2 = texture(bufA, fract(uv0 + txwav2 * warpEff * 0.33)).rgb; // trailed
-    vec3 col = clamp(mix(1.0 - tx, tx2, grid), 0.0, 1.0);
-
-    // Overall energy → the frame leans toward its own inverse on louder passages
-    // (reads as a pulse/flash without ever clipping to white, since the image
-    // here runs bright — a straight brightness multiply would just clip). Clamp
-    // col first so this never runs away when stacked with the terms below.
-    float invFrac = clamp(audioReact * 0.65 * lvlP, 0.0, 0.5);
-    col = mix(col, 1.0 - col, invFrac);
+    vec3 col = mix(1.0 - tx, tx2, grid);
 
     // Highs: sparse sparkle riding the grid borders only (1.0 - grid = border mask).
     float sparkleMask = (1.0 - grid) * step(0.7 - 0.15 * highP, h21(id));
-    col += vec3(sparkleMask * highP * audioReact * 0.3);
+    col += vec3(sparkleMask * highP * audioReact * 0.4);
 
     // Beat: a brief, soft flash on the grid lines that decays with the pulse.
-    col += vec3((1.0 - grid) * beatP * audioReact * 0.2);
+    col += vec3((1.0 - grid) * beatP * audioReact * 0.25);
+
+    // Overall energy → the frame leans toward its own inverse on louder passages
+    // (reads as a pulse/flash without ever clipping to white, since the image
+    // here runs bright — a straight brightness multiply would just clip).
+    col = mix(col, 1.0 - col, audioReact * 0.6 * lvlP);
 
     gl_FragColor = vec4(col, 1.0);
 }

@@ -420,9 +420,11 @@ void main() {
             float rad = fitRad
                       * mix(1.0, 0.4 + 1.4 * hash11(fc * 31.1 + fn * 5.3),
                             radiusVariance);
-            // Bass pulse on the freshest cluster.
-            if (phase < 0.25) rad *= 1.0 + 0.15 * bass * audio
-                                       * (1.0 - phase / 0.25);
+            // Bass pulse — applied AFTER the fitRad auto-fit cap so it
+            // isn't swallowed by the neighbour-collision clamp above.
+            // Always-on (not just the spawn window) so live clusters keep
+            // breathing with the music for their whole hold phase.
+            rad *= 1.0 + 0.10 * bass * audio;
             rad *= clusterScale;
 
             // Circle SDF.
@@ -708,16 +710,20 @@ void main() {
         blobSdf -= (n - 0.5) * morphAmp * 0.07;
     }
 
-    // Compose: bg ← cluster blob ← text ink.
+    // Compose: bg ← cluster blob ← text ink. Bass lights the whole
+    // blob tissue up a touch so the cell color itself breathes with
+    // the music (audible even when node-radius pulse alone would be
+    // too thin a band to read at a glance).
+    vec3 blobColLit = blobCol * (1.0 + 0.07 * bass * audio);
     float blobFw   = fwidth(blobSdf);
     float blobFill = 1.0 - smoothstep(-blobFw, blobFw, blobSdf);
-    col = mix(col, blobCol, blobFill);
+    col = mix(col, blobColLit, blobFill);
     col = mix(col, textCol, charMask);
 
     float alpha = 1.0;
     if (transparentBg) {
         alpha = clamp(blobFill, 0.0, 1.0);
-        col   = mix(blobCol, textCol, charMask);
+        col   = mix(blobColLit, textCol, charMask);
     }
 
     gl_FragColor = vec4(col, alpha);

@@ -137,7 +137,11 @@ void main() {
     vec2 uv = (isf_FragNormCoord.xy * 2.0 - 1.0)
             * vec2(RENDERSIZE.x / RENDERSIZE.y, 1.0);
 
-    float audio      = clamp(audioReact, 0.0, 2.0);
+    // Wire real audio band into the reactivity knob — previously this only
+    // read the static audioReact param, never the live audioBass signal, so
+    // the shader was completely dead to actual sound regardless of level.
+    float audioLvl   = clamp(audioBass, 0.0, 1.0);
+    float audio      = clamp(audioReact, 0.0, 2.0) * (0.35 + 0.65 * audioLvl);
     float audioPulse = sin(TIME * 1.4) * 0.5 * audio;
     float twistK     = twist + 0.2 * audio;
 
@@ -207,8 +211,9 @@ void main() {
     // Subtle vignette
     col *= 1.0 - 0.18 * length(uv * 0.6);
 
-    // Final exposure
-    col *= exposure;
+    // Final exposure — bass adds a touch of extra punch on top of the
+    // caustic/dispersion response above so the whole piece breathes with it.
+    col *= exposure * (1.0 + 0.35 * audioLvl);
 
     gl_FragColor = vec4(col, 1.0);
 }

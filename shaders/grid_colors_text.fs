@@ -468,9 +468,11 @@ void main() {
     float t    = TIME * clamp(motionSpeed, 0.0, 2.5);
 
     // ── camera drift — slow translational dolly, audio.bass kicks z ──
-    float bass = clamp(audioDepth, 0.0, 2.0);
+    // audioDepth is the depth-push intensity knob; audioBass is the live
+    // engine audio-bus signal, so the push actually breathes with the mix.
+    float bass = clamp(audioDepth * (0.12 + 0.88 * audioBass), 0.0, 2.0);
     vec2 dolly = vec2(sin(t * 0.10) * 0.05, cos(t * 0.07) * 0.04);
-    float zPush = 0.06 * bass;
+    float zPush = 0.55 * bass;
 
     // Layer parallax: back drifts least, front most. Each layer has its
     // own slow lateral drift offset by 1/3 phases.
@@ -535,6 +537,9 @@ void main() {
     // ── overall depth fog so far tiles dissolve to bg ───────────────
     float depthFog = smoothstep(0.6, 1.05, length(p));
     col = mix(col, bg, depthFog * 0.18);
+
+    // ── bass punch — whole-sheet exposure lift that breathes with bass ─
+    col *= 1.0 + 3.0 * (bass - 0.08);
 
     // ── subtle film grain so nothing reads as a pixel grid ──────────
     float g = vnoise(uv * res.y * 0.012) + 0.5 * vnoise(uv * res.y * 0.03 + 7.0);

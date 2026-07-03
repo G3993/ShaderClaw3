@@ -403,14 +403,14 @@ vec3 renderLens(vec2 lp, float t, float dolly, float sunPulse, float chroma,
 
     // 2) Sun disc: bright lozenge near the horizon, parallaxes at 0.35×
     vec2 sunPos = vec2(0.18 - camX * 0.35, horizon + 0.10);
-    float sunR  = 0.22 + 0.04 * sunPulse;
+    float sunR  = 0.22 + 0.32 * sunPulse;
     float sunD  = length((lp - sunPos) / vec2(1.0, 0.85));
     float sun   = smoothstep(sunR, sunR * 0.55, sunD);
     float halo  = smoothstep(sunR * 2.4, sunR * 0.8, sunD) * 0.45;
     // Chromatic separation on the halo when player B is hot
     vec3 sunCol = mix(accent, vec3(1.0, 0.97, 0.85), 0.55);
     skyCol = mix(skyCol, sunCol, sun);
-    skyCol += halo * sunCol * (0.6 + 0.6 * sunPulse);
+    skyCol += halo * sunCol * (0.6 + 1.3 * sunPulse);
     // Chroma fringe on halo edge
     if (chroma > 0.001) {
         float fringe = smoothstep(sunR * 1.4, sunR * 1.05, sunD)
@@ -483,8 +483,8 @@ void main() {
     float eA     = clamp(energyA, 0.0, 1.0);
     float eB     = clamp(energyB, 0.0, 1.0);
     float eC     = clamp(energyC, 0.0, 1.0);
-    float bass   = clamp(bassPunch, 0.0, 2.0);
-    float treble = clamp(audioDepth, 0.0, 2.0);
+    float bass   = clamp(audioBass * bassPunch, 0.0, 2.0);
+    float treble = clamp(audioHigh * audioDepth, 0.0, 2.0);
 
     // Palette
     vec3 paper, ink, sky, land, accent;
@@ -543,8 +543,8 @@ void main() {
     float lensMask = 1.0 - smoothstep(0.97, 1.02, lensD);
     if (lensMask > 0.001) {
         float dolly = eA * 1.5 + sin(t * 0.13) * 0.18 * (0.4 + eA);
-        float sunP  = bass * 0.7 + eB * 0.9;
-        float chromaSep = eB * (0.6 + 0.4 * treble);
+        float sunP  = bass * 1.8 + eB * 0.9;
+        float chromaSep = eB * (0.6 + 0.4 * treble) + treble * 0.4;
         vec3 lensCol = renderLens(lp, t, dolly, sunP, chromaSep,
                                   sky, land, accent, paper);
         // Soft inner shadow + paper-mix at edge so the lens reads as a

@@ -11,9 +11,9 @@
     { "NAME": "energyD",       "LABEL": "Form 4 Energy",   "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[4].energy" },
     { "NAME": "energyE",       "LABEL": "Form 5 Energy",   "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[5].energy" },
 
-    { "NAME": "bassDrive",     "LABEL": "Bass Drive",      "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 2.0, "BIND": "audio.bass" },
-    { "NAME": "midDrive",      "LABEL": "Mid Drive",       "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 2.0, "BIND": "audio.mid" },
-    { "NAME": "highDrive",     "LABEL": "High Drive",      "TYPE": "float", "DEFAULT": 0.4, "MIN": 0.0, "MAX": 2.0, "BIND": "audio.high" },
+    { "NAME": "bassDrive",     "LABEL": "Bass Drive",      "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 2.0 },
+    { "NAME": "midDrive",      "LABEL": "Mid Drive",       "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 2.0 },
+    { "NAME": "highDrive",     "LABEL": "High Drive",      "TYPE": "float", "DEFAULT": 0.4, "MIN": 0.0, "MAX": 2.0 },
 
     { "NAME": "formCount",     "LABEL": "Form Count",      "TYPE": "long",  "DEFAULT": 6, "VALUES": [3,4,5,6], "LABELS": ["3","4","5","6"] },
     { "NAME": "formVariant",   "LABEL": "Form Variant",    "TYPE": "long",  "DEFAULT": 0, "VALUES": [0,1,2], "LABELS": ["Aura blobs","Ribbon clusters","Folded sheets"] },
@@ -481,9 +481,12 @@ void main(){
     p.y = uv.y - 0.5;
 
     float tw = TIME * max(motionSpeed, 0.0);
-    float bass = clamp(bassDrive, 0.0, 2.0);
-    float mid  = clamp(midDrive,  0.0, 2.0);
-    float high = clamp(highDrive, 0.0, 2.0);
+    // bassDrive/midDrive/highDrive are gains on the live audio*  uniforms
+    // (previously wired to a nonexistent "audio.bass" BIND path, so they
+    // sat at their static defaults regardless of sound).
+    float bass = clamp(bassDrive * audioBass, 0.0, 2.0);
+    float mid  = clamp(midDrive  * audioMid,  0.0, 2.0);
+    float high = clamp(highDrive * audioHigh, 0.0, 2.0);
     float audDepth = clamp(audioDepth, 0.0, 2.0);
 
     // Camera parallax via mouse + slow autonomic drift.
@@ -628,6 +631,10 @@ void main(){
             }
         }
     }
+
+    // Audio pulse — bass/mid lift the whole poster's exposure so the
+    // page visibly breathes with a hit, beyond the sixth form's own aura.
+    col *= 1.0 + bass * 0.32 + mid * 0.14;
 
     // Final tone shaping: gentle filmic, then sRGB-ish gamma.
     col = col / (1.0 + 0.55 * col);

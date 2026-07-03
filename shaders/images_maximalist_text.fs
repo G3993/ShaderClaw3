@@ -11,6 +11,7 @@
 
     { "NAME": "audioDensity","LABEL": "Bass → Density",      "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.8, "BIND": "audio.bass" },
     { "NAME": "grain",       "LABEL": "High → Tape Grain",   "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.6, "BIND": "audio.high" },
+    { "NAME": "audioReact",  "LABEL": "Audio React",         "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.35 },
 
     { "NAME": "imageCount",  "LABEL": "Cutouts per Plane",   "TYPE": "long",  "DEFAULT": 14, "VALUES": [8,10,12,14,18,22], "LABELS": ["8","10","12","14","18","22"] },
     { "NAME": "densityBias", "LABEL": "Density Bias",        "TYPE": "float", "MIN": 0.3, "MAX": 1.8, "DEFAULT": 1.0 },
@@ -296,11 +297,13 @@ vec3 paintCutout(vec2 local, vec2 he, float seed, int palMode, float bright) {
 // floods more scraps in without changing scene topology.
 vec4 renderPlane(vec2 p, int planeIdx, int n, float density,
                  float t, vec2 planeOffset, float jitter,
-                 int palMode, float bright, float aspect) {
+                 int palMode, float bright, float aspect, float sizeMod) {
     vec4 acc = vec4(0.0);
     float fp = float(planeIdx);
     // Per-plane scale of the cutout footprint (front bigger, back smaller).
-    float scaleBase = (planeIdx == 2) ? 0.20 : (planeIdx == 1) ? 0.15 : 0.105;
+    // sizeMod breathes the whole plane's footprint with bass — the
+    // dominant structural cue for this collage.
+    float scaleBase = ((planeIdx == 2) ? 0.20 : (planeIdx == 1) ? 0.15 : 0.105) * sizeMod;
     // Cutout aspect range (some landscape, some portrait, some square).
     for (int i = 0; i < MAX_CUTOUTS; i++) {
         if (i >= n) break;
@@ -483,6 +486,12 @@ void main() {
     float bass = clamp(audioDensity, 0.0, 2.0);
     float high = clamp(grain, 0.0, 1.5);
 
+    // ─── Native audio bus (soft-kneed, idle-floor safe) ───────────────
+    float aReact = clamp(audioReact, 0.0, 2.0);
+    float aBassP = pow(smoothstep(0.05, 0.85, audioBass), 1.6);
+    float aHighP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+    float aBeat  = audioBeatPulse * audioBeatPulse;
+
     // ── Paper backdrop with subtle marbled paper texture ──────────────
     vec3 paperA = paperTint.rgb;
     vec3 paperB = paperA * vec3(0.94, 0.93, 0.90);
@@ -515,6 +524,9 @@ void main() {
     float fD = clamp((0.35 + 0.70 * frontDrawer) * globalDensity, 0.0, 1.6);
     float mD = clamp((0.55 + 0.55 * midDrawer)   * globalDensity, 0.0, 1.6);
     float bD = clamp((0.75 + 0.40 * backDrawer)  * globalDensity, 0.0, 1.6);
+    // Bass breathes the whole collage's footprint scale — the dominant
+    // structural cue for a maximalist spread (soft knee, idle-floor safe).
+    float sizeMod = 1.0 + 0.65 * aReact * aBassP;
 
     // Per-plane parallax offsets. Slow & subtle on back, big & lively on front.
     float pAmt = parallaxAmt;
@@ -539,21 +551,24 @@ void main() {
     float fogFront = 0.05 * fog;
 
     // BACK plane (wallpaper tiles) — smaller scraps tinted toward paper.
-    vec4 backPlane = renderPlane(p, 0, n, bD, t, offBack, jBack, palMode, brBack, aspect);
+    vec4 backPlane = renderPlane(p, 0, n, bD, t, offBack, jBack, palMode, brBack, aspect, sizeMod);
     backPlane.rgb = mix(backPlane.rgb, paper, fogBack);
     col = mix(col, backPlane.rgb, backPlane.a);
     // Re-apply ink so type sits ABOVE the back wallpaper but UNDER mid/front.
     col = mix(col, ink, inkA * 0.88);
 
     // MID plane (photo polaroids) — mid-size with photo fbm fills.
-    vec4 midPlane = renderPlane(p, 1, n, mD, t, offMid, jMid, palMode, brMid, aspect);
+    vec4 midPlane = renderPlane(p, 1, n, mD, t, offMid, jMid, palMode, brMid, aspect, sizeMod);
     midPlane.rgb = mix(midPlane.rgb, paper, fogMid);
     col = mix(col, midPlane.rgb, midPlane.a);
 
     // FRONT plane (hand stickers) — biggest, brightest, jitteriest.
-    vec4 frontPlane = renderPlane(p, 2, n, fD, t, offFront, jFront, palMode, brFront, aspect);
+    vec4 frontPlane = renderPlane(p, 2, n, fD, t, offFront, jFront, palMode, brFront, aspect, sizeMod);
     frontPlane.rgb = mix(frontPlane.rgb, paper, fogFront);
     col = mix(col, frontPlane.rgb, frontPlane.a);
+
+    // Beat accent — a decaying flash across the front scraps only, never a strobe.
+    col += vec3(1.0, 0.96, 0.85) * aBeat * aReact * 0.60 * frontPlane.a;
 
     // ── Top-line headline: a thin band of ink stays VISIBLE above the
     //    front plane in a narrow band, simulating a chromed editorial
@@ -563,7 +578,7 @@ void main() {
 
     // ── Tape grain (audio.high) + paper fiber noise ───────────────────
     vec2 fragXY = gl_FragCoord.xy;
-    float grainAmt = (0.06 + 0.18 * high) * (0.6 + 0.6 * frontDrawer);
+    float grainAmt = (0.06 + 0.18 * high + 0.45 * aReact * aHighP) * (0.6 + 0.6 * frontDrawer);
     col += tapeGrain(fragXY, TIME, grainAmt) * vec3(1.0, 0.97, 0.93);
 
     float fiber = fbm2(uv * res.y * 0.011) * 0.06;
@@ -586,6 +601,15 @@ void main() {
             col = mix(col, swCol, tick * 0.85);
         }
     }
+
+    // Whole-spread energy breathing — a soft global lift so the collage
+    // visibly pumps with the music; idle floor keeps silence untouched.
+    float aGlow = smoothstep(0.10, 0.85, audioLevel);
+    // Bass breathing wash — the collage "inhales" warmer light on a hit,
+    // matching the shader's own breathing-density language. Soft-kneed via
+    // aBassP, capped well under a full wash, idle floor keeps silence untouched.
+    float aWash = clamp(aReact * aBassP * 1.7, 0.0, 0.55);
+    col = mix(col, vec3(0.95, 0.20, 0.15), aWash);
 
     // ── Final color polish ────────────────────────────────────────────
     // Mild s-curve so cutouts pop against paper without crushing.

@@ -15,7 +15,7 @@
     { "NAME": "rotSpeed", "LABEL": "Orbit Speed", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "bloomRatio", "LABEL": "Glow Ratio", "TYPE": "float", "DEFAULT": 0.4, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "metallic", "LABEL": "Metallic", "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "audioDrive", "LABEL": "Audio Drive", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 5.0 },
+    { "NAME": "audioDrive", "LABEL": "Audio Drive", "TYPE": "float", "DEFAULT": 1.8, "MIN": 0.0, "MAX": 5.0 },
     { "NAME": "accentColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.04, 1.0] },
     { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
@@ -90,7 +90,7 @@ vec2 mapScene(vec3 p, float count) {
         }
 
         // Audio pulse: expand radius on beat
-        float pulse = 1.0 + audioBass * audioDrive * 0.3 * hash1(i * 11.3);
+        float pulse = 1.0 + audioBass * audioDrive * 0.55 * hash1(i * 11.3);
 
         // Wider size variance per user feedback
         float szJit = mix(1.0, 0.20 + hash1(i * 2.37) * 1.6, sizeVariance);
@@ -239,15 +239,21 @@ vec4 passScene(vec2 uv) {
 
         // Audio brightness boost for blooming spheres.
         // Baseline TIME pulse keeps the shader alive in silence (audio non-gating).
+        float beatAll = audioLevel * audioDrive;
         if (shouldBloom(hit.y)) {
             float idle = 0.5 + 0.5 * sin(TIME * 1.7 + hit.y * 1.3);
-            float beat = audioLevel * audioDrive;
+            float beat = beatAll;
             // HDR core boost: hot blooming spheres punch into linear HDR (~1.4–2.2x).
-            col *= 1.0 + beat * 0.9 + idle * 0.25;
+            col *= 1.0 + beat * 1.6 + idle * 0.25;
             // Audio/idle flash: sharp linear-HDR spike on transients pushes bloom hard.
             // Tinted by the sphere's own color so flashes feel considered, not white.
             vec3 hotTint = normalize(col + vec3(1e-4)) * 1.4 + vec3(0.2);
-            col += hotTint * (beat * 0.55 + idle * 0.18);
+            col += hotTint * (beat * 0.9 + idle * 0.18);
+        } else {
+            // Non-bloom spheres still get a gentle audio-driven brightness
+            // ripple so the reactivity reads across the whole scene, not
+            // just the ~40% of spheres flagged for bloom.
+            col *= 1.0 + beatAll * 0.35;
         }
 
         // Encode bloom flag in alpha: 1.0 = bloom, 0.5 = no bloom

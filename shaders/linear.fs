@@ -7,7 +7,10 @@
     { "NAME": "dt",       "LABEL": "Sim Speed",  "TYPE": "float", "MIN": 0.1, "MAX": 2.0,  "DEFAULT": 0.7 },
     { "NAME": "sight",    "LABEL": "Sight Radius","TYPE": "float", "MIN": 10.0, "MAX": 120.0, "DEFAULT": 33.0 },
     { "NAME": "trail",    "LABEL": "Trail",      "TYPE": "float", "MIN": 0.0, "MAX": 0.995, "DEFAULT": 0.97 },
-    { "NAME": "exposure", "LABEL": "Exposure",   "TYPE": "float", "MIN": 0.3, "MAX": 2.5,  "DEFAULT": 1.0 }
+    { "NAME": "exposure", "LABEL": "Exposure",   "TYPE": "float", "MIN": 0.3, "MAX": 2.5,  "DEFAULT": 1.0 },
+    { "NAME": "audioReact","LABEL": "Audio React","TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.35 },
+    { "NAME": "inputTex", "TYPE": "image", "LABEL": "Texture" },
+    { "NAME": "texMix",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "LABEL": "Texture Mix" }
   ],
   "PASSES": [
     { "TARGET": "bufA", "PERSISTENT": true },
@@ -33,6 +36,12 @@ const int   nParticles = 200;
 const float minSep     = 33.0;
 const float rad        = 0.0075;
 const float obRad      = 45.0;
+
+// ── Audio conditioning (playbook: soft knees + floors, never linear) ─────
+float aKnee(float x, float lo, float hi) { return smoothstep(lo, hi, x); }
+float aBassP() { return pow(aKnee(audioBass, 0.05, 0.85), 1.6); }  // structural weight (flock speed)
+float aHighP() { return pow(aKnee(audioHigh, 0.10, 0.90), 1.2); }  // sparkle (dot glints)
+float aBeatP() { return audioBeatPulse * audioBeatPulse; }         // decaying accent (flash)
 
 vec2 hash22(vec2 p) {
     vec3 p3 = fract(vec3(p.xyx) * vec3(.1031, .1030, .0973));
@@ -62,9 +71,14 @@ void main() {
                 }
             }
 
+            // Bass gives the whole flock more urgency (the dominant
+            // structure — everyone speeds up together), a beat kicks a
+            // brief extra surge. Idle floor: audio 0 -> exactly authored
+            // speed.
+            float aSpeedMul = 1.0 + audioReact * (0.7 * aBassP() + 0.5 * aBeatP());
             if (nb > 0.0) {
                 avgPos /= nb;
-                bA.zw = normalize(avgDir) * speed;
+                bA.zw = normalize(avgDir) * speed * aSpeedMul;
                 vec2 dir = normalize(avgPos - bA.xy);
                 bA.zw += dir * 0.1;
             }
@@ -87,6 +101,10 @@ void main() {
 
     // ───────── Pass 1 — render boids + trail ─────────
     if (PASSINDEX == 1) {
+        // Highs add a sparse glint radius around each dot (sparkle on a
+        // sparse subset — only reads on strong high end). Idle floor:
+        // audio 0 -> exactly the authored dot size.
+        float glintR = rad * R.y * (1.0 + 0.5 * audioReact * aHighP());
         vec4 bB = texture(bufB, gl_FragCoord.xy / R);
         for (int i = 0; i < nParticles; i++) {
             vec2 p = A(ivec2(i, 0)).xy;
@@ -95,6 +113,10 @@ void main() {
             bB.xyz = mix(bB.xyz, c, ss(rad * R.y, rad * R.y - 1.0, d));
             float sd2 = ss(.4 * rad * R.y, .4 * rad * R.y - 1.0, d);
             bB.w = mix(bB.w, 1.0, sd2);
+            // Highs: a soft outer glint ring per dot, only visible once
+            // audio pushes past the knee — clean flock in silence.
+            float glint = ss(glintR, glintR - 1.5, d) - ss(rad * R.y, rad * R.y - 1.0, d);
+            bB.xyz += c * max(glint, 0.0) * audioReact * 0.8 * aHighP();
         }
         bB.xyz *= 0.8;
         bB.w   *= trail;
@@ -106,5 +128,27 @@ void main() {
     vec4 bB = texture(bufB, gl_FragCoord.xy / R);
     vec4 f = vec4(0.44 * vec3(bB.w), 1.0);
     f.xyz += 1.0 - exp(-bB.xyz);
+
+    // Bass/beat lift a faint ambient wash through the dark field behind
+    // the flock — the one part of the frame with real headroom (the dots
+    // and trail already run bright). Bass = steady glow, beat = a brief
+    // extra flare. Idle floor: audio 0 -> the field stays clean black.
+    float aB = audioReact * aBassP();
+    float aBeat = audioReact * aBeatP();
+    vec2 fuv = gl_FragCoord.xy / R;
+    float vign = 1.0 - length(fuv - 0.5) * 0.9;
+    vec3 wash = vec3(0.32, 0.48, 0.75) * (0.6 * aB + 1.3 * aBeat) * clamp(vign, 0.0, 1.0);
+    f.rgb += wash * (1.0 - clamp(bB.w, 0.0, 1.0));
+
+    if (texMix > 0.001) {
+        // Boids fly in front of the image: the texture shows through as a
+        // dim backdrop only where the trail hasn't claimed the pixel, so the
+        // flock reads as flying over it rather than a flat crossfade.
+        vec2 tuv = gl_FragCoord.xy / R;
+        vec3 texCol = texture2D(inputTex, tuv).rgb;
+        vec3 backdrop = texCol * (1.0 - clamp(bB.w, 0.0, 1.0)) * 0.6;
+        f.rgb = mix(f.rgb, f.rgb + backdrop, texMix);
+    }
+
     gl_FragColor = vec4(f.rgb * exposure, 1.0);
 }

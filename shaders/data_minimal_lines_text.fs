@@ -6,11 +6,11 @@
     { "NAME": "msg",         "LABEL": "Spoken Line",   "TYPE": "text",  "DEFAULT": "what we require is silence",
       "MAX_LENGTH": 48, "BIND": "cue.latest" },
     { "NAME": "energyA",     "LABEL": "Lines Agent",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0,
-      "DEFAULT": 0.0, "BIND": "player[1].energy" },
+      "DEFAULT": 0.35, "BIND": "player[1].energy" },
     { "NAME": "energyB",     "LABEL": "Glyph Agent",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0,
-      "DEFAULT": 0.0, "BIND": "player[2].energy" },
+      "DEFAULT": 0.35, "BIND": "player[2].energy" },
     { "NAME": "energyC",     "LABEL": "Bars Agent",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0,
-      "DEFAULT": 0.0, "BIND": "player[3].energy" },
+      "DEFAULT": 0.35, "BIND": "player[3].energy" },
     { "NAME": "aliveA",      "LABEL": "Lines Active",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0,
       "DEFAULT": 1.0, "BIND": "player[1].active" },
     { "NAME": "aliveB",      "LABEL": "Glyph Active",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0,
@@ -561,9 +561,16 @@ void main() {
     float sheen = smoothstep(0.0, 0.5, sin((p.x - p.y * 0.5) * 1.6 - t * 0.18) * 0.5 + 0.5);
     col += pow(sheen, 4.0) * 0.020 * (P.paper - 0.5);
 
-    // Audio-bound subtle pulse of contrast — never garish.
-    float pulse = 1.0 + 0.04 * lvl * audio;
+    // Audio-bound subtle pulse of contrast — never garish. `bass`/`treb`
+    // are the live engine bands (audioBass/audioHigh); `lvl`/`audio` are
+    // the host-BIND'd score-drift knobs. Both feed the same soft pulse so
+    // the page visibly breathes with the mix, not just the BIND path.
+    float bassHit = clamp(bass + treb, 0.0, 2.0);
+    float pulse = 1.0 + 0.04 * lvl * audio + 0.28 * bassHit;
     col = (col - P.paper) * pulse + P.paper;
+    // Whole-page breathing: a faint ink-ward lift so the paper itself (not
+    // just the marks) visibly answers the mix — musical, not garish.
+    col += (P.ink - P.paper) * 0.020 * bassHit;
 
     gl_FragColor = vec4(fidApply(clamp(col, 0.0, 1.0), gl_FragCoord.xy), 1.0);
 }

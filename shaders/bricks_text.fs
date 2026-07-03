@@ -11,7 +11,8 @@
     { "NAME": "textColor", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
     { "NAME": "bgColor", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
     { "NAME": "textScale", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "transparentBg", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "transparentBg", "TYPE": "bool", "DEFAULT": true },
+    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 2.0 }
   ]
 }*/
 
@@ -185,14 +186,25 @@ void main() {
     // Character mapping: which character from the text
     int charIdx = int(mod(colIdx + rowIdx * cols, float(numChars)));
 
+    // ── Audio conditioning — subtle, readability-first. Soft knees,
+    //    idle floor = the exact static baseline (all terms zero in silence).
+    float bassP = pow(smoothstep(0.05, 0.85, audioBass), 1.6);
+    float highP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+    float aKick = audioBeatPulse * audioBeatPulse;
+
     // Render character in cell
     // Character aspect ratio is 5:7
     float charW = 5.0 / 7.0;
+    // Bass breathes the glyph weight very slightly — the dominant structure.
+    float scaleBreath = 1.0 + audioReact * 0.04 * bassP;
     // Scale character within cell
-    float scaleX = textScale * charW;
-    float scaleY = textScale;
+    float scaleX = textScale * charW * scaleBreath;
+    float scaleY = textScale * scaleBreath;
     float marginX = (1.0 - scaleX) * 0.5;
     float marginY = (1.0 - scaleY) * 0.5;
+    // Highs add a hair of per-character letterspacing breathing — sparse,
+    // phase-locked to each cell so it never reads as a global pump.
+    marginX += audioReact * 0.012 * highP * sin(TIME * 3.0 + colIdx * 1.7 + rowIdx * 0.9);
 
     float textHit = 0.0;
 
@@ -244,6 +256,14 @@ void main() {
         alpha = textHit;
         finalCol = textColor.rgb;
     }
+
+    // Glow breathes with the music: a continuous (level-driven) warm lean
+    // plus a beat pulse on top — decaying accent, not a full-frame flash.
+    // Multiplicative tint (not additive) so it reads even on saturated
+    // white text, where additive glow would just clip invisibly.
+    vec3 beatTint = vec3(1.0, 0.65, 0.35);
+    float glowAmt = clamp(audioReact * (0.35 * highP + 0.9 * aKick), 0.0, 1.0);
+    finalCol = mix(finalCol, finalCol * beatTint, glowAmt);
 
     // Surprise: every ~28s a single brick falls — for ~0.5s the lower
     // edge sags, then snaps back. Lego physics rebellion.

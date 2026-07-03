@@ -187,7 +187,10 @@ void main() {
 
     // Audio non-gating: alive at audio=0, audio adds a subtle tint when present
     col += vec3(0.04, 0.025, 0.015);
-    col += smoothstep(0.0, 1.0, audioLevel) * vec3(0.05, 0.03, 0.02);
+    float audioKnee = pow(smoothstep(0.05, 0.85, audioLevel), 1.3);
+    col += audioKnee * vec3(0.25, 0.18, 0.10);
+    col += vec3(1.0, 0.9, 0.75) * spec1 * fresnel * audioKnee * 4.0;
+    col *= 1.0 + audioKnee * 1.6;
     alpha = 1.0;
   }
 

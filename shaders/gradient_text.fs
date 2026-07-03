@@ -322,16 +322,16 @@ void main() {
     // Cell sizes per layer — smaller cells in front for the "denser closer"
     // depth cue. Bass swells all cells slightly (whole field breathes).
     float densityBase = max(dotDensity, 5.0);
-    float cellBack  = (1.4 / densityBase) * (1.0 + 0.12 * bass);
-    float cellMid   = (1.0 / densityBase) * (1.0 + 0.10 * bass);
-    float cellFront = (0.75 / densityBase) * (1.0 + 0.08 * bass);
+    float cellBack  = (1.4 / densityBase) * (1.0 + 0.28 * bass);
+    float cellMid   = (1.0 / densityBase) * (1.0 + 0.24 * bass);
+    float cellFront = (0.75 / densityBase) * (1.0 + 0.20 * bass);
 
     // Player-energy bindings — each layer responds to its OWN channel.
     // Add an audio.bass baseline so audio-only setups still animate; the
     // shader passes the binding floor without requiring all three players.
-    float eA = clamp(energyA + bass * 0.25, 0.0, 1.5);   // front / orange
-    float eB = clamp(energyB + bass * 0.20, 0.0, 1.5);   // mid   / purple
-    float eC = clamp(energyC + bass * 0.15, 0.0, 1.5);   // back  / teal
+    float eA = clamp(energyA + bass * 1.05, 0.0, 1.5);   // front / orange
+    float eB = clamp(energyB + bass * 0.85, 0.0, 1.5);   // mid   / purple
+    float eC = clamp(energyC + bass * 0.65, 0.0, 1.5);   // back  / teal
 
     // Optional palette shift — slow hue rotation across all three tints.
     float ps = paletteShift;
@@ -489,7 +489,7 @@ void main() {
     // ── Subtle HDR bloom on dots — energy → glow swell ────────────────
     float layerLum = dot(front + midL * 0.7, vec3(0.299, 0.587, 0.114));
     float bloomAmt = smoothstep(0.6, 1.4, layerLum);
-    col += bloomAmt * (front * 0.6 + midL * 0.3) * (0.4 + 0.8 * bass);
+    col += bloomAmt * (front * 0.6 + midL * 0.3) * (0.4 + 1.6 * bass);
 
     // ── Paper grain (continuous noise, never a pixel grid) ────────────
     if (grain > 0.001) {

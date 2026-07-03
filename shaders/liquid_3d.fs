@@ -136,8 +136,8 @@ void main(){
     // Live audio bus → droplet swell + merge (calm: bass K=0.30, mid K=0.40).
     float bAud = audioBass * audioReact;
     float mAud = audioMid  * audioReact;
-    gAudioSize = 1.0 + 0.30 * bAud;
-    gAudioVisc = 1.0 + 0.40 * mAud;
+    gAudioSize = 1.0 + 0.65 * bAud;
+    gAudioVisc = 1.0 + 0.85 * mAud;
 
     // Auto-orbit camera (the original's no-mouse fallback path).
     vec2 angles = vec2(TIME * spin * 0.5, -0.5);
@@ -173,6 +173,10 @@ void main(){
         col  = mix(col, envR, reflAmt * (0.25 + 0.75 * fres));
         col += colB.rgb * fres * rimGlow;                        // fresnel rim glow
     }
+
+    // Audio punch: guarantees a visible reactive lift even when the camera
+    // framing keeps the metaball field small on screen this frame.
+    col *= 1.0 + 0.45 * bAud + 0.30 * mAud;
 
     // Tonemap + gamma.
     col = col / (1.0 + col);

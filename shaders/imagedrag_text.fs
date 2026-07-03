@@ -11,8 +11,8 @@
     { "NAME": "activeA",     "LABEL": "P1 Active",     "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[1].active" },
     { "NAME": "activeB",     "LABEL": "P2 Active",     "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[2].active" },
 
-    { "NAME": "bassDrive",   "LABEL": "Bass Drive",    "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "audio.bass" },
-    { "NAME": "trebleDrive", "LABEL": "Treble Jitter", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "audio.high" },
+    { "NAME": "bassDrive",   "LABEL": "Bass Drive",    "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.0, "BIND": "audio.bass" },
+    { "NAME": "trebleDrive", "LABEL": "Treble Jitter", "TYPE": "float", "DEFAULT": 0.30, "MIN": 0.0, "MAX": 1.0, "BIND": "audio.high" },
 
     { "NAME": "dragLength",  "LABEL": "Drag Length",   "TYPE": "float", "DEFAULT": 0.65, "MIN": 0.10, "MAX": 1.20 },
     { "NAME": "imageCount",  "LABEL": "Stamp Count",   "TYPE": "long",  "DEFAULT": 9,    "VALUES": [4,6,8,9,10,12,14], "LABELS": ["4","6","8","9","10","12","14"] },
@@ -354,8 +354,10 @@ void main() {
     float eA = clamp(max(energyA, 0.08) * (0.55 + 0.6 * activeA) * audioDepth, 0.0, 1.5);
     float eB = clamp(max(energyB, 0.08) * (0.55 + 0.6 * activeB) * audioDepth, 0.0, 1.5);
     float eC = clamp(max(energyC, 0.08) * audioDepth, 0.0, 1.5);
-    float bass = bassDrive;
-    float jit  = trebleDrive;
+    // Live audio bus (audioBass/audioHigh) drives the drag on top of the
+    // knob baseline — silence still breathes at bassDrive/trebleDrive.
+    float bass = clamp(bassDrive + audioBass * 0.6, 0.0, 1.4);
+    float jit  = clamp(trebleDrive + audioHigh * 0.6, 0.0, 1.4);
 
     // ── Backdrop: warm/dark paper with a subtle paper-fibre + a wandering raking light.
     vec3 col = paperColor.rgb;
@@ -409,6 +411,10 @@ void main() {
     // Soft motion shadow underneath every stack (extra depth read).
     float shelf = smoothstep(0.0, 0.04, -p.y - 0.30);
     col *= 1.0 - 0.10 * shelf;
+
+    // Bass breath — a gentle whole-frame lift so the piece visibly pulses
+    // with the track, not just the drag geometry.
+    col *= 1.0 + 0.42 * bass;
 
     // ── Caption — typewriter from cue.latest, sits in the upper third
     //    like the reference's editorial title. Plain horizontal layout.

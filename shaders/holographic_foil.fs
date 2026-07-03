@@ -391,7 +391,17 @@ void main() {
     col = col / (1.0 + col * 0.25);
 
     // Transmission strength — global brightness driven by audioLevel.
+    // Unchanged at rest (audioLevel 0 keeps the original idle look).
     col *= 0.6 + audioLevel * audioReact * 0.5;
+
+    // Beat duck — on loud peaks, briefly pull the (already near-white,
+    // Reinhard-clipped) foil highlights down instead of pushing them
+    // brighter still. A brightness-only increase here gets absorbed by
+    // clipping on the already-saturated sparkle/spec pixels and reads as
+    // no reaction at all; ducking the gain is the only lever that stays
+    // visible once highlights are pinned at white. Zero at rest.
+    float duck = smoothstep(0.3, 0.9, audioLevel * audioReact) * 0.75;
+    col *= (1.0 - duck);
 
     gl_FragColor = vec4(col, 1.0);
 }

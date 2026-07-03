@@ -64,6 +64,14 @@
      	"DEFAULT" :	13,
      	"MIN" :		5,
      	"MAX" :		55
+    },
+    {
+     	"NAME" :	"audioReact",
+     	"LABEL" :	"Audio React",
+      	"TYPE" :	"float",
+     	"DEFAULT" :	0.35,
+     	"MIN" :		0.0,
+     	"MAX" :		2.0
     }
   ]
 }
@@ -81,16 +89,30 @@
 float hash (float a) { return floor(cos(a)*seed1+sin(a*seed2));  }
 
 void main() {
-	
-    vec2 uv = (2.0 * gl_FragCoord.xy - RENDERSIZE.xy) / RENDERSIZE.y;	
+
+    // ── Audio conditioning — soft knees, idle floor = baseline look.
+    float bassP = pow(smoothstep(0.05, 0.85, audioBass), 1.6);
+    float midP  = smoothstep(0.08, 0.90, audioMid);
+    float highP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+    float aKick = audioBeatPulse * audioBeatPulse;
+
+    vec2 uv = (2.0 * gl_FragCoord.xy - RENDERSIZE.xy) / RENDERSIZE.y;
     uv -= center.xy;
-    uv *= 10.5-scale;
-    float C = sin(TIME * rate) * freq1, dist = 0.0;												
-    for(float i=10.0; i < 90.0; i++) {								
-        float R = C + i;									
-        vec2 N = vec2(sin(R), cos(R));				
-        N *= abs(hash(R)) * freq2;							
-        dist += sin(i + loops * distance(uv, N));				
+    // Bass zooms the whole blob field — the dominant structural knob.
+    float zoomA = 1.0 - audioReact * 0.20 * bassP;
+    uv *= (10.5-scale) * zoomA;
+    float C = sin(TIME * rate) * freq1, dist = 0.0;
+    // Mids widen the blob-node spread — fine turbulence, not structure.
+    float freq2A = freq2 * (1.0 + audioReact * 0.25 * midP);
+    for(float i=10.0; i < 90.0; i++) {
+        float R = C + i;
+        vec2 N = vec2(sin(R), cos(R));
+        N *= abs(hash(R)) * freq2A;
+        dist += sin(i + loops * distance(uv, N));
     }
+    // Beat pulse: a decaying brightness accent, not a continuous pump.
+    dist *= 1.0 + audioReact * 0.45 * aKick;
+    // Highs add a fine shimmer across the field — sparse, subtle detail.
+    dist += audioReact * 0.12 * highP * sin(dist * 3.0 + TIME * 2.0);
 	gl_FragColor = vec4(vec3(dist),1.0);
 }

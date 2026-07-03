@@ -237,7 +237,10 @@ void main() {
     float aA = clamp(activeA, 0.0, 1.0);
     float aB = clamp(activeB, 0.0, 1.0);
     float aC = clamp(activeC, 0.0, 1.0);
-    float bass = clamp(bassDrive, 0.0, 1.0) * audioDepth;
+    // Routing fix: bassDrive is a BIND'd knob (audio.bass) that only moves
+    // when a host wires live audio into it. Fold in the raw engine audioBass
+    // bus directly so the swell/wobble/dot response below is real by default.
+    float bass = clamp(max(bassDrive, audioBass), 0.0, 1.0) * audioDepth;
 
     // ── LAYER 0: paper backdrop ──────────────────────────────────────
     // Warm cream with subtle marbled fibre + a soft vignette so it
@@ -468,15 +471,15 @@ void main() {
         int slot = wordSlot(w);
         float slotE = (slot == 0) ? eA : (slot == 1) ? eB : eC;
         float slotA = (slot == 0) ? aA : (slot == 1) ? aB : aC;
-        hcol *= 1.0 + 0.12 * slotA + 0.10 * bass;
+        hcol *= 1.0 + 0.12 * slotA + 0.35 * bass;
 
         // Apply streak + tip pool.
         vec3 banded = hcol * mix(0.85, 1.05, streak);
         banded *= mix(1.0, 0.78, tipPool * (1.0 - grain * 0.4));
 
         float a = fill * clamp(opacity, 0.2, 1.0);
-        // Slight extra opacity for active speaker.
-        a = clamp(a * (1.0 + 0.10 * slotA), 0.0, 1.0);
+        // Slight extra opacity for active speaker + bass swell.
+        a = clamp(a * (1.0 + 0.10 * slotA + 0.30 * bass), 0.0, 1.0);
 
         // Z-stacking: front-to-back across words. Hottest active wins
         // any equal-fill ties (purely visual ordering, no real z buffer).
@@ -633,6 +636,10 @@ void main() {
     // Final: gentle canvas tooth so nothing reads as flat pixels.
     float tooth = fbm2(p * 220.0);
     col *= 1.0 + (tooth - 0.5) * 0.025;
+
+    // Bass-driven page glow — the whole sheet lifts a little on a hit,
+    // like the highlighter catching studio light. House depth ~30%.
+    col *= 1.0 + 0.30 * bass;
 
     // Soft tone, never crush.
     col = col / (1.0 + 0.10 * col);

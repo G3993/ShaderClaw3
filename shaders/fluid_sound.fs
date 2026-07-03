@@ -20,7 +20,9 @@
     { "NAME": "hueShift",     "LABEL": "Hue Shift",      "TYPE": "float", "DEFAULT": 0.0,  "MIN": 0.0,  "MAX": 1.0 },
     { "NAME": "colorDrift",   "LABEL": "Color Drift",    "TYPE": "float", "DEFAULT": 0.06, "MIN": 0.0,  "MAX": 0.5 },
     { "NAME": "dimFloor",     "LABEL": "Quiet Dimness",  "TYPE": "float", "DEFAULT": 0.10, "MIN": 0.0,  "MAX": 0.5 },
-    { "NAME": "transparentBg","LABEL": "Transparent",    "TYPE": "bool",  "DEFAULT": true }
+    { "NAME": "transparentBg","LABEL": "Transparent",    "TYPE": "bool",  "DEFAULT": true },
+    { "NAME": "inputTex",     "TYPE": "image", "LABEL": "Texture" },
+    { "NAME": "texMix",       "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "LABEL": "Texture Mix" }
   ],
   "PASSES": [
     { "TARGET": "velBuf", "PERSISTENT": true },
@@ -264,6 +266,17 @@ void main(){
     // Soft vignette so the volume sits in space.
     vec2  q = uv - 0.5;
     col *= 1.0 - 0.35 * dot(q, q);
+
+    if (texMix > 0.001) {
+        // Pour the texture into the gel: refract the lookup through the same
+        // surface normal used for the back-lit volume sample, then modulate
+        // (not crossfade) so it reads as etched into the fluid's density,
+        // strongest where the blobs actually have coverage.
+        vec2 texUV = clamp(uv + N.xy * 0.06, 0.0, 1.0);
+        vec3 texCol = texture2D(inputTex, texUV).rgb;
+        vec3 modCol = col * mix(vec3(1.0), texCol * 1.6, cov);
+        col = mix(col, modCol, texMix);
+    }
 
     if (transparentBg){
         gl_FragColor = vec4(col, cov * mix(0.6, 1.0, bright));

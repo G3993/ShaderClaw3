@@ -333,19 +333,24 @@ void main() {
             poseSplat(28, uv, aspect, poseR2, poseCutoff2, poseForce, poseSpawn, col); // R ankle
         }
 
-        // Audio — bass creates force splats
-        if (audioBass > 0.2) {
-            float at = float(FRAMEINDEX) * 0.1;
-            vec2 splatPos = vec2(hash21(vec2(at, 1.0)), hash21(vec2(at, 2.0)));
-            vec2 mDiff = uv - splatPos;
-            mDiff.x *= aspect;
-            float dist2 = dot(mDiff, mDiff);
-            float splatR = splatRadius * (1.0 + audioBass * 3.0);
-            if (dist2 < splatR * splatR * 12.0) {
-                float falloff = exp(-dist2 / (splatR * splatR));
-                float splatAngle = hash21(vec2(at, 3.0)) * PI2;
-                col.xy += vec2(cos(splatAngle), sin(splatAngle)) * audioBass * 0.3 * splatForce * falloff;
-                col.xy = clamp(col.xy, 0.0, 1.0);
+        // Audio — bass creates force splats. Knee'd so a quiet track still
+        // nudges the fluid but a driving bassline reads clearly against the
+        // always-on self-advection swirl (house law: never silent-dead).
+        {
+            float bassP = smoothstep(0.05, 0.85, audioBass);
+            if (bassP > 0.01) {
+                float at = float(FRAMEINDEX) * 0.1;
+                vec2 splatPos = vec2(hash21(vec2(at, 1.0)), hash21(vec2(at, 2.0)));
+                vec2 mDiff = uv - splatPos;
+                mDiff.x *= aspect;
+                float dist2 = dot(mDiff, mDiff);
+                float splatR = splatRadius * (1.0 + bassP * 8.0);
+                if (dist2 < splatR * splatR * 12.0) {
+                    float falloff = exp(-dist2 / (splatR * splatR));
+                    float splatAngle = hash21(vec2(at, 3.0)) * PI2;
+                    col.xy += vec2(cos(splatAngle), sin(splatAngle)) * bassP * 1.6 * splatForce * falloff;
+                    col.xy = clamp(col.xy, 0.0, 1.0);
+                }
             }
         }
 
@@ -472,6 +477,14 @@ void main() {
 
     // No internal tonemap — return LINEAR HDR. Downstream Phase Q bloom expects
     // values >1.0 on highlights and clamps at composite time.
+
+    // Audio-reactive brightness pulse — direct hook in the final render pass
+    // so a driving bassline reads immediately, independent of advection lag/
+    // saturation dynamics in the velocity buffer (non-gating: 0 at silence).
+    {
+        float bassP = smoothstep(0.05, 0.85, audioBass);
+        col += vec3(0.14, 0.11, 0.07) * bassP;
+    }
 
     // Transparent background
     float alpha = 1.0;

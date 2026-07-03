@@ -155,7 +155,7 @@ void main() {
         vec3 refl = vec3(0.30, 0.55, 1.00);
         float mixT = 0.5 + 0.5 * sin(armPhase * 1.7 + TIME * 0.1);
         vec3 nebCol = mix(refl, hii, mixT);
-        float trebleBoost = 1.0 + audioHigh * audioReact * 1.2;
+        float trebleBoost = 1.0 + audioHigh * audioReact * 5.0;
         col += nebCol * nebMask * nebulaIntensity * 0.55 * trebleBoost;
     }
 
@@ -231,7 +231,7 @@ void main() {
         float bassDrive = audioBass * audioReact;
         float window = floor(TIME * 1.7);
         float flashH = hash11(fi * 9.91 + window * 13.37);
-        float threshold = 1.0 - clamp(supernovaProb, 0.0, 0.2) * (0.5 + bassDrive * 1.5);
+        float threshold = 1.0 - clamp(supernovaProb, 0.0, 0.2) * (0.5 + bassDrive * 6.0);
         if (flashH > threshold) {
             float burst = smoothstep(0.0, 0.25, fract(TIME * 1.7))
                         * smoothstep(1.0,  0.4, fract(TIME * 1.7));
@@ -252,7 +252,7 @@ void main() {
         float bgOuter = exp(-(r * r) / (bulgeRadius * bulgeRadius * 4.5)) * 0.35;
         vec3 bulgeCol = vec3(1.00, 0.78, 0.55);
         // Audio bass pulse on the core.
-        float pulse = 1.0 + audioBass * audioReact * 0.5;
+        float pulse = 1.0 + audioBass * audioReact * 1.4;
         col += bulgeCol * (bg + bgOuter) * bulgeBrightness * pulse;
     }
 
@@ -271,6 +271,9 @@ void main() {
         lane *= smoothstep(bulgeRadius * 0.8, diskRadius, r); // spare the bright core
         col *= 1.0 - clamp(lane * dustLanes * 0.9, 0.0, 0.88);
     }
+
+    // ---- Global audio breath: whole-galaxy brightness pulse on bass ----
+    col *= 1.0 + audioBass * audioReact * 0.35;
 
     // ---- Hue rotate global ----
     col = hueShift(col, hueRotate);

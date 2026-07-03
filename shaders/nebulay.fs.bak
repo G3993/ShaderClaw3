@@ -233,14 +233,6 @@ void main() {
         // Seed the fluid from the blob field for the first frames.
         if (FRAMEINDEX < 4) blend = texture2D(genBuf, uv);
 
-        // Stability bound: this is a self-advecting float accumulator with
-        // no other ceiling, so tiny per-frame gain compounds over minutes of
-        // playback into an unbounded runaway (pre-existing, not audio-
-        // related). Cap it generously — far above anything the visible look
-        // needs in normal operation — so it can't diverge to infinity while
-        // leaving the intended "blooms toward white" character untouched.
-        blend = clamp(blend, -2.5, 2.5);
-
         gl_FragColor = blend;
         return;
     }
@@ -284,20 +276,7 @@ void main() {
 
     col = max(col, col2);
 
-    // fluidBuf is an unbounded float accumulator (self-advecting feedback) —
-    // over time it drifts well past 1.0 and the final blend clips to flat
-    // white, at which point ordinary brightness modulation is invisible.
-    // Bass pulls the glow back toward the bounded genBuf/litBuf floor
-    // (color/3 below), so the nebula visibly "breathes" open on a bass hit
-    // and lets its spectral structure show — a soft knee, silent-safe (no
-    // change at audioReact=0 or audioBass=0), that reads as a tasteful
-    // contraction rather than a raw brightness cut.
-    float bassDrive = audioReact * (2.2 * aBassP() + 1.3 * aBeatP());
-    float bloomPull = 1.0 - clamp(bassDrive, 0.0, 0.9);
-    col *= bloomPull;
-
     float grainMod = grain * (1.0 + audioReact * 0.35 * aHighP());
     float noise = 0.9 + randomFloat() * grainMod;
-    vec3 preTone = ((color * 0.5) + max(col, color / 3.0)) * noise;
-    gl_FragColor = vec4(ACESFilm(preTone), 1.0);
+    gl_FragColor = vec4(ACESFilm(((color * 0.5) + max(col, color / 3.0)) * noise), 1.0);
 }

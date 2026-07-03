@@ -7,7 +7,10 @@
     { "NAME": "stirStrength","LABEL": "Stir Strength", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.4 },
     { "NAME": "tintLow",     "LABEL": "Tint Low",     "TYPE": "color", "DEFAULT": [0.1, 0.0, 0.4, 1.0] },
     { "NAME": "tintHigh",    "LABEL": "Tint High",    "TYPE": "color", "DEFAULT": [0.25, 0.75, 1.0, 1.0] },
-    { "NAME": "exposure",    "LABEL": "Exposure",     "TYPE": "float", "MIN": 0.3, "MAX": 2.5, "DEFAULT": 1.0 }
+    { "NAME": "exposure",    "LABEL": "Exposure",     "TYPE": "float", "MIN": 0.3, "MAX": 2.5, "DEFAULT": 1.0 },
+    { "NAME": "audioReact",  "LABEL": "Audio React",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.35 },
+    { "NAME": "inputTex",    "TYPE": "image", "LABEL": "Texture" },
+    { "NAME": "texMix",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "LABEL": "Texture Mix" }
   ],
   "PASSES": [
     { "TARGET": "bufA", "PERSISTENT": true },
@@ -176,11 +179,22 @@ vec4 blur_vertical_left_column(vec2 uv, int depth) {
     return s / 0.98;
 }
 
+// ── Native audio bus (soft-kneed, idle-floor safe) ─────────────────────────
+// Bass nudges the vortex stir strength — the dominant structural driver of
+// this sim — so the fluid visibly surges with the low end. Kept modest and
+// applied identically every frame (deterministic, no feedback-loop shock).
+float audioStirMod() {
+    float aReact = clamp(audioReact, 0.0, 2.0);
+    float aBassP = pow(smoothstep(0.05, 0.85, audioBass), 1.6);
+    return 1.0 + 0.55 * aReact * aBassP;
+}
+
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     vec2 pixelSize = 1. / RENDERSIZE.xy;
     vec2 aspect = vec2(1., RENDERSIZE.y / RENDERSIZE.x);
     vec4 fragColor = vec4(0.0);
+    float stirMod = audioStirMod();
 
     // ───────────────────────── Buffer A — reaction-diffusion ───────────────
     if (PASSINDEX == 0) {
@@ -188,7 +202,7 @@ void main() {
         if (FRAMEINDEX < 10) { gl_FragColor = noise; return; }
 
         vec2 mouseV = stirVel();
-        uv = vortex_pair_warp(uv, stirPos(), mouseV * aspect * stirStrength);
+        uv = vortex_pair_warp(uv, stirPos(), mouseV * aspect * stirStrength * stirMod);
 
         vec2 gLook = pixelSize * 3.;
         float expansion = 1.0;
@@ -218,7 +232,7 @@ void main() {
 
         uv = 0.5 + (uv - 0.5) * 0.99;
         vec2 mouseV = stirVel();
-        uv = vortex_pair_warp(uv, stirPos(), mouseV * aspect * stirStrength);
+        uv = vortex_pair_warp(uv, stirPos(), mouseV * aspect * stirStrength * stirMod);
 
         float time = float(FRAMEINDEX) / 60.;
         uv += vec2(sin(time*0.1 + uv.x*2. + 1.) - sin(time*0.214 + uv.y*2. + 1.),
@@ -285,5 +299,33 @@ void main() {
     fragColor = mix(fragColor, vec4(1.,1.25,1.5,0.),
                     0.5*(1.-BlurA(uv, 0)*1.).a*length(GradientA(uv+GradientA(uv, pixelSize*2., vec4(0.,128.,0.,0.), 1)*pixelSize, pixelSize*1.5, vec4(0.,0.,16.,0.), 0)));
 
-    gl_FragColor = vec4(fragColor.rgb * exposure, 1.0);
+    // ─── Native audio bus (soft-kneed, idle-floor safe) ───────────────────
+    float aReact = clamp(audioReact, 0.0, 2.0);
+    float aBassP = pow(smoothstep(0.05, 0.85, audioBass), 1.6);
+    float aHighP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+    float aBeat  = audioBeatPulse * audioBeatPulse;
+
+    vec3 outCol = fragColor.rgb * exposure;
+    // The surface runs highlight-hot by design (many channels already near
+    // full white), so a brightening push has nowhere to go — instead bass
+    // pulls the surface into a cooler, deeper "inhale" that reads clearly
+    // even against the blown-out highlights, then releases on the exhale.
+    outCol *= mix(vec3(1.0), vec3(0.10, 0.13, 0.22), clamp(aReact * aBassP * 1.4, 0.0, 1.0));
+    // Highs -> fine surface sparkle: a cool desaturating pull on a thin band,
+    // same reasoning — pulls DOWN off the clipped ceiling so it reads.
+    outCol = mix(outCol, outCol * vec3(0.60, 0.70, 0.88), 0.6 * aReact * aHighP);
+    // Beat -> a decaying warm flash across the whole surface, never a strobe.
+    outCol += vec3(1.0, 0.85, 0.65) * aBeat * aReact * 1.6;
+
+    // Optional texture — refracted through the same RD surface gradient that
+    // drives the highlight streaks, so it reads as liquid over the artwork
+    // rather than a flat overlay.
+    if (texMix > 0.001) {
+        vec2 texUV = fract(uv + vec2(dx.x, dy.x) * pixelSize * 24.0);
+        vec3 texCol = texture2D(inputTex, texUV).rgb;
+        vec3 refracted = mix(texCol * (0.5 + 0.5 * outCol), outCol * texCol * 1.3, 0.5);
+        outCol = mix(outCol, refracted, texMix);
+    }
+
+    gl_FragColor = vec4(outCol, 1.0);
 }

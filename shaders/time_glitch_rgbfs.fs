@@ -157,7 +157,7 @@ void main() {
         lit += vec3(0.95, 0.90, 0.75) * sp2 * (onTrace ? 2.2 : 0.35);
 
         // Data pulse glow (additive, in HDR range)
-        vec3 pulse = dataPulse(p, sp) * hdrPeak * (1.0 + bass * (1.0 + 0.5 * float(onTrace)));
+        vec3 pulse = dataPulse(p, sp) * hdrPeak * (1.0 + bass * (1.6 + 0.5 * float(onTrace)));
         lit += pulse * (onTrace ? 1.0 : 0.25);   // pulse brighter on traces
 
         // fwidth edge AA on trace top surface
@@ -178,6 +178,7 @@ void main() {
     // Volumetric pulse glimmer along ray (very faint — gives depth)
     vec3 midP = ro + rd * min(t, 4.0);
     col += dataPulse(midP, sp) * vec3(0.0, 0.012, 0.006) * (1.0 + mid * 0.5);
+    col *= 1.0 + bass * 0.10;
 
     // LINEAR HDR — no tonemap, no clamp
     gl_FragColor = vec4(col, 1.0);

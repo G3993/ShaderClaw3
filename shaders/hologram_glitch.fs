@@ -223,15 +223,15 @@ void main() {
     // Fallback: if Custom is selected but no image is bound (host returns a
     // 1x1 placeholder), drop back to the head silhouette.
     if (which == 4 && IMG_SIZE_inputTex.x < 2.0) which = 0;
-    float scanS   = scanSpeed * (1.0 + 1.5 * aMid);
-    float chrAmt  = chromaShift * (1.0 + 2.0 * aHigh);
-    float intAmt  = clamp(interference + 0.4 * aBass, 0.0, 1.0);
+    float scanS   = scanSpeed * (1.0 + 4.0 * aMid);
+    float chrAmt  = chromaShift * (1.0 + 6.0 * aHigh);
+    float intAmt  = clamp(interference + 1.2 * aBass, 0.0, 1.0);
     float density = wireDensity;
 
     // Major signal-loss event — bass thump triggers a short dropout
     // "_drop" rises sharply, decays over ~0.4s. Latched by bass envelope.
     float dropPhase = fract(t * 0.31 + h11(floor(t * 0.31)) * 0.5);
-    float dropTrig  = step(0.93, h11(floor(t * 4.0))) * step(0.55, aBass);
+    float dropTrig  = step(0.75, h11(floor(t * 4.0))) * step(0.20, aBass);
     float dropEnv   = exp(-dropPhase * 6.0) * dropTrig;
     dropEnv = max(dropEnv, step(0.997, h11(floor(t * 13.0))) * 0.7);
 
@@ -253,7 +253,7 @@ void main() {
     // Screen-space jitter on big drops — whole frame trembles
     vec2 quake = vec2(
         (h21(vec2(floor(t * 30.0), 0.0)) - 0.5),
-        (h21(vec2(0.0, floor(t * 30.0))) - 0.5)) * dropEnv * 0.04;
+        (h21(vec2(0.0, floor(t * 30.0))) - 0.5)) * dropEnv * 0.09;
 
     vec2 sUV = uv + vec2(rowShift, 0.0) + quake;
 
@@ -316,7 +316,7 @@ void main() {
     // Broadcast scanlines + carrier breathing + treble sparkle
     col *= 0.92 + 0.08 * sin(uv.y * RENDERSIZE.y * 1.7);
     col *= 0.88 + 0.12 * sin(t * 1.3) + 0.06 * sin(t * 7.1);
-    float sparkle = step(0.997 - aHigh * 0.012, h21(uv * RENDERSIZE.xy + t));
+    float sparkle = step(0.997 - aHigh * 0.06, h21(uv * RENDERSIZE.xy + t));
     col += PAL_HIGH * sparkle * 0.6 * (0.3 + aHigh);
 
     // Linear HDR boost on the brightest emissive bits (host tonemaps)

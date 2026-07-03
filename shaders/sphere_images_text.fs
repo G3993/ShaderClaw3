@@ -45,7 +45,7 @@ vec3 fidApply(vec3 col, vec2 frag) {
     float edge = clamp(length(lg) * 7.0, 0.0, 1.0);
     col += col * edge * fidEdgeGlow * 1.50;
     float headroom = smoothstep(0.28, 0.95, l);
-    col += col * headroom * fidBloom * 1.80;
+    col += col * headroom * (fidBloom + 0.6*audioBass) * 1.80;
     vec2  uvN = frag / RENDERSIZE - 0.5;
     float vig = 1.0 - dot(uvN, uvN) * 1.80 * fidVignette;
     col *= clamp(vig, 0.0, 1.0);
@@ -387,12 +387,12 @@ void main() {
     int paletteId = int(palette);
     int surfMode  = int(surfaceMode);
 
-    float bass = clamp(audioDepth, 0.0, 2.0);
+    float bass = clamp(audioDepth + 0.8*audioBass, 0.0, 2.0);
 
     // ── Camera (with bass-driven dolly) ────────────────────────────────
     float yaw = sin(gT * 0.12) * 0.35;
     float pit = sin(gT * 0.09) * 0.18;
-    float dolly = 4.6 - 0.55 * bass;
+    float dolly = 4.6 - 0.55 * bass - 0.5 * audioBass;
     vec3 ro = vec3(sin(yaw) * dolly, pit * 1.4, cos(yaw) * dolly);
     vec3 ta = vec3(0.0);
     vec3 ww = normalize(ta - ro);

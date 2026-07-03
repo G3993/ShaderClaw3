@@ -77,7 +77,9 @@ float morphing(vec3 p) {
     }
 
     // Auto-morph default
-    tm = TIME * 0.4 * uMorphSpeed;
+    // (audioBass folded back in here — the first `tm` assignment above was
+    // being unconditionally overwritten, silently killing bass-driven morph.)
+    tm = TIME * 0.4 * uMorphSpeed + audioBass * 0.9;
     int idx = int(mod(tm, 4.0));
     float a = smoothstep(0.2, 0.8, mod(tm, 1.0));
     if (idx == 0) return mix(sdTriPrism(p, vec2(1.0, 1.5)), sdBox(p, vec3(1.0)), a);
@@ -193,11 +195,11 @@ void main() {
 
     // Audio non-gating: a subtle bass pulse boosts HDR peak when audio is
     // present, but at audio=0 we still hold a baseline 1.0 multiplier so the
-    // shader is fully alive without any sound input.
-    float audioLift = 1.0 + audioBass * 0.35;
-    // Apply audio lift only on object pixels (silhouette mask), so the
-    // background never gates on audio either — it's already alive.
-    cOut *= mix(1.0, audioLift, hitMask);
+    // shader is fully alive without any sound input. Applied frame-wide
+    // (object + background) so the pulse actually reads at a glance,
+    // not just as a sliver on the object silhouette.
+    float audioLift = 1.0 + audioBass * 3.6;
+    cOut *= audioLift;
 
     // Surprise: every ~29s the color basis briefly inverts — the cube
     // turns inside-out for ~0.6s, mapping each axis to its complement.

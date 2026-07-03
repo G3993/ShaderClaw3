@@ -159,10 +159,20 @@ void main() {
     int moodI = int(clamp(float(mood), 0.0, 3.0) + 0.5);
 
     // ── Audio split ────────────────────────────────────────────────────
+    // Idle sine keeps the field breathing in silence (sound-off test);
+    // real audioBass/Mid/High (previously never read — bass/mid/treb were
+    // pure time-sine, so the actual track had zero effect) are knee'd in
+    // on top so a driving track visibly lifts saturation/shimmer/pace.
     float a    = clamp(audioReact, 0.0, 2.0);
-    float bass = a * (0.55 + 0.45 * sin(t * 0.7));
-    float mid  = a * (0.50 + 0.50 * sin(t * 0.36 + 1.3));
-    float treb = a * (0.50 + 0.50 * sin(t * 2.1 + 2.1));
+    float bassIdle = 0.55 + 0.45 * sin(t * 0.7);
+    float midIdle  = 0.50 + 0.50 * sin(t * 0.36 + 1.3);
+    float trebIdle = 0.50 + 0.50 * sin(t * 2.1 + 2.1);
+    float bassLive = pow(smoothstep(0.05, 0.85, audioBass), 1.4);
+    float midLive  = pow(smoothstep(0.05, 0.85, audioMid),  1.2);
+    float trebLive = pow(smoothstep(0.05, 0.85, audioHigh), 1.2);
+    float bass = a * mix(bassIdle, 1.0, bassLive);
+    float mid  = a * mix(midIdle,  1.0, midLive);
+    float treb = a * mix(trebIdle, 1.0, trebLive);
     bass = max(bass, 0.0);
     mid  = max(mid,  0.0);
     treb = max(treb, 0.0);
@@ -251,8 +261,8 @@ void main() {
 
     // ── Bass saturation lift ───────────────────────────────────────────
     vec3 hsv = rgb2hsv(field);
-    hsv.y    = clamp(hsv.y + 0.05 + 0.05 * bass, 0.0, 1.0);
-    hsv.x    = fract(hsv.x + 0.004 * bass);
+    hsv.y    = clamp(hsv.y + 0.05 + 0.12 * bass, 0.0, 1.0);
+    hsv.x    = fract(hsv.x + 0.008 * bass);
     field    = hsv2rgb(hsv);
 
     // ── Treble corner shimmer ──────────────────────────────────────────
@@ -260,7 +270,11 @@ void main() {
     float corner = smoothstep(0.6, 1.6, r2);
     float shimmerN = hash21(floor(uv * RENDERSIZE.xy * 0.5) + floor(t * 2.4));
     vec3  shimmer  = vec3(shimmerN, hash21(uv + 13.7), hash21(uv + 91.1)) - 0.5;
-    field += shimmer * corner * treb * 0.018;
+    field += shimmer * corner * treb * 0.036;
+
+    // Overall audio-driven luminance breath — small, present across the
+    // whole field so a driving track reads even away from the corners.
+    field *= 1.0 + 0.10 * bass;
 
     // ── Skyspace sun-arc ───────────────────────────────────────────────
     if (moodI == 3) {

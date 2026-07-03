@@ -65,9 +65,11 @@ void main() {
     // ---- Sky gradient with subtle nebula tint ----
     float vGrad = smoothstep(0.0, 1.0, uv.y);
     vec3 col = mix(skyHorizon.rgb, skyTop.rgb, vGrad);
+    // Sky glow breathes softly with the bass
+    col *= 1.0 + bass * 0.35;
     float nebulaMask = smoothstep(0.3, 0.95, uv.y) *
         (0.5 + 0.5 * sin(uv.x * 3.4 + TIME * 0.05));
-    col += nebulaTint.rgb * nebulaMask * 0.18;
+    col += nebulaTint.rgb * nebulaMask * (0.18 + bass * 0.12);
 
     // ---- Milky Way band: angled stripe with elevated star density tint ----
     if (milkyWayBrightness > 0.0) {
@@ -85,8 +87,9 @@ void main() {
     float twkSpeed = 4.0 + treble * 8.0;
     float s1 = starLayer(auv, 70.0,  0.985, twkSpeed, TIME);
     float s2 = starLayer(auv, 130.0, 0.992, twkSpeed * 1.4, TIME);
-    col += vec3(1.0, 0.96, 0.88) * s1 * starDensity * 1.1;
-    col += vec3(0.85, 0.90, 1.00) * s2 * starDensity * 0.7;
+    float starBoost = 1.0 + treble * 0.6;
+    col += vec3(1.0, 0.96, 0.88) * s1 * starDensity * 1.1 * starBoost;
+    col += vec3(0.85, 0.90, 1.00) * s2 * starDensity * 0.7 * starBoost;
 
     // ---- Meteors radiating from radiant ----
     vec2 radiant = vec2(radiantX * aspect, radiantY);
@@ -166,7 +169,7 @@ void main() {
         }
     }
 
-    col += meteorAccum;
+    col += meteorAccum * (1.0 + bass * 0.5);
 
     // Subtle vignette so the sky settles into the corners.
     vec2 vc = uv - 0.5;

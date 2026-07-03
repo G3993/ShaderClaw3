@@ -12,7 +12,7 @@
     { "NAME": "fresnelAmt",   "LABEL": "Fresnel Rim",      "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.85 },
     { "NAME": "vignette",     "LABEL": "Vignette",         "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
     { "NAME": "texAmount",    "LABEL": "Texture Skin",     "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.85 },
-    { "NAME": "audioReact",   "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.25 },
+    { "NAME": "audioReact",   "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.8 },
     { "NAME": "blobCount",    "LABEL": "Blob Count",       "TYPE": "float", "MIN": 2.0,  "MAX": 10.0, "DEFAULT": 5.0 },
     { "NAME": "viscosity",    "LABEL": "Viscosity",        "TYPE": "float", "MIN": 0.1,  "MAX": 2.0,  "DEFAULT": 0.85 },
     { "NAME": "spin",         "LABEL": "Auto Spin",        "TYPE": "float", "MIN": 0.0,  "MAX": 1.5,  "DEFAULT": 0.22 }
@@ -105,14 +105,14 @@ float mapBlob(vec3 p){
         float sc = 0.28 + 0.18*hash1(fi+3.0);
         float rad = 0.55 + 0.50*hash1(fi+5.0);
         // Scale orbit radius so blobs stay close and merge well
-        rad *= 1.0 + 0.18*gAud;
+        rad *= 1.0 + 0.34*gAud;
         vec3 center = vec3(
             sin(t*sa + fi*2.39) * rad,
             sin(t*sb + fi*1.71) * rad * 0.85,
             cos(t*sc + fi*1.13) * rad * 0.90
         );
         // Each blob slightly different size
-        float r = (0.62 + 0.32*hash1(fi+7.0)) * (0.90 + 0.25*gAud);
+        float r = (0.62 + 0.32*hash1(fi+7.0)) * (0.85 + 0.42*gAud);
         d = smin(d, length(q - center) - r, k);
     }
 
@@ -256,7 +256,7 @@ void main(){
         surf += pow(fres,1.5)*vec3(1.0,0.85,0.80)*0.38*fresnelAmt;
 
         // Bass breathe
-        surf *= 1.0 + 0.14*pb;
+        surf *= 1.0 + 0.30*pb;
 
         // Soft silhouette fade into vignette
         col = mix(surf, bg, smoothstep(0.0,1.0,fres)*0.08);

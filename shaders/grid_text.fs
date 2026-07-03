@@ -481,6 +481,11 @@ void main() {
                   sin(uv.x * 1.15 - uv.y * 0.6 - wobble * 0.4) * 0.5 + 0.5);
     col += pow(sheen, 4.0) * 0.03;
 
+    // Audio pulse — bass/mid lift the whole sheet's exposure so the poster
+    // visibly "breathes" with the music, on top of the per-quadrant burst.
+    float audioPulse = audioBass * 0.30 + audioMid * 0.12;
+    col *= 1.0 + audioPulse;
+
     // gentle tonemap → no banding, no over-saturation
     col = col / (1.0 + 0.18 * col);
     col = pow(max(col, 0.0), vec3(0.94));

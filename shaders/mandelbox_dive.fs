@@ -72,10 +72,10 @@ void main() {
   vec2 uv = (gl_FragCoord.xy - 0.5*RENDERSIZE) / min(RENDERSIZE.x, RENDERSIZE.y);
 
   // mid breathes the fold scale (small, K<=1.5)
-  gScale = scaleParam * (1.0 + 0.06*mid);
+  gScale = scaleParam * (1.0 + 0.22*mid);
 
   // forward velocity: constant drift, bass pushes (K<=0.8)
-  float spd = camSpeed * (1.0 + bass*0.8);
+  float spd = camSpeed * (1.0 + bass*2.6);
   vec3 ro = vec3(0.0, 0.0, -3.0 + TIME*spd);
 
   vec3 rd = normalize(vec3(uv, 1.4));
@@ -110,7 +110,7 @@ void main() {
   float pt = paletteShift + dmin*0.35 + TIME*0.02;
   vec3 glowCol = pal(pt) * (trapGlow*0.8 + stepGlow*0.6);
   // treble boosts edge glow (additive, K<=0.6)
-  glowCol *= glow * (1.0 + treble*0.6);
+  glowCol *= glow * (1.0 + treble*1.8);
 
   if(hit > 0.5){
     vec3 n = calcNormal(pos);
@@ -131,7 +131,7 @@ void main() {
     }
 
     col  = base * (0.12 + 0.7*lam);
-    col += rim * pal(pt + 0.2) * (0.6 + treble*0.6);
+    col += rim * pal(pt + 0.2) * (0.6 + treble*1.5);
     col += glowCol * 0.6;
 
     // fog into black with distance

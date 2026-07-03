@@ -311,8 +311,11 @@ void screenPass(){
         float speGain = 1.0 + 0.6 * treble;                        // treble brighten K<=0.6
         col += vec3(1.0, 0.92, 0.75) * spec * 1.4 * speGain;
 
-        // faint mid-driven ambient lift on the water body
-        col += waterTint.rgb * 0.05 * (1.0 + 0.4 * mid);
+        // mid-driven ambient lift on the water body, plus a bass/punch glow
+        // that reads instantly (doesn't wait on ripple propagation through simBuf)
+        float punch = audioPunch * audioReact;
+        col += waterTint.rgb * (0.05 + 0.55 * mid) * (1.0 + 0.5 * bass);
+        col += vec3(1.0, 0.9, 0.75) * punch * 0.16;
     }
 
     // tonemap + gamma

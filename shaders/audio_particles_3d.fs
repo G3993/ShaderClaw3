@@ -96,7 +96,7 @@ vec3 cloudPos(float i, float t, float bass) {
              + c  * sin(ph * 0.67 + i * 0.13) * orbR * 0.62;
     float a = t * 0.12, ca = cos(a), sa = sin(a);
     p.xz = mat2(ca, -sa, sa, ca) * p.xz;
-    return p * (1.0 - 0.30 * bass);   // bass aggregation
+    return p * (1.0 - 0.85 * bass);   // bass aggregation
 }
 vec3 gridPos(int ix, int iy, int iz, ivec3 dims, float t, float aAll) {
     float fi = float(ix) + float(iy) * 17.0 + float(iz) * 113.0;
@@ -150,7 +150,7 @@ vec3 evalCloud(vec3 ro, vec3 rd, float t, vec3 a, int N,
                vec3 kDir, vec3 kC, vec3 fC, float amb, float rimK) {
     vec3 emit = vec3(0.0);
     float ps = 0.052, ps2 = ps * ps, cut = ps2 * 24.0;   // larger points compensate reduced count
-    float sh = 1.0 + a.z * 1.4 * (0.5 + 0.5 * sin(t * 11.0 + ro.x * 2.0));
+    float sh = 1.0 + a.z * 3.0 * (0.5 + 0.5 * sin(t * 11.0 + ro.x * 2.0));
     for (int i = 0; i < MAX_CLOUD; i++) {
         if (i >= N) break;
         float fi = float(i);
@@ -289,7 +289,16 @@ void main() {
                                       kDir, keyColor.rgb, fillColor.rgb, ambient, rimStrength);
     else             emit = evalConstellation(ro, rd, TIME, audio, starCount(tier));
 
+    // Global emissive audio pulse — bass/high are 0 in silence so this is a
+    // no-op sound-off; gives the particle field a musical brightness lift
+    // on top of the per-mood spatial/shimmer response computed above.
+    emit *= (1.0 + audio.x * 2.2 + audio.z * 1.2);
+
     vec3 col = bg + emit;
+
+    // Bass kick wash — soft full-frame HDR lift so even the near-black
+    // negative space breathes on the beat (dead silent when audio.x==0).
+    col += vec3(0.06, 0.035, 0.10) * (audio.x * audio.x) * 1.8;
 
     if (m == 1) col *= 0.92 + 0.16 * (1.0 - abs(uv.y));   // overhead fluorescent feel
     if (m == 3) col  = max(col, bg);                       // protect true black

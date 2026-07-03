@@ -138,8 +138,8 @@ void main() {
     float t = TIME * speed;
 
     // ── Audio reactivity values ─────────────────────────────────────────
-    float audioWave    = audioBass * audioReact * 0.02;
-    float audioShimmer = audioHigh * audioReact;
+    float audioWave    = audioBass * audioReact * 0.08;
+    float audioShimmer = audioHigh * audioReact * 3.0;
 
     // ── Mouse deformation in normalised UV space ────────────────────────
     vec2 mNorm = mousePos; // already 0..1
@@ -196,7 +196,7 @@ void main() {
 
     // Audio shimmer on highlights
     float d = silkDerivative(uv, t);
-    fgCol += sheenColor.rgb * audioShimmer * 0.15 * max(0.0, d) * 2.0;
+    fgCol += sheenColor.rgb * audioShimmer * 0.15 * max(0.0, d) * 2.0 + sheenColor.rgb * audioShimmer * 0.06;
     fgCol = clamp(fgCol, 0.0, 1.0);
 
     // ════════════════════════════════════════════════════════════════════
@@ -230,6 +230,11 @@ void main() {
         float _wave = sin((_diag - _ph * 4.0) * 14.0) * 0.5 + 0.5;
         c = mix(c, c * (0.8 + 0.4 * _wave), _f * 0.5);
     }
+
+    // ── Audio pulse — sheen brightens with high-band energy ────────────
+    float audioKnee = pow(smoothstep(0.05, 0.85, audioHigh), 1.2) * audioReact;
+    c += sheenColor.rgb * audioKnee * 0.5;
+    c *= 1.0 + audioKnee * 0.35;
 
     // ── Output ───────────────────────────────────────────────────────
     c = clamp(c, 0.0, 1.0);

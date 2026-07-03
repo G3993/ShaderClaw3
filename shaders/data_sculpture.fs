@@ -47,9 +47,13 @@ float fftSample(float fIdx, float t, float bass, float mid, float treble) {
 }
 void synthAudio(float t, float ar, out float bass, out float mid, out float treble) {
     float k = clamp(ar, 0.0, 2.0);
-    bass   = (0.20 + 0.18 * (sin(t * 0.71) * 0.5 + 0.5))           * (0.5 + 0.9 * k);
-    mid    = (0.25 + 0.20 * (sin(t * 1.13 + 1.7) * 0.5 + 0.5))     * (0.5 + 0.9 * k);
-    treble = (0.15 + 0.15 * (sin(t * 2.31 + 3.1) * 0.5 + 0.5))     * (0.4 + 1.1 * k);
+    // Synthetic base keeps the piece alive in silence; real audioBass/Mid/High
+    // (live signal) are wired in on top, scaled by the Audio React knob, so
+    // the sculpture actually breathes with the track instead of only a
+    // fixed internal clock.
+    bass   = (0.20 + 0.18 * (sin(t * 0.71) * 0.5 + 0.5))           * (0.5 + 0.9 * k) + audioBass * k * 0.6;
+    mid    = (0.25 + 0.20 * (sin(t * 1.13 + 1.7) * 0.5 + 0.5))     * (0.5 + 0.9 * k) + audioMid  * k * 0.6;
+    treble = (0.15 + 0.15 * (sin(t * 2.31 + 3.1) * 0.5 + 0.5))     * (0.4 + 1.1 * k) + audioHigh * k * 0.6;
 }
 
 // ─── MOOD 0 — BAR FOREST ──────────────────────────────────────────────

@@ -55,16 +55,22 @@ void main() {
     vec2 c = uv - 0.5;
     c.x *= res.x / res.y;                                   // aspect-correct working space
 
-    // Zoom > 1 pulls the previous frame toward the camera; bass deepens the pull (K<=1.5 -> stays calm).
-    float zoom = 1.0 + zoomRate * (1.0 + bass*0.8);
-    // Gentle swirl; mid adds a little extra rotation so the tunnel turns with the music.
-    float rot  = rotRate * (1.0 + mid*0.6);
+    // Zoom > 1 pulls the previous frame toward the camera; bass deepens the pull.
+    float zoom = 1.0 + zoomRate * (1.0 + bass*4.5);
+    // Swirl; mid adds extra rotation so the tunnel visibly turns with the music.
+    float rot  = rotRate * (1.0 + mid*3.5);
     mat2  R    = mat2(cos(rot), -sin(rot), sin(rot), cos(rot));
 
     // Sample where this pixel was a frame ago (rotated + scaled inward), then map back to 0..1 uv.
     vec2 prevC  = (R * c) / zoom;
     vec2 prevUV = prevC; prevUV.x *= res.y / res.x; prevUV += 0.5;
-    vec3 prev   = texture2D(trailBuf, prevUV).rgb * decay;  // decay<1 fades old detail, prevents blow-up
+    // Trail persistence itself breathes with the music (house playbook: feedback-warp
+    // decay = mix(0.90, decay, energy)) — quiet holds shorter/darker trails so loud
+    // passages have real headroom to brighten and stay visible instead of the buffer
+    // sitting permanently near its saturated ceiling.
+    float energyDrive = clamp(audioEnergy * audioReact, 0.0, 1.0);
+    float decayEff = mix(0.92, decay, energyDrive);
+    vec3 prev   = texture2D(trailBuf, prevUV).rgb * decayEff;  // decay<1 fades old detail, prevents blow-up
 
     // ---- fresh fractal structure at the rim ----
     float r = length(c);
@@ -74,7 +80,7 @@ void main() {
     float fold   = abs(fract(a/6.28318 * folds) * 2.0 - 1.0);
 
     // Bright annulus near the rim, breathing slowly + with treble.
-    float rim    = rimRadius + 0.05*sin(TIME*0.3) + 0.04*treble;
+    float rim    = rimRadius + 0.05*sin(TIME*0.3) + 0.12*treble;
     float ring   = smoothstep(0.06, 0.0, abs(r - rim));
 
     // Radial spokes from the kaleidoscope, sharpened by lineW.
@@ -84,9 +90,11 @@ void main() {
     float ripple = 0.6 + 0.4*vnoise(vec2(fold*6.0, r*9.0 - TIME*0.4));
 
     // Neon color: palette wraps with radius + angle so each ring lands a fresh hue.
-    vec3  fresh  = pal(r*2.0 + a*0.2 + paletteShift + TIME*0.03)
+    // Treble also nudges the hue itself (not just brightness) so louder highs read as a
+    // genuine color shift even where the accumulated trail is already near-saturated.
+    vec3  fresh  = pal(r*2.0 + a*0.2 + paletteShift + TIME*0.03 + treble*0.18)
                  * (ring + spokes*0.6) * ripple
-                 * inject * (0.6 + treble*0.6);
+                 * inject * (0.6 + treble*0.9);
 
     // ---- USER IMAGE: feed the uploaded picture in as fresh detail so it gets pulled
     //      into the infinite zoom and smears into fractal trails. Unuploaded = black, so guard. ----
@@ -102,7 +110,13 @@ void main() {
     }
 
     // Accumulate: max keeps trails bright without runaway; small additive term to seed glow.
-    vec3 col = max(prev, fresh) + fresh*0.15;
+    // Hard-clamp the HDR accumulator: over hundreds of frames the additive term (never
+    // itself decayed) was creeping the whole buffer to a fully-saturated white ceiling,
+    // which silently swallowed every audio-driven brightness/hue term downstream (nothing
+    // left for the screen-pass tonemap to reveal). Capping keeps real headroom so louder
+    // passages actually read as brighter/differently-hued instead of clipping to identical
+    // white every frame.
+    vec3 col = min(max(prev, fresh) + fresh*0.15, vec3(1.5));
 
     gl_FragColor = vec4(col, 1.0);
 
@@ -110,9 +124,14 @@ void main() {
     // ---------- SCREEN PASS: read accumulated trail, tonemap + gamma + vignette. ----------
     vec3 col = texture2D(trailBuf, uv).rgb;
 
+    // Whole-frame exposure lift so the mix genuinely reads brighter/hotter on loud
+    // passages (the HDR accumulator alone was too easily buried by its own decay/clamp
+    // headroom for a one-pixel-thin ring to move the needle across the full frame).
+    col *= 0.7 + bass*2.6 + treble*1.0;
+
     // Subtle chromatic pull toward center sells the "rushing down a tunnel" feel.
     vec2 d = uv - 0.5;
-    float ca = 0.004 + bass*0.004;
+    float ca = 0.004 + bass*0.05;
     float rC = texture2D(trailBuf, uv - d*ca).r;
     float bC = texture2D(trailBuf, uv + d*ca).b;
     col.r = mix(col.r, rC, 0.6);

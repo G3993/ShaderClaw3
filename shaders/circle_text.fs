@@ -273,10 +273,11 @@ void main() {
 
     // ───── Halo / aura behind the ring (cue-driven glow) ─────────────
     float baseR = ringRadius * (1.0 + 0.05 * sin(t * 0.31))
-                + 0.04 * bass * audioDepth;
+                + 0.32 * bass * audioDepth;
     float rDist = length(p);
-    // Diffuse ring glow — wider with talking, faint when silent.
-    float talk = clamp((innerEnergy + midEnergy + outerEnergy) / 3.0, 0.0, 1.0);
+    // Diffuse ring glow — wider with talking, faint when silent. Bass
+    // alone also swells the halo so an audio-only rig still breathes.
+    float talk = clamp((innerEnergy + midEnergy + outerEnergy) / 3.0 + bass * 0.6, 0.0, 1.0);
     float aura = exp(-pow((rDist - baseR) / (0.10 + 0.07 * talk), 2.0));
     vec3 auraTint = mix(vec3(1.0, 0.94, 0.86), accentB.rgb, 0.25 + 0.4 * midEnergy);
     col += aura * auraTint * (0.06 + 0.18 * talk);
@@ -284,7 +285,7 @@ void main() {
     // ───── Center text aura (the serif-text quiet middle) ────────────
     // A small breathing dot of light where the message would sit.
     float center = exp(-rDist * rDist * 38.0);
-    col = mix(col, col * 1.04 + accentA.rgb * 0.04, center * (0.4 + 0.6 * lvl));
+    col = mix(col, col * 1.04 + accentA.rgb * 0.04, center * (0.4 + 1.6 * lvl));
 
     // ───── The ring of cards ─────────────────────────────────────────
     // 50 cards total across 3 shells.
@@ -355,7 +356,7 @@ void main() {
         // Per-card jitter — driven by THIS shell's energy. Silencing
         // player[1] freezes the inner shell visibly; talking on player[2]
         // wobbles only the middle shell, etc.
-        float jit = shellEnergy;
+        float jit = clamp(shellEnergy + bass * 0.9, 0.0, 1.5);
         ang += jit * 0.12 * sin(t * 1.7 + fSlot * 0.9);
         float rJit = rShell + jit * 0.02 * sin(t * 2.3 + fSlot * 1.3);
 

@@ -61,9 +61,10 @@ vec3 fidApply(vec3 col, vec2 frag) {
     float edge = clamp(length(lg) * 7.0, 0.0, 1.0);
     col += col * edge * fidEdgeGlow * 1.50;
 
-    // 2. Headroom bloom (widened from v1).
+    // 2. Headroom bloom (widened from v1). audioBass adds a musical kick
+    //    on top of the knob so bright peaks flare with the music.
     float headroom = smoothstep(0.28, 0.95, l);
-    col += col * headroom * fidBloom * 1.80;
+    col += col * headroom * (fidBloom + 0.6*audioBass) * 1.80;
 
     // 3. Vignette — quadratic radial darken.
     vec2  uvN = frag / RENDERSIZE - 0.5;
@@ -305,8 +306,8 @@ void main() {
     float eA = clamp(energyA, 0.0, 1.0);
     float eB = clamp(energyB, 0.0, 1.0);
     float eC = clamp(energyC, 0.0, 1.0);
-    float lvl    = clamp(audioDepth, 0.0, 2.0);
-    float bass   = clamp(bassDrive, 0.0, 2.0);
+    float lvl    = clamp(audioDepth + 0.7*audioLevel, 0.0, 2.0);
+    float bass   = clamp(bassDrive + 0.7*audioBass, 0.0, 2.0);
     float totalE = clamp((eA + eB + eC) / 3.0, 0.0, 1.0);
     // "Restraint" curve: at totalE ≈ 0 motion is ~15% of normal; at totalE=1
     // it reaches ~120%. This is what gives the silence its weight.
@@ -575,8 +576,11 @@ void main() {
         float gr = fbm2(uv * res.y * 0.015) - 0.5;
         col += gr * 0.05 * grain;
     }
-    // Bass lift — barely visible, but lifts the field warmth on hits.
+    // Bass lift — barely visible in silence, but lifts the field warmth
+    // on hits (audioBass drives the extra kick on top of the knob). Additive
+    // so the lift reads even over the near-dark parts of the gradient.
     col *= 1.0 + 0.04 * bass;
+    col *= vec3(1.0, 1.0 - 0.30 * audioBass, 1.0 - 0.60 * audioBass);
 
     // Soft tonemap — very gentle since we already returned LINEAR HDR-ish.
     col = col / (1.0 + 0.25 * max(col - 1.0, 0.0));

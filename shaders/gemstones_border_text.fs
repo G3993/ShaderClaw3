@@ -44,7 +44,9 @@
     { "NAME": "fidGamma",    "LABEL": "Gamma",      "TYPE": "float", "DEFAULT": 0.6,  "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "fidEdgeGlow", "LABEL": "Edge Glow",  "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "fidVignette", "LABEL": "Vignette",   "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "fidGrain",    "LABEL": "Grain",      "TYPE": "float", "DEFAULT": 0.30, "MIN": 0.0, "MAX": 1.0 }
+    { "NAME": "fidGrain",    "LABEL": "Grain",      "TYPE": "float", "DEFAULT": 0.30, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "inputTex",    "TYPE": "image", "LABEL": "Texture" },
+    { "NAME": "texMix",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "LABEL": "Texture Mix" }
   ],
   "PASSES": [
     { "TARGET": "velBuf", "PERSISTENT": true },
@@ -212,7 +214,7 @@ void main(){
         if(FRAMEINDEX<4){ gl_FragColor=vec4(0.0,0.0,0.0,1.0); return; }
 
         float bass=clamp(audioBass*bassDrive,0.0,2.0);
-        float dt=flowSpeed*(1.0+0.6*bass*audioDepth);
+        float dt=flowSpeed*(1.0+1.4*bass*audioDepth);
 
         vec2 vel=IMG_NORM_PIXEL(velBuf,uv).xy;
         vec2 src=uv-vel*texel*dt;
@@ -227,7 +229,7 @@ void main(){
         vel-=0.5*vec2(pR-pL,pT-pB);
 
         // Audio-reactive stir position — bass pushes orbit radius
-        float bassR=0.30+0.12*clamp(audioBass*bassDrive,0.0,1.0);
+        float bassR=0.30+0.26*clamp(audioBass*bassDrive,0.0,1.0);
         float t=TIME*stirSpeed;
         vec2 m=vec2(0.5)+bassR*vec2(cos(t),sin(t*1.43));
         vec2 rel=(uv-m)*aspect;
@@ -358,6 +360,14 @@ void main(){
     float peak=smoothstep(0.18,0.10,peakD)*smoothstep(-0.02,-0.10,p.y);
     inner=mix(inner,vec3(0.16,0.20,0.22),peak*0.65);
 
+    // Optional texture — refracted into the aperture by the fluid's own gradient
+    if(texMix>0.001){
+        vec2 texUV=fract(uv+fGrad*0.10*(0.4+concentration));
+        vec3 texCol=texture2D(inputTex,texUV).rgb;
+        vec3 texBlend=mix(inner*texCol*1.4, texCol*shade, 0.5);
+        inner=mix(inner,texBlend,texMix);
+    }
+
     vec3 col=mix(paper,inner,inside);
 
     // ── Gem ring ──────────────────────────────────────────────────
@@ -457,7 +467,7 @@ void main(){
     col=mix(col,bestCol,fill);
 
     // Halo: blends fluid colour into the ring glow
-    float halo=exp(-bestEdge*6.0)*(0.20+0.45*bass*audioDepth);
+    float halo=exp(-bestEdge*6.0)*(0.20+0.85*bass*audioDepth);
     vec3 haloCol=mix(
         mix(vec3(1.0,0.78,0.45),fluidCol,fluidMix*0.5),
         mix(vec3(0.55,0.85,1.0),fluidCol,fluidMix*0.6),
@@ -556,7 +566,10 @@ void main(){
     col+=pow(sweep,4.0)*0.04*vec3(1.0,0.95,0.85);
 
     float Lum=dot(col,vec3(0.299,0.587,0.114));
-    col+=0.18*smoothstep(0.65,1.20,Lum)*col*(1.0+0.4*bass);
+    col+=0.18*smoothstep(0.65,1.20,Lum)*col*(1.0+1.0*bass*audioDepth);
+    // Immediate (non-buffered) audio pulse — bass lifts overall luminance
+    // a touch every frame, so the room brightens with the beat.
+    col*=1.0+0.16*bass*audioDepth;
 
     float tooth=fbm2(p*res.y*0.018);
     col*=1.0+(tooth-0.5)*0.04;

@@ -540,10 +540,14 @@ void main(){
     gT  = TIME;
     gTw = gT * max(motionSpeed, 0.0);
 
-    float bass = clamp(bassDrive, 0.0, 2.0);
-    float mid  = clamp(midDrive,  0.0, 2.0);
-    float high = clamp(highDrive, 0.0, 2.0);
-    float audDepth = clamp(audioDepth, 0.0, 2.0);
+    // bassDrive/midDrive/highDrive/audioDepth are host-BIND'd (audio.bass/
+    // mid/high/level) but that binding is a runtime-only contract — wire the
+    // engine's live audio bus in directly too so the shader responds out of
+    // the box even when the host BIND isn't present (e.g. preview/eval).
+    float bass = clamp(bassDrive + audioBass * 0.8, 0.0, 2.0);
+    float mid  = clamp(midDrive  + audioMid  * 0.6, 0.0, 2.0);
+    float high = clamp(highDrive + audioHigh * 0.8, 0.0, 2.0);
+    float audDepth = clamp(audioDepth + audioLevel * 0.4, 0.0, 2.0);
 
     // Two-channel split. Multiply each energy by its active flag so
     // muting a player retracts that half (rubric a=5: you can SEE
@@ -723,6 +727,12 @@ void main(){
     // Final tone shaping
     col = col / (1.0 + 0.55 * col);
     col = pow(max(col, 0.0), vec3(0.92));
+
+    // Audio-bound global pulse — applied AFTER tone-mapping (additive, not
+    // multiplicative) so the beat-breathing survives the Reinhard curve
+    // instead of collapsing into highlight saturation on the bright paper.
+    float audioPulse = clamp(audioBass + audioHigh, 0.0, 2.0);
+    col += vec3(0.065, 0.048, 0.032) * audioPulse;
 
     col *= mkFlicker(gl_FragCoord.xy / RENDERSIZE - 0.5, TIME);
     gl_FragColor = vec4(fidApply(col, gl_FragCoord.xy), 1.0);

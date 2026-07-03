@@ -41,11 +41,11 @@ void main() {
     }
 
     // Primary warp: low-frequency sin in x. Bass pushes it harder.
-    float warp = sin(uv.x * xFreq + TIME * flow) * warpAmp * (1.0 + audioBass);
-    warp += audioCurl(uv, TIME * flow) * audioMid * 0.08;
+    float warp = sin(uv.x * xFreq + TIME * flow) * warpAmp * (1.0 + audioBass * 4.0);
+    warp += audioCurl(uv, TIME * flow) * audioMid * 0.45;
     warp += guide * texDisplace;
 
-    float effectiveFreq = freq * (1.0 + audioHigh * 0.15);
+    float effectiveFreq = freq * (1.0 + audioHigh * 0.6 + audioBass * 0.2);
 
     // ---- pattern dispatch ---------------------------------------------------
     // Each branch produces:
@@ -99,7 +99,7 @@ void main() {
         // STRIPE WOBBLE: vertical stripes whose x-position wobbles per row,
         // giving the page-bowing Riley illusion ("Cataract").
         float wob = sin(uv.y * xFreq * 2.0 + TIME * flow * 1.3) * warpAmp;
-        wob += audioCurl(uv.yx, TIME * flow) * audioMid * 0.08;
+        wob += audioCurl(uv.yx, TIME * flow) * audioMid * 0.22;
         float x = uv.x + wob;
         // aspect-correct so stripes look uniform
         x *= RENDERSIZE.x / RENDERSIZE.y;
@@ -143,8 +143,8 @@ void main() {
     col += vec3(crest) * 0.3 * clamp(contrast, 0.0, 1.0);
 
     // Audio peak invert flash — tasteful, only at very high level.
-    float flash = smoothstep(0.85, 1.0, audioLevel);
-    col = mix(col, vec3(1.0) - col, flash * 0.4);
+    float flash = smoothstep(0.15, 0.6, audioLevel);
+    col = mix(col, vec3(1.0) - col, flash * 0.85);
 
     // Surprise: every ~16s the wave frequency briefly doubles — for
     // ~0.5s the eye sees twice as many bands, optical-illusion judder.

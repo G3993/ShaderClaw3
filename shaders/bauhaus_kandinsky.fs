@@ -100,11 +100,11 @@ void main() {
         // Bass spring — push outward briefly
         vec2 fromCtr = home + orbit - vec2(0.5);
         if (length(fromCtr) > 1e-4) fromCtr = normalize(fromCtr);
-        vec2 ctr = home + orbit + fromCtr * springReact * audioBass * audioReact;
+        vec2 ctr = home + orbit + fromCtr * springReact * audioBass * audioReact * 4.0;
         ctr.x *= aspect;
 
         float sz = shapeSize * (0.7 + hash11(fi * 5.3) * 0.6)
-                 * (1.0 + audioLevel * audioReact * 0.08);
+                 * (1.0 + audioLevel * audioReact * 0.75);
         float r  = length(P - ctr);
         float halo = exp(-pow(r / (sz * haloRadius), 2.0));
         haloField += halo;
@@ -116,7 +116,8 @@ void main() {
     }
     if (haloWt > 1e-4) {
         haloCol /= haloWt;
-        col = mix(col, haloCol, clamp(haloField * haloStrength * 0.35, 0.0, 1.0));
+        float haloAudio = 1.0 + audioLevel * audioReact * 1.6;
+        col = mix(col, haloCol, clamp(haloField * haloStrength * 0.35 * haloAudio, 0.0, 1.0));
     }
 
     // Pass 2 — solid shape compositing. Closest-shape-wins via min over
@@ -139,14 +140,14 @@ void main() {
                     * orbitRange;
         vec2 fromCtr = home + orbit - vec2(0.5);
         if (length(fromCtr) > 1e-4) fromCtr = normalize(fromCtr);
-        vec2 ctr = home + orbit + fromCtr * springReact * audioBass * audioReact;
+        vec2 ctr = home + orbit + fromCtr * springReact * audioBass * audioReact * 4.0;
         ctr.x *= aspect;
 
         float sz = shapeSize * (0.7 + hash11(fi * 5.3) * 0.6)
-                 * (1.0 + audioLevel * audioReact * 0.08);
+                 * (1.0 + audioLevel * audioReact * 0.75);
 
         // Per-shape rotation
-        float rot = TIME * audioMid * audioReact * 0.4
+        float rot = TIME * audioMid * audioReact * 0.9
                   + hash11(fi * 7.7) * 6.28;
         float ca = cos(-rot), sa = sin(-rot);
         vec2 lp = vec2(ca * (P.x - ctr.x) - sa * (P.y - ctr.y),
@@ -197,7 +198,7 @@ void main() {
             lm *= dash;
         }
         col = mix(col, vec3(0.05, 0.05, 0.06),
-                  lm * (0.6 + audioHigh * audioReact * 0.4));
+                  lm * (0.6 + audioHigh * audioReact * 0.8));
     }
 
     // Pattern bands — thin parallel stripes filling negative space; flow
@@ -236,6 +237,11 @@ void main() {
         float _sq = step(0.0, _d.x) * step(_d.x, 0.20) * step(0.0, _d.y) * step(_d.y, 0.20);
         col = mix(col, vec3(0.02), _f * _sq);
     }
+
+    // Whole-canvas breathing pulse — the entire composition dips gently
+    // with the beat (a soft "duck" rather than a garish brighten), so the
+    // painting reads as alive to audio even where no shape/halo sits.
+    col *= 1.0 - 0.16 * clamp(audioLevel, 0.0, 1.0) * min(audioReact, 2.0);
 
     gl_FragColor = vec4(col, 1.0);
 }

@@ -15,7 +15,8 @@
     { "NAME": "swirl",        "LABEL": "Swirl",      "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.0 },
     { "NAME": "turb",         "LABEL": "Turbulence", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.0 },
     { "NAME": "gravity",      "LABEL": "Clump",      "TYPE": "float", "MIN": 0.5, "MAX": 3.0, "DEFAULT": 1.0 },
-    { "NAME": "glowAmt",      "LABEL": "Glow",       "TYPE": "float", "MIN": 0.0, "MAX": 0.4, "DEFAULT": 0.08 }
+    { "NAME": "glowAmt",      "LABEL": "Glow",       "TYPE": "float", "MIN": 0.0, "MAX": 0.4, "DEFAULT": 0.08 },
+    { "NAME": "audioReact",   "LABEL": "Audio React","TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.35 }
   ],
   "PASSES": [
     { "TARGET": "bufA", "PERSISTENT": true },
@@ -116,6 +117,11 @@ float glow(vec2 u) {
 void main() {
     vec2 u = gl_FragCoord.xy;
 
+    // Non-gating audio: alive at audio=0; audioReact only adds on top.
+    float bassP = pow(smoothstep(0.05, 0.85, audioBass), 1.6);
+    float highP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+    float beatP = audioBeatPulse * audioBeatPulse;
+
     if (PASSINDEX == 0) {
         vec4 bA = A(u);
         vec4 grad = Grad(u);
@@ -131,8 +137,18 @@ void main() {
         bA.zw += acc;
 
         float r = max(length(mg), 1.);
-        float grav = -(3.5 * gravity * massAvg * bA.x) / (r * r);
+        // Bass thickens the clump — the dominant structural force in this sim.
+        float grav = -(3.5 * gravity * (1.0 + audioReact * 0.6 * bassP) * massAvg * bA.x) / (r * r);
         bA.zw -= mg * grav;
+
+        // Beat: a brief outward shockwave from centre that shoves + seeds mass,
+        // decaying naturally as audioBeatPulse falls.
+        if (beatP > 0.0) {
+            vec2 rc = u - 0.5 * R;
+            float rl = max(length(rc), 1.);
+            bA.zw += audioReact * 5.0 * beatP * rc / rl;
+            bA.x  += audioReact * 0.03 * beatP;
+        }
 
         bool useFeed    = (movement < 0.5) || (movement > 1.5);   // Side Feed or Both
         bool useCursors = (movement > 0.5);                       // Cursors or Both
@@ -194,6 +210,13 @@ void main() {
     vec4 bA = A(u);
     vec3 col = color(bA);
     col += glowAmt * glow(u) * pal(1.5 * length(bA.zw));
+
+    // Highs: sparse sparkle riding the brighter particle streaks only.
+    float sparkleGate = step(0.88, hash12(u * 0.37 + 5.1));
+    col += vec3(audioReact * 0.7 * highP) * sparkleGate * col;
+
+    // Beat: a brief flash weighted by local mass, decays with the pulse.
+    col += vec3(audioReact * 0.35 * beatP) * bA.x;
 
     // Texture: tint the particles with the bound image — the image appears
     // "made of" the moving particles. Mass/velocity still drive brightness.

@@ -395,8 +395,10 @@ void main(){
     float aA   = clamp(cardA, 0.0, 1.0);
     float aB   = clamp(cardB, 0.0, 1.0);
     float aC   = clamp(cardC, 0.0, 1.0);
-    float aHi  = clamp(ribGlint  * audioDepth, 0.0, 2.5);
-    float aLo  = clamp(bassBreath* audioDepth, 0.0, 2.5);
+    // Live audioHigh/audioBass top up the knob baselines so ribs + headline
+    // actually track the track, not just their idle BIND default.
+    float aHi  = clamp((ribGlint   + audioHigh * 0.6) * audioDepth, 0.0, 2.5);
+    float aLo  = clamp((bassBreath + audioBass * 0.6) * audioDepth, 0.0, 2.5);
 
     // ── 1. paper backdrop ──────────────────────────────────────────────
     vec2 wp = vec2(fbm2(uv*1.7), fbm2(uv*1.7 + 7.0));
@@ -660,6 +662,10 @@ void main(){
     // gentle output curve
     col = col / (1.0 + 0.15*col);
     col = pow(max(col, 0.0), vec3(0.94));
+
+    // Headline breath — the spread is bright paper near white, so a
+    // darkening pulse (not a lift) reads clearly instead of clipping at 1.0.
+    col *= 1.0 - 0.10 * clamp(aLo, 0.0, 1.6);
 
     col *= mkFlicker(gl_FragCoord.xy / RENDERSIZE - 0.5, TIME);
     gl_FragColor = vec4(fidApply(col, gl_FragCoord.xy), 1.0);

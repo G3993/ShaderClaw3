@@ -12,13 +12,22 @@
     { "NAME": "variety",       "LABEL": "Building Variety",   "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "speed",         "LABEL": "Movement Speed",     "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0, "MAX": 3.0 },
     { "NAME": "flightMode",    "LABEL": "Drive(0) / Fly(1)",  "TYPE": "float", "DEFAULT": 0.0,  "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fog",           "LABEL": "Fog Density",        "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0, "MAX": 1.0 }
+    { "NAME": "fog",           "LABEL": "Fog Density",        "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "audioReact",    "LABEL": "Audio React",        "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 2.0 }
   ]
 }*/
 
 // NYC is a procedural city. We raymarch a grid of box-buildings, sample
 // window/ad textures on surfaces, light with a time-of-day sky, and grade
 // with a mood slider. No external mesh data — everything comes from hashes.
+//
+// Audio: bass makes the city glow (window/ad emission + fog thinning), beats
+// flash the LED ad walls, highs flick on extra scattered windows. Everything
+// is gated on audioReact with soft knees — silence renders the baseline city.
+
+float aBassP() { return pow(smoothstep(0.05, 0.85, audioBass), 1.6); }
+float aHighP() { return pow(smoothstep(0.10, 0.90, audioHigh), 1.2); }
+float aKickP() { return audioBeatPulse * audioBeatPulse; }
 
 #define CELL        8.0        // grid spacing in world units
 #define BUILD_HALF  3.0        // half-width of a typical building footprint
@@ -127,6 +136,10 @@ vec3 skyColor(vec3 rd, float tod) {
         float st = step(0.997, hash11(floor(sc.x) * 31.7 + floor(sc.y) * 17.3));
         col += vec3(st) * (1.0 - dayMask) * 0.8;
     }
+    // City-glow haze pulses with the music near the horizon (zero in silence).
+    col += vec3(0.06, 0.08, 0.14)
+         * (audioReact * smoothstep(0.05, 0.90, audioLevel))
+         * pow(1.0 - abs(rd.y), 2.0);
     return col;
 }
 
@@ -184,9 +197,13 @@ void surfaceShade(vec3 p, vec3 n, vec2 cell, vec4 info,
     float mask = step(0.15, winLocal.x) * step(winLocal.x, 0.85)
                * step(0.15, winLocal.y) * step(winLocal.y, 0.85);
 
-    // Which windows are lit — hash + windowLights threshold
+    // Which windows are lit — hash + windowLights threshold. The music raises
+    // the density: the city literally lights up with the level (idle = knob).
+    float wl = min(windowLights * (1.0 + audioReact * 0.30 * smoothstep(0.05, 0.90, audioLevel)), 1.0);
     float litRnd = hash11(dot(winCell, vec2(12.7, 7.3)) + cell.x * 2.1 + cell.y * 0.7);
-    float lit = step(1.0 - windowLights, litRnd) * mask;
+    float lit = step(1.0 - wl, litRnd) * mask;
+    // Highs flick on an extra sparse scatter of windows — fine sparkle only.
+    lit = max(lit, mask * step(0.93, litRnd) * aHighP() * min(audioReact * 1.5, 1.0));
 
     // Window color: mix warm indoor and cool fluorescent at random per cell
     vec3 warmInterior = vec3(1.00, 0.82, 0.55);
@@ -196,7 +213,8 @@ void surfaceShade(vec3 p, vec3 n, vec2 cell, vec4 info,
     // Base surface = concrete where no window, lit window otherwise
     vec3 glass = mask * mix(vec3(0.08, 0.12, 0.18), winCol, lit);
     outCol = mix(concrete, glass, mask);
-    outEm  = lit * 1.6;
+    // Bass swells the interior glow — the whole skyline breathes with the low end.
+    outEm  = lit * 1.6 * (1.0 + audioReact * 0.5 * aBassP());
 
     // ── LED ad wall ─────────────────────────────────────────────────
     // Buildings tagged hasAd get an ad surface on their +X or +Z face
@@ -230,7 +248,9 @@ void surfaceShade(vec3 p, vec3 n, vec2 cell, vec4 info,
                 adCol = abs(adCol);
             }
             outCol = adCol;
-            outEm  = dot(adCol, vec3(0.33)) * adIntensity;
+            // Beats flash the LED walls (decaying accent); bass lifts them too.
+            outEm  = dot(adCol, vec3(0.33)) * adIntensity
+                   * (1.0 + audioReact * (0.4 * aBassP() + 0.8 * aKickP()));
         }
     }
 }
@@ -244,8 +264,11 @@ void main() {
     float t = TIME * speed;
     float flyH   = mix(1.7, 26.0, flightMode);
     float lookH  = mix(0.3, 6.0,  flightMode);
-    float swayX  = sin(t * 0.35) * mix(1.5, 4.0, flightMode);
-    float swayY  = sin(t * 0.22) * mix(0.2, 3.0, flightMode);
+    // Bass leans into the camera sway — amplitude only (smooth envelope on a
+    // sinusoid), never a raw-position jump.
+    float swayAmp = 1.0 + audioReact * 0.35 * aBassP();
+    float swayX  = sin(t * 0.35) * mix(1.5, 4.0, flightMode) * swayAmp;
+    float swayY  = sin(t * 0.22) * mix(0.2, 3.0, flightMode) * swayAmp;
 
     vec3 ro = vec3(swayX, flyH + swayY, t * 8.0);
     vec3 target = ro + vec3(sin(t * 0.17) * 2.0, lookH - flyH, 10.0);
@@ -291,8 +314,10 @@ void main() {
 
         col = lit;
 
-        // Fog — distance-based, tinted toward sky
-        float fogAmt = 1.0 - exp(-td * fog * 0.018);
+        // Fog — distance-based, tinted toward sky. Bass thins it out so the
+        // deep city snaps into focus on the low end.
+        float fogD = fog * (1.0 - audioReact * 0.35 * aBassP());
+        float fogAmt = 1.0 - exp(-td * fogD * 0.018);
         col = mix(col, sky, clamp(fogAmt, 0.0, 0.95));
     } else {
         col = sky;
@@ -304,6 +329,10 @@ void main() {
     // Tone map + mild contrast so emission reads without blowing out
     col = col / (1.0 + col);
     col = pow(col, vec3(0.85));
+
+    // Overall level breathes the city glow — post-tonemap so the swell reads
+    // directly. Soft knee, idle floor = 1.0 (silence renders the baseline).
+    col *= 1.0 + audioReact * 0.45 * smoothstep(0.05, 0.90, audioLevel);
 
     gl_FragColor = vec4(col, 1.0);
 }

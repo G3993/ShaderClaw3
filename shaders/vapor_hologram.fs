@@ -292,6 +292,11 @@ void main() {
     // alive-in-silence pulse on grid lines — slow breathing in luminance
     col += vec3(0.04, 0.02, 0.08) * (0.5 + 0.5 * sin(TIME * 0.6));
 
+    // Global audio pulse — whole-frame HDR lift on top of the per-element
+    // modulation above, so the tunnel visibly breathes with the beat.
+    // bass/mid/high are 0 in silence, so this is a no-op sound-off.
+    col *= (1.0 + bass * 3.2 + high * 1.3);
+
     // OUTPUT LINEAR HDR — no tonemap, no pow, no clamp
     gl_FragColor = vec4(col, 1.0);
 }

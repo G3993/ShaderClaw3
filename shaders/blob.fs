@@ -28,7 +28,10 @@
     { "NAME": "vignette",        "LABEL": "Vignette",           "TYPE": "float",  "MIN": 0.0,  "MAX": 1.0,   "DEFAULT": 0.3  },
     { "NAME": "cameraDistance",  "LABEL": "Camera Distance",    "TYPE": "float",  "MIN": 4.0,  "MAX": 30.0,  "DEFAULT": 13.5 },
     { "NAME": "cameraFOV",       "LABEL": "Camera FOV",         "TYPE": "float",  "MIN": 2.0,  "MAX": 14.0,  "DEFAULT": 8.0  },
-    { "NAME": "cameraOrbitX",    "LABEL": "Camera Tilt",        "TYPE": "float",  "MIN": -1.0, "MAX": 1.0,   "DEFAULT": 0.27 }
+    { "NAME": "cameraOrbitX",    "LABEL": "Camera Tilt",        "TYPE": "float",  "MIN": -1.0, "MAX": 1.0,   "DEFAULT": 0.27 },
+    { "NAME": "audioReact",      "LABEL": "Audio React",        "TYPE": "float",  "MIN": 0.0,  "MAX": 2.0,   "DEFAULT": 0.35 },
+    { "NAME": "inputTex",        "TYPE": "image", "LABEL": "Texture" },
+    { "NAME": "texMix",          "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "LABEL": "Texture Mix" }
   ],
   "PASSES": [
     { "TARGET": "bufA", "PERSISTENT": true },
@@ -49,6 +52,18 @@
 #define Res1 RENDERSIZE
 
 const float ang = 2.0 * 3.14159265359 / float(RotNum);
+
+// ── Audio conditioning (playbook: soft knees + floors, never linear) ────────
+float aKnee(float x, float lo, float hi) { return smoothstep(lo, hi, x); }
+float aBassP() { return pow(aKnee(audioBass, 0.05, 0.85), 1.6); }  // dominant-structure weight
+float aHighP() { return pow(aKnee(audioHigh, 0.10, 0.90), 1.2); }  // sparkle
+float aBeatP() { return audioBeatPulse * audioBeatPulse; }         // decaying accent
+
+// Audio "zoom": bass/beat shrink the effective blob scale used by the SDF,
+// which reads as the planet swelling toward camera (verified numerically
+// safe for this raymarcher, unlike perturbing camera distance directly).
+// Set once per-fragment in main() before dist()/march() are called.
+float gZoomDiv = 1.0;
 
 // ── Procedural hash ──────────────────────────────────────────────────────────
 vec4 hash4(vec2 p) {
@@ -163,7 +178,7 @@ vec3 getRot(vec3 pos, vec3 b) {
 float dist(vec3 pos) {
     vec3 wp = warpPos(pos);
     vec3 disp = (texture(bufA, sph2frag(pos) / RENDERSIZE.xy).xyz - 0.5) * displacement;
-    return length(wp + disp) / blobScale - 1.0;
+    return length(wp + disp) / (blobScale / gZoomDiv) - 1.0;
 }
 vec3 getGrad(vec3 pos, float eps) {
     vec2 d = vec2(eps, 0.0);
@@ -175,7 +190,7 @@ vec3 getGrad(vec3 pos, float eps) {
 
 // ── Raymarch ─────────────────────────────────────────────────────────────────
 vec4 march(inout vec3 pos, vec3 dir) {
-    if (length(pos - dir * dot(dir, pos)) > 1.4 * blobScale) return vec4(0.0, 0.0, 1.0, 1.0);
+    if (length(pos - dir * dot(dir, pos)) > 1.4 * (blobScale / gZoomDiv)) return vec4(0.0, 0.0, 1.0, 1.0);
     float eps = 0.001, bg = 1.0;
     for (int cnt = 0; cnt < 120; cnt++) {
         float d = dist(pos);
@@ -237,6 +252,13 @@ void main() {
     // ─────────────────────────────────────────────────────────────────────
     vec2 sc = (gl_FragCoord.xy / RENDERSIZE.xy) * 2.0 - 1.0;
 
+    // Bass swells the planet toward camera (dominant-structure zoom,
+    // Milkdrop-style breathing); a beat adds a short extra shove. Idle
+    // floor: audio 0 -> gZoomDiv 1.0 -> exactly the authored scale.
+    float aB = audioReact * aBassP();
+    float aBeat = audioReact * aBeatP();
+    gZoomDiv = 1.0 + 0.55 * aB + 0.4 * aBeat;
+
     vec3 pos = vec3(0.0, -cameraDistance, 0.0);
     vec3 dir = normalize(cameraFOV * normalize(-pos) +
                          vec3(sc.x, 0.0, sc.y * RENDERSIZE.y / RENDERSIZE.x));
@@ -286,6 +308,10 @@ void main() {
     c *= 0.8;
     c += clamp(spec * fres, 0.0, 1.0) * highColor.rgb;
 
+    // Highs: sparse specular glints on the fresnel rim only — silence keeps
+    // the clean surface, sound peppers a few extra glints across it.
+    c += clamp(spec * fres, 0.0, 1.0) * highColor.rgb * audioReact * 1.6 * aHighP();
+
     if (bg > 0.5) { diff = 0.0; ao = 1.0; }
 
     // Tone by diffuse: lerp deep -> mid -> highlight
@@ -294,10 +320,31 @@ void main() {
     c = mix(c * 0.6, baseCol * diff, 1.0 - diff * 0.4);
     c *= ao;
 
+    if (texMix > 0.001 && bg < 0.5) {
+        // Map the texture onto the planet as albedo via spherical (lat/long)
+        // projection of the surface normal, lit by the same diffuse/AO the
+        // rest of the surface uses — reads as a textured planet, not a decal.
+        vec3 nn = normalize(nm.xyz);
+        vec2 texUV = vec2(atan(nn.z, nn.x) / (2.0 * PI) + 0.5, acos(clamp(nn.y, -1.0, 1.0)) / PI);
+        vec3 texCol = texture2D(inputTex, texUV).rgb;
+        vec3 texShaded = texCol * (diff * 0.7 + 0.3) * ao;
+        c = mix(c, texShaded, texMix);
+    }
+
     // Sun glow
     float sdot = clamp(dot(sun, dir), 0.0, 1.0);
     float sunmix = pow(sdot, 600.0) * 2.0 + 0.3 * sdot;
     c = c * (0.8 - 2.0 * sunmix) + sunColor.rgb * bg * sunmix;
+
+    // Audio corona: a soft energy rim breathing around the planet's
+    // silhouette against the black — bass swells it, a beat kicks a bright
+    // pulse. Only lives on background pixels; silent = no ring at all.
+    if (bg > 0.5) {
+        float rad = length(sc);
+        float edge = 0.62 / (1.0 + 0.55 * aB + 0.35 * aBeat);
+        float ring = exp(-pow(max(rad - edge, 0.0) * 5.5, 2.0));
+        c += midColor.rgb * ring * (0.9 * aB + 1.4 * aBeat);
+    }
 
     // Vignette
     float vign = mix(1.0, 1.06 - length(sc.xy) * 0.5, vignette);

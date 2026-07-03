@@ -345,7 +345,7 @@ void main() {
         float depthDim   = mix(0.50, 1.00, zT);
 
         // Sprite size in world units, scaled by audio level.
-        float baseSize = 0.045 * sScale * depthScale * (1.0 + 0.25 * aL);
+        float baseSize = 0.045 * sScale * depthScale * (1.0 + 1.0 * aL);
         // Local UV (-0.5..0.5) inside the sprite stamp
         vec2 local = (p - pos) / baseSize;
         if (abs(local.x) > 0.5 || abs(local.y) > 0.5) continue;
@@ -414,8 +414,8 @@ void main() {
 
         // Audio jitter — shake the pixel grid horizontally.
         float jit = clamp(audioJitter, 0.0, 3.0);
-        float jitterX = 0.012 * jit * aB * sin(t * 14.0 + p.y * 6.0);
-        float jitterY = 0.004 * jit * aB * cos(t * 9.5);
+        float jitterX = 0.055 * jit * aB * sin(t * 14.0 + p.y * 6.0);
+        float jitterY = 0.020 * jit * aB * cos(t * 9.5);
 
         // Typewriter wave: each glyph bobs vertically based on its slot,
         // peaking just after it's revealed.
@@ -525,6 +525,11 @@ void main() {
 
     // Motion kit: subtle brightness flicker.
     col *= mkFlicker(p, t);
+
+    // Bass punch: a real kick briefly lifts overall brightness so the
+    // whole composition is felt to pulse with the beat, not just the
+    // sprite lanes / glyph jitter above.
+    col *= 1.0 + 2.6 * aB;
 
     float alpha = 1.0;
     if (transparentBg) {

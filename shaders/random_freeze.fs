@@ -111,7 +111,7 @@ void main() {
 
         // Pulsing with TIME and audio-bass
         float pulse = 0.82 + 0.18*sin(TIME*2.3 + fbm(p.xz*3.5)*6.28)
-                     + bass * (1.0 + 0.5*lavaT) * 0.22;
+                     + bass * (1.0 + 0.5*lavaT) * 0.55;
         vec3 lavaCol = lavaPalette(clamp(lavaT * pulse, 0.0, 1.0)) * lavaGlow;
 
         // Obsidian rock: dark specular highlight from a warm overhead sun
@@ -140,7 +140,7 @@ void main() {
     }
 
     // Global emissive breath from lava lake (audio-modulated)
-    col += vec3(0.045, 0.012, 0.0) * (0.6 + 0.4*sin(TIME*0.45)) * (1.0 + mid*0.5);
+    col += vec3(0.045, 0.012, 0.0) * (0.6 + 0.4*sin(TIME*0.45)) * (1.0 + mid*2.2);
 
     // LINEAR HDR — no tonemap, no clamp
     gl_FragColor = vec4(col, 1.0);

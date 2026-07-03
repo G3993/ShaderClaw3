@@ -470,11 +470,14 @@ void main() {
     float mid  = audioMid;
     float high = audioHigh;
 
-    // Per-band energies — players + a small audio.* injection so the
-    // shader still breathes when no player channels are bound.
-    float eA = clamp(energyA + bass * 0.20 * audioDepth, 0.0, 1.5);
-    float eB = clamp(energyB + mid  * 0.20 * audioDepth, 0.0, 1.5);
-    float eC = clamp(energyC + high * 0.20 * audioDepth, 0.0, 1.5);
+    // Per-band energies — players + an audio.* injection so the shader
+    // still breathes when no player channels are bound. Routing fix: the
+    // previous 0.20 weight was too subtle to register as a real swell
+    // against the mesh's own continuous travelling-wave motion — raised
+    // so a hit visibly surges the ridge amplitude.
+    float eA = clamp(energyA + bass * 0.65 * audioDepth, 0.0, 1.5);
+    float eB = clamp(energyB + mid  * 0.65 * audioDepth, 0.0, 1.5);
+    float eC = clamp(energyC + high * 0.65 * audioDepth, 0.0, 1.5);
 
     // Vertical band layout. Bands STACK across the canvas — explicit
     // anti-mirror: no horizon line, no symmetric reflection. The three

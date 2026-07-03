@@ -843,6 +843,16 @@ void main() {
     if (noiseAmt > 0.001) col += vec3(h21(floor(uv0 * RES) + floor(dt * 40.0)) - 0.5) * noiseAmt * 0.6;
     if (vignetteAmt > 0.001) col *= 1.0 - vignetteAmt * smoothstep(0.3, 0.9, length(uv0 - 0.5));
 
+    // ===== AUDIO PUNCH — always-on reactive hit, independent of the
+    // probabilistic module stack above (so audio reads even when this
+    // frame's random recipe happened to dodge every audio-linked module) ==
+    float aPunch = clamp(aAll, 0.0, 1.0);
+    vec3 hsvP = rgb2hsv(col);
+    hsvP.x = fract(hsvP.x + aPunch * 0.16);                    // hue rotate on loud
+    col = hsv2rgb(hsvP);
+    col = mix(col, vec3(1.0) - col, aPunch * 0.42);            // invert-flash on loud
+    col *= 1.0 + aPunch * 0.55;                                // brightness lift on loud
+
     // surface texture (final layer): VHS tape texture, then film/video grain
     col = vhsTexture(col, uv0, t, RES, aH, vhsTex);
     col = addGrain(col, uv0, t, RES, aH, grainAmt);

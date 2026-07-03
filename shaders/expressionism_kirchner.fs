@@ -422,7 +422,7 @@ void main() {
         vec2 fromCtr2 = pos3.xy;
         float fcLen = length(fromCtr2);
         if (fcLen > 1e-4) fromCtr2 = fromCtr2/fcLen;
-        pos3.xy += fromCtr2*springReact*bass;
+        pos3.xy += fromCtr2*springReact*bass*2.2;
         vec2 ctr2D = project3D(pos3, cameraZ);
         float zFactor = clamp((cameraZ-pos3.z)/cameraZ, 0.3, 2.5);
         float sz = shapeSize*(0.7+h11(fi*5.3)*0.6)*zFactor*(1.0+level*0.08);
@@ -465,11 +465,11 @@ void main() {
         vec2 fromCtr2 = pos3.xy;
         float fcLen = length(fromCtr2);
         if (fcLen > 1e-4) fromCtr2 = fromCtr2/fcLen;
-        pos3.xy += fromCtr2*springReact*bass;
+        pos3.xy += fromCtr2*springReact*bass*2.2;
         vec2 ctr2D = project3D(pos3, cameraZ);
         float zFactor = clamp((cameraZ-pos3.z)/cameraZ, 0.3, 2.5);
         float sz = shapeSize*(0.7+h11(fi*5.3)*0.6)*zFactor*(1.0+level*0.08);
-        float rot = t*midA*0.5 + h11(fi*7.7)*6.2832 + t*orbitSpeed*h11(fi*2.33)*0.8;
+        float rot = t*midA*1.3 + h11(fi*7.7)*6.2832 + t*orbitSpeed*h11(fi*2.33)*0.8;
         float ca = cos(-rot), sa = sin(-rot);
         vec2 lp = Psc - ctr2D;
         lp = vec2(ca*lp.x - sa*lp.y, sa*lp.x + ca*lp.y);
@@ -523,7 +523,7 @@ void main() {
             float along = d.x*dir.x+d.y*dir.y;
             lm *= step(0.5, fract(along*26.0+t*0.3));
         }
-        col = mix(col, LL_BLACK, lm*(0.4+treble*0.3));
+        col = mix(col, LL_BLACK, lm*(0.4+treble*0.7));
     }
 
     // ── 8) CANVAS TOOTH ───────────────────────────────────────────
@@ -543,7 +543,7 @@ void main() {
     {
         vec2 fc = (uv01 - vec2(0.18,0.82)); fc.x *= aspect;
         float fa = atan(fc.y, fc.x); float fr = length(fc);
-        float flashR = 0.10 + 0.04*cos(fa*10.0);
+        float flashR = 0.10 + 0.04*cos(fa*10.0) + 0.10*bass;
         float flashAmt = step(fr, flashR)*bass;
         col = mix(col, LL_YELLOW, flashAmt*0.70);
         col = mix(col, LL_BLACK,  step(abs(fr-flashR),0.008)*bass);

@@ -60,9 +60,11 @@ void main() {
     // ------------------------------------------------------------------ //
     // Zoom path — cycle through 5 locations.                             //
     // ------------------------------------------------------------------ //
-    float bassPunch  = bass   * audioReact;
-    float midPunch   = mid    * audioReact;
-    float treblePunch= treble * audioReact;
+    // Engine audio bus drives reactivity by default; the bass/mid/treble
+    // INPUT knobs remain as manual overrides (max-merged).
+    float bassPunch  = max(bass,   audioBass) * audioReact;
+    float midPunch   = max(mid,    audioMid)  * audioReact;
+    float treblePunch= max(treble, audioHigh) * audioReact;
 
     float speed = zoomSpeed * (1.0 + 0.6 * bassPunch);
     float t     = TIME * speed;

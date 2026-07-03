@@ -12,7 +12,7 @@
     { "NAME": "pitchA",     "LABEL": "Player A Pitch",  "TYPE": "float", "DEFAULT": 0.4, "MIN": 0.0, "MAX": 1.0, "BIND": "player[1].pitch" },
     { "NAME": "pitchB",     "LABEL": "Player B Pitch",  "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 1.0, "BIND": "player[2].pitch" },
 
-    { "NAME": "bassDrive",  "LABEL": "Bass Drive",      "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "audio.bass" },
+    { "NAME": "bassDrive",  "LABEL": "Bass Drive",      "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.0 },
 
     { "NAME": "paperColor", "LABEL": "Paper",           "TYPE": "color", "DEFAULT": [0.93, 0.92, 0.91, 1.0] },
     { "NAME": "colorA",     "LABEL": "Player A Color",  "TYPE": "color", "DEFAULT": [0.22, 0.45, 0.48, 1.0] },
@@ -258,7 +258,9 @@ void main(){
     // started speaking), give them visual presence anyway.
     eA = max(eA, aA * 0.45);
     eB = max(eB, aB * 0.45);
-    float bass = clamp(bassDrive * audioDepth, 0.0, 2.0);
+    // bassDrive is a gain on the live audioBass uniform (previously wired
+    // to a nonexistent "audio.bass" BIND path, so it never moved).
+    float bass = clamp(bassDrive * audioDepth * audioBass, 0.0, 2.0);
 
     // Whose turn it is, [-1..+1]. A wins → -1, B wins → +1.
     float turn = (eB - eA) / max(eA + eB, 1e-3);
@@ -569,6 +571,10 @@ void main(){
     col *= vig;
     float tooth = fbm2(uv * res.y * 0.012) + 0.5*fbm2(uv * res.y * 0.03 + 7.0);
     col *= 1.0 + (tooth - 0.75) * 0.04;
+
+    // Audio pulse — bass lifts the whole scene's exposure so a hit reads
+    // across the page, beyond the orb-jitter/speck bass cues above.
+    col *= 1.0 + bass * 4.0;
 
     col *= mkFlicker(gl_FragCoord.xy / RENDERSIZE - 0.5, TIME);
     gl_FragColor = vec4(fidApply(col, gl_FragCoord.xy), 1.0);

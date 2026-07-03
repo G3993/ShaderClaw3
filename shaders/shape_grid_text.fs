@@ -11,9 +11,9 @@
     { "NAME": "activeA", "LABEL": "Player 1 Active",  "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[1].active" },
     { "NAME": "activeB", "LABEL": "Player 2 Active",  "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[2].active" },
 
-    { "NAME": "bassDrive", "LABEL": "Bass (Stroke)",  "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "audio.bass" },
-    { "NAME": "midDrive",  "LABEL": "Mid (Rotation)", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "audio.mid" },
-    { "NAME": "highDrive", "LABEL": "High (Crisp)",   "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "audio.high" },
+    { "NAME": "bassDrive", "LABEL": "Bass (Stroke)",  "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.0, "BIND": "audio.bass" },
+    { "NAME": "midDrive",  "LABEL": "Mid (Rotation)", "TYPE": "float", "DEFAULT": 0.30, "MIN": 0.0, "MAX": 1.0, "BIND": "audio.mid" },
+    { "NAME": "highDrive", "LABEL": "High (Crisp)",   "TYPE": "float", "DEFAULT": 0.30, "MIN": 0.0, "MAX": 1.0, "BIND": "audio.high" },
 
     { "NAME": "rows",        "LABEL": "Rows",          "TYPE": "long",  "DEFAULT": 4, "VALUES": [3,4,5,6], "LABELS": ["3","4","5","6"] },
     { "NAME": "cols",        "LABEL": "Cols",          "TYPE": "long",  "DEFAULT": 4, "VALUES": [3,4,5,6], "LABELS": ["3","4","5","6"] },
@@ -337,9 +337,11 @@ void main() {
     float bandE1 = eB * mix(0.5, 1.0, aB);
     float bandE2 = eC;
     float audAct  = clamp(audioDepth, 0.0, 2.0);
-    float bass    = clamp(bassDrive, 0.0, 1.0);
-    float midF    = clamp(midDrive,  0.0, 1.0);
-    float highF   = clamp(highDrive, 0.0, 1.0);
+    // Live audio bus tops up each Drive knob so silence still holds the
+    // knob baseline but the track visibly pushes stroke/rotation/crisp.
+    float bass    = clamp(bassDrive + audioBass * 0.6, 0.0, 1.4);
+    float midF    = clamp(midDrive  + audioMid  * 0.6, 0.0, 1.4);
+    float highF   = clamp(highDrive + audioHigh * 0.6, 0.0, 1.4);
     float spdMul  = clamp(motionSpeed, 0.0, 1.6);
     float t       = TIME * (0.45 + 0.65 * spdMul);
 
@@ -617,6 +619,10 @@ void main() {
     col += pow(sweep, 6.0) * 0.022 * vec3(1.0, 0.98, 0.92);
     // Soft tonemap so the yellow never burns
     col = col / (1.0 + 0.18 * col);
+
+    // Bass breath — gentle whole-grid pulse so the piece visibly breathes
+    // with the track, not just the stroke width.
+    col *= 1.0 - 0.30 * clamp(bass, 0.0, 1.4);
 
     col *= mkFlicker(gl_FragCoord.xy / RENDERSIZE - 0.5, TIME);
     gl_FragColor = vec4(fidApply(col, gl_FragCoord.xy), 1.0);

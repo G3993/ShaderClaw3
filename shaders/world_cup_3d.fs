@@ -2063,7 +2063,7 @@ vec4 card(vec2 p, vec2 c, float s, float yaw, int t, vec3 col){
 
     float sa = sin(yaw), ca = cos(yaw);
     float caa = max(abs(ca), 0.14);
-    float t2 = uExtrude * (0.55 + 0.45*gPulse);   // half-thickness, breathes with bass
+    float t2 = uExtrude * (0.5 + 0.9*gPulse);   // half-thickness, breathes with bass
 
     const int L = 14;
     float hd = -1.0; float ucoord = 0.0;
@@ -2086,7 +2086,7 @@ vec4 card(vec2 p, vec2 c, float s, float yaw, int t, vec3 col){
     // white-hot core on the front face
     e += vec3(1.0) * uNeon * 0.55 * depthShade * smoothstep(0.5, 0.0, hd);
     e *= sheen;
-    e *= (1.0 + gPulse*0.65 + gHigh*0.25);
+    e *= (1.0 + gPulse*1.8 + gHigh*0.9);
     return vec4(e, cov);
 }
 
@@ -2202,7 +2202,7 @@ vec3 gridFloor(vec2 uv, float horizon, vec3 tint){
     float grid = max(lineZ, lineX);
     float fade = exp(-d*2.2) * smoothstep(0.0, 0.08, d);  // fade at horizon + into distance
     vec3 gcol = mix(vec3(0.20,0.35,0.9), tint, 0.5);
-    return gcol * grid * fade * (0.6 + 0.8*gPulse) * 0.9;
+    return gcol * grid * fade * (0.5 + 1.6*gPulse) * 0.9;
 }
 
 // ── all crests for the current mode (emissive only) ──────────────────────
@@ -2227,7 +2227,7 @@ vec3 crests(vec2 p, float cardY){
         float sc = 0.25 * uZoom;
         vec4 s = card(p, vec2(0.0, cardY), sc, yaw, showIdx, col);
         e += s.rgb;
-        e += col * halo(p, vec2(0.0, cardY), sc, showIdx) * uNeon * 1.3;
+        e += col * halo(p, vec2(0.0, cardY), sc, showIdx) * uNeon * 1.3 * (1.0 + gPulse*1.4 + gHigh*0.8);
     } else {
         // ── VERSUS ── two crests angled toward each other
         int tA = int(clamp(uTeamA, 0.0, float(NTEAM-1)));
@@ -2242,8 +2242,8 @@ vec3 crests(vec2 p, float cardY){
         vec2 pb = vec2( off, cardY - bob);
         e += card(p, pa, sc,  0.28 + spin, tA, cA).rgb;
         e += card(p, pb, sc, -0.28 - spin, tB, cB).rgb;
-        e += cA * halo(p, pa, sc, tA) * uNeon * 1.15;
-        e += cB * halo(p, pb, sc, tB) * uNeon * 1.15;
+        e += cA * halo(p, pa, sc, tA) * uNeon * 1.15 * (1.0 + gPulse*1.4 + gHigh*0.8);
+        e += cB * halo(p, pb, sc, tB) * uNeon * 1.15 * (1.0 + gPulse*1.4 + gHigh*0.8);
         // clash glow in the middle
         vec2 m = p - vec2(0.0, cardY);
         float cl = exp(-dot(m,m)*7.0);
@@ -2278,7 +2278,7 @@ void main(){
     if(bg){
         // faint nebula glow behind the crest
         float neb = exp(-length(uv - vec2(0.0, cardY))*1.6);
-        col += tint * neb * 0.10 * (0.7 + 0.6*gPulse);
+        col += tint * neb * 0.10 * (0.5 + 2.0*gPulse);
         if(uGridOn > 0.5) col += gridFloor(uv, horizon, tint);
         // floor reflection of the crests
         if(uFloorOn > 0.5 && uv.y < horizon){

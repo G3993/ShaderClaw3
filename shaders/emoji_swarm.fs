@@ -13,6 +13,7 @@
     { "NAME": "wiggle",  "LABEL": "Wiggle",     "TYPE": "float", "MIN": 0.0,  "MAX": 0.5,  "DEFAULT": 0.14 },
     { "NAME": "glow",    "LABEL": "Glow",       "TYPE": "float", "MIN": 0.0,  "MAX": 1.5,  "DEFAULT": 0.40 },
     { "NAME": "silentFade", "LABEL": "Silence Fade", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.75 },
+    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.35 },
     { "NAME": "bg",      "LABEL": "Background", "TYPE": "long",
       "VALUES": [0, 1, 2],
       "LABELS": ["Transparent", "Black", "Gradient"],
@@ -126,7 +127,15 @@ void main() {
     float t    = TIME;
     float vox  = voiceLevel();                          // 0..1 speech activity
     float seed = computeMsgSeed();                       // 0..1 from msg chars
-    int   live = int(clamp(count * (0.30 + 0.70 * vox), 4.0, 64.0));
+
+    // ─── Native audio bus (soft-kneed, idle-floor safe) ───────────────────
+    float aReact = clamp(audioReact, 0.0, 2.0);
+    float aBassP = pow(smoothstep(0.05, 0.85, audioBass), 1.6);
+    float aHighP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+    float aBeat  = audioBeatPulse * audioBeatPulse;
+
+    // Bass -> swarm count, the dominant structural cue (soft-kneed, ≤~35% at default).
+    int   live = int(clamp(count * (0.30 + 0.70 * vox) * (1.0 + 1.8 * aReact * aBassP), 4.0, 64.0));
 
     // Hard upper bound 64 lets the compiler unroll; `break` gates by live count.
     for (int i = 0; i < 64; i++) {
@@ -154,7 +163,8 @@ void main() {
         center.y = mod(center.y + 0.90, 1.80) - 0.90;
 
         vec2  local = p - center;
-        float sz    = size * (0.70 + 0.60 * s.y);
+        // Bass gives the swarm a gentle collective pulse in size (soft knee).
+        float sz    = size * (0.70 + 0.60 * s.y) * (1.0 + 0.40 * aReact * aBassP);
         local /= sz;
         if (abs(local.x) > 1.10 || abs(local.y) > 1.10) continue;
 
@@ -167,6 +177,11 @@ void main() {
 
         // Voice-driven brightness lift + halo so active speech = vibrant swarm.
         vec3 halo = e.rgb * glow * vox * 0.6;
+        // Highs -> fine sparkle on a sparse subset only (fresh hash per particle).
+        float sparkleMask = step(0.75, h11(fi * 3.71 + 5.2));
+        halo += e.rgb * sparkleMask * aReact * aHighP * 1.4;
+        // Beat -> decaying whole-swarm flash accent, never a strobe.
+        halo += e.rgb * aBeat * aReact * 0.9;
         col = mix(col, e.rgb + halo, e.a);
     }
 

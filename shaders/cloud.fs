@@ -6,7 +6,8 @@
     { "NAME": "density",    "LABEL": "Density",     "TYPE": "float", "MIN": 8.0,  "MAX": 64.0, "DEFAULT": 32.0 },
     { "NAME": "rotSpeed",   "LABEL": "Rotate",      "TYPE": "float", "MIN": 0.0,  "MAX": 1.5,  "DEFAULT": 0.5 },
     { "NAME": "colorSpeed", "LABEL": "Color Drift", "TYPE": "float", "MIN": 0.0,  "MAX": 3.0,  "DEFAULT": 1.0 },
-    { "NAME": "bgColor",    "LABEL": "Sky",         "TYPE": "color", "DEFAULT": [0.5, 0.6, 0.8, 1.0] }
+    { "NAME": "bgColor",    "LABEL": "Sky",         "TYPE": "color", "DEFAULT": [0.5, 0.6, 0.8, 1.0] },
+    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.35 }
   ]
 }*/
 
@@ -28,6 +29,13 @@ const vec3  ambientDensity  = vec3(0.14, 0.13, 0.1) * 3.0;
 const vec3  boundingBoxRad  = vec3(0.75 * 0.5);
 
 float saturate(float v) { return clamp(v, 0.0, 1.0); }
+
+// Audio state, set once per-fragment in main() before the raymarch — Render()
+// and ShadowStep() (called many times per pixel) read these globals rather
+// than recomputing knees every step. Non-gating: 1.0/0.0 at rest (no change).
+float gDensityScale = 1.0;   // bass -> cloud density/opacity (dominant structure)
+float gFlash         = 0.0;  // beat -> a brief, decaying brightness pulse
+float gGlint          = 0.0; // highs -> sparse sunlit-edge sparkle
 
 // ── procedural 3D value-noise fBm (replaces the noise texture) ──────────
 float h31(vec3 p) {
@@ -125,7 +133,7 @@ float ShadowStep(vec3 p, float jitter) {
         d += shadowStep;
         float overstep = max(0.0, d - box.y);
         float curStep = shadowStep - overstep;
-        float v = SampleDensity(p - d * sd) * curStep * density;
+        float v = SampleDensity(p - d * sd) * curStep * density * gDensityScale;
         alpha += v;
         inside = overstep == 0.0;
         shadowStep *= shadowStepScalar;
@@ -160,7 +168,7 @@ vec4 Render(vec3 ro, vec3 rd, float rand) {
         vec3 colPhase = p.z * 2.0 - tCol + vec3(0, 2, 4);
         vec3 shadowDensity = 0.5 + 0.5 * cos(colPhase) * 0.75;
 
-        float v = saturate(SampleDensity(p) * stepSize * density);
+        float v = saturate(SampleDensity(p) * stepSize * density * gDensityScale);
         if (v > 0.001) {
             float s = ShadowStep(p, rand);
             vec3 st = exp(-s * shadowDensity);
@@ -180,6 +188,14 @@ vec4 Render(vec3 ro, vec3 rd, float rand) {
 }
 
 void main() {
+    // Non-gating audio: alive at audio=0; audioReact only adds on top.
+    float bassP = pow(smoothstep(0.05, 0.85, audioBass), 1.6);
+    float highP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+    float beatP = audioBeatPulse * audioBeatPulse;
+    gDensityScale = 1.0 + audioReact * 0.7  * bassP;  // cloud swells with bass (dominant structure)
+    gFlash        = audioReact * 0.8  * beatP;         // brief decaying brightness pulse on the beat
+    gGlint        = audioReact * 1.4  * highP;         // sparse sunlit-edge sparkle on highs
+
     vec3 ro, rd;
     RORD(gl_FragCoord.xy, RENDERSIZE.xy, ro, rd);
     float rand = hash12(gl_FragCoord.xy + TIME);
@@ -187,6 +203,13 @@ void main() {
     vec3 bg = bgColor.rgb;
     if (result.a > 0.0) result.rgb /= result.a;
     vec3 col = mix(bg, result.rgb, result.a);
+
+    // Beat flash — only lifts the cloud body itself, never the empty sky.
+    col += vec3(gFlash) * result.a;
+    // High sparkle — a sparse glint on the sun-facing rim of the cloud.
+    float sunAlign = pow(max(dot(normalize(rd), normalize(-sunDir)), 0.0), 24.0);
+    col += vec3(1.0, 0.92, 0.75) * gGlint * sunAlign * result.a * step(0.85, rand);
+
     col = pow(col, vec3(1.0 / 2.2));
     gl_FragColor = vec4(col, 1.0);
 }

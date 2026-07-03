@@ -450,16 +450,20 @@ void main() {
 
     // Energies — clamp + small audio.bass floor so audio-only setups still
     // animate. Each cloud responds to its OWN channel; A=front, C=back.
-    float eA = clamp(energyA + bass * 0.15 * audioDepth, 0.0, 1.8);
-    float eB = clamp(energyB + bass * 0.10 * audioDepth, 0.0, 1.8);
-    float eC = clamp(energyC + bass * 0.08 * audioDepth, 0.0, 1.8);
+    float eA = clamp(energyA + bass * 0.42 * audioDepth, 0.0, 1.8);
+    float eB = clamp(energyB + bass * 0.30 * audioDepth, 0.0, 1.8);
+    float eC = clamp(energyC + bass * 0.24 * audioDepth, 0.0, 1.8);
 
     // Mouse-driven parallax: shifts each cloud layer differently → depth.
     vec2 cam = (mousePos - 0.5) * audioDepth * 0.18;
 
     // ── Paper backdrop ────────────────────────────────────────────────
     vec3 paper = paperColor.rgb;
-    paper *= 1.0 - 0.10 * dot(p, p);                       // vignette
+    // Bass deepens the vignette (a soft recessed "breath" on the plate) —
+    // darkening reads through the bloom stage where a brightness lift on
+    // an already-near-white paper would just clip away. Zero at silence.
+    paper *= 1.0 - (0.10 + 0.24 * bass) * dot(p, p);
+    paper *= 1.0 - 0.025 * bass;
     float marb = fbm2(p * 1.5 + 7.0);
     paper *= 1.0 + (marb - 0.5) * 0.04;
     vec3 col = paper;
@@ -516,14 +520,14 @@ void main() {
 
     // Cloud sizes — bass swell breathes all three but each by a different
     // amount so they don't move as a single field.
-    float swell = 1.0 + 0.18 * bass;
+    float swell = 1.0 + 0.30 * bass;
     vec3 back  = cloud(p, cBack, axB, 0.55 * frameW * swell,
                        0.34 * frameH * swell, cBk, eC, t * 0.7, 1.3, 1.8);
-    vec3 midL  = cloud(p, cMid, axC, 0.48 * frameW * (1.0 + 0.14 * bass),
-                       0.30 * frameH * (1.0 + 0.14 * bass), cB, eB,
+    vec3 midL  = cloud(p, cMid, axC, 0.48 * frameW * (1.0 + 0.22 * bass),
+                       0.30 * frameH * (1.0 + 0.22 * bass), cB, eB,
                        t * 1.0, 3.7, 1.2);
-    vec3 front = cloud(p, cFro, axA, 0.36 * frameW * (1.0 + 0.10 * bass),
-                       0.22 * frameH * (1.0 + 0.10 * bass), cA, eA,
+    vec3 front = cloud(p, cFro, axA, 0.36 * frameW * (1.0 + 0.16 * bass),
+                       0.22 * frameH * (1.0 + 0.16 * bass), cA, eA,
                        t * 1.4, 7.1, 0.85);
 
     // Clip clouds to the inner frame (soft).
@@ -531,9 +535,13 @@ void main() {
                               vec2(frameW * 0.5 - 0.004,
                                    frameH * 0.5 - 0.004),
                               0.018);
-    back  *= clipMask;
-    midL  *= clipMask;
-    front *= clipMask;
+    // Bass injects a soft brightness pulse into all three cloud bodies —
+    // "structure on beats, texture on levels" (kick reads as a bloom lift,
+    // not a shape change). Zero at silence.
+    float cloudPulse = 1.0 + 0.6 * bass;
+    back  *= clipMask * cloudPulse;
+    midL  *= clipMask * cloudPulse;
+    front *= clipMask * cloudPulse;
 
     // Composite: back → mid → front with screen-ish add.
     col += back  * 0.95;
@@ -550,7 +558,7 @@ void main() {
     float bestT;
     float dPrim = curveDist(variant, p - frameC, aspect,
                             wobble, bestT);
-    float lineW = 0.0030 * lineDensity * (1.0 + 0.4 * bass);
+    float lineW = 0.0030 * lineDensity * (1.0 + 1.1 * bass);
     float crisp = lineCrispness * (0.7 + 0.6 * (1.0 - high * 0.3));
     float primLine = 1.0 - smoothstep(lineW, lineW * (1.0 + crisp), dPrim);
     // Secondary curve — always the loop, lighter weight, gives the
@@ -559,7 +567,7 @@ void main() {
     float bestT2;
     float dSec = curveDist(secondary, p - frameC, aspect,
                            wobble * 1.1, bestT2);
-    float lineW2 = 0.0021 * lineDensity * (1.0 + 0.3 * bass);
+    float lineW2 = 0.0021 * lineDensity * (1.0 + 0.9 * bass);
     float secLine = 1.0 - smoothstep(lineW2, lineW2 * (1.0 + crisp), dSec);
     // Inside-frame clip for the lines too.
     primLine *= clipMask;

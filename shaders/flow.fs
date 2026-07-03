@@ -6,6 +6,7 @@
     { "NAME": "particleSize", "LABEL": "Particle Size", "TYPE": "float", "DEFAULT": 12.0, "MIN": 2.0, "MAX": 64.0 },
     { "NAME": "orbitSpeed", "LABEL": "Speed", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 5.0 },
     { "NAME": "orbitChaos", "LABEL": "Chaos", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.0 },
+    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "fadeRate", "LABEL": "Trail Fade", "TYPE": "float", "DEFAULT": 0.002, "MIN": 0.0, "MAX": 0.05 },
     { "NAME": "glossiness", "LABEL": "Glossiness", "TYPE": "float", "DEFAULT": 120.0, "MIN": 4.0, "MAX": 256.0 },
     { "NAME": "specular", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 2.0 },
@@ -149,13 +150,26 @@ void main() {
     vec2 Res = RENDERSIZE;
     vec2 pos = gl_FragCoord.xy;
     vec2 uv = isf_FragNormCoord;
-    float pSize = particleSize;
+    // ── Audio conditioning — soft knees, gated on audioReact so silence
+    //    renders the exact baseline look (idle floor = multiplier 1.0).
+    float bassP = pow(smoothstep(0.05, 0.85, audioBass), 1.6);
+    float midP  = smoothstep(0.08, 0.90, audioMid);
+    float highP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+    float lvlP  = smoothstep(0.05, 0.90, audioLevel);
+    float aKick = audioBeatPulse * audioBeatPulse; // decaying beat accent
+
+    // Bass swells the stream weight — the dominant structure of the piece.
+    float pSize = particleSize * (1.0 + audioReact * 0.45 * bassP);
     float t = TIME * orbitSpeed;
 
     // ===== PASS 0: Albedo (trails) =====
     // Interpolate between previous and current position to draw continuous trails
+    // Mids lean on the streams — an accumulated sideways drift of the whole
+    // trail field (impulse in, motion with memory out). Zero in silence.
+    float aScroll = audioReact * 3.2 * midP;
+
     if (PASSINDEX == 0) {
-        vec2 scrollUV = (pos + vec2(scrollSpeed, 0.0) + 0.5) / Res;
+        vec2 scrollUV = (pos + vec2(scrollSpeed + aScroll, 0.0) + 0.5) / Res;
         vec4 col = texture2D(albedoBuf, scrollUV);
         col.a *= (1.0 - fadeRate);
 
@@ -210,7 +224,7 @@ void main() {
 
     // ===== PASS 1: Normals (trails) =====
     if (PASSINDEX == 1) {
-        vec2 scrollUV = (pos + vec2(scrollSpeed, 0.0) + 0.5) / Res;
+        vec2 scrollUV = (pos + vec2(scrollSpeed + aScroll, 0.0) + 0.5) / Res;
         vec4 nrm = texture2D(normalBuf, scrollUV);
         float dt = TIMEDELTA * orbitSpeed * 1.2;
 
@@ -252,6 +266,8 @@ void main() {
     float nDot = clamp(dot(normal, lDir), 0.0, 1.0);
     float diff = mix(0.3, 1.0, nDot);
     float spec = pow(clamp(dot(reflect(-lDir, normal), vec3(0,0,1)), 0.0, 1.0), glossiness) * specular;
+    // Highs glint off the trail surface — fine sparkle on the lit ridges.
+    spec *= 1.0 + audioReact * 0.8 * highP;
 
     // Lit trail color — specular peak lifted to HDR (~1.8x at the gloss centroid)
     vec3 result = albedo.rgb * diff + vec3(spec * 0.3) + vec3(pow(spec, 1.5) * 1.5);
@@ -297,14 +313,23 @@ void main() {
         float halo = smoothstep(pSize * 2.0 + aaw, pSize * 0.5 - aaw, dist) * 0.25;
         // HDR PEAKS: tight cores blow past 1.0 so the bloom catches them
         float hdrCore = pow(core, 3.0) * 2.2; // up to ~2.2x linear at center
-        result += pc * (core + halo) * glowAmount * 0.4;
-        result += pc * hdrCore * glowAmount * 0.9;
+        // Highs sparkle a sparse subset of orbs; beats accent every orb briefly.
+        float sparkle = step(0.62, hash(vec2(float(i), 4.2))) * highP;
+        float aGlow = 1.0 + audioReact * (0.8 * aKick + 0.6 * sparkle);
+        result += pc * (core + halo) * glowAmount * 0.4 * aGlow;
+        result += pc * hdrCore * glowAmount * 0.9 * aGlow;
     }
+
+    // Level breathes overall trail luminance (~11% at default depth);
+    // mids shimmer the hue of the whole field — turbulence in color space.
+    result *= 1.0 + audioReact * 0.38 * lvlP;
+    result = mix(result, result.gbr, audioReact * 0.22 * midP);
 
     // Vignette
     if (vignette > 0.001) {
         vec2 co = (uv - 0.5) * (Res.x / Res.y) * 2.0;
-        float rf = length(co) * 0.25 * vignette;
+        // Bass opens the vignette — the whole frame breathes with the low end.
+        float rf = length(co) * 0.25 * vignette * (1.0 - audioReact * 0.35 * bassP);
         float rf2 = rf * rf + 1.0;
         result *= pow(1.0 / (rf2 * rf2), 2.24);
     }

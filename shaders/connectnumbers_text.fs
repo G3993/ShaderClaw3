@@ -295,7 +295,11 @@ void main() {
 
     float t   = TIME * max(motionSpeed, 0.0);
     float aud = clamp(audioDepth, 0.0, 2.0);
-    float bass = clamp(bassDrive, 0.0, 1.0);
+    // Routing fix: bassDrive is a BIND'd knob (audio.bass) that only moves
+    // when the host wires live audio into it. Also fold in the raw engine
+    // audioBass bus directly so the kinetic edge/node/glow response below
+    // is real out of the box, not just when a host binding is present.
+    float bass = clamp(max(bassDrive, audioBass), 0.0, 1.0);
 
     int totalNodes = int(nodeCount);
     if (totalNodes > MAX_NODES) totalNodes = MAX_NODES;
