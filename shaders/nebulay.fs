@@ -4,6 +4,8 @@
   "CATEGORIES": ["Generator", "Simulation", "Audio Reactive"],
   "INPUTS": [
     { "NAME": "inputTex",     "LABEL": "Texture",         "TYPE": "image" },
+    { "NAME": "audioReact",   "LABEL": "Audio React",     "TYPE": "float", "DEFAULT": 0.35,   "MIN": 0.0,   "MAX": 2.0 },
+    { "NAME": "speed",        "LABEL": "Speed",           "TYPE": "float", "DEFAULT": 1.0,    "MIN": 0.0,   "MAX": 2.0 },
     { "NAME": "texInject",    "LABEL": "Image Feed",      "TYPE": "float", "DEFAULT": 0.05,   "MIN": 0.0,   "MAX": 0.5 },
     { "NAME": "texScale",     "LABEL": "Image Zoom",      "TYPE": "float", "DEFAULT": 1.0,    "MIN": 0.25,  "MAX": 4.0 },
     { "NAME": "fluidSpeed",   "LABEL": "Flow Speed",      "TYPE": "float", "DEFAULT": 2.0,    "MIN": 0.0,   "MAX": 6.0 },
@@ -53,6 +55,12 @@
 #define iFeedbackColorShiftZoom   0.05
 #define iBlob1ColorPulseSpeed     0.03456
 #define iBlob2ColorPulseSpeed     (-0.02345)
+
+// ── audio conditioning (soft knees + floors; shader stays alive in silence) ──
+float aKnee(float x, float lo, float hi) { return smoothstep(lo, hi, x); }
+float aBassP() { return pow(aKnee(audioBass, 0.05, 0.85), 1.6); } // structural weight
+float aHighP() { return pow(aKnee(audioHigh, 0.10, 0.90), 1.2); } // sparse sparkle
+float aBeatP() { return audioBeatPulse * audioBeatPulse; }        // decaying accent
 
 // ── grain (mutable per-fragment global; valid GLSL) ──
 float NoiseSeed;
@@ -112,7 +120,7 @@ vec4 sampleTex(vec2 coord) { return texture2D(inputTex, texUV(coord)); }
 
 float drawBlob(vec2 st, vec2 center, float radius, float edge) {
     float dist = length((st - center) / radius);
-    return dist * smoothstep(1.0, 1.0 - (edge - (0.05 * sin(TIME / 5.1))), dist);
+    return dist * smoothstep(1.0, 1.0 - (edge - (0.05 * sin(TIME * speed / 5.1))), dist);
 }
 
 // ── flockaroo rotational CFD helpers (read the fluid field = fluidBuf) ──
@@ -145,8 +153,9 @@ void main() {
             ? vec2(RENDERSIZE.y / RENDERSIZE.x * 0.5, 0.5)
             : vec2(0.5, RENDERSIZE.x / RENDERSIZE.y);
 
-        vec3 iBlob1Color = spectral_zucconi6(mod(TIME * iBlob1ColorPulseSpeed, 1.0));
-        vec3 iBlob2Color = spectral_zucconi6(mod(TIME * iBlob2ColorPulseSpeed + iBlob2ColorPulseShift, 1.0));
+        float bT = TIME * speed;
+        vec3 iBlob1Color = spectral_zucconi6(mod(bT * iBlob1ColorPulseSpeed, 1.0));
+        vec3 iBlob2Color = spectral_zucconi6(mod(bT * iBlob2ColorPulseSpeed + iBlob2ColorPulseShift, 1.0));
 
         vec2 mPix = (mouseDown > 0.5) ? mousePos * RENDERSIZE : vec2(0.0);
         vec2 iFeedbackShiftVector = (mPix.x > 0.0 && mPix.y > 0.0)
@@ -157,7 +166,7 @@ void main() {
 
         vec3 feedbk = repeatedTexture(genBuf, uv - st).rgb;
         vec3 colorShift = repeatedTexture(
-            genBuf, uv - st * (iFeedbackColorShiftZoom * (1.5 * sin(TIME / 2.81))) * iScreenRatioHalf
+            genBuf, uv - st * (iFeedbackColorShiftZoom * (1.5 * sin(TIME * speed / 2.81))) * iScreenRatioHalf
         ).rgb;
 
         vec2 stShift = vec2(0.0);
@@ -171,10 +180,13 @@ void main() {
         prevColor *= feedbackFade;
 
         float radius = 1.0 + (colorShift.r + colorShift.g + colorShift.b) * iColorShiftOfRadius;
+        // bass swells the dominant blob structure; beats inject a brighter
+        // pulse that the fluid then advects for seconds (audio with memory)
+        radius *= 1.0 + 0.16 * audioReact * aBassP();
         vec3 drawColor = vec3(0.0);
         drawColor += pow(drawBlob(st, vec2(0.0), radius * iBlob1Radius, iBlobEdgeSmoothing), iBlob1PowFactor) * iBlob1Color;
         drawColor += pow(drawBlob(st, vec2(0.0), radius * iBlob2Radius, iBlobEdgeSmoothing), iBlob2PowFactor) * iBlob2Color;
-        drawColor *= drawIntensity;
+        drawColor *= drawIntensity * (1.0 + audioReact * (0.20 * aBassP() + 0.45 * aBeatP()));
 
         vec3 color = clamp(prevColor + drawColor, 0.0, 1.0);
         gl_FragColor = vec4(color, 1.0);
