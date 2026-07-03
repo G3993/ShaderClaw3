@@ -19,6 +19,8 @@
   ]
 }*/
 
+float h11(float x) { return fract(sin(x * 127.1) * 43758.5453); }
+
 float sampleChar(int ch, vec2 uv) {
     if (ch < 0 || ch > 36) return 0.0;
     if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
@@ -97,6 +99,13 @@ void main() {
     vec2 p = vec2((uv.x - 0.5) * aspect + 0.5, uv.y);
     float maxW = aspect * 0.9;
 
+    // Audio time-warp clock: the whole scene breathes with the track, and
+    // still drifts on its own in silence (idle floor keeps it alive).
+    float musicTime = TIME * (0.5 + 1.2 * clamp(audioEnergy, 0.0, 1.0));
+    float bassP = pow(smoothstep(0.05, 0.85, audioBass), 1.6);
+    float midDrive = 0.7 + 0.3 * clamp(audioMid, 0.0, 1.0);
+    float beatKick = audioBeatPulse * audioBeatPulse;
+
     // Typewriter reveal
     int revealed;
     if (voiceSync) {
@@ -129,7 +138,9 @@ void main() {
     float gap = charW * 0.25 * kr;
     float cellStep = charW + gap;
 
-    float originY = 0.5 - charH * 0.5;
+    // Slow global bob — always-on autonomous drift, bass adds weight (structural).
+    float globalBob = charH * 0.09 * sin(musicTime * 0.5) * (0.6 + 0.4 * bassP);
+    float originY = 0.5 - charH * 0.5 + globalBob;
 
     // Center visible text — all characters always visible
     float visibleW = float(showCount) * cellStep - gap;
@@ -146,9 +157,15 @@ void main() {
         if (i >= numChars) break;
 
         int ch = getChar(i);
-        float cx = originX + float(i) * cellStep;
-        // Oscillator: per-character Y offset
-        float oscY = oscAmount * sin(TIME * oscSpeed * 6.2832 + float(i) * oscSpread * 3.14159);
+        // Autonomous per-character drift — small, incommensurate frequencies
+        // (golden-angle phase spacing) so characters never lock into a shared
+        // period; lives even with the user oscillator off / in silence.
+        float idxPhase = float(i) * 2.399963;
+        float driftX = charW * 0.06 * sin(musicTime * (0.23 + 0.07 * h11(float(i) + 3.7)) + idxPhase * 1.3);
+        float driftY = charH * 0.10 * sin(musicTime * (0.35 + 0.11 * h11(float(i))) + idxPhase) * midDrive;
+        float cx = originX + float(i) * cellStep + driftX;
+        // Oscillator: per-character Y offset (user-controlled + autonomous drift)
+        float oscY = driftY + oscAmount * sin(TIME * oscSpeed * 6.2832 + float(i) * oscSpread * 3.14159);
 
         if (ch >= 0 && ch <= 36 && ch != 26) {
             vec2 cellUV = vec2((p.x - cx) / charW, (p.y - (originY + oscY)) / charH);
@@ -164,9 +181,12 @@ void main() {
         lastX = cx + cellStep;
     }
 
-    // Blinking cursor after last char
-    float cursorOn = step(0.5, fract(TIME * cursorBlink));
-    float cursorW = charW * 0.15;
+    // Blinking cursor after last char — phase-wobbled so it never freezes
+    // into a perfectly periodic (visually static) blink, and gets a soft
+    // width pulse on beat.
+    float blinkPhase = fract(TIME * cursorBlink + 0.15 * sin(musicTime * 0.37));
+    float cursorOn = step(0.5, blinkPhase);
+    float cursorW = charW * 0.15 * (1.0 + 0.4 * beatKick);
     if (p.x >= lastX && p.x <= lastX + cursorW &&
         p.y >= originY && p.y <= originY + charH) {
         textCol = textColor.rgb;

@@ -160,8 +160,29 @@ void main() {
     // Water absorbs light; the deeper we look the darker it gets.
     // This is separate from the gradient — it's a multiplicative term
     // so colours stay physically plausible rather than just shifting hue.
-    float aoDepth = mix(0.55, 1.0, pow(uvD.y, 0.7));
+    float aoDepth = mix(0.30, 0.85, pow(uvD.y, 0.7));
     col *= aoDepth;
+
+    // ─── Fine-grain water detail (secondary noise layer) ──────────
+    // Adds subtle micro-structure to the water body itself, on top of
+    // the smooth depth gradient, so it never reads as a flat wash of
+    // colour — this is the richer "density" layer the deep water needs.
+    float grain = vnoise(puv * 18.0 + t * 0.03) * 0.5
+                + vnoise(puv * 37.0 - t * 0.021 + 4.1) * 0.5;
+    col *= 1.0 + (grain - 0.5) * 0.24;
+
+    // ─── Micro-contour lines ────────────────────────────────────────
+    // Thin bright threads traced along the steepest edges of the grain
+    // field — reads like fine light-refraction lacing on the water
+    // body, and gives the frame real edge structure instead of smooth
+    // gradients everywhere.
+    float gEps = 0.006;
+    float gGx = vnoise(puv * 18.0 + t * 0.03 + vec2(gEps, 0.0))
+              - vnoise(puv * 18.0 + t * 0.03 - vec2(gEps, 0.0));
+    float gGy = vnoise(puv * 18.0 + t * 0.03 + vec2(0.0, gEps))
+              - vnoise(puv * 18.0 + t * 0.03 - vec2(0.0, gEps));
+    float contour = clamp(length(vec2(gGx, gGy)) * 22.0 - 0.35, 0.0, 1.0);
+    col += mix(depthColor.rgb, surfaceColor.rgb, 0.6) * contour * 0.22;
 
     // ─── Volumetric drift / haze layers ──────────────────────────
     // Three parallax layers of soft particulate/haze tinted to the
@@ -184,7 +205,7 @@ void main() {
     // Caustics also respect the shadow planes — bright patches sit
     // between shadow bands, mimicking real underwater light.
     c *= 0.65 + shad * 0.35;
-    col += sunColor.rgb * c * causticIntensity * 0.55;
+    col += sunColor.rgb * c * causticIntensity * 0.20;
 
     // ─── God rays ─────────────────────────────────────────────────
     vec2 sunUV = vec2(sunPosX, sunPosY);
@@ -209,14 +230,14 @@ void main() {
     illum /= Nf;
     illum *= godrayIntensity;
     illum *= 1.0 + audioBass * audio * 1.3;
-    col += sunColor.rgb * illum * 2.4;
+    col += sunColor.rgb * illum * 0.75;
 
     // ─── Sun disc + halo ──────────────────────────────────────────
     float sunDist = length((uvD - sunUV) * vec2(aspect, 1.0));
     float sunDisc = smoothstep(0.12, 0.02, sunDist);
-    col += sunColor.rgb * sunDisc * 2.0;
+    col += sunColor.rgb * sunDisc * 1.5;
     float halo = exp(-sunDist * 2.6);
-    col += sunColor.rgb * halo * 0.45;
+    col += sunColor.rgb * halo * 0.30;
 
     // ─── Directional side-light scattering ───────────────────────
     // A soft glow coming from the light direction, giving the water
@@ -228,7 +249,7 @@ void main() {
     sideLight = clamp(sideLight, 0.0, 1.0);
     sideLight = pow(sideLight, 3.0);
     sideLight *= smoothstep(1.0, 0.3, uvD.y); // only below surface
-    col += sunColor.rgb * sideLight * 0.08 * (1.0 - aoDepth + 0.5);
+    col += sunColor.rgb * sideLight * 0.05 * (1.0 - aoDepth + 0.5);
 
     // ─── Bubbles ──────────────────────────────────────────────────
     int B = int(bubbleCount);
@@ -262,6 +283,19 @@ void main() {
     vec2 moteUV = uv * 90.0 + vec2(driftX * 12.0, t * 0.06 + driftY * 8.0);
     float motes = pow(vnoise(moteUV), 9.0);
     col += vec3(0.45, 0.65, 0.85) * motes * 0.45;
+
+    // ─── Soft highlight compression ────────────────────────────────
+    // Many additive light terms (caustics, god rays, sun halo, bubble
+    // rims) stack on top of each other; without this they crush the
+    // whole frame to flat white. This keeps genuine highlights (sun
+    // core, caustic peaks) bright enough to still trigger bloom while
+    // preserving the depth gradient / colour structure everywhere else.
+    float peak = max(col.r, max(col.g, col.b));
+    if (peak > 0.88) {
+        float excess = peak - 0.88;
+        float comp = 0.88 + (1.0 - exp(-excess * 1.2)) * 0.7;
+        col *= comp / peak;
+    }
 
     // ─── Surface ripple band ──────────────────────────────────────
     if (uvD.y > 0.90) {

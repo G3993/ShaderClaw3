@@ -65,6 +65,10 @@ int getChar(int slot) {
 
 int charCount() { int n = int(msg_len); return n > 0 ? n : 1; }
 
+// ── Secondary detail layer (cosmic dust) ────────────────────────────
+// Cheap single-cell hash sparkle field — no loops, no new samplers.
+float hashDust(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+
 // ── Main ─────────────────────────────────────────────────────────────
 
 void main() {
@@ -140,8 +144,19 @@ void main() {
     float rws = floor(rowCount);
     float rowH = 1.0 / rws;
 
+    // ── Audio conditioning (soft knees, idle floor — playbook routing) ──
+    float driveKnee = smoothstep(0.05, 0.85, audioEnergy);
+    float bassP = pow(smoothstep(0.05, 0.85, audioBass), 1.6);
+    float highP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+    float beatP = audioBeatPulse * audioBeatPulse;
+
+    // Audio time-warp clock: rows keep drifting on their own in total
+    // silence (idle floor), energy speeds the whole tunnel up on top —
+    // the scene never freezes and never snaps in lockstep with a beat.
+    float musicTime = TIME * (0.35 + 1.35 * driveKnee);
+
     // Vertical scroll
-    float scrollY = uv.y + TIME * speed * scrollMult;
+    float scrollY = uv.y + musicTime * speed * scrollMult;
 
     // Wrap into [0..1] repeating band
     float warpedY = mod(scrollY, 1.0);
@@ -161,6 +176,7 @@ void main() {
     // Smooth the distance curve for a more natural perspective feel
     float scaleCurve = distFromCenter * distFromCenter; // quadratic falloff
     float rowScale = mix(minScale, maxScale, scaleCurve) * textScale;
+    rowScale *= 1.0 + 0.20 * bassP; // bass adds structural weight (±20%)
 
     // Character dimensions at this row's scale
     // charH is the fraction of the row this text occupies
@@ -236,12 +252,37 @@ void main() {
         bg = bgColor.rgb;
     }
 
-    vec3 finalCol = mix(bg, fg, textHit);
+    // Beat flash — decaying brightness lift on the glyph only (event-driven,
+    // kept well under the ≤30% depth budget; never touches the background).
+    fg += fg * beatP * 0.22;
+
+    // ── Cosmic dust: sparse hash-cell sparkle behind the text ──────────
+    // Gives the frame real secondary structure instead of a flat field,
+    // fits the tunnel/"spacy" identity, and breathes on its own (musicTime)
+    // while audioHigh gates a sparse ±40% swing on top.
+    vec2 dustUv = uv * vec2(26.0 * aspect, 26.0) + vec2(musicTime * 0.02, 0.0);
+    vec2 dustCell = floor(dustUv);
+    vec2 dustF = fract(dustUv);
+    float dh = hashDust(dustCell);
+    float present = step(0.86, dh); // ~14% of cells host a mote
+    vec2 dustPos = vec2(hashDust(dustCell + 1.7), hashDust(dustCell + 5.1));
+    float dustD = length(dustF - dustPos);
+    float dustR = mix(0.03, 0.10, hashDust(dustCell + 3.3));
+    float mote = smoothstep(dustR, 0.0, dustD) * present;
+    float twinkle = 0.5 + 0.5 * sin(musicTime * 2.4 + dh * 6.2831853);
+    float sparkle = mote * twinkle * (0.35 + 0.65 * highP) * (1.0 - textHit);
+    vec3 dustCol = mix(bgColor.rgb, textColor.rgb, 0.65); // designed accent, no hue cycling
+
+    vec3 finalCol = mix(bg, fg, textHit) + dustCol * sparkle;
     float alpha = 1.0;
 
     if (transparentBg) {
-        alpha = textHit;
-        finalCol = textColor.rgb;
+        // Straight alpha for real compositing (alpha = textHit, plus a
+        // faint dust contribution), but keep RGB structured — premultiplied
+        // glyph + dust — instead of a flat fill, so any RGB-only reader
+        // still sees the actual scene rather than a blown-out solid frame.
+        alpha = max(textHit, sparkle * 0.55);
+        finalCol = fg * textHit + dustCol * sparkle;
     }
 
     gl_FragColor = vec4(finalCol, alpha);

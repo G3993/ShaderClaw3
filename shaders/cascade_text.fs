@@ -67,15 +67,34 @@ int charCount() { int n = int(msg_len); return n > 0 ? n : 1; }
 
 // ── Main ─────────────────────────────────────────────────────────────
 
+// Cheap hash + value noise for a secondary detail layer (density fill).
+float hash21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float valueNoise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    float a = hash21(i), b = hash21(i + vec2(1.0, 0.0));
+    float c = hash21(i + vec2(0.0, 1.0)), d = hash21(i + vec2(1.0, 1.0));
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
 
+    // Soft-knee audio conditioning (playbook standard snippet).
+    float bassP = pow(clamp(smoothstep(0.05, 0.85, audioBass), 0.0, 1.0), 1.6);
+    float highP = pow(clamp(smoothstep(0.10, 0.90, audioHigh), 0.0, 1.0), 1.2);
+    float drive = 0.25 + 0.75 * clamp(smoothstep(0.05, 0.9, audioEnergy), 0.0, 1.0);
+
+    // Time-warp clock: scene lives in silence, leans into the music when present.
+    float musicTime = TIME * (0.5 + 1.2 * drive * 0.6);
+
     int numChars = charCount();
     float rows = floor(rowCount);
 
-    // Warp Y coordinate with a sine wave to create bunching/spreading
-    float warpedY = uv.y + sin(uv.y * 6.2832 * 1.5 + TIME * speed * 1.5) * waveAmount * 0.06;
+    // Warp Y coordinate with a sine wave to create bunching/spreading.
+    // Bass adds a gentle extra bunch/spread breathing on top of the base wave.
+    float warpedY = uv.y + sin(uv.y * 6.2832 * 1.5 + musicTime * speed * 1.5) * waveAmount * (0.06 + 0.02 * bassP);
 
     // Row height in UV space
     float rowH = 1.0 / rows;
@@ -95,12 +114,12 @@ void main() {
     // Total width of one copy of the message (in UV x-space)
     float wordW = float(numChars) * (charW + gapW);
 
-    // Cascading wave offset per row
-    float wavePhase = rowIdx * 0.6 + TIME * speed * 2.0;
+    // Cascading wave offset per row (audio time-warp clock drives pace)
+    float wavePhase = rowIdx * 0.6 + musicTime * speed * 2.0;
     float xOffset = sin(wavePhase) * waveAmount * wordW * 1.5;
 
     // Slow base scroll
-    xOffset += TIME * speed * 0.08;
+    xOffset += musicTime * speed * 0.08;
 
     // X position with offset applied
     float px = uv.x + xOffset;
@@ -160,12 +179,25 @@ void main() {
         bg = bgColor.rgb;
     }
 
+    // Secondary detail layer: a faint drifting grain fills the negative
+    // space so the field isn't a flat, empty background between glyphs.
+    // Highs sparsen/brighten it into occasional sparkle; kept subtle so it
+    // never competes with the text itself.
+    vec2 grainUv = uv * vec2(48.0, 18.0) + vec2(musicTime * 0.15, rowIdx * 3.7);
+    float grain = valueNoise(grainUv) * 0.5 + valueNoise(grainUv * 2.13 + 11.0) * 0.5;
+    float sparkle = step(0.965, grain + highP * 0.06) * highP;
+    float fill = grain * 0.10 + sparkle * 0.5;
+
     vec3 finalCol = mix(bg, fg, textHit);
-    float alpha = 1.0;
+    finalCol = mix(finalCol, fg, fill * (1.0 - textHit));
+    float alpha = max(textHit, fill * 0.6 * (1.0 - textHit));
+
+    // Beat pulse: glyphs briefly brighten/flash on strong hits, easing back.
+    float kick = audioBeatPulse * audioBeatPulse;
+    finalCol += fg * kick * 0.35 * textHit;
 
     if (transparentBg) {
-        alpha = textHit;
-        finalCol = textColor.rgb;
+        alpha = max(textHit, fill * 0.5 * (1.0 - textHit));
     }
 
     // Surprise: every ~17s the cascade momentarily reverses — letters

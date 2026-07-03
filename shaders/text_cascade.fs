@@ -99,6 +99,9 @@ float vnsc(vec2 p) {
 }
 float fbmSC(vec2 p){float v=0.0,a=0.5;for(int i=0;i<4;i++){v+=a*vnsc(p);p=p*2.1+vec2(5.3,2.7);a*=0.5;}return v;}
 
+// Soft-knee audio conditioning (playbook standard snippet).
+float knee(float x, float lo, float hi) { return smoothstep(lo, hi, x); }
+
 // Sunset canyon background: deep crimson base, amber mid, gold sky
 vec3 sunsetBg(vec2 uv) {
     float t = uv.y;
@@ -129,7 +132,15 @@ vec4 effectCascade(vec2 uv, vec3 bgOverride) {
     float waveAmount = intensity;
     float rows = floor(mix(5.0, 30.0, density));
 
-    float warpedY = uv.y + sin(uv.y * TWO_PI * 1.5 + TIME * speed * 1.5) * waveAmount * 0.06;
+    // Soft-knee audio conditioning + time-warp clock: the cascade always
+    // drifts on its own (silence floor), and leans into the music when
+    // it's present. Bass adds a gentle extra bunch/spread breathing.
+    float bassP = pow(knee(audioBass, 0.05, 0.85), 1.6);
+    float highP = pow(knee(audioHigh, 0.10, 0.90), 1.2);
+    float drive = 0.25 + 0.75 * knee(audioEnergy, 0.05, 0.9);
+    float musicTime = TIME * (0.5 + 1.2 * drive * 0.6);
+
+    float warpedY = uv.y + sin(uv.y * TWO_PI * 1.5 + musicTime * speed * 1.5) * waveAmount * (0.06 + 0.02 * bassP);
     float rowH = 1.0 / rows;
     float rowIdx = clamp(floor(warpedY / rowH), 0.0, rows - 1.0);
     float localY = fract(warpedY / rowH);
@@ -139,7 +150,7 @@ vec4 effectCascade(vec2 uv, vec3 bgOverride) {
     float gW = cW * 0.15;
     float wordW = float(numChars) * (cW + gW);
 
-    float xOff = sin(rowIdx*0.6 + TIME*speed*2.0) * waveAmount * wordW * 1.5 + TIME*speed*0.08;
+    float xOff = sin(rowIdx*0.6 + musicTime*speed*2.0) * waveAmount * wordW * 1.5 + musicTime*speed*0.08;
     float px = mod(uv.x + xOff - 0.5 + wordW * 0.5, wordW);
     if (px < 0.0) px += wordW;
 
@@ -158,13 +169,38 @@ vec4 effectCascade(vec2 uv, vec3 bgOverride) {
         }
     }
 
+    // Secondary detail layer: a faint drifting grain fills the negative
+    // space between glyphs so the field reads as textured rather than a
+    // flat void. Highs sparsen/brighten it into occasional sparkle; kept
+    // subtle so it never competes with the text itself.
+    vec2 grainUv = uv * vec2(46.0, 17.0) + vec2(musicTime * 0.15, rowIdx * 3.7);
+    float grain = vnsc(grainUv) * 0.5 + vnsc(grainUv * 2.13 + 11.0) * 0.5;
+    float sparkle = step(0.965, grain + highP * 0.12) * highP;
+    float fillAmt = grain * 0.10 + sparkle * 0.8;
+
     bool inv = mod(rowIdx, 2.0) < 1.0;
     vec3 tCol = textColor.rgb * hdrGlow;
     vec3 fg = inv ? bgOverride : tCol;
     vec3 bg = inv ? tCol : bgOverride;
     vec3 fc = mix(bg, fg, textHit);
+    fc = mix(fc, fg, fillAmt * (1.0 - textHit));
+
+    // Beat pulse: glyphs briefly brighten on strong hits, easing back.
+    float kick = audioBeatPulse * audioBeatPulse;
+    fc += tCol * kick * 0.5 * textHit;
+    fc += bgOverride * kick * 0.25 * (1.0 - textHit);
+
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = tCol; }
+    if (transparentBg) {
+        // Premultiplied-style structure: negative space stays near-black
+        // with a faint canyon-hued tint (crimson/amber/gold by position,
+        // not a flat constant) so the glyphs, grain and row rhythm all
+        // remain visible as real spatial structure, not just an alpha mask.
+        float structureMask = max(textHit, fillAmt * (1.0 - textHit));
+        a = structureMask;
+        vec3 negTint = sunsetBg(uv) * (0.10 + kick * 0.3) * (1.0 - textHit);
+        fc = tCol * max(textHit, fillAmt * 0.6 * (1.0 - textHit)) + negTint;
+    }
     return vec4(fc, a);
 }
 

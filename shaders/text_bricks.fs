@@ -124,10 +124,15 @@ vec3 nebulaBg(vec2 uv) {
 // EFFECT: BRICKS - grid with animated displacement
 // =======================================================================
 
+float knee(float x, float lo, float hi) { return smoothstep(lo, hi, x); }
+
 vec4 effectBricks(vec2 uv, int sub, vec3 bgOverride) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
     int numChars = charCount();
-    float waveAmount = intensity;
+    float bassP = pow(knee(audioBass, 0.05, 0.85), 1.6);
+    float highP = pow(knee(audioHigh, 0.10, 0.90), 1.2);
+    float drive = 0.25 + 0.75 * knee(audioEnergy, 0.05, 0.9);
+    float waveAmount = intensity * (0.85 + 0.3 * bassP);
     float cols = floor(mix(5.0, 40.0, density));
 
     float wX=0.0, wY=0.0, fX=3.0, fY=3.0, pm=0.0;
@@ -149,7 +154,7 @@ vec4 effectBricks(vec2 uv, int sub, vec3 bgOverride) {
         lx = fract(sx/cellW);
     }
 
-    float t = TIME*speed*2.5;
+    float t = TIME*speed*2.5*(0.8 + 0.4*drive);
     float phase = ci + ri;
     if (pm > 0.5 && pm < 1.5) phase = ri;
     else if (pm > 1.5) phase = (ci + ri)*PI;
@@ -173,12 +178,25 @@ vec4 effectBricks(vec2 uv, int sub, vec3 bgOverride) {
     }
 
     bool inv = mod(ri, 2.0) < 1.0;
-    vec3 tCol = textColor.rgb * hdrGlow;
+    float beatBoost = 1.0 + 0.5*pow(audioBeatPulse, 1.5);
+    vec3 tCol = textColor.rgb * hdrGlow * beatBoost;
+
+    // Secondary detail layer: mortar lines between bricks — richer, non-flat
+    // value distribution instead of solid empty cells (density + edges).
+    float mortar = clamp((1.0-smoothstep(0.0,0.035,lx)) + smoothstep(1.0-0.035,1.0,lx)
+                        + (1.0-smoothstep(0.0,0.035,ly)) + smoothstep(1.0-0.035,1.0,ly), 0.0, 1.0);
+
+    // Sparse highlight sparkle gated by highs — audio-reactive, subtle subset only.
+    float cellHash = h21nb(vec2(ci*3.7+1.3, ri*5.1+7.9));
+    float sparkle = step(0.94 - 0.12*highP, cellHash) * (0.4 + 0.6*highP);
+
     vec3 fg = inv ? bgOverride : tCol;
     vec3 bg = inv ? tCol : bgOverride;
+    bg = mix(bg, bg*0.55 + fg*0.1, mortar*0.6);
+    bg += fg * sparkle * 0.35;
     vec3 fc = mix(bg, fg, textHit);
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = tCol; }
+    if (transparentBg) { a = clamp(textHit + sparkle*0.5, 0.0, 1.0); }
     return vec4(fc, a);
 }
 

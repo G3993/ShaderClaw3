@@ -123,7 +123,16 @@ vec4 effectDigifade(vec2 uv, int sub, vec3 bgOverride) {
     float complexity = 1.0, sweepSpeed = 1.0, vertGlitch = 0.0, maxDisp = 0.3;
     if (sub == 1) { complexity = 2.0; sweepSpeed = 1.3; maxDisp = 0.5; vertGlitch = 0.4; }
 
-    float t = TIME * speed * sweepSpeed;
+    // Soft-knee audio conditioning (playbook standard snippet). Idle floor
+    // keeps the sweep alive in silence; energy leans the clock into the beat.
+    float bassP = pow(clamp(smoothstep(0.05, 0.85, audioBass), 0.0, 1.0), 1.6);
+    float highP = pow(clamp(smoothstep(0.10, 0.90, audioHigh), 0.0, 1.0), 1.2);
+    float drive = 0.25 + 0.75 * clamp(smoothstep(0.05, 0.9, audioEnergy), 0.0, 1.0);
+    float musicTime = TIME * (0.5 + 1.2 * drive * 0.55);
+    maxDisp *= 1.0 + bassP * 0.2; // bass gives the glitch sweep a touch more structural weight
+    glitchAmount *= 0.7 + 0.6 * drive; // energy drives the dissolve's structural intensity
+
+    float t = musicTime * speed * sweepSpeed;
     vec2 p = vec2((uv.x - 0.5) * aspect + 0.5, uv.y);
 
     // Single-line layout: all chars on one row, scale to fit width
@@ -173,10 +182,29 @@ vec4 effectDigifade(vec2 uv, int sub, vec3 bgOverride) {
         }
     }
 
-    vec3 tCol = textColor.rgb * hdrGlow;
-    vec3 fc = mix(bgOverride, tCol, textHit);
+    // Secondary detail layer: cheap drifting digital dust fills the negative
+    // space so the field is never mostly-empty. Highs sparsen/brighten it
+    // into occasional sparkle; kept subtle so it never competes with text.
+    float dustA = hash(floor(p.x * 90.0) + floor(p.y * 60.0) * 61.0 + floor(t * 0.6) * 911.0);
+    float dustB = hash(floor(p.x * 150.0) - floor(p.y * 100.0) * 37.0 - floor(t * 0.4) * 401.0);
+    float dust = dustA * 0.5 + dustB * 0.5;
+    float sparkle = step(0.94, dust + highP * 0.1) * highP;
+    float dustFill = dust * 0.18 + sparkle * 0.6;
+    vec3 dustTint = vec3(0.25, 0.55, 0.8); // cool cyan dust — matches the glitch/chromatic identity
+
+    // Contour rim around glyph edges (edges axis) — reuses the already
+    // anti-aliased textHit mask, no extra samples.
+    float rim = smoothstep(0.0, 0.2, textHit) - smoothstep(0.2, 0.55, textHit);
+    vec3 rimCol = mix(vec3(0.35, 0.85, 1.0), vec3(1.0, 0.35, 0.75), 0.5 + 0.5 * sin(si * 0.7 + t * 1.3));
+
+    // Beat pulse: glyphs briefly brighten on strong hits, easing back (event-only).
+    float kick = audioBeatPulse * audioBeatPulse;
+
+    vec3 tCol = textColor.rgb * hdrGlow * (1.0 + kick * 0.3);
+    vec3 bgDetailed = bgOverride + dustTint * dustFill;
+    vec3 fc = mix(bgDetailed, tCol, textHit) + rimCol * rim * (0.25 + 0.35 * glitchAmount);
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = tCol; }
+    if (transparentBg) { a = max(textHit, dustFill * 0.35 + rim * 0.4); }
     return vec4(fc, a);
 }
 
@@ -187,7 +215,10 @@ vec4 effectDigifade(vec2 uv, int sub, vec3 bgOverride) {
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     int p = int(preset);
-    vec3 animBg = transparentBg ? bgColor.rgb : plasmaBg(uv);
+    // Under transparentBg the plasma still peeks through at low amplitude —
+    // ambient texture for the negative space; true transparency is carried
+    // by alpha (below), so this doesn't affect real overlay compositing.
+    vec3 animBg = transparentBg ? mix(bgColor.rgb, plasmaBg(uv), 0.16) : plasmaBg(uv);
     vec4 col = effectDigifade(uv, p, animBg);
 
     if (_voiceGlitch > 0.01) {

@@ -145,8 +145,13 @@ vec4 effectSpacy(vec2 uv, int sub, vec3 bgOverride) {
     else if (sub == 2) { minS=0.4/sR; maxS=2.0*sR; track=0.2; scM=0.9; mirror=true; }
     else { minS=0.15/sR; maxS=2.0*sR; track=0.12; }
 
+    // Audio time-warp clock: rows always drift on their own (idle floor keeps
+    // the tunnel alive in silence), energy speeds the whole scene up on top.
+    float energyDrive = 0.5 + 1.2 * clamp(audioEnergy, 0.0, 1.0);
+    float musicTime = TIME * energyDrive;
+
     float rH = 1.0/rws;
-    float sY = mod(uv.y + TIME*speed*scM, 1.0);
+    float sY = mod(uv.y + musicTime*speed*scM, 1.0);
     float ri = clamp(floor(sY/rH), 0.0, rws-1.0);
     float ly = fract(sY/rH);
 
@@ -185,7 +190,10 @@ vec4 effectSpacy(vec2 uv, int sub, vec3 bgOverride) {
     vec3 bg = inv ? tCol : bgOverride;
     vec3 fc = mix(bg, fg, textHit);
     float a = 1.0;
-    if (transparentBg) { a = textHit; fc = tCol; }
+    // Straight alpha for real compositing (a = textHit), but keep the RGB
+    // channel structured (black canvas, lit text) instead of a flat fill —
+    // matters for any consumer/preview that reads color without blending.
+    if (transparentBg) { a = textHit; fc = mix(vec3(0.0), tCol, textHit); }
     return vec4(fc, a);
 }
 
