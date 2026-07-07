@@ -394,6 +394,24 @@ window.evalShader = async function(file, opts) {
       const fb = drawFrame(t, dt, baseAudio);
       frames.push(framePixels(fb.fbo));
     }
+    // Opt-in still frame capture for thumbnail generation (make_thumbnails.cjs)
+    // — reuses the same compiled/driven render this function already proved
+    // out on all 176 shaders, so it never fights a second, less-complete
+    // renderer's uniform set. Additive only; scoring below is unaffected.
+    if (opts.captureFrame) {
+      const px = frames[Math.min(1, frames.length - 1)]; // ~t=2.0s, representative
+      const tmp = document.createElement('canvas');
+      tmp.width = W; tmp.height = H;
+      const ctx2d = tmp.getContext('2d');
+      // readPixels rows are bottom-to-top; ImageData wants top-to-bottom.
+      const flipped = new Uint8ClampedArray(px.length);
+      for (let y = 0; y < H; y++) {
+        const srcStart = (H - 1 - y) * W * 4;
+        flipped.set(px.subarray(srcStart, srcStart + W * 4), y * W * 4);
+      }
+      ctx2d.putImageData(new ImageData(flipped, W, H), 0, 0);
+      out.thumbnail = tmp.toDataURL('image/png');
+    }
     const stats = frames.map(frameStats);
     out.meanLuma = stats.reduce((s, x) => s + x.meanLuma, 0) / stats.length;
     out.variance = stats.reduce((s, x) => s + x.variance, 0) / stats.length;
