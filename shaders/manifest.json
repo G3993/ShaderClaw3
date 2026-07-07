@@ -26,30 +26,6 @@
   },
   {
     "categories": [
-      "Generator"
-    ],
-    "description": "American Flag \u2014 13 stripes + 50-star canton with billowing wind, fabric shading, and audio-reactive gusts",
-    "file": "american_flag.fs",
-    "hasVertex": false,
-    "hidden": false,
-    "id": 513,
-    "title": "American Flag",
-    "type": "generator"
-  },
-  {
-    "categories": [
-      "Generator",
-      "Fractal",
-      "Audio Reactive"
-    ],
-    "description": "Apollonian Gasket \u2014 2D circle-packing fractal via the classic apollonian fold. Thin neon circle rims on deep black, cosine-palette colored, live audio breathes the fold radius / glows the rims / drifts the palette. Optional user image rides the circle packing.",
-    "file": "apollonian_gasket.fs",
-    "id": 1200,
-    "title": "Apollonian Gasket",
-    "type": "generator"
-  },
-  {
-    "categories": [
       "Effect",
       "Text"
     ],
@@ -141,18 +117,6 @@
   },
   {
     "categories": [
-      "Generator",
-      "Fluid",
-      "Audio Reactive"
-    ],
-    "description": "Milkdrop-style feedback field: bass zooms the flow, mids swirl it, beats re-roll direction and burn in shockwaves the field carries away",
-    "file": "beat_flow.fs",
-    "id": 1217,
-    "title": "Beat Flow",
-    "type": "generator"
-  },
-  {
-    "categories": [
       "3D",
       "Fluid",
       "Simulation"
@@ -190,16 +154,6 @@
     "id": 516,
     "title": "Bricks Text",
     "type": "generator"
-  },
-  {
-    "categories": [
-      "Generator"
-    ],
-    "description": "Woven carbon fiber fabric with silk sheen, mouse deformation, and audio-reactive shimmer",
-    "file": "carbon_fiber.fs",
-    "hasVertex": true,
-    "id": 203,
-    "title": "Carbon Fiber"
   },
   {
     "categories": [
@@ -373,18 +327,6 @@
   {
     "categories": [
       "Generator",
-      "Art Movement",
-      "Audio Reactive"
-    ],
-    "description": "Picasso analytic phase \u2014 N translucent rectangular planes alpha-stacked, each rotated and sampling the source from its own viewpoint with per-plane gradient shading. Near-monochrome ochre. After Portrait of Kahnweiler (1910) and Ma Jolie (1912).",
-    "file": "cubism_picasso.fs",
-    "id": 476,
-    "title": "Cubism (Picasso)",
-    "type": "generator"
-  },
-  {
-    "categories": [
-      "Generator",
       "Audio Reactive",
       "Generative"
     ],
@@ -475,19 +417,6 @@
     "hasVertex": true,
     "id": 113,
     "title": "Dispersion"
-  },
-  {
-    "categories": [
-      "Generator",
-      "Fractal",
-      "Tunnel",
-      "Audio Reactive"
-    ],
-    "description": "Droste Spiral \u2014 an Escher logarithmic-spiral that zooms into itself forever, an infinite self-similar tunnel spiraling toward the viewer via log-polar tiling. Optionally feed your own image into the spiral.",
-    "file": "droste_spiral.fs",
-    "id": 1204,
-    "title": "Droste Spiral",
-    "type": "generator"
   },
   {
     "categories": [
@@ -659,20 +588,6 @@
   {
     "categories": [
       "Generator",
-      "Fractal",
-      "Tunnel",
-      "Feedback",
-      "Audio Reactive"
-    ],
-    "description": "Fractal Feedback Tunnel \u2014 a persistent buffer is sampled zoomed + rotated every frame so neon detail spirals inward forever, accumulating an infinite fractal tunnel. Multipass feedback: pass 0 warps last frame inward and injects fresh kaleidoscopic rim detail (HDR, no tonemap); the screen pass tonemaps + vignettes. Alive in silence (constant slow zoom), audio pushes the pull-in, brightens spokes, and ripples the rim.",
-    "file": "fractal_feedback_tunnel.fs",
-    "id": 1210,
-    "title": "Fractal Feedback Tunnel",
-    "type": "generator"
-  },
-  {
-    "categories": [
-      "Generator",
       "Text",
       "A-List"
     ],
@@ -680,19 +595,6 @@
     "file": "gemstones_border_text.fs",
     "title": "Gemstones Border Text",
     "type": "fs"
-  },
-  {
-    "categories": [
-      "Generator",
-      "Audio Reactive"
-    ],
-    "description": "Geo \u2014 2D path-traced circle-circle intersection. Two orbiting circles compute their algebraic intersection points in real time; a 68-sample radial path tracer accumulates global illumination across the canvas. Ported from Yusef28 Shadertoy 7l2XDm.",
-    "file": "geo.fs",
-    "hasVertex": false,
-    "hidden": false,
-    "id": 568,
-    "title": "Geo",
-    "type": "generator"
   },
   {
     "categories": [
@@ -710,49 +612,10 @@
       "Glitch",
       "Audio Reactive"
     ],
-    "description": "Frame-feedback datamosh \u2014 buffer pulled along motion vectors, per-row tear, RGB channel split, 8x8 DCT-block corruption, burst rainbow garbage on bass. Menkman / Murata / JODI tradition.",
-    "file": "glitch_datamosh.fs",
-    "id": 490,
-    "title": "Glitch / Datamosh",
-    "type": "generator"
-  },
-  {
-    "categories": [
-      "Generator",
-      "Glitch",
-      "Audio Reactive"
-    ],
     "description": "GLITCH GOD \u2014 every glitch-art + analog-degradation technique in one shader (52 modules). A single GOD SEED hashes into a recipe picking which modules fire and how hard. Digital: chromatic aberration, pixel-sort, datamosh, 8x8 macroblock corruption, kaleido, sine warp, slice, sync tear, block-jump, jitter, mosaic, posterize, hue-rotate, channel swap, solarize, static, dither, ghost echo, sobel edges, strobe, HDR bloom. Analog (research-authentic): VHS color-under smear, head-switch tear, dropout, tracking roll, time-base wobble, generation loss, RF snow; NTSC dot-crawl, cross-color rainbow, PAL Hanover bars, ringing, interlace combing, shadow-mask scanlines, phosphor persistence, vertical-hold roll; RF ghosting, hum bars, herringbone, ignition sparkle; video-synth Rutt-Etra terrain, feedback tunnel, Sandin colorizer, Paik-Abe hue, wobbulator, chroma bloom. 2^52 configurations. CHAOS stacks modules, MUTATE auto-cycles recipes, bass/mid/treble drive corruption. Linear HDR out.",
     "file": "glitch_god.fs",
     "id": 1024,
     "title": "Glitch God",
-    "type": "generator"
-  },
-  {
-    "categories": [
-      "Examples",
-      "Generator",
-      "Audio Reactive"
-    ],
-    "description": "Volumetric gradient \u2014 two-stop color sampled through a 3D fbm noise field. Camera flies through the field giving depth and parallax. Bright crests punch into HDR (linear). Audio drives flow speed and crest intensity. Output linear HDR.",
-    "file": "gradient_example.fs",
-    "hasVertex": false,
-    "hidden": false,
-    "id": 529,
-    "title": "Gradient Example",
-    "type": "generator"
-  },
-  {
-    "categories": [
-      "Generator",
-      "3D",
-      "Nature",
-      "Audio Reactive"
-    ],
-    "description": "Genuinely-3D procedural grass field with user-controllable wave-warp wind. Perspective ground recedes to a horizon, blades draw back-to-front (painter's algorithm), wind sway is a directional wave you steer (amount/frequency/speed/angle/cross), audio bass adds gusts and treble shimmers the tips. Lush by default with no image; optional image as sky backdrop or whole-field tint.",
-    "file": "grass_wave_3d.fs",
-    "id": 1212,
-    "title": "Grass Wave 3D",
     "type": "generator"
   },
   {
@@ -776,21 +639,6 @@
     "file": "hologram_glitch.fs",
     "id": 470,
     "title": "Hologram Glitch",
-    "type": "generator"
-  },
-  {
-    "categories": [
-      "Generator",
-      "Glitch",
-      "Atmospheric",
-      "Audio Reactive"
-    ],
-    "description": "Combined holographic / glitch shader. Four modes stack the best techniques from datamosh (persistent moshBuf frame-feedback + I-frame stutter + per-row tear + 8x8 DCT block corruption + RGB chroma split + bass burst garbage), hologram (scan-bar + cyan tint + parallax tilt + horizontal interlace), and foil (diffraction-grating rainbow palette + sparkle cells + paper grain + four foil patterns: linear / radial / crystal / glitter). Mode 3 stacks all three at lower intensity for a Pokemon-card-on-fire look.",
-    "file": "holographic_foil.fs",
-    "hasVertex": false,
-    "hidden": false,
-    "id": 531,
-    "title": "Holographic Foil",
     "type": "generator"
   },
   {
@@ -981,18 +829,6 @@
   },
   {
     "categories": [
-      "Generator"
-    ],
-    "description": "Marble \u2014 swirling wisps with custom texture vein color",
-    "file": "marble.fs",
-    "hasVertex": false,
-    "hidden": false,
-    "id": 538,
-    "title": "Marble",
-    "type": "generator"
-  },
-  {
-    "categories": [
       "Generator",
       "Text",
       "Audio Reactive"
@@ -1043,15 +879,6 @@
   },
   {
     "categories": [
-      "Generator"
-    ],
-    "description": "Raymarched morphing metallic metaballs",
-    "file": "metamorphosis.fs",
-    "id": 335,
-    "title": "Metamorphosis"
-  },
-  {
-    "categories": [
       "Generator",
       "Atmospheric",
       "Audio Reactive"
@@ -1067,40 +894,6 @@
   {
     "categories": [
       "Generator",
-      "Art Movement",
-      "Audio Reactive"
-    ],
-    "description": "Minimalism \u2014 Stella + the canon (Black Paintings, Protractor, Agnes Martin, Ellsworth Kelly, LeWitt) with an optional Seurat pointillism overlay that re-renders any mood as broken-colour dots.",
-    "file": "minimalism_stella.fs",
-    "id": 484,
-    "title": "Minimalism (Stella)",
-    "type": "generator"
-  },
-  {
-    "categories": [
-      "VFX"
-    ],
-    "description": "Mirror Fold 3D \u2014 N-fold kaleidoscope with curated palettes, now a real receding tunnel: stacked parallax-scaled, fogged layers fly toward the camera for genuine depth. TRUE mirror at the wedge seam.",
-    "file": "mirror_fractal.fs",
-    "id": 437,
-    "title": "Mirror Fractal"
-  },
-  {
-    "categories": [
-      "Generator",
-      "3D",
-      "Atmospheric",
-      "Audio Reactive"
-    ],
-    "description": "Monolith Drift \u2014 minimal 3D slabs receding through fog toward the camera; a layered 2.5D depth stack, monochrome with one accent. 2001 mood. Optional image textures the slab faces.",
-    "file": "monolith_drift.fs",
-    "id": 1205,
-    "title": "Monolith Drift",
-    "type": "generator"
-  },
-  {
-    "categories": [
-      "Generator",
       "Text",
       "A-List"
     ],
@@ -1108,18 +901,6 @@
     "file": "morphing_organic_text.fs",
     "title": "Morphing Organic Text",
     "type": "fs"
-  },
-  {
-    "categories": [
-      "TEST-GLSL"
-    ],
-    "description": "Moves a multicolor (up to 5) gradient across the view from and to off view",
-    "file": "moveable_gradient.fs",
-    "hasVertex": false,
-    "hidden": false,
-    "id": 541,
-    "title": "Moveable Gradient",
-    "type": "generator"
   },
   {
     "categories": [
@@ -1157,15 +938,6 @@
     "id": 1041,
     "title": "Nebulay",
     "type": "generator"
-  },
-  {
-    "categories": [
-      "Effect"
-    ],
-    "description": "Oil paint brush effect \u2014 multi-layer brush strokes with relief lighting and vignette",
-    "file": "oil_paint.fs",
-    "id": 444,
-    "title": "Oil Paint"
   },
   {
     "categories": [
@@ -1219,20 +991,6 @@
   {
     "categories": [
       "Generator",
-      "Atmospheric",
-      "Audio Reactive"
-    ],
-    "description": "Spiral galaxy of rotating star particles, now tilted in 3D (disc inclination) with silhouetted dust lanes threading the near-side arms. Bass ignites supernovae, treble drives nebular glow.",
-    "file": "particle_galaxy.fs",
-    "hasVertex": false,
-    "hidden": false,
-    "id": 545,
-    "title": "Particle Galaxy",
-    "type": "generator"
-  },
-  {
-    "categories": [
-      "Generator",
       "Audio Reactive",
       "Geometric"
     ],
@@ -1280,20 +1038,6 @@
     "file": "pbr_reference_3d.fs",
     "id": 501,
     "title": "PBR Reference 3D",
-    "type": "generator"
-  },
-  {
-    "categories": [
-      "Effect",
-      "Stylized",
-      "Audio Reactive"
-    ],
-    "description": "Ink & watercolour stylizer \u2014 paints an image as translucent watercolour (pigment pools, edge-darkening, granulation, wet bleeding, backruns) using the picture's own colours, plus Cross-Hatch / Stippling / Contour / Sumi-e pen modes.",
-    "file": "pen_ink.fs",
-    "hasVertex": false,
-    "hidden": false,
-    "id": 548,
-    "title": "Pen Ink",
     "type": "generator"
   },
   {
@@ -1368,31 +1112,6 @@
   {
     "categories": [
       "Generator",
-      "Optical",
-      "Audio Reactive"
-    ],
-    "description": "White-light beam striking a triangular glass prism and splitting into a continuous rainbow spectrum on the other side \u2014 Snell's law refraction with wavelength-dependent index gives the iconic Pink Floyd Dark Side cover. The beam can be redirected by audio bass; treble shifts the dispersion factor",
-    "file": "prism_dispersion.fs",
-    "hasVertex": false,
-    "hidden": false,
-    "id": 550,
-    "title": "Prism Dispersion",
-    "type": "generator"
-  },
-  {
-    "categories": [
-      "Generator",
-      "Audio Reactive"
-    ],
-    "description": "Frequency-decomposed cell grid: every cell listens to its own slice of the spectrum; kicks ripple shockwaves across the field",
-    "file": "pulse_field.fs",
-    "id": 1215,
-    "title": "Pulse Field",
-    "type": "generator"
-  },
-  {
-    "categories": [
-      "Generator",
       "Fractal",
       "3D",
       "Audio Reactive"
@@ -1434,27 +1153,6 @@
     "hidden": false,
     "id": 552,
     "title": "Random Freeze",
-    "type": "generator"
-  },
-  {
-    "categories": [
-      "Generator"
-    ],
-    "description": "Carbon-fiber 2x2 weave geometry rendered as deep red velvet \u2014 oxblood/crimson warp-and-weft, anisotropic fiber-streak specular, pile shimmer, slow light drift",
-    "file": "red_carpet.fs",
-    "hasVertex": true,
-    "id": 202,
-    "title": "Red Carpet"
-  },
-  {
-    "categories": [
-      "Generator",
-      "Flow"
-    ],
-    "description": "Colored seeds streaked backward through an animated cellular flow. Looks like wind-blown grass tips. Ported from Shadertoy X3BBD1.",
-    "file": "reverse_flow_field.fs",
-    "id": 494,
-    "title": "Reverse Flow Field",
     "type": "generator"
   },
   {
@@ -1541,19 +1239,6 @@
   },
   {
     "categories": [
-      "Generator",
-      "Fractal",
-      "Tunnel",
-      "Audio Reactive"
-    ],
-    "description": "Sierpinski Gate \u2014 fly endlessly into a recursive triangle (Sierpinski) lattice; self-similar zoom loops seamlessly, neon folded edges glow on deep-black voids. Bass drives the dive, mid drifts the palette, treble flares the glow.",
-    "file": "sierpinski_gate.fs",
-    "id": 1207,
-    "title": "Sierpinski Gate",
-    "type": "generator"
-  },
-  {
-    "categories": [
       "Generator"
     ],
     "description": "SketchPad \u2014 animated sketch on paper: rough circles, drifting lines/rectangles, scribble hatching, with outline or filled-color modes and halftone screen-print overlap blending",
@@ -1562,20 +1247,6 @@
     "hidden": false,
     "id": 554,
     "title": "Sketchpad",
-    "type": "generator"
-  },
-  {
-    "categories": [
-      "Generator",
-      "Atmospheric",
-      "Audio Reactive"
-    ],
-    "description": "Earth from orbit \u2014 rotating globe with day/night terminator line, city lights blooming across the dark side, atmospheric scattering halo at the limb. Bass kicks accelerate rotation, treble drives auroras at the poles. The blue-marble shot every space film loves",
-    "file": "solar_terminator.fs",
-    "hasVertex": false,
-    "hidden": false,
-    "id": 555,
-    "title": "Solar Terminator",
     "type": "generator"
   },
   {
@@ -1634,17 +1305,6 @@
     "hasVertex": true,
     "id": 14,
     "title": "Water",
-    "type": "generator"
-  },
-  {
-    "categories": [
-      "Generator",
-      "Feedback"
-    ],
-    "description": "Moving Lissajous spot painted into a slowly-rotating feedback field. Ported from Shadertoy XsyGzz.",
-    "file": "swirl_spin.fs",
-    "id": 493,
-    "title": "Swirl Spin",
     "type": "generator"
   },
   {
@@ -2015,20 +1675,6 @@
   },
   {
     "categories": [
-      "Generator",
-      "3D",
-      "Audio Reactive"
-    ],
-    "description": "Crystal Cave Formations \u2014 3D raymarched cave interior with hexagonal emerald and amethyst crystal columns growing from floor and ceiling. Cinematic low-angle camera slowly drifts through the cavern. LINEAR HDR out, no tonemap.",
-    "file": "vishes.fs",
-    "hasVertex": false,
-    "hidden": false,
-    "id": 564,
-    "title": "Vishes",
-    "type": "generator"
-  },
-  {
-    "categories": [
       "3D",
       "Generator",
       "Audio Reactive"
@@ -2193,16 +1839,5 @@
     "id": 109,
     "title": "Veroni 3",
     "type": "scene"
-  },
-  {
-    "categories": [
-      "Generator",
-      "Text"
-    ],
-    "description": "Speech-bubble note taker. Splits the message into chunks and emits each chunk as a small chat bubble that floats up the screen, alternating sender/receiver sides. New bubble spawns at the bottom every interval; old bubbles drift up and fade.",
-    "file": "text_chat.fs",
-    "id": 506,
-    "title": "Chat",
-    "type": "generator"
   }
 ]
