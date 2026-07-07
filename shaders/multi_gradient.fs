@@ -141,10 +141,15 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	uv.x = uv.y;
 	
 	vec3 canvas = vec3(CanvasColor.rgb);
-    canvas = softLight(canvas, uv-(Color1_Y), vec2(.5, 0.5), Color1_Radius, vec3(Color1.rgb));
-    canvas = softLight(canvas, uv-Color2_Y, vec2(.5, 0.5), Color2_Radius, vec3(Color2.rgb));
-    canvas = softLight(canvas, (uv-Color3_Y), vec2(.5, 0.5), Color3_Radius, vec3(Color3.rgb));
-    canvas = softLight(canvas, (uv-Color4_Y), vec2(.5, 0.5), Color4_Radius, vec3(Color4.rgb));
+	// Subtle audio breathing on the blob radii — soft knee + small depth
+	// (±12%) so it reads as a gentle pulse, never a jolt. Idle floor keeps
+	// it alive-looking even in silence.
+	float _aKnee = smoothstep(0.05, 0.85, audioBass);
+	float _breathe = 1.0 + 0.12 * pow(_aKnee, 1.6);
+    canvas = softLight(canvas, uv-(Color1_Y), vec2(.5, 0.5), Color1_Radius * _breathe, vec3(Color1.rgb));
+    canvas = softLight(canvas, uv-Color2_Y, vec2(.5, 0.5), Color2_Radius * _breathe, vec3(Color2.rgb));
+    canvas = softLight(canvas, (uv-Color3_Y), vec2(.5, 0.5), Color3_Radius * _breathe, vec3(Color3.rgb));
+    canvas = softLight(canvas, (uv-Color4_Y), vec2(.5, 0.5), Color4_Radius * _breathe, vec3(Color4.rgb));
 	fragColor = vec4(canvas,1.0);
 }
 

@@ -150,10 +150,15 @@ vec2 toCenter(vec2 pos) {
    return (pos * 2.0 - 1.0) * vec2(1.0, RENDERSIZE.y / RENDERSIZE.x) * zoom;
 }
 
+float laserKnee(float x, float lo, float hi) { return smoothstep(lo, hi, x); }
+
 void main(void) {
    vec2 p = (gl_FragCoord.xy / RENDERSIZE.x) * 2.0 - vec2(1.0, RENDERSIZE.y / RENDERSIZE.x);
    p *= zoom;
-   float t = TIME * speed * (1.0 + audioHigh * 2.0);
+   // Was raw audioHigh*2.0 (up to 3x speed on any transient high-freq spike)
+   // — soft knee + much smaller depth so it's a subtle lift, not a lurch.
+   float highP = pow(laserKnee(audioHigh, 0.10, 0.90), 1.2);
+   float t = TIME * speed * (1.0 + highP * 0.35);
 
    // Smooth sinusoidal drift — ease-in/ease-out parallax feel
    vec2 drift = 0.03 * vec2(sin(t * 0.17), cos(t * 0.23));
@@ -171,7 +176,10 @@ void main(void) {
    d += laserCluster(p - toCenter(alt) - drift, t, bc) * 0.6;
 
    // Audio non-gating: alive at audio=0. Bass adds kick-coupled flare on top.
-   float boost = 1.0 + audioBass * 5.0;
+   // Was raw audioBass*5.0 (a 6x brightness surge on any bass hit) — soft
+   // knee + much smaller depth for a subtle lift instead of a strobe.
+   float bassP = pow(laserKnee(audioBass, 0.05, 0.85), 1.6);
+   float boost = 1.0 + bassP * 0.7;
    d *= intensity * boost;
 
    // HDR PEAKS for Phase Q v4 bloom — lift beam cores into 1.6–2.5 linear so

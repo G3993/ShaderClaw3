@@ -1,6 +1,6 @@
 /*{
   "CATEGORIES": ["Generator", "Audio Reactive"],
-  "DESCRIPTION": "Sound made literally visible — concentric ripples rolling across stacked depth-planes, audio frequencies sculpting cymatic interference patterns in 3D space.",
+  "DESCRIPTION": "Sound made literally visible — concentric ripples rolling across stacked depth-planes, audio frequencies sculpting cymatic interference patterns in 3D space. Pure black background edition.",
   "INPUTS": [
     {"NAME":"layers","TYPE":"float","MIN":1.0,"MAX":6.0,"DEFAULT":6.0},
     {"NAME":"freqScale","TYPE":"float","MIN":4.0,"MAX":40.0,"DEFAULT":16.0},
@@ -8,81 +8,134 @@
     {"NAME":"refraction","TYPE":"float","MIN":0.0,"MAX":0.08,"DEFAULT":0.02},
     {"NAME":"parallax","TYPE":"float","MIN":0.0,"MAX":0.3,"DEFAULT":0.08},
     {"NAME":"idleAmp","TYPE":"float","MIN":0.0,"MAX":0.5,"DEFAULT":0.15},
-    {"NAME":"fogColor","TYPE":"color","DEFAULT":[0.02,0.04,0.08,1.0]},
-    {"NAME":"inputTex","TYPE":"image"}
+    {"NAME":"bloomStr","TYPE":"float","MIN":0.0,"MAX":2.0,"DEFAULT":1.0},
+    {"NAME":"inputTex","TYPE":"image"},
+    {"NAME":"texMix","TYPE":"float","MIN":0.0,"MAX":1.0,"DEFAULT":0.0}
   ]
 }*/
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
-// Per-layer hashed ripple source position so each plane has its own focus.
 vec2 hashPos(int L) {
     float f = float(L);
     return vec2(hash(vec2(f, 1.7)), hash(vec2(f, 9.3))) - 0.5;
 }
 
-// Per-layer base colour — 0/120/240° offsets guarantee full hue-wheel coverage.
-// TIME * 0.15 cycles fast enough to show distinct colours across audit frames.
-vec3 planeColor(int L, float layers) {
-    float t = fract(float(L) / max(layers - 1.0, 1.0) + TIME * 0.15);
-    return 0.5 + 0.5 * cos(6.2832 * (vec3(0.0, 0.33, 0.67) + t));
+vec3 planeColor(int L, float layerCount) {
+    float t = fract(float(L) / max(layerCount - 1.0, 1.0) + TIME * 0.12);
+    // Saturated neon palette — stays vivid on pure black
+    vec3 c = 0.5 + 0.5 * cos(6.2832 * (vec3(0.0, 0.33, 0.67) + t));
+    // Boost saturation by pulling toward max component
+    float mx = max(c.r, max(c.g, c.b));
+    c = mix(c, vec3(mx), -0.3);
+    return clamp(c, 0.0, 1.0);
+}
+
+// Soft additive glow kernel (approx bloom via radial samples)
+vec3 addGlow(vec3 col, float h, vec3 glowCol, float str) {
+    float g = exp(-abs(h) * 6.0) * str;
+    return col + glowCol * g * 0.6;
 }
 
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     vec2 p  = (gl_FragCoord.xy - 0.5 * RENDERSIZE.xy) / RENDERSIZE.y;
 
-    vec3 col = vec3(0.0);
+    vec3 col    = vec3(0.0); // TRUE BLACK base
     float totalH = 0.0;
+    float totalW = 0.0;
 
     for (int L = 0; L < 6; L++) {
         if (float(L) >= layers) break;
         float depth = float(L) / max(layers, 1.0);
 
-        // Parallax — front planes (low depth) shift more with mouse.
-        vec2 pp = p + (mousePos - 0.5) * parallax * (1.0 - depth);
+        // Parallax offset (no mousePos — use slight TIME drift instead)
+        vec2 drift = vec2(sin(TIME * 0.07 + float(L) * 0.9), cos(TIME * 0.05 + float(L) * 1.3)) * 0.04;
+        vec2 pp = p + drift * parallax * (1.0 - depth);
 
-        // Bin selection: bass → back layers, treble → front. Maps cleanly to
-        // FFT 0..0.6 range (above that is mostly noise on most music).
+        // Frequency bin: bass at back, treble at front
         float bin = mix(0.05, 0.6, 1.0 - depth);
-        float amp = texture(audioFFT, vec2(bin, 0.5)).r + idleAmp;
+        float fftVal = texture(audioFFT, vec2(bin, 0.5)).r;
+        float amp = fftVal + idleAmp;
 
-        // Ripple source per layer. Wave height = sin(distance × freq − phase).
-        // freqScale × (1+depth) makes front ripples tighter than back.
-        vec2 src = hashPos(L) + vec2(sin(TIME * 0.3 + float(L) * 1.7), cos(TIME * 0.2 + float(L) * 2.3)) * (0.08 + audioBass * 0.1);
+        // Animated source position per layer
+        vec2 src = hashPos(L)
+            + vec2(
+                sin(TIME * 0.3 + float(L) * 1.7),
+                cos(TIME * 0.2 + float(L) * 2.3)
+              ) * (0.08 + audioBass * 0.12);
+
         float dist = length(pp - src);
-        float h = sin(dist * freqScale * (0.6 + depth * 0.8) - TIME * speed) * amp;
-        totalH += h * (1.0 - depth);  // front layers contribute more to refraction
+        float fq   = freqScale * (0.6 + depth * 0.8);
+        float h    = sin(dist * fq - TIME * speed) * amp;
 
-        // Layer colour modulated by ripple height — encode height as luminance.
-        vec3 lc = planeColor(L, layers) * (0.5 + 0.5 * h) * (0.6 + amp * 2.4);
+        // Second harmonic adds interference complexity
+        float dist2 = length(pp - src * vec2(-0.7, 0.9));
+        float h2    = sin(dist2 * fq * 1.618 - TIME * speed * 1.3) * amp * 0.4;
+        float hCombined = h + h2;
 
-        // Depth fog — back planes fade toward fogColor.
-        lc = mix(lc, fogColor.rgb, depth * 0.45);
+        float layerWeight = 1.0 - depth;
+        totalH += hCombined * layerWeight;
+        totalW += layerWeight;
 
-        // Composite back-to-front with falling alpha per layer.
-        col = mix(col, lc, 1.0 / max(layers, 1.0));
+        // --- Per-layer colour: pure additive on black ---
+        vec3 lc = planeColor(L, layers);
+
+        // Ripple modulation: dark troughs stay pure black, bright crests glow.
+        // hCombined's natural peak tracks amp (~amp*1.4), and amp itself is
+        // small (idleAmp default 0.15 + a modest FFT bin) — a raw max(0,
+        // hCombined) never gets anywhere near 1.0, so the crests barely lit
+        // up at all (the first attempt at "true black" over-corrected into
+        // "barely visible"). Normalize against amp's own peak so a crest
+        // reaches full brightness regardless of how quiet amp is, while
+        // hCombined<=0 still stays exactly 0 (pure black between ripples).
+        float crestPeak = max(amp * 1.4, 0.001);
+        float brightness = clamp(max(0.0, hCombined) / crestPeak, 0.0, 1.0);
+        brightness = pow(brightness, 0.8); // gentle lift so mid-crests read, not just tips
+        lc *= brightness * (0.6 + amp * 2.0);
+
+        // Depth attenuation — back layers dimmer, no fog colour added
+        lc *= (1.0 - depth * 0.55);
+
+        // Additive bloom halo on strong ridges
+        lc = addGlow(lc, hCombined, planeColor(L, layers), bloomStr * amp);
+
+        // Additive composite — black stays black where waves are zero
+        col += lc / max(layers, 1.0);
     }
 
-    // Refract live video through the integrated wave height.
-    if (IMG_SIZE_inputTex.x > 0.0) {
-        vec2 refractUV = uv + vec2(totalH * refraction);
-        vec3 t = texture(inputTex, clamp(refractUV, 0.0, 1.0)).rgb;
-        col = mix(col, t * (0.6 + 0.4 * abs(totalH)), 0.4);
+    float normH = (totalW > 0.0) ? totalH / totalW : 0.0;
+
+    // Refract live video through integrated wave height (optional input).
+    // IMG_SIZE() reports the canvas size on this engine, not whether an
+    // image is actually connected — it's always > 0, so it can't gate this.
+    // Blend only when the user explicitly dials texMix up; otherwise the
+    // background stays the pure-black additive composite from above.
+    if (texMix > 0.001) {
+        vec2 refractUV = uv + vec2(normH * refraction, normH * refraction * 0.7);
+        vec3 t = IMG_NORM_PIXEL(inputTex, clamp(refractUV, 0.0, 1.0)).rgb;
+        col = mix(col, t * (0.5 + 0.5 * abs(normH)), texMix);
     }
 
-    // Subtle fog wash so corners don't go pitch black.
-    col += fogColor.rgb * 0.3;
+    // Contour edge lines — pure white/cyan/orange lines on black
+    float cBand  = abs(fract(normH * 2.0 + 0.5) - 0.5) * 2.0;
+    float contour = 1.0 - smoothstep(0.0, 0.04, cBand);
+    col += contour * vec3(0.4, 0.85, 1.0) * 1.4 * bloomStr;
 
-    // Contour edge lines — sharper primary + high-freq secondary for denser edges
-    float cBand = abs(fract(totalH * 2.0 + 0.5) - 0.5) * 2.0;
-    float contour = 1.0 - smoothstep(0.0, 0.05, cBand);
-    col += contour * vec3(0.5, 0.8, 1.0) * 1.2;
-    float cBand2 = abs(fract(totalH * 5.0 + 0.5) - 0.5) * 2.0;
-    float contour2 = 1.0 - smoothstep(0.0, 0.04, cBand2);
-    col += contour2 * vec3(1.0, 0.6, 0.3) * 0.6;
+    float cBand2  = abs(fract(normH * 5.5 + 0.5) - 0.5) * 2.0;
+    float contour2 = 1.0 - smoothstep(0.0, 0.03, cBand2);
+    col += contour2 * vec3(1.0, 0.55, 0.15) * 0.7 * bloomStr;
 
-    // LUT snap: 6 discrete steps per channel for palette bucket entropy
-    col = mix(col, floor(col * 6.0 + 0.5) / 6.0, 0.4);
+    // Subtle specular flash at wave peaks driven by audio level
+    float specular = pow(max(0.0, normH), 4.0) * audioLevel * 1.5;
+    col += vec3(specular * 0.9, specular * 0.95, specular);
+
+    // LUT snap — discrete palette steps, preserves vividness
+    col = mix(col, floor(col * 7.0 + 0.5) / 7.0, 0.35);
+
+    // Tone-map (filmic) so over-driven additive blends stay bold but not blown
+    col = col / (col + vec3(0.75));
+    col = pow(col, vec3(0.88)); // slight gamma lift for screen display
+
     gl_FragColor = vec4(col, 1.0);
 }

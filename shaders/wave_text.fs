@@ -13,50 +13,15 @@
   ]
 }*/
 
-// ---- Font engine: 5x7 bitmap font, 2 rows packed per float ----
-// (values stay <= 1023 so decoding is exact even in mediump/fp16 on mobile)
-
-vec4 charData(int ch) {
-    if (ch == 0)  return vec4(561.0, 1009.0, 561.0, 14.0);
-    if (ch == 1)  return vec4(574.0, 977.0, 561.0, 30.0);
-    if (ch == 2)  return vec4(558.0, 528.0, 560.0, 14.0);
-    if (ch == 3)  return vec4(604.0, 561.0, 593.0, 28.0);
-    if (ch == 4)  return vec4(543.0, 976.0, 528.0, 31.0);
-    if (ch == 5)  return vec4(528.0, 976.0, 528.0, 31.0);
-    if (ch == 6)  return vec4(558.0, 753.0, 560.0, 14.0);
-    if (ch == 7)  return vec4(561.0, 1009.0, 561.0, 17.0);
-    if (ch == 8)  return vec4(142.0, 132.0, 132.0, 14.0);
-    if (ch == 9)  return vec4(588.0, 66.0, 66.0, 7.0);
-    if (ch == 10) return vec4(593.0, 788.0, 596.0, 17.0);
-    if (ch == 11) return vec4(543.0, 528.0, 528.0, 16.0);
-    if (ch == 12) return vec4(561.0, 689.0, 885.0, 17.0);
-    if (ch == 13) return vec4(561.0, 625.0, 821.0, 17.0);
-    if (ch == 14) return vec4(558.0, 561.0, 561.0, 14.0);
-    if (ch == 15) return vec4(528.0, 976.0, 561.0, 30.0);
-    if (ch == 16) return vec4(589.0, 565.0, 561.0, 14.0);
-    if (ch == 17) return vec4(593.0, 980.0, 561.0, 30.0);
-    if (ch == 18) return vec4(558.0, 449.0, 560.0, 14.0);
-    if (ch == 19) return vec4(132.0, 132.0, 132.0, 31.0);
-    if (ch == 20) return vec4(558.0, 561.0, 561.0, 17.0);
-    if (ch == 21) return vec4(324.0, 554.0, 561.0, 17.0);
-    if (ch == 22) return vec4(881.0, 693.0, 561.0, 17.0);
-    if (ch == 23) return vec4(561.0, 138.0, 554.0, 17.0);
-    if (ch == 24) return vec4(132.0, 132.0, 554.0, 17.0);
-    if (ch == 25) return vec4(543.0, 136.0, 34.0, 31.0);
-    return vec4(0.0, 0.0, 0.0, 0.0);
-}
+// ---- Font engine ----
+// Atlas-based (replaces legacy hardcoded 5x7 packed-bit charData() bitmap
+// with a sample from the shared, high-resolution fontAtlasTex).
 
 float charPixel(int ch, float col, float row) {
-    vec4 data = charData(ch);
-    float rowIdx = floor(row);
-    // Pick the packed pair (2 rows per component, w holds row 6)
-    float packed2;
-    if (rowIdx < 2.0)      packed2 = data.x;
-    else if (rowIdx < 4.0) packed2 = data.y;
-    else if (rowIdx < 6.0) packed2 = data.z;
-    else                   packed2 = data.w;
-    float rowVal = mod(floor(packed2 / pow(32.0, mod(rowIdx, 2.0))), 32.0);
-    return mod(floor(rowVal / pow(2.0, 4.0 - floor(col))), 2.0);
+    if (ch < 0 || ch > 36) return 0.0;
+    vec2 uv = vec2(col / 5.0, row / 7.0);
+    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
+    return smoothstep(0.1, 0.55, texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r);
 }
 
 int getChar(int slot) {

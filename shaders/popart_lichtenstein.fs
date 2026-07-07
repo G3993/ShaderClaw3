@@ -50,12 +50,10 @@ float sdSegment(vec2 p, vec2 a, vec2 b, float w) {
     float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
     return length(pa - ba * h) - w;
 }
-// Axis-aligned box SDF
 float sdBox2(vec2 p, float r) {
     vec2 d = abs(p) - r;
     return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
 }
-// Equilateral triangle SDF
 float sdTriangle2(vec2 p, float r) {
     float k = 1.7320508;
     p.x = abs(p.x) - r;
@@ -299,8 +297,6 @@ vec3 renderPanel(int mood, vec2 uv, float aspect, float t,
 }
 
 // ─── 3D PERSPECTIVE PROJECTION ───────────────────────────────────────
-// Project a 3D point to 2D screen coords. Camera is at z=cameraZ
-// looking toward z=0. Simple pinhole.
 vec2 project3D(vec3 pos, float cameraZ) {
     float iz = 1.0 / max(cameraZ - pos.z, 0.01);
     return pos.xy * (cameraZ * iz);
@@ -347,23 +343,16 @@ void main() {
     }
 
     // ─── KANDINSKY 3D FLOATING SHAPES ────────────────────────────────
-    // Shapes orbit in 3D space. depth3D controls how much Z variance
-    // they have. We use a simple perspective camera at z = cameraZ,
-    // shapes swim between z = -zRange .. +zRange.
-    // Aspect-correct: work in [-0.5*aspect, +0.5*aspect] x [-0.5, +0.5]
-    vec2 Psc = vec2((uv.x - 0.5) * aspect, uv.y - 0.5); // screen space
+    vec2 Psc = vec2((uv.x - 0.5) * aspect, uv.y - 0.5);
 
     float cameraZ = 2.2;
     float zRange  = depth3D * 0.85;
 
     int N = int(clamp(shapeCount, 1.0, 20.0));
 
-    // Palette derived from mood panel to harmonise with Lichtenstein.
-    // We pick three shape colours from the five-colour set.
     vec3 shapeColA = LL_YELLOW;
     vec3 shapeColB = LL_RED;
     vec3 shapeColC = LL_CYAN;
-    // On Drowning/Crying panels, boost white/cyan shapes.
     if (moodA == 1 || moodA == 2) { shapeColC = K_BLUE; }
     if (moodA == 3) { shapeColA = LL_RED; shapeColB = LL_YELLOW; shapeColC = LL_CYAN; }
 
@@ -376,8 +365,7 @@ void main() {
         if (i >= N) break;
         float fi = float(i) + compositionSeed * 1.71;
 
-        // 3D Lissajous orbit
-        float phA  = fi * 2.399;  // golden angle offset
+        float phA  = fi * 2.399;
         float phB  = fi * 1.618;
         float spd  = orbitSpeed * (0.5 + hash11(fi * 3.1) * 1.2);
         float ox   = (hash11(fi * 1.3) - 0.5) * 0.7 * aspect;
@@ -395,16 +383,13 @@ void main() {
         );
 
         vec3 pos3 = home + orbit3;
-        // Bass spring: push away from screen centre
         vec2 fromCtr2 = pos3.xy;
         float fcLen = length(fromCtr2);
         if (fcLen > 1e-4) fromCtr2 = fromCtr2 / fcLen;
         pos3.xy += fromCtr2 * springReact * bass;
 
-        // Project to screen
         vec2 ctr2D = project3D(pos3, cameraZ);
 
-        // Apparent size — closer = bigger
         float zFactor  = clamp((cameraZ - pos3.z) / cameraZ, 0.3, 2.5);
         float sz = shapeSize * (0.7 + hash11(fi * 5.3) * 0.6)
                  * zFactor
@@ -462,9 +447,8 @@ void main() {
         float zFactor = clamp((cameraZ - pos3.z)/cameraZ, 0.3, 2.5);
         float sz = shapeSize*(0.7+hash11(fi*5.3)*0.6)*zFactor*(1.0+level*0.08);
 
-        // Per-shape rotation (audio-driven + intrinsic)
-        float rot = t * mid * 0.5 + hash11(fi*7.7)*6.2832
-                  + t * orbitSpeed * hash11(fi*2.33) * 0.8;
+        // Fixed orientation per shape — no rotation over time
+        float rot = hash11(fi*7.7) * 6.2832;
         float ca = cos(-rot), sa = sin(-rot);
         vec2 lp = Psc - ctr2D;
         lp = vec2(ca*lp.x - sa*lp.y, sa*lp.x + ca*lp.y);
@@ -481,7 +465,6 @@ void main() {
             bestSC   = (shapeType == 0) ? shapeColA
                      : (shapeType == 1) ? shapeColB : shapeColC;
 
-            // Checkerboard interior on every 4th shape — Comp VIII signature
             vec2  chk   = floor(lp / max(sz*0.30, 1e-4));
             bool  chkOn = (mod(chk.x+chk.y, 2.0) < 1.0);
             bool  useChk= (mod(fi, 4.0) >= 3.0);
@@ -490,22 +473,19 @@ void main() {
     }
 
     if (bestSD < 0.0) {
-        // Inside shape — apply Ben-Day dots using shape's own colour
         float shapeDots = benDay(uv, dotDensity * 1.1, dotRadius * 0.75, aspect, treble * 0.5);
         vec3 dotCol = mix(bestCol, LL_BLACK, 0.85);
         vec3 filled = mix(bestCol, dotCol, shapeDots * 0.55);
         col = mix(col, filled, 1.0);
     } else if (bestSD < bestSz * 0.12) {
-        // Outline ring — black, hard
         float ot = 1.0 - smoothstep(0.0, outlineWeight * 2.0, bestSD);
         col = mix(col, LL_BLACK, ot);
     } else {
-        // Near-miss glow — soft fill of shape colour leaking outward
         float nearGlow = exp(-bestSD / (bestSz * 0.25)) * 0.18;
         col = mix(col, bestSC, nearGlow * haloStrength);
     }
 
-    // ─── Support lines (Composition VIII scaffolding) ─────────────────
+    // ─── Support lines ────────────────────────────────────────────────
     int NL = int(clamp(lineCount, 0.0, 14.0));
     for (int k = 0; k < 14; k++) {
         if (k >= NL) break;

@@ -17,44 +17,14 @@
 }*/
 
 // ── Font engine ──────────────────────────────────────────────────────
-
-vec2 charData(int ch) {
-    if (ch == 0)  return vec2(1033777.0, 14897.0);
-    if (ch == 1)  return vec2(1001022.0, 31281.0);
-    if (ch == 2)  return vec2(541230.0, 14896.0);
-    if (ch == 3)  return vec2(575068.0, 29265.0);
-    if (ch == 4)  return vec2(999967.0, 32272.0);
-    if (ch == 5)  return vec2(999952.0, 32272.0);
-    if (ch == 6)  return vec2(771630.0, 14896.0);
-    if (ch == 7)  return vec2(1033777.0, 17969.0);
-    if (ch == 8)  return vec2(135310.0, 14468.0);
-    if (ch == 9)  return vec2(68172.0, 7234.0);
-    if (ch == 10) return vec2(807505.0, 18004.0);
-    if (ch == 11) return vec2(541215.0, 16912.0);
-    if (ch == 12) return vec2(706097.0, 18293.0);
-    if (ch == 13) return vec2(640561.0, 18229.0);
-    if (ch == 14) return vec2(575022.0, 14897.0);
-    if (ch == 15) return vec2(999952.0, 31281.0);
-    if (ch == 16) return vec2(579149.0, 14897.0);
-    if (ch == 17) return vec2(1004113.0, 31281.0);
-    if (ch == 18) return vec2(460334.0, 14896.0);
-    if (ch == 19) return vec2(135300.0, 31876.0);
-    if (ch == 20) return vec2(575022.0, 17969.0);
-    if (ch == 21) return vec2(567620.0, 17969.0);
-    if (ch == 22) return vec2(710513.0, 17969.0);
-    if (ch == 23) return vec2(141873.0, 17962.0);
-    if (ch == 24) return vec2(135300.0, 17962.0);
-    if (ch == 25) return vec2(139807.0, 31778.0);
-    return vec2(0.0, 0.0);
-}
+// Atlas-based (replaces legacy hardcoded 5x7 packed-bit charData() bitmap
+// with a sample from the shared, high-resolution fontAtlasTex).
 
 float charPixel(int ch, float col, float row) {
-    vec2 data = charData(ch);
-    float rowIdx = floor(row);
-    float rowVal;
-    if (rowIdx < 4.0) { rowVal = mod(floor(data.x / pow(32.0, rowIdx)), 32.0); }
-    else { rowVal = mod(floor(data.y / pow(32.0, rowIdx - 4.0)), 32.0); }
-    return mod(floor(rowVal / pow(2.0, 4.0 - floor(col))), 2.0);
+    if (ch < 0 || ch > 36) return 0.0;
+    vec2 uv = vec2(col / 5.0, row / 7.0);
+    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
+    return smoothstep(0.1, 0.55, texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r);
 }
 
 int getChar(int slot) {

@@ -208,7 +208,7 @@ void main() {
         float expansion = 1.0;
         float differentialFactor = 12. / 256.;
         float increment = -3. / 256.;
-        float noiseFactor = 2. / 256.;
+        float noiseFactor = 12. / 256.;
         float feedBack = 6. / 256.;
         float feedForward = 6. / 256.;
 
