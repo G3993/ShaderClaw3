@@ -394,25 +394,44 @@ window.evalShader = async function(file, opts) {
       const fb = drawFrame(t, dt, baseAudio);
       frames.push(framePixels(fb.fbo));
     }
+    const stats = frames.map(frameStats);
     // Opt-in still frame capture for thumbnail generation (make_thumbnails.cjs)
     // — reuses the same compiled/driven render this function already proved
     // out on all 176 shaders, so it never fights a second, less-complete
     // renderer's uniform set. Additive only; scoring below is unaffected.
+    // Picks the LEAST-BLACK sampled frame (not a fixed instant): text shaders
+    // and slow builds can be legitimately dark at any one moment, and a fixed
+    // t=2 frame shipped a batch of all-black thumbnails.
     if (opts.captureFrame) {
-      const px = frames[Math.min(1, frames.length - 1)]; // ~t=2.0s, representative
-      const tmp = document.createElement('canvas');
-      tmp.width = W; tmp.height = H;
-      const ctx2d = tmp.getContext('2d');
+      let best = 0;
+      for (let i = 1; i < stats.length; i++) {
+        if (stats[i].blackFrac < stats[best].blackFrac - 1e-6 ||
+            (Math.abs(stats[i].blackFrac - stats[best].blackFrac) <= 1e-6 && stats[i].meanLuma > stats[best].meanLuma)) {
+          best = i;
+        }
+      }
+      out.thumbnailFrame = { index: best, time: sampleTimes[best], blackFrac: stats[best].blackFrac, meanLuma: stats[best].meanLuma };
+      const px = frames[best];
+      const raw = document.createElement('canvas');
+      raw.width = W; raw.height = H;
       // readPixels rows are bottom-to-top; ImageData wants top-to-bottom.
       const flipped = new Uint8ClampedArray(px.length);
       for (let y = 0; y < H; y++) {
         const srcStart = (H - 1 - y) * W * 4;
         flipped.set(px.subarray(srcStart, srcStart + W * 4), y * W * 4);
       }
-      ctx2d.putImageData(new ImageData(flipped, W, H), 0, 0);
+      raw.getContext('2d').putImageData(new ImageData(flipped, W, H), 0, 0);
+      // Flatten onto black: text shaders are Easel OVERLAYS with transparent
+      // backgrounds by design — putImageData preserves that alpha, which made
+      // their PNGs read as blank. drawImage alpha-composites over the fill.
+      const tmp = document.createElement('canvas');
+      tmp.width = W; tmp.height = H;
+      const ctx2d = tmp.getContext('2d');
+      ctx2d.fillStyle = '#000';
+      ctx2d.fillRect(0, 0, W, H);
+      ctx2d.drawImage(raw, 0, 0);
       out.thumbnail = tmp.toDataURL('image/png');
     }
-    const stats = frames.map(frameStats);
     out.meanLuma = stats.reduce((s, x) => s + x.meanLuma, 0) / stats.length;
     out.variance = stats.reduce((s, x) => s + x.variance, 0) / stats.length;
     out.blackFrac = stats.reduce((s, x) => s + x.blackFrac, 0) / stats.length;

@@ -75,9 +75,13 @@ async function main() {
     const id = file.replace(/\.fs$/, '');
     let res;
     try {
+      // audio: 0.65 — audio-reactive shaders ("sound is the brush") render
+      // black at the harness's silent default; drive them so their thumbnail
+      // shows what they actually look like live. Default sample times give
+      // the least-black-frame picker four moments to choose from.
       res = await withTimeout(
-        page.evaluate((f) => window.evalShader(f, { captureFrame: true, times: [2.0] }), file),
-        20000, file
+        page.evaluate((f) => window.evalShader(f, { captureFrame: true, audio: 0.65 }), file),
+        30000, file
       );
     } catch (e) {
       res = { errors: [e.message] };
@@ -87,8 +91,9 @@ async function main() {
     if (res && res.thumbnail) {
       const b64 = res.thumbnail.replace(/^data:image\/png;base64,/, '');
       fs.writeFileSync(path.join(OUT_DIR, `${id}.png`), Buffer.from(b64, 'base64'));
-      results.ok.push(id);
-      console.log(`[${i + 1}/${files.length}] ok   ${id}`);
+      const tf = res.thumbnailFrame || {};
+      results.ok.push({ id, blackFrac: tf.blackFrac, time: tf.time });
+      console.log(`[${i + 1}/${files.length}] ok   ${id} (t=${tf.time} black=${(tf.blackFrac ?? 0).toFixed(2)})`);
     } else {
       results.fail.push({ id, error: (res && res.errors && res.errors.join('; ')) || 'no thumbnail' });
       console.log(`[${i + 1}/${files.length}] FAIL ${id} — ${results.fail[results.fail.length - 1].error}`);
