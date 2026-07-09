@@ -305,7 +305,7 @@ void main() {
     float jitter = treb * 0.06;
     float ledPulse = 0.3 + 0.7 * smoothstep(0.0, 0.25, beatF);
 
-    int nArms = int(clamp(armCount, 1.0, 4.0));
+    int nArms = clamp(armCount, 1, 4);
     bool mouseActive = (abs(mouseX) > 0.001 || abs(mouseY) > 0.001);
 
     // Mouse target in scene-space (matches normalized p coordinates: x in ~[-aspect/2, aspect/2], y in [-0.5, 0.5])

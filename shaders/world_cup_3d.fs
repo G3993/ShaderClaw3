@@ -2230,8 +2230,8 @@ vec3 crests(vec2 p, float cardY){
         e += col * halo(p, vec2(0.0, cardY), sc, showIdx) * uNeon * 1.3 * (1.0 + gPulse*1.4 + gHigh*0.8);
     } else {
         // ── VERSUS ── two crests angled toward each other
-        int tA = int(clamp(uTeamA, 0.0, float(NTEAM-1)));
-        int tB = int(clamp(uTeamB, 0.0, float(NTEAM-1)));
+        int tA = clamp(uTeamA, 0, NTEAM-1);
+        int tB = clamp(uTeamB, 0, NTEAM-1);
         vec3 cA = teamCol(tA), cB = teamCol(tB);
         float off = 0.40 * uZoom;
         float sc  = 0.26 * uZoom;
@@ -2265,8 +2265,8 @@ void main(){
 
     // team colors on screen (for tint, confetti, score)
     int idxC = int(mod(floor(TIME/max(uHoldTime,0.4)), float(NTEAM)));
-    int iA = int(clamp(uTeamA,0.0,float(NTEAM-1)));
-    int iB = int(clamp(uTeamB,0.0,float(NTEAM-1)));
+    int iA = clamp(uTeamA, 0, NTEAM-1);
+    int iB = clamp(uTeamB, 0, NTEAM-1);
     vec3 colA = (uMode < 0.5) ? teamCol(idxC) : teamCol(iA);
     vec3 colB = (uMode < 0.5) ? teamCol(idxC) : teamCol(iB);
     vec3 tint = mix(colA, colB, 0.5);
