@@ -12,9 +12,10 @@
     { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
     { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.5, 0.0, 1.0] },
+    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.03, 1.0] },
+    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 0.5, "MAX": 4.0, "DEFAULT": 2.2 },
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false }
   ]
 }*/
 
@@ -93,6 +94,25 @@ float sampleChar(int ch, vec2 uv) {
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
+// Ripple pool background — concentric waves from multiple centers (NOT starfield)
+vec3 rippleBg(vec2 uv) {
+    float t = TIME * 0.5;
+    vec3 col = bgColor.rgb;
+    // 4 ripple centers
+    vec2 c0 = vec2(0.25, 0.4), c1 = vec2(0.75, 0.6);
+    vec2 c2 = vec2(0.5, 0.2),  c3 = vec2(0.5, 0.8);
+    float r0 = sin(length(uv - c0) * 18.0 - t * 4.1) * 0.5 + 0.5;
+    float r1 = sin(length(uv - c1) * 14.0 - t * 3.7) * 0.5 + 0.5;
+    float r2 = sin(length(uv - c2) * 22.0 - t * 5.3) * 0.5 + 0.5;
+    float r3 = sin(length(uv - c3) * 16.0 - t * 4.5) * 0.5 + 0.5;
+    float rip = (r0 + r1 + r2 + r3) * 0.25;
+    // 3 saturated colors: orange, magenta, cyan
+    vec3 ca = vec3(1.0, 0.4, 0.0);
+    vec3 cb = vec3(1.0, 0.0, 0.7);
+    vec3 cc = vec3(0.0, 0.8, 1.0);
+    vec3 ripCol = rip < 0.5 ? mix(ca, cb, rip * 2.0) : mix(cb, cc, (rip - 0.5) * 2.0);
+    return col + ripCol * 0.13;
+}
 
 // =======================================================================
 // EFFECT: WAVE - sine displacement per letter
@@ -156,10 +176,11 @@ vec4 effectWave(vec2 uv) {
             shadowHit = max(shadowHit, sampleChar(ch, s));
     }
 
-    vec4 result = transparentBg ? vec4(0.0) : bgColor;
+    vec3 bgRgb = transparentBg ? bgColor.rgb : rippleBg(uv);
+    vec4 result = transparentBg ? vec4(0.0) : vec4(bgRgb, 1.0);
     if (shadowHit > 0.5)
-        result = vec4(mix(result.rgb, vec3(0.0), 0.3), result.a + 0.3*(1.0-result.a));
-    if (mainHit > 0.5) result = vec4(textColor.rgb, textColor.a);
+        result = vec4(mix(result.rgb, vec3(0.0), 0.4), result.a + 0.3*(1.0-result.a));
+    if (mainHit > 0.5) result = vec4(textColor.rgb * hdrGlow, textColor.a);
     return result;
 }
 
