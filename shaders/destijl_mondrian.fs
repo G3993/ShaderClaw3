@@ -278,7 +278,7 @@ void main() {
 
     // gridDensity is a long enum (0..3): Sparse, Medium, Dense, Very Dense.
     // It maps to active line counts (clamped to compile-time maxima).
-    int dIdx = int(clamp(gridDensity, 0.0, 3.0) + 0.5);
+    int dIdx = clamp(gridDensity, 0, 3);
     int activeLinesV = (dIdx == 0) ? 3 : (dIdx == 1) ? 5 : (dIdx == 2) ? 6 : 8;
     int activeLinesH = (dIdx == 0) ? 2 : (dIdx == 1) ? 4 : (dIdx == 2) ? 5 : 7;
 

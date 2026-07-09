@@ -543,7 +543,7 @@ void main() {
     vec2 uv01 = isf_FragNormCoord;
 
     float t = TIME * (0.4 + gestureSpeed);
-    int moodI = int(clamp(mood, 0.0, 3.0));
+    int moodI = clamp(mood, 0, 3);
     vec3 bands = audioBands(t, audioReact);
 
     float bass   = clamp(audioBass,  0.0, 1.0) * audioReact;
