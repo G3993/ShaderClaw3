@@ -14,7 +14,8 @@
     { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
     { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
     { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true },
+    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
   ]
 }*/
 
@@ -152,6 +153,7 @@ vec4 effectEtherea(vec2 uv) {
     float startY = 0.5 - charH * 0.5;
     float rowStartX = 0.5 - rw * 0.5;
 
+    float audioMod = 0.5 + 0.5 * audioLevel * audioReact;
     float textMask = 0.0;
     vec3 textCol = vec3(0.0);
     float glowAccum = 0.0;
@@ -203,9 +205,11 @@ vec4 effectEtherea(vec2 uv) {
     }
 
     col = mix(col, textCol, clamp(textMask, 0.0, 1.0));
-    if (!transparentBg) col += textColor.rgb * glowAccum;
+    // HDR glow: peaks at 4×audioMod — bloom-ready for LED wall; both opaque and transparent
+    float glowHDR = glowAccum * audioMod * 4.0;
+    col += textColor.rgb * glowHDR;
+    if (transparentBg) alpha = max(clamp(textMask, 0.0, 1.0), min(glowHDR * 0.75, 1.0));
     col *= 1.0 - 0.3 * length((uv - 0.5) * 1.5);
-    if (transparentBg) alpha = clamp(textMask, 0.0, 1.0);
     return vec4(col, alpha);
 }
 
