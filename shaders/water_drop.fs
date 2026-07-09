@@ -1,19 +1,138 @@
 /*{
   "DESCRIPTION": "Water Drop — a single droplet bobs and merges into a calm pool, sending soft concentric ripples across a raymarched water surface that reflects and refracts the sky. Grayscale-elegant by default; tint to color it. Live audio drives it: bass punches the drop impact + ripple amplitude, mid agitates the surface, treble shimmers the specular. Optional image becomes the equirectangular sky that the water reflects/refracts.",
   "CREDIT": "ShaderClaw3 (after a Shadertoy droplet study)",
-  "CATEGORIES": ["Generator", "3D", "Nature", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "3D",
+    "Nature",
+    "Audio Reactive"
+  ],
   "INPUTS": [
-    { "NAME": "speed",       "LABEL": "Speed",            "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
-    { "NAME": "rippleAmount","LABEL": "Ripple Amount",    "TYPE": "float", "MIN": 0.0,  "MAX": 0.9,  "DEFAULT": 0.4 },
-    { "NAME": "rippleScale", "LABEL": "Ripple Density",   "TYPE": "float", "MIN": 1.0,  "MAX": 7.0,  "DEFAULT": 3.0 },
-    { "NAME": "dropSize",    "LABEL": "Drop Size",        "TYPE": "float", "MIN": 0.5,  "MAX": 1.8,  "DEFAULT": 1.0 },
-    { "NAME": "rimLight",    "LABEL": "Specular",         "TYPE": "float", "MIN": 0.0,  "MAX": 0.8,  "DEFAULT": 0.3 },
-    { "NAME": "tint",        "LABEL": "Water Tint",       "TYPE": "color", "DEFAULT": [0.55, 0.78, 1.0, 1.0] },
-    { "NAME": "tintMix",     "LABEL": "Tint Amount",      "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.0 },
-    { "NAME": "audioReact",  "LABEL": "Sound Reactivity", "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
-    { "NAME": "inputImage",  "LABEL": "Sky / Reflection", "TYPE": "image" },
-    { "NAME": "envMix",      "LABEL": "Reflect Image",    "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.0 },
-    { "NAME": "quality",     "LABEL": "Anti-Alias",       "TYPE": "float", "MIN": 1.0,  "MAX": 3.0,  "DEFAULT": 2.0 }
+    {
+      "NAME": "rippleScale",
+      "LABEL": "Ripple Density",
+      "TYPE": "float",
+      "MIN": 1,
+      "MAX": 7,
+      "DEFAULT": 3,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "dropSize",
+      "LABEL": "Drop Size",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 1.8,
+      "DEFAULT": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "rippleAmount",
+      "LABEL": "Ripple Amount",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.9,
+      "DEFAULT": 0.4,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "tint",
+      "LABEL": "Water Tint",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.55,
+        0.78,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "tintMix",
+      "LABEL": "Tint Amount",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Sound Reactivity",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "inputImage",
+      "LABEL": "Sky / Reflection",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "envMix",
+      "LABEL": "Reflect Image",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "quality",
+      "LABEL": "Anti-Alias",
+      "TYPE": "float",
+      "MIN": 1,
+      "MAX": 3,
+      "DEFAULT": 2
+    },
+    {
+      "NAME": "rimLight",
+      "LABEL": "Specular",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.8,
+      "DEFAULT": 0.3
+    }
   ]
 }*/
 
@@ -85,12 +204,19 @@ void main(){
   float bass   = audioBass * audioReact;
   float mid    = audioMid  * audioReact;
   float treble = audioHigh * audioReact;
+  // Low-floor expansion (pow < 1 lifts soft levels, ~preserves loud ones) so
+  // jazz's soft swung kicks and rock's backbeat still move the pool; sub is
+  // coupled in for sparse sub-heavy hits. audioBeatPulse is a host-side
+  // decaying event envelope — each hit leaves a few-hundred-ms ripple trace.
+  float bassE  = pow(clamp(max(bass, audioSub * audioReact), 0.0, 1.0), 0.6);
+  float midE   = pow(clamp(mid, 0.0, 1.0), 0.7);
+  float hit    = audioBeatPulse * audioReact;
 
   // bass impact swells the drop + ripple, mid quickens the surface
-  gT         = TIME * speed * (1.0 + 0.25*mid);
-  gRippleAmp = rippleAmount * (1.0 + 0.6*bass);
-  gRippleScl = rippleScale;
-  gDropSize  = dropSize * (1.0 + 0.30*bass);
+  gT         = TIME * speed * (1.0 + 0.25*mid + 0.25*midE);
+  gRippleAmp = rippleAmount * (1.0 + 0.6*bass + 0.30*bassE + 0.35*hit);
+  gRippleScl = rippleScale * (1.0 + 0.20*midE);
+  gDropSize  = dropSize * (1.0 + 0.30*bass + 0.12*hit);
 
   vec2 res = RENDERSIZE.xy;
   vec3 col = vec3(0.0);
@@ -118,12 +244,32 @@ void main(){
       // refracted look-through + specular glint (treble shimmers it)
       vec3 wat = sky(ref) + rimLight * r * fres * fres * (1.0 + 0.8*treble);
       vec3 bac = sky(ray) * 0.5 + 0.5;
+      // universal background: blend the far-field sky fade toward bgColor
+      bac = mix(bac, bgColor.rgb, bgColor.a);
 
       float fade = pow(min(mar.w / 20.0, 1.0), 0.3);
       col += mix(wat, bac, fade);
     }
   }
   col /= aaF * aaF;
+
+  // Continuous level-follow: whole-frame luminance breathes with the mix
+  // (helps beatless/sustained material read; silence = exactly 1.0).
+  col *= 1.0 + 0.18 * smoothstep(0.04, 0.9, audioLevel * audioReact);
+
+  // ---- universal color block (defaults = no-op) ----
+  vec3 uc = col;
+  float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+  uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+  if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+    float hA = hueShift * 6.2831853;
+    float hC = cos(hA), hS = sin(hA);
+    mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+            + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+            + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+    uc = clamp(hM * uc, 0.0, 1.0);
+  }
+  col = uc;
 
   gl_FragColor = vec4(col * col, 1.0);   // mild gamma, faithful to the original
 }

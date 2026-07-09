@@ -1,134 +1,219 @@
 /*{
-    "DESCRIPTION": "Gradient Bars",
-    "CREDIT": "Joshua Batty",
-    "ISFVSN": "2",
-    "CATEGORIES": [
-        "Generator"
-    ],
-    "INPUTS": [
-        {
-            "NAME": "easing_type",
-            "TYPE": "long",
-            "DEFAULT": 0,
-            "VALUES": [
-                0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-                11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-                21, 22, 23, 24, 25, 26, 27, 28, 29
-            ],
-            "LABELS": [
-                "Ease In Sine", "Ease Out Sine", "Ease InOut Sine",
-                "Ease In Quad", "Ease Out Quad", "Ease InOut Quad",
-                "Ease In Cubic", "Ease Out Cubic", "Ease InOut Cubic",
-                "Ease In Quart", "Ease Out Quart", "Ease InOut Quart",
-                "Ease In Quint", "Ease Out Quint", "Ease InOut Quint",
-                "Ease In Expo", "Ease Out Expo", "Ease InOut Expo",
-                "Ease In Circ", "Ease Out Circ", "Ease InOut Circ",
-                "Ease In Back", "Ease Out Back", "Ease InOut Back",
-                "Ease In Elastic", "Ease Out Elastic", "Ease InOut Elastic",
-                "Ease In Bounce", "Ease Out Bounce", "Ease InOut Bounce"
-            ],
-            "LABEL": "Easing Type"
-        },
-        {
-            "NAME": "gradient_pow",
-            "TYPE": "float",
-            "DEFAULT": 0.2,
-            "MIN": 0.0,
-            "MAX": 1.0,
-            "LABEL": "Gradient Power"
-        },
-        {
-            "NAME": "balance",
-            "TYPE": "float",
-            "DEFAULT": 0.15,
-            "MIN": 0.0,
-            "MAX": 1.0,
-            "LABEL": "Balance"
-        },
-        {
-            "NAME": "speed",
-            "TYPE": "float",
-            "DEFAULT": 0.03,
-            "MIN": 0.0,
-            "MAX": 0.5,
-            "LABEL": "Speed"
-        },
-        {
-            "NAME": "invert_speed",
-            "TYPE": "float",
-            "DEFAULT": 0.05,
-            "MIN": 0.0,
-            "MAX": 0.5,
-            "LABEL": "Invert Speed"
-        },
-        {
-            "NAME": "offset",
-            "TYPE": "float",
-            "DEFAULT": 4.0,
-            "MIN": 0.0,
-            "MAX": 16.0,
-            "LABEL": "Offset"
-        },
-        {
-            "NAME": "use_odd_dirs",
-            "TYPE": "float",
-            "DEFAULT": 0.0,
-            "MIN": 0.0,
-            "MAX": 1.0,
-            "LABEL": "Use Odd Directions"
-        },
-        {
-            "NAME": "phase_iter",
-            "TYPE": "float",
-            "DEFAULT": 2.0,
-            "MIN": 1.0,
-            "MAX": 16.0,
-            "LABEL": "Phase Iterations"
-        },
-        {
-            "NAME": "num_columns",
-            "TYPE": "float",
-            "DEFAULT": 8.0,
-            "MIN": 1.0,
-            "MAX": 32.0,
-            "LABEL": "Number of Columns"
-        },
-        {
-            "NAME": "x_iter",
-            "TYPE": "float",
-            "DEFAULT": 2.0,
-            "MIN": 1.0,
-            "MAX": 2.0,
-            "LABEL": "X Iterations"
-        },
-        {
-            "NAME": "audio_influence",
-            "TYPE": "float",
-            "DEFAULT": 0.2,
-            "MIN": 0.0,
-            "MAX": 1.0,
-            "LABEL": "Audio Influence"
-        },
-        {
-            "NAME": "use_columns",
-            "TYPE": "bool",
-            "DEFAULT": 1,
-            "LABEL": "Columns / Rows"
-        },
-        {
-            "NAME": "inputTex",
-            "TYPE": "image",
-            "LABEL": "Texture"
-        },
-        {
-            "NAME": "texMix",
-            "TYPE": "float",
-            "DEFAULT": 0.0,
-            "MIN": 0.0,
-            "MAX": 1.0,
-            "LABEL": "Texture Mix"
-        }
-    ]
+  "DESCRIPTION": "Gradient Bars",
+  "CREDIT": "Joshua Batty",
+  "ISFVSN": "2",
+  "CATEGORIES": [
+    "Generator"
+  ],
+  "INPUTS": [
+    {
+      "NAME": "balance",
+      "TYPE": "float",
+      "DEFAULT": 0.15,
+      "MIN": 0,
+      "MAX": 1,
+      "LABEL": "Balance"
+    },
+    {
+      "NAME": "offset",
+      "TYPE": "float",
+      "DEFAULT": 4,
+      "MIN": 0,
+      "MAX": 16,
+      "LABEL": "Offset"
+    },
+    {
+      "NAME": "use_odd_dirs",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "LABEL": "Use Odd Directions"
+    },
+    {
+      "NAME": "x_iter",
+      "TYPE": "float",
+      "DEFAULT": 2,
+      "MIN": 1,
+      "MAX": 2,
+      "LABEL": "X Iterations"
+    },
+    {
+      "NAME": "inputTex",
+      "TYPE": "image",
+      "LABEL": "Texture"
+    },
+    {
+      "NAME": "texMix",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "LABEL": "Texture Mix"
+    },
+    {
+      "NAME": "num_columns",
+      "TYPE": "float",
+      "DEFAULT": 8,
+      "MIN": 1,
+      "MAX": 32,
+      "LABEL": "Number of Columns",
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "use_columns",
+      "TYPE": "bool",
+      "DEFAULT": 1,
+      "LABEL": "Columns / Rows",
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "easing_type",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29
+      ],
+      "LABELS": [
+        "Ease In Sine",
+        "Ease Out Sine",
+        "Ease InOut Sine",
+        "Ease In Quad",
+        "Ease Out Quad",
+        "Ease InOut Quad",
+        "Ease In Cubic",
+        "Ease Out Cubic",
+        "Ease InOut Cubic",
+        "Ease In Quart",
+        "Ease Out Quart",
+        "Ease InOut Quart",
+        "Ease In Quint",
+        "Ease Out Quint",
+        "Ease InOut Quint",
+        "Ease In Expo",
+        "Ease Out Expo",
+        "Ease InOut Expo",
+        "Ease In Circ",
+        "Ease Out Circ",
+        "Ease InOut Circ",
+        "Ease In Back",
+        "Ease Out Back",
+        "Ease InOut Back",
+        "Ease In Elastic",
+        "Ease Out Elastic",
+        "Ease InOut Elastic",
+        "Ease In Bounce",
+        "Ease Out Bounce",
+        "Ease InOut Bounce"
+      ],
+      "LABEL": "Easing Type",
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "speed",
+      "TYPE": "float",
+      "DEFAULT": 0.03,
+      "MIN": 0,
+      "MAX": 0.5,
+      "LABEL": "Speed",
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "invert_speed",
+      "TYPE": "float",
+      "DEFAULT": 0.05,
+      "MIN": 0,
+      "MAX": 0.5,
+      "LABEL": "Invert Speed",
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "phase_iter",
+      "TYPE": "float",
+      "DEFAULT": 2,
+      "MIN": 1,
+      "MAX": 16,
+      "LABEL": "Phase Iterations",
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "gradient_pow",
+      "TYPE": "float",
+      "DEFAULT": 0.2,
+      "MIN": 0,
+      "MAX": 1,
+      "LABEL": "Gradient Power",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audio_influence",
+      "TYPE": "float",
+      "DEFAULT": 0.2,
+      "MIN": 0,
+      "MAX": 1,
+      "LABEL": "Audio Influence",
+      "GROUP": "Audio Reactivity"
+    }
+  ]
 }*/
 
 const float PI = 3.14159265358979;
@@ -339,9 +424,12 @@ float adjust_balance(float value, float b) {
 
 float stripe_mask_for(float stripe_index, float secondary_in, float secondary_orig) {
     float phase_offset = stripe_index * (1.0 / (num_columns * max(offset, 0.001)));
-    // Smooth audio influence — scaled down and gently mixed
-    float audioMod = 1.0 + audioBass * audio_influence * 0.5;
-    float phase = fract(TIME * speed * audioMod + phase_offset);
+    // R3 chop fix: multiplying TIME by an audio value made the stripe phase
+    // jump by TIME*speed*0.1*Δbass — grows unbounded with TIME, and on EDM
+    // it was the single biggest frame-step source (p95 0.109). The bounded
+    // additive band-follow on animated_coord below already carries the
+    // correlated response; keep the clock constant.
+    float phase = fract(TIME * speed + phase_offset);
     float lfo = fun(phase, easing_type) * phase_iter - (phase_iter / 2.0);
 
     bool is_even_stripe = mod(stripe_index, 2.0) < 1.0;
@@ -352,7 +440,13 @@ float stripe_mask_for(float stripe_index, float secondary_in, float secondary_or
     // Slow, smooth invert oscillation
     gradient = mix(gradient, 1.0 - gradient, 0.5 + sin(TIME * invert_speed) * 0.5);
 
-    float animated_coord = fract(lfo + gradient);
+    // Continuous band-follow (ambient fix r2): LINEAR bass/mid shift the
+    // stripe phase itself — geometry breathing that reads even where the
+    // HDR bar brightness clips at white or sits at black. Bands are
+    // pre-smoothed; silence = exact authored pattern.
+    float animated_coord = fract(lfo + gradient
+        + 0.10 * clamp(audioBass, 0.0, 1.0)
+        + 0.06 * clamp(audioMid,  0.0, 1.0));
     float col = 0.5 + 0.5 * sin(animated_coord * 6.28318530718);
     col = adjust_balance(col, balance);
     return 1.0 - col;
@@ -395,6 +489,15 @@ void main() {
     hdrGain = min(hdrGain, 2.5);
     float mask_hdr = mask * hdrGain;
 
+    // Continuous smooth band-following (ambient fix r2): LINEAR bands at
+    // full calibrated depth, NOT scaled by audio_influence (default 0.2
+    // diluted the round-1 depth to ~0.19 effective and the knee crushed
+    // ambient swells). The clipping-proof follower is the stripe-phase
+    // shift above; this brightness term covers the midtone pixels.
+    float _fb = clamp(audioBass, 0.0, 1.0);
+    float _fm = clamp(audioMid,  0.0, 1.0);
+    mask_hdr *= 1.0 + 0.20 * _fb + 0.12 * _fm;
+
     // IMG_SIZE() on this engine reports the canvas resolution, not whether an
     // image is actually connected — it's always > 0, so it can't gate the
     // texture branch (that made the bars vanish behind an empty sampler
@@ -402,11 +505,28 @@ void main() {
     // blend in the texture only when the user explicitly dials texMix up,
     // matching this library's house convention for optional image inputs.
     vec3 base = mix(vec3(mask_hdr), vec3(1.0, 0.2, 0.8) * mask_hdr, _f * 0.5);
+    vec3 outCol = base;
     if (texMix > 0.001) {
         vec4 tex = IMG_NORM_PIXEL(inputTex, uv);
         vec3 texd = tex.rgb * mask_hdr;
-        gl_FragColor = vec4(mix(base, texd, texMix), 1.0);
-    } else {
-        gl_FragColor = vec4(base, 1.0);
+        outCol = mix(base, texd, texMix);
     }
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = outCol;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    // Full-field bars: tint the darkest end (gaps between bars) toward bg.
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+    outCol = uc;
+
+    gl_FragColor = vec4(outCol, 1.0);
 }

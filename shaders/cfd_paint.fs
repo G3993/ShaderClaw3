@@ -1,31 +1,232 @@
 /*{
   "DESCRIPTION": "Computational Fluid Dynamics — multi-buffer rotational self-advection with mouse/touch painting",
-  "CATEGORIES": ["Generator", "Simulation"],
+  "CATEGORIES": [
+    "Generator",
+    "Simulation"
+  ],
   "INPUTS": [
-    { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "fluidSpeed", "LABEL": "Fluid Speed", "TYPE": "float", "DEFAULT": 1.5, "MIN": 0.1, "MAX": 8.0 },
-    { "NAME": "viscosity", "LABEL": "Viscosity", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "brushSize", "LABEL": "Brush Size", "TYPE": "float", "DEFAULT": 0.06, "MIN": 0.01, "MAX": 0.2 },
-    { "NAME": "brushForce", "LABEL": "Brush Force", "TYPE": "float", "DEFAULT": 3.0, "MIN": 0.5, "MAX": 10.0 },
-    { "NAME": "specAmount", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 2.5, "MIN": 0.0, "MAX": 8.0 },
-    { "NAME": "specPow", "LABEL": "Spec Sharpness", "TYPE": "float", "DEFAULT": 36.0, "MIN": 4.0, "MAX": 128.0 },
-    { "NAME": "fluidHeight", "LABEL": "Surface Height", "TYPE": "float", "DEFAULT": 150.0, "MIN": 1.0, "MAX": 500.0 },
-    { "NAME": "diffMin", "LABEL": "Shadow", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "colorSat", "LABEL": "Saturation", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "colorCycle", "LABEL": "Color Cycle", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "colorFloor", "LABEL": "Color Floor", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 0.5 },
-    { "NAME": "movePattern", "LABEL": "Move Pattern", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Freeform", "Center", "Wave", "Vortex", "Pulse"] },
-    { "NAME": "moveSpeed", "LABEL": "Move Speed", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.1, "MAX": 2.0 },
-    { "NAME": "moveSpread", "LABEL": "Move Spread", "TYPE": "float", "DEFAULT": 0.7, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "moveIntensity", "LABEL": "Move Intensity", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "sourceBlend", "LABEL": "Source Blend", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "blendMode", "LABEL": "Blend Mode", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Warp", "Dissolve", "Luma Map", "Edge Reveal", "Chromatic"] },
-    { "NAME": "texScale", "LABEL": "Tex Scale", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 5.0 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    {
+      "NAME": "inputTex",
+      "LABEL": "Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "brushForce",
+      "LABEL": "Brush Force",
+      "TYPE": "float",
+      "DEFAULT": 3,
+      "MIN": 0.5,
+      "MAX": 10
+    },
+    {
+      "NAME": "specAmount",
+      "LABEL": "Specular",
+      "TYPE": "float",
+      "DEFAULT": 2.5,
+      "MIN": 0,
+      "MAX": 8
+    },
+    {
+      "NAME": "specPow",
+      "LABEL": "Spec Sharpness",
+      "TYPE": "float",
+      "DEFAULT": 36,
+      "MIN": 4,
+      "MAX": 128
+    },
+    {
+      "NAME": "diffMin",
+      "LABEL": "Shadow",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "sourceBlend",
+      "LABEL": "Source Blend",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "blendMode",
+      "LABEL": "Blend Mode",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "LABELS": [
+        "Warp",
+        "Dissolve",
+        "Luma Map",
+        "Edge Reveal",
+        "Chromatic"
+      ]
+    },
+    {
+      "NAME": "texScale",
+      "LABEL": "Tex Scale",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.1,
+      "MAX": 5
+    },
+    {
+      "NAME": "brushSize",
+      "LABEL": "Brush Size",
+      "TYPE": "float",
+      "DEFAULT": 0.06,
+      "MIN": 0.01,
+      "MAX": 0.2,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "fluidHeight",
+      "LABEL": "Surface Height",
+      "TYPE": "float",
+      "DEFAULT": 150,
+      "MIN": 1,
+      "MAX": 500,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "fluidSpeed",
+      "LABEL": "Fluid Speed",
+      "TYPE": "float",
+      "DEFAULT": 1.5,
+      "MIN": 0.1,
+      "MAX": 8,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "viscosity",
+      "LABEL": "Viscosity",
+      "TYPE": "float",
+      "DEFAULT": 0.3,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "movePattern",
+      "LABEL": "Move Pattern",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "LABELS": [
+        "Freeform",
+        "Center",
+        "Wave",
+        "Vortex",
+        "Pulse"
+      ],
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "moveSpeed",
+      "LABEL": "Move Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0.1,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "moveSpread",
+      "LABEL": "Move Spread",
+      "TYPE": "float",
+      "DEFAULT": 0.7,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "moveIntensity",
+      "LABEL": "Move Intensity",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "colorSat",
+      "LABEL": "Saturation",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorCycle",
+      "LABEL": "Color Cycle",
+      "TYPE": "float",
+      "DEFAULT": 0.15,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorFloor",
+      "LABEL": "Color Floor",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 0.5,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    }
   ],
   "PASSES": [
-    { "TARGET": "velBuf", "PERSISTENT": true },
-    { "TARGET": "dyeBuf", "PERSISTENT": true },
+    {
+      "TARGET": "velBuf",
+      "PERSISTENT": true
+    },
+    {
+      "TARGET": "dyeBuf",
+      "PERSISTENT": true
+    },
     {}
   ]
 }*/
@@ -75,6 +276,22 @@ void main() {
     vec2 uv = isf_FragNormCoord;
     float aspect = Res.x / Res.y;
     vec2 invRes = 1.0 / Res; // precompute — avoid per-sample division
+
+    // Soft-knee audio conditioning (playbook) — shared by all passes.
+    // Audio injects force into the sim: energy floors it, bass kicks it,
+    // punch adds a decaying accent. The fluid's own dynamics do the rest.
+    float bassP = pow(smoothstep(0.05, 0.85, audioBass), 1.6);
+    float midP  = smoothstep(0.08, 0.85, audioMid);
+    float highP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+    float drive = 0.25 + 0.75 * smoothstep(0.05, 0.9, audioEnergy);
+    float audioGain = 0.9 + 0.4 * (drive - 0.25) + 0.3 * bassP + 0.25 * audioPunch;
+    // Fast direct-path envelopes: the fluid integrates injected force, so a
+    // force-only response lags and diffuses — it correlates with slow swells
+    // (ambient) but not with beats (edm/rock/jazz were deaf). These drive
+    // instantaneous, screen-visible params below. Low knee so jazz's soft
+    // 0.4-amp kicks read; headroom top so edm keeps breathing.
+    float bassF  = pow(smoothstep(0.03, 0.70, audioBass), 1.3);
+    float punchP = pow(clamp(audioPunch, 0.0, 1.0), 1.5);
 
     // ===== PASS 0: Velocity field =====
     if (PASSINDEX == 0) {
@@ -150,8 +367,8 @@ void main() {
         // ---- Movement patterns ----
         float t = TIME * moveSpeed;
         float spread = mix(0.05, 0.42, moveSpread);
-        float intensity = moveIntensity * 0.2;
-        float splatR = brushSize * 2.5;
+        float intensity = moveIntensity * 0.2 * audioGain;      // audio drives injection force
+        float splatR = brushSize * 2.5 * (1.0 + 0.15 * midP);   // mids widen the splats
         float splatR2 = splatR * splatR;
         float cutoff2 = splatR2 * 12.0;
 
@@ -283,7 +500,10 @@ void main() {
     // ===== PASS 1: Dye/color field =====
     if (PASSINDEX == 1) {
         vec2 vel = (texture2D(velBuf, uv).xy - 0.5) * 2.0;
-        vec2 advUV = fract(uv - vel * fluidSpeed * 0.01);
+        // Bass surges the dye advection speed — existing motion accelerates
+        // on the hit, so per-frame visual change tracks the envelope
+        // directly (fast path; the force injection is the slow path).
+        vec2 advUV = fract(uv - vel * fluidSpeed * 0.01 * (1.0 + 0.8 * bassF));
         vec4 dye = texture2D(dyeBuf, advUV);
 
         // Dissipation
@@ -331,7 +551,7 @@ void main() {
         // Movement color injection — 2 splats
         float t = TIME * moveSpeed;
         float spread = mix(0.05, 0.42, moveSpread);
-        float splatR = brushSize * 2.5;
+        float splatR = brushSize * 2.5 * (1.0 + 0.15 * midP);   // match velocity-pass splat width
         float cutoff2 = splatR * splatR * 12.0;
 
         for (int s = 0; s < 2; s++) {
@@ -370,7 +590,7 @@ void main() {
             mDiff.x *= aspect;
             float dist2 = dot(mDiff, mDiff);
             if (dist2 < cutoff2) {
-                float falloff = exp(-dist2 / (splatR * splatR)) * 0.15 * moveIntensity;
+                float falloff = exp(-dist2 / (splatR * splatR)) * 0.15 * moveIntensity * audioGain; // dye keeps pace with force
                 vec3 splatCol = hasInput
                     ? sampleTex(splatPos, aspect).rgb
                     : hsv2rgb(vec3(fract(t * 0.08 + fs * 0.2), 0.85, 1.0));
@@ -413,9 +633,12 @@ void main() {
     // Diffuse + specular
     vec3 lightDir = normalize(vec3(1.0, 1.0, 2.0));
     float diff = clamp(dot(n, lightDir), diffMin, 1.0);
-    float spec = pow(clamp(dot(reflect(-lightDir, n), vec3(0.0, 0.0, 1.0)), 0.0, 1.0), specPow) * specAmount;
+    float spec = pow(clamp(dot(reflect(-lightDir, n), vec3(0.0, 0.0, 1.0)), 0.0, 1.0), specPow) * specAmount * (1.0 + 0.35 * highP + 0.6 * punchP); // highs glint the surface, transients flash it
 
     vec3 fluid = col.rgb * diff + vec3(spec);
+    // Continuous luminance follow (fast path): paint brightens with bass
+    // and mids — smooth envelopes, moderate depth, no-op in silence.
+    fluid *= 1.0 + 0.28 * bassF + 0.14 * midP;
 
     // ---- Source blending ----
     if (sourceBlend > 0.001 && IMG_SIZE_inputTex.x > 0.0) {
@@ -480,6 +703,22 @@ void main() {
     float alpha = 1.0;
     if (transparentBg) {
         alpha = smoothstep(0.02, 0.15, dot(fluid, vec3(0.299, 0.587, 0.114)));
+    }
+
+    // ---- universal color block (defaults = no-op; saturation via native colorSat) ----
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        fluid = clamp(hM * fluid, 0.0, 1.0);
+    }
+    // Background: the empty (dark) canvas between paint takes the chosen color.
+    if (bgColor.a > 0.0005) {
+        float bgMask = 1.0 - smoothstep(0.0, 0.35, dot(fluid, vec3(0.299, 0.587, 0.114)));
+        fluid = mix(fluid, bgColor.rgb, bgColor.a * bgMask);
+        alpha = max(alpha, bgColor.a * bgMask);
     }
 
     gl_FragColor = vec4(fluid, alpha);

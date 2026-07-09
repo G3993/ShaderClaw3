@@ -1,20 +1,161 @@
 /*{
-  "CATEGORIES": ["Generator", "Text"],
+  "CATEGORIES": [
+    "Generator",
+    "Text"
+  ],
   "DESCRIPTION": "Digifade — glitch dissolve with psychedelic plasma background. Rainbow sinusoidal plasma field pulses in full saturation. White text at HDR 2.5+ cuts through. LINEAR HDR out.",
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
-    { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1], "LABELS": ["Digifade","Digifade Glitch"], "DEFAULT": 0 },
-    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
-    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
-    { "NAME": "intensity", "LABEL": "Glitch", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "density", "LABEL": "Dissolve", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true },
-    { "NAME": "hdrGlow", "LABEL": "HDR Glow", "TYPE": "float", "MIN": 1.0, "MAX": 4.0, "DEFAULT": 2.5 }
+    {
+      "NAME": "preset",
+      "LABEL": "Style",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1
+      ],
+      "LABELS": [
+        "Digifade",
+        "Digifade Glitch"
+      ],
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Speed",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 3,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "intensity",
+      "LABEL": "Glitch",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "density",
+      "LABEL": "Dissolve",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "textColor",
+      "LABEL": "Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": " ETHEREA",
+      "MAX_LENGTH": 48,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "fontFamily",
+      "LABEL": "Font",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Inter",
+        "Times New Roman",
+        "Libre Caslon",
+        "Outfit"
+      ],
+      "DEFAULT": 0,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "textScale",
+      "LABEL": "Size",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "hdrGlow",
+      "LABEL": "HDR Glow",
+      "TYPE": "float",
+      "MIN": 1,
+      "MAX": 4,
+      "DEFAULT": 2.5
+    }
   ]
 }*/
+
+// ---- universal color block (defaults = no-op) ----
+vec3 ucApply(vec3 uc) {
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                      // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    return uc;
+}
+
 
 const float PI = 3.14159265;
 const float TWO_PI = 6.28318530;
@@ -125,12 +266,17 @@ vec4 effectDigifade(vec2 uv, int sub, vec3 bgOverride) {
 
     // Soft-knee audio conditioning (playbook standard snippet). Idle floor
     // keeps the sweep alive in silence; energy leans the clock into the beat.
-    float bassP = pow(clamp(smoothstep(0.05, 0.85, audioBass), 0.0, 1.0), 1.6);
+    float bassP = pow(clamp(smoothstep(0.03, 0.85, audioBass), 0.0, 1.0), 1.4);
+    // Sub coupling: hiphop's sparse kicks live in the sub band — fold it in
+    // so those hits register even when the bass band alone stays quiet.
+    float subP  = pow(clamp(smoothstep(0.03, 0.80, audioSub), 0.0, 1.0), 1.3);
+    bassP = max(bassP, subP);
+    float midP  = clamp(smoothstep(0.06, 0.90, audioMid), 0.0, 1.0);
     float highP = pow(clamp(smoothstep(0.10, 0.90, audioHigh), 0.0, 1.0), 1.2);
     float drive = 0.25 + 0.75 * clamp(smoothstep(0.05, 0.9, audioEnergy), 0.0, 1.0);
     float musicTime = TIME * (0.5 + 1.2 * drive * 0.55);
-    maxDisp *= 1.0 + bassP * 0.2; // bass gives the glitch sweep a touch more structural weight
-    glitchAmount *= 0.7 + 0.6 * drive; // energy drives the dissolve's structural intensity
+    maxDisp *= 1.0 + bassP * 0.45 + midP * 0.15; // bass/mids deepen the glitch sweep
+    glitchAmount *= 0.7 + 0.6 * drive + 0.25 * midP; // energy+mids drive the dissolve intensity
 
     float t = musicTime * speed * sweepSpeed;
     vec2 p = vec2((uv.x - 0.5) * aspect + 0.5, uv.y);
@@ -148,6 +294,13 @@ vec4 effectDigifade(vec2 uv, int sub, vec3 bgOverride) {
     cH *= fitScale;
     cW *= fitScale;
     gW *= fitScale;
+
+    // Size breathing: the word swells with bass, a touch with mids —
+    // a continuous, unclippable response (text brightness is already HDR).
+    float sizePulse = 1.0 + 0.10 * bassP + 0.05 * midP;
+    cH *= sizePulse;
+    cW *= sizePulse;
+    gW *= sizePulse;
 
     float rowW = float(numChars) * cW + float(numChars - 1) * gW;
     float startX = 0.5 - rowW * 0.5;
@@ -189,7 +342,9 @@ vec4 effectDigifade(vec2 uv, int sub, vec3 bgOverride) {
     float dustB = hash(floor(p.x * 150.0) - floor(p.y * 100.0) * 37.0 - floor(t * 0.4) * 401.0);
     float dust = dustA * 0.5 + dustB * 0.5;
     float sparkle = step(0.94, dust + highP * 0.1) * highP;
-    float dustFill = dust * 0.18 + sparkle * 0.6;
+    // Dust density follows mids + bass continuously (whole negative space
+    // breathes with beat-less material too). Silence ≈ the old 0.18 look.
+    float dustFill = dust * (0.15 + 0.14 * midP + 0.10 * bassP) + sparkle * 0.6;
     vec3 dustTint = vec3(0.25, 0.55, 0.8); // cool cyan dust — matches the glitch/chromatic identity
 
     // Contour rim around glyph edges (edges axis) — reuses the already
@@ -202,7 +357,7 @@ vec4 effectDigifade(vec2 uv, int sub, vec3 bgOverride) {
 
     vec3 tCol = textColor.rgb * hdrGlow * (1.0 + kick * 0.3);
     vec3 bgDetailed = bgOverride + dustTint * dustFill;
-    vec3 fc = mix(bgDetailed, tCol, textHit) + rimCol * rim * (0.25 + 0.35 * glitchAmount);
+    vec3 fc = mix(bgDetailed, tCol, textHit) + rimCol * rim * (0.25 + 0.35 * glitchAmount + 0.30 * midP);
     float a = 1.0;
     if (transparentBg) { a = max(textHit, dustFill * 0.35 + rim * 0.4); }
     return vec4(fc, a);
@@ -246,5 +401,5 @@ void main() {
         col = mix(col, glitched, smoothstep(0.0, 0.3, g));
     }
 
-    gl_FragColor = col;
+    gl_FragColor = vec4(ucApply(col.rgb), col.a);
 }

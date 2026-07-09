@@ -1,17 +1,134 @@
 /*{
-  "CATEGORIES": ["Generator", "Text"],
+  "CATEGORIES": [
+    "Generator",
+    "Text"
+  ],
   "DESCRIPTION": "Rows of text at varying depth scales creating a perspective tunnel effect",
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "ETHEREA", "MAX_LENGTH": 12 },
-    { "NAME": "preset", "TYPE": "long", "VALUES": [0,1,2,3,4,5,6], "LABELS": ["Post Space","Bridge","Beach","Moon","X","Whitney","Recede"], "DEFAULT": 0 },
-    { "NAME": "speed", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 0.3 },
-    { "NAME": "rowCount", "TYPE": "float", "MIN": 3.0, "MAX": 20.0, "DEFAULT": 7.0 },
-    { "NAME": "textColor", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "textScale", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "transparentBg", "TYPE": "bool", "DEFAULT": true }
+    {
+      "NAME": "preset",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "LABELS": [
+        "Post Space",
+        "Bridge",
+        "Beach",
+        "Moon",
+        "X",
+        "Whitney",
+        "Recede"
+      ],
+      "DEFAULT": 0,
+      "LABEL": "Preset"
+    },
+    {
+      "NAME": "rowCount",
+      "TYPE": "float",
+      "MIN": 3,
+      "MAX": 20,
+      "DEFAULT": 7,
+      "GROUP": "Shape / Geometry",
+      "LABEL": "Row Count"
+    },
+    {
+      "NAME": "speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 0.3,
+      "GROUP": "Motion / Animation",
+      "LABEL": "Speed"
+    },
+    {
+      "NAME": "textColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color",
+      "LABEL": "Text Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": "ETHEREA",
+      "MAX_LENGTH": 12,
+      "GROUP": "Text",
+      "LABEL": "Message"
+    },
+    {
+      "NAME": "textScale",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Text",
+      "LABEL": "Text Scale"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background"
+    }
   ]
 }*/
+
+// ---- universal color block (defaults = no-op) ----
+vec3 ucApply(vec3 uc) {
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                      // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    return uc;
+}
+
 
 // ── Font engine ──────────────────────────────────────────────────────
 // Atlas-based (replaces legacy hardcoded 5x7 packed-bit charData() bitmap
@@ -255,5 +372,5 @@ void main() {
         finalCol = fg * textHit + dustCol * sparkle;
     }
 
-    gl_FragColor = vec4(finalCol, alpha);
+    gl_FragColor = vec4(ucApply(finalCol), alpha);
 }

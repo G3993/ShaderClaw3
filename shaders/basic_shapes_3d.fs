@@ -1,30 +1,292 @@
 /*{
-  "CATEGORIES": ["3D", "Generator", "Audio Reactive"],
+  "CATEGORIES": [
+    "3D",
+    "Generator",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "Fluid abstract 3D elements floating in space — SDF primitives (sphere, cube, capsule, torus, torus knot, glass disc) auto-morphing with refraction, studio three-point lighting, wave/nebula background, chromatic aberration, DoF, and full audio reactivity.",
   "INPUTS": [
-    { "NAME": "camDist",       "LABEL": "Camera Distance",  "TYPE": "float", "MIN": 1.5,  "MAX": 12.0,   "DEFAULT": 5.5 },
-    { "NAME": "camHeight",     "LABEL": "Camera Height",    "TYPE": "float", "MIN": -3.0, "MAX": 4.0,    "DEFAULT": 1.0 },
-    { "NAME": "camOrbitSpeed", "LABEL": "Orbit Speed",      "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,    "DEFAULT": 0.14 },
-    { "NAME": "camAzimuth",    "LABEL": "Camera Azimuth",   "TYPE": "float", "MIN": 0.0,  "MAX": 6.2832, "DEFAULT": 0.0 },
-    { "NAME": "keyAngle",      "LABEL": "Key Light Angle",  "TYPE": "float", "MIN": 0.0,  "MAX": 6.2832, "DEFAULT": 0.785 },
-    { "NAME": "keyElevation",  "LABEL": "Key Elevation",    "TYPE": "float", "MIN": 0.0,  "MAX": 1.5708, "DEFAULT": 0.7 },
-    { "NAME": "keyColor",      "LABEL": "Key Light",        "TYPE": "color", "DEFAULT": [1.0, 0.94, 0.82, 1.0] },
-    { "NAME": "fillColor",     "LABEL": "Fill Light",       "TYPE": "color", "DEFAULT": [0.55, 0.70, 1.0, 1.0] },
-    { "NAME": "ambient",       "LABEL": "Ambient",          "TYPE": "float", "MIN": 0.0,  "MAX": 0.5,    "DEFAULT": 0.09 },
-    { "NAME": "rimStrength",   "LABEL": "Rim Strength",     "TYPE": "float", "MIN": 0.0,  "MAX": 1.5,    "DEFAULT": 0.6 },
-    { "NAME": "exposure",      "LABEL": "Exposure",         "TYPE": "float", "MIN": 0.3,  "MAX": 3.0,    "DEFAULT": 1.0 },
-    { "NAME": "uC1",           "LABEL": "Color 1",          "TYPE": "color", "DEFAULT": [1.0, 0.82, 0.55, 1.0] },
-    { "NAME": "uC2",           "LABEL": "Color 2",          "TYPE": "color", "DEFAULT": [0.4, 0.7,  1.0,  1.0] },
-    { "NAME": "uC3",           "LABEL": "Color 3",          "TYPE": "color", "DEFAULT": [1.0, 0.25, 0.45, 1.0] },
-    { "NAME": "uColMode",      "LABEL": "Color Mode",       "TYPE": "long",  "VALUES": [0,1], "LABELS": ["Lit","Custom Palette"], "DEFAULT": 0 },
-    { "NAME": "uShape",        "LABEL": "Shape",            "TYPE": "long",  "VALUES": [0,1,2,3,4,5,6,7], "LABELS": ["Auto Morph","Cube","Prism","Torus","Torus Knot","Sphere","Octahedron","Heart"], "DEFAULT": 0 },
-    { "NAME": "uMorphSpeed",   "LABEL": "Morph Speed",      "TYPE": "float", "MIN": 0.0,  "MAX": 4.0,    "DEFAULT": 0.7 },
-    { "NAME": "uTorThick",     "LABEL": "Toroid Thickness", "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,    "DEFAULT": 0.25 },
-    { "NAME": "floatAmp",      "LABEL": "Float Amplitude",  "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,    "DEFAULT": 0.38 },
-    { "NAME": "bgStyle",       "LABEL": "Background",       "TYPE": "long",  "VALUES": [0,1,2,3], "LABELS": ["Void","Nebula Wave","Tillmans White","Judd Cobalt"], "DEFAULT": 1 },
-    { "NAME": "dofStrength",   "LABEL": "Depth of Field",   "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,    "DEFAULT": 0.0 },
-    { "NAME": "chromaticAb",   "LABEL": "Chromatic Ab.",    "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,    "DEFAULT": 0.18 },
-    { "NAME": "audioReact",    "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,    "DEFAULT": 1.0 }
+    {
+      "NAME": "keyAngle",
+      "LABEL": "Key Light Angle",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 6.2832,
+      "DEFAULT": 0.785
+    },
+    {
+      "NAME": "keyElevation",
+      "LABEL": "Key Elevation",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5708,
+      "DEFAULT": 0.7
+    },
+    {
+      "NAME": "ambient",
+      "LABEL": "Ambient",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.5,
+      "DEFAULT": 0.09
+    },
+    {
+      "NAME": "rimStrength",
+      "LABEL": "Rim Strength",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.6
+    },
+    {
+      "NAME": "exposure",
+      "LABEL": "Exposure",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 3,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "uShape",
+      "LABEL": "Shape",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "LABELS": [
+        "Auto Morph",
+        "Cube",
+        "Prism",
+        "Torus",
+        "Torus Knot",
+        "Sphere",
+        "Octahedron",
+        "Heart"
+      ],
+      "DEFAULT": 0,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "uTorThick",
+      "LABEL": "Toroid Thickness",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.25,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "uMorphSpeed",
+      "LABEL": "Morph Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 4,
+      "DEFAULT": 0.7,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "floatAmp",
+      "LABEL": "Float Amplitude",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.38,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "keyColor",
+      "LABEL": "Key Light",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.94,
+        0.82,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "fillColor",
+      "LABEL": "Fill Light",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.55,
+        0.7,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "uC1",
+      "LABEL": "Color 1",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.82,
+        0.55,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "uC2",
+      "LABEL": "Color 2",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.4,
+        0.7,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "uC3",
+      "LABEL": "Color 3",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.25,
+        0.45,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "uColMode",
+      "LABEL": "Color Mode",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1
+      ],
+      "LABELS": [
+        "Lit",
+        "Custom Palette"
+      ],
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "chromaticAb",
+      "LABEL": "Chromatic Ab.",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.18,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "camDist",
+      "LABEL": "Camera Distance",
+      "TYPE": "float",
+      "MIN": 1.5,
+      "MAX": 12,
+      "DEFAULT": 5.5,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "camHeight",
+      "LABEL": "Camera Height",
+      "TYPE": "float",
+      "MIN": -3,
+      "MAX": 4,
+      "DEFAULT": 1,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "camOrbitSpeed",
+      "LABEL": "Orbit Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.14,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "camAzimuth",
+      "LABEL": "Camera Azimuth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 6.2832,
+      "DEFAULT": 0,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "dofStrength",
+      "LABEL": "Depth of Field",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgStyle",
+      "LABEL": "Background",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Void",
+        "Nebula Wave",
+        "Tillmans White",
+        "Judd Cobalt"
+      ],
+      "DEFAULT": 1,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -168,10 +430,13 @@ vec3 bgCobalt(vec3 rd){
 
 vec3 envColor(vec3 rd){
     int bs=int(bgStyle);
-    if(bs==0) return bgVoid(rd);
-    if(bs==1) return bgNebula(rd);
-    if(bs==2) return bgWhite(rd);
-    return bgCobalt(rd);
+    vec3 env;
+    if(bs==0)      env=bgVoid(rd);
+    else if(bs==1) env=bgNebula(rd);
+    else if(bs==2) env=bgWhite(rd);
+    else           env=bgCobalt(rd);
+    // User background: blend the environment/backdrop toward the chosen color.
+    return mix(env, bgColor.rgb, bgColor.a);
 }
 
 // ── Scene map ───────────────────────────────────────────────────────────
@@ -207,7 +472,7 @@ Hit map(vec3 p){
         float s=breathe(4,bass);
         vec3 lp=p-floatPos(vec3(0.0,0.2,0.0),4);
         // spin with audio
-        float spinT=TIME*0.18+bass*0.4;
+        float spinT=TIME*0.18+bass*0.3;
         lp.xy=rot2(spinT*1.1)*lp.xy;
         lp.yz=rot2(spinT*0.87)*lp.yz;
         lp.xz=rot2(spinT*0.63)*lp.xz;
@@ -227,7 +492,7 @@ Hit map(vec3 p){
     {
         float s=breathe(1,bass);
         vec3 lp=p-floatPos(vec3(2.0,0.5,-0.8),1);
-        lp.xz=rot2(TIME*0.22+high*0.5)*lp.xz;
+        lp.xz=rot2(TIME*0.22+high*0.3)*lp.xz;
         float d=sdRoundBox(lp,vec3(0.42*s),0.018);
         if(d<best.d){best.d=d;best.mat=MAT_CHROME;}
     }
@@ -471,8 +736,14 @@ void main(){
     float mid2=clamp(audioMid,0.0,1.0)*audioReact;
     float bass=clamp(audioBass,0.0,1.0)*audioReact;
 
-    float orb=camAzimuth+TIME*camOrbitSpeed*(1.0+0.5*mid2);
-    vec3 ro=vec3(cos(orb)*camDist,camHeight,sin(orb)*camDist);
+    // Constant orbit rate + bounded phase offset — rate×audio scaled the
+    // azimuth jump by elapsed TIME, so the camera teleported on mid swings.
+    float orb=camAzimuth+TIME*camOrbitSpeed+0.3*mid2;
+    // Camera-dolly breathing — smooth bounded zoom moves every edge in the
+    // frame, restoring the continuous correlation the old rate-coupled
+    // orbit provided (color gain alone was swamped by baseline motion).
+    float cd=camDist*(1.0-0.10*bass-0.20*mid2);
+    vec3 ro=vec3(cos(orb)*cd,camHeight,sin(orb)*cd);
     vec3 ta=vec3(0.0,0.2,0.0);
     vec3 fwd=normalize(ta-ro);
     vec3 rgt=normalize(cross(fwd,vec3(0.0,1.0,0.0)));
@@ -513,16 +784,18 @@ void main(){
         col=uC1.rgb*col.r+uC2.rgb*col.g+uC3.rgb*col.b;
     }
 
-    // Audio lift on object pixels — silhouette detection via scene depth
+    // Audio lift on object pixels — silhouette detection via scene depth.
+    // (Was two stacked ~3x bass gains ⇒ up to ~17x per-frame swings = chop
+    // and hard clipping; replaced with bounded lifts of matching feel.)
     float hitMask=sG.a<MAX_DIST*0.95?1.0:0.0;
-    float audioLift=1.0+bass*2.6;
+    float audioLift=1.0+bass*0.6;
     col*=mix(1.0,audioLift,hitMask);
 
-    // Whole-frame audio pulse (background included) — bass/high are 0 in
-    // silence so this is a no-op sound-off; gives the scene a musical
-    // breathing lift on top of the object-only boost above.
-    float high2=clamp(audioHigh,0.0,1.0)*audioReact;
-    col*=(1.0+bass*2.6+high2*1.1);
+    // Calibrated whole-frame follower (linear bands) + decaying beat accent.
+    // All terms are exactly 1.0 in silence.
+    col*=1.0+0.25*clamp(audioBass,0.0,1.0)+0.15*clamp(audioMid,0.0,1.0);
+    float kick=pow(max(audioBeatPulse,0.8*audioPunch),1.3);
+    col*=1.0+0.08*kick;
 
     // Inversion flash every ~29s (from color_cube)
     {
@@ -540,6 +813,20 @@ void main(){
     col+=(gr-0.5)*0.009;
     col*=0.96+0.04*sin(TIME*0.31);
     col*=exposure;
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = col;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    col = uc;
 
     gl_FragColor=vec4(col,1.0);
 }

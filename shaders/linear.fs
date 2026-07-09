@@ -1,20 +1,117 @@
 /*{
   "DESCRIPTION": "Linear — a barebones boids flocking sim. Buffer A tracks 280 boids (position + velocity) in the first texel row, steering each toward the average heading and position of neighbors within sight while separating from those too close. Buffer B renders the boids as glowing dots with a ghosting trail; the image pass tone-maps it. Ported to Easel ISF: the Shadertoy 'common' tab folded inline, iChannels mapped to named persistent buffers, mouse/keyboard dropped, iDate seed replaced by TIME.",
   "CREDIT": "Cole Peterson — ISF port for Easel.",
-  "CATEGORIES": ["Generator", "Simulation", "Particles"],
+  "CATEGORIES": [
+    "Generator",
+    "Simulation",
+    "Particles"
+  ],
   "INPUTS": [
-    { "NAME": "speed",    "LABEL": "Speed",      "TYPE": "float", "MIN": 0.5, "MAX": 6.0,  "DEFAULT": 2.2 },
-    { "NAME": "dt",       "LABEL": "Sim Speed",  "TYPE": "float", "MIN": 0.1, "MAX": 2.0,  "DEFAULT": 0.7 },
-    { "NAME": "sight",    "LABEL": "Sight Radius","TYPE": "float", "MIN": 10.0, "MAX": 120.0, "DEFAULT": 33.0 },
-    { "NAME": "trail",    "LABEL": "Trail",      "TYPE": "float", "MIN": 0.0, "MAX": 0.995, "DEFAULT": 0.97 },
-    { "NAME": "exposure", "LABEL": "Exposure",   "TYPE": "float", "MIN": 0.3, "MAX": 2.5,  "DEFAULT": 1.0 },
-    { "NAME": "audioReact","LABEL": "Audio React","TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.35 },
-    { "NAME": "inputTex", "TYPE": "image", "LABEL": "Texture" },
-    { "NAME": "texMix",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "LABEL": "Texture Mix" }
+    {
+      "NAME": "trail",
+      "LABEL": "Trail",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.995,
+      "DEFAULT": 0.97
+    },
+    {
+      "NAME": "exposure",
+      "LABEL": "Exposure",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2.5,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "inputTex",
+      "LABEL": "Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "texMix",
+      "LABEL": "Texture Mix",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "sight",
+      "LABEL": "Sight Radius",
+      "TYPE": "float",
+      "MIN": 10,
+      "MAX": 120,
+      "DEFAULT": 33,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Speed",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 6,
+      "DEFAULT": 2.2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "dt",
+      "LABEL": "Sim Speed",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 2,
+      "DEFAULT": 0.7,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.35,
+      "GROUP": "Audio Reactivity"
+    }
   ],
   "PASSES": [
-    { "TARGET": "bufA", "PERSISTENT": true },
-    { "TARGET": "bufB", "PERSISTENT": true },
+    {
+      "TARGET": "bufA",
+      "PERSISTENT": true
+    },
+    {
+      "TARGET": "bufB",
+      "PERSISTENT": true
+    },
     {}
   ]
 }*/
@@ -137,7 +234,10 @@ void main() {
     float aBeat = audioReact * aBeatP();
     vec2 fuv = gl_FragCoord.xy / R;
     float vign = 1.0 - length(fuv - 0.5) * 0.9;
-    vec3 wash = vec3(0.32, 0.48, 0.75) * (0.6 * aB + 1.3 * aBeat) * clamp(vign, 0.0, 1.0);
+    // Beat flare depth capped: 1.3 lit the whole dark field in a single
+    // frame (choppy); 0.5 still reads, and beatPulse gives the 300-600ms
+    // glide back down.
+    vec3 wash = vec3(0.32, 0.48, 0.75) * (0.6 * aB + 0.5 * aBeat) * clamp(vign, 0.0, 1.0);
     f.rgb += wash * (1.0 - clamp(bB.w, 0.0, 1.0));
 
     if (texMix > 0.001) {
@@ -150,5 +250,18 @@ void main() {
         f.rgb = mix(f.rgb, f.rgb + backdrop, texMix);
     }
 
-    gl_FragColor = vec4(f.rgb * exposure, 1.0);
+    vec3 ucCol = f.rgb * exposure;
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(ucCol, vec3(0.299, 0.587, 0.114));
+    ucCol = mix(vec3(ucL), ucCol, colorBoost);
+    if (hueShift > 0.0005) {
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        ucCol = clamp(hM * ucCol, 0.0, 1.0);
+    }
+    ucCol = mix(ucCol, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+    gl_FragColor = vec4(ucCol, 1.0);
 }

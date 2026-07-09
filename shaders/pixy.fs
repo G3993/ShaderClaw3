@@ -1,17 +1,97 @@
 /*{
   "DESCRIPTION": "Pixy — a warping pixel-grid kaleidoscope. The bound image is sliced into a grid of cells whose borders breathe on a procedural wave field; each cell samples the image (and a feedback-smeared copy of it) through swirling UV displacement, inverting and cross-fading between the fresh frame and the trailed one. Ported from a multi-buffer Shadertoy: iChannel0/1 -> input image + Buffer A feedback, iChannel2/3 displacement maps -> procedural value noise, Buffer A -> a persistent gaussian-smear feedback of the input.",
   "CREDIT": "Shadertoy 'pixy' — ISF multi-buffer port for Easel",
-  "CATEGORIES": ["Effect", "Feedback"],
+  "CATEGORIES": [
+    "Effect",
+    "Feedback"
+  ],
   "INPUTS": [
-    { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "gridScale", "LABEL": "Grid Scale", "TYPE": "float", "MIN": 4.0,  "MAX": 60.0, "DEFAULT": 20.0 },
-    { "NAME": "speed",     "LABEL": "Speed",      "TYPE": "float", "MIN": 0.0,  "MAX": 3.0,  "DEFAULT": 1.0 },
-    { "NAME": "warpAmt",   "LABEL": "Warp",       "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.3 },
-    { "NAME": "trail",     "LABEL": "Trail",      "TYPE": "float", "MIN": 0.0,  "MAX": 0.98, "DEFAULT": 0.9 },
-    { "NAME": "audioReact","LABEL": "Audio React","TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.35 }
+    {
+      "NAME": "inputImage",
+      "LABEL": "Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "gridScale",
+      "LABEL": "Grid Scale",
+      "TYPE": "float",
+      "MIN": 4,
+      "MAX": 60,
+      "DEFAULT": 20,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "warpAmt",
+      "LABEL": "Warp",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "trail",
+      "LABEL": "Trail",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.98,
+      "DEFAULT": 0.9,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.35,
+      "GROUP": "Audio Reactivity"
+    }
   ],
   "PASSES": [
-    { "TARGET": "bufA", "PERSISTENT": true },
+    {
+      "TARGET": "bufA",
+      "PERSISTENT": true
+    },
     {}
   ]
 }*/
@@ -124,5 +204,18 @@ void main() {
     // Beat: a brief, soft flash on the grid lines that decays with the pulse.
     col += vec3((1.0 - grid) * beatP * audioReact * 0.2);
 
-    gl_FragColor = vec4(col, 1.0);
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    vec3 uc = mix(vec3(ucL), col, colorBoost);
+    if (hueShift > 0.0005) {
+        float hueA = hueShift * 6.2831853;
+        float hueC = cos(hueA), hueS = sin(hueA);
+        mat3 hueM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                  + hueC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                  + hueS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hueM * uc, 0.0, 1.0);
+    }
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+
+    gl_FragColor = vec4(uc, 1.0);
 }

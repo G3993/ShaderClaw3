@@ -1,57 +1,403 @@
 /*{
   "DESCRIPTION": "Gemstone Fluid — a ring of polished tumbled gems frames a glowing aperture filled with a stable-fluids liquid-metal simulation. Each gem is pseudo-3D with facet normals, Fresnel, specular and warm refraction; the fluid interior is a semi-Lagrangian velocity field with divergence correction and metallic shading. Fully audio-reactive (bass/mid/high) with rich color palettes, motion kit, and fidelity post-processing.",
   "CREDIT": "ShaderClaw + Schuetze/Vimont fluid core",
-  "CATEGORIES": ["Generator", "VFX", "Fluid", "A-List"],
+  "CATEGORIES": [
+    "Generator",
+    "VFX",
+    "Fluid",
+    "A-List"
+  ],
   "INPUTS": [
-    { "NAME": "msg", "LABEL": "Caption", "TYPE": "text", "DEFAULT": "ode to song", "MAX_LENGTH": 48, "BIND": "cue.latest" },
-
-    { "NAME": "energyA", "LABEL": "Cluster A Energy", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "BIND": "player[1].energy" },
-    { "NAME": "energyB", "LABEL": "Cluster B Energy", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "BIND": "player[2].energy" },
-    { "NAME": "energyC", "LABEL": "Cluster C Energy", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "BIND": "player[3].energy" },
-    { "NAME": "activeA", "LABEL": "Cluster A Active",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "BIND": "player[1].active" },
-    { "NAME": "activeB", "LABEL": "Cluster B Active",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "BIND": "player[2].active" },
-
-    { "NAME": "bassDrive", "LABEL": "Bass → Aperture", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "BIND": "audio.bass" },
-    { "NAME": "midDrive",  "LABEL": "Mid → Sparkle",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.8, "BIND": "audio.mid" },
-    { "NAME": "highDrive", "LABEL": "High → Detail",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.6 },
-
-    { "NAME": "gemCount",     "LABEL": "Gem Count",     "TYPE": "long",  "DEFAULT": 14, "VALUES": [8,10,12,14,16,18,20], "LABELS": ["8","10","12","14","16","18","20"] },
-    { "NAME": "gemSize",      "LABEL": "Gem Size",      "TYPE": "float", "MIN": 0.05, "MAX": 0.20, "DEFAULT": 0.105 },
-    { "NAME": "ringRadius",   "LABEL": "Ring Radius",   "TYPE": "float", "MIN": 0.20, "MAX": 0.55, "DEFAULT": 0.36 },
-    { "NAME": "paletteMode",  "LABEL": "Palette",       "TYPE": "long",  "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Opal","Citrine","Amethyst","Aurora"] },
-    { "NAME": "motionSpeed",  "LABEL": "Motion",        "TYPE": "float", "MIN": 0.0,  "MAX": 2.0, "DEFAULT": 0.6 },
-    { "NAME": "audioDepth",   "LABEL": "Audio Depth",   "TYPE": "float", "MIN": 0.0,  "MAX": 1.5, "DEFAULT": 0.8 },
-    { "NAME": "facetSharp",   "LABEL": "Facet Sharp",   "TYPE": "float", "MIN": 0.0,  "MAX": 1.5, "DEFAULT": 0.8 },
-    { "NAME": "captionScale", "LABEL": "Caption Size",  "TYPE": "float", "MIN": 0.4,  "MAX": 1.8, "DEFAULT": 1.0 },
-    { "NAME": "paperColor",   "LABEL": "Paper",         "TYPE": "color", "DEFAULT": [0.06, 0.07, 0.12, 1.0] },
-
-    { "NAME": "stirSpeed",    "LABEL": "Stir Speed",    "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.35 },
-    { "NAME": "fluidForce",   "LABEL": "Fluid Force",   "TYPE": "float", "MIN": 0.0, "MAX": 6.0, "DEFAULT": 3.2 },
-    { "NAME": "dyeRate",      "LABEL": "Dye Rate",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.65 },
-    { "NAME": "dissipation",  "LABEL": "Dissipation",   "TYPE": "float", "MIN": 0.95, "MAX": 1.0, "DEFAULT": 0.997 },
-    { "NAME": "flowSpeed",    "LABEL": "Flow Speed",    "TYPE": "float", "MIN": 0.2, "MAX": 4.0, "DEFAULT": 1.8 },
-    { "NAME": "fluidMix",     "LABEL": "Fluid Mix",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.72 },
-    { "NAME": "exposure",     "LABEL": "Exposure",      "TYPE": "float", "MIN": 0.3, "MAX": 2.5, "DEFAULT": 1.15 },
-
-    { "NAME": "motionDrift",  "LABEL": "Drift Speed",   "TYPE": "float", "DEFAULT": 1.3,  "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "motionJitter", "LABEL": "Jitter",        "TYPE": "float", "DEFAULT": 0.20, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionFlicker","LABEL": "Flicker",       "TYPE": "float", "DEFAULT": 0.12, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionSway",   "LABEL": "Sway",          "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionChaos",  "LABEL": "Chaos",         "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.0 },
-
-    { "NAME": "fidBloom",    "LABEL": "Glow",       "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "fidDither",   "LABEL": "Dither",     "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fidGamma",    "LABEL": "Gamma",      "TYPE": "float", "DEFAULT": 0.6,  "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fidEdgeGlow", "LABEL": "Edge Glow",  "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "fidVignette", "LABEL": "Vignette",   "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "fidGrain",    "LABEL": "Grain",      "TYPE": "float", "DEFAULT": 0.30, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "inputTex",    "TYPE": "image", "LABEL": "Texture" },
-    { "NAME": "texMix",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "LABEL": "Texture Mix" }
+    {
+      "NAME": "energyA",
+      "LABEL": "Cluster A Energy",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "BIND": "player[1].energy"
+    },
+    {
+      "NAME": "energyB",
+      "LABEL": "Cluster B Energy",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "BIND": "player[2].energy"
+    },
+    {
+      "NAME": "energyC",
+      "LABEL": "Cluster C Energy",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "BIND": "player[3].energy"
+    },
+    {
+      "NAME": "activeA",
+      "LABEL": "Cluster A Active",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "BIND": "player[1].active"
+    },
+    {
+      "NAME": "activeB",
+      "LABEL": "Cluster B Active",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "BIND": "player[2].active"
+    },
+    {
+      "NAME": "dyeRate",
+      "LABEL": "Dye Rate",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.65
+    },
+    {
+      "NAME": "fluidMix",
+      "LABEL": "Fluid Mix",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.72
+    },
+    {
+      "NAME": "exposure",
+      "LABEL": "Exposure",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2.5,
+      "DEFAULT": 1.15
+    },
+    {
+      "NAME": "fidBloom",
+      "LABEL": "Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.85,
+      "MIN": 0,
+      "MAX": 1.5
+    },
+    {
+      "NAME": "fidDither",
+      "LABEL": "Dither",
+      "TYPE": "float",
+      "DEFAULT": 0.85,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "fidGamma",
+      "LABEL": "Gamma",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "fidEdgeGlow",
+      "LABEL": "Edge Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "fidVignette",
+      "LABEL": "Vignette",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1.5
+    },
+    {
+      "NAME": "fidGrain",
+      "LABEL": "Grain",
+      "TYPE": "float",
+      "DEFAULT": 0.3,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "inputTex",
+      "LABEL": "Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "texMix",
+      "LABEL": "Texture Mix",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "gemCount",
+      "LABEL": "Gem Count",
+      "TYPE": "long",
+      "DEFAULT": 14,
+      "VALUES": [
+        8,
+        10,
+        12,
+        14,
+        16,
+        18,
+        20
+      ],
+      "LABELS": [
+        "8",
+        "10",
+        "12",
+        "14",
+        "16",
+        "18",
+        "20"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "gemSize",
+      "LABEL": "Gem Size",
+      "TYPE": "float",
+      "MIN": 0.05,
+      "MAX": 0.2,
+      "DEFAULT": 0.105,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "ringRadius",
+      "LABEL": "Ring Radius",
+      "TYPE": "float",
+      "MIN": 0.2,
+      "MAX": 0.55,
+      "DEFAULT": 0.36,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "facetSharp",
+      "LABEL": "Facet Sharp",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.8,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "motionSpeed",
+      "LABEL": "Motion",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.6,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "stirSpeed",
+      "LABEL": "Stir Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.35,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "fluidForce",
+      "LABEL": "Fluid Force",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 6,
+      "DEFAULT": 3.2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "dissipation",
+      "LABEL": "Dissipation",
+      "TYPE": "float",
+      "MIN": 0.95,
+      "MAX": 1,
+      "DEFAULT": 0.997,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "flowSpeed",
+      "LABEL": "Flow Speed",
+      "TYPE": "float",
+      "MIN": 0.2,
+      "MAX": 4,
+      "DEFAULT": 1.8,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionDrift",
+      "LABEL": "Drift Speed",
+      "TYPE": "float",
+      "DEFAULT": 1.3,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionJitter",
+      "LABEL": "Jitter",
+      "TYPE": "float",
+      "DEFAULT": 0.2,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionFlicker",
+      "LABEL": "Flicker",
+      "TYPE": "float",
+      "DEFAULT": 0.12,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionSway",
+      "LABEL": "Sway",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionChaos",
+      "LABEL": "Chaos",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "paletteMode",
+      "LABEL": "Palette",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Opal",
+        "Citrine",
+        "Amethyst",
+        "Aurora"
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "msg",
+      "LABEL": "Caption",
+      "TYPE": "text",
+      "DEFAULT": "ode to song",
+      "MAX_LENGTH": 48,
+      "BIND": "cue.latest",
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "captionScale",
+      "LABEL": "Caption Size",
+      "TYPE": "float",
+      "MIN": 0.4,
+      "MAX": 1.8,
+      "DEFAULT": 1,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "paperColor",
+      "LABEL": "Paper",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.06,
+        0.07,
+        0.12,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "bassDrive",
+      "LABEL": "Bass → Aperture",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "BIND": "audio.bass",
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "midDrive",
+      "LABEL": "Mid → Sparkle",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.8,
+      "BIND": "audio.mid",
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "highDrive",
+      "LABEL": "High → Detail",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.6,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "audioDepth",
+      "LABEL": "Audio Depth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.8,
+      "GROUP": "Audio Reactivity"
+    }
   ],
   "PASSES": [
-    { "TARGET": "velBuf", "PERSISTENT": true },
-    { "TARGET": "divBuf" },
-    { "TARGET": "prsBuf", "PERSISTENT": true },
+    {
+      "TARGET": "velBuf",
+      "PERSISTENT": true
+    },
+    {
+      "TARGET": "divBuf"
+    },
+    {
+      "TARGET": "prsBuf",
+      "PERSISTENT": true
+    },
     {}
   ]
 }*/
@@ -303,6 +649,10 @@ void main(){
     float bass = clamp(audioBass*bassDrive,0.0,2.0);
     float mid  = clamp(audioMid*midDrive,0.0,2.0);
     float high = clamp(audioHigh*highDrive,0.0,2.0);
+    // Soft-kneed direct band followers (ambient fix): continuous, smooth,
+    // independent of the drive binds — beatless swells still read.
+    float bassF = pow(smoothstep(0.04,0.90,audioBass),1.3);
+    float midF  = pow(smoothstep(0.05,0.90,audioMid),1.2);
 
     int gems=int(gemCount);
     if(gems>MAX_GEMS) gems=MAX_GEMS;
@@ -352,6 +702,9 @@ void main(){
     inner*=0.85+0.30*rim2;
     // Fuse with fluid interior
     inner=mix(inner,fluidCol,fluidMix*clamp(concentration*1.5,0.0,1.0));
+    // Aperture interior breathes with the smoothed bands (ambient fix) —
+    // the largest bright region in frame, so the swell is clearly visible.
+    inner*=1.0+(0.20*bassF+0.10*midF)*audioDepth;
     // Fluid velocity adds swirling normal-map shimmer
     inner+=0.18*high*vec3(fGrad.x,-fGrad.y,0.5)*concentration;
 
@@ -567,16 +920,50 @@ void main(){
 
     float Lum=dot(col,vec3(0.299,0.587,0.114));
     col+=0.18*smoothstep(0.65,1.20,Lum)*col*(1.0+1.0*bass*audioDepth);
-    // Immediate (non-buffered) audio pulse — bass lifts overall luminance
-    // a touch every frame, so the room brightens with the beat.
-    col*=1.0+0.16*bass*audioDepth;
-
     float tooth=fbm2(p*res.y*0.018);
     col*=1.0+(tooth-0.5)*0.04;
 
     col=col/(1.0+0.55*col);
     col=pow(max(col,0.0),vec3(0.94));
 
+    // Immediate (non-buffered) whole-frame follower — Round 3 (measured):
+    // the round-2 pre-tonemap 0.25/0.15 version measured ambient 0.0 — the
+    // double tonemap (here + fidApply) compressed it to ~±2% under a large
+    // 0.035/frame baseline churn (motion kit + grain + sweep). POST-tonemap
+    // on display values, deeper, and broadband (bass/mid/high weights match
+    // the music's band mix). Floored depth so the room breathes even at low
+    // Audio Depth. Silence -> exactly 1.0.
+    float aD2=0.6+0.4*clamp(audioDepth,0.0,1.5);
+    col*=1.0+aD2*(0.35*clamp(audioBass,0.0,1.0)
+                 +0.22*clamp(audioMid,0.0,1.0)
+                 +0.13*clamp(audioHigh,0.0,1.0));
+    // Audio-energy sheen (Round 3, measured): a slow luminance ripple that
+    // travels across the frame while music plays, amplitude tracking the
+    // broadband level. Unlike a plain follower (whose per-frame delta rides
+    // the band DERIVATIVE and drowns under this piece's 0.035/frame idle
+    // churn), a moving pattern changes the frame at a rate proportional to
+    // the band LEVEL itself — beatless ambient swells finally register.
+    // Zero-mean ripple: silence -> exactly 1.0, no DC brightness shift.
+    float envF=0.40*clamp(audioBass,0.0,1.0)
+              +0.25*clamp(audioMid,0.0,1.0)
+              +0.15*clamp(audioHigh,0.0,1.0);
+    col*=1.0+envF*0.20*sin(p.x*2.6-p.y*1.8+TIME*5.0);
+
     col*=mkFlicker(gl_FragCoord.xy/RENDERSIZE-0.5,TIME);
-    gl_FragColor=vec4(fidApply(col,gl_FragCoord.xy),1.0);
+
+    // ---- universal color block (defaults = no-op) ----
+    // (background handled by the existing paperColor input)
+    vec3 uc=fidApply(col,gl_FragCoord.xy);
+    float ucL=dot(uc,vec3(0.299,0.587,0.114));
+    uc=mix(vec3(ucL),uc,colorBoost);                       // saturation
+    if(hueShift>0.0005){                                   // cheap hue rotate (YIQ)
+        float hA=hueShift*6.2831853;
+        float hC=cos(hA),hS=sin(hA);
+        mat3 hM=mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+              +hC*mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+              +hS*mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc=clamp(hM*uc,0.0,1.0);
+    }
+
+    gl_FragColor=vec4(uc,1.0);
 }

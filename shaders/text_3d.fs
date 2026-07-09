@@ -1,20 +1,171 @@
 /*{
-  "CATEGORIES": ["Generator", "Text", "3D"],
+  "CATEGORIES": [
+    "Generator",
+    "Text",
+    "3D"
+  ],
   "DESCRIPTION": "3D extruded text — rotating block letters with Phong lighting and cycling fill patterns",
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
-    { "NAME": "fontFamily", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
-    { "NAME": "effect", "TYPE": "long", "VALUES": [0, 1], "LABELS": ["3D Text", "James 3D"], "DEFAULT": 0 },
-    { "NAME": "font", "TYPE": "long", "VALUES": [0,1,2], "LABELS": ["Block","Slim","Round"], "DEFAULT": 0 },
-    { "NAME": "speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
-    { "NAME": "intensity", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "density", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "textScale", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "TYPE": "bool", "DEFAULT": true }
+    {
+      "NAME": "font",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2
+      ],
+      "LABELS": [
+        "Block",
+        "Slim",
+        "Round"
+      ],
+      "DEFAULT": 0,
+      "GROUP": "Shape / Geometry",
+      "LABEL": "3D Font Style"
+    },
+    {
+      "NAME": "density",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5,
+      "GROUP": "Shape / Geometry",
+      "LABEL": "Extrude Depth"
+    },
+    {
+      "NAME": "speed",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 3,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation",
+      "LABEL": "Speed"
+    },
+    {
+      "NAME": "textColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color",
+      "LABEL": "Text Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "intensity",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5,
+      "GROUP": "Camera / Layout",
+      "LABEL": "Tilt Amount"
+    },
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": " ETHEREA",
+      "MAX_LENGTH": 48,
+      "GROUP": "Text",
+      "LABEL": "Message"
+    },
+    {
+      "NAME": "fontFamily",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Inter",
+        "Times New Roman",
+        "Libre Caslon",
+        "Outfit"
+      ],
+      "DEFAULT": 0,
+      "GROUP": "Text",
+      "LABEL": "Font Family"
+    },
+    {
+      "NAME": "textScale",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Background",
+      "LABEL": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background",
+      "LABEL": "Transparent Background"
+    },
+    {
+      "NAME": "effect",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1
+      ],
+      "LABELS": [
+        "3D Text",
+        "James 3D"
+      ],
+      "DEFAULT": 0,
+      "LABEL": "Effect Mode"
+    }
   ]
 }*/
+
+// ---- universal color block (defaults = no-op) ----
+vec3 ucApply(vec3 uc) {
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                      // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    return uc;
+}
+
 
 const float PI = 3.14159265;
 
@@ -92,9 +243,19 @@ void main() {
     int numChars = charCount();
     int e = int(effect);
 
+    // Soft-knee audio conditioning (playbook standard snippet).
+    // bassR: wide knee + no pow-crush keeps headroom at EDM levels (the old
+    // ^1.6 knee pegged near 1.0 under constant kicks and stopped varying);
+    // sub coupling + low floor lets sparse hiphop / soft jazz kicks register.
+    float bassR = smoothstep(0.03, 0.95, max(audioBass, audioSub));
+    float midP  = pow(smoothstep(0.08, 0.85, audioMid), 1.3);
+    float highP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+    float drive = 0.25 + 0.75 * smoothstep(0.05, 0.9, audioEnergy);
+    float pulse = audioBeatPulse; // host-side decaying hit trace (300-600ms)
+
     float rotAngle = TIME * speed;
-    float tiltAmount = intensity * 0.5;
-    float extrudeDepth = mix(0.05, 0.4, density);
+    float tiltAmount = intensity * 0.5 * (1.0 + 0.25 * midP);
+    float extrudeDepth = mix(0.05, 0.4, density) * (1.0 + 0.3 * bassR);
     float cycleSpeed = mix(0.2, 5.0, density);
     int numLayers = int(mix(4.0, 12.0, density));
     if (numLayers < 2) numLayers = 2;
@@ -112,7 +273,9 @@ void main() {
     vec3 lrd = vec3(r1d.x * cy - r1d.z * sy, r1d.y, r1d.x * sy + r1d.z * cy);
 
     float portraitScale = aspect < 1.0 ? aspect : 1.0;
-    float charW = 0.1 * textScale * portraitScale;
+    // Scale breathing (geometric, never clamps): bass swells the letters
+    // ±10%, each beat adds a small decaying extra — the un-saturable EDM path.
+    float charW = 0.1 * textScale * portraitScale * (1.0 + 0.10 * bassR + 0.05 * pulse);
     float charH = charW * 1.4;
     float gapW = charW * 0.2;
     float totalW = float(numChars) * (charW + gapW) - gapW;
@@ -160,7 +323,7 @@ void main() {
             vec3 viewDir = normalize(-rd);
             vec3 h = normalize(lightDir + viewDir);
             float spec = pow(max(dot(wn, h), 0.0), 32.0);
-            shade = 0.15 + diff * 0.7 + spec * 0.4;
+            shade = (0.15 + diff * 0.7 + spec * (0.4 + 0.16 * highP + 0.12 * audioPunch)) * (0.88 + 0.10 * drive + 0.14 * bassR + 0.10 * pulse);
             if (e > 0) {
                 float phase = float(slot) * 1.3 + TIME * speed * cycleSpeed;
                 int style = int(mod(floor(phase), 10.0));
@@ -169,11 +332,11 @@ void main() {
                 shade *= inten;
             }
         } else {
-            shade = mix(0.35, 0.7, depthFactor);
+            shade = mix(0.35, 0.7, depthFactor) * (0.88 + 0.10 * drive + 0.14 * bassR + 0.10 * pulse);
         }
         finalColor = textColor.rgb * clamp(shade, 0.0, 1.0);
         finalAlpha = 1.0;
     }
 
-    gl_FragColor = vec4(finalColor, finalAlpha);
+    gl_FragColor = vec4(ucApply(finalColor), finalAlpha);
 }

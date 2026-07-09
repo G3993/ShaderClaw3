@@ -1,24 +1,188 @@
 /*{
   "DESCRIPTION": "Stripes — the message hides behind sweeping diagonal stripe bands that shift phase and width over time, revealing letters only in the gaps between bars.",
   "CREDIT": "ShaderClaw — original take on a diagonal-stripe reveal/mask effect",
-  "CATEGORIES": ["Generator", "Text", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Text",
+    "Audio Reactive"
+  ],
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "ETHEREA", "MAX_LENGTH": 48 },
-    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"] },
-    { "NAME": "textScale", "LABEL": "Text Size", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.4, "MAX": 2.4 },
-    { "NAME": "kerning", "LABEL": "Kerning", "TYPE": "float", "DEFAULT": 0.9, "MIN": 0.55, "MAX": 1.4 },
-    { "NAME": "stripeCount", "LABEL": "Stripe Count", "TYPE": "float", "DEFAULT": 10.0, "MIN": 3.0, "MAX": 28.0 },
-    { "NAME": "stripeAngle", "LABEL": "Stripe Angle", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "sweepSpeed", "LABEL": "Sweep Speed", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "widthPulse", "LABEL": "Width Breathing", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 0.7, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "colorA", "LABEL": "Stripe Color A", "TYPE": "color", "DEFAULT": [0.02, 0.85, 0.95, 1.0] },
-    { "NAME": "colorB", "LABEL": "Stripe Color B", "TYPE": "color", "DEFAULT": [0.95, 0.15, 0.55, 1.0] },
-    { "NAME": "textColor", "LABEL": "Text Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent BG", "TYPE": "bool", "DEFAULT": false },
-    { "NAME": "inputTex", "LABEL": "Stripe Texture", "TYPE": "image" },
-    { "NAME": "texMix", "LABEL": "Texture Mix", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 }
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": "ETHEREA",
+      "MAX_LENGTH": 48,
+      "LABEL": "Message",
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "fontFamily",
+      "LABEL": "Font",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Inter",
+        "Times New Roman",
+        "Libre Caslon",
+        "Outfit"
+      ],
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "textScale",
+      "LABEL": "Text Size",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.4,
+      "MAX": 2.4,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "kerning",
+      "LABEL": "Kerning",
+      "TYPE": "float",
+      "DEFAULT": 0.9,
+      "MIN": 0.55,
+      "MAX": 1.4,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "stripeCount",
+      "LABEL": "Stripe Count",
+      "TYPE": "float",
+      "DEFAULT": 10,
+      "MIN": 3,
+      "MAX": 28,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "stripeAngle",
+      "LABEL": "Stripe Angle",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "sweepSpeed",
+      "LABEL": "Sweep Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "widthPulse",
+      "LABEL": "Width Breathing",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "colorA",
+      "LABEL": "Stripe Color A",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.02,
+        0.85,
+        0.95,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorB",
+      "LABEL": "Stripe Color B",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.95,
+        0.15,
+        0.55,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "textColor",
+      "LABEL": "Text Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent BG",
+      "TYPE": "bool",
+      "DEFAULT": false,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "DEFAULT": 0.7,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "inputTex",
+      "LABEL": "Stripe Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "texMix",
+      "LABEL": "Texture Mix",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1
+    }
   ]
 }*/
 
@@ -124,7 +288,11 @@ void main() {
     // idle base speed alone already reads as a complete, good-looking
     // animation (sound-off test). Kept modest so audio's contribution
     // (added below on duty/width/glow) reads clearly against it.
-    float musicTime = TIME * (0.32 + 0.28 * drive * audio);
+    // Fixed base rate + a bounded, energy-following phase push. Scaling
+    // TIME by a live factor made the phase jump grow with elapsed time
+    // (choppy); a bounded offset glides with the smoothed envelope.
+    // Silence: drive floors at 0.25 -> exactly TIME * 0.37 as before.
+    float musicTime = TIME * 0.37 + 0.9 * (drive - 0.25) * audio;
 
     // ── Diagonal stripe field ───────────────────────────────────────
     // Angle 0..1 maps to a shallow..steep diagonal; project position
@@ -138,8 +306,10 @@ void main() {
     // structural swell on top — audio's share of the total width
     // motion (~±20-25% around the idle wobble), never all of it.
     float nBase = max(stripeCount, 1.0);
-    float nSwell = 1.0 + widthPulse * 0.30 * sin(musicTime * 0.31)
-                 + widthPulse * 0.22 * bassP * audio;
+    // Bass no longer rescales the band count — a global rescale slides
+    // every stripe edge at once on each kick; its swell moved to the duty
+    // cycle below, where motion stays bounded within a band period.
+    float nSwell = 1.0 + widthPulse * 0.30 * sin(musicTime * 0.31);
     float n = nBase * nSwell;
 
     // Phase shift sweeps the stripe field across the canvas over time;
@@ -157,7 +327,7 @@ void main() {
     // a continuous structural swell (~±24% of the duty range), not a
     // binary gate or strobe.
     float duty = 0.5 + 0.20 * sin(musicTime * 0.53 + bandId * 0.7)
-               + 0.12 * widthPulse * bassP * audio;
+               + 0.16 * widthPulse * bassP * audio;
     duty = clamp(duty, 0.15, 0.85);
 
     // Soft edge width — high-frequency energy sharpens the bar edges
@@ -230,6 +400,20 @@ void main() {
     float textVis = glyph * isOpen;
     col3 = mix(col3, textColor.rgb, textVis);
     if (transparentBg) alpha = max(alpha, textVis);
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = col3;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    col3 = uc;
 
     gl_FragColor = vec4(col3, alpha);
 }

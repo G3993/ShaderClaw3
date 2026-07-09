@@ -1,21 +1,125 @@
 /*{
   "DESCRIPTION": "Spectral Tunnel — flight through a tunnel whose walls are carved from the music's spectral history: every beat leaves a ridge that recedes into the distance. Persistent FFT waterfall buffer sampled as tunnel displacement.",
-  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "3D",
+    "Audio Reactive"
+  ],
   "CREDIT": "Etherea",
   "INPUTS": [
-    { "NAME": "audioReact", "LABEL": "Audio React",  "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "speed",      "LABEL": "Flight Speed", "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "ridgeAmt",   "LABEL": "Ridge Depth",  "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "fogAmt",     "LABEL": "Fog",          "TYPE": "float", "DEFAULT": 0.75, "MIN": 0.2, "MAX": 1.5 },
-    { "NAME": "twist",      "LABEL": "Twist",        "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "inputTex",   "LABEL": "Texture",      "TYPE": "image" },
-    { "NAME": "texMix",     "LABEL": "Texture Mix",  "TYPE": "float", "DEFAULT": 0.0,  "MIN": 0.0, "MAX": 1.0 }
+    {
+      "NAME": "fogAmt",
+      "LABEL": "Fog",
+      "TYPE": "float",
+      "DEFAULT": 0.75,
+      "MIN": 0.2,
+      "MAX": 1.5
+    },
+    {
+      "NAME": "inputTex",
+      "LABEL": "Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "texMix",
+      "LABEL": "Texture Mix",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "ridgeAmt",
+      "LABEL": "Ridge Depth",
+      "TYPE": "float",
+      "DEFAULT": 0.85,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Flight Speed",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "twist",
+      "LABEL": "Twist",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    }
   ],
   "PASSES": [
-    { "TARGET": "histBuf", "PERSISTENT": true },
+    {
+      "TARGET": "histBuf",
+      "PERSISTENT": true
+    },
     {}
   ]
 }*/
+
+// ---- universal color block (defaults = no-op) ----
+vec3 ucApply(vec3 uc) {
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                      // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, dot(uc, vec3(0.299, 0.587, 0.114)))));
+    return uc;
+}
+
 
 // ── Spectral Tunnel ──────────────────────────────────────────
 // Playbook technique: spectral history waterfall (persistent
@@ -111,5 +215,13 @@ void main() {
     // center glow — the light at the end of the tunnel
     col += audioPalHigh * exp(-r * 7.0) * (0.25 + 0.45 * drive + 0.5 * bassP);
 
+    // Continuous band-follow (ambient fix r2): whole-tunnel luminance breathes
+    // with LINEAR smoothed bands — round 1 used bassP (pow-1.6 knee) which
+    // crushed ambient's 0.1-0.8 swells to near-zero variance. No beat gating;
+    // silence = exactly 1.0.
+    col *= 1.0 + (0.28 * clamp(audioBass, 0.0, 1.0)
+                + 0.16 * clamp(audioMid,  0.0, 1.0)) * min(amt, 1.0);
+
+    col = ucApply(col);
     gl_FragColor = vec4(col, 1.0);
 }

@@ -1,21 +1,161 @@
 /*{
-  "CATEGORIES": ["Generator", "Cymatics", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Cymatics",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "Chladni Figures with depth lighting, soft shadows, and slow drift. Sand on a vibrating plate (Ernst Chladni, 1787). Nodal-line equation Z = sin(nπx)sin(mπy) − sin(mπx)sin(nπy) solved per-pixel; sand collects along zero-crossings. Deferred-style normal map gives the sand ridges 3-D depth via a directional light with diffuse + specular. A slow Lissajous drift gently rocks the plate. Bass triggers mode jumps; mid/treble drive brightness and grain.",
   "INPUTS": [
-    { "NAME": "mood",          "LABEL": "Mood",             "TYPE": "long",  "DEFAULT": 0,
-      "VALUES": [0, 1, 2], "LABELS": ["Sand on Plate", "Water Cymatics", "Iron Filings + Magnet"] },
-    { "NAME": "morphPeriod",   "LABEL": "Mode Period (s)",  "TYPE": "float", "MIN": 4.0,  "MAX": 14.0, "DEFAULT": 8.0 },
-    { "NAME": "lineWidth",     "LABEL": "Sand Line Width",  "TYPE": "float", "MIN": 0.4,  "MAX": 3.5,  "DEFAULT": 1.4 },
-    { "NAME": "settle",        "LABEL": "Settle vs Agitate","TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.5 },
-    { "NAME": "grainDensity",  "LABEL": "Grain Density",    "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.55 },
-    { "NAME": "warmth",        "LABEL": "Warmth",           "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.7 },
-    { "NAME": "audioReact",    "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
-    { "NAME": "lightAngle",    "LABEL": "Light Angle",      "TYPE": "float", "MIN": 0.0,  "MAX": 6.283, "DEFAULT": 0.785 },
-    { "NAME": "lightElevation","LABEL": "Light Elevation",  "TYPE": "float", "MIN": 0.1,  "MAX": 1.0,  "DEFAULT": 0.55 },
-    { "NAME": "lightIntensity","LABEL": "Light Intensity",  "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
-    { "NAME": "glossiness",    "LABEL": "Glossiness",       "TYPE": "float", "MIN": 4.0,  "MAX": 180.0,"DEFAULT": 48.0 },
-    { "NAME": "driftAmount",   "LABEL": "Drift Amount",     "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.4 },
-    { "NAME": "driftSpeed",    "LABEL": "Drift Speed",      "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.3 }
+    {
+      "NAME": "mood",
+      "LABEL": "Mood",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2
+      ],
+      "LABELS": [
+        "Sand on Plate",
+        "Water Cymatics",
+        "Iron Filings + Magnet"
+      ]
+    },
+    {
+      "NAME": "lightAngle",
+      "LABEL": "Light Angle",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 6.283,
+      "DEFAULT": 0.785
+    },
+    {
+      "NAME": "lightElevation",
+      "LABEL": "Light Elevation",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 1,
+      "DEFAULT": 0.55
+    },
+    {
+      "NAME": "lightIntensity",
+      "LABEL": "Light Intensity",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "glossiness",
+      "LABEL": "Glossiness",
+      "TYPE": "float",
+      "MIN": 4,
+      "MAX": 180,
+      "DEFAULT": 48
+    },
+    {
+      "NAME": "lineWidth",
+      "LABEL": "Sand Line Width",
+      "TYPE": "float",
+      "MIN": 0.4,
+      "MAX": 3.5,
+      "DEFAULT": 1.4,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "grainDensity",
+      "LABEL": "Grain Density",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.55,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "morphPeriod",
+      "LABEL": "Mode Period (s)",
+      "TYPE": "float",
+      "MIN": 4,
+      "MAX": 14,
+      "DEFAULT": 8,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "settle",
+      "LABEL": "Settle vs Agitate",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "driftAmount",
+      "LABEL": "Drift Amount",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.4,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "driftSpeed",
+      "LABEL": "Drift Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "warmth",
+      "LABEL": "Warmth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.7,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -219,6 +359,7 @@ void main() {
         vec3 water2 = vec3(0.02, 0.05, 0.10);
         float ripple = 0.5 + 0.5 * sin(40.0 * (p.x + p.y) + t * 1.4);
         vec3 base    = mix(water2, water1, 0.5 + 0.4 * ripple);
+        base = mix(base, bgColor.rgb, bgColor.a);   // user background = the water bed
         vec3 cau     = vec3(0.85, 0.95, 1.05);
 
         col  = base;
@@ -232,6 +373,7 @@ void main() {
     } else if (moodI == 2) {
         // ─ Iron filings + dipole ──────────────────────────────────────
         vec3 plate = vec3(0.10, 0.09, 0.08);
+        plate = mix(plate, bgColor.rgb, bgColor.a); // user background = the plate
         float dip  = dipoleStream(p, t);
         float dipL = smoothstep(0.55, 0.92, dip);
         float combined = max(line * 0.85, dipL * (0.55 + 0.35 * line));
@@ -248,6 +390,7 @@ void main() {
     } else {
         // ─ Sand on plate (default) ────────────────────────────────────
         vec3 plate = vec3(0.18, 0.16, 0.14);
+        plate = mix(plate, bgColor.rgb, bgColor.a); // user background = the plate
         vec3 sandWarm = vec3(0.94, 0.88, 0.72);
         vec3 sandCool = vec3(0.86, 0.86, 0.84);
         vec3 sand     = mix(sandCool, sandWarm, clamp(warmth, 0.0, 1.0));
@@ -302,6 +445,20 @@ void main() {
     // ── mild HDR boost on bright sand ─────────────────────────────────
     float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
     col += col * smoothstep(0.85, 1.6, lum) * 0.6;
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = col;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    col = uc;
 
     gl_FragColor = vec4(col, 1.0);
 }

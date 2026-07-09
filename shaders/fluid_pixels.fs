@@ -1,184 +1,255 @@
 /*{
-    "DESCRIPTION": "Dynamic Pixel Grid with Procedural Noise Animation",
-    "CREDIT": "By fluidstorm.com (ISF)",
-    "CATEGORIES": [
-        "Generator"
-    ],
-    "INPUTS": [
-        {
-            "NAME": "zoom",
-            "TYPE": "float",
-            "MIN": 0.01,
-            "MAX": 0.5,
-            "DEFAULT": 0.42
-        },
-        {
-            "NAME": "horizontalScale",
-            "TYPE": "float",
-            "LABEL": "Horizontal Scale",
-            "MIN": 0.1,
-            "MAX": 10.0,
-            "DEFAULT": 1.8
-        },
-        {
-            "NAME": "verticalScale",
-            "TYPE": "float",
-            "LABEL": "Vertical Scale",
-            "MIN": 0.1,
-            "MAX": 10.0,
-            "DEFAULT": 1.4
-        },
-        {
-            "NAME": "gridSize",
-            "TYPE": "float",
-            "LABEL": "Grid Size",
-            "MIN": 1.0,
-            "MAX": 20.0,
-            "DEFAULT": 12.9
-        },
-        {
-            "NAME": "spacing",
-            "TYPE": "float",
-            "MIN": 0.0,
-            "MAX": 5.0,
-            "DEFAULT": 1.0
-        },
-        {
-            "NAME": "speed",
-            "TYPE": "float",
-            "MIN": 0.01,
-            "MAX": 0.5,
-            "DEFAULT": 0.1
-        },
-        {
-            "NAME": "maxOpacity",
-            "TYPE": "float",
-            "LABEL": "Max Opacity",
-            "MIN": 0.1,
-            "MAX": 1.0,
-            "DEFAULT": 1.0
-        },
-        {
-            "NAME": "octaves",
-            "TYPE": "float",
-            "MIN": 1.0,
-            "MAX": 8.0,
-            "DEFAULT": 1.0
-        },
-        {
-            "NAME": "persistence",
-            "TYPE": "float",
-            "MIN": 0.1,
-            "MAX": 1.0,
-            "DEFAULT": 0.6
-        },
-        {
-            "NAME": "lacunarity",
-            "TYPE": "float",
-            "MIN": 1.0,
-            "MAX": 4.0,
-            "DEFAULT": 2.2
-        },
-        {
-            "NAME": "colorRamp0",
-            "TYPE": "color",
-            "LABEL": "Color Low",
-            "DEFAULT": [0.0, 0.0, 0.0, 1.0]
-        },
-        {
-            "NAME": "colorRamp0Pos",
-            "TYPE": "float",
-            "LABEL": "Low Position",
-            "MIN": 0.0,
-            "MAX": 1.0,
-            "DEFAULT": 0.0
-        },
-        {
-            "NAME": "colorRamp0Alpha",
-            "TYPE": "float",
-            "LABEL": "Low Alpha",
-            "MIN": 0.0,
-            "MAX": 1.0,
-            "DEFAULT": 1.0
-        },
-        {
-            "NAME": "colorRamp1",
-            "TYPE": "color",
-            "LABEL": "Color Mid",
-            "DEFAULT": [1.0, 1.0, 1.0, 1.0]
-        },
-        {
-            "NAME": "colorRamp1Pos",
-            "TYPE": "float",
-            "LABEL": "Mid Position",
-            "MIN": 0.0,
-            "MAX": 1.0,
-            "DEFAULT": 0.5
-        },
-        {
-            "NAME": "colorRamp1Alpha",
-            "TYPE": "float",
-            "LABEL": "Mid Alpha",
-            "MIN": 0.0,
-            "MAX": 1.0,
-            "DEFAULT": 1.0
-        },
-        {
-            "NAME": "colorRamp2",
-            "TYPE": "color",
-            "LABEL": "Color High",
-            "DEFAULT": [1.0, 1.0, 1.0, 1.0]
-        },
-        {
-            "NAME": "colorRamp2Pos",
-            "TYPE": "float",
-            "LABEL": "High Position",
-            "MIN": 0.0,
-            "MAX": 1.0,
-            "DEFAULT": 1.0
-        },
-        {
-            "NAME": "colorRamp2Alpha",
-            "TYPE": "float",
-            "LABEL": "High Alpha",
-            "MIN": 0.0,
-            "MAX": 1.0,
-            "DEFAULT": 1.0
-        },
-        {
-            "NAME": "noiseStyle",
-            "TYPE": "long",
-            "LABEL": "Noise Style",
-            "VALUES": [0, 1, 2, 3],
-            "LABELS": ["Basic", "Clouds", "Turbulent", "Marble"],
-            "DEFAULT": 3
-        },
-        {
-            "NAME": "backgroundColor",
-            "TYPE": "color",
-            "LABEL": "Background",
-            "DEFAULT": [0.0, 0.0, 0.0, 1.0]
-        },
-        {
-            "NAME": "inputTex",
-            "TYPE": "image",
-            "LABEL": "Texture"
-        },
-        {
-            "NAME": "texMix",
-            "TYPE": "float",
-            "LABEL": "Texture Mix",
-            "MIN": 0.0,
-            "MAX": 1.0,
-            "DEFAULT": 0.0
-        },
-        {
-            "NAME": "useBackgroundColor",
-            "TYPE": "bool",
-            "LABEL": "Use Background",
-            "DEFAULT": true
-        }
-    ]
+  "DESCRIPTION": "Dynamic Pixel Grid with Procedural Noise Animation",
+  "CREDIT": "By fluidstorm.com (ISF)",
+  "CATEGORIES": [
+    "Generator"
+  ],
+  "INPUTS": [
+    {
+      "NAME": "maxOpacity",
+      "TYPE": "float",
+      "LABEL": "Max Opacity",
+      "MIN": 0.1,
+      "MAX": 1,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "octaves",
+      "TYPE": "float",
+      "MIN": 1,
+      "MAX": 8,
+      "DEFAULT": 1,
+      "LABEL": "Octaves"
+    },
+    {
+      "NAME": "persistence",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 1,
+      "DEFAULT": 0.6,
+      "LABEL": "Persistence"
+    },
+    {
+      "NAME": "lacunarity",
+      "TYPE": "float",
+      "MIN": 1,
+      "MAX": 4,
+      "DEFAULT": 2.2,
+      "LABEL": "Lacunarity"
+    },
+    {
+      "NAME": "noiseStyle",
+      "TYPE": "long",
+      "LABEL": "Noise Style",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Basic",
+        "Clouds",
+        "Turbulent",
+        "Marble"
+      ],
+      "DEFAULT": 3
+    },
+    {
+      "NAME": "inputTex",
+      "TYPE": "image",
+      "LABEL": "Texture"
+    },
+    {
+      "NAME": "texMix",
+      "TYPE": "float",
+      "LABEL": "Texture Mix",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "horizontalScale",
+      "TYPE": "float",
+      "LABEL": "Horizontal Scale",
+      "MIN": 0.1,
+      "MAX": 10,
+      "DEFAULT": 1.8,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "verticalScale",
+      "TYPE": "float",
+      "LABEL": "Vertical Scale",
+      "MIN": 0.1,
+      "MAX": 10,
+      "DEFAULT": 1.4,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "gridSize",
+      "TYPE": "float",
+      "LABEL": "Grid Size",
+      "MIN": 1,
+      "MAX": 20,
+      "DEFAULT": 12.9,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "spacing",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 5,
+      "DEFAULT": 1,
+      "LABEL": "Spacing",
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "speed",
+      "TYPE": "float",
+      "MIN": 0.01,
+      "MAX": 0.5,
+      "DEFAULT": 0.1,
+      "LABEL": "Speed",
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "colorRamp0",
+      "TYPE": "color",
+      "LABEL": "Color Low",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorRamp0Pos",
+      "TYPE": "float",
+      "LABEL": "Low Position",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorRamp0Alpha",
+      "TYPE": "float",
+      "LABEL": "Low Alpha",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorRamp1",
+      "TYPE": "color",
+      "LABEL": "Color Mid",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorRamp1Pos",
+      "TYPE": "float",
+      "LABEL": "Mid Position",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorRamp1Alpha",
+      "TYPE": "float",
+      "LABEL": "Mid Alpha",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorRamp2",
+      "TYPE": "color",
+      "LABEL": "Color High",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorRamp2Pos",
+      "TYPE": "float",
+      "LABEL": "High Position",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorRamp2Alpha",
+      "TYPE": "float",
+      "LABEL": "High Alpha",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "LABEL": "Hue Shift",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "LABEL": "Color Boost",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "zoom",
+      "TYPE": "float",
+      "MIN": 0.01,
+      "MAX": 0.5,
+      "DEFAULT": 0.42,
+      "LABEL": "Zoom",
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "backgroundColor",
+      "TYPE": "color",
+      "LABEL": "Background",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "useBackgroundColor",
+      "TYPE": "bool",
+      "LABEL": "Use Background",
+      "DEFAULT": true,
+      "GROUP": "Background"
+    }
+  ]
 }*/
 
 #ifdef GL_ES
@@ -339,6 +410,21 @@ void main() {
     // Composite: cellMask blends fluid pixel over background with soft AA edges.
     // HDR-safe: no clamp, no tonemap — bright cores stay >1.0 for bloom.
     float coverage = cellMask * color.a;
-    gl_FragColor.rgb = mix(bgColor.rgb, color.rgb, coverage);
+
+    // ---- universal color block (defaults = no-op) ----
+    // (background handled by the existing backgroundColor/useBackgroundColor inputs)
+    vec3 uc = mix(bgColor.rgb, color.rgb, coverage);
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                   // saturation
+    if (hueShift > 0.0005) {                               // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+
+    gl_FragColor.rgb = uc;
     gl_FragColor.a = mix(bgColor.a, color.a, cellMask);
 }

@@ -1,22 +1,175 @@
 /*{
-  "CATEGORIES": ["Generator", "Text"],
+  "CATEGORIES": [
+    "Generator",
+    "Text"
+  ],
   "DESCRIPTION": "Etherea — cycling font styles per letter with bounce animation",
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "ETHEREA", "MAX_LENGTH": 48 },
-    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
-    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
-    { "NAME": "intensity", "LABEL": "Bounce", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "density", "LABEL": "Cycle Speed", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "kerning", "LABEL": "Spacing", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0 },
-    { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
-    { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
-    { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    {
+      "NAME": "speed",
+      "LABEL": "Speed",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 3,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "intensity",
+      "LABEL": "Bounce",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "density",
+      "LABEL": "Cycle Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "oscSpeed",
+      "LABEL": "Osc Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 10,
+      "DEFAULT": 0,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "oscAmount",
+      "LABEL": "Osc Amount",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.2,
+      "DEFAULT": 0,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "oscSpread",
+      "LABEL": "Osc Spread",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "textColor",
+      "LABEL": "Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": "ETHEREA",
+      "MAX_LENGTH": 48,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "fontFamily",
+      "LABEL": "Font",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Inter",
+        "Times New Roman",
+        "Libre Caslon",
+        "Outfit"
+      ],
+      "DEFAULT": 0,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "textScale",
+      "LABEL": "Size",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "kerning",
+      "LABEL": "Spacing",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 1,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background"
+    }
   ]
 }*/
+
+// ---- universal color block (defaults = no-op) ----
+vec3 ucApply(vec3 uc) {
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                      // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    return uc;
+}
+
 
 // ═══════════════════════════════════════════════════════════════════════
 // ANGLE-safe character lookup — tent function ensures all msg_N uniforms
@@ -121,6 +274,12 @@ vec4 effectEtherea(vec2 uv) {
     float _sp = max(speed, 0.01);
     float cycleSpd = mix(0.2, 5.0, density);
 
+    // Soft-knee audio conditioning (playbook standard snippet)
+    float bassP = pow(smoothstep(0.05, 0.85, audioBass), 1.6);
+    float midP  = pow(smoothstep(0.08, 0.85, audioMid), 1.3);
+    float highP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+    float drive = 0.25 + 0.75 * smoothstep(0.05, 0.9, audioEnergy);
+
     vec3 col = bgColor.rgb;
     float alpha = transparentBg ? 0.0 : 1.0;
 
@@ -168,10 +327,10 @@ vec4 effectEtherea(vec2 uv) {
         float cx = rowStartX + float(i) * cellStep;
         float cy = startY;
         float bp = float(i) * 0.8 + TIME * _sp * 2.5;
-        cy += sin(bp) * 0.015 * intensity;
+        cy += sin(bp) * 0.015 * intensity * (1.0 + 0.3 * midP);
         float oscY = oscAmount * sin(TIME * oscSpeed * 6.2832 + float(i) * oscSpread * 3.14159);
         cy += oscY;
-        float sp2 = 1.0 + sin(bp + 1.0) * 0.05 * intensity;
+        float sp2 = (1.0 + sin(bp + 1.0) * 0.05 * intensity) * (1.0 + 0.15 * bassP);
 
         // UV within this character cell
         vec2 cellUV = vec2((p.x - cx) / (charW * sp2), (p.y - cy) / (charH * sp2));
@@ -189,7 +348,7 @@ vec4 effectEtherea(vec2 uv) {
                 vec2 lp = fract(cellUV * vec2(5.0, 7.0));
                 float inten = fillStyle(style, lp);
 
-                textCol = max(textCol, textColor.rgb * inten * edgeAA);
+                textCol = max(textCol, textColor.rgb * inten * edgeAA * (1.0 + 0.25 * highP));
                 textMask = max(textMask, inten * edgeAA);
             }
         }
@@ -198,7 +357,7 @@ vec4 effectEtherea(vec2 uv) {
         if (isActive > 0.5) {
             vec2 cc = vec2(cx + charW * 0.5, cy + charH * 0.5);
             float gd = length((p - cc) * vec2(1.0, 0.7));
-            glowAccum += exp(-gd * gd / (charW * charW * 2.0)) * 0.15;
+            glowAccum += exp(-gd * gd / (charW * charW * 2.0)) * 0.15 * (0.85 + 0.3 * drive);
         }
     }
 
@@ -235,5 +394,5 @@ void main() {
         col = mix(col, glitched, smoothstep(0.0, 0.3, g));
     }
 
-    gl_FragColor = col;
+    gl_FragColor = vec4(ucApply(col.rgb), col.a);
 }

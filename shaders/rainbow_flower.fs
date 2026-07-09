@@ -1,31 +1,220 @@
 /*{
-  "CATEGORIES": ["Generator"],
+  "CATEGORIES": [
+    "Generator"
+  ],
   "DESCRIPTION": "Rainbow Flower — layered petal rings with simplex noise distortion, hue cycling, depth, and audio reactivity",
   "INPUTS": [
-    { "NAME": "hueShift", "LABEL": "Hue Shift", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "hueRange", "LABEL": "Hue Range", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "saturation", "LABEL": "Saturation", "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.42 },
-    { "NAME": "brightness", "LABEL": "Brightness", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.6 },
-    { "NAME": "petalCount", "LABEL": "Petals", "TYPE": "float", "MIN": 1.0, "MAX": 12.0, "DEFAULT": 5.0 },
-    { "NAME": "layers", "LABEL": "Layers", "TYPE": "float", "MIN": 5.0, "MAX": 60.0, "DEFAULT": 40.0 },
-    { "NAME": "bloom", "LABEL": "Bloom", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "depth", "LABEL": "Depth", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "depthFalloff", "LABEL": "Depth Falloff", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.7 },
-    { "NAME": "shadowStrength", "LABEL": "Shadow Strength", "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.6 },
-    { "NAME": "shadowSoftness", "LABEL": "Shadow Softness", "TYPE": "float", "MIN": 0.5, "MAX": 6.0, "DEFAULT": 2.0 },
-    { "NAME": "innerShadow", "LABEL": "Inner Shadow", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.45 },
-    { "NAME": "rimLight", "LABEL": "Rim Light", "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.35 },
-    { "NAME": "petalContrast", "LABEL": "Petal Contrast", "TYPE": "float", "MIN": 0.5, "MAX": 2.5, "DEFAULT": 1.2 },
-    { "NAME": "ambientOcclusion", "LABEL": "Ambient Occlusion", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.4 },
-    { "NAME": "noiseAmount", "LABEL": "Noise", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "spinSpeed", "LABEL": "Spin", "TYPE": "float", "MIN": -3.0, "MAX": 3.0, "DEFAULT": 0.0 },
-    { "NAME": "pulseSpeed", "LABEL": "Pulse", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.25 },
-    { "NAME": "scale", "LABEL": "Scale", "TYPE": "float", "MIN": 0.2, "MAX": 4.0, "DEFAULT": 1.0 },
-    { "NAME": "centerX", "LABEL": "Center X", "TYPE": "float", "MIN": -1.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "centerY", "LABEL": "Center Y", "TYPE": "float", "MIN": -1.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    {
+      "NAME": "bloom",
+      "LABEL": "Bloom",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5
+    },
+    {
+      "NAME": "shadowStrength",
+      "LABEL": "Shadow Strength",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.6
+    },
+    {
+      "NAME": "shadowSoftness",
+      "LABEL": "Shadow Softness",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 6,
+      "DEFAULT": 2
+    },
+    {
+      "NAME": "innerShadow",
+      "LABEL": "Inner Shadow",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.45
+    },
+    {
+      "NAME": "rimLight",
+      "LABEL": "Rim Light",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.35
+    },
+    {
+      "NAME": "ambientOcclusion",
+      "LABEL": "Ambient Occlusion",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.4
+    },
+    {
+      "NAME": "petalCount",
+      "LABEL": "Petals",
+      "TYPE": "float",
+      "MIN": 1,
+      "MAX": 12,
+      "DEFAULT": 5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "layers",
+      "LABEL": "Layers",
+      "TYPE": "float",
+      "MIN": 5,
+      "MAX": 60,
+      "DEFAULT": 40,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "depth",
+      "LABEL": "Depth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "depthFalloff",
+      "LABEL": "Depth Falloff",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.7,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "scale",
+      "LABEL": "Scale",
+      "TYPE": "float",
+      "MIN": 0.2,
+      "MAX": 4,
+      "DEFAULT": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "noiseAmount",
+      "LABEL": "Noise",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "spinSpeed",
+      "LABEL": "Spin",
+      "TYPE": "float",
+      "MIN": -3,
+      "MAX": 3,
+      "DEFAULT": 0,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "pulseSpeed",
+      "LABEL": "Pulse",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 1.25,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueRange",
+      "LABEL": "Hue Range",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "saturation",
+      "LABEL": "Saturation",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.42,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "brightness",
+      "LABEL": "Brightness",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.6,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "petalContrast",
+      "LABEL": "Petal Contrast",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 2.5,
+      "DEFAULT": 1.2,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "centerX",
+      "LABEL": "Center X",
+      "TYPE": "float",
+      "MIN": -1,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "centerY",
+      "LABEL": "Center Y",
+      "TYPE": "float",
+      "MIN": -1,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 

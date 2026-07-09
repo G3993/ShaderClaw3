@@ -1,20 +1,143 @@
 /*{
-  "CATEGORIES": ["Generator", "Atmospheric", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Atmospheric",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "Volumetric fog machine — domain-warped fbm rolling forward, with an optional input texture sampled through the warp so the image itself becomes the fog. Audio-reactive density pulse on bass.",
   "INPUTS": [
-    { "NAME": "density",     "LABEL": "Density",          "TYPE": "float", "MIN": 0.0,  "MAX": 3.0,  "DEFAULT": 1.15 },
-    { "NAME": "speed",       "LABEL": "Drift Speed",      "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.35 },
-    { "NAME": "scale",       "LABEL": "Fog Scale",        "TYPE": "float", "MIN": 0.5,  "MAX": 8.0,  "DEFAULT": 2.4 },
-    { "NAME": "billow",      "LABEL": "Billowing",        "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.85 },
-    { "NAME": "depth",       "LABEL": "Depth Layers",     "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.6 },
-    { "NAME": "glow",        "LABEL": "Glow",             "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.7 },
-    { "NAME": "fogColor",    "LABEL": "Fog Color",        "TYPE": "color", "DEFAULT": [0.85, 0.88, 0.95, 1.0] },
-    { "NAME": "backColor",   "LABEL": "Back Color",       "TYPE": "color", "DEFAULT": [0.04, 0.05, 0.09, 1.0] },
-    { "NAME": "textureMix",  "LABEL": "Texture as Fog",   "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.0 },
-    { "NAME": "textureWarp", "LABEL": "Texture Warp",     "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.35 },
-    { "NAME": "textureZoom", "LABEL": "Texture Zoom",     "TYPE": "float", "MIN": 0.25, "MAX": 4.0,  "DEFAULT": 1.0 },
-    { "NAME": "audioReact",  "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
-    { "NAME": "inputTex",    "LABEL": "Texture",          "TYPE": "image" }
+    {
+      "NAME": "density",
+      "LABEL": "Density",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 1.15
+    },
+    {
+      "NAME": "glow",
+      "LABEL": "Glow",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.7
+    },
+    {
+      "NAME": "textureMix",
+      "LABEL": "Texture as Fog",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "textureWarp",
+      "LABEL": "Texture Warp",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.35
+    },
+    {
+      "NAME": "textureZoom",
+      "LABEL": "Texture Zoom",
+      "TYPE": "float",
+      "MIN": 0.25,
+      "MAX": 4,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "inputTex",
+      "LABEL": "Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "scale",
+      "LABEL": "Fog Scale",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 8,
+      "DEFAULT": 2.4,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "depth",
+      "LABEL": "Depth Layers",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.6,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Drift Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.35,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "billow",
+      "LABEL": "Billowing",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.85,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "fogColor",
+      "LABEL": "Fog Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.85,
+        0.88,
+        0.95,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "backColor",
+      "LABEL": "Back Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.04,
+        0.05,
+        0.09,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -100,5 +223,19 @@ void main() {
     float shaft = mix(0.92, 1.05, smoothstep(0.0, 1.0, 1.0 - uv.y));
     procColor *= shaft;
 
-    gl_FragColor = vec4(procColor, 1.0);
+    // ---- universal color block (defaults = no-op) ----
+    // (background handled by the existing backColor input)
+    vec3 uc = procColor;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                   // saturation
+    if (hueShift > 0.0005) {                               // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+
+    gl_FragColor = vec4(uc, 1.0);
 }

@@ -1,25 +1,194 @@
 /*{
   "DESCRIPTION": "Text Cylinder — your message wraps around the circumference of a raymarched 3D cylinder, embossed into chrome and lit with neon rim light. The camera orbits slowly while the label itself drifts in a lazy independent spin, so the wrap-around reads continuously. Bass pops the letter relief, mids ripple the chrome, highs sparkle a sparse subset of glyphs, beats flash the neon — all eased around an always-alive idle rotation. An optional image ghosts into the chrome as a fake environment reflection.",
   "CREDIT": "ShaderClaw3",
-  "CATEGORIES": ["Generator", "Text", "3D", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Text",
+    "3D",
+    "Audio Reactive"
+  ],
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "ETHEREA", "MAX_LENGTH": 48 },
-    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
-    { "NAME": "textScale", "LABEL": "Label Size", "TYPE": "float", "MIN": 0.5, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "kerning", "LABEL": "Kerning", "TYPE": "float", "MIN": 0.5, "MAX": 1.0, "DEFAULT": 0.82 },
-    { "NAME": "orbitSpeed", "LABEL": "Camera Orbit Speed", "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.15 },
-    { "NAME": "spinSpeed", "LABEL": "Label Spin Speed", "TYPE": "float", "MIN": -1.0, "MAX": 1.0, "DEFAULT": 0.07 },
-    { "NAME": "chromeAmount", "LABEL": "Chrome Amount", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.65 },
-    { "NAME": "embossAmount", "LABEL": "Letter Relief", "TYPE": "float", "MIN": 0.0, "MAX": 0.6, "DEFAULT": 0.22 },
-    { "NAME": "audioReact", "LABEL": "Sound Reactivity", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.85 },
-    { "NAME": "neonColorA", "LABEL": "Neon Color A", "TYPE": "color", "DEFAULT": [0.15, 0.95, 1.00, 1.0] },
-    { "NAME": "neonColorB", "LABEL": "Neon Color B", "TYPE": "color", "DEFAULT": [0.95, 0.15, 0.85, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
-    { "NAME": "texMix", "LABEL": "Image Reflection Mix", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "inputImage", "TYPE": "image" }
+    {
+      "NAME": "embossAmount",
+      "LABEL": "Letter Relief",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.6,
+      "DEFAULT": 0.22,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "spinSpeed",
+      "LABEL": "Label Spin Speed",
+      "TYPE": "float",
+      "MIN": -1,
+      "MAX": 1,
+      "DEFAULT": 0.07,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "chromeAmount",
+      "LABEL": "Chrome Amount",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.65,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "neonColorA",
+      "LABEL": "Neon Color A",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.15,
+        0.95,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "neonColorB",
+      "LABEL": "Neon Color B",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.95,
+        0.15,
+        0.85,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "orbitSpeed",
+      "LABEL": "Camera Orbit Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.15,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": "ETHEREA",
+      "MAX_LENGTH": 48,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "fontFamily",
+      "LABEL": "Font",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Inter",
+        "Times New Roman",
+        "Libre Caslon",
+        "Outfit"
+      ],
+      "DEFAULT": 0,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "textScale",
+      "LABEL": "Label Size",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "kerning",
+      "LABEL": "Kerning",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 1,
+      "DEFAULT": 0.82,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent",
+      "TYPE": "bool",
+      "DEFAULT": false,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Sound Reactivity",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.85,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "texMix",
+      "LABEL": "Image Reflection Mix",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "inputImage",
+      "TYPE": "image",
+      "LABEL": "Reflection Image"
+    }
   ]
 }*/
+
+// ---- universal color block (defaults = no-op) ----
+vec3 ucApply(vec3 uc) {
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                      // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    return uc;
+}
+
 
 // ============================================================================
 // TEXT CYLINDER
@@ -165,7 +334,12 @@ void main() {
     float glyphWidthFrac = clamp(kerning, 0.5, 1.0);
 
     // --- camera: slow orbit, idle-alive bob + gentle bass lift --------------
-    float camAng  = t * orbitSpeed * (0.5 + 0.6 * drive) + beatPulse * 0.35;
+    // Constant orbit speed (silent look unchanged: 0.5+0.6*0.25 = 0.65) plus a
+    // BOUNDED audio angle offset — never TIME * (audio speed), which makes the
+    // camera jump proportionally to elapsed time on every energy swell.
+    // (no beatPulse term here: an instant-attack envelope on the camera angle
+    // rotated the whole scene ~9 deg in one frame on every beat = the chop)
+    float camAng  = t * orbitSpeed * 0.65 + 0.45 * (drive - 0.25);
     float camDist = gRadius * 1.55 + 0.95;
     float camY = 0.16 * gHalfHeight + 0.10 * gHalfHeight * sin(t * 0.23)
                + 0.05 * gHalfHeight * bassP * sin(t * 2.7);
@@ -174,7 +348,9 @@ void main() {
     vec3 fwd = normalize(ta - ro);
     vec3 rgt = normalize(cross(vec3(0.0, 1.0, 0.0), fwd));
     vec3 upv = cross(fwd, rgt);
-    float fov = 1.05 - 0.07 * punch;
+    // zoom rides the SMOOTHED bass follower; only a whisper of instant punch
+    // (a 7% one-frame fov snap moved every edge pixel = chop)
+    float fov = 1.05 - 0.05 * bassP - 0.02 * punch;
     vec3 rd = normalize(fwd + (ndc.x * rgt + ndc.y * upv) * fov);
 
     // --- label spin: always-on idle drift, independent from the camera -----
@@ -240,11 +416,15 @@ void main() {
         // --- neon emissive letterforms --------------------------------------
         float ciHash = hash(float(ci) * 12.9898 + 4.0);
         float idleShimmer = 0.85 + 0.15 * sin(t * 1.1 + ciHash * 18.0);
-        float sparkGate = step(0.965 - 0.30 * highP, ciHash);
+        float sparkGate = smoothstep(0.965 - 0.30 * highP, 0.985 - 0.30 * highP, ciHash);
         float sparkle = sparkGate * highP * (0.6 + 0.6 * sin(t * 6.0 + ciHash * 40.0));
 
         vec3 neonMix = mix(neonColorA.rgb, neonColorB.rgb, ciHash);
-        vec3 emissive = neonMix * mask * idleShimmer * (0.95 + 1.7 * pow(beatPulse, 1.4) + 0.9 * pow(punch, 1.5));
+        // Continuous band-following glow (reads on beatless material) + capped
+        // beat/punch flashes that decay with the host envelopes.
+        vec3 emissive = neonMix * mask * idleShimmer
+                      * (0.95 + 0.45 * bassP + 0.25 * midP
+                         + 0.35 * pow(beatPulse, 1.4) + 0.22 * pow(punch, 1.5));
         emissive += vec3(1.0) * mask * sparkle;
 
         vec3 col = mix(chromeCol, emissive, clamp(mask * 1.05, 0.0, 1.0));
@@ -252,8 +432,9 @@ void main() {
         // this is what keeps the cylinder's edge reading crisp against black
         col += neonColorB.rgb * fres * 0.22 * (0.55 + 0.5 * bassP);
         // beat flash — a brief, eased whole-surface brightening (never a
-        // per-frame strobe: audioBeatPulse arrives pre-enveloped by the host)
-        col *= (1.0 + 0.55 * pow(beatPulse, 1.4));
+        // per-frame strobe: audioBeatPulse arrives pre-enveloped by the host),
+        // plus a smooth bass/mid breathing lift so ambient swells stay visible
+        col *= (1.0 + 0.16 * pow(beatPulse, 1.4) + 0.16 * bassP + 0.09 * midP);
         // faint hologram-style scanlines — cheap fine-frequency detail that
         // reads as a chrome/CRT surface rather than a flat gradient
         col *= (1.0 - 0.16 * (0.5 + 0.5 * sin(gl_FragCoord.y * 1.5)));
@@ -271,5 +452,5 @@ void main() {
         outAlpha = transparentBg ? 0.0 : 1.0;
     }
 
-    gl_FragColor = vec4(clamp(outCol, 0.0, 4.0), clamp(outAlpha, 0.0, 1.0));
+    gl_FragColor = vec4(ucApply(clamp(outCol, 0.0, 4.0)), clamp(outAlpha, 0.0, 1.0));
 }

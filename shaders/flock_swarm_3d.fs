@@ -1,24 +1,167 @@
 /*{
-  "DESCRIPTION":"Raymarched 3D swarm of 8 glowing metaball creatures driven by a genuine boids flocking simulation (cohesion/separation/alignment) held in a persistent per-agent state buffer. An idle wander drive keeps the flock alive and organic even in total silence; audio nudges cohesion (bass makes the flock clump/fuse), separation/scatter (highs dart the flock apart) and overall flight energy (mids), with a synchronized glow flash across the whole flock on the beat.",
-  "CREDIT":"ShaderClaw3",
-  "CATEGORIES":["Generator","3D","Audio Reactive"],
-  "INPUTS":[
-    { "NAME":"audioReact", "LABEL":"Sound Reactivity", "TYPE":"float", "DEFAULT":1.0, "MIN":0.0, "MAX":2.0 },
-    { "NAME":"cohesionStrength", "LABEL":"Cohesion", "TYPE":"float", "DEFAULT":0.95, "MIN":0.0, "MAX":3.0 },
-    { "NAME":"separationStrength", "LABEL":"Separation", "TYPE":"float", "DEFAULT":1.7, "MIN":0.0, "MAX":3.0 },
-    { "NAME":"alignStrength", "LABEL":"Alignment", "TYPE":"float", "DEFAULT":1.0, "MIN":0.0, "MAX":3.0 },
-    { "NAME":"wanderAmt", "LABEL":"Idle Wander", "TYPE":"float", "DEFAULT":0.55, "MIN":0.0, "MAX":1.5 },
-    { "NAME":"creatureSize", "LABEL":"Creature Size", "TYPE":"float", "DEFAULT":0.16, "MIN":0.05, "MAX":0.35 },
-    { "NAME":"glowIntensity", "LABEL":"Glow", "TYPE":"float", "DEFAULT":1.0, "MIN":0.0, "MAX":2.0 },
-    { "NAME":"texTint", "LABEL":"Image Tint Amount", "TYPE":"float", "DEFAULT":0.4, "MIN":0.0, "MAX":1.0 },
-    { "NAME":"camDist", "LABEL":"Camera Distance", "TYPE":"float", "DEFAULT":2.7, "MIN":1.4, "MAX":5.0 },
-    { "NAME":"camOrbitSpeed", "LABEL":"Camera Orbit Speed", "TYPE":"float", "DEFAULT":0.5, "MIN":0.0, "MAX":2.0 },
-    { "NAME":"primaryColor", "LABEL":"Primary Hue", "TYPE":"color", "DEFAULT":[0.15,0.85,0.95,1.0] },
-    { "NAME":"accentColor", "LABEL":"Accent Hue", "TYPE":"color", "DEFAULT":[0.80,0.30,0.95,1.0] },
-    { "NAME":"inputImage", "TYPE":"image" }
+  "DESCRIPTION": "Raymarched 3D swarm of 8 glowing metaball creatures driven by a genuine boids flocking simulation (cohesion/separation/alignment) held in a persistent per-agent state buffer. An idle wander drive keeps the flock alive and organic even in total silence; audio nudges cohesion (bass makes the flock clump/fuse), separation/scatter (highs dart the flock apart) and overall flight energy (mids), with a synchronized glow flash across the whole flock on the beat.",
+  "CREDIT": "ShaderClaw3",
+  "CATEGORIES": [
+    "Generator",
+    "3D",
+    "Audio Reactive"
   ],
-  "PASSES":[
-    { "TARGET":"agentBuf", "PERSISTENT": true, "WIDTH": "8", "HEIGHT": "1" },
+  "INPUTS": [
+    {
+      "NAME": "glowIntensity",
+      "LABEL": "Glow",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "texTint",
+      "LABEL": "Image Tint Amount",
+      "TYPE": "float",
+      "DEFAULT": 0.4,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "inputImage",
+      "TYPE": "image",
+      "LABEL": "Input Image"
+    },
+    {
+      "NAME": "creatureSize",
+      "LABEL": "Creature Size",
+      "TYPE": "float",
+      "DEFAULT": 0.16,
+      "MIN": 0.05,
+      "MAX": 0.35,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "cohesionStrength",
+      "LABEL": "Cohesion",
+      "TYPE": "float",
+      "DEFAULT": 0.95,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "separationStrength",
+      "LABEL": "Separation",
+      "TYPE": "float",
+      "DEFAULT": 1.7,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "alignStrength",
+      "LABEL": "Alignment",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "wanderAmt",
+      "LABEL": "Idle Wander",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "primaryColor",
+      "LABEL": "Primary Hue",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.15,
+        0.85,
+        0.95,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "accentColor",
+      "LABEL": "Accent Hue",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.8,
+        0.3,
+        0.95,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "camDist",
+      "LABEL": "Camera Distance",
+      "TYPE": "float",
+      "DEFAULT": 2.7,
+      "MIN": 1.4,
+      "MAX": 5,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "camOrbitSpeed",
+      "LABEL": "Camera Orbit Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Sound Reactivity",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    }
+  ],
+  "PASSES": [
+    {
+      "TARGET": "agentBuf",
+      "PERSISTENT": true,
+      "WIDTH": "8",
+      "HEIGHT": "1"
+    },
     {}
   ]
 }*/
@@ -301,8 +444,11 @@ void screenPass(){
     vec2 res = RENDERSIZE;
     vec2 ndc = (gl_FragCoord.xy - 0.5 * res) / res.y;
 
-    float bassP = pow(knee(audioBass, 0.05, 0.85), 1.6) * audioReact;
+    // Lower sensitivity floor (jazz fix): soft swing accents sit ~0.3-0.5,
+    // so the knee starts at 0.03 with a gentler curve than the sim pass.
+    float bassP = pow(knee(audioBass, 0.03, 0.80), 1.3) * audioReact;
     float highP = pow(knee(audioHigh, 0.10, 0.90), 1.2) * audioReact;
+    float midP  = knee(audioMid, 0.04, 0.90) * audioReact;
     float drive = 0.25 + 0.75 * knee(audioEnergy, 0.05, 0.9);
 
     // Track the flock's rough centroid so the camera keeps it framed.
@@ -349,7 +495,10 @@ void screenPass(){
         if (t > 9.0) break;
     }
 
-    float beatFlash = pow(clamp(audioBeatPulse, 0.0, 1.0), 2.0) * audioReact;
+    // Jazz fix: squaring crushed soft accents (0.45^2 ~ 0.2). A 1.3 exponent
+    // plus punch coupling lets quiet swing hits leave a visible decaying
+    // flash (both envelopes already decay — never a raw-gate strobe).
+    float beatFlash = pow(clamp(max(audioBeatPulse, audioPunch * 0.8), 0.0, 1.0), 1.3) * audioReact;
 
     if (hit){
         vec3 n = calcNormal(hitP, k);
@@ -368,7 +517,7 @@ void screenPass(){
     // where the ray doesn't hit a surface, brightening on bass and flashing
     // together on the beat (synchronized flock-wide flash, event-only).
     vec3 glowColor = mix(primaryColor.rgb, accentColor.rgb, 0.5);
-    col += glowColor * glow * glowIntensity * (0.5 + 0.6 * bassP) * (1.0 + 1.4 * beatFlash);
+    col += glowColor * glow * glowIntensity * (0.5 + 0.6 * bassP + 0.35 * midP) * (1.0 + 1.4 * beatFlash);
 
     // Luminance-preserving tonemap (per-channel Reinhard desaturates bright
     // highlights toward white; scaling by a single luminance-derived factor
@@ -384,7 +533,22 @@ void screenPass(){
     float lum2 = dot(col, vec3(0.299, 0.587, 0.114));
     col = clamp(mix(vec3(lum2), col, 1.9), 0.0, 1.0);
 
-    gl_FragColor = vec4(col, 1.0);
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = col;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                   // saturation
+    if (hueShift > 0.0005) {                               // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    // background = the black void the flock flies in (darkest end)
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+
+    gl_FragColor = vec4(uc, 1.0);
 }
 
 // ---------------------------------------------------------------------------

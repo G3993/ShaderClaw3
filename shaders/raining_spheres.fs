@@ -1,15 +1,95 @@
 /*{
   "DESCRIPTION": "Raining Spheres — bouncing colored light-emitting spheres on a grid. Based on work by Reinder Nijhoff (CC BY-NC-SA 4.0)",
   "CREDIT": "Reinder Nijhoff (adapted for ShaderClaw)",
-  "CATEGORIES": ["3D"],
+  "CATEGORIES": [
+    "3D"
+  ],
   "INPUTS": [
-    { "NAME": "camSpeed", "LABEL": "Cam Speed", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "bounceHeight", "LABEL": "Bounce Height", "TYPE": "float", "DEFAULT": 30.0, "MIN": 5.0, "MAX": 60.0 },
-    { "NAME": "sphereSpeed", "LABEL": "Sphere Speed", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "brightness", "LABEL": "Brightness", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.1, "MAX": 2.0 },
-    { "NAME": "reflections", "LABEL": "Reflections", "TYPE": "bool", "DEFAULT": true },
-    { "NAME": "shadows", "LABEL": "Shadows", "TYPE": "bool", "DEFAULT": true },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    {
+      "NAME": "reflections",
+      "LABEL": "Reflections",
+      "TYPE": "bool",
+      "DEFAULT": true
+    },
+    {
+      "NAME": "shadows",
+      "LABEL": "Shadows",
+      "TYPE": "bool",
+      "DEFAULT": true
+    },
+    {
+      "NAME": "bounceHeight",
+      "LABEL": "Bounce Height",
+      "TYPE": "float",
+      "DEFAULT": 30,
+      "MIN": 5,
+      "MAX": 60,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "sphereSpeed",
+      "LABEL": "Sphere Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.3,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "brightness",
+      "LABEL": "Brightness",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0.1,
+      "MAX": 2,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "camSpeed",
+      "LABEL": "Cam Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    }
   ]
 }*/
 
@@ -231,5 +311,22 @@ void main() {
         col = mix(col, vec3(_lum) * vec3(0.92, 0.95, 1.05), _f * 0.55);
     }
 
-    gl_FragColor = vec4(col, alpha);
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    vec3 uc = mix(vec3(ucL), col, colorBoost);
+    if (hueShift > 0.0005) {
+        float hueA = hueShift * 6.2831853;
+        float hueC = cos(hueA), hueS = sin(hueA);
+        mat3 hueM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                  + hueC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                  + hueS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hueM * uc, 0.0, 1.0);
+    }
+    // background fill: dark/transparent region takes bgColor at bgColor.a strength
+    if (bgColor.a > 0.0005) {
+        uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - alpha));
+        alpha = max(alpha, bgColor.a);
+    }
+
+    gl_FragColor = vec4(uc, alpha);
 }

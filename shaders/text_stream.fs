@@ -1,29 +1,254 @@
 /*{
   "DESCRIPTION": "Stream — flowing ribbons of text drift like jellyfish tentacles. Many vertical character columns sway side-to-side at different frequencies and speeds, characters fall along each ribbon, tops & bottoms taper softly. Lots of text on screen at once. Bass deepens the sway, treble lights up individual character peaks. Bind a Background Layer for any backdrop.",
   "CREDIT": "ShaderClaw",
-  "CATEGORIES": ["Generator", "Text", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Text",
+    "Audio Reactive"
+  ],
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "STREAM RIBBONS DRIFT THROUGH THE DEEP", "MAX_LENGTH": 48 },
-    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Inter","Times","Caslon","Outfit"] },
-    { "NAME": "ribbonCount", "LABEL": "Ribbons", "TYPE": "long", "DEFAULT": 11, "VALUES": [4,6,8,10,11,12,14,16,20,24], "LABELS": ["4","6","8","10","11","12","14","16","20","24"] },
-    { "NAME": "fallSpeed", "LABEL": "Fall Speed", "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "swayAmp", "LABEL": "Sway Amplitude", "TYPE": "float", "DEFAULT": 0.06, "MIN": 0.0, "MAX": 0.18 },
-    { "NAME": "swayFreq", "LABEL": "Sway Frequency", "TYPE": "float", "DEFAULT": 1.7, "MIN": 0.0, "MAX": 8.0 },
-    { "NAME": "ribbonJitter", "LABEL": "Ribbon Variance", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "textScale", "LABEL": "Text Size", "TYPE": "float", "DEFAULT": 0.05, "MIN": 0.02, "MAX": 0.12 },
-    { "NAME": "kerning", "LABEL": "Vertical Spacing", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.6, "MAX": 1.8 },
-    { "NAME": "ribbonThickness", "LABEL": "Ribbon Width", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.2, "MAX": 1.0 },
-    { "NAME": "tipFade", "LABEL": "Tip Fade", "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.0, "MAX": 0.5 },
-    { "NAME": "haloStrength", "LABEL": "Halo", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "hdrBoost", "LABEL": "HDR Boost", "TYPE": "float", "DEFAULT": 1.8, "MIN": 1.0, "MAX": 3.5 },
-    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "inputTex", "LABEL": "Background Layer", "TYPE": "image" },
-    { "NAME": "bgOpacity", "LABEL": "BG Layer Opacity", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.01, 0.02, 0.05, 1.0] },
-    { "NAME": "textA", "LABEL": "Tip Color", "TYPE": "color", "DEFAULT": [1.00, 1.00, 1.00, 1.0] },
-    { "NAME": "textB", "LABEL": "Mid Color", "TYPE": "color", "DEFAULT": [0.20, 0.95, 1.00, 1.0] },
-    { "NAME": "textC", "LABEL": "Tail Color", "TYPE": "color", "DEFAULT": [0.60, 0.20, 1.00, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent BG", "TYPE": "bool", "DEFAULT": 1.0 }
+    {
+      "NAME": "ribbonCount",
+      "LABEL": "Ribbons",
+      "TYPE": "long",
+      "DEFAULT": 11,
+      "VALUES": [
+        4,
+        6,
+        8,
+        10,
+        11,
+        12,
+        14,
+        16,
+        20,
+        24
+      ],
+      "LABELS": [
+        "4",
+        "6",
+        "8",
+        "10",
+        "11",
+        "12",
+        "14",
+        "16",
+        "20",
+        "24"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "ribbonThickness",
+      "LABEL": "Ribbon Width",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0.2,
+      "MAX": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "ribbonJitter",
+      "LABEL": "Ribbon Variance",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "tipFade",
+      "LABEL": "Tip Fade",
+      "TYPE": "float",
+      "DEFAULT": 0.18,
+      "MIN": 0,
+      "MAX": 0.5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "fallSpeed",
+      "LABEL": "Fall Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "swayAmp",
+      "LABEL": "Sway Amplitude",
+      "TYPE": "float",
+      "DEFAULT": 0.06,
+      "MIN": 0,
+      "MAX": 0.18,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "swayFreq",
+      "LABEL": "Sway Frequency",
+      "TYPE": "float",
+      "DEFAULT": 1.7,
+      "MIN": 0,
+      "MAX": 8,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "textA",
+      "LABEL": "Tip Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "textB",
+      "LABEL": "Mid Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.2,
+        0.95,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "textC",
+      "LABEL": "Tail Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.6,
+        0.2,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": "STREAM RIBBONS DRIFT THROUGH THE DEEP",
+      "MAX_LENGTH": 48,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "fontFamily",
+      "LABEL": "Font",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Inter",
+        "Times",
+        "Caslon",
+        "Outfit"
+      ],
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "textScale",
+      "LABEL": "Text Size",
+      "TYPE": "float",
+      "DEFAULT": 0.05,
+      "MIN": 0.02,
+      "MAX": 0.12,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "kerning",
+      "LABEL": "Vertical Spacing",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.6,
+      "MAX": 1.8,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "inputTex",
+      "LABEL": "Background Layer",
+      "TYPE": "image",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "bgOpacity",
+      "LABEL": "BG Layer Opacity",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.01,
+        0.02,
+        0.05,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent BG",
+      "TYPE": "bool",
+      "DEFAULT": 1,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "DEFAULT": 0.85,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "haloStrength",
+      "LABEL": "Halo",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "hdrBoost",
+      "LABEL": "HDR Boost",
+      "TYPE": "float",
+      "DEFAULT": 1.8,
+      "MIN": 1,
+      "MAX": 3.5
+    }
   ]
 }*/
 
@@ -264,6 +489,20 @@ void main() {
         alpha = clamp(textMask + halo * 0.25, 0.0, 1.0);
         col   = textCol;
     }
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = col;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    col = uc;
 
     gl_FragColor = vec4(col, alpha);
 }

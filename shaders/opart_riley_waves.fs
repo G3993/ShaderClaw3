@@ -1,17 +1,140 @@
 /*{
-  "CATEGORIES": ["Generator", "Geometric", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Geometric",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "Dense black-and-white Op Art that breathes with the music. Switch between Riley waves, zigzags, checkers, diamonds, and wobbling stripes.",
   "INPUTS": [
-    {"NAME":"pattern","LABEL":"Pattern","TYPE":"long","DEFAULT":0,"VALUES":[0,1,2,3,4],"LABELS":["Wave","Zigzag","Checker","Diamond","Stripe Wobble"]},
-    {"NAME":"freq","TYPE":"float","MIN":10.0,"MAX":160.0,"DEFAULT":60.0},
-    {"NAME":"warpAmp","TYPE":"float","MIN":0.0,"MAX":0.5,"DEFAULT":0.12},
-    {"NAME":"xFreq","TYPE":"float","MIN":0.5,"MAX":12.0,"DEFAULT":3.0},
-    {"NAME":"flow","TYPE":"float","MIN":0.0,"MAX":2.0,"DEFAULT":0.4},
-    {"NAME":"contrast","TYPE":"float","MIN":0.0,"MAX":1.0,"DEFAULT":1.0},
-    {"NAME":"accentEvery","TYPE":"float","MIN":2.0,"MAX":20.0,"DEFAULT":7.0},
-    {"NAME":"accentColor","TYPE":"color","DEFAULT":[0.95,0.15,0.25,1.0]},
-    {"NAME":"texDisplace","TYPE":"float","MIN":0.0,"MAX":0.3,"DEFAULT":0.0},
-    {"NAME":"inputTex","TYPE":"image"}
+    {
+      "NAME": "contrast",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 1,
+      "LABEL": "Contrast"
+    },
+    {
+      "NAME": "texDisplace",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.3,
+      "DEFAULT": 0,
+      "LABEL": "Texture Displace"
+    },
+    {
+      "NAME": "inputTex",
+      "TYPE": "image",
+      "LABEL": "Texture"
+    },
+    {
+      "NAME": "pattern",
+      "LABEL": "Pattern",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "LABELS": [
+        "Wave",
+        "Zigzag",
+        "Checker",
+        "Diamond",
+        "Stripe Wobble"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "freq",
+      "TYPE": "float",
+      "MIN": 10,
+      "MAX": 160,
+      "DEFAULT": 60,
+      "LABEL": "Frequency",
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "warpAmp",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.5,
+      "DEFAULT": 0.12,
+      "LABEL": "Warp Amplitude",
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "xFreq",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 12,
+      "DEFAULT": 3,
+      "LABEL": "X Frequency",
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "accentEvery",
+      "TYPE": "float",
+      "MIN": 2,
+      "MAX": 20,
+      "DEFAULT": 7,
+      "LABEL": "Accent Every Nth",
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "flow",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.4,
+      "LABEL": "Flow Speed",
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "accentColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.95,
+        0.15,
+        0.25,
+        1
+      ],
+      "LABEL": "Accent Color",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    }
   ]
 }*/
 
@@ -157,6 +280,19 @@ void main() {
         col = mix(col, vec3(0.5 + 0.5 * _doubled), _f * 0.45 * clamp(contrast, 0.0, 1.0));
     }
 
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    vec3 uc = mix(vec3(ucL), col, colorBoost);
+    if (hueShift > 0.0005) {
+        float hueA = hueShift * 6.2831853;
+        float hueC = cos(hueA), hueS = sin(hueA);
+        mat3 hueM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                  + hueC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                  + hueS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hueM * uc, 0.0, 1.0);
+    }
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+
     // LINEAR HDR output — no gamma encode here; downstream tone-mapper handles it.
-    gl_FragColor = vec4(col, 1.0);
+    gl_FragColor = vec4(uc, 1.0);
 }

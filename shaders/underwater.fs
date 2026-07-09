@@ -1,28 +1,247 @@
 /*{
   "DESCRIPTION": "Underwater — looking up from the deep. Volumetric god rays pierce down through dancing caustics, rising bubbles trail upward toward the rippling surface. Slow parallax drift adds depth; soft directional light/shadow planes give the water column a 3D feel. Deep-to-aqua depth gradient, HDR linear output so the sun disc and brightest caustic peaks catch bloom.",
   "CREDIT": "ShaderClaw — original underwater god-ray composition, depth/light extensions",
-  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "3D",
+    "Audio Reactive"
+  ],
   "INPUTS": [
-    { "NAME": "sunPosX",          "LABEL": "Sun X",            "TYPE": "float", "DEFAULT": 0.50, "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "sunPosY",          "LABEL": "Sun Y",            "TYPE": "float", "DEFAULT": 0.92, "MIN": 0.5,  "MAX": 1.0 },
-    { "NAME": "godrayIntensity",  "LABEL": "God-Ray Intensity","TYPE": "float", "DEFAULT": 1.20, "MIN": 0.0,  "MAX": 3.0 },
-    { "NAME": "godraySamples",    "LABEL": "Ray Samples",      "TYPE": "long",  "DEFAULT": 64,   "VALUES": [16,32,48,64,96,128], "LABELS": ["16","32","48","64","96","128"] },
-    { "NAME": "godrayDecay",      "LABEL": "Ray Decay",        "TYPE": "float", "DEFAULT": 0.965,"MIN": 0.85, "MAX": 0.995 },
-    { "NAME": "causticIntensity", "LABEL": "Caustics",         "TYPE": "float", "DEFAULT": 1.20, "MIN": 0.0,  "MAX": 3.0 },
-    { "NAME": "causticSpeed",     "LABEL": "Caustic Speed",    "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0,  "MAX": 1.5 },
-    { "NAME": "causticScale",     "LABEL": "Caustic Scale",    "TYPE": "float", "DEFAULT": 4.0,  "MIN": 1.0,  "MAX": 10.0 },
-    { "NAME": "bubbleCount",      "LABEL": "Bubbles",          "TYPE": "long",  "DEFAULT": 24,   "VALUES": [0,12,24,48,96],      "LABELS": ["0","12","24","48","96"] },
-    { "NAME": "bubbleRise",       "LABEL": "Bubble Rise",      "TYPE": "float", "DEFAULT": 0.12, "MIN": 0.0,  "MAX": 0.6 },
-    { "NAME": "driftSpeed",       "LABEL": "Drift Speed",      "TYPE": "float", "DEFAULT": 0.04, "MIN": 0.0,  "MAX": 0.2 },
-    { "NAME": "driftAmount",      "LABEL": "Drift Amount",     "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0,  "MAX": 2.0 },
-    { "NAME": "lightAngle",       "LABEL": "Light Angle",      "TYPE": "float", "DEFAULT": 0.35, "MIN": -1.57,"MAX": 1.57 },
-    { "NAME": "shadowSoftness",   "LABEL": "Shadow Softness",  "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "shadowDepth",      "LABEL": "Shadow Depth",     "TYPE": "float", "DEFAULT": 0.40, "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "depthColor",       "LABEL": "Deep Color",       "TYPE": "color", "DEFAULT": [0.015, 0.045, 0.115, 1.0] },
-    { "NAME": "surfaceColor",     "LABEL": "Surface Color",    "TYPE": "color", "DEFAULT": [0.20,  0.65,  0.85,  1.0] },
-    { "NAME": "sunColor",         "LABEL": "Sun Color",        "TYPE": "color", "DEFAULT": [1.00,  0.95,  0.80,  1.0] },
-    { "NAME": "audioReact",       "LABEL": "Audio React",      "TYPE": "float", "DEFAULT": 0.80, "MIN": 0.0,  "MAX": 2.0 },
-    { "NAME": "vignette",         "LABEL": "Vignette",         "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0,  "MAX": 0.8 }
+    {
+      "NAME": "sunPosX",
+      "LABEL": "Sun X",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "sunPosY",
+      "LABEL": "Sun Y",
+      "TYPE": "float",
+      "DEFAULT": 0.92,
+      "MIN": 0.5,
+      "MAX": 1,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "vignette",
+      "LABEL": "Vignette",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 0.8,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "godrayIntensity",
+      "LABEL": "God-Ray Intensity",
+      "TYPE": "float",
+      "DEFAULT": 1.2,
+      "MIN": 0,
+      "MAX": 3
+    },
+    {
+      "NAME": "godraySamples",
+      "LABEL": "Ray Samples",
+      "TYPE": "long",
+      "DEFAULT": 64,
+      "VALUES": [
+        16,
+        32,
+        48,
+        64,
+        96,
+        128
+      ],
+      "LABELS": [
+        "16",
+        "32",
+        "48",
+        "64",
+        "96",
+        "128"
+      ]
+    },
+    {
+      "NAME": "godrayDecay",
+      "LABEL": "Ray Decay",
+      "TYPE": "float",
+      "DEFAULT": 0.965,
+      "MIN": 0.85,
+      "MAX": 0.995
+    },
+    {
+      "NAME": "causticIntensity",
+      "LABEL": "Caustics",
+      "TYPE": "float",
+      "DEFAULT": 1.2,
+      "MIN": 0,
+      "MAX": 3
+    },
+    {
+      "NAME": "causticScale",
+      "LABEL": "Caustic Scale",
+      "TYPE": "float",
+      "DEFAULT": 4,
+      "MIN": 1,
+      "MAX": 10
+    },
+    {
+      "NAME": "bubbleCount",
+      "LABEL": "Bubbles",
+      "TYPE": "long",
+      "DEFAULT": 24,
+      "VALUES": [
+        0,
+        12,
+        24,
+        48,
+        96
+      ],
+      "LABELS": [
+        "0",
+        "12",
+        "24",
+        "48",
+        "96"
+      ]
+    },
+    {
+      "NAME": "driftAmount",
+      "LABEL": "Drift Amount",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "lightAngle",
+      "LABEL": "Light Angle",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": -1.57,
+      "MAX": 1.57
+    },
+    {
+      "NAME": "shadowSoftness",
+      "LABEL": "Shadow Softness",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "shadowDepth",
+      "LABEL": "Shadow Depth",
+      "TYPE": "float",
+      "DEFAULT": 0.4,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "causticSpeed",
+      "LABEL": "Caustic Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "bubbleRise",
+      "LABEL": "Bubble Rise",
+      "TYPE": "float",
+      "DEFAULT": 0.12,
+      "MIN": 0,
+      "MAX": 0.6,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "driftSpeed",
+      "LABEL": "Drift Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.04,
+      "MIN": 0,
+      "MAX": 0.2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "depthColor",
+      "LABEL": "Deep Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.015,
+        0.045,
+        0.115,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "surfaceColor",
+      "LABEL": "Surface Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.2,
+        0.65,
+        0.85,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "sunColor",
+      "LABEL": "Sun Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.95,
+        0.8,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "DEFAULT": 0.8,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -279,9 +498,22 @@ void main() {
     }
 
     // ─── Drifting motes / particulate ────────────────────────────
-    // UV offset so motes drift slowly with the current.
+    // UV offset so motes drift slowly with the current. Cell-hashed dots:
+    // pixel-sharp cores with a soft additive halo — the old pow(vnoise,9)
+    // read as blurry upscaled noise blobs instead of marine snow.
     vec2 moteUV = uv * 90.0 + vec2(driftX * 12.0, t * 0.06 + driftY * 8.0);
-    float motes = pow(vnoise(moteUV), 9.0);
+    vec2 mCell = floor(moteUV);
+    vec2 mF    = fract(moteUV);
+    float motes = 0.0;
+    if (h12(mCell * 1.13 + 7.7) > 0.80) {              // sparse occupancy
+        vec2  mPos = vec2(h12(mCell + 3.1), h12(mCell + 9.4)) * 0.6 + 0.2;
+        float mR   = mix(0.06, 0.16, h12(mCell + 5.2));  // radius in cell units
+        float mD   = length(mF - mPos);
+        float mPx  = 90.0 / RENDERSIZE.y;                // one pixel in cell units
+        float mCore = 1.0 - smoothstep(mR - 1.5 * mPx, mR + 1.5 * mPx, mD);
+        float mHalo = exp(-mD * mD / (mR * mR * 6.0)) * 0.35;
+        motes = (mCore + mHalo) * (0.5 + 0.5 * h12(mCell + 12.9));
+    }
     col += vec3(0.45, 0.65, 0.85) * motes * 0.45;
 
     // ─── Soft highlight compression ────────────────────────────────
@@ -308,6 +540,22 @@ void main() {
     vec2 vuv = uv * (1.0 - uv.yx);
     float vig = pow(max(vuv.x * vuv.y * 16.0, 0.0), max(vignette, 0.001));
     col *= mix(1.0, vig, clamp(vignette, 0.0, 1.0));
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = col;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    // background: tint the darkest end (the deep-water void) toward bgColor
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+    col = uc;
 
     // HDR linear output — peaks > 1.0 are intentional for bloom.
     gl_FragColor = vec4(col, 1.0);

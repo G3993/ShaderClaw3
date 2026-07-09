@@ -1,22 +1,146 @@
 /*{
-  "DESCRIPTION":"Circuit Bloom Sphere: a raymarched sphere, bare and near-black, etched over time by a neon PCB-circuit-trace pattern. A persistent cellular-automaton growth field spreads and branches across the sphere's surface forever and never resets — real accumulated memory, not a decaying effect. Mids set the branch spawn rate, bass pulses the sphere size and trace brightness, highs send traveling sparks along already-lit traces, and beats flash the whole network white. The source image is sampled as a growth-density mask that steers where the circuit spreads thicker and faster.",
-  "CREDIT":"ShaderClaw3",
-  "CATEGORIES":["Generator","3D","Audio Reactive"],
-  "INPUTS":[
-    { "NAME":"audioReact", "LABEL":"Sound Reactivity", "TYPE":"float", "DEFAULT":1.0, "MIN":0.0, "MAX":2.0 },
-    { "NAME":"growthRate", "LABEL":"Growth Rate", "TYPE":"float", "DEFAULT":0.5, "MIN":0.0, "MAX":1.0 },
-    { "NAME":"sphereScale", "LABEL":"Sphere Size", "TYPE":"float", "DEFAULT":1.0, "MIN":0.5, "MAX":1.6 },
-    { "NAME":"traceGlow", "LABEL":"Trace Glow", "TYPE":"float", "DEFAULT":2.1, "MIN":0.0, "MAX":3.0 },
-    { "NAME":"sparkleAmt", "LABEL":"Spark Sparkle", "TYPE":"float", "DEFAULT":1.0, "MIN":0.0, "MAX":2.0 },
-    { "NAME":"gridAmt", "LABEL":"Grid Backdrop", "TYPE":"float", "DEFAULT":0.3, "MIN":0.0, "MAX":1.0 },
-    { "NAME":"texMaskAmt", "LABEL":"Image Growth Mask", "TYPE":"float", "DEFAULT":0.75, "MIN":0.0, "MAX":1.0 },
-    { "NAME":"hueA", "LABEL":"Trace Hue (settled)", "TYPE":"color", "DEFAULT":[0.10,0.85,1.00,1.0] },
-    { "NAME":"hueB", "LABEL":"Trace Hue (frontier)", "TYPE":"color", "DEFAULT":[1.00,0.20,0.75,1.0] },
-    { "NAME":"camSpin", "LABEL":"Camera Orbit Speed", "TYPE":"float", "DEFAULT":0.35, "MIN":0.0, "MAX":1.0 },
-    { "NAME":"inputImage", "TYPE":"image" }
+  "DESCRIPTION": "Circuit Bloom Sphere: a raymarched sphere, bare and near-black, etched over time by a neon PCB-circuit-trace pattern. A persistent cellular-automaton growth field spreads and branches across the sphere's surface forever and never resets — real accumulated memory, not a decaying effect. Mids set the branch spawn rate, bass pulses the sphere size and trace brightness, highs send traveling sparks along already-lit traces, and beats flash the whole network white. The source image is sampled as a growth-density mask that steers where the circuit spreads thicker and faster.",
+  "CREDIT": "ShaderClaw3",
+  "CATEGORIES": [
+    "Generator",
+    "3D",
+    "Audio Reactive"
   ],
-  "PASSES":[
-    { "TARGET":"growthBuf", "PERSISTENT": true },
+  "INPUTS": [
+    {
+      "NAME": "traceGlow",
+      "LABEL": "Trace Glow",
+      "TYPE": "float",
+      "DEFAULT": 2.1,
+      "MIN": 0,
+      "MAX": 3
+    },
+    {
+      "NAME": "sparkleAmt",
+      "LABEL": "Spark Sparkle",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "texMaskAmt",
+      "LABEL": "Image Growth Mask",
+      "TYPE": "float",
+      "DEFAULT": 0.75,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "inputImage",
+      "LABEL": "Input Image",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "sphereScale",
+      "LABEL": "Sphere Size",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.5,
+      "MAX": 1.6,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "growthRate",
+      "LABEL": "Growth Rate",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "hueA",
+      "LABEL": "Trace Hue (settled)",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.1,
+        0.85,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueB",
+      "LABEL": "Trace Hue (frontier)",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.2,
+        0.75,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "gridAmt",
+      "LABEL": "Grid Backdrop",
+      "TYPE": "float",
+      "DEFAULT": 0.3,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "camSpin",
+      "LABEL": "Camera Orbit Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Sound Reactivity",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    }
+  ],
+  "PASSES": [
+    {
+      "TARGET": "growthBuf",
+      "PERSISTENT": true
+    },
     {}
   ]
 }*/
@@ -179,6 +303,8 @@ void renderPass(){
     float gly = 1.0 - smoothstep(0.0, 0.06, abs(gcell.y - 0.5));
     float gline = clamp(max(glx, gly), 0.0, 1.0);
     vec3 bg = hueA.rgb * 0.05 * gline * clamp(gridAmt, 0.0, 1.0);
+    // User background: blend the void/grid backdrop toward the chosen color.
+    bg = mix(bg, bgColor.rgb, bgColor.a);
 
     // --- raymarch the exact sphere SDF --------------------------------------
     float t = 0.0;
@@ -255,6 +381,21 @@ void renderPass(){
 
     col = col / (1.0 + col);
     col = pow(max(col, 0.0), vec3(1.0 / 2.2));
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = col;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    col = uc;
+
     gl_FragColor = vec4(col, 1.0);
 }
 

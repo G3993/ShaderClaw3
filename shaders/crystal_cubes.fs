@@ -5,45 +5,84 @@
   "DESCRIPTION": "Rotating crystal cubes with glass-like lighting, revealed through texture masking",
   "INPUTS": [
     {
-      "NAME": "baseColor",
-      "LABEL": "Color",
-      "TYPE": "color",
-      "DEFAULT": [1.0, 1.0, 1.0, 1.0]
-    },
-    {
       "NAME": "inputTex",
       "LABEL": "Texture",
       "TYPE": "image"
-    },
-    {
-      "NAME": "transparentBg",
-      "LABEL": "Transparent",
-      "TYPE": "bool",
-      "DEFAULT": true
-    },
-    {
-      "NAME": "cubeCount",
-      "LABEL": "Cubes",
-      "TYPE": "float",
-      "DEFAULT": 7.0,
-      "MIN": 2.0,
-      "MAX": 12.0
-    },
-    {
-      "NAME": "roundness",
-      "LABEL": "Roundness",
-      "TYPE": "float",
-      "DEFAULT": 0.06,
-      "MIN": 0.0,
-      "MAX": 0.2
     },
     {
       "NAME": "refractionStrength",
       "LABEL": "Refraction",
       "TYPE": "float",
       "DEFAULT": 0.08,
-      "MIN": 0.0,
+      "MIN": 0,
       "MAX": 0.3
+    },
+    {
+      "NAME": "cubeCount",
+      "LABEL": "Cubes",
+      "TYPE": "float",
+      "DEFAULT": 7,
+      "MIN": 2,
+      "MAX": 12,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "roundness",
+      "LABEL": "Roundness",
+      "TYPE": "float",
+      "DEFAULT": 0.06,
+      "MIN": 0,
+      "MAX": 0.2,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "baseColor",
+      "LABEL": "Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
     }
   ]
 }*/
@@ -62,8 +101,8 @@ float sdRoundBox(vec3 p, vec3 b, float r) {
 
 float scene(vec3 p) {
   float d = MAX_DIST;
-  float bassPulse = smoothstep(0.0, 1.0, audioBass) * 0.15;
-  float midRot = smoothstep(0.0, 1.0, audioMid) * 0.5 + 0.3;
+  float bassPulse = pow(smoothstep(0.05, 0.9, audioBass), 1.4) * 0.09;
+  float midK = pow(smoothstep(0.05, 0.9, audioMid), 1.3);
 
   for (int i = 0; i < 12; i++) {
     if (float(i) >= cubeCount) break;
@@ -79,10 +118,13 @@ float scene(vec3 p) {
 
     vec3 q = p - pos;
 
-    // Rotation per cube at different speeds
-    float rotSpeed = midRot * (0.5 + fi * 0.2);
-    q.xz *= rot2(TIME * rotSpeed + fi * 0.8);
-    q.yz *= rot2(TIME * rotSpeed * 0.7 + fi * 1.1);
+    // Rotation per cube at different speeds. Constant base speed (matches
+    // the old silent look) + bounded mid-band angle offset — never multiply
+    // TIME by an audio-dependent speed (angle jumps scale with elapsed time).
+    float rotSpeed = 0.3 * (0.5 + fi * 0.2);
+    float aRot = midK * 0.45;
+    q.xz *= rot2(TIME * rotSpeed + aRot + fi * 0.8);
+    q.yz *= rot2(TIME * rotSpeed * 0.7 + aRot * 0.7 + fi * 1.1);
 
     // Size with bass pulse
     float size = 0.28 + fi * 0.04 + bassPulse;
@@ -189,8 +231,8 @@ void main() {
     col += vec3(0.04, 0.025, 0.015);
     float audioKnee = pow(smoothstep(0.05, 0.85, audioLevel), 1.3);
     col += audioKnee * vec3(0.25, 0.18, 0.10);
-    col += vec3(1.0, 0.9, 0.75) * spec1 * fresnel * audioKnee * 4.0;
-    col *= 1.0 + audioKnee * 1.6;
+    col += vec3(1.0, 0.9, 0.75) * spec1 * fresnel * audioKnee * 1.6;
+    col *= 1.0 + audioKnee * 0.55;
     alpha = 1.0;
   }
 
@@ -214,5 +256,23 @@ void main() {
     }
   }
 
-  gl_FragColor = vec4(col, alpha);
+  // ---- universal color block (defaults = no-op) ----
+  vec3 uc = col;
+  float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+  uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+  if (hueShift > 0.0005) {                                 // cheap hue rotate (YIQ)
+    float hA = hueShift * 6.2831853;
+    float hC = cos(hA), hS = sin(hA);
+    mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+            + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+            + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+    uc = clamp(hM * uc, 0.0, 1.0);
+  }
+  float ucA = alpha;
+  if (bgColor.a > 0.0) {                                   // fill transparent bg region
+    uc = mix(uc, bgColor.rgb, (1.0 - ucA) * bgColor.a);
+    ucA = ucA + (1.0 - ucA) * bgColor.a;
+  }
+
+  gl_FragColor = vec4(uc, ucA);
 }

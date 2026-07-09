@@ -1,23 +1,153 @@
 /*{
-  "DESCRIPTION":"3D water ripple field: a persistent wave-equation simulation propagates ripples (audio drops as bass impulses, treble chop, idle drips) and the final pass raymarches the simulated heightfield as reflective/refractive 3D water.",
-  "CREDIT":"ShaderClaw3",
-  "CATEGORIES":["Generator","3D","Fluid","Audio Reactive"],
-  "INPUTS":[
-    { "NAME":"audioReact", "LABEL":"Sound Reactivity", "TYPE":"float", "DEFAULT":1.0, "MIN":0.0, "MAX":2.0 },
-    { "NAME":"heightScale", "LABEL":"Wave Height", "TYPE":"float", "DEFAULT":0.12, "MIN":0.0, "MAX":0.4 },
-    { "NAME":"waveSpeedC", "LABEL":"Wave Speed", "TYPE":"float", "DEFAULT":0.30, "MIN":0.0, "MAX":0.5 },
-    { "NAME":"damping", "LABEL":"Ripple Persistence", "TYPE":"float", "DEFAULT":0.995, "MIN":0.985, "MAX":0.999 },
-    { "NAME":"dropStrength", "LABEL":"Drop Strength", "TYPE":"float", "DEFAULT":0.6, "MIN":0.0, "MAX":2.0 },
-    { "NAME":"refrAmt", "LABEL":"Refraction", "TYPE":"float", "DEFAULT":0.18, "MIN":0.0, "MAX":0.6 },
-    { "NAME":"reflAmt", "LABEL":"Reflection", "TYPE":"float", "DEFAULT":0.7, "MIN":0.0, "MAX":1.0 },
-    { "NAME":"waterTint", "LABEL":"Water Tint", "TYPE":"color", "DEFAULT":[0.04,0.18,0.26,1.0] },
-    { "NAME":"texMix", "LABEL":"Floor Image", "TYPE":"float", "DEFAULT":0.0, "MIN":0.0, "MAX":1.0 },
-    { "NAME":"camSpin", "LABEL":"Camera Spin", "TYPE":"float", "DEFAULT":0.08, "MIN":0.0, "MAX":1.0 },
-    { "NAME":"cameraTilt", "LABEL":"Camera Tilt", "TYPE":"float", "DEFAULT":0.62, "MIN":0.2, "MAX":1.2 },
-    { "NAME":"inputImage", "TYPE":"image" }
+  "DESCRIPTION": "3D water ripple field: a persistent wave-equation simulation propagates ripples (audio drops as bass impulses, treble chop, idle drips) and the final pass raymarches the simulated heightfield as reflective/refractive 3D water.",
+  "CREDIT": "ShaderClaw3",
+  "CATEGORIES": [
+    "Generator",
+    "3D",
+    "Fluid",
+    "Audio Reactive"
   ],
-  "PASSES":[
-    { "TARGET":"simBuf", "PERSISTENT": true },
+  "INPUTS": [
+    {
+      "NAME": "refrAmt",
+      "LABEL": "Refraction",
+      "TYPE": "float",
+      "DEFAULT": 0.18,
+      "MIN": 0,
+      "MAX": 0.6
+    },
+    {
+      "NAME": "reflAmt",
+      "LABEL": "Reflection",
+      "TYPE": "float",
+      "DEFAULT": 0.7,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "texMix",
+      "LABEL": "Floor Image",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "inputImage",
+      "TYPE": "image",
+      "LABEL": "Texture"
+    },
+    {
+      "NAME": "heightScale",
+      "LABEL": "Wave Height",
+      "TYPE": "float",
+      "DEFAULT": 0.12,
+      "MIN": 0,
+      "MAX": 0.4,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "waveSpeedC",
+      "LABEL": "Wave Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.3,
+      "MIN": 0,
+      "MAX": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "damping",
+      "LABEL": "Ripple Persistence",
+      "TYPE": "float",
+      "DEFAULT": 0.995,
+      "MIN": 0.985,
+      "MAX": 0.999,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "dropStrength",
+      "LABEL": "Drop Strength",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "waterTint",
+      "LABEL": "Water Tint",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.04,
+        0.18,
+        0.26,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "camSpin",
+      "LABEL": "Camera Spin",
+      "TYPE": "float",
+      "DEFAULT": 0.08,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "cameraTilt",
+      "LABEL": "Camera Tilt",
+      "TYPE": "float",
+      "DEFAULT": 0.62,
+      "MIN": 0.2,
+      "MAX": 1.2,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Sound Reactivity",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    }
+  ],
+  "PASSES": [
+    {
+      "TARGET": "simBuf",
+      "PERSISTENT": true
+    },
     {}
   ]
 }*/
@@ -321,7 +451,34 @@ void screenPass(){
     // tonemap + gamma
     col = col / (1.0 + col);
     col = pow(max(col, 0.0), vec3(1.0 / 2.2));
-    gl_FragColor = vec4(col, 1.0);
+
+    // Continuous smooth band-follow (ambient fix): beat-less swells only fed
+    // the sim, where propagation lag + the field's own churn hid them — so
+    // the bands also breathe the whole frame's luminance directly, water and
+    // sky alike. Round 3 (measured): the pre-tonemap 0.28/0.17 bass/mid
+    // version still scored ambient 0.28 — the tonemap+gamma chain compressed
+    // it under the sim's own churn. POST-tonemap it acts on display values
+    // directly, and the bass/mid/high weights track the actual band mix of
+    // the music (broadband, so no single sinusoid dominates the response).
+    // Silence -> exactly 1.0.
+    float followA = clamp(audioReact, 0.0, 1.5);
+    col *= 1.0 + (0.30 * clamp(audioBass, 0.0, 1.0)
+                + 0.19 * clamp(audioMid, 0.0, 1.0)
+                + 0.11 * clamp(audioHigh, 0.0, 1.0)) * followA;
+
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    vec3 uc = mix(vec3(ucL), col, colorBoost);
+    if (hueShift > 0.0005) {
+        float hueA = hueShift * 6.2831853;
+        float hueC = cos(hueA), hueSn = sin(hueA);
+        mat3 hueM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                  + hueC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                  + hueSn * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hueM * uc, 0.0, 1.0);
+    }
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+    gl_FragColor = vec4(uc, 1.0);
 }
 
 // ---------------------------------------------------------------------------

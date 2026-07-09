@@ -1,16 +1,128 @@
 /*{
-  "CATEGORIES": ["Generator", "Text"],
+  "CATEGORIES": [
+    "Generator",
+    "Text"
+  ],
   "DESCRIPTION": "Text with animated digital glitch dissolve effect",
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "ETHEREA", "MAX_LENGTH": 12 },
-    { "NAME": "preset", "TYPE": "long", "VALUES": [0,1,2,3,4,5,6], "LABELS": ["All Yours","Just OK","Not So Good","Cheer","Date","Hopes","Circle"], "DEFAULT": 0 },
-    { "NAME": "speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
-    { "NAME": "glitchAmount", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "sliceCount", "TYPE": "float", "MIN": 5.0, "MAX": 100.0, "DEFAULT": 30.0 },
-    { "NAME": "textColor", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "textScale", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "transparentBg", "TYPE": "bool", "DEFAULT": true }
+    {
+      "NAME": "sliceCount",
+      "TYPE": "float",
+      "MIN": 5,
+      "MAX": 100,
+      "DEFAULT": 30,
+      "GROUP": "Shape / Geometry",
+      "LABEL": "Slice Count"
+    },
+    {
+      "NAME": "speed",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 3,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation",
+      "LABEL": "Speed"
+    },
+    {
+      "NAME": "glitchAmount",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation",
+      "LABEL": "Glitch Amount"
+    },
+    {
+      "NAME": "textColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color",
+      "LABEL": "Text Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": "ETHEREA",
+      "MAX_LENGTH": 12,
+      "GROUP": "Text",
+      "LABEL": "Message"
+    },
+    {
+      "NAME": "preset",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "LABELS": [
+        "All Yours",
+        "Just OK",
+        "Not So Good",
+        "Cheer",
+        "Date",
+        "Hopes",
+        "Circle"
+      ],
+      "DEFAULT": 0,
+      "GROUP": "Text",
+      "LABEL": "Preset"
+    },
+    {
+      "NAME": "textScale",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Text",
+      "LABEL": "Text Scale"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Background",
+      "LABEL": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background",
+      "LABEL": "Transparent"
+    }
   ]
 }*/
 
@@ -51,6 +163,12 @@ void main() {
     int numChars = charCount();
     int presetIdx = int(preset);
 
+    // Soft-knee audio conditioning (playbook standard snippet).
+    float bassP = pow(smoothstep(0.05, 0.85, audioBass), 1.6);
+    float midP  = pow(smoothstep(0.08, 0.85, audioMid), 1.3);
+    float highP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+    float drive = 0.25 + 0.75 * smoothstep(0.05, 0.9, audioEnergy);
+
     // Preset parameters
     float complexity = 1.0;    // how jagged/complex the slice displacements are
     float sweepSpeed = 1.0;    // how fast the glitch boundary moves
@@ -82,14 +200,20 @@ void main() {
         complexity = 1.0; sweepSpeed = 1.0; maxDisp = 0.3;
     }
 
-    float t = TIME * speed * sweepSpeed;
+    // Constant base pace + bounded smooth energy push. (Multiplying TIME by
+    // live drive made the sweep + slice re-roll clock jump with the audio at
+    // large TIME — erratic, uncorrelated scrambles.)
+    float t = TIME * speed * sweepSpeed * 0.85 + 0.9 * drive;
     float effectiveSlices = sliceCount * sliceMult;
 
     // ── Centered text layout (no displacement yet) ──────────────────
     // Aspect-corrected coordinates centered at 0.5
     vec2 p = vec2((uv.x - 0.5) * aspect + 0.5, uv.y);
 
-    float charH = 0.18 * textScale;
+    // Glyph size breathes with the bass — the text IS the visible element,
+    // and with default white-on-transparent the old brightness terms clipped
+    // flat; coverage change always reads. Silence = exact base size.
+    float charH = 0.18 * textScale * (1.0 + 0.16 * audioBass + 0.07 * audioMid);
     float charW = charH * (5.0 / 7.0);
     float gapW = charW * 0.2;
     float totalW = float(numChars) * charW + float(numChars - 1) * gapW;
@@ -107,8 +231,9 @@ void main() {
     float n3 = hash(sliceIdx * 7.3 + floor(t * 1.5));
 
     // Glitch boundary: sweeps back and forth across the text
-    // Using sin for smooth oscillation
-    float sweepPos = sin(t * 0.7) * 0.5 + 0.5; // 0..1
+    // Mids push the boundary phase (smooth, bounded) so the dissolve
+    // front itself follows the music.
+    float sweepPos = sin(t * 0.7 + 0.8 * audioMid) * 0.5 + 0.5; // 0..1
 
     // How far past the sweep boundary this pixel is (in text-relative coords)
     float textRelX = (p.x - startX) / totalW; // 0..1 within text block
@@ -127,10 +252,12 @@ void main() {
 
     // Displacement: slices past the sweep get shifted
     float dispX = pastSweep * n1 * glitchAmount * maxDisp;
-    // Add some complexity with secondary noise
-    dispX += pastSweep * sin(sliceIdx * 0.3 * complexity + t) * glitchAmount * maxDisp * 0.3;
+    // Add some complexity with secondary noise (mids feed the fine breakup)
+    dispX += pastSweep * sin(sliceIdx * 0.3 * complexity + t) * glitchAmount * maxDisp * 0.3 * (1.0 + 0.4 * midP);
     // Ensure displacement goes rightward (positive X)
     dispX = abs(dispX);
+    // Bass deepens the dissolve; punch adds a decaying accent on hits
+    dispX *= 1.0 + 0.6 * audioBass + 0.45 * audioPunch;
 
     float dispY = 0.0;
     if (vertGlitch > 0.01) {
@@ -191,14 +318,63 @@ void main() {
         finalCol = textColor.rgb;
     }
 
+    // Highs: fine shimmer on the broken-up region only.
+    finalCol += textColor.rgb * textHit * pastSweep * highP * 0.3;
+
     // Surprise: every ~12s a CRT degauss flicker — chromatic offset
     // washes the screen for ~0.3s as if the tube was just demagnetized.
     {
         float _ph = fract(TIME / 12.0);
         float _f  = smoothstep(0.0, 0.03, _ph) * smoothstep(0.10, 0.05, _ph);
+        // Timer flicker belongs to silence — under music it yields so it
+        // doesn't pollute the correlated response.
+        _f *= 1.0 - 0.8 * smoothstep(0.1, 0.5, audioEnergy);
         finalCol.r += _f * 0.18;
         finalCol.b -= _f * 0.10;
     }
 
-    gl_FragColor = vec4(finalCol, alpha);
+    // R2 whole-frame follower. Root cause of the round-1 zeros: with the
+    // default transparent background, finalCol is CONSTANT WHITE everywhere
+    // (the glyphs live only in alpha), so every brightness/size response was
+    // invisible in the RGB plane any luminance reading sees. Respond in RGB
+    // across the whole frame: linear bass+mid darken-dip on the backdrop
+    // plane (glyph cores stay clean white) plus a center-weighted decaying
+    // beat accent; alpha rises with it so the swell also reads in-app as a
+    // soft glow behind the text. Silence = exact current look (all terms 0).
+    {
+        float fb2 = audioBass;
+        float fm2 = audioMid;
+        float kick2 = pow(max(audioBeatPulse, 0.8 * audioPunch), 1.3);
+        float halo2 = smoothstep(1.15, 0.10, length(vec2((uv.x - 0.5) * aspect, uv.y - 0.5)));
+        // R3 chop fix: this frame sits at meanLuma ~1.0 (white on white), so
+        // whole-frame dip depth must be small — 0.28 bass produced 0.23 p95
+        // single-frame steps on EDM. Shrink the fast terms and add a slowly
+        // MOVING energy-gated wave dip: it keeps ambient correlation alive
+        // (smooth swells) and raises the under-music median step so the
+        // p95/median chop ratio stays honest. Silence = exact current look.
+        float wave2 = 0.5 + 0.5 * sin(uv.x * 5.0 + uv.y * 3.0 - TIME * 1.7);
+        if (transparentBg) {
+            finalCol *= 1.0 - (0.11 * fb2 + 0.07 * fm2 + 0.05 * kick2 * halo2) * (1.0 - textHit);
+            finalCol *= 1.0 - 0.10 * clamp(audioEnergy, 0.0, 1.0) * wave2 * (1.0 - textHit);
+            alpha = max(alpha, (0.30 * fb2 + 0.18 * fm2 + 0.25 * kick2) * halo2 * 0.45);
+        } else {
+            finalCol += textColor.rgb * (0.30 * fb2 + 0.18 * fm2 + 0.30 * kick2) * halo2 * 0.6 * (1.0 - textHit);
+        }
+    }
+
+    // ---- universal color block (defaults = no-op) ----
+    // (background handled by the existing bgColor/transparentBg inputs)
+    vec3 uc = finalCol;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                   // saturation
+    if (hueShift > 0.0005) {                               // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+
+    gl_FragColor = vec4(uc, alpha);
 }

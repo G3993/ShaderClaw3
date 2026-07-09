@@ -1,18 +1,103 @@
 /*{
   "DESCRIPTION": "Chromatic dispersion — refractive color separation driven by animated flow noise",
   "CREDIT": "ShaderClaw (dispersion model inspired by Shadertoy)",
-  "CATEGORIES": ["Effect"],
+  "CATEGORIES": [
+    "Effect"
+  ],
   "INPUTS": [
-    { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "dispScale", "LABEL": "Dispersion", "TYPE": "float", "DEFAULT": 0.08, "MIN": 0.0, "MAX": 0.3 },
-    { "NAME": "noiseScale", "LABEL": "Noise Scale", "TYPE": "float", "DEFAULT": 3.0, "MIN": 0.5, "MAX": 12.0 },
-    { "NAME": "flowSpeed", "LABEL": "Speed", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "contrastAmt", "LABEL": "Contrast", "TYPE": "float", "DEFAULT": 12.0, "MIN": 1.0, "MAX": 30.0 },
-    { "NAME": "causticStrength", "LABEL": "Caustics", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.5 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 1.0 }
+    {
+      "NAME": "inputImage",
+      "LABEL": "Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "noiseScale",
+      "LABEL": "Noise Scale",
+      "TYPE": "float",
+      "DEFAULT": 3,
+      "MIN": 0.5,
+      "MAX": 12,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "flowSpeed",
+      "LABEL": "Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.3,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "dispScale",
+      "LABEL": "Dispersion",
+      "TYPE": "float",
+      "DEFAULT": 0.08,
+      "MIN": 0,
+      "MAX": 0.3,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "contrastAmt",
+      "LABEL": "Contrast",
+      "TYPE": "float",
+      "DEFAULT": 12,
+      "MIN": 1,
+      "MAX": 30,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "causticStrength",
+      "LABEL": "Caustics",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 2.5,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent",
+      "TYPE": "bool",
+      "DEFAULT": 1,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    }
   ],
   "PASSES": [
-    { "TARGET": "dispBuf", "PERSISTENT": true },
+    {
+      "TARGET": "dispBuf",
+      "PERSISTENT": true
+    },
     {}
   ]
 }*/
@@ -113,13 +198,20 @@ void main() {
     vec2 uv = isf_FragNormCoord;
     vec2 texel = 1.0 / RENDERSIZE;
 
+    // ---- Soft-knee audio conditioning (playbook) — shared by both passes ----
+    float bassP = pow(smoothstep(0.05, 0.85, audioBass), 1.6);
+    float midP  = smoothstep(0.08, 0.85, audioMid);
+    float highP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+    float drive = 0.25 + 0.75 * smoothstep(0.05, 0.9, audioEnergy);
+
     // ---- Pass 0: generate animated displacement field ----
     if (PASSINDEX == 0) {
-        float t = TIME * flowSpeed;
+        float t = TIME * flowSpeed * (0.9 + 0.4 * (drive - 0.25)); // flow rides the energy
         vec2 p = uv * noiseScale;
         // Multi-octave curl noise for organic flow
-        vec2 d = curlNoise(p + t) * 0.6
-               + curlNoise(p * 2.1 - t * 0.7) * 0.3
+        // Bass swells the big flow; mids stir the mid-octave turbulence
+        vec2 d = curlNoise(p + t) * 0.6 * (1.0 + 0.25 * bassP)
+               + curlNoise(p * 2.1 - t * 0.7) * 0.3 * (1.0 + 0.30 * midP)
                + curlNoise(p * 4.3 + t * 0.4) * 0.1;
         gl_FragColor = vec4(d, 0.0, 1.0);
         return;
@@ -143,7 +235,7 @@ void main() {
     float ld = length(db);
     vec2 ln = normz(db);
 
-    vec3 col = sampleDisp(uv, ln, dispScale * ld);
+    vec3 col = sampleDisp(uv, ln, dispScale * ld * (1.0 + 0.22 * bassP)); // bass widens the spectral split
     col = sigmoidContrast(col, contrastAmt);
 
     // ---- Caustics: bright focal lines where the dispersion field converges ----
@@ -162,7 +254,8 @@ void main() {
         // at different points.
         vec3 causticHue = 0.5 + 0.5 * cos(6.28318 *
                           (ld * 4.0 + vec3(0.0, 0.33, 0.67)));
-        col += causticHue * caustic * causticStrength;
+        // Highs make the filaments glitter; punch adds a decaying flare
+        col += causticHue * caustic * causticStrength * (1.0 + 0.40 * highP + 0.30 * audioPunch);
     }
 
     // ---- HDR PEAKS: lift brightest dispersion strips into bloom range ----
@@ -227,6 +320,24 @@ void main() {
         col = mix(col, vec3(col.r * 1.4, col.g, col.b * 0.8) * (0.5 + _l), _f * 0.4);
     }
 
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = col;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                   // saturation
+    if (hueShift > 0.0005) {                               // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    float ucA = alpha;
+    if (bgColor.a > 0.0) {                                 // fill low-alpha bg region
+        uc = mix(uc, bgColor.rgb, (1.0 - clamp(ucA, 0.0, 1.0)) * bgColor.a);
+        ucA = ucA + (1.0 - clamp(ucA, 0.0, 1.0)) * bgColor.a;
+    }
+
     // NO TONEMAP — pass HDR through to bloom pipeline.
-    gl_FragColor = vec4(col, alpha);
+    gl_FragColor = vec4(uc, ucA);
 }

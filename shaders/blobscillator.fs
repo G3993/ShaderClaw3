@@ -1,126 +1,174 @@
 /*{
-	"CREDIT": "by mojovideotech, smoothed by assistant",
-	"CATEGORIES" : [
-		"generator",
-		"blobs",
-		"distance",
-		"noise"
-	],
-	"DESCRIPTION" : "Blobscillator — organic morphing edition. Blobs flow and merge naturally using smooth-min field accumulation and temporal smoothing. Two-pass: blob field + gaussian blur composite.",
-	"ISFVSN" : "2",
-	"PASSES" : [
-		{
-			"TARGET" : "blobBuffer",
-			"PERSISTENT" : false
-		},
-		{}
-	],
-	"INPUTS" : [
-	{
-		"NAME": 	"scale",
-		"TYPE": 	"float",
-		"DEFAULT": 	3.5,
-		"MIN": 		0.0,
-		"MAX": 		10.0
-	},
-	{
-		"NAME": 	"rate",
-		"TYPE": 	"float",
-		"DEFAULT": 	0.035,
-		"MIN": 		0.0,
-		"MAX": 		1.0
-	},
-	{
-		"NAME": 	"loops",
-		"TYPE": 	"float",
-		"DEFAULT":	12.0,
-		"MIN": 		1.0,
-		"MAX": 		40.0
-	},
-	{
-		"NAME": 	"center",
-		"TYPE": 	"point2D",
-		"DEFAULT":	[ 0, 0 ],
-		"MAX" : 	[ 1.0, 1.0 ],
-		"MIN" : 	[ -1.0, -1.0 ]
-	},
-	{
-		"NAME": 	"freq1",
-		"TYPE": 	"float",
-		"DEFAULT": 	0.95,
-		"MIN": 		0.005,
-		"MAX": 		1.0
-	},
-	{
-		"NAME": 	"freq2",
-		"TYPE": 	"float",
-		"DEFAULT": 	2.8,
-		"MIN": 		0.5,
-		"MAX": 		10.0
-	},
-	{
-		"NAME" :	"seed1",
-		"TYPE" : 	"float",
-		"DEFAULT" :	233.0,
-		"MIN" : 	89.0,
-		"MAX" :		1597.0
-	},
-	{
-		"NAME" :	"seed2",
-		"TYPE" :	"float",
-		"DEFAULT" :	13.0,
-		"MIN" :		5.0,
-		"MAX" :		55.0
-	},
-	{
-		"NAME" :	"blobRadius",
-		"LABEL" :	"Blob Radius",
-		"TYPE" :	"float",
-		"DEFAULT" :	1.1,
-		"MIN" :		0.1,
-		"MAX" :		3.0
-	},
-	{
-		"NAME" :	"mergeSmoothness",
-		"LABEL" :	"Merge Smoothness",
-		"TYPE" :	"float",
-		"DEFAULT" :	0.85,
-		"MIN" :		0.05,
-		"MAX" :		2.5
-	},
-	{
-		"NAME" :	"audioReact",
-		"LABEL" :	"Audio React",
-		"TYPE" :	"float",
-		"DEFAULT" :	0.35,
-		"MIN" :		0.0,
-		"MAX" :		2.0
-	},
-	{
-		"NAME" :	"blurAmount",
-		"LABEL" :	"Blur Amount",
-		"TYPE" :	"float",
-		"DEFAULT" :	3.0,
-		"MIN" :		0.0,
-		"MAX" :		20.0
-	},
-	{
-		"NAME" :	"blendSoftness",
-		"LABEL" :	"Blend Softness",
-		"TYPE" :	"float",
-		"DEFAULT" :	0.5,
-		"MIN" :		0.0,
-		"MAX" :		1.0
-	},
-	{
-		"NAME" :	"colorShift",
-		"LABEL" :	"Color Shift",
-		"TYPE" :	"float",
-		"DEFAULT" :	0.0,
-		"MIN" :		0.0,
-		"MAX" :		1.0
-	}
-	]
+  "CREDIT": "by mojovideotech, smoothed by assistant",
+  "CATEGORIES": [
+    "generator",
+    "blobs",
+    "distance",
+    "noise"
+  ],
+  "DESCRIPTION": "Blobscillator — organic morphing edition. Blobs flow and merge naturally using smooth-min field accumulation and temporal smoothing. Two-pass: blob field + gaussian blur composite.",
+  "ISFVSN": "2",
+  "PASSES": [
+    {
+      "TARGET": "blobBuffer",
+      "PERSISTENT": false
+    },
+    {}
+  ],
+  "INPUTS": [
+    {
+      "NAME": "seed1",
+      "TYPE": "float",
+      "DEFAULT": 233,
+      "MIN": 89,
+      "MAX": 1597,
+      "LABEL": "Seed 1"
+    },
+    {
+      "NAME": "seed2",
+      "TYPE": "float",
+      "DEFAULT": 13,
+      "MIN": 5,
+      "MAX": 55,
+      "LABEL": "Seed 2"
+    },
+    {
+      "NAME": "blurAmount",
+      "LABEL": "Blur Amount",
+      "TYPE": "float",
+      "DEFAULT": 3,
+      "MIN": 0,
+      "MAX": 20
+    },
+    {
+      "NAME": "blendSoftness",
+      "LABEL": "Blend Softness",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "scale",
+      "TYPE": "float",
+      "DEFAULT": 3.5,
+      "MIN": 0,
+      "MAX": 10,
+      "LABEL": "Scale",
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "loops",
+      "TYPE": "float",
+      "DEFAULT": 12,
+      "MIN": 1,
+      "MAX": 40,
+      "LABEL": "Loops",
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "blobRadius",
+      "LABEL": "Blob Radius",
+      "TYPE": "float",
+      "DEFAULT": 1.1,
+      "MIN": 0.1,
+      "MAX": 3,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "mergeSmoothness",
+      "LABEL": "Merge Smoothness",
+      "TYPE": "float",
+      "DEFAULT": 0.85,
+      "MIN": 0.05,
+      "MAX": 2.5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "rate",
+      "TYPE": "float",
+      "DEFAULT": 0.035,
+      "MIN": 0,
+      "MAX": 1,
+      "LABEL": "Rate",
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "freq1",
+      "TYPE": "float",
+      "DEFAULT": 0.95,
+      "MIN": 0.005,
+      "MAX": 1,
+      "LABEL": "Frequency 1",
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "freq2",
+      "TYPE": "float",
+      "DEFAULT": 2.8,
+      "MIN": 0.5,
+      "MAX": 10,
+      "LABEL": "Frequency 2",
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "colorShift",
+      "LABEL": "Color Shift",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "center",
+      "TYPE": "point2D",
+      "DEFAULT": [
+        0,
+        0
+      ],
+      "MAX": [
+        1,
+        1
+      ],
+      "MIN": [
+        -1,
+        -1
+      ],
+      "LABEL": "Center",
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    }
+  ]
 }*/
 
 ////////////////////////////////////////////////////////////
@@ -186,14 +234,19 @@ void main() {
 		float zoomA = 1.0 - audioReact * 0.18 * bassP;
 		uv *= (10.5 - scale) * zoomA;
 
-		// Very slow master time
-		float T = TIME * rate * 0.25;
+		// Very slow master time. Music advances it: audioBassTime integrates
+		// the smoothed bass level, so the blobs literally drift in proportion
+		// to the low end (frozen in silence — exact current look preserved).
+		float T = TIME * rate * 0.25 + audioBassTime * 0.45;
 
 		// Number of blobs: clamp loops to integer count
 		float nBlobs = clamp(loops, 1.0, 40.0);
 
-		// Audio-reactive radius modulation — smooth, not jittery
-		float radAudio = 1.0 + audioReact * 0.20 * bassP
+		// Audio-reactive radius modulation — LINEAR followers (no knees, no
+		// dilution by the 0.35 audioReact default), plus the original
+		// audioReact-scaled extra depth on top. Silence → exactly 1.0.
+		float radAudio = 1.0 + 0.50 * audioBass + 0.20 * audioMid
+		                     + audioReact * 0.20 * bassP
 		                     + audioReact * 0.08 * midP;
 		float R = blobRadius * radAudio;
 
@@ -264,6 +317,8 @@ void main() {
 		// Color shift: rotate hue of the palette
 		float cs      = colorShift;
 		vec3 darkBg   = vec3(0.02, 0.02, 0.06);
+		// User background: blend the void behind the blobs toward the chosen color.
+		darkBg        = mix(darkBg, bgColor.rgb, bgColor.a);
 
 		// Mid blob colour — hue-rotate via simple RGB rotation
 		vec3 midBase  = vec3(0.05, 0.22, 0.60);
@@ -281,12 +336,20 @@ void main() {
 		vec3 col = mix(darkBg, midShift, glow);
 		col      = mix(col, coreColor, core * core);
 
+		// Whole-frame LINEAR follower — the scene is dark (peak ~0.6) so a
+		// bass gain can't clip; ambient swells read directly. Silence = 1.0.
+		col     *= 1.0 + 0.60 * audioBass + 0.35 * audioMid;
+
 		// Beat pulse on cores
 		col += audioReact * 0.18 * bassP * coreColor * core;
 
 		// Subtle high-frequency shimmer along edges
 		float edge   = glow * (1.0 - core);
 		col         += audioReact * 0.06 * highP * vec3(0.5, 0.8, 1.0) * edge;
+
+		// ---- universal color block (defaults = no-op; hue via native colorShift) ----
+		float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+		col = mix(vec3(ucL), col, colorBoost);               // saturation
 
 		gl_FragColor = vec4(col, 1.0);
 	}

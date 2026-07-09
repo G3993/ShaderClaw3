@@ -1,16 +1,121 @@
 /*{
-  "CATEGORIES": ["Generator", "Art Movement", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Art Movement",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "Constructivism (El Lissitzky / Rodchenko) — a bold animated Suprematist composition: a red disc, heavy black diagonal beams and a thrusting wedge, fine line accents and a small jewel-accent square on a warm paper field. Crisp anti-aliased edges, drop-shadow depth, paper grain and vignette for a premium flat-graphic look. Bass pulses the disc; mid drives the diagonal thrust; the whole composition breathes with a slow rotation. Single-pass, LINEAR-ish out.",
   "INPUTS": [
-    { "NAME": "audioReact", "LABEL": "Audio React",  "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
-    { "NAME": "tempo",      "LABEL": "Tempo",         "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.7 },
-    { "NAME": "compRotate", "LABEL": "Composition Tilt","TYPE": "float","MIN": -0.6, "MAX": 0.6, "DEFAULT": 0.12 },
-    { "NAME": "discScale",  "LABEL": "Disc Size",     "TYPE": "float", "MIN": 0.2,  "MAX": 0.8,  "DEFAULT": 0.46 },
-    { "NAME": "grainAmt",   "LABEL": "Grain",         "TYPE": "float", "MIN": 0.0,  "MAX": 0.2,  "DEFAULT": 0.06 },
-    { "NAME": "redCol",     "LABEL": "Red",           "TYPE": "color", "DEFAULT": [0.86, 0.10, 0.09, 1.0] },
-    { "NAME": "inkCol",     "LABEL": "Ink",           "TYPE": "color", "DEFAULT": [0.06, 0.06, 0.07, 1.0] },
-    { "NAME": "paperCol",   "LABEL": "Paper",         "TYPE": "color", "DEFAULT": [0.93, 0.90, 0.83, 1.0] },
-    { "NAME": "accentCol",  "LABEL": "Accent",        "TYPE": "color", "DEFAULT": [0.10, 0.32, 0.78, 1.0] }
+    {
+      "NAME": "grainAmt",
+      "LABEL": "Grain",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.2,
+      "DEFAULT": 0.06
+    },
+    {
+      "NAME": "discScale",
+      "LABEL": "Disc Size",
+      "TYPE": "float",
+      "MIN": 0.2,
+      "MAX": 0.8,
+      "DEFAULT": 0.46,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "tempo",
+      "LABEL": "Tempo",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.7,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "compRotate",
+      "LABEL": "Composition Tilt",
+      "TYPE": "float",
+      "MIN": -0.6,
+      "MAX": 0.6,
+      "DEFAULT": 0.12,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "redCol",
+      "LABEL": "Red",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.86,
+        0.1,
+        0.09,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "inkCol",
+      "LABEL": "Ink",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.06,
+        0.06,
+        0.07,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "accentCol",
+      "LABEL": "Accent",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.1,
+        0.32,
+        0.78,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "paperCol",
+      "LABEL": "Paper",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.93,
+        0.9,
+        0.83,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -128,6 +233,20 @@ void main(){
     col += (g - 0.5) * grainAmt;
     float vig = 1.0 - smoothstep(0.55, 1.25, length(uv));
     col *= mix(0.82, 1.0, vig);
+
+    // ---- universal color block (defaults = no-op; bg via native Paper color) ----
+    vec3 uc = max(col, 0.0);
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    col = uc;
 
     gl_FragColor = vec4(max(col, 0.0), 1.0);
 }

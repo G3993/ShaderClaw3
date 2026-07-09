@@ -1,44 +1,358 @@
 /*{
   "DESCRIPTION": "Fluid Body + Image — organic fluid simulation with UV-advection texture warping, chromatic aberration, color rotation, surface lighting, and full audio-reactive momentum. Single-pass merge of fluid_body and fluid_image.",
   "CREDIT": "ShaderClaw",
-  "CATEGORIES": ["Generator", "Simulation", "VFX"],
+  "CATEGORIES": [
+    "Generator",
+    "Simulation",
+    "VFX"
+  ],
   "INPUTS": [
-    { "NAME": "inputTex",      "LABEL": "Image/Video",    "TYPE": "image" },
-    { "NAME": "scaleFactor",   "LABEL": "Scale Factor",   "TYPE": "float", "DEFAULT": 0.50, "MIN": 0.1,  "MAX": 2.0 },
-    { "NAME": "pulse",         "LABEL": "Pulse",          "TYPE": "float", "DEFAULT": 0.50, "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "momentum",      "LABEL": "Momentum",       "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "flow",          "LABEL": "Flow",           "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "driftX",        "LABEL": "Drift X",        "TYPE": "float", "DEFAULT": 0.0,  "MIN": -1.0, "MAX": 1.0 },
-    { "NAME": "driftY",        "LABEL": "Drift Y",        "TYPE": "float", "DEFAULT": 0.0,  "MIN": -1.0, "MAX": 1.0 },
-    { "NAME": "chromatic",     "LABEL": "Chromatic",      "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "coruscate",     "LABEL": "Coruscate",      "TYPE": "float", "DEFAULT": 0.0,  "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "colorRotate",   "LABEL": "Color Rotate",   "TYPE": "float", "DEFAULT": 0.0,  "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "colorSpeed",    "LABEL": "Color Speed",    "TYPE": "float", "DEFAULT": 0.0,  "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "zap",           "LABEL": "Zap",            "TYPE": "float", "DEFAULT": 0.0,  "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "lens",          "LABEL": "Lens Distort",   "TYPE": "float", "DEFAULT": 0.0,  "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "bars",          "LABEL": "Bars",           "TYPE": "float", "DEFAULT": 0.0,  "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "reactivity",    "LABEL": "Reactivity",     "TYPE": "float", "DEFAULT": 0.50, "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "audioSpeed",    "LABEL": "Audio Speed",    "TYPE": "float", "DEFAULT": 0.50, "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "advectSpeed",   "LABEL": "Advect Speed",   "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 5.0 },
-    { "NAME": "returnRate",    "LABEL": "Return Rate",    "TYPE": "float", "DEFAULT": 0.004,"MIN": 0.0,  "MAX": 0.05 },
-    { "NAME": "bumpHeight",    "LABEL": "Surface Depth",  "TYPE": "float", "DEFAULT": 80.0, "MIN": 0.0,  "MAX": 300.0 },
-    { "NAME": "specAmount",    "LABEL": "Specular",       "TYPE": "float", "DEFAULT": 1.5,  "MIN": 0.0,  "MAX": 5.0 },
-    { "NAME": "specPow",       "LABEL": "Spec Power",     "TYPE": "float", "DEFAULT": 36.0, "MIN": 4.0,  "MAX": 128.0 },
-    { "NAME": "texBlend",      "LABEL": "Texture Blend",  "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "depthLayers",   "LABEL": "Depth Layers",   "TYPE": "float", "DEFAULT": 3.0,  "MIN": 1.0,  "MAX": 6.0 },
-    { "NAME": "fluidSpeed",    "LABEL": "Fluid Speed",    "TYPE": "float", "DEFAULT": 5.0,  "MIN": 0.5,  "MAX": 20.0 },
-    { "NAME": "vorticity",     "LABEL": "Vorticity",      "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 5.0 },
-    { "NAME": "moveMode",      "LABEL": "Movement Mode",  "TYPE": "long",  "VALUES": [0,1,2,3,4], "LABELS": ["None","Freeform","Center","Wave","Vortex"], "DEFAULT": 1 },
-    { "NAME": "moveSpeed",     "LABEL": "Move Speed",     "TYPE": "float", "DEFAULT": 0.3,  "MIN": 0.05, "MAX": 2.0 },
-    { "NAME": "moveSpread",    "LABEL": "Move Spread",    "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "moveIntensity", "LABEL": "Move Intensity", "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "splatRadius",   "LABEL": "Splat Radius",   "TYPE": "float", "DEFAULT": 0.05, "MIN": 0.01, "MAX": 0.2 },
-    { "NAME": "splatForce",    "LABEL": "Splat Force",    "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.1,  "MAX": 10.0 },
-    { "NAME": "lowColor",      "LABEL": "Low Color",      "TYPE": "color", "DEFAULT": [0.05, 0.0, 0.1, 1.0] },
-    { "NAME": "highColor",     "LABEL": "High Color",     "TYPE": "color", "DEFAULT": [1.0, 0.6, 0.1, 1.0] },
-    { "NAME": "limitColors",   "LABEL": "Limit Colors",   "TYPE": "bool",  "DEFAULT": false },
-    { "NAME": "showUV",        "LABEL": "Show UV Field",  "TYPE": "bool",  "DEFAULT": false },
-    { "NAME": "transparentBg", "LABEL": "Transparent",    "TYPE": "bool",  "DEFAULT": true }
+    {
+      "NAME": "inputTex",
+      "LABEL": "Image/Video",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "coruscate",
+      "LABEL": "Coruscate",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "zap",
+      "LABEL": "Zap",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "bars",
+      "LABEL": "Bars",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "specAmount",
+      "LABEL": "Specular",
+      "TYPE": "float",
+      "DEFAULT": 1.5,
+      "MIN": 0,
+      "MAX": 5
+    },
+    {
+      "NAME": "specPow",
+      "LABEL": "Spec Power",
+      "TYPE": "float",
+      "DEFAULT": 36,
+      "MIN": 4,
+      "MAX": 128
+    },
+    {
+      "NAME": "texBlend",
+      "LABEL": "Texture Blend",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "showUV",
+      "LABEL": "Show UV Field",
+      "TYPE": "bool",
+      "DEFAULT": false
+    },
+    {
+      "NAME": "scaleFactor",
+      "LABEL": "Scale Factor",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0.1,
+      "MAX": 2,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "bumpHeight",
+      "LABEL": "Surface Depth",
+      "TYPE": "float",
+      "DEFAULT": 80,
+      "MIN": 0,
+      "MAX": 300,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "depthLayers",
+      "LABEL": "Depth Layers",
+      "TYPE": "float",
+      "DEFAULT": 3,
+      "MIN": 1,
+      "MAX": 6,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "moveSpread",
+      "LABEL": "Move Spread",
+      "TYPE": "float",
+      "DEFAULT": 0.7,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "splatRadius",
+      "LABEL": "Splat Radius",
+      "TYPE": "float",
+      "DEFAULT": 0.05,
+      "MIN": 0.01,
+      "MAX": 0.2,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "splatForce",
+      "LABEL": "Splat Force",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.1,
+      "MAX": 10,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "pulse",
+      "LABEL": "Pulse",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "momentum",
+      "LABEL": "Momentum",
+      "TYPE": "float",
+      "DEFAULT": 0.25,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "flow",
+      "LABEL": "Flow",
+      "TYPE": "float",
+      "DEFAULT": 0.25,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "driftX",
+      "LABEL": "Drift X",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": -1,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "driftY",
+      "LABEL": "Drift Y",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": -1,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "advectSpeed",
+      "LABEL": "Advect Speed",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "returnRate",
+      "LABEL": "Return Rate",
+      "TYPE": "float",
+      "DEFAULT": 0.004,
+      "MIN": 0,
+      "MAX": 0.05,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "fluidSpeed",
+      "LABEL": "Fluid Speed",
+      "TYPE": "float",
+      "DEFAULT": 5,
+      "MIN": 0.5,
+      "MAX": 20,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "vorticity",
+      "LABEL": "Vorticity",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "moveMode",
+      "LABEL": "Movement Mode",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "LABELS": [
+        "None",
+        "Freeform",
+        "Center",
+        "Wave",
+        "Vortex"
+      ],
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "moveSpeed",
+      "LABEL": "Move Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.3,
+      "MIN": 0.05,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "moveIntensity",
+      "LABEL": "Move Intensity",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "colorRotate",
+      "LABEL": "Color Rotate",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorSpeed",
+      "LABEL": "Color Speed",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "lowColor",
+      "LABEL": "Low Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.05,
+        0,
+        0.1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "highColor",
+      "LABEL": "High Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.6,
+        0.1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "limitColors",
+      "LABEL": "Limit Colors",
+      "TYPE": "bool",
+      "DEFAULT": false,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "chromatic",
+      "LABEL": "Chromatic",
+      "TYPE": "float",
+      "DEFAULT": 0.18,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "lens",
+      "LABEL": "Lens Distort",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "reactivity",
+      "LABEL": "Reactivity",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "audioSpeed",
+      "LABEL": "Audio Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -245,8 +559,9 @@ void main() {
     float aspect = Res.x / Res.y;
 
     float audioMod     = audioBass * reactivity;
-    float audioTimeMod = 1.0 + audioMod * audioSpeed * 2.0;
-    float t            = TIME * audioTimeMod;
+    // Constant clock + small bounded phase offset. Multiplying the TIME
+    // rate by bass made the entire curl field teleport on transients.
+    float t            = TIME + 0.2 * audioBass * (0.5 + 0.5 * audioSpeed);
     int   mMode        = int(moveMode);
     int   octaves      = int(clamp(depthLayers, 1.0, 6.0));
 
@@ -308,7 +623,9 @@ void main() {
     // Audio push
     if (audioMod > 0.05) {
         vec2  center    = renderUV - 0.5;
-        float pushAngle = hash21(vec2(float(FRAMEINDEX) * 0.1, 1.0)) * PI2;
+        // Slow continuous rotation — was a fresh random hash per frame,
+        // which jittered velocity/hue every frame under audio.
+        float pushAngle = TIME * 0.7;
         float dist      = length(center);
         float radialPush = smoothstep(0.4, 0.0, dist);
         fluidVel += vec2(cos(pushAngle), sin(pushAngle)) * audioMod * 0.2 * radialPush;
@@ -502,6 +819,13 @@ void main() {
     // 14. AUDIO BRIGHTNESS + CLAMP
     // ----------------------------------------------------------------
     col += col * audioMod * 0.3;
+    // Calibrated whole-frame follower (raw linear bands — NOT scaled by
+    // reactivity, whose 0.5 default would halve the depth) + beat accent.
+    col *= 1.0 + 0.25 * audioBass + 0.15 * audioMid;
+    // Kick kept shallow: this frame is 100% lit (blackFrac 0), so a deep
+    // whole-frame beat gain spikes the frame-step metric into chop range.
+    float kick = pow(max(audioBeatPulse, 0.8 * audioPunch), 1.3);
+    col *= 1.0 + 0.05 * kick;
     col  = clamp(col, 0.0, 1.0);
 
     // ----------------------------------------------------------------
@@ -513,5 +837,16 @@ void main() {
         alpha     = smoothstep(0.02, 0.15, lum);
     }
 
-    gl_FragColor = vec4(col, alpha);
+    // ---- universal color block (defaults = no-op) ----
+    // (hue rotation handled by the existing colorRotate/colorSpeed inputs)
+    vec3 uc = col;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                   // saturation
+    float ucA = alpha;
+    if (bgColor.a > 0.0) {                                 // fill low-alpha bg region
+        uc = mix(uc, bgColor.rgb, (1.0 - ucA) * bgColor.a);
+        ucA = ucA + (1.0 - ucA) * bgColor.a;
+    }
+
+    gl_FragColor = vec4(uc, ucA);
 }

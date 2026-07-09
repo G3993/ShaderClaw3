@@ -1,16 +1,127 @@
 /*{
-  "CATEGORIES": ["Generator", "Sci-Fi", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Sci-Fi",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "Unstable projected hologram — wireframe SDF subject (head/cube/sphere/cylinder/custom) scanned by a sweeping line, corrupted by interference bands, smeared by chromatic aberration, hazed by volumetric beam dust. Drop any image into Custom Image to project your own logo or silhouette as a hologram. References: Princess Leia recording (1977), Blade Runner 2049 Joi, JARVIS UI, HoloLens, Cyberpunk brain-dance. Bass triggers signal-loss dropouts, mid drives scan speed, treble shimmers the RGB split. Single-pass, linear HDR.",
   "INPUTS": [
-    { "NAME": "subject",       "LABEL": "Subject",          "TYPE": "long",  "DEFAULT": 0, "VALUES": [0,1,2,3,4], "LABELS": ["Head","Cube","Sphere","Cylinder","Custom"] },
-    { "NAME": "inputTex",      "LABEL": "Custom Image",     "TYPE": "image" },
-    { "NAME": "scanSpeed",     "LABEL": "Scan Speed",       "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.55 },
-    { "NAME": "interference",  "LABEL": "Interference",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55 },
-    { "NAME": "chromaShift",   "LABEL": "Chromatic Split",  "TYPE": "float", "MIN": 0.0, "MAX": 0.04,"DEFAULT": 0.010 },
-    { "NAME": "beamHaze",      "LABEL": "Beam Haze",        "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.65 },
-    { "NAME": "wireDensity",   "LABEL": "Wire Density",     "TYPE": "float", "MIN": 4.0, "MAX": 28.0,"DEFAULT": 14.0 },
-    { "NAME": "rotateSpeed",   "LABEL": "Rotation",         "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.35 },
-    { "NAME": "audioReact",    "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
+    {
+      "NAME": "subject",
+      "LABEL": "Subject",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "LABELS": [
+        "Head",
+        "Cube",
+        "Sphere",
+        "Cylinder",
+        "Custom"
+      ]
+    },
+    {
+      "NAME": "inputTex",
+      "LABEL": "Custom Image",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "interference",
+      "LABEL": "Interference",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.55
+    },
+    {
+      "NAME": "beamHaze",
+      "LABEL": "Beam Haze",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.65
+    },
+    {
+      "NAME": "wireDensity",
+      "LABEL": "Wire Density",
+      "TYPE": "float",
+      "MIN": 4,
+      "MAX": 28,
+      "DEFAULT": 14,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "scanSpeed",
+      "LABEL": "Scan Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.55,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "rotateSpeed",
+      "LABEL": "Rotation",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.35,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "chromaShift",
+      "LABEL": "Chromatic Split",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.04,
+      "DEFAULT": 0.01,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -323,5 +434,17 @@ void main() {
     float lum = dot(col, vec3(0.299, 0.587, 0.114));
     col += PAL_PRIMARY * pow(max(lum - 0.6, 0.0), 1.6) * 0.8;
 
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(vec3(ucL), col, colorBoost);
+    if (hueShift > 0.0005) {
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        col = clamp(hM * col, 0.0, 1.0);
+    }
+    col = mix(col, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
     gl_FragColor = vec4(col, 1.0);
 }

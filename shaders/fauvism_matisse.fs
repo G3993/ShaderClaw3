@@ -1,14 +1,113 @@
 /*{
-  "CATEGORIES": ["Generator", "Art Movement", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Art Movement",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "Fauvism after Matisse — four discrete moods, each its own visual world. La Danse (1909–10): five silhouetted figures ringing on cobalt/viridian ground, holding hands, audio bass throws the tempo. Jazz Cut-Out (1947): flat Icarus-style paper shapes — cobalt body, red heart-circle, yellow stars on white. Femme au chapeau (1905): the Salon scandal portrait — central oval head with green nose-stripe, vermilion cheek, viridian shadow. Goldfish (1912): orange-vermilion fish in glass bowl, flattened multi-perspective. Loud, unmixed, wild-beasts color. Single-pass, LINEAR HDR.",
   "INPUTS": [
-    { "NAME": "mood",        "LABEL": "Mood",        "TYPE": "long",  "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["La Danse","Jazz Cut-Out","Femme au chapeau","Goldfish (1912)"] },
-    { "NAME": "tempo",       "LABEL": "Tempo",       "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.7 },
-    { "NAME": "wildness",    "LABEL": "Wildness",    "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 1.0 },
-    { "NAME": "paintTooth",  "LABEL": "Paint Tooth", "TYPE": "float", "MIN": 0.0, "MAX": 0.4, "DEFAULT": 0.12 },
-    { "NAME": "audioReact",  "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "gestureSpeed","LABEL": "Gesture Speed","TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "figureScale", "LABEL": "Figure Scale","TYPE": "float", "MIN": 0.5, "MAX": 2.0, "DEFAULT": 1.0 }
+    {
+      "NAME": "mood",
+      "LABEL": "Mood",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "La Danse",
+        "Jazz Cut-Out",
+        "Femme au chapeau",
+        "Goldfish (1912)"
+      ]
+    },
+    {
+      "NAME": "paintTooth",
+      "LABEL": "Paint Tooth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.4,
+      "DEFAULT": 0.12,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "figureScale",
+      "LABEL": "Figure Scale",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "tempo",
+      "LABEL": "Tempo",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.7,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "wildness",
+      "LABEL": "Wildness",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "gestureSpeed",
+      "LABEL": "Gesture Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -71,7 +170,10 @@ vec3 moodLaDanse(vec2 uv, float t, float audio, float wild, float fScale) {
     q.x *= 1.0;  // already aspect-corrected by caller
 
     float ring = 0.30;
-    float dance = t * (0.4 + audio * 0.6);  // bass throws tempo
+    // Constant tempo (silence-identical: audio rests at 0.8*audioReact) plus a
+    // small BOUNDED bass throw — never multiply t by an audio-driven rate.
+    float dance = t * (0.4 + 0.48 * clamp(audioReact, 0.0, 2.0))
+                + 0.30 * audioBass;
 
     float bestD = 1e9;
     int bestI = 0;
@@ -374,7 +476,17 @@ void main() {
 
     float gSpeed = clamp(gestureSpeed, 0.0, 2.0);
     float t = TIME * (0.6 + tempo) * gSpeed;
-    float audio = clamp(audioReact, 0.0, 2.0);
+
+    // Soft-knee audio conditioning (playbook) — bass throws the tempo,
+    // mids flush the color, energy breathes the whole canvas.
+    float bassP = pow(smoothstep(0.05, 0.85, audioBass), 1.6);
+    float midP  = smoothstep(0.08, 0.85, audioMid);
+    float highP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+    float drive = 0.25 + 0.75 * smoothstep(0.05, 0.9, audioEnergy);
+
+    // Live audio replaces the old constant: rests near 1.0 in silence,
+    // swells with bass (structure) and mids (flush/detail).
+    float audio = clamp(audioReact, 0.0, 2.0) * (0.80 + 0.35 * bassP + 0.15 * midP);
     float wild = clamp(wildness, 0.0, 1.5);
     float fScale = clamp(figureScale, 0.5, 2.0);
 
@@ -385,15 +497,41 @@ void main() {
     else if (m == 2) col = moodFemme(cuv, t, audio, wild, fScale);
     else             col = moodGoldfish(cuv, t, audio, wild, fScale);
 
-    // Painter's tooth — coarse canvas grain across the whole image
-    float tooth = paintGrain(uv) * paintTooth;
+    // Painter's tooth — coarse canvas grain, highs raise the sparkle
+    float tooth = paintGrain(uv) * paintTooth * (1.0 + 0.35 * highP);
     col += tooth * 0.15;
 
-    // Subtle audio breath — never flatten the silence
-    col *= 0.95 + 0.10 * audio * (0.5 + 0.5 * sin(t * 1.4));
+    // Subtle audio breath — never flatten the silence; energy lifts the canvas
+    col *= 0.95 + 0.10 * audio * (0.5 + 0.5 * sin(t * 1.4)) + 0.05 * (drive - 0.25);
+
+    // Linear whole-frame follower + decaying beat accent — the bands are
+    // pre-smoothed upstream, use them straight (no knee) so quieter broadband
+    // styles (rock/jazz) still register.
+    float ar = clamp(audioReact, 0.0, 1.5);
+    // R3 chop fix: 0.22 bass + 0.20 kick whole-frame gains stacked to 0.14
+    // single-frame steps on EDM (ratio 6.1, just over the 6.0 gate). Trim the
+    // instant-attack kick hard and the bass follower a little; mids unchanged.
+    col *= 1.0 + (0.17 * audioBass + 0.14 * audioMid) * ar;
+    float kick = pow(max(audioBeatPulse, 0.8 * audioPunch), 1.3);
+    col *= 1.0 + 0.09 * kick * ar;
 
     // LINEAR HDR — keep saturation high; host applies tonemap
     col = max(col, vec3(0.0));
 
-    gl_FragColor = vec4(col, 1.0);
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = col;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                   // saturation
+    if (hueShift > 0.0005) {                               // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    // background = darkest end of the canvas (full-field painting, no void)
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+
+    gl_FragColor = vec4(uc, 1.0);
 }

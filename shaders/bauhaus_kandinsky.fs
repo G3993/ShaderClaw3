@@ -1,25 +1,204 @@
 /*{
-  "CATEGORIES": ["Generator", "Art Movement", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Art Movement",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "Bauhaus after Kandinsky's Composition VIII (1923) and Several Circles (1926) — geometric SDF primitives floating on white, each shape strictly paired to its primary (yellow triangle, red square, blue circle). Lissajous orbits, weighted-circle gradient halos, thin black supporting lines.",
   "INPUTS": [
-    { "NAME": "kandinskyWork", "LABEL": "Painting", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Composition VIII (1923)", "Several Circles (1926)", "Yellow Red Blue (1925)", "Composition X (1939)", "On White II (1923)"] },
-    { "NAME": "shapeCount", "LABEL": "Shape Count", "TYPE": "float", "MIN": 4.0, "MAX": 22.0, "DEFAULT": 13.0 },
-    { "NAME": "shapeSize", "LABEL": "Shape Size", "TYPE": "float", "MIN": 0.04, "MAX": 0.20, "DEFAULT": 0.09 },
-    { "NAME": "orbitSpeed", "LABEL": "Orbit Speed", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.25 },
-    { "NAME": "orbitRange", "LABEL": "Orbit Range", "TYPE": "float", "MIN": 0.0, "MAX": 0.5, "DEFAULT": 0.22 },
-    { "NAME": "haloStrength", "LABEL": "Halo Strength", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55 },
-    { "NAME": "haloRadius", "LABEL": "Halo Radius", "TYPE": "float", "MIN": 1.2, "MAX": 4.0, "DEFAULT": 2.2 },
-    { "NAME": "lineCount", "LABEL": "Support Lines", "TYPE": "float", "MIN": 0.0, "MAX": 16.0, "DEFAULT": 8.0 },
-    { "NAME": "lineWidth", "LABEL": "Line Width", "TYPE": "float", "MIN": 0.0008, "MAX": 0.008, "DEFAULT": 0.0028 },
-    { "NAME": "lineMotion", "LABEL": "Line Motion", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.45 },
-    { "NAME": "patternBands", "LABEL": "Pattern Bands", "TYPE": "float", "MIN": 0.0, "MAX": 6.0, "DEFAULT": 3.0 },
-    { "NAME": "patternFlow", "LABEL": "Pattern Flow", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.50 },
-    { "NAME": "springReact", "LABEL": "Bass Spring", "TYPE": "float", "MIN": 0.0, "MAX": 0.4, "DEFAULT": 0.12 },
-    { "NAME": "strictPairing", "LABEL": "Strict Pairing", "TYPE": "bool", "DEFAULT": true },
-    { "NAME": "useTexPalette", "LABEL": "Sample Tex for Palette", "TYPE": "bool", "DEFAULT": false },
-    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "compositionSeed", "LABEL": "Seed", "TYPE": "float", "MIN": 0.0, "MAX": 50.0, "DEFAULT": 0.0 },
-    { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" }
+    {
+      "NAME": "haloStrength",
+      "LABEL": "Halo Strength",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.55
+    },
+    {
+      "NAME": "strictPairing",
+      "LABEL": "Strict Pairing",
+      "TYPE": "bool",
+      "DEFAULT": true
+    },
+    {
+      "NAME": "compositionSeed",
+      "LABEL": "Seed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 50,
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "inputTex",
+      "LABEL": "Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "shapeCount",
+      "LABEL": "Shape Count",
+      "TYPE": "float",
+      "MIN": 4,
+      "MAX": 22,
+      "DEFAULT": 13,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "shapeSize",
+      "LABEL": "Shape Size",
+      "TYPE": "float",
+      "MIN": 0.04,
+      "MAX": 0.2,
+      "DEFAULT": 0.09,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "haloRadius",
+      "LABEL": "Halo Radius",
+      "TYPE": "float",
+      "MIN": 1.2,
+      "MAX": 4,
+      "DEFAULT": 2.2,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "lineCount",
+      "LABEL": "Support Lines",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 16,
+      "DEFAULT": 8,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "lineWidth",
+      "LABEL": "Line Width",
+      "TYPE": "float",
+      "MIN": 0.0008,
+      "MAX": 0.008,
+      "DEFAULT": 0.0028,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "patternBands",
+      "LABEL": "Pattern Bands",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 6,
+      "DEFAULT": 3,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "orbitSpeed",
+      "LABEL": "Orbit Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.25,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "orbitRange",
+      "LABEL": "Orbit Range",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.5,
+      "DEFAULT": 0.22,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "lineMotion",
+      "LABEL": "Line Motion",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.45,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "patternFlow",
+      "LABEL": "Pattern Flow",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "kandinskyWork",
+      "LABEL": "Painting",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "LABELS": [
+        "Composition VIII (1923)",
+        "Several Circles (1926)",
+        "Yellow Red Blue (1925)",
+        "Composition X (1939)",
+        "On White II (1923)"
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "useTexPalette",
+      "LABEL": "Sample Tex for Palette",
+      "TYPE": "bool",
+      "DEFAULT": false,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "springReact",
+      "LABEL": "Bass Spring",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.4,
+      "DEFAULT": 0.12,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -63,6 +242,9 @@ void main() {
     else if (kw == 4) col = vec3(0.97, 0.97, 0.97);  // On White II
     else if (kw == 2) col = vec3(0.95, 0.92, 0.84);  // Yellow Red Blue warm
     else              col = vec3(0.97, 0.96, 0.92);  // Composition VIII default
+
+    // User background: blend the canvas ground toward the chosen color.
+    col = mix(col, bgColor.rgb, bgColor.a);
 
     // Palette — strict pairing or input-derived.
     vec3 yellowC = vec3(0.98, 0.85, 0.10);
@@ -242,6 +424,20 @@ void main() {
     // with the beat (a soft "duck" rather than a garish brighten), so the
     // painting reads as alive to audio even where no shape/halo sits.
     col *= 1.0 - 0.16 * clamp(audioLevel, 0.0, 1.0) * min(audioReact, 2.0);
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = col;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    col = uc;
 
     gl_FragColor = vec4(col, 1.0);
 }

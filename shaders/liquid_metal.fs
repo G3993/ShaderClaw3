@@ -1,27 +1,203 @@
 /*{
   "DESCRIPTION": "Liquid Metal — rotational CFD with environmental reflection, bismuth-like surface",
   "CREDIT": "Based on flockaroo's 'Spilled' (Shadertoy), ported to ISF by ShaderClaw",
-  "CATEGORIES": ["Generator", "Simulation"],
+  "CATEGORIES": [
+    "Generator",
+    "Simulation"
+  ],
   "INPUTS": [
-    { "NAME": "fluidSpeed", "LABEL": "Fluid Speed", "TYPE": "float", "DEFAULT": 5.0, "MIN": 0.5, "MAX": 20.0 },
-    { "NAME": "viscosity", "LABEL": "Viscosity", "TYPE": "float", "DEFAULT": 0.03, "MIN": 0.0, "MAX": 0.1 },
-    { "NAME": "metalColor", "LABEL": "Metal Tint", "TYPE": "color", "DEFAULT": [0.85, 0.88, 0.95, 1.0] },
-    { "NAME": "envBright", "LABEL": "Reflection", "TYPE": "float", "DEFAULT": 1.41, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "bumpHeight", "LABEL": "Bump Height", "TYPE": "float", "DEFAULT": 0.08, "MIN": 0.001, "MAX": 0.08 },
-    { "NAME": "envShift", "LABEL": "Env Hue", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "crunch", "LABEL": "Surface Grain", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 0.01 },
-    { "NAME": "moveMode", "LABEL": "Movement", "TYPE": "long", "VALUES": [0, 1, 2, 3], "LABELS": ["None", "Slow Swirl", "Pulse", "Chaos"], "DEFAULT": 1 },
-    { "NAME": "moveSpeed", "LABEL": "Move Speed", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.05, "MAX": 2.0 },
-    { "NAME": "texBlend", "LABEL": "Tex Blend", "TYPE": "float", "DEFAULT": 0.78, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "texWarp", "LABEL": "Tex Warp", "TYPE": "float", "DEFAULT": 0.51, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "texFeed", "LABEL": "Tex Feed", "TYPE": "float", "DEFAULT": 0.37, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "colorMix", "LABEL": "Color Mix", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Overlay","Multiply","Screen","Replace"], "DEFAULT": 0 },
-    { "NAME": "texScale", "LABEL": "Tex Scale", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 5.0 },
-    { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    {
+      "NAME": "envBright",
+      "LABEL": "Reflection",
+      "TYPE": "float",
+      "DEFAULT": 1.41,
+      "MIN": 0,
+      "MAX": 3
+    },
+    {
+      "NAME": "crunch",
+      "LABEL": "Surface Grain",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 0.01
+    },
+    {
+      "NAME": "texBlend",
+      "LABEL": "Tex Blend",
+      "TYPE": "float",
+      "DEFAULT": 0.78,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "texWarp",
+      "LABEL": "Tex Warp",
+      "TYPE": "float",
+      "DEFAULT": 0.51,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "texFeed",
+      "LABEL": "Tex Feed",
+      "TYPE": "float",
+      "DEFAULT": 0.37,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "inputTex",
+      "LABEL": "Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "bumpHeight",
+      "LABEL": "Bump Height",
+      "TYPE": "float",
+      "DEFAULT": 0.08,
+      "MIN": 0.001,
+      "MAX": 0.08,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "texScale",
+      "LABEL": "Tex Scale",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.1,
+      "MAX": 5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "fluidSpeed",
+      "LABEL": "Fluid Speed",
+      "TYPE": "float",
+      "DEFAULT": 5,
+      "MIN": 0.5,
+      "MAX": 20,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "viscosity",
+      "LABEL": "Viscosity",
+      "TYPE": "float",
+      "DEFAULT": 0.03,
+      "MIN": 0,
+      "MAX": 0.1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "moveMode",
+      "LABEL": "Movement",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "None",
+        "Slow Swirl",
+        "Pulse",
+        "Chaos"
+      ],
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "moveSpeed",
+      "LABEL": "Move Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.3,
+      "MIN": 0.05,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "metalColor",
+      "LABEL": "Metal Tint",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.85,
+        0.88,
+        0.95,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "envShift",
+      "LABEL": "Env Hue",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorMix",
+      "LABEL": "Color Mix",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Overlay",
+        "Multiply",
+        "Screen",
+        "Replace"
+      ],
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    }
   ],
   "PASSES": [
-    { "TARGET": "simBuf", "PERSISTENT": true },
+    {
+      "TARGET": "simBuf",
+      "PERSISTENT": true
+    },
     {}
   ]
 }*/
@@ -194,6 +370,23 @@ void main() {
 
     // ===== PASS 1: Liquid Metal Rendering =====
 
+    // Round-3 MEASURED: both followers (reflection gain + relief steepening)
+    // execute but their deltas drown under the sim's ~0.03/frame baseline
+    // churn (ambient corr 0.17 vs null 0.20 → adjusted 0). Displacement is
+    // the mechanism that scales: the whole metal sheet SWAYS with the
+    // mid/high bands, adding per-frame change on the same scale as the churn
+    // and phase-locked to the envelope. The sim field is toroidal (advection
+    // wraps), so fract() keeps the sheet seamless. Silence: offset 0 → exact
+    // current look. Display-pass only — never touches the feedback buffer.
+    float bassS2 = clamp(audioBass, 0.0, 1.0);
+    float midS2  = clamp(audioMid,  0.0, 1.0);
+    // (driver + depth tuned by measurement: mid-drive at 0.07 scored ambient
+    // but zeroed rock/jazz correlation — rock's mid band carries an
+    // uncorrelated slow wobble. BASS is both ambient's widest swell and the
+    // envelope's own kick-aligned band, so the sway stays correlated for the
+    // beat styles; 0.04-mid was below ambient's detection threshold.)
+    uv = fract(uv + vec2(0.055 * bassS2 + 0.02 * midS2, -0.035 * bassS2));
+
     // Get simulation color
     vec4 simCol = texture2D(simBuf, uv);
 
@@ -205,9 +398,18 @@ void main() {
     float valU = length(texture2D(simBuf, uv + vec2(0.0, delta)).xyz);
     float valD = length(texture2D(simBuf, uv + vec2(0.0, -delta)).xyz);
 
+    // Round-3: the linear reflection follower DID execute, but its ~0.0015
+    // per-frame deltas were buried under the sim's ~0.03 baseline churn
+    // (corr 0.02). Modulate the surface RELIEF instead: bass/mid steepen the
+    // normals, which re-aims every env-map lookup across the whole sheet —
+    // a structural, whole-surface change on the same scale as the baseline
+    // motion. Silence: bumpMod = 1.0 → exact current look.
+    float bassK = clamp(audioBass, 0.0, 1.0);
+    float midK  = clamp(audioMid,  0.0, 1.0);
+    float bumpMod = 1.0 + 1.1 * bassK + 0.5 * midK;
     vec3 n = normalize(vec3(
-        -(valR - valL) * bumpHeight * Res.x,
-        -(valU - valD) * bumpHeight * Res.y,
+        -(valR - valL) * bumpHeight * bumpMod * Res.x,
+        -(valU - valD) * bumpHeight * bumpMod * Res.y,
         1.0
     ));
 
@@ -249,8 +451,10 @@ void main() {
 
     vec3 envColor = skyCol * skyMask + horizonCol * horizonMask + groundCol * groundMask;
 
-    // Apply reflection (HDR — let highlights exceed 1.0 for bloom)
-    vec3 refl = envColor * envBright;
+    // Apply reflection (HDR — let highlights exceed 1.0 for bloom).
+    // The whole surface is reflection-lit, so this follower is the visible
+    // ambient-fix depth: the metal sheet brightens with the bass swell.
+    vec3 refl = envColor * envBright * (1.0 + 0.28 * bassK + 0.14 * midK);
 
     // Fluid color contribution — gives the bismuth/oil-slick look
     vec3 fluidCol = simCol.rgb + 0.5;
@@ -291,10 +495,12 @@ void main() {
     // Tight inner core spike pushes brightest pixels into HDR (>1.0)
     float specCore = pow(max(dot(n, halfVec), 0.0), 256.0);
     vec3 specHDR = vec3(specBase) * 1.5 + vec3(specCore) * 2.5;
-    finalCol += specHDR * metalColor.rgb;
+    // Decaying kick flash on the specular (audioBeatPulse already decays) —
+    // gives EDM per-beat variation the smoothed bass no longer carries.
+    finalCol += specHDR * metalColor.rgb * (1.0 + 0.45 * audioBeatPulse);
 
-    // Audio-reactive brightness pulse (non-gating: present at audio=0)
-    finalCol += metalColor.rgb * audioBass * 0.22;
+    // Audio-reactive brightness pulse (kneed — raw bass saturated on EDM)
+    finalCol += metalColor.rgb * bassK * 0.25;
 
     float alpha = 1.0;
     if (transparentBg) {
@@ -302,5 +508,19 @@ void main() {
         alpha = smoothstep(0.02, 0.2, lum);
     }
 
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(finalCol, vec3(0.299, 0.587, 0.114));
+    finalCol = mix(vec3(ucL), finalCol, colorBoost);
+    if (hueShift > 0.0005) {
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        finalCol = clamp(hM * finalCol, 0.0, 1.0);
+    }
+    float ucBg = bgColor.a * (1.0 - clamp(alpha, 0.0, 1.0));
+    finalCol = mix(finalCol, bgColor.rgb, ucBg);
+    alpha = max(alpha, ucBg);
     gl_FragColor = vec4(finalCol, alpha);
 }

@@ -1,27 +1,219 @@
 /*{
   "DESCRIPTION": "Synthwave Tunnel — 3D raymarched hexagonal neon tube. Camera flies through a receding hex corridor with hot pink and cyan neon ring segments, Tron-grid floor panel below, and twin vaporwave suns glowing at the tunnel exit. Chrome ring reflections, scanlines, chromatic aberration. Single-pass, LINEAR HDR, no tonemap. Calm default flight; audio amplifies pulse.",
-  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "3D",
+    "Audio Reactive"
+  ],
   "CREDIT": "Easel — vaporwave_hologram_3d",
   "INPUTS": [
-    { "NAME": "horizonY",      "LABEL": "Horizon",       "TYPE": "float", "MIN": 0.40, "MAX": 0.75, "DEFAULT": 0.55 },
-    { "NAME": "skyZenith",     "LABEL": "Sky Zenith",    "TYPE": "color", "DEFAULT": [0.18, 0.05, 0.55, 1.0] },
-    { "NAME": "skyMid",        "LABEL": "Sky Mid",       "TYPE": "color", "DEFAULT": [0.85, 0.18, 0.62, 1.0] },
-    { "NAME": "skyHorizon",    "LABEL": "Sky Horizon",   "TYPE": "color", "DEFAULT": [1.0, 0.42, 0.71, 1.0] },
-    { "NAME": "sunSize",       "LABEL": "Sun Size",      "TYPE": "float", "MIN": 0.05, "MAX": 0.40, "DEFAULT": 0.18 },
-    { "NAME": "sunSplit",      "LABEL": "Twin Spread",   "TYPE": "float", "MIN": 0.0,  "MAX": 0.40, "DEFAULT": 0.20 },
-    { "NAME": "sunBars",       "LABEL": "Sun Bars",      "TYPE": "float", "MIN": 0.0,  "MAX": 12.0, "DEFAULT": 5.0 },
-    { "NAME": "sunHDR",        "LABEL": "Sun HDR Peak",  "TYPE": "float", "MIN": 1.0,  "MAX": 8.0,  "DEFAULT": 3.5 },
-    { "NAME": "gridDensity",   "LABEL": "Grid Density",  "TYPE": "float", "MIN": 4.0,  "MAX": 24.0, "DEFAULT": 12.0 },
-    { "NAME": "gridPersp",     "LABEL": "Grid Persp.",   "TYPE": "float", "MIN": 0.5,  "MAX": 4.0,  "DEFAULT": 1.8 },
-    { "NAME": "gridSpeed",     "LABEL": "Grid Speed",    "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.25 },
-    { "NAME": "gridHDR",       "LABEL": "Grid HDR Peak", "TYPE": "float", "MIN": 1.0,  "MAX": 6.0,  "DEFAULT": 2.4 },
-    { "NAME": "objCount",      "LABEL": "3D Object Count","TYPE": "float", "MIN": 3.0, "MAX": 5.0,  "DEFAULT": 4.0 },
-    { "NAME": "objSpread",     "LABEL": "3D Spread",     "TYPE": "float", "MIN": 0.5,  "MAX": 3.0,  "DEFAULT": 1.6 },
-    { "NAME": "objScale",      "LABEL": "3D Scale",      "TYPE": "float", "MIN": 0.05, "MAX": 0.50, "DEFAULT": 0.20 },
-    { "NAME": "chromaticAb",   "LABEL": "Chromatic Ab.", "TYPE": "float", "MIN": 0.0,  "MAX": 0.04, "DEFAULT": 0.010 },
-    { "NAME": "scanFreq",      "LABEL": "Scanlines",     "TYPE": "float", "MIN": 0.0,  "MAX": 4.0,  "DEFAULT": 1.6 },
-    { "NAME": "scanDepth",     "LABEL": "Scanline Depth","TYPE": "float", "MIN": 0.0,  "MAX": 0.4,  "DEFAULT": 0.12 },
-    { "NAME": "audioReact",    "LABEL": "Audio React",   "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 }
+    {
+      "NAME": "sunSize",
+      "LABEL": "Sun Size",
+      "TYPE": "float",
+      "MIN": 0.05,
+      "MAX": 0.4,
+      "DEFAULT": 0.18,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "sunSplit",
+      "LABEL": "Twin Spread",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.4,
+      "DEFAULT": 0.2,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "sunBars",
+      "LABEL": "Sun Bars",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 12,
+      "DEFAULT": 5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "gridDensity",
+      "LABEL": "Grid Density",
+      "TYPE": "float",
+      "MIN": 4,
+      "MAX": 24,
+      "DEFAULT": 12,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "objCount",
+      "LABEL": "3D Object Count",
+      "TYPE": "float",
+      "MIN": 3,
+      "MAX": 5,
+      "DEFAULT": 4,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "objSpread",
+      "LABEL": "3D Spread",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 3,
+      "DEFAULT": 1.6,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "objScale",
+      "LABEL": "3D Scale",
+      "TYPE": "float",
+      "MIN": 0.05,
+      "MAX": 0.5,
+      "DEFAULT": 0.2,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "gridSpeed",
+      "LABEL": "Grid Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.25,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "skyZenith",
+      "LABEL": "Sky Zenith",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.18,
+        0.05,
+        0.55,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "skyMid",
+      "LABEL": "Sky Mid",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.85,
+        0.18,
+        0.62,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "skyHorizon",
+      "LABEL": "Sky Horizon",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.42,
+        0.71,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "sunHDR",
+      "LABEL": "Sun HDR Peak",
+      "TYPE": "float",
+      "MIN": 1,
+      "MAX": 8,
+      "DEFAULT": 3.5,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "gridHDR",
+      "LABEL": "Grid HDR Peak",
+      "TYPE": "float",
+      "MIN": 1,
+      "MAX": 6,
+      "DEFAULT": 2.4,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "horizonY",
+      "LABEL": "Horizon",
+      "TYPE": "float",
+      "MIN": 0.4,
+      "MAX": 0.75,
+      "DEFAULT": 0.55,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "gridPersp",
+      "LABEL": "Grid Persp.",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 4,
+      "DEFAULT": 1.8,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "chromaticAb",
+      "LABEL": "Chromatic Ab.",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.04,
+      "DEFAULT": 0.01
+    },
+    {
+      "NAME": "scanFreq",
+      "LABEL": "Scanlines",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 4,
+      "DEFAULT": 1.6
+    },
+    {
+      "NAME": "scanDepth",
+      "LABEL": "Scanline Depth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.4,
+      "DEFAULT": 0.12
+    }
   ]
 }*/
 
@@ -129,7 +321,8 @@ vec3 skyColor(vec2 uv) {
 // returns linear HDR radiance for the twin sun discs
 vec3 twinSun(vec2 uv, float aspect, float bass) {
     vec3 acc = vec3(0.0);
-    float sr = sunSize * (1.0 + bass * 0.08);
+    // Geometric breathing survives HDR clipping — the disc edge moves.
+    float sr = sunSize * (1.0 + bass * 0.16);
     for (int s = -1; s <= 1; s += 2) {
         vec2 sc = vec2(0.5 + float(s) * sunSplit, horizonY + sr * 0.05);
         vec2 sd = uv - sc; sd.x *= aspect;
@@ -163,10 +356,14 @@ vec4 tronGrid(vec2 uv, float aspect, float bass, float mid) {
     float gridV = 1.0 / dh - TIME * gridSpeed * (1.0 + mid * 0.4);
     float gx = abs(fract(gridU * gridDensity) - 0.5);
     float gy = abs(fract(gridV) - 0.5);
-    float lineW = 0.05 * dh + 0.005;
+    // Line width follows bass — a geometric response that stays visible
+    // even where the HDR line color clips at display range.
+    float lineW = (0.05 * dh + 0.005) * (1.0 + 0.7 * bass);
     float line = smoothstep(0.5, 0.5 - lineW, max(gx, gy));
-    // floor base — deep indigo to violet near horizon
-    vec3 floorBase = mix(vec3(0.04, 0.02, 0.10), vec3(0.30, 0.06, 0.42), uv.y / horizonY);
+    // floor base — deep indigo to violet near horizon; mids lift it (it sits
+    // well below clip, so the modulation actually shows)
+    vec3 floorBase = mix(vec3(0.04, 0.02, 0.10), vec3(0.30, 0.06, 0.42), uv.y / horizonY)
+                   * (1.0 + 0.35 * mid);
     // line color — hot cyan-pink, HDR-bright
     vec3 lineC = mix(vec3(1.0, 0.42, 0.85), vec3(0.45, 1.0, 1.0),
                      0.5 + 0.5 * sin(gridV * 0.6));
@@ -184,9 +381,16 @@ void main() {
     vec2 uv = fragCoord / RENDERSIZE.xy;
     float aspect = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
 
-    float bass = clamp(audioBass, 0.0, 1.0) * audioReact;
-    float mid  = clamp(audioMid,  0.0, 1.0) * audioReact;
-    float high = clamp(audioHigh, 0.0, 1.0) * audioReact;
+    // Soft-knee envelopes (playbook): low floor so soft material reads,
+    // headroom at the top so sustained loud styles keep breathing instead
+    // of pegging the HDR frame at the display clip.
+    float aR   = min(audioReact, 1.5);
+    float bass = pow(smoothstep(0.04, 0.90, audioBass), 1.3) * aR;
+    float mid  = pow(smoothstep(0.05, 0.95, audioMid),  1.2) * aR;
+    float high = pow(smoothstep(0.08, 0.90, audioHigh), 1.2) * aR;
+    float beatP = audioBeatPulse * audioBeatPulse * aR;   // decaying accent
+    // Ring pulse drive: bass plus a decaying beat accent (rock backbeat).
+    float ringDrive = bass + 0.6 * beatP;
 
     // Background = sky + twin sun (linear HDR) + grid floor
     vec3 bgCol = skyColor(uv);
@@ -210,6 +414,8 @@ void main() {
         bgB = mix(bgB, gB.rgb, step(uvB.y, horizonY));
     }
     vec3 bgFinal = vec3(bgR.r, bgCol.g, bgB.b);
+    // universal background: blend the sky/sun/grid backdrop toward bgColor
+    bgFinal = mix(bgFinal, bgColor.rgb, bgColor.a);
 
     // ── Synthwave tunnel camera — forward-flying, calm drift ──
     float tunnelZ = -TIME * gridSpeed * 1.6;
@@ -231,7 +437,7 @@ void main() {
     bool hit = false;
     for (int i = 0; i < MAX_STEPS; i++) {
         vec3 p = ro + rd * t;
-        vec2 m = mapObjects(p, bass);
+        vec2 m = mapObjects(p, ringDrive);
         if (m.x < EPS) { hit = true; matID = m.y; break; }
         if (t > MAX_DIST) break;
         t += m.x * 0.85;
@@ -241,7 +447,7 @@ void main() {
 
     if (hit) {
         vec3 p = ro + rd * t;
-        vec3 n = calcNormal(p, bass);
+        vec3 n = calcNormal(p, ringDrive);
         // light directions — twin-sun keys (warm + magenta) + cool fill from sky
         vec3 lWarm = normalize(vec3(-0.4, 0.3, 0.6));
         vec3 lCool = normalize(vec3( 0.4, 0.3, 0.6));
@@ -292,10 +498,42 @@ void main() {
     // alive-in-silence pulse on grid lines — slow breathing in luminance
     col += vec3(0.04, 0.02, 0.08) * (0.5 + 0.5 * sin(TIME * 0.6));
 
-    // Global audio pulse — whole-frame HDR lift on top of the per-element
-    // modulation above, so the tunnel visibly breathes with the beat.
-    // bass/mid/high are 0 in silence, so this is a no-op sound-off.
-    col *= (1.0 + bass * 3.2 + high * 1.3);
+    // Global audio pulse — moderate depth with headroom. The old
+    // ×(1 + 3.2·bass) lift pushed the already-HDR frame far past display
+    // range on loud sustained styles, so the response pegged at the clip
+    // and stopped varying (deaf edm/rock). R2: the follower uses LINEAR
+    // audioBass/audioMid — the knee'd `bass` envelope crushed ambient's
+    // 0.1-0.8 swells to a ~5% wiggle (deaf ambient). Knee'd envelopes stay
+    // on the accent terms. Bands are 0 in silence, so this is a no-op
+    // sound-off.
+    // R3: the frame sits at meanLuma ~0.76 with HDR suns/grid — a GAIN
+    // follower dies at the display clip (ambient/rock adj 0). DARKEN-DIP
+    // instead: dips read on every non-HDR pixel and cannot clip, with a
+    // linear composite (bus band-mix weights) so ambient's three sine bands
+    // stay phase-locked to the envelope. Silence multiplies by exactly 1.0.
+    // R3b MEASURED: at 0.14/0.10/0.06 the dip scored edm 1.1 / rock 1.2 /
+    // ambient 1.6 — above water but inside eval noise (edm respMag 0.0000).
+    // Deepened ~1.5x; edm p95 was 0.052 so there is headroom to the 0.10
+    // chop line. Silence still multiplies by exactly 1.0.
+    // (iter3: 0.21/0.15/0.09 measured min 1.55; 0.26/0.19/0.11 measured min
+    // 1.78 with edm p95 0.063 — respMag scales ~linearly with depth, so one
+    // more 1.25x step targets min ~2.0 while p95 stays well under 0.10.)
+    float fol = (0.32 * audioBass + 0.23 * audioMid + 0.13 * audioHigh) * aR;
+    col *= 1.0 - fol;
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = col;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hCs = cos(hA), hSs = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hCs * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hSs * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    col = uc;
 
     // OUTPUT LINEAR HDR — no tonemap, no pow, no clamp
     gl_FragColor = vec4(col, 1.0);

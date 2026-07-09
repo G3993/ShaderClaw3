@@ -1,24 +1,143 @@
 /*{
   "DESCRIPTION": "Trapped — squishy deformable balls bouncing inside a glass box",
   "CREDIT": "nimitz (Shadertoy), adapted for ShaderClaw",
-  "CATEGORIES": ["Generator", "3D"],
+  "CATEGORIES": [
+    "Generator",
+    "3D"
+  ],
   "INPUTS": [
-    { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "texMix", "LABEL": "Texture Mix", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "zoom", "LABEL": "Zoom", "TYPE": "float", "DEFAULT": 5.5, "MIN": 3.0, "MAX": 15.0 },
-    { "NAME": "ballSize", "LABEL": "Ball Size", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.3, "MAX": 1.8 },
-    { "NAME": "squish", "LABEL": "Squish", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "ballColor", "LABEL": "Ball Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "colorMix", "LABEL": "Color Mix", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "roughness", "LABEL": "Roughness", "TYPE": "float", "DEFAULT": 0.57, "MIN": 0.05, "MAX": 1.0 },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 1.0 }
+    {
+      "NAME": "inputImage",
+      "LABEL": "Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "texMix",
+      "LABEL": "Texture Mix",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "ballSize",
+      "LABEL": "Ball Size",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.3,
+      "MAX": 1.8,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "squish",
+      "LABEL": "Squish",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Speed",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "ballColor",
+      "LABEL": "Ball Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorMix",
+      "LABEL": "Color Mix",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "zoom",
+      "LABEL": "Zoom",
+      "TYPE": "float",
+      "DEFAULT": 5.5,
+      "MIN": 3,
+      "MAX": 15,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent",
+      "TYPE": "bool",
+      "DEFAULT": 1,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "roughness",
+      "LABEL": "Roughness",
+      "TYPE": "float",
+      "DEFAULT": 0.57,
+      "MIN": 0.05,
+      "MAX": 1
+    }
   ]
 }*/
 
 #define ITR 100
 #define FAR 10.0
+
+// Audio conditioning (playbook soft knees) — shared by map() and main().
+float aBass()  { return pow(smoothstep(0.05, 0.85, audioBass), 1.6); }
+float aMid()   { return pow(smoothstep(0.08, 0.85, audioMid), 1.3); }
+float aHigh()  { return pow(smoothstep(0.10, 0.90, audioHigh), 1.2); }
+float aDrive() { return 0.25 + 0.75 * smoothstep(0.05, 0.9, audioEnergy); }
+// Time-warp clock: the balls tumble with the track's energy, and the
+// integrated band clocks (audioBassTime/audioMidTime advance only while the
+// band is hot) make the tumble SPEED itself track bass+mid — beatless
+// ambient swells read as the whole scene surging/relaxing. Silence: the
+// integrated clocks hold still, so the look is exactly the authored tumble.
+float musicT() { return (TIME * (0.7 + 0.6 * aDrive()) + 1.8 * audioBassTime + 1.0 * audioMidTime) * speed; }
 
 float smax(float a, float b) {
     float pw = 14.0;
@@ -35,7 +154,7 @@ float matid = 0.0;
 
 // Procedural ball positions (replaces physics buffer)
 vec4 getBall(float fi, float t) {
-    float r = ballSize * (0.9 + 0.1 * sin(fi * 2.37));
+    float r = ballSize * (0.9 + 0.1 * sin(fi * 2.37)) * (1.0 + 0.22 * aBass()); // bass swells the balls (deep enough to read on beatless swells)
     float px = sin(t * (0.7 + fi * 0.13) + fi * 1.3) * (1.8 - r);
     float py = sin(t * (0.9 + fi * 0.17) + fi * 2.7) * (1.8 - r);
     float pz = sin(t * (0.6 + fi * 0.11) + fi * 4.1) * (1.8 - r);
@@ -43,8 +162,8 @@ vec4 getBall(float fi, float t) {
 }
 
 float map(vec3 p) {
-    float t = TIME * speed;
-    float dmx = 1.0 - squish;
+    float t = musicT();
+    float dmx = 1.0 - min(squish * (1.0 + 0.3 * aMid()), 1.0); // mids deepen the squish
 
     float df = 100.0;
     float d0, d1, d2, d3, d4;
@@ -187,7 +306,8 @@ vec3 shade(vec3 pos, vec3 rd, vec3 n, vec3 alb) {
         float G = (1.0 / (nl * (1.0 - k) + k)) * (1.0 / (nvv * (1.0 - k) + k));
         vec3 F = f0 + (1.0 - f0) * exp2((-5.55473 * lh - 6.98316) * lh);
         // HDR specular boost: tight highlights blow out to 1.4-2.5 linear for bloom
-        float specHDR = 1.0 + 1.4 * pow(nh, 8.0);
+        // (highs sharpen the specular glints)
+        float specHDR = 1.0 + (1.4 + 0.6 * aHigh()) * pow(nh, 8.0);
         vec3 spec = nl * D * F * G * specHDR;
         col.rgb = lcol * nl * (spec + alb * (1.0 - f0));
     }
@@ -227,7 +347,7 @@ float triNoise3d(vec3 p) {
 }
 
 void main() {
-    float t = TIME * speed;
+    float t = musicT(); // must match map()'s clock
     vec2 q = gl_FragCoord.xy / RENDERSIZE.xy;
     vec2 p = q - 0.5;
     p.x *= RENDERSIZE.x / RENDERSIZE.y;
@@ -294,9 +414,9 @@ void main() {
             vec3 e = smoothstep(brad - 0.15 - aaw, brad + aaw, abs(pos));
             float al = 1.0 - (1.0 - e.x * e.y) * (1.0 - e.y * e.z) * (1.0 - e.z * e.x);
             col = mix(col, vec3(0.03), 0.4 * al);
-            // HDR edge accent: corners/edges punch above 1.0 for bloom
+            // HDR edge accent: corners/edges punch above 1.0 for bloom (highs sparkle the frame)
             float edgeCore = smoothstep(0.55, 1.0, al);
-            col += vec3(0.97, 1.0, 0.99) * edgeCore * 1.1;
+            col += vec3(0.97, 1.0, 0.99) * edgeCore * 1.1 * (1.0 + 0.4 * aHigh());
             col *= (triNoise3d(pos * 2.0) * 0.1 + 0.95) * vec3(0.97, 1.0, 0.99);
         }
         if (ib2.x < rz) {
@@ -305,8 +425,9 @@ void main() {
             float al = 1.0 - (1.0 - e.x * e.y) * (1.0 - e.y * e.z) * (1.0 - e.z * e.x);
             col = mix(col, vec3(0.03), 0.4 * al);
             // HDR edge accent on the front faces (stronger — these read as highlights)
+            // Highs sparkle it; punch adds a decaying flash on hits.
             float edgeCore = smoothstep(0.55, 1.0, al);
-            col += vec3(0.97, 1.0, 0.99) * edgeCore * 1.4;
+            col += vec3(0.97, 1.0, 0.99) * edgeCore * (1.4 * (1.0 + 0.4 * aHigh()) + 0.6 * audioPunch);
             col *= (triNoise3d(pos * 2.0) * 0.17 + 0.9) * vec3(0.97, 1.0, 0.99);
         }
     }
@@ -316,9 +437,30 @@ void main() {
     float hdrLift = smoothstep(0.85, 1.6, lum);
     col += col * hdrLift * 0.8;
 
+    // Continuous band-follow (ambient fix): smooth bass/mid lift the whole
+    // scene's light — no beat gating, so beatless swells read as breathing.
+    // Silence: exactly 1.0, look unchanged.
+    // Round-2: LINEAR bands here. aBass()/aMid() pow-knees crushed ambient's
+    // 0.1-0.8 swells (0.3 bass -> 0.096) — knees stay on the geometry paths.
+    col *= 1.0 + 0.25 * clamp(audioBass, 0.0, 1.0) + 0.15 * clamp(audioMid, 0.0, 1.0);
+
     // NO TONEMAP, NO sRGB OETF — leave linear HDR for downstream Phase Q v4 bloom.
     // Preserve the original vignette character.
     col *= pow(20.0 * q.x * q.y * (1.0 - q.x) * (1.0 - q.y), 0.07);
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = col;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    col = uc;
 
     float alpha = 1.0;
     if (transparentBg) {

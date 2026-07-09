@@ -1,38 +1,301 @@
 /*{
   "DESCRIPTION": "Maximalist 3D Shapes Text — a dense corecore poster collage on warm paper. A vertical neon lightning spine splits the canvas; raymarched 3D shapes (sphere/wing/bust/hand/torus) tumble in real depth behind a confetti of procedural image cutouts (flower, statue, sticker, robot, pixel-art card, star emojis) that parallax in z. Three player channels each twitch one shape-cluster and two cutout swarms; bass owns the lightning, cue.latest types out as the giant headline ribbon that scribbles across the middle. Ticker bars top + bottom carry secondary glyphs. Dense, loud, lo-fi internet-poster — not symmetrical, not literal, no spectrum bars, no horizon.",
   "CREDIT": "ShaderClaw — A-List drop · maximalist_3dshapes_text",
-  "CATEGORIES": ["Generator", "Text", "A-List"],
+  "CATEGORIES": [
+    "Generator",
+    "Text",
+    "A-List"
+  ],
   "INPUTS": [
-    { "NAME": "msg",         "TYPE": "text",  "DEFAULT": "MAJESTIC CASUAL", "MAX_LENGTH": 48, "BIND": "cue.latest" },
-
-    { "NAME": "swarmA",      "LABEL": "Shapes A · Energy",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "BIND": "player[1].energy" },
-    { "NAME": "swarmB",      "LABEL": "Cutouts B · Active",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "BIND": "player[2].active" },
-    { "NAME": "swarmC",      "LABEL": "Stickers C · Pitch",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "BIND": "player[3].pitch" },
-    { "NAME": "boltPulse",   "LABEL": "Lightning · Bass",    "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "BIND": "audio.bass" },
-
-    { "NAME": "shapeCount",  "LABEL": "3D Shape Count",      "TYPE": "long", "DEFAULT": 6, "VALUES": [3,4,5,6,7,8], "LABELS": ["3","4","5","6","7","8"] },
-    { "NAME": "cutoutCount", "LABEL": "Image Cutout Count",  "TYPE": "long", "DEFAULT": 7, "VALUES": [3,4,5,6,7,8,9], "LABELS": ["3","4","5","6","7","8","9"] },
-    { "NAME": "palette",     "LABEL": "Palette",             "TYPE": "long", "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Poster","Acid","Mono","Risograph"] },
-    { "NAME": "motion",      "LABEL": "Motion Tempo",        "TYPE": "float","MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "audioDepth",  "LABEL": "Audio Depth",         "TYPE": "float","MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "density",     "LABEL": "Density",             "TYPE": "float","MIN": 0.4, "MAX": 1.6, "DEFAULT": 1.0 },
-
-    { "NAME": "headlineSize","LABEL": "Headline Size",       "TYPE": "float","MIN": 0.04, "MAX": 0.16, "DEFAULT": 0.085 },
-    { "NAME": "boltJitter",  "LABEL": "Bolt Jitter",         "TYPE": "float","MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.7 },
-    { "NAME": "grain",       "LABEL": "Print Grain",         "TYPE": "float","MIN": 0.0, "MAX": 1.2, "DEFAULT": 0.45 }
-  ,
-    { "NAME": "motionDrift",  "LABEL": "Drift Speed",      "TYPE": "float", "DEFAULT": 1.3,  "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "motionJitter", "LABEL": "Jitter",           "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionFlicker","LABEL": "Flicker",          "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionSway",   "LABEL": "Sway",             "TYPE": "float", "DEFAULT": 0.50, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionChaos",  "LABEL": "Chaos",            "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.0 }
-  ,
-    { "NAME": "fidBloom",    "LABEL": "Glow",      "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "fidDither",   "LABEL": "Dither",    "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fidGamma",    "LABEL": "Gamma",     "TYPE": "float", "DEFAULT": 0.60, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fidEdgeGlow", "LABEL": "Edge Glow", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "fidVignette", "LABEL": "Vignette",  "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "fidGrain",    "LABEL": "Grain",     "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.0 }
+    {
+      "NAME": "swarmA",
+      "LABEL": "Shapes A · Energy",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "BIND": "player[1].energy"
+    },
+    {
+      "NAME": "swarmB",
+      "LABEL": "Cutouts B · Active",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "BIND": "player[2].active"
+    },
+    {
+      "NAME": "swarmC",
+      "LABEL": "Stickers C · Pitch",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "BIND": "player[3].pitch"
+    },
+    {
+      "NAME": "grain",
+      "LABEL": "Print Grain",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.2,
+      "DEFAULT": 0.45
+    },
+    {
+      "NAME": "fidBloom",
+      "LABEL": "Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 1.5
+    },
+    {
+      "NAME": "fidDither",
+      "LABEL": "Dither",
+      "TYPE": "float",
+      "DEFAULT": 0.85,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "fidGamma",
+      "LABEL": "Gamma",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "fidEdgeGlow",
+      "LABEL": "Edge Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "fidVignette",
+      "LABEL": "Vignette",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1.5
+    },
+    {
+      "NAME": "fidGrain",
+      "LABEL": "Grain",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "shapeCount",
+      "LABEL": "3D Shape Count",
+      "TYPE": "long",
+      "DEFAULT": 6,
+      "VALUES": [
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "LABELS": [
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "cutoutCount",
+      "LABEL": "Image Cutout Count",
+      "TYPE": "long",
+      "DEFAULT": 7,
+      "VALUES": [
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "LABELS": [
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "density",
+      "LABEL": "Density",
+      "TYPE": "float",
+      "MIN": 0.4,
+      "MAX": 1.6,
+      "DEFAULT": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "motion",
+      "LABEL": "Motion Tempo",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "boltJitter",
+      "LABEL": "Bolt Jitter",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.7,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionDrift",
+      "LABEL": "Drift Speed",
+      "TYPE": "float",
+      "DEFAULT": 1.3,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionJitter",
+      "LABEL": "Jitter",
+      "TYPE": "float",
+      "DEFAULT": 0.25,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionFlicker",
+      "LABEL": "Flicker",
+      "TYPE": "float",
+      "DEFAULT": 0.15,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionSway",
+      "LABEL": "Sway",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionChaos",
+      "LABEL": "Chaos",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "palette",
+      "LABEL": "Palette",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Poster",
+        "Acid",
+        "Mono",
+        "Risograph"
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": "MAJESTIC CASUAL",
+      "MAX_LENGTH": 48,
+      "BIND": "cue.latest",
+      "LABEL": "Message",
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "headlineSize",
+      "LABEL": "Headline Size",
+      "TYPE": "float",
+      "MIN": 0.04,
+      "MAX": 0.16,
+      "DEFAULT": 0.085,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "boltPulse",
+      "LABEL": "Lightning · Bass",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "BIND": "audio.bass",
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "audioDepth",
+      "LABEL": "Audio Depth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -450,6 +713,13 @@ void main() {
     p.x = (uv.x - 0.5) * aspect;
     p.y = uv.y - 0.5;
 
+    // Continuous band-follow (ambient fix): smooth bass breathes the whole
+    // poster's zoom (~±9%) — every edge moves with beatless swells, no beat
+    // gating. Silence: exactly the authored framing.
+    float bassF = smoothstep(0.03, 0.9, audioBass) * clamp(audioDepth, 0.0, 2.0);
+    float midF  = smoothstep(0.05, 0.85, audioMid) * clamp(audioDepth, 0.0, 2.0);
+    p /= 1.0 + 0.09 * bassF;
+
     // ─── globals from inputs ───
     gT      = TIME;
     gMotion = motion;
@@ -470,6 +740,7 @@ void main() {
     vec3 paper = mix(vec3(0.96,0.95,0.92), vec3(0.92,0.91,0.86),
                      fbm2(p * 1.3));
     paper *= 1.0 - 0.05 * dot(p, p);
+    paper = mix(paper, bgColor.rgb, bgColor.a);  // universal background
     vec3 col = paper;
 
     // ─── ticker bars top + bottom (lo-fi info strips) ───
@@ -727,8 +998,18 @@ void main() {
         }
     }
 
-    // ─── bass punch — whole-poster exposure lift that breathes with the mix ───
-    col *= 1.0 + 1.6 * (gBass - 0.10);
+    // ─── bass breath — whole-poster DARKEN-dip (round-2) ───
+    // The round-1 lift `1.0 + 1.6*(gBass-0.10)` brightened, which clips flat
+    // on the near-white paper (most of the frame), and wasn't unity at
+    // silence (x0.84). Darken-dips always read on white; linear bands with
+    // a floored depth so low Audio Depth can't dilute it. Silence = 1.0.
+    float aDm = 0.6 + 0.4 * min(clamp(audioDepth, 0.0, 2.0), 1.0);
+    col *= 1.0 - aDm * (0.22 * clamp(audioBass, 0.0, 1.0)
+                      + 0.12 * clamp(audioMid,  0.0, 1.0));
+
+    // mids tilt the paper temperature (continuous, beatless-friendly; the
+    // exposure lift above clamps on white paper, this keeps varying there)
+    col *= vec3(1.0 + 0.07 * midF, 1.0, 1.0 - 0.07 * midF);
 
     // ─── grain + vignette ───
     float gn = (h12(gl_FragCoord.xy + gT) - 0.5) * 0.10 * grain;
@@ -743,5 +1024,16 @@ void main() {
         col = clamp(col * (1.0 + 0.15*(dens-1.0)), 0.0, 1.0);
     }
 
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(vec3(ucL), col, colorBoost);
+    if (hueShift > 0.0005) {
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        col = clamp(hM * col, 0.0, 1.0);
+    }
     gl_FragColor = vec4(fidApply(clamp(col, 0.0, 1.0), gl_FragCoord.xy), 1.0);
 }

@@ -1,22 +1,187 @@
 /*{
   "DESCRIPTION": "ASCII art filter — converts any image/video to colored ASCII characters with ANSI palette matching",
-  "CATEGORIES": ["Effect", "Text"],
+  "CATEGORIES": [
+    "Effect",
+    "Text"
+  ],
   "INPUTS": [
-    { "NAME": "inputTex", "LABEL": "Source", "TYPE": "image" },
-    { "NAME": "cellSize", "LABEL": "Cell Size", "TYPE": "float", "DEFAULT": 8.0, "MIN": 4.0, "MAX": 32.0 },
-    { "NAME": "charSet", "LABEL": "Character Set", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4, 5, 6], "LABELS": ["Simple", "Extended", "Blocks", "Binary 01", "Hex", "Matrix Glyphs", "Geometric"] },
-    { "NAME": "colorMode", "LABEL": "Color Mode", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4, 5], "LABELS": ["ANSI 16", "Mono", "Custom Duo", "Full Color", "Heatmap", "Cyberpunk"] },
-    { "NAME": "depth", "LABEL": "Depth (Zoom Center)", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "depthFalloff", "LABEL": "Depth Falloff", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.2, "MAX": 4.0 },
-    { "NAME": "charCycle", "LABEL": "Charset Cycle", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 4.0 },
-    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "fgColor", "LABEL": "Foreground", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "contrast", "LABEL": "Contrast", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.5, "MAX": 3.0 },
-    { "NAME": "brightness", "LABEL": "Brightness", "TYPE": "float", "DEFAULT": 0.0, "MIN": -0.5, "MAX": 0.5 },
-    { "NAME": "invert", "LABEL": "Invert", "TYPE": "bool", "DEFAULT": false },
-    { "NAME": "scanlines", "LABEL": "Scanlines", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    {
+      "NAME": "inputTex",
+      "LABEL": "Source",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "contrast",
+      "LABEL": "Contrast",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.5,
+      "MAX": 3
+    },
+    {
+      "NAME": "brightness",
+      "LABEL": "Brightness",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": -0.5,
+      "MAX": 0.5
+    },
+    {
+      "NAME": "invert",
+      "LABEL": "Invert",
+      "TYPE": "bool",
+      "DEFAULT": false
+    },
+    {
+      "NAME": "scanlines",
+      "LABEL": "Scanlines",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "cellSize",
+      "LABEL": "Cell Size",
+      "TYPE": "float",
+      "DEFAULT": 8,
+      "MIN": 4,
+      "MAX": 32,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "colorMode",
+      "LABEL": "Color Mode",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "LABELS": [
+        "ANSI 16",
+        "Mono",
+        "Custom Duo",
+        "Full Color",
+        "Heatmap",
+        "Cyberpunk"
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "fgColor",
+      "LABEL": "Foreground",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "depth",
+      "LABEL": "Depth (Zoom Center)",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "depthFalloff",
+      "LABEL": "Depth Falloff",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.2,
+      "MAX": 4,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "charSet",
+      "LABEL": "Character Set",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "LABELS": [
+        "Simple",
+        "Extended",
+        "Blocks",
+        "Binary 01",
+        "Hex",
+        "Matrix Glyphs",
+        "Geometric"
+      ],
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "charCycle",
+      "LABEL": "Charset Cycle",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 4,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -317,6 +482,20 @@ void main() {
         float _band = exp(-pow((_suv.y - 0.5) * 30.0, 2.0));
         result = mix(result, vec3(0.20, 0.95, 0.40), _f * _band * 0.5);
     }
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = result;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    result = uc;
 
     gl_FragColor = vec4(result, alpha);
 }

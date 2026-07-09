@@ -1,31 +1,287 @@
 /*{
   "DESCRIPTION": "La Bloom — message characters arranged on a rose-curve flower silhouette that continuously blooms outward from the center. Multiple concurrent bloom waves at offset phases keep a new flower always opening while older ones fade at the rim. Toggle 3D for a tilted bowl-shaped bloom: petals lift toward the viewer with perspective scaling, depth-based haze, and rim-light HDR peaks. Saturated jewel palette, ink-black silhouettes against bloom haze.",
   "CREDIT": "ShaderClaw",
-  "CATEGORIES": ["Generator", "Text", "Audio Reactive", "3D"],
+  "CATEGORIES": [
+    "Generator",
+    "Text",
+    "Audio Reactive",
+    "3D"
+  ],
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "BLOOM ", "MAX_LENGTH": 48 },
-    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "DEFAULT": 3, "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"] },
-    { "NAME": "mode3D", "LABEL": "3D Mode", "TYPE": "bool", "DEFAULT": 0.0 },
-    { "NAME": "bowlDepth", "LABEL": "Bowl Depth (3D)", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.4 },
-    { "NAME": "camTilt", "LABEL": "Camera Tilt (3D)", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.4 },
-    { "NAME": "petals", "LABEL": "Petals", "TYPE": "long", "DEFAULT": 6, "VALUES": [3,4,5,6,7,8,10,12], "LABELS": ["3","4","5","6","7","8","10","12"] },
-    { "NAME": "waveCount", "LABEL": "Bloom Waves", "TYPE": "long", "DEFAULT": 3, "VALUES": [1,2,3,4,5,6], "LABELS": ["1","2","3","4","5","6"] },
-    { "NAME": "bloomSpeed", "LABEL": "Bloom Speed", "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.02, "MAX": 1.0 },
-    { "NAME": "spin", "LABEL": "Spin", "TYPE": "float", "DEFAULT": 0.12, "MIN": -1.5, "MAX": 1.5 },
-    { "NAME": "maxRadius", "LABEL": "Max Radius", "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.15, "MAX": 0.7 },
-    { "NAME": "petalDepth", "LABEL": "Petal Depth", "TYPE": "float", "DEFAULT": 0.34, "MIN": 0.0, "MAX": 0.7 },
-    { "NAME": "textScale", "LABEL": "Text Size", "TYPE": "float", "DEFAULT": 0.07, "MIN": 0.02, "MAX": 0.18 },
-    { "NAME": "haloStrength", "LABEL": "Halo", "TYPE": "float", "DEFAULT": 1.6, "MIN": 0.0, "MAX": 4.0 },
-    { "NAME": "hdrBoost", "LABEL": "HDR Boost", "TYPE": "float", "DEFAULT": 2.4, "MIN": 1.0, "MAX": 4.0 },
-    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "inkColor", "LABEL": "Ink", "TYPE": "color", "DEFAULT": [0.02, 0.01, 0.03, 1.0] },
-    { "NAME": "petalA", "LABEL": "Petal Hot", "TYPE": "color", "DEFAULT": [1.0, 0.32, 0.55, 1.0] },
-    { "NAME": "petalB", "LABEL": "Petal Cool", "TYPE": "color", "DEFAULT": [0.95, 0.78, 0.20, 1.0] },
-    { "NAME": "centerColor", "LABEL": "Pistil", "TYPE": "color", "DEFAULT": [1.0, 0.95, 0.55, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.04, 0.02, 0.08, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 1.0 }
+    {
+      "NAME": "petals",
+      "LABEL": "Petals",
+      "TYPE": "long",
+      "DEFAULT": 6,
+      "VALUES": [
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        10,
+        12
+      ],
+      "LABELS": [
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "10",
+        "12"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "waveCount",
+      "LABEL": "Bloom Waves",
+      "TYPE": "long",
+      "DEFAULT": 3,
+      "VALUES": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "LABELS": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "maxRadius",
+      "LABEL": "Max Radius",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0.15,
+      "MAX": 0.7,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "petalDepth",
+      "LABEL": "Petal Depth",
+      "TYPE": "float",
+      "DEFAULT": 0.34,
+      "MIN": 0,
+      "MAX": 0.7,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "bowlDepth",
+      "LABEL": "Bowl Depth (3D)",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 1.4,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "bloomSpeed",
+      "LABEL": "Bloom Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.18,
+      "MIN": 0.02,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "spin",
+      "LABEL": "Spin",
+      "TYPE": "float",
+      "DEFAULT": 0.12,
+      "MIN": -1.5,
+      "MAX": 1.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "inkColor",
+      "LABEL": "Ink",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.02,
+        0.01,
+        0.03,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "petalA",
+      "LABEL": "Petal Hot",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.32,
+        0.55,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "petalB",
+      "LABEL": "Petal Cool",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.95,
+        0.78,
+        0.2,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "centerColor",
+      "LABEL": "Pistil",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.95,
+        0.55,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "mode3D",
+      "LABEL": "3D Mode",
+      "TYPE": "bool",
+      "DEFAULT": 0,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "camTilt",
+      "LABEL": "Camera Tilt (3D)",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 1.4,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": "BLOOM ",
+      "MAX_LENGTH": 48,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "fontFamily",
+      "LABEL": "Font",
+      "TYPE": "long",
+      "DEFAULT": 3,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Inter",
+        "Times New Roman",
+        "Libre Caslon",
+        "Outfit"
+      ],
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "textScale",
+      "LABEL": "Text Size",
+      "TYPE": "float",
+      "DEFAULT": 0.07,
+      "MIN": 0.02,
+      "MAX": 0.18,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.04,
+        0.02,
+        0.08,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent",
+      "TYPE": "bool",
+      "DEFAULT": 1,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "haloStrength",
+      "LABEL": "Halo",
+      "TYPE": "float",
+      "DEFAULT": 1.6,
+      "MIN": 0,
+      "MAX": 4
+    },
+    {
+      "NAME": "hdrBoost",
+      "LABEL": "HDR Boost",
+      "TYPE": "float",
+      "DEFAULT": 2.4,
+      "MIN": 1,
+      "MAX": 4
+    }
   ]
 }*/
+
+// ---- universal color block (defaults = no-op) ----
+vec3 ucApply(vec3 uc) {
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                      // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    return uc;
+}
+
 
 // =====================================================================
 // La Bloom — flower of text. Message characters orbit on a rose curve
@@ -267,5 +523,5 @@ void main() {
         col = mix(petalCol * bloomGlow * haloStrength * hdrBoost * 0.5,
                   inkColor.rgb, charAlpha);
     }
-    gl_FragColor = vec4(col, alpha);
+    gl_FragColor = vec4(ucApply(col), alpha);
 }

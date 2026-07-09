@@ -1,18 +1,145 @@
 /*{
-  "CATEGORIES": ["Generator", "Audio Reactive", "Generative"],
+  "CATEGORIES": [
+    "Generator",
+    "Audio Reactive",
+    "Generative"
+  ],
   "DESCRIPTION": "Cymatics — sand on a vibrating plate. True Chladni eigenmodes of a square plate (sin(mπx)sin(nπy) ± sin(nπx)sin(mπy)) driven by FFT bins: bass swells macro lobes, mids carve crosshatch, treble shatters into fine grids. Three-mode interference produces nodal lines (sand) and antinodes (sand-jumping fizz). Plate disc rotates with bevel and Tyndall haze drift outside.",
   "INPUTS": [
-    { "NAME": "modeBass",         "LABEL": "Bass Mode",      "TYPE": "float", "MIN": 1.0,  "MAX": 12.0, "DEFAULT": 3.0 },
-    { "NAME": "modeMid",          "LABEL": "Mid Mode",       "TYPE": "float", "MIN": 1.0,  "MAX": 16.0, "DEFAULT": 7.0 },
-    { "NAME": "modeHigh",         "LABEL": "Treble Mode",    "TYPE": "float", "MIN": 1.0,  "MAX": 24.0, "DEFAULT": 13.0 },
-    { "NAME": "drift",            "LABEL": "Mode Drift",     "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.18 },
-    { "NAME": "plateRadius",      "LABEL": "Plate Radius",   "TYPE": "float", "MIN": 0.30, "MAX": 0.55, "DEFAULT": 0.45 },
-    { "NAME": "plateRotate",      "LABEL": "Plate Rotate",   "TYPE": "float", "MIN": -0.5, "MAX": 0.5,  "DEFAULT": 0.04 },
-    { "NAME": "sandAccumulation", "LABEL": "Sand Bias",      "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.55 },
-    { "NAME": "audioReact",       "LABEL": "Audio React",    "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
-    { "NAME": "sandColor",        "LABEL": "Sand Color",     "TYPE": "color", "DEFAULT": [0.94, 0.87, 0.71, 1.0] },
-    { "NAME": "drumColor",        "LABEL": "Drum Color",     "TYPE": "color", "DEFAULT": [0.04, 0.05, 0.07, 1.0] },
-    { "NAME": "hazeColor",        "LABEL": "Haze Color",     "TYPE": "color", "DEFAULT": [0.12, 0.14, 0.18, 1.0] }
+    {
+      "NAME": "modeBass",
+      "LABEL": "Bass Mode",
+      "TYPE": "float",
+      "MIN": 1,
+      "MAX": 12,
+      "DEFAULT": 3
+    },
+    {
+      "NAME": "modeMid",
+      "LABEL": "Mid Mode",
+      "TYPE": "float",
+      "MIN": 1,
+      "MAX": 16,
+      "DEFAULT": 7
+    },
+    {
+      "NAME": "modeHigh",
+      "LABEL": "Treble Mode",
+      "TYPE": "float",
+      "MIN": 1,
+      "MAX": 24,
+      "DEFAULT": 13
+    },
+    {
+      "NAME": "sandAccumulation",
+      "LABEL": "Sand Bias",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.55
+    },
+    {
+      "NAME": "plateRadius",
+      "LABEL": "Plate Radius",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 0.55,
+      "DEFAULT": 0.45,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "drift",
+      "LABEL": "Mode Drift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.18,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "plateRotate",
+      "LABEL": "Plate Rotate",
+      "TYPE": "float",
+      "MIN": -0.5,
+      "MAX": 0.5,
+      "DEFAULT": 0.04,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "sandColor",
+      "LABEL": "Sand Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.94,
+        0.87,
+        0.71,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "drumColor",
+      "LABEL": "Drum Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.04,
+        0.05,
+        0.07,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hazeColor",
+      "LABEL": "Haze Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.12,
+        0.14,
+        0.18,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -39,9 +166,27 @@ float chladni(vec2 uv, float m, float n, float phase) {
     return a - b;
 }
 
+// ---- universal color block (defaults = no-op) ----
+vec3 ucGrade(vec3 uc) {
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                   // saturation
+    if (hueShift > 0.0005) {                               // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    return uc;
+}
+
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     float aspect = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
+
+    // universal background: blend the haze (the scene's background) toward bgColor
+    vec3 hzBG = mix(hazeColor.rgb, bgColor.rgb, bgColor.a);
 
     // ---- Plate-local coords (centred + rotated) ---------------------------
     vec2 pp = (uv - 0.5) * vec2(aspect, 1.0);
@@ -55,7 +200,7 @@ void main() {
     // ---- OUTSIDE THE PLATE: Tyndall haze + drifting motes ----------------
     if (plateMask < 0.001) {
         float vig = smoothstep(1.2, 0.4, length(uv - 0.5));
-        vec3 outCol = mix(hazeColor.rgb * 0.55, hazeColor.rgb, vig);
+        vec3 outCol = mix(hzBG * 0.55, hzBG, vig);
 
         // Brownian drift: cells of motes shift with TIME, audioLevel pushes
         // particles harder so the air "thickens" with the music.
@@ -67,7 +212,7 @@ void main() {
         float jitter = step(0.5, fract(TIME * 2.0 + hr.y * 6.28));
         outCol += sandColor.rgb * p * (0.35 + jitter * 0.2);
 
-        gl_FragColor = vec4(outCol, 1.0);
+        gl_FragColor = vec4(ucGrade(outCol), 1.0);
         return;
     }
 
@@ -153,12 +298,12 @@ void main() {
 
     // Vignette into haze near plate rim
     float vig = smoothstep(plateRadius * 1.15, plateRadius * 0.55, pr);
-    col = mix(hazeColor.rgb, col, vig);
+    col = mix(hzBG, col, vig);
 
     // Sand-grain micro-texture
     float grain = (hash21(gl_FragCoord.xy * 0.5 + TIME * 0.1) - 0.5) * 0.05;
     col += grain * sandColor.rgb * sandDensity;
 
     // Final composite over haze background
-    gl_FragColor = vec4(col * plateMask + hazeColor.rgb * (1.0 - plateMask), 1.0);
+    gl_FragColor = vec4(ucGrade(col * plateMask + hzBG * (1.0 - plateMask)), 1.0);
 }

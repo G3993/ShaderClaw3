@@ -1,39 +1,304 @@
 /*{
-  "CATEGORIES": ["Generator", "Glitch", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Glitch",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "GLITCH GOD — the entire glitch-art + analog-degradation vocabulary fused into one shader (52 modules). A single GOD SEED hashes into a recipe deciding which modules fire and how hard. DIGITAL: chromatic aberration, pixel-sort, datamosh P-frame smear, 8x8 macroblock/DCT corruption, kaleido fold, sine warp, slab slice, sync tear, block-jump, jitter, mosaic, posterize, hue-rotate, channel swap, solarize, static, dither/bit-crush, ghost echo, sobel neon edges, strobe, HDR bloom. ANALOG LIBRARY (research-authentic): VHS color-under chroma smear, head-switching tear band, tape dropout, tracking-error roll, time-base wobble, generation loss, RF/luma snow; NTSC dot-crawl + cross-color rainbow, PAL Hanover bars, ringing/overshoot, interlace combing, shadow-mask + Gaussian scanlines, phosphor persistence, vertical-hold roll + VBI bar; RF multipath ghosting, hum bars, co-channel herringbone, ignition sparkle; analog video synthesis — Rutt-Etra scan terrain, video-feedback tunnel, Sandin colorizer, Paik-Abe hue, wobbulator, chroma bloom. 2^52 configurations. CHAOS stacks modules, MUTATE auto-cycles recipes live, bass/mid/treble drive the corruption. Operates on inputTex, falls back to a vivid procedural test signal. Linear HDR out for bloom. After Menkman, Murata, JODI, Cory Arcangel, Nam June Paik & Shuya Abe, Bill Etra & Steve Rutt, Dan Sandin.",
   "INPUTS": [
-    { "NAME": "godSeed",    "LABEL": "God Seed",     "TYPE": "float", "MIN": 0.0, "MAX": 1024.0, "DEFAULT": 222.0 },
-    { "NAME": "chaos",      "LABEL": "Chaos",        "TYPE": "float", "MIN": 0.0, "MAX": 1.0,    "DEFAULT": 0.5 },
-    { "NAME": "intensity",  "LABEL": "Intensity",    "TYPE": "float", "MIN": 0.0, "MAX": 1.5,    "DEFAULT": 1.0 },
-    { "NAME": "mutate",     "LABEL": "Mutate",       "TYPE": "float", "MIN": 0.0, "MAX": 1.0,    "DEFAULT": 0.0 },
-    { "NAME": "speed",      "LABEL": "Speed",        "TYPE": "float", "MIN": 0.0, "MAX": 4.0,    "DEFAULT": 1.0 },
-    { "NAME": "glitchRate", "LABEL": "Glitch Rate",  "TYPE": "float", "MIN": 0.1, "MAX": 4.0,    "DEFAULT": 1.0 },
-    { "NAME": "audioReact", "LABEL": "Audio React",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0,    "DEFAULT": 1.0 },
-    { "NAME": "rgbSplit",     "LABEL": "RGB Split",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "splitAngle",   "LABEL": "Split Angle",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "chromaRadial", "LABEL": "Radial Chroma",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "monochrome",   "LABEL": "Black & White",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "pixelateAmt",  "LABEL": "Pixelate",       "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "waveWarp",     "LABEL": "Wave Warp",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "blockGlitch",  "LABEL": "Block Glitch",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "scanlineAmt",  "LABEL": "Scanlines",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "noiseAmt",     "LABEL": "Noise / Static", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "posterizeAmt", "LABEL": "Posterize",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "hueShift",     "LABEL": "Hue Shift",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "invertAmt",    "LABEL": "Invert",         "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "vignetteAmt",  "LABEL": "Vignette",       "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "feedback",       "LABEL": "Feedback",        "TYPE": "float", "MIN": 0.0,  "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "feedbackZoom",   "LABEL": "Feedback Zoom",   "TYPE": "float", "MIN": -1.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "feedbackRotate", "LABEL": "Feedback Rotate", "TYPE": "float", "MIN": -1.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "fmDepth",        "LABEL": "FM Depth",        "TYPE": "float", "MIN": 0.0,  "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "fmRate",         "LABEL": "FM Rate",         "TYPE": "float", "MIN": 0.0,  "MAX": 1.0, "DEFAULT": 0.3 },
-    { "NAME": "fmRatio",        "LABEL": "FM Ratio",        "TYPE": "float", "MIN": 0.0,  "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "crossMix",       "LABEL": "FB/FM Cross Mix", "TYPE": "float", "MIN": 0.0,  "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "depth",        "LABEL": "Depth",          "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "vhsTex",       "LABEL": "VHS Texture",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "grainAmt",     "LABEL": "Texture / Grain","TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "crtScreen",    "LABEL": "CRT Screen",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "inputTex",   "LABEL": "Texture",      "TYPE": "image" }
+    {
+      "NAME": "godSeed",
+      "LABEL": "God Seed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1024,
+      "DEFAULT": 222
+    },
+    {
+      "NAME": "intensity",
+      "LABEL": "Intensity",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "scanlineAmt",
+      "LABEL": "Scanlines",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "noiseAmt",
+      "LABEL": "Noise / Static",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "feedback",
+      "LABEL": "Feedback",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "fmDepth",
+      "LABEL": "FM Depth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "fmRatio",
+      "LABEL": "FM Ratio",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5
+    },
+    {
+      "NAME": "crossMix",
+      "LABEL": "FB/FM Cross Mix",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5
+    },
+    {
+      "NAME": "depth",
+      "LABEL": "Depth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "vhsTex",
+      "LABEL": "VHS Texture",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "grainAmt",
+      "LABEL": "Texture / Grain",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "crtScreen",
+      "LABEL": "CRT Screen",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "inputTex",
+      "LABEL": "Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "pixelateAmt",
+      "LABEL": "Pixelate",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "blockGlitch",
+      "LABEL": "Block Glitch",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "chaos",
+      "LABEL": "Chaos",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "mutate",
+      "LABEL": "Mutate",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 4,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "glitchRate",
+      "LABEL": "Glitch Rate",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 4,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "waveWarp",
+      "LABEL": "Wave Warp",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "feedbackRotate",
+      "LABEL": "Feedback Rotate",
+      "TYPE": "float",
+      "MIN": -1,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "fmRate",
+      "LABEL": "FM Rate",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "rgbSplit",
+      "LABEL": "RGB Split",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "splitAngle",
+      "LABEL": "Split Angle",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "chromaRadial",
+      "LABEL": "Radial Chroma",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "monochrome",
+      "LABEL": "Black & White",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "posterizeAmt",
+      "LABEL": "Posterize",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "invertAmt",
+      "LABEL": "Invert",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "vignetteAmt",
+      "LABEL": "Vignette",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "feedbackZoom",
+      "LABEL": "Feedback Zoom",
+      "TYPE": "float",
+      "MIN": -1,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -874,6 +1139,10 @@ void main() {
     // bezel: outside curved CRT goes black
     col *= bezel;
 
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(vec3(ucL), col, colorBoost);
+    col = mix(col, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
     // Fully opaque — solid output, no alpha/transparency.
     gl_FragColor = vec4(max(col, vec3(0.0)), 1.0);
 }

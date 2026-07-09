@@ -1,47 +1,341 @@
 /*{
   "DESCRIPTION": "Spiral Text — the cue message is whispered around a logarithmic vortex by three counter-rotating arms that wind into perspective depth. Each arm belongs to a player; their energy thickens the coil, lifts glyphs off the page and brightens its ink. Letters bend tangent to the curve, scale with z-depth, and recede into a paper-cream haze. Bass pulses the camera zoom into the eye of the spiral; cue.latest types in via the typewriter so the spiral writes itself as the speaker speaks. fwidth-antialiased curves, ink-on-paper palette, no defaults harmed.",
   "CREDIT": "Easel A-List · spiral_text",
-  "CATEGORIES": ["Generator", "Text", "A-List"],
+  "CATEGORIES": [
+    "Generator",
+    "Text",
+    "A-List"
+  ],
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "SPIRAL SP R SP RALE SP R SP", "MAX_LENGTH": 48, "BIND": "cue.latest" },
-
-    { "NAME": "energyA", "LABEL": "Arm 1 Energy", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[1].energy" },
-    { "NAME": "energyB", "LABEL": "Arm 2 Energy", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[2].energy" },
-    { "NAME": "energyC", "LABEL": "Arm 3 Energy", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[3].energy" },
-    { "NAME": "bassPull", "LABEL": "Bass Vortex Pull", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 1.5 },
-
-    { "NAME": "armCount", "LABEL": "Arms", "TYPE": "long", "DEFAULT": 3, "VALUES": [1,2,3,4,5,6], "LABELS": ["1","2","3","4","5","6"] },
-    { "NAME": "coilRate", "LABEL": "Coil Rate (log b)", "TYPE": "float", "DEFAULT": 0.22, "MIN": 0.05, "MAX": 0.55 },
-    { "NAME": "turns", "LABEL": "Turns", "TYPE": "float", "DEFAULT": 4.5, "MIN": 1.5, "MAX": 7.5 },
-    { "NAME": "spinSpeed", "LABEL": "Spin Speed", "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "counterRotate", "LABEL": "Counter Rotate", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 1.0 },
-
-    { "NAME": "textAlong", "LABEL": "Glyphs Along Curve", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "glyphSize", "LABEL": "Glyph Size", "TYPE": "float", "DEFAULT": 0.034, "MIN": 0.014, "MAX": 0.065 },
-    { "NAME": "glyphSpacing", "LABEL": "Glyph Spacing", "TYPE": "float", "DEFAULT": 1.05, "MIN": 0.55, "MAX": 1.6 },
-
-    { "NAME": "depthAmp", "LABEL": "Depth Parallax", "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "audioDepth", "LABEL": "Audio Depth", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.5 },
-
-    { "NAME": "paperColor", "LABEL": "Paper", "TYPE": "color", "DEFAULT": [0.953, 0.937, 0.886, 1.0] },
-    { "NAME": "inkA", "LABEL": "Ink — Arm 1 (Sumi)", "TYPE": "color", "DEFAULT": [0.060, 0.058, 0.071, 1.0] },
-    { "NAME": "inkB", "LABEL": "Ink — Arm 2 (Vermillion)", "TYPE": "color", "DEFAULT": [0.760, 0.180, 0.140, 1.0] },
-    { "NAME": "inkC", "LABEL": "Ink — Arm 3 (Indigo)", "TYPE": "color", "DEFAULT": [0.130, 0.180, 0.380, 1.0] }
-  ,
-    { "NAME": "motionDrift",  "LABEL": "Drift Speed",      "TYPE": "float", "DEFAULT": 1.3,  "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "motionJitter", "LABEL": "Jitter",           "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionFlicker","LABEL": "Flicker",          "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionSway",   "LABEL": "Sway",             "TYPE": "float", "DEFAULT": 0.50, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionChaos",  "LABEL": "Chaos",            "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.0 }
-  ,
-    { "NAME": "fidBloom",    "LABEL": "Glow",      "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "fidDither",   "LABEL": "Dither",    "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fidGamma",    "LABEL": "Gamma",     "TYPE": "float", "DEFAULT": 0.60, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fidEdgeGlow", "LABEL": "Edge Glow", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "fidVignette", "LABEL": "Vignette",  "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "fidGrain",    "LABEL": "Grain",     "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.0 }
+    {
+      "NAME": "armCount",
+      "LABEL": "Arms",
+      "TYPE": "long",
+      "DEFAULT": 3,
+      "VALUES": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "LABELS": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "coilRate",
+      "LABEL": "Coil Rate (log b)",
+      "TYPE": "float",
+      "DEFAULT": 0.22,
+      "MIN": 0.05,
+      "MAX": 0.55,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "turns",
+      "LABEL": "Turns",
+      "TYPE": "float",
+      "DEFAULT": 4.5,
+      "MIN": 1.5,
+      "MAX": 7.5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "spinSpeed",
+      "LABEL": "Spin Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.18,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "counterRotate",
+      "LABEL": "Counter Rotate",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "depthAmp",
+      "LABEL": "Depth Parallax",
+      "TYPE": "float",
+      "DEFAULT": 0.85,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionDrift",
+      "LABEL": "Drift Speed",
+      "TYPE": "float",
+      "DEFAULT": 1.3,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionJitter",
+      "LABEL": "Jitter",
+      "TYPE": "float",
+      "DEFAULT": 0.25,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionFlicker",
+      "LABEL": "Flicker",
+      "TYPE": "float",
+      "DEFAULT": 0.15,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionSway",
+      "LABEL": "Sway",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionChaos",
+      "LABEL": "Chaos",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "paperColor",
+      "LABEL": "Paper",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.953,
+        0.937,
+        0.886,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "inkA",
+      "LABEL": "Ink — Arm 1 (Sumi)",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.06,
+        0.058,
+        0.071,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "inkB",
+      "LABEL": "Ink — Arm 2 (Vermillion)",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.76,
+        0.18,
+        0.14,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "inkC",
+      "LABEL": "Ink — Arm 3 (Indigo)",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.13,
+        0.18,
+        0.38,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": "SPIRAL SP R SP RALE SP R SP",
+      "MAX_LENGTH": 48,
+      "BIND": "cue.latest",
+      "GROUP": "Text",
+      "LABEL": "Message"
+    },
+    {
+      "NAME": "textAlong",
+      "LABEL": "Glyphs Along Curve",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "glyphSize",
+      "LABEL": "Glyph Size",
+      "TYPE": "float",
+      "DEFAULT": 0.034,
+      "MIN": 0.014,
+      "MAX": 0.065,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "glyphSpacing",
+      "LABEL": "Glyph Spacing",
+      "TYPE": "float",
+      "DEFAULT": 1.05,
+      "MIN": 0.55,
+      "MAX": 1.6,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "energyA",
+      "LABEL": "Arm 1 Energy",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "BIND": "player[1].energy",
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "energyB",
+      "LABEL": "Arm 2 Energy",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "BIND": "player[2].energy",
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "energyC",
+      "LABEL": "Arm 3 Energy",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "BIND": "player[3].energy",
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "bassPull",
+      "LABEL": "Bass Vortex Pull",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "audioDepth",
+      "LABEL": "Audio Depth",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "fidBloom",
+      "LABEL": "Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 1.5
+    },
+    {
+      "NAME": "fidDither",
+      "LABEL": "Dither",
+      "TYPE": "float",
+      "DEFAULT": 0.85,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "fidGamma",
+      "LABEL": "Gamma",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "fidEdgeGlow",
+      "LABEL": "Edge Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "fidVignette",
+      "LABEL": "Vignette",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1.5
+    },
+    {
+      "NAME": "fidGrain",
+      "LABEL": "Grain",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 1
+    }
   ]
 }*/
+
+// ---- universal color block (defaults = no-op) ----
+vec3 ucApply(vec3 uc) {
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                      // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    return uc;
+}
+
 
 // ── FIDELITY KIT v2 (text-safe cinematic polish) ────────────────────
 // Pure RGB math on the final color — no displacement, no chroma shift,
@@ -257,14 +551,21 @@ void main() {
     float coverAll = 0.0;     // accumulated glyph coverage
     vec3  inkAll   = vec3(0.0);
 
-    // Energies → array
+    // Energies → array. When no player energies are bound (all default 0)
+    // the arms follow the smoothed band bus directly — bass/mid/high, one
+    // band per arm (frequency → space) — so ambient swells continuously
+    // thicken, brighten and halo the arms. Wide soft knees (hi 0.95) keep
+    // headroom under sustained EDM bass; silence leaves the look untouched.
+    float bandB = pow(smoothstep(0.03, 0.95, audioBass), 1.2);
+    float bandM = pow(smoothstep(0.05, 0.95, audioMid),  1.2);
+    float bandH = pow(smoothstep(0.06, 0.95, audioHigh), 1.2);
     float energies[MAX_ARMS];
-    energies[0] = energyA;
-    energies[1] = energyB;
-    energies[2] = energyC;
-    energies[3] = (energyA + energyB) * 0.5;   // synth fill for 4+ arms
-    energies[4] = (energyB + energyC) * 0.5;
-    energies[5] = (energyA + energyC) * 0.5;
+    energies[0] = clamp(energyA + 0.7 * bandB, 0.0, 1.0);
+    energies[1] = clamp(energyB + 0.7 * bandM, 0.0, 1.0);
+    energies[2] = clamp(energyC + 0.7 * bandH, 0.0, 1.0);
+    energies[3] = (energies[0] + energies[1]) * 0.5;   // synth fill for 4+ arms
+    energies[4] = (energies[1] + energies[2]) * 0.5;
+    energies[5] = (energies[0] + energies[2]) * 0.5;
 
     for (int a = 0; a < MAX_ARMS; a++) {
         if (a >= nArms) break;
@@ -462,14 +763,30 @@ void main() {
     float tooth = vnoise(uv * res.y * 0.018);
     col *= 1.0 + (tooth - 0.5) * 0.04;
 
-    // Audio pulse — bass swells the whole page's exposure so a hit reads
-    // even where the spiral itself is thin, on top of the eye-glow bp cue.
-    col *= 1.0 + audioBass * 0.28;
-
     // Final tone curve — gentle.
     col = col / (1.0 + 0.10 * col);
     col = pow(max(col, 0.0), vec3(0.95));
 
     col *= mkFlicker(gl_FragCoord.xy / RENDERSIZE - 0.5, TIME);
-    gl_FragColor = vec4(fidApply(col, gl_FragCoord.xy), 1.0);
+
+    // Round 3: fidApply's headroom bloom pushes the whole paper past clip
+    // (measured meanLuma 0.992) — every PRE-fid gain, and even mkFlicker's
+    // dips, were erased at 1.0, so the round-2 follower measured exactly
+    // zero. The audio response must live AFTER fidApply, as a darken-dip
+    // on the final framebuffer value (a white page can only respond
+    // downward). Silence: dip=0 → exact current look.
+    vec3 outC = fidApply(col, gl_FragCoord.xy);
+    // Round-3 MEASURED: the 0.30-bass + raw beatPulse dip was CHOPPY on edm
+    // (p95 0.216, ratio 10.5) — a kick stepped the whole white page ~20% in
+    // one frame. Soften bass, ramp the beat kick in over the first quarter
+    // of the beat (lag-tolerant detector still credits it), and spread the
+    // rest into mid/high so the continuous styles keep their correlation.
+    float beatSoft = clamp(audioBeatPulse, 0.0, 1.0)
+                   * smoothstep(0.0, 0.25, audioBeatPhase);
+    outC *= 1.0 - (0.18 * clamp(audioBass, 0.0, 1.0)
+                 + 0.14 * clamp(audioMid,  0.0, 1.0)
+                 + 0.06 * clamp(audioHigh, 0.0, 1.0)
+                 + 0.10 * beatSoft);
+    outC = ucApply(outC);
+    gl_FragColor = vec4(outC, 1.0);
 }

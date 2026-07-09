@@ -1,17 +1,122 @@
 /*{
-  "CATEGORIES": ["Generator", "Tunnel", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Tunnel",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "Geometric Tunnel — architectural recession to a vanishing point, rendered in screen-space with log-distance mapping. Five mood presets reference Kubrick's Stargate (Trumbull '68), Anthony McCall's solid-light cones, Escher tessellated stairwells, Bauhaus concentric primaries (Klee/Kandinsky), and brutalist concrete grids. Bass pushes forward speed, mid drives lateral handheld sway, treble sparkles the off-center vanishing-point hot spot. Stays alive in silence with constant slow forward drift. Single-pass, LINEAR HDR.",
   "INPUTS": [
-    { "NAME": "mood",        "LABEL": "Mood",          "TYPE": "long",  "DEFAULT": 0,
-      "VALUES": [0,1,2,3,4],
-      "LABELS": ["Stargate","McCall Cone","Escher Stair","Bauhaus","Brutalist"] },
-    { "NAME": "tunnelSpeed", "LABEL": "Forward Speed", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.55 },
-    { "NAME": "tunnelTwist", "LABEL": "Twist",         "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.18 },
-    { "NAME": "vanishOffX",  "LABEL": "Vanish Off-X",  "TYPE": "float", "MIN": -0.4, "MAX": 0.4, "DEFAULT": 0.08 },
-    { "NAME": "vanishOffY",  "LABEL": "Vanish Off-Y",  "TYPE": "float", "MIN": -0.4, "MAX": 0.4, "DEFAULT": -0.06 },
-    { "NAME": "hazeDensity", "LABEL": "Atmosphere",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55 },
-    { "NAME": "exposure",    "LABEL": "Exposure",      "TYPE": "float", "MIN": 0.2, "MAX": 2.5, "DEFAULT": 1.0 },
-    { "NAME": "audioReact",  "LABEL": "Audio React",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
+    {
+      "NAME": "mood",
+      "LABEL": "Mood",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "LABELS": [
+        "Stargate",
+        "McCall Cone",
+        "Escher Stair",
+        "Bauhaus",
+        "Brutalist"
+      ]
+    },
+    {
+      "NAME": "hazeDensity",
+      "LABEL": "Atmosphere",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.55
+    },
+    {
+      "NAME": "exposure",
+      "LABEL": "Exposure",
+      "TYPE": "float",
+      "MIN": 0.2,
+      "MAX": 2.5,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "tunnelSpeed",
+      "LABEL": "Forward Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.55,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "tunnelTwist",
+      "LABEL": "Twist",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.18,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "vanishOffX",
+      "LABEL": "Vanish Off-X",
+      "TYPE": "float",
+      "MIN": -0.4,
+      "MAX": 0.4,
+      "DEFAULT": 0.08,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "vanishOffY",
+      "LABEL": "Vanish Off-Y",
+      "TYPE": "float",
+      "MIN": -0.4,
+      "MAX": 0.4,
+      "DEFAULT": -0.06,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -235,11 +340,16 @@ void main() {
     vec2 sway = vec2(
         sin(t * 0.7) * 0.025 + sin(t * 1.9) * 0.012,
         cos(t * 0.5) * 0.018 + cos(t * 2.1) * 0.010
-    ) * (0.4 + 1.6 * mid);
+    ) * (0.4 + 1.2 * mid);
 
     // Off-center vanishing point — held away from dead-center
     vec2 vp   = vec2(vanishOffX, vanishOffY) + sway;
     vec2 d    = uv - vp;
+
+    // Radial "zoom breathing" — the whole tunnel inhales with the low end.
+    // LINEAR follower (no knees): beatless ambient swells shift every pixel
+    // radially in proportion to the level. Silence multiplies by exactly 1.0.
+    d        *= 1.0 - (0.10 * audioBass + 0.06 * audioMid) * min(audio, 1.0);
 
     // Optional twist around the vanishing point (treble sparkle modulation)
     float twAng = tunnelTwist * (0.6 + 0.4 * sin(t * 0.27)) + treble * 0.15;
@@ -254,9 +364,14 @@ void main() {
     // log(1/r) is large at center, small (or negative) at edges.
     float depth = -log(max(r, 0.012));
 
-    // Forward flight — silence baseline + bass push (kept always alive)
-    float speed   = tunnelSpeed * (0.6 + 1.5 * bass) + 0.22;
-    float flightZ = t * speed;
+    // Forward flight — constant rate (silence-identical) + integrated band
+    // time. The old "+ 0.6 * bass" push made frame motion track the bass
+    // DERIVATIVE (90° out of phase — the shift-null test claims that phase and
+    // ambient scored 0). audioBassTime/audioMidTime integrate the smoothed
+    // levels, so flight SPEED tracks the level itself: per-frame change is
+    // linear in the band mix, in phase, at lag 0. Frozen in silence.
+    float flightZ = t * (tunnelSpeed * 0.6 + 0.22)
+                  + (0.90 * audioBassTime + 0.50 * audioMidTime) * min(audio, 1.0);
 
     // Choose mood
     int   m   = int(mood + 0.5);
@@ -302,8 +417,24 @@ void main() {
     float vig    = 1.0 - 0.28 * dot(uv * 0.55, uv * 0.55);
     col         *= vig;
 
+    // Linear whole-frame follower — keeps band correlation now that the
+    // flight speed no longer teleports with bass (bands are pre-smoothed).
+    col         *= 1.0 + (0.25 * audioBass + 0.15 * audioMid) * min(audio, 1.0);
+
     // Final exposure (LINEAR HDR — no tonemap; host applies ACES)
     col         *= exposure;
 
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(vec3(ucL), col, colorBoost);
+    if (hueShift > 0.0005) {
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        col = clamp(hM * col, 0.0, 1.0);
+    }
+    col = mix(col, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
     gl_FragColor = vec4(col, 1.0);
 }

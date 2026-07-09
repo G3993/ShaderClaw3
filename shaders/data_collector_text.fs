@@ -1,54 +1,301 @@
 /*{
   "DESCRIPTION": "Data Collector — a parallax telemetry deck. Three depth columns of scrolling values (timecodes, hex IDs, percentages, hashtags) tick past each other in z while a thermal heatmap cloud blooms across a dossier-grid backdrop. The current cue utterance lays down as the live log entry, revealed letter-by-letter via msgAge. Each column is its own data feed; mute one and the deck visibly thins. Abstract feel of 'the system is observing you' — no spectrum bars, no EKG, no literal icons.",
   "CREDIT": "easel a-list — data_collector_text",
-  "CATEGORIES": ["Generator", "Text", "A-List"],
+  "CATEGORIES": [
+    "Generator",
+    "Text",
+    "A-List"
+  ],
   "INPUTS": [
-    { "NAME": "msg",         "LABEL": "Log Entry",     "TYPE": "text",  "DEFAULT": "COLLECTING TELEMETRY",
-      "MAX_LENGTH": 48, "BIND": "cue.latest" },
-    { "NAME": "energyA",     "LABEL": "Column 1 Feed", "TYPE": "float", "MIN": 0.0, "MAX": 1.0,
-      "DEFAULT": 0.0, "BIND": "player[1].energy" },
-    { "NAME": "energyB",     "LABEL": "Column 2 Feed", "TYPE": "float", "MIN": 0.0, "MAX": 1.0,
-      "DEFAULT": 0.0, "BIND": "player[2].energy" },
-    { "NAME": "energyC",     "LABEL": "Column 3 Feed", "TYPE": "float", "MIN": 0.0, "MAX": 1.0,
-      "DEFAULT": 0.0, "BIND": "player[3].energy" },
-    { "NAME": "aliveA",     "LABEL": "Col 1 Active",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0,
-      "DEFAULT": 1.0, "BIND": "player[1].active" },
-    { "NAME": "aliveB",     "LABEL": "Col 2 Active",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0,
-      "DEFAULT": 1.0, "BIND": "player[2].active" },
-    { "NAME": "aliveC",     "LABEL": "Col 3 Active",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0,
-      "DEFAULT": 1.0, "BIND": "player[3].active" },
-    { "NAME": "heat",        "LABEL": "Heatmap Bloom", "TYPE": "float", "MIN": 0.0, "MAX": 1.5,
-      "DEFAULT": 0.8, "BIND": "audio.level" },
-    { "NAME": "datNoise",    "LABEL": "Data Noise",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0,
-      "DEFAULT": 0.55, "BIND": "data.entropy" },
-    { "NAME": "columnCount", "LABEL": "Columns",       "TYPE": "long",
-      "DEFAULT": 3, "VALUES": [2,3,4,5,6], "LABELS": ["2","3","4","5","6"] },
-    { "NAME": "scrollSpeed", "LABEL": "Scroll Speed",  "TYPE": "float", "MIN": 0.05, "MAX": 3.0,
-      "DEFAULT": 0.85 },
-    { "NAME": "fontSize",    "LABEL": "Font Size",     "TYPE": "float", "MIN": 0.5, "MAX": 1.8,
-      "DEFAULT": 1.0 },
-    { "NAME": "audioDepth",  "LABEL": "Audio Depth",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0,
-      "DEFAULT": 0.9 },
-    { "NAME": "palette",     "LABEL": "Palette",       "TYPE": "long",
-      "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Thermal","Mono Dossier","Cyan Console","Acid"] },
-    { "NAME": "gridDensity", "LABEL": "Grid Density",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0,
-      "DEFAULT": 1.0 },
-    { "NAME": "vignette",    "LABEL": "Vignette",      "TYPE": "float", "MIN": 0.0, "MAX": 1.5,
-      "DEFAULT": 0.6 }
-  ,
-    { "NAME": "motionDrift",  "LABEL": "Drift Speed",      "TYPE": "float", "DEFAULT": 1.3,  "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "motionJitter", "LABEL": "Jitter",           "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionFlicker","LABEL": "Flicker",          "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionSway",   "LABEL": "Sway",             "TYPE": "float", "DEFAULT": 0.50, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionChaos",  "LABEL": "Chaos",            "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.0 }
-  ,
-    { "NAME": "fidBloom",  "LABEL": "Glow",   "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "fidDither", "LABEL": "Dither", "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fidGamma",  "LABEL": "Gamma",  "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 1.0 }
-  ,
-    { "NAME": "fidEdgeGlow", "LABEL": "Edge Glow", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "fidVignette", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "fidGrain",    "LABEL": "Grain",    "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.0 }
+    {
+      "NAME": "energyA",
+      "LABEL": "Column 1 Feed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "BIND": "player[1].energy"
+    },
+    {
+      "NAME": "energyB",
+      "LABEL": "Column 2 Feed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "BIND": "player[2].energy"
+    },
+    {
+      "NAME": "energyC",
+      "LABEL": "Column 3 Feed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "BIND": "player[3].energy"
+    },
+    {
+      "NAME": "aliveA",
+      "LABEL": "Col 1 Active",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 1,
+      "BIND": "player[1].active"
+    },
+    {
+      "NAME": "aliveB",
+      "LABEL": "Col 2 Active",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 1,
+      "BIND": "player[2].active"
+    },
+    {
+      "NAME": "aliveC",
+      "LABEL": "Col 3 Active",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 1,
+      "BIND": "player[3].active"
+    },
+    {
+      "NAME": "datNoise",
+      "LABEL": "Data Noise",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.55,
+      "BIND": "data.entropy"
+    },
+    {
+      "NAME": "vignette",
+      "LABEL": "Vignette",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.6
+    },
+    {
+      "NAME": "fidBloom",
+      "LABEL": "Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 1.5
+    },
+    {
+      "NAME": "fidDither",
+      "LABEL": "Dither",
+      "TYPE": "float",
+      "DEFAULT": 0.85,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "fidGamma",
+      "LABEL": "Gamma",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "fidEdgeGlow",
+      "LABEL": "Edge Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "fidVignette",
+      "LABEL": "Vignette",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1.5
+    },
+    {
+      "NAME": "fidGrain",
+      "LABEL": "Grain",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "columnCount",
+      "LABEL": "Columns",
+      "TYPE": "long",
+      "DEFAULT": 3,
+      "VALUES": [
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "LABELS": [
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "scrollSpeed",
+      "LABEL": "Scroll Speed",
+      "TYPE": "float",
+      "MIN": 0.05,
+      "MAX": 3,
+      "DEFAULT": 0.85,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionDrift",
+      "LABEL": "Drift Speed",
+      "TYPE": "float",
+      "DEFAULT": 1.3,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionJitter",
+      "LABEL": "Jitter",
+      "TYPE": "float",
+      "DEFAULT": 0.25,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionFlicker",
+      "LABEL": "Flicker",
+      "TYPE": "float",
+      "DEFAULT": 0.15,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionSway",
+      "LABEL": "Sway",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionChaos",
+      "LABEL": "Chaos",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "palette",
+      "LABEL": "Palette",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Thermal",
+        "Mono Dossier",
+        "Cyan Console",
+        "Acid"
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "gridDensity",
+      "LABEL": "Grid Density",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "msg",
+      "LABEL": "Log Entry",
+      "TYPE": "text",
+      "DEFAULT": "COLLECTING TELEMETRY",
+      "MAX_LENGTH": 48,
+      "BIND": "cue.latest",
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "fontSize",
+      "LABEL": "Font Size",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 1.8,
+      "DEFAULT": 1,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "heat",
+      "LABEL": "Heatmap Bloom",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.8,
+      "BIND": "audio.level",
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "audioDepth",
+      "LABEL": "Audio Depth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.9,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -314,6 +561,11 @@ void main() {
     float bass  = clamp(audioBass,  0.0, 1.0);
     float mid   = clamp(audioMid,   0.0, 1.0);
     float hi    = clamp(audioHigh,  0.0, 1.0);
+    // Soft-kneed band followers (ambient fix): pre-smoothed envelopes with a
+    // low floor and top headroom — continuous, never beat-gated.
+    float bassK = pow(smoothstep(0.04, 0.90, bass), 1.3);
+    float midK  = pow(smoothstep(0.05, 0.90, mid),  1.2);
+    float hiK   = pow(smoothstep(0.04, 0.85, hi),   1.2);
 
     float t = TIME;
 
@@ -359,9 +611,9 @@ void main() {
     float hA = exp(-pow(length(p - hcA), 2.0) * 6.0);
     float hB = exp(-pow(length(p - hcB), 2.0) * 5.0);
     float hC = exp(-pow(length(p - hcC), 2.0) * 7.0);
-    float heatField = (hA * (0.6 + bass * aDepth)
-                    +  hB * (0.5 + mid  * aDepth)
-                    +  hC * (0.4 + hi   * aDepth));
+    float heatField = (hA * (0.6 + (bass + 0.8 * bassK) * aDepth)
+                    +  hB * (0.5 + (mid  + 0.8 * midK)  * aDepth)
+                    +  hC * (0.4 + (hi   + 0.8 * hiK)   * aDepth));
     // Stretch + perturb with fbm so the cloud has internal texture.
     heatField *= 0.55 + 0.9 * fbm2(p * 2.2 + vec2(t * 0.07, -t * 0.05));
     heatField *= heatAmt * (0.6 + 0.7 * audio);
@@ -618,10 +870,31 @@ void main() {
     float r = length(uv - 0.5);
     col *= 1.0 - vigAmt * smoothstep(0.35, 0.85, r);
 
+    // Whole-deck luminance breath (ambient fix): the scrolling columns
+    // dominate frame change, so ride the smoothed bands globally with
+    // visible depth. Multiplicative around 1.0 — silence is untouched.
+    col *= 1.0 + (0.16 * bassK + 0.10 * midK) * aDepth;
+
     // Reinhard-ish soft toe so brightnesses never clip.
     col = col / (1.0 + 0.55 * col);
     col = pow(max(col, 0.0), vec3(0.92));
 
     col *= mkFlicker(gl_FragCoord.xy / RENDERSIZE - 0.5, TIME);
-    gl_FragColor = vec4(fidApply(col, gl_FragCoord.xy), 1.0);
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = fidApply(col, gl_FragCoord.xy);
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                   // saturation
+    if (hueShift > 0.0005) {                               // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    // background = the darkest end of the deck (dossier backdrop)
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+
+    gl_FragColor = vec4(uc, 1.0);
 }

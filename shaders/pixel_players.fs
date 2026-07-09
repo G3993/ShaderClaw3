@@ -1,43 +1,340 @@
 /*{
   "DESCRIPTION": "Pixel Players — a flock of small pixelated face icons drifting around the screen on a flow field. Each player gets its own seed, palette, gaze, mouth, and accessories. The msg text input auto-binds to the live transcript: each character of what the user says spawns and seeds a player, mouths flap when text is present, eyebrows raise on high-frequency hits, bodies squash on bass.",
   "CREDIT": "ShaderClaw — Lu / Pixel Players",
-  "CATEGORIES": ["Generator", "Character", "Audio", "Text"],
+  "CATEGORIES": [
+    "Generator",
+    "Character",
+    "Audio",
+    "Text"
+  ],
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "PIXEL PLAYERS", "MAX_LENGTH": 16 },
-    { "NAME": "playerCount",  "LABEL": "Players",         "TYPE": "float", "DEFAULT": 9.0,  "MIN": 1.0,  "MAX": 16.0 },
-    { "NAME": "playerSize",   "LABEL": "Size",            "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.06, "MAX": 0.40 },
-    { "NAME": "useFlowField", "LABEL": "Flow-field Drift","TYPE": "bool",  "DEFAULT": 1.0  },
-    { "NAME": "driftAmt",     "LABEL": "Drift Range",     "TYPE": "float", "DEFAULT": 0.22, "MIN": 0.0,  "MAX": 0.50 },
-    { "NAME": "driftSpeed",   "LABEL": "Drift Speed",     "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0,  "MAX": 3.0  },
-    { "NAME": "playerArche",  "LABEL": "Archetype",       "TYPE": "long",  "DEFAULT": 8,
-      "VALUES": [0,1,2,3,4,5,6,7,8],
-      "LABELS": ["Warm","Peach","Reef","Rainbow A","Ocean","Rainbow B","Magenta","Pastel","Per-player Random"] },
-    { "NAME": "seed",         "LABEL": "Seed",            "TYPE": "float", "DEFAULT": 17.0, "MIN": 0.0,  "MAX": 1000.0 },
-    { "NAME": "gridX",        "LABEL": "Pixel Grid",      "TYPE": "float", "DEFAULT": 14.0, "MIN": 8.0,  "MAX": 28.0 },
-    { "NAME": "faceAspect",   "LABEL": "Head Aspect",     "TYPE": "float", "DEFAULT": 1.18, "MIN": 0.8,  "MAX": 1.6  },
-    { "NAME": "morphSpeed",   "LABEL": "Morph Speed",     "TYPE": "float", "DEFAULT": 0.6,  "MIN": 0.0,  "MAX": 2.5  },
-    { "NAME": "shapeWobble",  "LABEL": "Shape Wobble",    "TYPE": "float", "DEFAULT": 0.32, "MIN": 0.0,  "MAX": 0.8  },
-    { "NAME": "headRadius",   "LABEL": "Head Size",       "TYPE": "float", "DEFAULT": 0.36, "MIN": 0.18, "MAX": 0.55 },
-    { "NAME": "showHair",     "LABEL": "Hair Tuft",       "TYPE": "bool",  "DEFAULT": 1.0  },
-    { "NAME": "accessories",  "LABEL": "Accessories",     "TYPE": "bool",  "DEFAULT": 1.0  },
-    { "NAME": "colorSteps",   "LABEL": "Color Bands",     "TYPE": "float", "DEFAULT": 4.0,  "MIN": 2.0,  "MAX": 9.0  },
-    { "NAME": "fleckChance",  "LABEL": "Fleck Chance",    "TYPE": "float", "DEFAULT": 0.86, "MIN": 0.5,  "MAX": 1.0  },
-    { "NAME": "eyeGap",       "LABEL": "Eye Gap",         "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.08, "MAX": 0.35 },
-    { "NAME": "eyeRow",       "LABEL": "Eye Row",         "TYPE": "float", "DEFAULT": 0.46, "MIN": 0.25, "MAX": 0.75 },
-    { "NAME": "bigEyes",      "LABEL": "Big Eyes",        "TYPE": "bool",  "DEFAULT": 0.0  },
-    { "NAME": "gazeSpeed",    "LABEL": "Gaze Speed",      "TYPE": "float", "DEFAULT": 0.9,  "MIN": 0.0,  "MAX": 4.0  },
-    { "NAME": "blinkChance",  "LABEL": "Blink Chance",    "TYPE": "float", "DEFAULT": 0.94, "MIN": 0.85, "MAX": 1.0  },
-    { "NAME": "mouthMode",    "LABEL": "Mouth",           "TYPE": "long",  "DEFAULT": 2,
-      "VALUES": [0,1,2], "LABELS": ["Off","Always Talking","Audio + Text"] },
-    { "NAME": "eyebrowReact", "LABEL": "Eyebrow Raise",   "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0,  "MAX": 2.0  },
-    { "NAME": "audioBassPump","LABEL": "Bass Pump",       "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0,  "MAX": 2.5  },
-    { "NAME": "squashAmt",    "LABEL": "Squash & Stretch","TYPE": "float", "DEFAULT": 0.18, "MIN": 0.0,  "MAX": 0.6  },
-    { "NAME": "audioMidColor","LABEL": "Mid Color Drift", "TYPE": "float", "DEFAULT": 0.6,  "MIN": 0.0,  "MAX": 3.0  },
-    { "NAME": "audioHighSparkle","LABEL": "High Sparkle", "TYPE": "float", "DEFAULT": 0.8,  "MIN": 0.0,  "MAX": 3.0  },
-    { "NAME": "bgColor",      "LABEL": "Background",      "TYPE": "color", "DEFAULT": [0.961, 0.937, 0.882, 1.0] },
-    { "NAME": "eyeColor",     "LABEL": "Eye White",       "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "pupilColor",   "LABEL": "Pupil",           "TYPE": "color", "DEFAULT": [0.04, 0.04, 0.04, 1.0] },
-    { "NAME": "transparentBg","LABEL": "Transparent BG",  "TYPE": "bool",  "DEFAULT": 1.0  }
+    {
+      "NAME": "seed",
+      "LABEL": "Seed",
+      "TYPE": "float",
+      "DEFAULT": 17,
+      "MIN": 0,
+      "MAX": 1000
+    },
+    {
+      "NAME": "showHair",
+      "LABEL": "Hair Tuft",
+      "TYPE": "bool",
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "accessories",
+      "LABEL": "Accessories",
+      "TYPE": "bool",
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "fleckChance",
+      "LABEL": "Fleck Chance",
+      "TYPE": "float",
+      "DEFAULT": 0.86,
+      "MIN": 0.5,
+      "MAX": 1
+    },
+    {
+      "NAME": "mouthMode",
+      "LABEL": "Mouth",
+      "TYPE": "long",
+      "DEFAULT": 2,
+      "VALUES": [
+        0,
+        1,
+        2
+      ],
+      "LABELS": [
+        "Off",
+        "Always Talking",
+        "Audio + Text"
+      ]
+    },
+    {
+      "NAME": "playerCount",
+      "LABEL": "Players",
+      "TYPE": "float",
+      "DEFAULT": 9,
+      "MIN": 1,
+      "MAX": 16,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "playerSize",
+      "LABEL": "Size",
+      "TYPE": "float",
+      "DEFAULT": 0.18,
+      "MIN": 0.06,
+      "MAX": 0.4,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "gridX",
+      "LABEL": "Pixel Grid",
+      "TYPE": "float",
+      "DEFAULT": 14,
+      "MIN": 8,
+      "MAX": 28,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "faceAspect",
+      "LABEL": "Head Aspect",
+      "TYPE": "float",
+      "DEFAULT": 1.18,
+      "MIN": 0.8,
+      "MAX": 1.6,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "headRadius",
+      "LABEL": "Head Size",
+      "TYPE": "float",
+      "DEFAULT": 0.36,
+      "MIN": 0.18,
+      "MAX": 0.55,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "eyeGap",
+      "LABEL": "Eye Gap",
+      "TYPE": "float",
+      "DEFAULT": 0.18,
+      "MIN": 0.08,
+      "MAX": 0.35,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "eyeRow",
+      "LABEL": "Eye Row",
+      "TYPE": "float",
+      "DEFAULT": 0.46,
+      "MIN": 0.25,
+      "MAX": 0.75,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "bigEyes",
+      "LABEL": "Big Eyes",
+      "TYPE": "bool",
+      "DEFAULT": 0,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "useFlowField",
+      "LABEL": "Flow-field Drift",
+      "TYPE": "bool",
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "driftAmt",
+      "LABEL": "Drift Range",
+      "TYPE": "float",
+      "DEFAULT": 0.22,
+      "MIN": 0,
+      "MAX": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "driftSpeed",
+      "LABEL": "Drift Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "morphSpeed",
+      "LABEL": "Morph Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 2.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "shapeWobble",
+      "LABEL": "Shape Wobble",
+      "TYPE": "float",
+      "DEFAULT": 0.32,
+      "MIN": 0,
+      "MAX": 0.8,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "gazeSpeed",
+      "LABEL": "Gaze Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.9,
+      "MIN": 0,
+      "MAX": 4,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "blinkChance",
+      "LABEL": "Blink Chance",
+      "TYPE": "float",
+      "DEFAULT": 0.94,
+      "MIN": 0.85,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "squashAmt",
+      "LABEL": "Squash & Stretch",
+      "TYPE": "float",
+      "DEFAULT": 0.18,
+      "MIN": 0,
+      "MAX": 0.6,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "playerArche",
+      "LABEL": "Archetype",
+      "TYPE": "long",
+      "DEFAULT": 8,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "LABELS": [
+        "Warm",
+        "Peach",
+        "Reef",
+        "Rainbow A",
+        "Ocean",
+        "Rainbow B",
+        "Magenta",
+        "Pastel",
+        "Per-player Random"
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorSteps",
+      "LABEL": "Color Bands",
+      "TYPE": "float",
+      "DEFAULT": 4,
+      "MIN": 2,
+      "MAX": 9,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "eyeColor",
+      "LABEL": "Eye White",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "pupilColor",
+      "LABEL": "Pupil",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.04,
+        0.04,
+        0.04,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": "PIXEL PLAYERS",
+      "MAX_LENGTH": 16,
+      "GROUP": "Text",
+      "LABEL": "Message"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.961,
+        0.937,
+        0.882,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent BG",
+      "TYPE": "bool",
+      "DEFAULT": 1,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "eyebrowReact",
+      "LABEL": "Eyebrow Raise",
+      "TYPE": "float",
+      "DEFAULT": 0.7,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "audioBassPump",
+      "LABEL": "Bass Pump",
+      "TYPE": "float",
+      "DEFAULT": 0.7,
+      "MIN": 0,
+      "MAX": 2.5,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "audioMidColor",
+      "LABEL": "Mid Color Drift",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "audioHighSparkle",
+      "LABEL": "High Sparkle",
+      "TYPE": "float",
+      "DEFAULT": 0.8,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -366,5 +663,17 @@ void main(){
 
     float aOut = (anyPlayer > 0.5) ? 1.0
                : (transparentBg ? 0.0 : 1.0);
-    gl_FragColor = vec4(finalCol, aOut);
+
+    // ---- universal color block (defaults = no-op; bgColor already native) ----
+    float ucL = dot(finalCol, vec3(0.299, 0.587, 0.114));
+    vec3 uc = mix(vec3(ucL), finalCol, colorBoost);
+    if (hueShift > 0.0005) {
+        float hueA = hueShift * 6.2831853;
+        float hueC = cos(hueA), hueS = sin(hueA);
+        mat3 hueM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                  + hueC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                  + hueS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hueM * uc, 0.0, 1.0);
+    }
+    gl_FragColor = vec4(uc, aOut);
 }

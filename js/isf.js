@@ -323,6 +323,15 @@ function buildFragmentShader(source) {
     'audioNovelty', 'audioSectionPhase', 'audioSectionAge', 'audioLayers', 'audioDensity',
     'audioPalTemp', 'audioPalSat', 'audioDominantPitch', 'audioMajorMinor', 'audioHCDF',
     'audioBassHit', 'audioMidHit', 'audioHighHit', 'audioBassTime', 'audioMidTime', 'audioHighTime',
+    // EaselAudio schema v1.0 additions (spec/easel_audio_bus.json) — additive.
+    // NOTE: float `audioPresence` (mix presence) is intentionally absent: the
+    // long-standing GLSL contract already declares vec4 audioPresence below.
+    'audioBassPresence', 'audioMidPresence', 'audioHighPresence', 'audioTime',
+    'audioBPMConfidence', 'audioPhase2', 'audioPhase4', 'audioPhase8', 'audioPhase16',
+    'audioOnBeat', 'audioToggleOnBeat',
+    'stemBass', 'stemDrums', 'stemMelody', 'stemAir', 'stemVocal',
+    'stemBassHit', 'stemDrumsHit', 'stemMelodyHit', 'stemAirHit', 'stemVocalHit',
+    'stemBassPresence', 'stemDrumsPresence', 'stemMelodyPresence', 'stemAirPresence', 'stemVocalPresence',
   ];
   const AUDIO_BUS_VECS = [
     ['vec2', 'audioMood'], ['vec4', 'audioPresence'], ['vec2', 'audioFlow'],

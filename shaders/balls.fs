@@ -1,31 +1,213 @@
 /*{
   "DESCRIPTION": "Balls — metallic spheres with selective Unreal-style bloom",
   "CREDIT": "ShaderClaw (inspired by three.js selective bloom example)",
-  "CATEGORIES": ["Generator", "3D"],
+  "CATEGORIES": [
+    "Generator",
+    "3D"
+  ],
   "INPUTS": [
-    { "NAME": "ballCount", "LABEL": "Count", "TYPE": "float", "DEFAULT": 25.0, "MIN": 5.0, "MAX": 50.0 },
-    { "NAME": "ballSize", "LABEL": "Size", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.05, "MAX": 1.0 },
-    { "NAME": "sizeVariance", "LABEL": "Size Variance", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "movementMode", "LABEL": "Movement", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Orbit", "Heart Pump", "Morph Center", "Dance Around", "Swarm"] },
-    { "NAME": "noiseTexture", "LABEL": "Surface Noise", "TYPE": "float", "DEFAULT": 0.30, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "rimLight", "LABEL": "Rim Light", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "shadowSoftness", "LABEL": "Shadow Soft", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "bloomStr", "LABEL": "Bloom", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "bloomRadius", "LABEL": "Blur Size", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 3.0 },
-    { "NAME": "rotSpeed", "LABEL": "Orbit Speed", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "bloomRatio", "LABEL": "Glow Ratio", "TYPE": "float", "DEFAULT": 0.4, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "metallic", "LABEL": "Metallic", "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "audioDrive", "LABEL": "Audio Drive", "TYPE": "float", "DEFAULT": 1.8, "MIN": 0.0, "MAX": 5.0 },
-    { "NAME": "accentColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.04, 1.0] },
-    { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "texMix", "LABEL": "Texture Mix", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 1.0 }
+    {
+      "NAME": "noiseTexture",
+      "LABEL": "Surface Noise",
+      "TYPE": "float",
+      "DEFAULT": 0.3,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "rimLight",
+      "LABEL": "Rim Light",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "shadowSoftness",
+      "LABEL": "Shadow Soft",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "bloomStr",
+      "LABEL": "Bloom",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 3
+    },
+    {
+      "NAME": "bloomRadius",
+      "LABEL": "Blur Size",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.1,
+      "MAX": 3
+    },
+    {
+      "NAME": "bloomRatio",
+      "LABEL": "Glow Ratio",
+      "TYPE": "float",
+      "DEFAULT": 0.4,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "metallic",
+      "LABEL": "Metallic",
+      "TYPE": "float",
+      "DEFAULT": 0.8,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "inputImage",
+      "LABEL": "Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "texMix",
+      "LABEL": "Texture Mix",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "ballCount",
+      "LABEL": "Count",
+      "TYPE": "float",
+      "DEFAULT": 25,
+      "MIN": 5,
+      "MAX": 50,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "ballSize",
+      "LABEL": "Size",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0.05,
+      "MAX": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "sizeVariance",
+      "LABEL": "Size Variance",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "movementMode",
+      "LABEL": "Movement",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "LABELS": [
+        "Orbit",
+        "Heart Pump",
+        "Morph Center",
+        "Dance Around",
+        "Swarm"
+      ],
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "rotSpeed",
+      "LABEL": "Orbit Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.3,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "accentColor",
+      "LABEL": "Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.02,
+        0.02,
+        0.04,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent",
+      "TYPE": "bool",
+      "DEFAULT": 1,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioDrive",
+      "LABEL": "Audio Drive",
+      "TYPE": "float",
+      "DEFAULT": 1.8,
+      "MIN": 0,
+      "MAX": 5,
+      "GROUP": "Audio Reactivity"
+    }
   ],
   "PASSES": [
-    { "TARGET": "scene", "PERSISTENT": true },
-    { "TARGET": "blurH", "PERSISTENT": true, "WIDTH": "$WIDTH/3", "HEIGHT": "$HEIGHT/3" },
-    { "TARGET": "blurV", "PERSISTENT": true, "WIDTH": "$WIDTH/3", "HEIGHT": "$HEIGHT/3" },
+    {
+      "TARGET": "scene",
+      "PERSISTENT": true
+    },
+    {
+      "TARGET": "blurH",
+      "PERSISTENT": true,
+      "WIDTH": "$WIDTH/3",
+      "HEIGHT": "$HEIGHT/3"
+    },
+    {
+      "TARGET": "blurV",
+      "PERSISTENT": true,
+      "WIDTH": "$WIDTH/3",
+      "HEIGHT": "$HEIGHT/3"
+    },
     {}
   ]
 }*/
@@ -340,6 +522,20 @@ vec4 passFinal(vec2 uv) {
         alpha = clamp(max(sceneCol.a, lum * 2.0), 0.0, 1.0);
         if (sceneCol.a < 0.01 && length(bloomCol) < 0.01) alpha = 0.0;
     }
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = col;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    col = uc;
 
     return vec4(col, alpha);
 }

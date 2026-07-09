@@ -1,37 +1,250 @@
 /*{
   "DESCRIPTION": "Checkers — audio-reactive 3D checkerboard with metallic or gradient palettes, bevel lighting, brushed noise, and optional texture on tiles",
   "CREDIT": "ShaderClaw — fusion of Bars time-sweeps + Squares cellular structure",
-  "CATEGORIES": ["Generator"],
+  "CATEGORIES": [
+    "Generator"
+  ],
   "INPUTS": [
-    { "NAME": "palette", "LABEL": "Palette", "TYPE": "long", "DEFAULT": 0,
-      "VALUES": [0, 1, 2],
-      "LABELS": ["B&W Metallic", "Fantasy Gradient", "Both (Split)"] },
-    { "NAME": "tileCount", "LABEL": "Tiles", "TYPE": "float", "DEFAULT": 8.0, "MIN": 2.0, "MAX": 40.0 },
-    { "NAME": "scrollSpeed", "LABEL": "Scroll Speed", "TYPE": "float", "DEFAULT": 0.003, "MIN": 0.0, "MAX": 0.01 },
-    { "NAME": "scrollAngle", "LABEL": "Scroll Angle", "TYPE": "float", "DEFAULT": 0.78, "MIN": 0.0, "MAX": 6.28 },
-    { "NAME": "perspective", "LABEL": "Perspective", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 0.9 },
-    { "NAME": "bevel", "LABEL": "Bevel", "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.0, "MAX": 0.5 },
-    { "NAME": "reliefHeight", "LABEL": "Relief Height", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "glossiness", "LABEL": "Glossiness", "TYPE": "float", "DEFAULT": 32.0, "MIN": 2.0, "MAX": 128.0 },
-    { "NAME": "specAmount", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 1.1, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "metalness", "LABEL": "Metalness", "TYPE": "float", "DEFAULT": 0.75, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "brushAmt", "LABEL": "Brushed Noise", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "hueShift", "LABEL": "Hue Shift", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "hueSpread", "LABEL": "Hue Spread", "TYPE": "float", "DEFAULT": 0.7, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "gradientFlow", "LABEL": "Gradient Flow", "TYPE": "float", "DEFAULT": 0.4, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "rimGlow", "LABEL": "Rim Glow", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "lightAngle", "LABEL": "Light Angle", "TYPE": "float", "DEFAULT": 2.3, "MIN": 0.0, "MAX": 6.28 },
-    { "NAME": "lightPitch", "LABEL": "Light Pitch", "TYPE": "float", "DEFAULT": 0.65, "MIN": 0.1, "MAX": 1.0 },
-    { "NAME": "audioBassLift", "LABEL": "Bass Lift", "TYPE": "float", "DEFAULT": 1.2, "MIN": 0.0, "MAX": 4.0 },
-    { "NAME": "audioMidWarp", "LABEL": "Mid Warp", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 2.5 },
-    { "NAME": "audioHighShimmer", "LABEL": "High Shimmer", "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "audioTileFlip", "LABEL": "Beat Flip", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "texBlend", "LABEL": "Texture Blend", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "texTileMode", "LABEL": "Tex on Tiles", "TYPE": "long", "DEFAULT": 0,
-      "VALUES": [0, 1, 2],
-      "LABELS": ["Light tiles", "Dark tiles", "All tiles"] },
-    { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "backgroundColor", "LABEL": "BG Color", "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.04, 1.0] }
+    {
+      "NAME": "glossiness",
+      "LABEL": "Glossiness",
+      "TYPE": "float",
+      "DEFAULT": 32,
+      "MIN": 2,
+      "MAX": 128
+    },
+    {
+      "NAME": "specAmount",
+      "LABEL": "Specular",
+      "TYPE": "float",
+      "DEFAULT": 1.1,
+      "MIN": 0,
+      "MAX": 3
+    },
+    {
+      "NAME": "metalness",
+      "LABEL": "Metalness",
+      "TYPE": "float",
+      "DEFAULT": 0.75,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "brushAmt",
+      "LABEL": "Brushed Noise",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "rimGlow",
+      "LABEL": "Rim Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "lightAngle",
+      "LABEL": "Light Angle",
+      "TYPE": "float",
+      "DEFAULT": 2.3,
+      "MIN": 0,
+      "MAX": 6.28
+    },
+    {
+      "NAME": "lightPitch",
+      "LABEL": "Light Pitch",
+      "TYPE": "float",
+      "DEFAULT": 0.65,
+      "MIN": 0.1,
+      "MAX": 1
+    },
+    {
+      "NAME": "texBlend",
+      "LABEL": "Texture Blend",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "texTileMode",
+      "LABEL": "Tex on Tiles",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2
+      ],
+      "LABELS": [
+        "Light tiles",
+        "Dark tiles",
+        "All tiles"
+      ]
+    },
+    {
+      "NAME": "inputTex",
+      "LABEL": "Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "tileCount",
+      "LABEL": "Tiles",
+      "TYPE": "float",
+      "DEFAULT": 8,
+      "MIN": 2,
+      "MAX": 40,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "bevel",
+      "LABEL": "Bevel",
+      "TYPE": "float",
+      "DEFAULT": 0.18,
+      "MIN": 0,
+      "MAX": 0.5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "reliefHeight",
+      "LABEL": "Relief Height",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "scrollSpeed",
+      "LABEL": "Scroll Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.003,
+      "MIN": 0,
+      "MAX": 0.01,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "scrollAngle",
+      "LABEL": "Scroll Angle",
+      "TYPE": "float",
+      "DEFAULT": 0.78,
+      "MIN": 0,
+      "MAX": 6.28,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "gradientFlow",
+      "LABEL": "Gradient Flow",
+      "TYPE": "float",
+      "DEFAULT": 0.4,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "palette",
+      "LABEL": "Palette",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2
+      ],
+      "LABELS": [
+        "B&W Metallic",
+        "Fantasy Gradient",
+        "Both (Split)"
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueSpread",
+      "LABEL": "Hue Spread",
+      "TYPE": "float",
+      "DEFAULT": 0.7,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "perspective",
+      "LABEL": "Perspective",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 0.9,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "backgroundColor",
+      "LABEL": "BG Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.02,
+        0.02,
+        0.04,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioBassLift",
+      "LABEL": "Bass Lift",
+      "TYPE": "float",
+      "DEFAULT": 1.2,
+      "MIN": 0,
+      "MAX": 4,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "audioMidWarp",
+      "LABEL": "Mid Warp",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 2.5,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "audioHighShimmer",
+      "LABEL": "High Shimmer",
+      "TYPE": "float",
+      "DEFAULT": 0.8,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "audioTileFlip",
+      "LABEL": "Beat Flip",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -240,6 +453,10 @@ void main() {
         float _b = dot(shaded, vec3(0.299, 0.587, 0.114));
         shaded = mix(shaded, vec3(1.0, 0.78, 0.20), _f * smoothstep(0.65, 0.85, _b) * 0.7);
     }
+
+    // ---- universal color block (defaults = no-op; hue/bg via native params) ----
+    float ucL = dot(shaded, vec3(0.299, 0.587, 0.114));
+    shaded = mix(vec3(ucL), shaded, colorBoost);             // saturation
 
     gl_FragColor = vec4(shaded, 1.0);
 }

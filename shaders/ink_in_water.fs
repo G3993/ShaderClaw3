@@ -1,21 +1,169 @@
 /*{
-  "CATEGORIES": ["Generator", "Fluid", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Fluid",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "Drops of colored ink dispersing through clear water — curl-noise advected blooms with branching tendrils, slow rotational vortex, and pigment density decreasing as it spreads. Audio bass triggers new ink drops at hashed positions; treble drives fine turbulence detail. The Sunday-afternoon kitchen experiment as music visualizer.",
   "INPUTS": [
-    { "NAME": "dropCount",      "LABEL": "Drop Count",      "TYPE": "float", "MIN": 1.0,  "MAX": 12.0, "DEFAULT": 7.0 },
-    { "NAME": "dropSize",       "LABEL": "Drop Size",       "TYPE": "float", "MIN": 0.05, "MAX": 0.8,  "DEFAULT": 0.27 },
-    { "NAME": "dropSpread",     "LABEL": "Spread Rate",     "TYPE": "float", "MIN": 0.02, "MAX": 0.40, "DEFAULT": 0.14 },
-    { "NAME": "dropDispersion", "LABEL": "Dispersion",      "TYPE": "float", "MIN": 0.05, "MAX": 1.80, "DEFAULT": 0.70 },
-    { "NAME": "curlScale",      "LABEL": "Curl Scale",      "TYPE": "float", "MIN": 0.5,  "MAX": 8.0,  "DEFAULT": 3.2 },
-    { "NAME": "curlStrength",   "LABEL": "Curl Strength",   "TYPE": "float", "MIN": 0.0,  "MAX": 0.8,  "DEFAULT": 0.30 },
-    { "NAME": "vortexSpeed",    "LABEL": "Vortex Speed",    "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.12 },
-    { "NAME": "fadeRate",       "LABEL": "Fade Rate",       "TYPE": "float", "MIN": 0.05, "MAX": 1.50, "DEFAULT": 0.35 },
-    { "NAME": "audioReact",     "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
-    { "NAME": "waterTop",       "LABEL": "Water Top",       "TYPE": "color", "DEFAULT": [0.92, 0.96, 0.98, 1.0] },
-    { "NAME": "waterBottom",    "LABEL": "Water Bottom",    "TYPE": "color", "DEFAULT": [0.78, 0.86, 0.92, 1.0] },
-    { "NAME": "inkA",           "LABEL": "Ink A",           "TYPE": "color", "DEFAULT": [0.05, 0.18, 0.55, 1.0] },
-    { "NAME": "inkB",           "LABEL": "Ink B",           "TYPE": "color", "DEFAULT": [0.85, 0.10, 0.35, 1.0] },
-    { "NAME": "inkC",           "LABEL": "Ink C",           "TYPE": "color", "DEFAULT": [0.95, 0.65, 0.10, 1.0] }
+    {
+      "NAME": "fadeRate",
+      "LABEL": "Fade Rate",
+      "TYPE": "float",
+      "MIN": 0.05,
+      "MAX": 1.5,
+      "DEFAULT": 0.35
+    },
+    {
+      "NAME": "dropCount",
+      "LABEL": "Drop Count",
+      "TYPE": "float",
+      "MIN": 1,
+      "MAX": 12,
+      "DEFAULT": 7,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "dropSize",
+      "LABEL": "Drop Size",
+      "TYPE": "float",
+      "MIN": 0.05,
+      "MAX": 0.8,
+      "DEFAULT": 0.27,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "dropSpread",
+      "LABEL": "Spread Rate",
+      "TYPE": "float",
+      "MIN": 0.02,
+      "MAX": 0.4,
+      "DEFAULT": 0.14,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "dropDispersion",
+      "LABEL": "Dispersion",
+      "TYPE": "float",
+      "MIN": 0.05,
+      "MAX": 1.8,
+      "DEFAULT": 0.7,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "curlScale",
+      "LABEL": "Curl Scale",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 8,
+      "DEFAULT": 3.2,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "curlStrength",
+      "LABEL": "Curl Strength",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.8,
+      "DEFAULT": 0.3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "vortexSpeed",
+      "LABEL": "Vortex Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.12,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "waterTop",
+      "LABEL": "Water Top",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.92,
+        0.96,
+        0.98,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "waterBottom",
+      "LABEL": "Water Bottom",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.78,
+        0.86,
+        0.92,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "inkA",
+      "LABEL": "Ink A",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.05,
+        0.18,
+        0.55,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "inkB",
+      "LABEL": "Ink B",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.85,
+        0.1,
+        0.35,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "inkC",
+      "LABEL": "Ink C",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.95,
+        0.65,
+        0.1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -100,12 +248,11 @@ void main() {
     vec3 transmission = vec3(1.0);
 
     int N = int(clamp(dropCount, 1.0, 12.0));
-    float bassPulse = 0.5 + 0.5 * bass;
 
-    // Bass EXPLOSION: brief massive size jump that decays over ~0.5s.
-    // Use a fast-decay envelope on bass for dramatic transient drops.
-    float bassExplode = bass * bass * 2.2;
-    float explodeEnv  = bassExplode * exp(-fract(t * 2.0) * 1.5);
+    // Beat-driven drop swell: audioBeatPulse already decays smoothly.
+    // (The old sawtooth exp(-fract(t*2.0)) envelope snapped radii every
+    // 0.5 s, and bass-modulated periods re-hashed drop positions — chop.)
+    float explodeEnv = pow(max(audioBeatPulse, 0.8 * audioPunch), 1.3);
     // Accumulator for bloom halo — sums pigment so we can add a glow afterward.
     vec3 bloomAccum = vec3(0.0);
 
@@ -113,9 +260,10 @@ void main() {
         if (i >= N) break;
         float fi = float(i);
 
-        // Each drop relaunches every `period` seconds (TIME-bucket); bass shortens it.
+        // Each drop relaunches every `period` seconds (TIME-bucket).
+        // Period must stay CONSTANT: bass-shortened periods moved bucket
+        // boundaries, instantly re-hashing drop positions (teleports).
         float period = mix(9.0, 4.0, hash11(fi * 1.37));
-        period /= max(0.35, bassPulse);
         float bucket = floor(t / period + hash11(fi * 7.13));
         float seed   = fi * 17.3 + bucket * 53.1;
 
@@ -132,8 +280,10 @@ void main() {
         // Diffusion radius grows with sqrt(life); pigment density decays.
         // Bass explosion: massive size jump for ~0.5s after impact.
         float baseR    = dropSize * mix(0.55, 1.25, hash11(seed + 5.5));
-        float bassKick = 1.0 + explodeEnv * 1.8 * smoothstep(0.0, 0.4, life)
-                              * exp(-life * 1.5);
+        // Continuous radius breathing (smoothed bass) + decaying beat swell.
+        float bassKick = (1.0 + 0.35 * bass)
+                       * (1.0 + explodeEnv * 0.5 * smoothstep(0.0, 0.4, life)
+                              * exp(-life * 1.5));
         float radius   = (baseR + sqrt(life) * dropSpread) * bassKick;
         float density  = 1.0 / (1.0 + life * dispersionFor(life));
         density       *= smoothstep(0.0, 0.6, life) * exp(-life * fadeRate * 0.18);
@@ -188,5 +338,23 @@ void main() {
     float vig = smoothstep(1.15, 0.35, length(p));
     col *= mix(0.85, 1.0, vig);
 
+    // Whole-frame follower as DARKEN-dips: the water sits at 0.85-0.96
+    // luma, so up-gains clip almost immediately and the response saturates;
+    // dips never clip and read on every pixel. Beats deepen the dip (ink
+    // "absorbs" on the hit). All terms exactly 1.0 in silence.
+    col *= 1.0 - 0.15 * audioBass - 0.20 * audioMid;
+    col *= 1.0 - 0.04 * pow(max(audioBeatPulse, 0.8 * audioPunch), 1.3);
+
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(vec3(ucL), col, colorBoost);
+    if (hueShift > 0.0005) {
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        col = clamp(hM * col, 0.0, 1.0);
+    }
     gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

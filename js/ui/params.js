@@ -2,6 +2,25 @@
 // ShaderClaw — Parameter Controls (ISF INPUTS → UI)
 // ============================================================
 
+// Insert spaces at camelCase/snake_case/kebab-case word boundaries so a raw
+// ISF NAME (no "LABEL" in the shader JSON) reads as words — e.g. "danceSpeed"
+// -> "dance Speed" -> displayed as "Dance Speed" — instead of the raw
+// unspaced camelCase the label used to fall back to.
+function humanizeParamName(name) {
+  const spaced = String(name)
+    .replace(/[_-]+/g, ' ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .trim();
+  return spaced.replace(/\w\S*/g, (w) => w[0].toUpperCase() + w.slice(1));
+}
+
+// Single source of truth for a param's display label: prefer the ISF JSON
+// LABEL (already human-written) and fall back to a humanized NAME rather
+// than the raw camelCase NAME.
+function paramDisplayLabel(inp) {
+  return inp.LABEL || humanizeParamName(inp.NAME);
+}
+
 // Detect which inputs are driven by audio/mouse/hand in shader source
 function detectReactivity(shaderSource, inputs) {
   if (!shaderSource || !inputs) return {};
@@ -148,17 +167,38 @@ function generateControls(inputs, container, onChange) {
     inputs = inputs.filter(inp => inp.NAME !== 'textColor');
   }
 
+  // "Audio Reactivity" group renders first, ahead of every other group —
+  // mirrors Easel, where these knobs sit directly under the master audio
+  // controls. Stable partition: relative order within each half is kept.
+  const audioFirst = inputs.filter(inp => inp.GROUP === 'Audio Reactivity');
+  const restInputs = inputs.filter(inp => inp.GROUP !== 'Audio Reactivity');
+  inputs = [...audioFirst, ...restInputs];
+
   const values = { ...hiddenDefaults };
   let imageInputIdx = 0;
+  let lastGroup = null;
 
   inputs.forEach(inp => {
+    // Subtle cluster label for a run of params sharing the same ISF "GROUP"
+    // — not a collapsible section, just a small dim header. Params without
+    // a GROUP never trigger this, so ungrouped shaders render exactly as
+    // before this feature existed.
+    if (inp.GROUP && inp.GROUP !== lastGroup) {
+      const groupHeader = document.createElement('div');
+      groupHeader.className = 'param-group-header';
+      groupHeader.textContent = inp.GROUP;
+      container.appendChild(groupHeader);
+      lastGroup = inp.GROUP;
+    }
+
     const row = document.createElement('div');
     row.className = 'control-row';
     row.dataset.name = inp.NAME;
 
     const label = document.createElement('label');
-    label.textContent = inp.LABEL || inp.NAME;
-    label.title = inp.LABEL || inp.NAME; // tooltip shows full name on hover
+    const dispLabel = paramDisplayLabel(inp);
+    label.textContent = dispLabel;
+    label.title = dispLabel; // tooltip shows full name on hover
     row.appendChild(label);
 
     if (inp.TYPE === 'float') {

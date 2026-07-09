@@ -1,25 +1,170 @@
 /*{
   "DESCRIPTION": "Multi-GPU Tiled Particles — spatial tiling for multi-GPU projection. Each GPU renders a tile of a larger virtual canvas. All particles exist in the full space; each GPU sees its slice. 3 GPUs at 832x480 = 2496x480 seamless output.",
   "CREDIT": "Etherea / ShaderClaw",
-  "CATEGORIES": ["Generator", "Projection"],
+  "CATEGORIES": [
+    "Generator",
+    "Projection"
+  ],
   "INPUTS": [
-    { "NAME": "tileIndex", "LABEL": "Tile Index", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 7.0 },
-    { "NAME": "tileCount", "LABEL": "Tile Count", "TYPE": "float", "DEFAULT": 3.0, "MIN": 1.0, "MAX": 8.0 },
-    { "NAME": "tileAxis", "LABEL": "Tile Axis", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "overlap", "LABEL": "Overlap", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 0.2 },
-    { "NAME": "particleCount", "LABEL": "Particles", "TYPE": "float", "DEFAULT": 12.0, "MIN": 1.0, "MAX": 100.0 },
-    { "NAME": "particleSize", "LABEL": "Size", "TYPE": "float", "DEFAULT": 0.04, "MIN": 0.005, "MAX": 0.2 },
-    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "trailLength", "LABEL": "Trail", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "audioDrive", "LABEL": "Audio Drive", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 5.0 },
-    { "NAME": "colorMode", "LABEL": "Color Mode", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "accentColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 0.7, 0.3, 1.0] },
-    { "NAME": "syncTime", "TYPE": "float", "DEFAULT": -1.0, "MIN": -1.0, "MAX": 99999.0 },
-    { "NAME": "inputTex", "TYPE": "image", "LABEL": "Texture" },
-    { "NAME": "texMix", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "LABEL": "Texture Mix" }
+    {
+      "NAME": "syncTime",
+      "TYPE": "float",
+      "DEFAULT": -1,
+      "MIN": -1,
+      "MAX": 99999,
+      "LABEL": "Sync Time"
+    },
+    {
+      "NAME": "inputTex",
+      "TYPE": "image",
+      "LABEL": "Texture"
+    },
+    {
+      "NAME": "texMix",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Texture Mix"
+    },
+    {
+      "NAME": "particleCount",
+      "LABEL": "Particles",
+      "TYPE": "float",
+      "DEFAULT": 12,
+      "MIN": 1,
+      "MAX": 100,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "particleSize",
+      "LABEL": "Size",
+      "TYPE": "float",
+      "DEFAULT": 0.04,
+      "MIN": 0.005,
+      "MAX": 0.2,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "trailLength",
+      "LABEL": "Trail",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.3,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "colorMode",
+      "LABEL": "Color Mode",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "accentColor",
+      "LABEL": "Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.7,
+        0.3,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "tileIndex",
+      "LABEL": "Tile Index",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 7,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "tileCount",
+      "LABEL": "Tile Count",
+      "TYPE": "float",
+      "DEFAULT": 3,
+      "MIN": 1,
+      "MAX": 8,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "tileAxis",
+      "LABEL": "Tile Axis",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "overlap",
+      "LABEL": "Overlap",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 0.2,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioDrive",
+      "LABEL": "Audio Drive",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 5,
+      "GROUP": "Audio Reactivity"
+    }
   ],
   "PASSES": [
-    { "TARGET": "trail", "PERSISTENT": true },
+    {
+      "TARGET": "trail",
+      "PERSISTENT": true
+    },
     {}
   ]
 }*/
@@ -94,8 +239,8 @@ vec3 particleColor(float id) {
     if (mode < 0.5) {
         // Mode 0: accent color with per-particle hue shift
         vec3 base = accentColor.rgb;
-        float hueShift = (hash1(id * 13.37) - 0.5) * 0.4;
-        float angle = hueShift * 6.2832;
+        float hueJit = (hash1(id * 13.37) - 0.5) * 0.4;
+        float angle = hueJit * 6.2832;
         float cs = cos(angle), sn = sin(angle);
         return vec3(
             base.r * (0.667 + cs * 0.333) + base.g * (0.333 - cs * 0.333 + sn * 0.577) + base.b * (0.333 - cs * 0.333 - sn * 0.577),
@@ -200,7 +345,20 @@ vec4 passFinal(vec2 uv) {
         col = mix(col, texBlend, texMix);
     }
 
-    return vec4(col, 1.0);
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    vec3 uc = mix(vec3(ucL), col, colorBoost);
+    if (hueShift > 0.0005) {
+        float hueA = hueShift * 6.2831853;
+        float hueC = cos(hueA), hueS = sin(hueA);
+        mat3 hueM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                  + hueC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                  + hueS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hueM * uc, 0.0, 1.0);
+    }
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+
+    return vec4(uc, 1.0);
 }
 
 // ============================================================

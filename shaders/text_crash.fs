@@ -1,22 +1,166 @@
 /*{
   "DESCRIPTION": "Text Crash — the message lives as rigid letterforms that shatter into displaced strips and blocks on beat/punch hits, chromatic edges tearing apart, then settle back to a clean reassembled line between hits. Black stage, cyan/magenta impact palette.",
   "CREDIT": "ShaderClaw — original glitch-impact/shatter-reassemble concept",
-  "CATEGORIES": ["Generator", "Text", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Text",
+    "Audio Reactive"
+  ],
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "ETHEREA", "MAX_LENGTH": 48 },
-    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"] },
-    { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.4, "MAX": 2.0 },
-    { "NAME": "kerning", "LABEL": "Kerning", "TYPE": "float", "DEFAULT": 0.9, "MIN": 0.5, "MAX": 1.6 },
-    { "NAME": "shatterAmount", "LABEL": "Shatter Amount", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "reactivity", "LABEL": "Beat Reactivity", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "colorA", "LABEL": "Ink Color", "TYPE": "color", "DEFAULT": [0.15, 0.92, 1.0, 1.0] },
-    { "NAME": "colorB", "LABEL": "Impact Color", "TYPE": "color", "DEFAULT": [1.0, 0.18, 0.55, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.035, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": false },
-    { "NAME": "img", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "texMix", "LABEL": "Texture Mix", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 }
+    {
+      "NAME": "shatterAmount",
+      "LABEL": "Shatter Amount",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "colorA",
+      "LABEL": "Ink Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.15,
+        0.92,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorB",
+      "LABEL": "Impact Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.18,
+        0.55,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": "ETHEREA",
+      "MAX_LENGTH": 48,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "fontFamily",
+      "LABEL": "Font",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Inter",
+        "Times New Roman",
+        "Libre Caslon",
+        "Outfit"
+      ],
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "textScale",
+      "LABEL": "Size",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.4,
+      "MAX": 2,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "kerning",
+      "LABEL": "Kerning",
+      "TYPE": "float",
+      "DEFAULT": 0.9,
+      "MIN": 0.5,
+      "MAX": 1.6,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.02,
+        0.02,
+        0.035,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent",
+      "TYPE": "bool",
+      "DEFAULT": false,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "reactivity",
+      "LABEL": "Beat Reactivity",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "img",
+      "LABEL": "Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "texMix",
+      "LABEL": "Texture Mix",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1
+    }
   ]
 }*/
+
+// ---- universal color block (defaults = no-op) ----
+vec3 ucApply(vec3 uc) {
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                      // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    return uc;
+}
+
 
 // ═══════════════════════════════════════════════════════════════════════
 // TEXT CRASH — rigid letterforms that shatter into displaced strips/blocks
@@ -147,6 +291,12 @@ float glyphAt(vec2 pIn) {
     impact = clamp(impact, 0.0, 1.6);
     impact = max(impact, 0.05); // idle floor: always a little alive, never frozen
 
+    // r2 ambient fix: continuous smooth band-follow — LINEAR raw bands (they
+    // arrive pre-smoothed; the kneed g_bassP/g_midP crushed ambient's slow
+    // swells) and no extra dilution. Beatless music still leans letters out
+    // and settles them back; silence adds 0.
+    impact += (0.30 * audioBass + 0.18 * audioMid) * g_reactAmt;
+
     // Whole-letter fly-apart: bass scales magnitude (big/global — Law 3).
     float ang = hash11(slotF * 3.7 + 91.0) * 6.2831853;
     vec2  dir = vec2(cos(ang), sin(ang));
@@ -222,6 +372,11 @@ void main() {
         gap = charW * 0.35 * kn; kern = charW + gap;
         wordW = float(g_numChars) * kern;
     }
+    // Whole-word size breathing (r2 ambient fix): geometry/coverage moves
+    // many pixels even on a near-black stage where brightness gain can't.
+    // Linear pre-smoothed bands; silence = exactly 1.0.
+    float sizeBr = 1.0 + (0.10 * audioBass + 0.06 * audioMid) * g_reactAmt;
+    charH *= sizeBr; charW *= sizeBr; gap *= sizeBr; kern *= sizeBr; wordW *= sizeBr;
     g_charH = charH; g_charW = charW; g_kern = kern; g_wordW = wordW;
 
     vec2 p;
@@ -247,6 +402,11 @@ void main() {
     float hot = clamp(globalPunch * 1.3, 0.0, 1.0);
     textCol = mix(textCol, vec3(1.0), hot * 0.4 * mask);
 
+    // Continuous ink brightness breath (r2: linear bands, deeper) — follows
+    // smoothed bass/mid/high directly, multiplicative around 1.0 so silence
+    // is untouched.
+    textCol *= 1.0 + (0.25 * audioBass + 0.12 * audioMid + 0.08 * g_highP) * g_reactAmt;
+
     // ── Optional background texture, gated behind explicit texMix
     //    (house convention — never inferred from IMG_SIZE). A restrained
     //    scanline-style glitch rides along with impact so the backdrop
@@ -261,10 +421,15 @@ void main() {
     // Faint ambient wash from a big hit, capped low so black stays black
     // between crashes (Law 7 — sound-off test).
     col += colorB.rgb * 0.05 * hot * (1.0 - mask);
+    // r2 ambient fix: faint additive stage wash riding the linear bands —
+    // dark pixels get an absolute lift (multiplication can't move near-black).
+    // Silence adds exactly 0.
+    col += (colorA.rgb * 0.5 + colorB.rgb * 0.5) * 0.06
+         * (0.7 * audioBass + 0.3 * audioMid) * g_reactAmt * (1.0 - mask);
 
     if (transparentBg) {
-        gl_FragColor = vec4(textCol, mask);
+        gl_FragColor = vec4(ucApply(textCol), mask);
     } else {
-        gl_FragColor = vec4(col, 1.0);
+        gl_FragColor = vec4(ucApply(col), 1.0);
     }
 }

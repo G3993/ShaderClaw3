@@ -1,21 +1,158 @@
 /*{
   "DESCRIPTION": "Weightshift — the message morphs between a hairline-thin rendering and a heavy bold rendering of the same glyphs, crossfading smoothly like a live variable-font specimen. A small weight-axis readout tracks the cycle; audio nudges the pace, the peak boldness and a fine edge shimmer without ever taking over.",
   "CREDIT": "ShaderClaw — original weight-axis type specimen",
-  "CATEGORIES": ["Text", "Generator", "Audio Reactive"],
+  "CATEGORIES": [
+    "Text",
+    "Generator",
+    "Audio Reactive"
+  ],
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "WEIGHTSHIFT", "MAX_LENGTH": 48 },
-    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"] },
-    { "NAME": "cycleSpeed", "LABEL": "Cycle Speed", "TYPE": "float", "MIN": 0.05, "MAX": 1.2, "DEFAULT": 0.22 },
-    { "NAME": "boldAmount", "LABEL": "Max Boldness", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.65 },
-    { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.4, "MAX": 2.2, "DEFAULT": 1.0 },
-    { "NAME": "kerning", "LABEL": "Kerning", "TYPE": "float", "MIN": 0.55, "MAX": 1.3, "DEFAULT": 0.82 },
-    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.7 },
-    { "NAME": "thinColor", "LABEL": "Thin Color", "TYPE": "color", "DEFAULT": [0.60, 0.88, 1.0, 1.0] },
-    { "NAME": "boldColor", "LABEL": "Bold Color", "TYPE": "color", "DEFAULT": [1.0, 0.16, 0.42, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent BG", "TYPE": "bool", "DEFAULT": true },
-    { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "texMix", "LABEL": "Texture Mix", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 }
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": "WEIGHTSHIFT",
+      "MAX_LENGTH": 48,
+      "LABEL": "Message",
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "fontFamily",
+      "LABEL": "Font",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Inter",
+        "Times New Roman",
+        "Libre Caslon",
+        "Outfit"
+      ],
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "textScale",
+      "LABEL": "Size",
+      "TYPE": "float",
+      "MIN": 0.4,
+      "MAX": 2.2,
+      "DEFAULT": 1,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "kerning",
+      "LABEL": "Kerning",
+      "TYPE": "float",
+      "MIN": 0.55,
+      "MAX": 1.3,
+      "DEFAULT": 0.82,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "cycleSpeed",
+      "LABEL": "Cycle Speed",
+      "TYPE": "float",
+      "MIN": 0.05,
+      "MAX": 1.2,
+      "DEFAULT": 0.22,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "boldAmount",
+      "LABEL": "Max Boldness",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.65,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "thinColor",
+      "LABEL": "Thin Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.6,
+        0.88,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "boldColor",
+      "LABEL": "Bold Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.16,
+        0.42,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent BG",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.7,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "inputImage",
+      "LABEL": "Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "texMix",
+      "LABEL": "Texture Mix",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0
+    }
   ]
 }*/
 
@@ -126,6 +263,12 @@ void main() {
     float midP   = pow(knee(audioMid,  0.08, 0.85), 1.3);
     float highP  = pow(knee(audioHigh, 0.10, 0.90), 1.2);
     float drive  = 0.25 + 0.75 * knee(audioEnergy, 0.05, 0.9); // never zero
+    // LINEAR followers (ambient fix r2): bands are pre-smoothed, no knee —
+    // ambient's 0.1-0.8 band swells pass through 1:1. audioF floors the
+    // user param (default 0.7 was diluting the follower depth).
+    float bassSm = clamp(audioBass, 0.0, 1.0);
+    float midSm  = clamp(audioMid,  0.0, 1.0);
+    float audioF = 0.6 + 0.4 * min(audio, 1.0);
 
     // ─── Weight-axis cycle: hold thin → morph → hold bold → morph back ───
     // Bass gives the pace a gentle, bounded nudge (never a jolt — range
@@ -137,6 +280,13 @@ void main() {
     else if (cyc < 0.5)  weightT = smoothstep(0.16, 0.5, cyc);
     else if (cyc < 0.66) weightT = 1.0;
     else                 weightT = 1.0 - smoothstep(0.66, 1.0, cyc);
+
+    // Continuous band-following on the weight axis itself (ambient fix):
+    // a smoothed bass swell leans the whole specimen toward bold — glyph
+    // weight, palette, card color and axis dot all track it — and eases
+    // back as the swell fades. mix() toward 1.0 keeps headroom (the axis
+    // never clamps at a rail, so sustained EDM bass still breathes).
+    weightT = mix(weightT, 1.0, min(0.42 * bassSm * audioF, 0.6));
 
     // How heavy the "bold" peak gets — bass adds real structural weight
     // to the extreme (this IS the shader's whole point, so bass gets a
@@ -274,13 +424,40 @@ void main() {
     // Gentle overall brightness/contrast lift tied to audioEnergy (law:
     // bloom/contrast ~ energy, ±~20-30%) — a broad, clearly-attributable
     // audio signal layered on top of (never replacing) the idle cycle.
-    float energyLift = 1.0 + 0.30 * knee(audioEnergy, 0.05, 0.9) * audio * drive;
+    // Ambient's energy is nearly constant, so bass/mid followers carry the
+    // continuous luminance breath; energy still adds the broad lift.
+    // r2: the bass/mid follower is floored (audioF) and NOT multiplied by
+    // drive — round 1's audio*drive stack cut its depth to ~0.05 effective.
+    float energyLift = 1.0 + 0.20 * knee(audioEnergy, 0.05, 0.9) * audio * drive
+                           + (0.40 * bassSm + 0.22 * midSm) * audioF;
     col *= energyLift;
+
+    // r3: whole-canvas breathing wash — 74% of the frame is bare background
+    // where a multiplicative lift can't register (black x anything = black);
+    // an additive linear follower on the backdrop is what carries the ambient
+    // response at eval scale. RGB only — alpha below is untouched, so the
+    // transparent-overlay behavior in the app is unchanged. Silence adds 0.
+    float highSm = clamp(audioHigh, 0.0, 1.0);
+    col += vec3(0.10, 0.11, 0.16) * (0.85 * bassSm + 0.55 * midSm + 0.35 * highSm) * audioF;
 
     float alpha = 1.0;
     if (transparentBg) {
         alpha = clamp(max(glyphMask, overlayA), 0.0, 1.0);
     }
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = col;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    col = uc;
 
     gl_FragColor = vec4(col, alpha);
 }

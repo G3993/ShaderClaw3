@@ -2632,7 +2632,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
       if (!layer.inputs || layer.inputs.length === 0) continue;
       for (const inp of layer.inputs) {
         if (inp.TYPE !== 'float' && inp.TYPE !== 'long') continue;
-        html += `<div class="mp-picker-list-item" data-layer="${layer.id}" data-param="${inp.NAME}">${layer.id}/${inp.LABEL || inp.NAME}</div>`;
+        html += `<div class="mp-picker-list-item" data-layer="${layer.id}" data-param="${inp.NAME}">${layer.id}/${paramDisplayLabel(inp)}</div>`;
       }
     }
     html += '</div>';
@@ -2701,7 +2701,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
       if (!layer.inputs || layer.inputs.length === 0) continue;
       for (const inp of layer.inputs) {
         if (inp.TYPE !== 'float' && inp.TYPE !== 'long') continue;
-        html += `<div class="mp-picker-list-item" data-layer="${layer.id}" data-param="${inp.NAME}">${layer.id}/${inp.LABEL || inp.NAME}</div>`;
+        html += `<div class="mp-picker-list-item" data-layer="${layer.id}" data-param="${inp.NAME}">${layer.id}/${paramDisplayLabel(inp)}</div>`;
       }
     }
     html += '</div>';
@@ -5818,10 +5818,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
       if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         audioAnalyser = audioCtx.createAnalyser();
-        audioAnalyser.fftSize = 256;
+        audioAnalyser.fftSize = 2048; // 1024 bins — real sub/air resolution (EaselAudio)
         audioAnalyser.smoothingTimeConstant = 0.8;
         audioAnalyser.connect(audioCtx.destination);
-        audioDataArray = new Uint8Array(audioAnalyser.frequencyBinCount); // 128 bins
+        audioDataArray = new Uint8Array(audioAnalyser.frequencyBinCount); // 1024 bins
       }
 
       // Disconnect previous audio source (file or mic)
@@ -6020,7 +6020,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     if (!audioCtx) {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       audioAnalyser = audioCtx.createAnalyser();
-      audioAnalyser.fftSize = 256;
+      audioAnalyser.fftSize = 2048; // 1024 bins — real sub/air resolution (EaselAudio)
       audioAnalyser.smoothingTimeConstant = 0.8;
       audioAnalyser.connect(audioCtx.destination);
       audioDataArray = new Uint8Array(audioAnalyser.frequencyBinCount);

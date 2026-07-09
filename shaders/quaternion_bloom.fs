@@ -1,16 +1,108 @@
 /*{
-  "DESCRIPTION":"Quaternion Bloom — a raymarched 4D Quaternion-Julia fractal that slowly blooms like an alien flower. The Julia seed morphs over time, treble ignites edge bloom, mid breathes the seed, bass pulses its magnitude. Calm orbiting camera, curated cosine palette, deep near-black.",
-  "CREDIT":"ShaderClaw3",
-  "CATEGORIES":["Generator","Fractal","3D","Audio Reactive"],
-  "INPUTS":[
-    {"NAME":"orbitSpeed","LABEL":"Orbit Speed","TYPE":"float","DEFAULT":0.07,"MIN":0.0,"MAX":1.0},
-    {"NAME":"iters","TYPE":"float","DEFAULT":9.0,"MIN":5.0,"MAX":11.0},
-    {"NAME":"glow","TYPE":"float","DEFAULT":0.6,"MIN":0.0,"MAX":2.0},
-    {"NAME":"paletteShift","TYPE":"float","DEFAULT":0.0,"MIN":0.0,"MAX":1.0},
-    {"NAME":"fogDensity","TYPE":"float","DEFAULT":0.18,"MIN":0.0,"MAX":1.0},
-    {"NAME":"audioReact","LABEL":"Sound Reactivity","TYPE":"float","DEFAULT":1.0,"MIN":0.0,"MAX":2.0},
-    {"NAME":"inputImage","LABEL":"Your Image","TYPE":"image"},
-    {"NAME":"texMix","LABEL":"Image Amount","TYPE":"float","DEFAULT":0.0,"MIN":0.0,"MAX":1.0}
+  "DESCRIPTION": "Quaternion Bloom — a raymarched 4D Quaternion-Julia fractal that slowly blooms like an alien flower. The Julia seed morphs over time, treble ignites edge bloom, mid breathes the seed, bass pulses its magnitude. Calm orbiting camera, curated cosine palette, deep near-black.",
+  "CREDIT": "ShaderClaw3",
+  "CATEGORIES": [
+    "Generator",
+    "Fractal",
+    "3D",
+    "Audio Reactive"
+  ],
+  "INPUTS": [
+    {
+      "NAME": "glow",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 2,
+      "LABEL": "Glow"
+    },
+    {
+      "NAME": "fogDensity",
+      "TYPE": "float",
+      "DEFAULT": 0.18,
+      "MIN": 0,
+      "MAX": 1,
+      "LABEL": "Fog Density"
+    },
+    {
+      "NAME": "inputImage",
+      "LABEL": "Your Image",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "texMix",
+      "LABEL": "Image Amount",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "iters",
+      "TYPE": "float",
+      "DEFAULT": 9,
+      "MIN": 5,
+      "MAX": 11,
+      "GROUP": "Shape / Geometry",
+      "LABEL": "Iterations"
+    },
+    {
+      "NAME": "orbitSpeed",
+      "LABEL": "Orbit Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.07,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "paletteShift",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color",
+      "LABEL": "Palette Shift"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Sound Reactivity",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -148,11 +240,26 @@ void main() {
     col = base * fog;
   }
 
+  // universal background override — miss region only (a=0 -> untouched)
+  if (hit <= 0.0) col = mix(col, bgColor.rgb, bgColor.a);
+
   // gentle global bloom lift with treble
   col += bg * treble * 0.5;
 
   // ---- tonemap + gamma ----
   col = col / (1.0 + col);
   col = pow(col, vec3(0.4545));
-  gl_FragColor = vec4(col, 1.0);
+
+  // ---- universal color block (defaults = no-op) ----
+  float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+  vec3 uc = mix(vec3(ucL), col, colorBoost);
+  if (hueShift > 0.0005) {
+    float hueA = hueShift * 6.2831853;
+    float hueC = cos(hueA), hueS = sin(hueA);
+    mat3 hueM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+              + hueC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+              + hueS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+    uc = clamp(hueM * uc, 0.0, 1.0);
+  }
+  gl_FragColor = vec4(uc, 1.0);
 }

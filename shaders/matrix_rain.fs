@@ -1,19 +1,152 @@
 /*{
-  "CATEGORIES": ["Generator", "Text", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Text",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "Wachowski Matrix code rain — vertical columns of bright green pseudo-glyphs falling at column-specific speeds, leading head-glyph blown out white, trailing characters fading to dark green. Random glyph mutation per frame so the code reads as live data. Audio-reactive: bass spawns new columns, treble accelerates the fall.",
   "INPUTS": [
-    { "NAME": "columnCount",   "LABEL": "Columns",        "TYPE": "float", "MIN": 20.0,  "MAX": 220.0, "DEFAULT": 90.0 },
-    { "NAME": "rowCount",      "LABEL": "Rows",           "TYPE": "float", "MIN": 16.0,  "MAX": 80.0,  "DEFAULT": 36.0 },
-    { "NAME": "fallSpeed",     "LABEL": "Fall Speed",     "TYPE": "float", "MIN": 0.0,   "MAX": 6.0,   "DEFAULT": 1.4 },
-    { "NAME": "trailLength",   "LABEL": "Trail Length",   "TYPE": "float", "MIN": 0.05,  "MAX": 0.95,  "DEFAULT": 0.55 },
-    { "NAME": "spawnDensity",  "LABEL": "Spawn Density",  "TYPE": "float", "MIN": 0.05,  "MAX": 1.0,   "DEFAULT": 0.7 },
-    { "NAME": "mutationRate",  "LABEL": "Glyph Mutation", "TYPE": "float", "MIN": 0.0,   "MAX": 30.0,  "DEFAULT": 6.0 },
-    { "NAME": "headBrightness","LABEL": "Head Bright",    "TYPE": "float", "MIN": 0.5,   "MAX": 3.0,   "DEFAULT": 1.6 },
-    { "NAME": "scanline",      "LABEL": "CRT Scanlines",  "TYPE": "float", "MIN": 0.0,   "MAX": 0.5,   "DEFAULT": 0.18 },
-    { "NAME": "bloom",         "LABEL": "Bloom",          "TYPE": "float", "MIN": 0.0,   "MAX": 1.5,   "DEFAULT": 0.55 },
-    { "NAME": "tint",          "LABEL": "Glyph Tint",     "TYPE": "color", "DEFAULT": [0.18, 0.95, 0.42, 1.0] },
-    { "NAME": "tintHead",      "LABEL": "Head Tint",      "TYPE": "color", "DEFAULT": [0.95, 1.00, 0.92, 1.0] },
-    { "NAME": "audioReact",    "LABEL": "Audio React",    "TYPE": "float", "MIN": 0.0,   "MAX": 2.0,   "DEFAULT": 1.0 }
+    {
+      "NAME": "headBrightness",
+      "LABEL": "Head Bright",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 3,
+      "DEFAULT": 1.6
+    },
+    {
+      "NAME": "scanline",
+      "LABEL": "CRT Scanlines",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.5,
+      "DEFAULT": 0.18
+    },
+    {
+      "NAME": "bloom",
+      "LABEL": "Bloom",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.55
+    },
+    {
+      "NAME": "columnCount",
+      "LABEL": "Columns",
+      "TYPE": "float",
+      "MIN": 20,
+      "MAX": 220,
+      "DEFAULT": 90,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "rowCount",
+      "LABEL": "Rows",
+      "TYPE": "float",
+      "MIN": 16,
+      "MAX": 80,
+      "DEFAULT": 36,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "trailLength",
+      "LABEL": "Trail Length",
+      "TYPE": "float",
+      "MIN": 0.05,
+      "MAX": 0.95,
+      "DEFAULT": 0.55,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "spawnDensity",
+      "LABEL": "Spawn Density",
+      "TYPE": "float",
+      "MIN": 0.05,
+      "MAX": 1,
+      "DEFAULT": 0.7,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "fallSpeed",
+      "LABEL": "Fall Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 6,
+      "DEFAULT": 1.4,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "mutationRate",
+      "LABEL": "Glyph Mutation",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 30,
+      "DEFAULT": 6,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "tint",
+      "LABEL": "Glyph Tint",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.18,
+        0.95,
+        0.42,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "tintHead",
+      "LABEL": "Head Tint",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.95,
+        1,
+        0.92,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -131,8 +264,33 @@ float drawGlyph(vec2 cuv, int idx) {
     return clamp(g, 0.0, 1.0);
 }
 
+// ---- universal color block (defaults = no-op) ----
+vec3 ucApply(vec3 uc) {
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);
+    if (hueShift > 0.0005) {
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+    return uc;
+}
+
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
+
+    // Whole-frame additive audio glow — 80%+ of the frame is pure black,
+    // so a multiplicative follower alone barely registers. This faint tint
+    // wash follows the music on every pixel and is exactly 0 in silence.
+    // Mid-weighted: mid is steady in beat-heavy styles (chop-safe depth)
+    // but swings widely in beatless material, where the glow must carry
+    // the correlation on its own.
+    vec3 audioGlow = tint.rgb * (0.10 * audioBass + 0.45 * audioMid);
 
     int   NC = int(clamp(columnCount, 1.0, 220.0));
     int   NR = int(clamp(rowCount,    1.0, 80.0));
@@ -148,8 +306,9 @@ void main() {
     float row   = (fNR - 1.0) - gi.y;
 
     // Per-column properties: hashed speed, head position, length.
-    float colSpeed = 0.4 + hash11(colId * 1.71) * 1.6
-                   * (1.0 + audioHigh * audioReact * 0.8);
+    // Constant per-column speed — audioHigh used to multiply the fall RATE,
+    // which teleported every head on treble transients (the chop).
+    float colSpeed = 0.4 + hash11(colId * 1.71) * 1.6;
     float colSeed  = colId * 7.31;
     // Per-column "active" — sparser columns at low spawnDensity. Audio
     // bass triggers extra columns to spawn. Anti-aliased threshold so
@@ -159,13 +318,14 @@ void main() {
     float colActive = smoothstep(colThresh + 0.02, colThresh - 0.02, 1.0 - colHash);
     if (colHash < colThresh - 0.05) {
         // Draw nothing for clearly inactive columns
-        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+        gl_FragColor = vec4(ucApply(audioGlow), 1.0);
         return;
     }
 
     // Head position in row-space. Falls forever; modulo total rows + trail.
     float headPos = mod(TIME * fallSpeed * colSpeed * 4.0
-                      + hash11(colSeed * 0.3) * fNR,
+                      + hash11(colSeed * 0.3) * fNR
+                      + 0.3 * audioHigh,
                       fNR + fNR * trailLength);
 
     // Distance from this cell up-column to the head.
@@ -175,7 +335,7 @@ void main() {
     // beyond trail length means already passed.)
     float trail = trailLength * fNR;
     if (dist < 0.0 || dist > trail) {
-        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+        gl_FragColor = vec4(ucApply(audioGlow), 1.0);
         return;
     }
 
@@ -240,5 +400,12 @@ void main() {
     scan = smoothstep(0.5 - scanAA, 0.5 + scanAA, scan);
     col *= 1.0 - scanline * (1.0 - scan);
 
-    gl_FragColor = vec4(col, 1.0);
+    // Calibrated whole-frame follower (linear bands) + decaying beat accent —
+    // replaces the correlation lost by removing the rate multiplication.
+    col *= 1.0 + 0.20 * audioBass + 0.30 * audioMid;
+    float kick = pow(max(audioBeatPulse, 0.8 * audioPunch), 1.3);
+    col *= 1.0 + 0.30 * kick;
+    col += audioGlow;
+
+    gl_FragColor = vec4(ucApply(col), 1.0);
 }

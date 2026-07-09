@@ -1,25 +1,182 @@
 /*{
-  "CATEGORIES": ["Generator", "Text"],
+  "CATEGORIES": [
+    "Generator",
+    "Text"
+  ],
   "DESCRIPTION": "Unified text effects - 21 presets across 9 effect families with 3 bitmap fonts + variable font",
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
-    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
-    { "NAME": "fontWeight", "LABEL": "Weight", "TYPE": "float", "MIN": 100, "MAX": 900, "DEFAULT": 400 },
-    { "NAME": "effect", "LABEL": "Effect", "TYPE": "long",
-      "VALUES": [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19],
-      "LABELS": ["James","Wave","Cascade","Digifade","Digifade Glitch",
-                 "Coil Wide","Coil Star","Coil Lemniscate","Coil Pulse",
-                 "Flag Banner","Flag Origami","Flag Barber","Flag Newsprint",
-                 "Bricks","Bricks Harlequin","Bricks Zebra",
-                 "Spacy","Spacy Bridge","Spacy Whitney","Spacy Recede"],
-      "DEFAULT": 0 },
-    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
-    { "NAME": "intensity", "LABEL": "Intensity", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "density", "LABEL": "Density", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": " ETHEREA",
+      "MAX_LENGTH": 48,
+      "LABEL": "Message",
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "fontFamily",
+      "LABEL": "Font",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Inter",
+        "Times New Roman",
+        "Libre Caslon",
+        "Outfit"
+      ],
+      "DEFAULT": 0,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "fontWeight",
+      "LABEL": "Weight",
+      "TYPE": "float",
+      "MIN": 100,
+      "MAX": 900,
+      "DEFAULT": 400,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "textScale",
+      "LABEL": "Size",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "effect",
+      "LABEL": "Effect",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "LABELS": [
+        "James",
+        "Wave",
+        "Cascade",
+        "Digifade",
+        "Digifade Glitch",
+        "Coil Wide",
+        "Coil Star",
+        "Coil Lemniscate",
+        "Coil Pulse",
+        "Flag Banner",
+        "Flag Origami",
+        "Flag Barber",
+        "Flag Newsprint",
+        "Bricks",
+        "Bricks Harlequin",
+        "Bricks Zebra",
+        "Spacy",
+        "Spacy Bridge",
+        "Spacy Whitney",
+        "Spacy Recede"
+      ],
+      "DEFAULT": 0,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Speed",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 3,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "intensity",
+      "LABEL": "Intensity",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "density",
+      "LABEL": "Density",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "textColor",
+      "LABEL": "Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background"
+    }
   ]
 }*/
 
@@ -98,6 +255,12 @@ float sampleChar(int ch, vec2 uv) {
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
+// Soft-knee audio conditioning (playbook standard snippet), shared by all effects
+float aBass()  { return pow(smoothstep(0.05, 0.85, audioBass), 1.6); }
+float aMid()   { return pow(smoothstep(0.08, 0.85, audioMid), 1.3); }
+float aHigh()  { return pow(smoothstep(0.10, 0.90, audioHigh), 1.2); }
+float aDrive() { return 0.25 + 0.75 * smoothstep(0.05, 0.9, audioEnergy); }
+
 // =======================================================================
 // EFFECT 0: JAMES - cycling font styles per letter
 // =======================================================================
@@ -105,7 +268,7 @@ float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 vec4 effectJames(vec2 uv) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
     int numChars = charCount();
-    float bounce = intensity;
+    float bounce = intensity * (1.0 + 0.3 * aMid());
     float cycleSpeed = mix(0.2, 5.0, density);
 
     vec3 col = bgColor.rgb;
@@ -143,7 +306,7 @@ vec4 effectJames(vec2 uv) {
         int style = int(mod(floor(phase), 18.0));
         float bp = float(i) * 0.8 + TIME * speed * 2.5;
         float yOff = sin(bp) * 0.015 * bounce;
-        float sp = 1.0 + sin(bp + 1.0) * 0.05 * bounce;
+        float sp = (1.0 + sin(bp + 1.0) * 0.05 * bounce) * (1.0 + 0.15 * aBass());
         float cx = startX + float(i) * (charW + gap);
         float cy = startY + yOff;
         vec2 cellUV = vec2((p.x - cx) / (charW * sp), (p.y - cy) / (charH * sp));
@@ -203,7 +366,7 @@ vec4 effectJames(vec2 uv) {
                     // 17: X slash
                     else { float d = min(abs(lp.x - lp.y), abs(lp.x - (1.0 - lp.y))); inten = smoothstep(0.2, 0.1, d); }
 
-                    textCol = max(textCol, textColor.rgb * inten);
+                    textCol = max(textCol, textColor.rgb * inten * (1.0 + 0.25 * aHigh()));
                     textMask = max(textMask, inten);
                 }
             }
@@ -211,7 +374,7 @@ vec4 effectJames(vec2 uv) {
 
         vec2 cc = vec2(cx + charW*0.5, cy + charH*0.5);
         float gd = length((p - cc) * vec2(1.0, 0.7));
-        glowAccum += exp(-gd*gd/(charW*charW*2.0)) * 0.15 * (0.8 + 0.2*sin(phase*2.0));
+        glowAccum += exp(-gd*gd/(charW*charW*2.0)) * 0.15 * (0.8 + 0.2*sin(phase*2.0)) * (0.85 + 0.3*aDrive());
     }
 
     col = mix(col, textCol, clamp(textMask, 0.0, 1.0));
@@ -228,7 +391,7 @@ vec4 effectJames(vec2 uv) {
 vec4 effectWave(vec2 uv) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
     int numChars = charCount();
-    float amplitude = mix(0.0, 0.15, intensity);
+    float amplitude = mix(0.0, 0.15, intensity) * (1.0 + 0.25 * aBass());
     float frequency = mix(0.5, 5.0, density);
 
     vec2 p = vec2((uv.x - 0.5) * aspect + 0.5, uv.y);
@@ -276,7 +439,7 @@ vec4 effectWave(vec2 uv) {
 vec4 effectCascade(vec2 uv) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
     int numChars = charCount();
-    float waveAmount = intensity;
+    float waveAmount = intensity * (0.85 + 0.2 * aDrive() + 0.2 * aMid());
     float rows = floor(mix(5.0, 30.0, density));
 
     float warpedY = uv.y + sin(uv.y * TWO_PI * 1.5 + TIME * speed * 1.5) * waveAmount * 0.06;
@@ -324,7 +487,7 @@ vec4 effectCascade(vec2 uv) {
 vec4 effectDigifade(vec2 uv, int sub) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
     int numChars = charCount();
-    float glitchAmount = intensity;
+    float glitchAmount = intensity * (1.0 + 0.35 * aHigh());
     float sliceCount = mix(5.0, 100.0, density);
 
     float complexity = 1.0, sweepSpeed = 1.0, vertGlitch = 0.0, maxDisp = 0.3;
@@ -405,7 +568,7 @@ vec4 effectCoil(vec2 uv, int sub) {
     else if (sub == 2) { innerR = 0.08; ringGap = 0.05; shapeType = 3; }
     else if (sub == 3) { doPulse = true; }
 
-    float eRG = ringGap;
+    float eRG = ringGap * (1.0 + 0.08 * aBass());
     if (doPulse) eRG *= 1.0 + 0.3*sin(TIME*speed*2.0);
     eRG *= textScale;
     innerR *= textScale;
@@ -475,7 +638,7 @@ vec4 effectCoil(vec2 uv, int sub) {
 vec4 effectFlag(vec2 uv, int sub) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
     int numChars = charCount();
-    float waveSize = intensity;
+    float waveSize = intensity * (1.0 + 0.25 * aBass());
     float rows = floor(mix(4.0, 20.0, density));
 
     float wA=1.0, wF=3.0, xSA=1.0, anch=0.5, sM=1.0, rM=1.0;
@@ -539,7 +702,7 @@ vec4 effectFlag(vec2 uv, int sub) {
 vec4 effectBricks(vec2 uv, int sub) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
     int numChars = charCount();
-    float waveAmount = intensity;
+    float waveAmount = intensity * (1.0 + 0.3 * aMid());
     float cols = floor(mix(5.0, 40.0, density));
 
     float wX=0.0, wY=0.0, fX=3.0, fY=3.0, pm=0.0;
@@ -601,7 +764,7 @@ vec4 effectSpacy(vec2 uv, int sub) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
     int numChars = charCount();
     float rws = floor(mix(3.0, 20.0, density));
-    float sR = mix(0.5, 1.5, intensity);
+    float sR = mix(0.5, 1.5, intensity) * (1.0 + 0.2 * aBass());
 
     float minS=0.3, maxS=2.5, track=0.15, scM=1.0;
     bool mirror = false;
@@ -735,6 +898,20 @@ void main() {
         // Blend: more glitch as decay increases
         col = mix(col, glitched, smoothstep(0.0, 0.3, g));
     }
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = col.rgb;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    col.rgb = uc;
 
     gl_FragColor = col;
 }

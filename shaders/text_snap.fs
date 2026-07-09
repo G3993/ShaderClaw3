@@ -1,24 +1,177 @@
 /*{
   "DESCRIPTION": "Snap — every glyph of the message is flung out to a scattered, tumbling position around the frame, then elastically snaps home into the sentence with a springy overshoot, holds, and shatters back out to repeat. Characters stagger in and out so the assembly ripples rather than arriving in lockstep. Two-hue electric palette, warm flare on characters mid-flight, cooling to ink once settled.",
   "CREDIT": "ShaderClaw — original",
-  "CATEGORIES": ["Generator", "Text", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Text",
+    "Audio Reactive"
+  ],
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "ETHEREA", "MAX_LENGTH": 32 },
-    { "NAME": "cycleSpeed",   "LABEL": "Cycle Speed",    "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.3, "MAX": 2.5 },
-    { "NAME": "holdTime",     "LABEL": "Hold Time",      "TYPE": "float", "DEFAULT": 1.7,  "MIN": 0.3, "MAX": 5.0 },
-    { "NAME": "scatterSpread","LABEL": "Scatter Spread", "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.4, "MAX": 2.0 },
-    { "NAME": "textScale",    "LABEL": "Size",           "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.4, "MAX": 2.0 },
-    { "NAME": "kerning",      "LABEL": "Kerning",        "TYPE": "float", "DEFAULT": 1.05, "MIN": 0.7, "MAX": 1.6 },
-    { "NAME": "audioReact",   "LABEL": "Audio React",    "TYPE": "float", "DEFAULT": 0.8,  "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "colorA",   "LABEL": "Ink A",       "TYPE": "color", "DEFAULT": [0.20, 0.90, 0.98, 1.0] },
-    { "NAME": "colorB",   "LABEL": "Ink B",       "TYPE": "color", "DEFAULT": [0.68, 0.34, 0.98, 1.0] },
-    { "NAME": "glowColor","LABEL": "Flight Glow", "TYPE": "color", "DEFAULT": [1.00, 0.55, 0.20, 1.0] },
-    { "NAME": "bgColor",  "LABEL": "Background",  "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.035, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent BG", "TYPE": "bool", "DEFAULT": 1.0 },
-    { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "texMix",   "LABEL": "Texture Mix", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 }
+    {
+      "NAME": "scatterSpread",
+      "LABEL": "Scatter Spread",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.4,
+      "MAX": 2,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "cycleSpeed",
+      "LABEL": "Cycle Speed",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.3,
+      "MAX": 2.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "holdTime",
+      "LABEL": "Hold Time",
+      "TYPE": "float",
+      "DEFAULT": 1.7,
+      "MIN": 0.3,
+      "MAX": 5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "colorA",
+      "LABEL": "Ink A",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.2,
+        0.9,
+        0.98,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorB",
+      "LABEL": "Ink B",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.68,
+        0.34,
+        0.98,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "glowColor",
+      "LABEL": "Flight Glow",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.55,
+        0.2,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": "ETHEREA",
+      "MAX_LENGTH": 32,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "textScale",
+      "LABEL": "Size",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.4,
+      "MAX": 2,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "kerning",
+      "LABEL": "Kerning",
+      "TYPE": "float",
+      "DEFAULT": 1.05,
+      "MIN": 0.7,
+      "MAX": 1.6,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.02,
+        0.02,
+        0.035,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent BG",
+      "TYPE": "bool",
+      "DEFAULT": 1,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "DEFAULT": 0.8,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "inputTex",
+      "LABEL": "Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "texMix",
+      "LABEL": "Texture Mix",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1
+    }
   ]
 }*/
+
+// ---- universal color block (defaults = no-op) ----
+vec3 ucApply(vec3 uc) {
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                      // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    return uc;
+}
+
 
 // =====================================================================
 // SNAP — glyphs scatter to random tumbling positions around the frame,
@@ -119,7 +272,7 @@ void main() {
 
     int numChars = charCount();
     if (numChars <= 0) {
-        gl_FragColor = transparentBg ? vec4(0.0) : vec4(bgColor.rgb, 1.0);
+        gl_FragColor = transparentBg ? vec4(0.0) : vec4(ucApply(bgColor.rgb), 1.0);
         return;
     }
 
@@ -129,11 +282,11 @@ void main() {
     float holdDur  = clamp(holdTime, 0.2, 6.0);
     float cycleLen = SNAP_DUR + holdDur + SCATTER_DUR;
 
-    // Retrigger tempo breathes gently with the track's energy (routing
-    // table: animation speed <- audioEnergy), kept to a small range so
-    // it never reads as jittery.
-    float speedMul  = clamp(cycleSpeed, 0.2, 4.0) * mix(0.9, 1.15, drive * reactAmt * 0.6 + (1.0 - reactAmt) * 0.35);
-    float musicClock = TIME * speedMul;
+    // Constant base pace + bounded, smooth audio phase push. (Multiplying
+    // TIME by a live audio value made the cycle phase wander erratically at
+    // large TIME — uncorrelated jumps that drowned the real response.)
+    float speedMul  = clamp(cycleSpeed, 0.2, 4.0);
+    float musicClock = TIME * speedMul + 0.35 * drive * reactAmt;
     float phase = mod(musicClock, cycleLen);
 
     bool inSnap = phase < SNAP_DUR;
@@ -184,6 +337,25 @@ void main() {
     col += dustCol * dustAmt;
     if (transparentBg) alpha = max(alpha, dustAmt * 0.5);
 
+    // R2 whole-frame follower. The round-1 terms lived only on the glyphs
+    // (~5% of the frame's pixels) and rode pow-crushed knees, so beatless
+    // styles measured ~0. Add a linear bass+mid breathing wash across the
+    // whole frame (ink-colored, center-weighted) + a decaying beat accent;
+    // alpha rises with it so it reads in-app too. Silence = exact current
+    // look (wash is 0 at zero audio).
+    float fbL = audioBass;
+    float fmL = audioMid;
+    float kickL = pow(punch, 1.3);
+    float washHalo = smoothstep(1.6, 0.0, length(p));
+    // R3 chop fix: the 0.25 kick term attacks in a single frame across the
+    // whole wash halo — it alone pushed EDM p95 steps to 0.12. The smooth
+    // bass/mid terms carry the correlation (ambient sits at 1.1 — do not
+    // shrink them); the kick is just an accent now.
+    float washAmt = (0.30 * fbL + 0.18 * fmL + 0.09 * kickL) * washHalo * 0.65;
+    vec3 washCol = mix(colorA.rgb, colorB.rgb, 0.5 + 0.5 * sin(TIME * 0.23));
+    col += washCol * washAmt;
+    if (transparentBg) alpha = max(alpha, washAmt * 0.8);
+
     for (int i = 0; i < MAX_CHARS; i++) {
         if (i >= numChars) break;
         int ch = getChar(i);
@@ -226,6 +398,10 @@ void main() {
 
         float scaleT = clamp(settle, -0.05, 1.35);
         float scale  = mix(0.16, 1.0, scaleT);
+        // Settled glyphs breathe with the bass — the sentence itself (the
+        // dominant element, on screen for the whole hold) carries the audio.
+        float settled = clamp(settle, 0.0, 1.0);
+        scale *= 1.0 + 0.14 * audioBass * reactAmt * settled;
         float rotT   = clamp(settle, -0.1, 1.2);
         float rotStart = (seed.y - 0.5) * 2.6;
         float rot = mix(rotStart, 0.0, rotT);
@@ -246,6 +422,11 @@ void main() {
         vec3 inkBase = mix(colorA.rgb, colorB.rgb, seed.y);
         vec3 charCol = mix(inkBase, glowColor.rgb, flight * 0.85);
 
+        // Continuous band-following luminance on the settled ink — LINEAR
+        // bands (the old pow-crushed knees flattened ambient/jazz swells;
+        // the ink colors have headroom so this doesn't clip).
+        charCol *= 1.0 + settled * reactAmt * (0.45 * audioBass + 0.25 * audioMid);
+
         // Sparkle glint right at the settle moment — highs gate a sparse,
         // sub-strobe highlight (never a jolt: gaussian window, capped low).
         float settleWin = exp(-pow((settle - 1.0) * 5.5, 2.0));
@@ -264,5 +445,5 @@ void main() {
         if (transparentBg) alpha = max(alpha, charAlpha);
     }
 
-    gl_FragColor = vec4(col, clamp(alpha, 0.0, 1.0));
+    gl_FragColor = vec4(ucApply(col), clamp(alpha, 0.0, 1.0));
 }

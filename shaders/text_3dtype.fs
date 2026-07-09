@@ -1,19 +1,148 @@
 /*{
-  "CATEGORIES": ["Generator", "Text"],
+  "CATEGORIES": [
+    "Generator",
+    "Text"
+  ],
   "DESCRIPTION": "3D Type — layered depth text with parallax perspective and color gradients",
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
-    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
-    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 0.5 },
-    { "NAME": "depth", "LABEL": "Depth", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "hueSpread", "LABEL": "Hue Spread", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0 },
-    { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "kerning", "LABEL": "Spacing", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.04, 0.04, 0.07, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    {
+      "NAME": "depth",
+      "LABEL": "Depth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "hueSpread",
+      "LABEL": "Hue Spread",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "textColor",
+      "LABEL": "Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": " ETHEREA",
+      "MAX_LENGTH": 48,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "fontFamily",
+      "LABEL": "Font",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Inter",
+        "Times New Roman",
+        "Libre Caslon",
+        "Outfit"
+      ],
+      "DEFAULT": 0,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "textScale",
+      "LABEL": "Size",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "kerning",
+      "LABEL": "Spacing",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 1,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.04,
+        0.04,
+        0.07,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background"
+    }
   ]
 }*/
+
+// ---- universal color block (defaults = no-op) ----
+vec3 ucApply(vec3 uc) {
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                      // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    return uc;
+}
+
 
 // Atlas-only character sampling (no bitmap charData = no 27-branch dead code)
 float sampleAtlas(int ch, vec2 cellUV) {
@@ -121,11 +250,21 @@ float textHit(vec2 uv, float aspect) {
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE;
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
-    float layerSpacing = depth * 0.008;
+
+    // Soft-knee audio conditioning: low floors so ambient swells and soft
+    // jazz accents register; 0.95 ceiling keeps headroom so EDM's constant
+    // kicks still breathe instead of pegging the knee.
+    float bassP = pow(smoothstep(0.03, 0.95, audioBass), 1.3);
+    float midP  = pow(smoothstep(0.04, 0.90, audioMid), 1.2);
+    float highP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+    float drive = 0.25 + 0.75 * smoothstep(0.05, 0.9, audioEnergy);
+    float kickT = audioBeatPulse * audioBeatPulse; // decaying hit trace
+
+    float layerSpacing = depth * 0.008 * (1.0 + 0.3 * bassP);
 
     float perspX = sin(TIME * speed * 0.3) * 0.25;
     float perspY = cos(TIME * speed * 0.25) * 0.15;
-    float breathe = sin(TIME * speed * 0.8) * 0.3;
+    float breathe = sin(TIME * speed * 0.8) * 0.3 * (0.85 + 0.3 * drive);
 
     vec3 baseHSV = rgb2hsv(textColor.rgb);
     vec3 finalColor = transparentBg ? vec3(0.0) : bgColor.rgb;
@@ -136,20 +275,30 @@ void main() {
         float t = float(i) / 7.0;
         float layerDepth = float(i) * layerSpacing * (1.0 + breathe * 0.2);
 
-        float waveX = sin(TIME * speed * 0.5 + float(i) * 0.4) * 0.003;
-        float waveY = cos(TIME * speed * 0.4 + float(i) * 0.3) * 0.002;
+        float waveX = sin(TIME * speed * 0.5 + float(i) * 0.4) * 0.003 * (1.0 + 0.3 * midP);
+        float waveY = cos(TIME * speed * 0.4 + float(i) * 0.3) * 0.002 * (1.0 + 0.3 * midP);
 
         vec2 offset = vec2(perspX, perspY) * layerDepth + vec2(waveX, waveY);
         float layerScale = 1.0 + t * 0.06;
-        vec2 layerUV = (uv - 0.5) / layerScale + 0.5 + offset;
+        // Continuous zoom breathing: bass swells (ambient) and soft kicks
+        // (jazz) visibly scale the whole type; kick trace pops then eases.
+        // R2: LINEAR bands, deeper — the knee'd bassP crushed ambient's
+        // swells to ~2% zoom. White glyphs clip additive light, so scale
+        // is the channel that has to carry the follower.
+        float breatheZoom = 1.0 + 0.13 * audioBass + 0.06 * audioMid + 0.05 * kickT;
+        vec2 layerUV = (uv - 0.5) / (layerScale * breatheZoom) + 0.5 + offset;
 
         float hit = textHit(layerUV, aspect);
         if (hit > 0.5) {
             vec3 hsv = baseHSV;
             hsv.x = fract(hsv.x + t * hueSpread);
             hsv.y = min(1.0, hsv.y + t * 0.2);
+            hsv.z = min(1.0, hsv.z * (1.0 + 0.3 * highP * (1.0 - t)));
             vec3 layerColor = hsv2rgb(hsv);
-            float alpha = 0.3 + 0.7 * (1.0 - t);
+            // Mids raise deep-layer opacity (silence = exactly the old look;
+            // front layer clamps at 1.0 so only the depth stack breathes).
+            // R2: linear audioMid — no knee on the follower path.
+            float alpha = min(1.0, (0.3 + 0.7 * (1.0 - t)) * (1.0 + 0.35 * audioMid));
             finalColor = mix(finalColor, layerColor, alpha);
             finalAlpha = max(finalAlpha, alpha);
         }
@@ -159,5 +308,5 @@ void main() {
     float scanline = 1.0 - 0.03 * step(0.5, fract(gl_FragCoord.y / 3.0));
     finalColor *= scanline;
 
-    gl_FragColor = vec4(finalColor, finalAlpha);
+    gl_FragColor = vec4(ucApply(finalColor), finalAlpha);
 }

@@ -5,7 +5,7 @@
     "Audio Reactive",
     "Sports"
   ],
-  "DESCRIPTION": "World Cup neon 3D \u2014 all 48 national crests as extruded neon pixel-slabs on a black void with a synthwave grid floor and reflection. Auto-cycles every team, or pick two for a head-to-head VERSUS. Audio reactive.",
+  "DESCRIPTION": "World Cup neon 3D — all 48 national crests as extruded neon pixel-slabs on a black void with a synthwave grid floor and reflection. Auto-cycles every team, or pick two for a head-to-head VERSUS. Audio reactive.",
   "INPUTS": [
     {
       "NAME": "uMode",
@@ -234,52 +234,178 @@
       "DEFAULT": 1
     },
     {
+      "NAME": "uExtrude",
+      "LABEL": "Extrude Depth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.6,
+      "DEFAULT": 0.26,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "uGlowSize",
+      "LABEL": "Glow Size",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
       "NAME": "uHoldTime",
       "LABEL": "Seconds / Team",
       "TYPE": "float",
       "MIN": 0.6,
-      "MAX": 8.0,
-      "DEFAULT": 2.6
+      "MAX": 8,
+      "DEFAULT": 2.6,
+      "GROUP": "Motion / Animation"
     },
     {
       "NAME": "uSpinSpeed",
       "LABEL": "Spin Speed",
       "TYPE": "float",
-      "MIN": 0.0,
-      "MAX": 2.0,
-      "DEFAULT": 0.5
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation"
     },
     {
       "NAME": "uSpinAmt",
       "LABEL": "Spin Amount",
       "TYPE": "float",
-      "MIN": 0.0,
+      "MIN": 0,
       "MAX": 1.2,
-      "DEFAULT": 0.32
+      "DEFAULT": 0.32,
+      "GROUP": "Motion / Animation"
     },
     {
-      "NAME": "uExtrude",
-      "LABEL": "Extrude Depth",
+      "NAME": "uFlicker",
+      "LABEL": "Neon Flicker",
       "TYPE": "float",
-      "MIN": 0.0,
-      "MAX": 0.6,
-      "DEFAULT": 0.26
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.35,
+      "GROUP": "Motion / Animation"
     },
     {
       "NAME": "uNeon",
       "LABEL": "Neon Intensity",
       "TYPE": "float",
       "MIN": 0.4,
-      "MAX": 4.0,
-      "DEFAULT": 1.7
+      "MAX": 4,
+      "DEFAULT": 1.7,
+      "GROUP": "Color"
     },
     {
-      "NAME": "uGlowSize",
-      "LABEL": "Glow Size",
+      "NAME": "hueShift",
       "TYPE": "float",
-      "MIN": 0.0,
-      "MAX": 2.0,
-      "DEFAULT": 1.0
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "uFloorOn",
+      "LABEL": "Floor Reflection",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1
+      ],
+      "LABELS": [
+        "Off",
+        "On"
+      ],
+      "DEFAULT": 1,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "uGridOn",
+      "LABEL": "Grid Floor",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1
+      ],
+      "LABELS": [
+        "Off",
+        "On"
+      ],
+      "DEFAULT": 1,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "uZoom",
+      "LABEL": "Camera Zoom",
+      "TYPE": "float",
+      "MIN": 0.35,
+      "MAX": 2.2,
+      "DEFAULT": 1,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "uCamHeight",
+      "LABEL": "Camera Height",
+      "TYPE": "float",
+      "MIN": -0.4,
+      "MAX": 0.6,
+      "DEFAULT": 0.06,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "uVignette",
+      "LABEL": "Vignette",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "uRemoveBg",
+      "LABEL": "Remove Background",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1
+      ],
+      "LABELS": [
+        "Off",
+        "On"
+      ],
+      "DEFAULT": 0,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
     },
     {
       "NAME": "uShowScore",
@@ -315,98 +441,16 @@
       "NAME": "uGoal",
       "LABEL": "GOAL! (trigger anim)",
       "TYPE": "float",
-      "MIN": 0.0,
-      "MAX": 1.0,
-      "DEFAULT": 0.0
-    },
-    {
-      "NAME": "uFlicker",
-      "LABEL": "Neon Flicker",
-      "TYPE": "float",
-      "MIN": 0.0,
-      "MAX": 1.0,
-      "DEFAULT": 0.35
-    },
-    {
-      "NAME": "uRemoveBg",
-      "LABEL": "Remove Background",
-      "TYPE": "long",
-      "VALUES": [
-        0,
-        1
-      ],
-      "LABELS": [
-        "Off",
-        "On"
-      ],
+      "MIN": 0,
+      "MAX": 1,
       "DEFAULT": 0
-    },
-    {
-      "NAME": "uFloorOn",
-      "LABEL": "Floor Reflection",
-      "TYPE": "long",
-      "VALUES": [
-        0,
-        1
-      ],
-      "LABELS": [
-        "Off",
-        "On"
-      ],
-      "DEFAULT": 1
-    },
-    {
-      "NAME": "uGridOn",
-      "LABEL": "Grid Floor",
-      "TYPE": "long",
-      "VALUES": [
-        0,
-        1
-      ],
-      "LABELS": [
-        "Off",
-        "On"
-      ],
-      "DEFAULT": 1
-    },
-    {
-      "NAME": "uZoom",
-      "LABEL": "Camera Zoom",
-      "TYPE": "float",
-      "MIN": 0.35,
-      "MAX": 2.2,
-      "DEFAULT": 1.0
-    },
-    {
-      "NAME": "uCamHeight",
-      "LABEL": "Camera Height",
-      "TYPE": "float",
-      "MIN": -0.4,
-      "MAX": 0.6,
-      "DEFAULT": 0.06
-    },
-    {
-      "NAME": "audioReact",
-      "LABEL": "Audio React",
-      "TYPE": "float",
-      "MIN": 0.0,
-      "MAX": 2.0,
-      "DEFAULT": 1.0
-    },
-    {
-      "NAME": "uVignette",
-      "LABEL": "Vignette",
-      "TYPE": "float",
-      "MIN": 0.0,
-      "MAX": 1.0,
-      "DEFAULT": 0.5
     },
     {
       "NAME": "uScanline",
       "LABEL": "Scanlines",
       "TYPE": "float",
-      "MIN": 0.0,
-      "MAX": 1.0,
+      "MIN": 0,
+      "MAX": 1,
       "DEFAULT": 0.3
     }
   ]
@@ -2311,6 +2355,22 @@ void main(){
         float vig = smoothstep(1.45, 0.35, length(uv*vec2(R.x/R.y,1.0)));
         col *= mix(1.0, vig, uVignette);
     }
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = col;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    // background: tint the darkest end (the black void) toward bgColor
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+    col = uc;
 
     // alpha: opaque normally; with background removed, key on luminance so only
     // the neon crests / text / confetti show on a transparent canvas

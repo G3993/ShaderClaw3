@@ -1,27 +1,188 @@
 /*{
   "DESCRIPTION": "Gravity Streams — orbiting particles with glowing trails, deferred lighting, and texture-mapped streams",
-  "CATEGORIES": ["Generator", "Simulation"],
+  "CATEGORIES": [
+    "Generator",
+    "Simulation"
+  ],
   "INPUTS": [
-    { "NAME": "inputTex", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "particleSize", "LABEL": "Particle Size", "TYPE": "float", "DEFAULT": 12.0, "MIN": 2.0, "MAX": 64.0 },
-    { "NAME": "orbitSpeed", "LABEL": "Speed", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 5.0 },
-    { "NAME": "orbitChaos", "LABEL": "Chaos", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "fadeRate", "LABEL": "Trail Fade", "TYPE": "float", "DEFAULT": 0.002, "MIN": 0.0, "MAX": 0.05 },
-    { "NAME": "glossiness", "LABEL": "Glossiness", "TYPE": "float", "DEFAULT": 120.0, "MIN": 4.0, "MAX": 256.0 },
-    { "NAME": "specular", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "surfaceHeight", "LABEL": "Surface Depth", "TYPE": "float", "DEFAULT": 384.0, "MIN": 0.0, "MAX": 800.0 },
-    { "NAME": "glowAmount", "LABEL": "Glow", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "vignette", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "scrollSpeed", "LABEL": "Camera Scroll", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "texScale", "LABEL": "Tex Scale", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 5.0 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true },
-    { "NAME": "palette", "LABEL": "Palette", "TYPE": "long", "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Source", "Aurora", "Magma", "Cyberpunk", "Bioluminescence"], "DEFAULT": 0 }
+    {
+      "NAME": "inputTex",
+      "LABEL": "Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "glossiness",
+      "LABEL": "Glossiness",
+      "TYPE": "float",
+      "DEFAULT": 120,
+      "MIN": 4,
+      "MAX": 256
+    },
+    {
+      "NAME": "specular",
+      "LABEL": "Specular",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "glowAmount",
+      "LABEL": "Glow",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 3
+    },
+    {
+      "NAME": "particleSize",
+      "LABEL": "Particle Size",
+      "TYPE": "float",
+      "DEFAULT": 12,
+      "MIN": 2,
+      "MAX": 64,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "surfaceHeight",
+      "LABEL": "Surface Depth",
+      "TYPE": "float",
+      "DEFAULT": 384,
+      "MIN": 0,
+      "MAX": 800,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "texScale",
+      "LABEL": "Tex Scale",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.1,
+      "MAX": 5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "orbitSpeed",
+      "LABEL": "Speed",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "orbitChaos",
+      "LABEL": "Chaos",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "fadeRate",
+      "LABEL": "Trail Fade",
+      "TYPE": "float",
+      "DEFAULT": 0.002,
+      "MIN": 0,
+      "MAX": 0.05,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "palette",
+      "LABEL": "Palette",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "LABELS": [
+        "Source",
+        "Aurora",
+        "Magma",
+        "Cyberpunk",
+        "Bioluminescence"
+      ],
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "vignette",
+      "LABEL": "Vignette",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "scrollSpeed",
+      "LABEL": "Camera Scroll",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    }
   ],
   "PASSES": [
-    { "TARGET": "albedoBuf", "PERSISTENT": true },
-    { "TARGET": "normalBuf", "PERSISTENT": true },
+    {
+      "TARGET": "albedoBuf",
+      "PERSISTENT": true
+    },
+    {
+      "TARGET": "normalBuf",
+      "PERSISTENT": true
+    },
     {}
   ]
 }*/
@@ -348,5 +509,19 @@ void main() {
         result = mix(result, result.bgr, _f * 0.4);
     }
 
-    gl_FragColor = vec4(result, alpha);
+    // ---- universal color block (defaults = no-op) ----
+    // (background handled by the existing bgColor/transparentBg inputs)
+    vec3 uc = result;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                   // saturation
+    if (hueShift > 0.0005) {                               // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+
+    gl_FragColor = vec4(uc, alpha);
 }

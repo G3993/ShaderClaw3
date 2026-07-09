@@ -1,23 +1,193 @@
 /*{
-  "CATEGORIES": ["Generator", "Art Movement", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Art Movement",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "Pop Art × Bauhaus 3D — Lichtenstein Ben-Day dots and hard outlines fused with Kandinsky Lissajous-orbiting geometric solids. Shapes float in perspective-projected 3D space, casting halo glows. Five mood panels cross-fade. Bass springs shapes outward, treble shimmers the dot field. Five-colour Lichtenstein palette plus Kandinsky primaries.",
   "INPUTS": [
-    { "NAME": "moodOverride",  "LABEL": "Mood",           "TYPE": "long",  "DEFAULT": -1, "VALUES": [-1, 0, 1, 2, 3, 4], "LABELS": ["Auto Cycle", "Whaam!", "Drowning Girl", "Crying Girl", "Sunrise", "Bauhaus"] },
-    { "NAME": "dotDensity",    "LABEL": "Ben-Day Density","TYPE": "float", "MIN": 30.0, "MAX": 160.0, "DEFAULT": 72.0 },
-    { "NAME": "dotRadius",     "LABEL": "Dot Radius",     "TYPE": "float", "MIN": 0.20, "MAX": 0.48,  "DEFAULT": 0.34 },
-    { "NAME": "outlineWeight", "LABEL": "Outline Weight", "TYPE": "float", "MIN": 0.001,"MAX": 0.012, "DEFAULT": 0.0042 },
-    { "NAME": "speechBubble",  "LABEL": "Speech Bubble",  "TYPE": "bool",  "DEFAULT": false },
-    { "NAME": "panelDuration", "LABEL": "Panel Seconds",  "TYPE": "float", "MIN": 4.0,  "MAX": 20.0,  "DEFAULT": 9.0 },
-    { "NAME": "shapeCount",    "LABEL": "Shape Count",    "TYPE": "float", "MIN": 3.0,  "MAX": 20.0,  "DEFAULT": 11.0 },
-    { "NAME": "shapeSize",     "LABEL": "Shape Size",     "TYPE": "float", "MIN": 0.03, "MAX": 0.18,  "DEFAULT": 0.08 },
-    { "NAME": "orbitSpeed",    "LABEL": "Orbit Speed",    "TYPE": "float", "MIN": 0.0,  "MAX": 1.5,   "DEFAULT": 0.30 },
-    { "NAME": "orbitRange",    "LABEL": "Orbit Range",    "TYPE": "float", "MIN": 0.0,  "MAX": 0.45,  "DEFAULT": 0.20 },
-    { "NAME": "haloStrength",  "LABEL": "Halo Strength",  "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,   "DEFAULT": 0.60 },
-    { "NAME": "depth3D",       "LABEL": "3D Depth",       "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,   "DEFAULT": 0.65 },
-    { "NAME": "lineCount",     "LABEL": "Support Lines",  "TYPE": "float", "MIN": 0.0,  "MAX": 14.0,  "DEFAULT": 7.0 },
-    { "NAME": "springReact",   "LABEL": "Bass Spring",    "TYPE": "float", "MIN": 0.0,  "MAX": 0.5,   "DEFAULT": 0.14 },
-    { "NAME": "compositionSeed","LABEL":"Seed",           "TYPE": "float", "MIN": 0.0,  "MAX": 50.0,  "DEFAULT": 0.0 },
-    { "NAME": "audioReact",    "LABEL": "Audio React",    "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,   "DEFAULT": 1.0 }
+    {
+      "NAME": "moodOverride",
+      "LABEL": "Mood",
+      "TYPE": "long",
+      "DEFAULT": -1,
+      "VALUES": [
+        -1,
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "LABELS": [
+        "Auto Cycle",
+        "Whaam!",
+        "Drowning Girl",
+        "Crying Girl",
+        "Sunrise",
+        "Bauhaus"
+      ]
+    },
+    {
+      "NAME": "speechBubble",
+      "LABEL": "Speech Bubble",
+      "TYPE": "bool",
+      "DEFAULT": false
+    },
+    {
+      "NAME": "haloStrength",
+      "LABEL": "Halo Strength",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.6
+    },
+    {
+      "NAME": "compositionSeed",
+      "LABEL": "Seed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 50,
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "dotDensity",
+      "LABEL": "Ben-Day Density",
+      "TYPE": "float",
+      "MIN": 30,
+      "MAX": 160,
+      "DEFAULT": 72,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "dotRadius",
+      "LABEL": "Dot Radius",
+      "TYPE": "float",
+      "MIN": 0.2,
+      "MAX": 0.48,
+      "DEFAULT": 0.34,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "outlineWeight",
+      "LABEL": "Outline Weight",
+      "TYPE": "float",
+      "MIN": 0.001,
+      "MAX": 0.012,
+      "DEFAULT": 0.0042,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "shapeCount",
+      "LABEL": "Shape Count",
+      "TYPE": "float",
+      "MIN": 3,
+      "MAX": 20,
+      "DEFAULT": 11,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "shapeSize",
+      "LABEL": "Shape Size",
+      "TYPE": "float",
+      "MIN": 0.03,
+      "MAX": 0.18,
+      "DEFAULT": 0.08,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "lineCount",
+      "LABEL": "Support Lines",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 14,
+      "DEFAULT": 7,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "panelDuration",
+      "LABEL": "Panel Seconds",
+      "TYPE": "float",
+      "MIN": 4,
+      "MAX": 20,
+      "DEFAULT": 9,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "orbitSpeed",
+      "LABEL": "Orbit Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "orbitRange",
+      "LABEL": "Orbit Range",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.45,
+      "DEFAULT": 0.2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "depth3D",
+      "LABEL": "3D Depth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.65,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "springReact",
+      "LABEL": "Bass Spring",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.5,
+      "DEFAULT": 0.14,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -560,5 +730,18 @@ void main() {
         col = mix(col, LL_BLACK, ef*sq);
     }
 
-    gl_FragColor = vec4(col, 1.0);
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    vec3 uc = mix(vec3(ucL), col, colorBoost);
+    if (hueShift > 0.0005) {
+        float hueA = hueShift * 6.2831853;
+        float hueC = cos(hueA), hueS = sin(hueA);
+        mat3 hueM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                  + hueC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                  + hueS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hueM * uc, 0.0, 1.0);
+    }
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+
+    gl_FragColor = vec4(uc, 1.0);
 }

@@ -1,16 +1,99 @@
 /*{
-  "DESCRIPTION":"Mandelbox Dive — raymarched 3D Mandelbox with the camera flying into the folds. Audio-reactive: bass pushes velocity, mid breathes the fold scale, treble ignites edge glow. Calm constant forward drift at silence.",
-  "CREDIT":"ShaderClaw3",
-  "CATEGORIES":["Generator","Fractal","3D","Audio Reactive"],
-  "INPUTS":[
-    {"NAME":"camSpeed","LABEL":"Dive Speed","TYPE":"float","DEFAULT":0.10,"MIN":0.0,"MAX":1.0},
-    {"NAME":"scaleParam","TYPE":"float","DEFAULT":2.4,"MIN":1.8,"MAX":3.0},
-    {"NAME":"glow","TYPE":"float","DEFAULT":0.5,"MIN":0.0,"MAX":1.5},
-    {"NAME":"paletteShift","TYPE":"float","DEFAULT":0.0,"MIN":0.0,"MAX":1.0},
-    {"NAME":"fogDensity","TYPE":"float","DEFAULT":0.12,"MIN":0.0,"MAX":0.6},
-    {"NAME":"inputImage","LABEL":"Your Image","TYPE":"image"},
-    {"NAME":"texMix","LABEL":"Image Amount","TYPE":"float","DEFAULT":0.0,"MIN":0.0,"MAX":1.0},
-    {"NAME":"audioReact","LABEL":"Sound Reactivity","TYPE":"float","DEFAULT":1.0,"MIN":0.0,"MAX":2.0}
+  "DESCRIPTION": "Mandelbox Dive — raymarched 3D Mandelbox with the camera flying into the folds. Audio-reactive: bass pushes velocity, mid breathes the fold scale, treble ignites edge glow. Calm constant forward drift at silence.",
+  "CREDIT": "ShaderClaw3",
+  "CATEGORIES": [
+    "Generator",
+    "Fractal",
+    "3D",
+    "Audio Reactive"
+  ],
+  "INPUTS": [
+    {
+      "NAME": "glow",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1.5,
+      "LABEL": "Glow Intensity"
+    },
+    {
+      "NAME": "fogDensity",
+      "TYPE": "float",
+      "DEFAULT": 0.12,
+      "MIN": 0,
+      "MAX": 0.6,
+      "LABEL": "Fog Density"
+    },
+    {
+      "NAME": "inputImage",
+      "LABEL": "Your Image",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "texMix",
+      "LABEL": "Image Amount",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "scaleParam",
+      "TYPE": "float",
+      "DEFAULT": 2.4,
+      "MIN": 1.8,
+      "MAX": 3,
+      "LABEL": "Fold Scale",
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "camSpeed",
+      "LABEL": "Dive Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.1,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "paletteShift",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "LABEL": "Palette Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Sound Reactivity",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -140,11 +223,15 @@ void main() {
   } else {
     // miss: only the volumetric glow survives, fading into deep near-black
     col = glowCol * 0.5;
+    col = mix(col, bgColor.rgb, bgColor.a);  // universal background
   }
 
   // tonemap + gamma (house style)
   col = col/(1.0+col);
   col = pow(col, vec3(0.4545));
 
+  // ---- universal color block (defaults = no-op) ----
+  float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+  col = mix(vec3(ucL), col, colorBoost);
   gl_FragColor = vec4(col, 1.0);
 }

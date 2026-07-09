@@ -1,30 +1,182 @@
 /*{
   "DESCRIPTION": "Polka dot pixel tiles — flipping mosaic that reveals image through animated circular pixels",
   "CREDIT": "Florian Berger (flockaroo), adapted for ISF by ShaderClaw",
-  "CATEGORIES": ["Effect"],
+  "CATEGORIES": [
+    "Effect"
+  ],
   "INPUTS": [
-    { "NAME": "inputImage", "LABEL": "Texture", "TYPE": "image" },
-    { "NAME": "tileScale", "LABEL": "Tile Size", "TYPE": "float", "DEFAULT": 20.0, "MIN": 5.0, "MAX": 60.0 },
-    { "NAME": "flipSpeed", "LABEL": "Flip Speed", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 5.0 },
-    { "NAME": "flipInterval", "LABEL": "Flip Interval", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.2, "MAX": 4.0 },
-    { "NAME": "dotSize", "LABEL": "Dot Size", "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.1, "MAX": 0.5 },
-    { "NAME": "dotPulse",  "LABEL": "Dot Pulse",  "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "scrollX",   "LABEL": "Scroll X",   "TYPE": "float", "DEFAULT": 0.0,  "MIN": -1.0,"MAX": 1.0 },
-    { "NAME": "scrollY",   "LABEL": "Scroll Y",   "TYPE": "float", "DEFAULT": 0.0,  "MIN": -1.0,"MAX": 1.0 },
-    { "NAME": "rotateGrid","LABEL": "Rotate Grid","TYPE": "float", "DEFAULT": 0.0,  "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "audioReact","LABEL": "Audio React","TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "specAmt", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "vignetteAmt", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "gapShade", "LABEL": "Gap Shade", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 0.5 },
-    { "NAME": "bgColor", "LABEL": "Gap Color", "TYPE": "color", "DEFAULT": [0.2, 0.3, 0.4, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": 1.0 },
-    { "NAME": "dotShape", "LABEL": "Dot Shape", "TYPE": "long",
-      "VALUES": [0, 1, 2, 3],
-      "LABELS": ["Circle", "Star", "Square", "Hexagon"],
-      "DEFAULT": 0 }
+    {
+      "NAME": "inputImage",
+      "LABEL": "Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "specAmt",
+      "LABEL": "Specular",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "vignetteAmt",
+      "LABEL": "Vignette",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "gapShade",
+      "LABEL": "Gap Shade",
+      "TYPE": "float",
+      "DEFAULT": 0.15,
+      "MIN": 0,
+      "MAX": 0.5
+    },
+    {
+      "NAME": "tileScale",
+      "LABEL": "Tile Size",
+      "TYPE": "float",
+      "DEFAULT": 20,
+      "MIN": 5,
+      "MAX": 60,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "dotSize",
+      "LABEL": "Dot Size",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0.1,
+      "MAX": 0.5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "dotShape",
+      "LABEL": "Dot Shape",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Circle",
+        "Star",
+        "Square",
+        "Hexagon"
+      ],
+      "DEFAULT": 0,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "flipSpeed",
+      "LABEL": "Flip Speed",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.1,
+      "MAX": 5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "flipInterval",
+      "LABEL": "Flip Interval",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.2,
+      "MAX": 4,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "dotPulse",
+      "LABEL": "Dot Pulse",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "scrollX",
+      "LABEL": "Scroll X",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": -1,
+      "MAX": 1,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "scrollY",
+      "LABEL": "Scroll Y",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": -1,
+      "MAX": 1,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "rotateGrid",
+      "LABEL": "Rotate Grid",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Gap Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.2,
+        0.3,
+        0.4,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent",
+      "TYPE": "bool",
+      "DEFAULT": 1,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    }
   ],
   "PASSES": [
-    { "TARGET": "histBuf", "PERSISTENT": true },
+    {
+      "TARGET": "histBuf",
+      "PERSISTENT": true
+    },
     {}
   ]
 }*/
@@ -234,6 +386,19 @@ void main() {
     if (vignetteAmt > 0.0) {
         col *= mix(1.0, 1.2 * getVign(pos), vignetteAmt);
     }
+
+    // ---- universal color block (defaults = no-op; bgColor already native) ----
+    float ucL = dot(col.rgb, vec3(0.299, 0.587, 0.114));
+    vec3 uc = mix(vec3(ucL), col.rgb, colorBoost);
+    if (hueShift > 0.0005) {
+        float hueA = hueShift * 6.2831853;
+        float hueC = cos(hueA), hueS = sin(hueA);
+        mat3 hueM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                  + hueC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                  + hueS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hueM * uc, 0.0, 1.0);
+    }
+    col.rgb = uc;
 
     gl_FragColor = col;
     gl_FragColor.w = 1.0;

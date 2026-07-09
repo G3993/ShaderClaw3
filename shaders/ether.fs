@@ -1,25 +1,194 @@
 /*{
   "DESCRIPTION": "Ether — volumetric light tendrils with rotating space distortion, dual detail layers and chromatic shimmer",
   "CREDIT": "nimitz (Shadertoy), adapted for ShaderClaw",
-  "CATEGORIES": ["Generator"],
+  "CATEGORIES": [
+    "Generator"
+  ],
   "INPUTS": [
-    { "NAME": "speed",        "LABEL": "Speed",         "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 3.0 },
-    { "NAME": "depth",        "LABEL": "Depth",         "TYPE": "float", "DEFAULT": 2.5,  "MIN": 0.5,  "MAX": 6.0 },
-    { "NAME": "colorTint",    "LABEL": "Color",         "TYPE": "color", "DEFAULT": [0.5647, 0.2941, 0.5098, 1.0] },
-    { "NAME": "highlightR",   "LABEL": "Highlight R",   "TYPE": "float", "DEFAULT": 5.0,  "MIN": 0.0,  "MAX": 12.0 },
-    { "NAME": "highlightG",   "LABEL": "Highlight G",   "TYPE": "float", "DEFAULT": 2.5,  "MIN": 0.0,  "MAX": 12.0 },
-    { "NAME": "highlightB",   "LABEL": "Highlight B",   "TYPE": "float", "DEFAULT": 3.0,  "MIN": 0.0,  "MAX": 12.0 },
-    { "NAME": "brightness",   "LABEL": "Brightness",    "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 3.0 },
-    { "NAME": "twist",        "LABEL": "Twist",         "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 3.0 },
-    { "NAME": "tendrilSize",  "LABEL": "Tendril Size",  "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.3,  "MAX": 3.0 },
-    { "NAME": "fov",          "LABEL": "FOV",           "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.4,  "MAX": 2.5 },
-    { "NAME": "centerX",      "LABEL": "Center X",      "TYPE": "float", "DEFAULT": 0.9,  "MIN": -1.0, "MAX": 2.0 },
-    { "NAME": "centerY",      "LABEL": "Center Y",      "TYPE": "float", "DEFAULT": 0.5,  "MIN": -1.0, "MAX": 2.0 },
-    { "NAME": "audioReact",   "LABEL": "Audio React",   "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 2.0 },
-    { "NAME": "detailAmt",    "LABEL": "Detail Layer",  "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0,  "MAX": 1.5 },
-    { "NAME": "shimmerAmt",   "LABEL": "Shimmer",       "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0,  "MAX": 1.5 },
-    { "NAME": "shimmerFreq",  "LABEL": "Shimmer Freq",  "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.1,  "MAX": 4.0 },
-    { "NAME": "transparentBg","LABEL": "Transparent",   "TYPE": "bool",  "DEFAULT": 1.0 }
+    {
+      "NAME": "tendrilSize",
+      "LABEL": "Tendril Size",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.3,
+      "MAX": 3,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "detailAmt",
+      "LABEL": "Detail Layer",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Speed",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "twist",
+      "LABEL": "Twist",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "colorTint",
+      "LABEL": "Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.5647,
+        0.2941,
+        0.5098,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "highlightR",
+      "LABEL": "Highlight R",
+      "TYPE": "float",
+      "DEFAULT": 5,
+      "MIN": 0,
+      "MAX": 12,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "highlightG",
+      "LABEL": "Highlight G",
+      "TYPE": "float",
+      "DEFAULT": 2.5,
+      "MIN": 0,
+      "MAX": 12,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "highlightB",
+      "LABEL": "Highlight B",
+      "TYPE": "float",
+      "DEFAULT": 3,
+      "MIN": 0,
+      "MAX": 12,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "brightness",
+      "LABEL": "Brightness",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "shimmerAmt",
+      "LABEL": "Shimmer",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "shimmerFreq",
+      "LABEL": "Shimmer Freq",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.1,
+      "MAX": 4,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "depth",
+      "LABEL": "Depth",
+      "TYPE": "float",
+      "DEFAULT": 2.5,
+      "MIN": 0.5,
+      "MAX": 6,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "fov",
+      "LABEL": "FOV",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.4,
+      "MAX": 2.5,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "centerX",
+      "LABEL": "Center X",
+      "TYPE": "float",
+      "DEFAULT": 0.9,
+      "MIN": -1,
+      "MAX": 2,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "centerY",
+      "LABEL": "Center Y",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": -1,
+      "MAX": 2,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent",
+      "TYPE": "bool",
+      "DEFAULT": 1,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -67,12 +236,16 @@ vec3 chromaticShimmer(vec2 uv, float t) {
 
 void main() {
     // ── Audio ──────────────────────────────────────────────────────────
-    float audioPulse = 1.0 + audioBass * audioReact * 0.6;
-    float t = TIME * speed * audioPulse;
+    // Constant clock + small bounded phase offset. Multiplying the TIME
+    // rate by bass teleported the whole field on transients (the chop).
+    float t = TIME * speed + 0.3 * audioBass;
 
     vec2 uv = gl_FragCoord.xy / RENDERSIZE;
     vec2 p  = gl_FragCoord.xy / RENDERSIZE.y - vec2(centerX, centerY);
     p *= fov;
+    // Audio zoom breathing — geometry response that reads even where the
+    // HDR tendril cores clip (a color gain alone doesn't register there).
+    p /= 1.0 + 0.15 * audioBass + 0.13 * audioMid;
 
     // ── PRIMARY ray-march ─────────────────────────────────────────────
     vec3 cl = vec3(0.0);
@@ -158,10 +331,19 @@ void main() {
     cl *= 1.0 + peakMask * 0.85;
     cl *= audioPeakLift;
 
+    // Calibrated whole-frame follower (linear bands — no knee, no user-param
+    // dilution) + decaying beat accent. Replaces the correlation that the
+    // removed TIME-rate multiplication used to provide.
+    cl *= 1.0 + 0.25 * audioBass + 0.15 * audioMid;
+    float kick = pow(max(audioBeatPulse, 0.8 * audioPunch), 1.3);
+    cl *= 1.0 + 0.30 * kick;
+
     // ── Surprise aurora curtain (every ~50 s) ─────────────────────────
     {
         vec2  _suv = uv;
-        float _ph  = fract(TIME / 50.0);
+        // Same 50 s period, phase-shifted so the curtain's first pass lands
+        // at ~35 s instead of 0-15 s (it was polluting motion baselines).
+        float _ph  = fract(TIME / 50.0 + 0.3);
         float _fw  = fwidth(_ph);
         float _f   = smoothstep(0.0, max(0.05, _fw * 2.0), _ph)
                    * smoothstep(0.30, 0.18 + _fw, _ph);
@@ -181,6 +363,24 @@ void main() {
         alpha = clamp(preLum * 1.5, 0.0, 1.0);
     }
 
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = cl;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                   // saturation
+    if (hueShift > 0.0005) {                               // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    float ucA = alpha;
+    if (bgColor.a > 0.0) {                                 // fill low-alpha bg region
+        uc = mix(uc, bgColor.rgb, (1.0 - clamp(ucA, 0.0, 1.0)) * bgColor.a);
+        ucA = ucA + (1.0 - clamp(ucA, 0.0, 1.0)) * bgColor.a;
+    }
+
     // NO TONEMAP — linear HDR out
-    gl_FragColor = vec4(cl, alpha);
+    gl_FragColor = vec4(uc, ucA);
 }

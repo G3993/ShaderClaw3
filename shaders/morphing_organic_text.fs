@@ -1,36 +1,291 @@
 /*{
   "DESCRIPTION": "Morphing Organic Text — three voices breathe through a domain-warped FBM field that flows like a slow chemistry. Each player owns a region of the canvas and pushes a reaction-diffusion-feel current of warp; bands intermingle, fuse, split, never repeat. A pseudo-3D normal field and a z-parallax shell of darker tissue give the morph real depth. The live utterance arrives as a hand-typewritten line that sinks into the field, contrast-adapted against the morph beneath it.",
   "CREDIT": "easel A-List",
-  "CATEGORIES": ["Generator", "Text", "A-List"],
+  "CATEGORIES": [
+    "Generator",
+    "Text",
+    "A-List"
+  ],
   "INPUTS": [
-    { "NAME": "msg",          "TYPE": "text",  "DEFAULT": "BREATHE INTO THE FIELD", "MAX_LENGTH": 48, "BIND": "cue.latest" },
-    { "NAME": "energyA",      "LABEL": "Player A Energy", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "BIND": "player[1].energy" },
-    { "NAME": "energyB",      "LABEL": "Player B Energy", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "BIND": "player[2].energy" },
-    { "NAME": "energyC",      "LABEL": "Player C Energy", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "BIND": "player[3].energy" },
-    { "NAME": "activeA",      "LABEL": "Player A Active", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "BIND": "player[1].active" },
-    { "NAME": "activeB",      "LABEL": "Player B Active", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "BIND": "player[2].active" },
-    { "NAME": "bassDepth",    "LABEL": "Audio Depth",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.7,  "BIND": "audio.bass" },
-    { "NAME": "audioReact",   "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.35 },
-    { "NAME": "morphSpeed",   "LABEL": "Morph Speed",     "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0 },
-    { "NAME": "warpAmp",      "LABEL": "Warp Amplitude",  "TYPE": "float", "MIN": 0.0, "MAX": 2.5, "DEFAULT": 1.1 },
-    { "NAME": "octaves",      "LABEL": "Octaves",         "TYPE": "long",  "DEFAULT": 5, "VALUES": [3,4,5,6], "LABELS": ["3","4","5","6"] },
-    { "NAME": "palette",      "LABEL": "Palette",         "TYPE": "long",  "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Lime/Ink","Magenta/Bone","Cyan/Iron","Saffron/Indigo"] },
-    { "NAME": "textContrast", "LABEL": "Text vs Morph",   "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.9 },
-    { "NAME": "textScale",    "LABEL": "Text Scale",      "TYPE": "float", "MIN": 0.5, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "zParallax",    "LABEL": "Z Parallax",      "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.85 }
-  ,
-    { "NAME": "motionDrift",  "LABEL": "Drift Speed",      "TYPE": "float", "DEFAULT": 1.3,  "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "motionJitter", "LABEL": "Jitter",           "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionFlicker","LABEL": "Flicker",          "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionSway",   "LABEL": "Sway",             "TYPE": "float", "DEFAULT": 0.50, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionChaos",  "LABEL": "Chaos",            "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.0 }
-  ,
-    { "NAME": "fidBloom",    "LABEL": "Glow",      "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "fidDither",   "LABEL": "Dither",    "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fidGamma",    "LABEL": "Gamma",     "TYPE": "float", "DEFAULT": 0.60, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fidEdgeGlow", "LABEL": "Edge Glow", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "fidVignette", "LABEL": "Vignette",  "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "fidGrain",    "LABEL": "Grain",     "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.0 }
+    {
+      "NAME": "energyA",
+      "LABEL": "Player A Energy",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "BIND": "player[1].energy"
+    },
+    {
+      "NAME": "energyB",
+      "LABEL": "Player B Energy",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "BIND": "player[2].energy"
+    },
+    {
+      "NAME": "energyC",
+      "LABEL": "Player C Energy",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "BIND": "player[3].energy"
+    },
+    {
+      "NAME": "activeA",
+      "LABEL": "Player A Active",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "BIND": "player[1].active"
+    },
+    {
+      "NAME": "activeB",
+      "LABEL": "Player B Active",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "BIND": "player[2].active"
+    },
+    {
+      "NAME": "fidBloom",
+      "LABEL": "Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 1.5
+    },
+    {
+      "NAME": "fidDither",
+      "LABEL": "Dither",
+      "TYPE": "float",
+      "DEFAULT": 0.85,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "fidGamma",
+      "LABEL": "Gamma",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "fidEdgeGlow",
+      "LABEL": "Edge Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "fidVignette",
+      "LABEL": "Vignette",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1.5
+    },
+    {
+      "NAME": "fidGrain",
+      "LABEL": "Grain",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "octaves",
+      "LABEL": "Octaves",
+      "TYPE": "long",
+      "DEFAULT": 5,
+      "VALUES": [
+        3,
+        4,
+        5,
+        6
+      ],
+      "LABELS": [
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "morphSpeed",
+      "LABEL": "Morph Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "warpAmp",
+      "LABEL": "Warp Amplitude",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2.5,
+      "DEFAULT": 1.1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionDrift",
+      "LABEL": "Drift Speed",
+      "TYPE": "float",
+      "DEFAULT": 1.3,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionJitter",
+      "LABEL": "Jitter",
+      "TYPE": "float",
+      "DEFAULT": 0.25,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionFlicker",
+      "LABEL": "Flicker",
+      "TYPE": "float",
+      "DEFAULT": 0.15,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionSway",
+      "LABEL": "Sway",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionChaos",
+      "LABEL": "Chaos",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "palette",
+      "LABEL": "Palette",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Lime/Ink",
+        "Magenta/Bone",
+        "Cyan/Iron",
+        "Saffron/Indigo"
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "zParallax",
+      "LABEL": "Z Parallax",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.85,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": "BREATHE INTO THE FIELD",
+      "MAX_LENGTH": 48,
+      "BIND": "cue.latest",
+      "LABEL": "Message",
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "textContrast",
+      "LABEL": "Text vs Morph",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.9,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "textScale",
+      "LABEL": "Text Scale",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "bassDepth",
+      "LABEL": "Audio Depth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.7,
+      "BIND": "audio.bass",
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.35,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -430,6 +685,18 @@ void main(){
     col = col / (1.0 + 0.45 * col);
     col = pow(max(col, 0.0), vec3(0.95));
 
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(vec3(ucL), col, colorBoost);
+    if (hueShift > 0.0005) {
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        col = clamp(hM * col, 0.0, 1.0);
+    }
+    col = mix(col, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
     col *= mkFlicker(gl_FragCoord.xy / RENDERSIZE - 0.5, TIME);
     gl_FragColor = vec4(fidApply(col, gl_FragCoord.xy), 1.0);
 }

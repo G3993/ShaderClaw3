@@ -1,32 +1,204 @@
 /*{
   "DESCRIPTION": "Fluid Sound — sound is the brush. A self-advecting fluid field (Fluid Sim) where audio energy births blobs from the center, shaded as a lit volumetric metaball gel (3D Fluid). Quiet = dim + settle to middle + fade; loud = blobs erupt and flow. Core audio bus only, so it runs in both Easel and ShaderClaw3.",
   "CREDIT": "ShaderClaw",
-  "CATEGORIES": ["Generator", "Simulation", "3D"],
+  "CATEGORIES": [
+    "Generator",
+    "Simulation",
+    "3D"
+  ],
   "INPUTS": [
-    { "NAME": "audioReact",   "LABEL": "Audio React",    "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 2.5 },
-    { "NAME": "birth",        "LABEL": "Blob Birth",     "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.0,  "MAX": 2.0 },
-    { "NAME": "flowSpeed",    "LABEL": "Flow Speed",     "TYPE": "float", "DEFAULT": 0.6,  "MIN": 0.0,  "MAX": 2.0 },
-    { "NAME": "swirl",        "LABEL": "Swirl",          "TYPE": "float", "DEFAULT": 0.6,  "MIN": 0.0,  "MAX": 2.0 },
-    { "NAME": "settle",       "LABEL": "Settle (quiet)", "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0,  "MAX": 2.0 },
-    { "NAME": "emitterSpread","LABEL": "Spread",         "TYPE": "float", "DEFAULT": 0.6,  "MIN": 0.0,  "MAX": 1.5 },
-    { "NAME": "blobRadius",   "LABEL": "Blob Size",      "TYPE": "float", "DEFAULT": 0.10, "MIN": 0.03, "MAX": 0.30 },
-    { "NAME": "surfaceDepth", "LABEL": "Surface Depth",  "TYPE": "float", "DEFAULT": 1.6,  "MIN": 0.2,  "MAX": 5.0 },
-    { "NAME": "specAmount",   "LABEL": "Specular",       "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0,  "MAX": 3.0 },
-    { "NAME": "specPow",      "LABEL": "Spec Sharpness", "TYPE": "float", "DEFAULT": 28.0, "MIN": 4.0,  "MAX": 96.0 },
-    { "NAME": "specTint",     "LABEL": "Spec Tint",      "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "glow",         "LABEL": "Inner Glow",     "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0,  "MAX": 2.0 },
-    { "NAME": "saturation",   "LABEL": "Saturation",     "TYPE": "float", "DEFAULT": 1.35, "MIN": 0.0,  "MAX": 2.5 },
-    { "NAME": "hueSpan",      "LABEL": "Hue Span",       "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "hueShift",     "LABEL": "Hue Shift",      "TYPE": "float", "DEFAULT": 0.0,  "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "colorDrift",   "LABEL": "Color Drift",    "TYPE": "float", "DEFAULT": 0.06, "MIN": 0.0,  "MAX": 0.5 },
-    { "NAME": "dimFloor",     "LABEL": "Quiet Dimness",  "TYPE": "float", "DEFAULT": 0.10, "MIN": 0.0,  "MAX": 0.5 },
-    { "NAME": "transparentBg","LABEL": "Transparent",    "TYPE": "bool",  "DEFAULT": true },
-    { "NAME": "inputTex",     "TYPE": "image", "LABEL": "Texture" },
-    { "NAME": "texMix",       "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "LABEL": "Texture Mix" }
+    {
+      "NAME": "specAmount",
+      "LABEL": "Specular",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 3
+    },
+    {
+      "NAME": "specPow",
+      "LABEL": "Spec Sharpness",
+      "TYPE": "float",
+      "DEFAULT": 28,
+      "MIN": 4,
+      "MAX": 96
+    },
+    {
+      "NAME": "glow",
+      "LABEL": "Inner Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "inputTex",
+      "TYPE": "image",
+      "LABEL": "Texture"
+    },
+    {
+      "NAME": "texMix",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Texture Mix"
+    },
+    {
+      "NAME": "emitterSpread",
+      "LABEL": "Spread",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "blobRadius",
+      "LABEL": "Blob Size",
+      "TYPE": "float",
+      "DEFAULT": 0.1,
+      "MIN": 0.03,
+      "MAX": 0.3,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "surfaceDepth",
+      "LABEL": "Surface Depth",
+      "TYPE": "float",
+      "DEFAULT": 1.6,
+      "MIN": 0.2,
+      "MAX": 5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "birth",
+      "LABEL": "Blob Birth",
+      "TYPE": "float",
+      "DEFAULT": 0.85,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "flowSpeed",
+      "LABEL": "Flow Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "swirl",
+      "LABEL": "Swirl",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "settle",
+      "LABEL": "Settle (quiet)",
+      "TYPE": "float",
+      "DEFAULT": 0.7,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "specTint",
+      "LABEL": "Spec Tint",
+      "TYPE": "float",
+      "DEFAULT": 0.7,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "saturation",
+      "LABEL": "Saturation",
+      "TYPE": "float",
+      "DEFAULT": 1.35,
+      "MIN": 0,
+      "MAX": 2.5,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueSpan",
+      "LABEL": "Hue Span",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorDrift",
+      "LABEL": "Color Drift",
+      "TYPE": "float",
+      "DEFAULT": 0.06,
+      "MIN": 0,
+      "MAX": 0.5,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2.5,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "dimFloor",
+      "LABEL": "Quiet Dimness",
+      "TYPE": "float",
+      "DEFAULT": 0.1,
+      "MIN": 0,
+      "MAX": 0.5,
+      "GROUP": "Audio Reactivity"
+    }
   ],
   "PASSES": [
-    { "TARGET": "velBuf", "PERSISTENT": true },
-    { "TARGET": "dyeBuf", "PERSISTENT": true },
+    {
+      "TARGET": "velBuf",
+      "PERSISTENT": true
+    },
+    {
+      "TARGET": "dyeBuf",
+      "PERSISTENT": true
+    },
     {}
   ]
 }*/
@@ -278,10 +450,18 @@ void main(){
         col = mix(col, modCol, texMix);
     }
 
+    // ---- universal background (defaults = no-op; hue/saturation already
+    // ---- covered by the existing hueShift/saturation inputs) ----
     if (transparentBg){
-        gl_FragColor = vec4(col, cov * mix(0.6, 1.0, bright));
+        float a = cov * mix(0.6, 1.0, bright);
+        if (bgColor.a > 0.0) {                    // fill transparent bg region
+            col = mix(col, bgColor.rgb, (1.0 - a) * bgColor.a);
+            a   = a + (1.0 - a) * bgColor.a;
+        }
+        gl_FragColor = vec4(col, a);
     } else {
         vec3 bg = vec3(0.015, 0.018, 0.026) * bright;
+        bg = mix(bg, bgColor.rgb, bgColor.a);     // blend the void toward bgColor
         gl_FragColor = vec4(col + bg * (1.0 - cov), 1.0);
     }
 }

@@ -1,41 +1,309 @@
 /*{
   "DESCRIPTION": "Connect-Numbers — a floating data-graph in pseudo-3D depth. A Voronoi-relaxed swarm of nodes drifts across three parallax planes, each plane wired by smooth-min capsule edges into a Delaunay-ish web. Every node wears a tiny numeric label drawn from the font atlas (27..36 = 0..9) — the labels twitch between values, ticking faster on whichever player[i] is hot. A caption from cue.latest typewriters along the bottom as a telemetry line. Inspired by connect-the-dots planners and editorial network diagrams, but everything is abstract: nodes are not a face, edges are not a graph, numbers are not data — they are the *feeling* of a network listening.",
   "CREDIT": "ShaderClaw — A-List drop · connectnumbers",
-  "CATEGORIES": ["Generator", "Text", "A-List"],
+  "CATEGORIES": [
+    "Generator",
+    "Text",
+    "A-List"
+  ],
   "INPUTS": [
-    { "NAME": "msg", "LABEL": "Telemetry", "TYPE": "text", "DEFAULT": "CONNECT THE NUMBERS", "MAX_LENGTH": 48, "BIND": "cue.latest" },
-
-    { "NAME": "energyA",  "LABEL": "Player 1 Energy", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[1].energy" },
-    { "NAME": "energyB",  "LABEL": "Player 2 Energy", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[2].energy" },
-    { "NAME": "energyC",  "LABEL": "Player 3 Energy", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[3].energy" },
-    { "NAME": "activeA",  "LABEL": "Player 1 Active", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[1].active" },
-    { "NAME": "activeB",  "LABEL": "Player 2 Active", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[2].active" },
-    { "NAME": "bassDrive","LABEL": "Bass Drive",      "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "audio.bass" },
-
-    { "NAME": "nodeCount",  "LABEL": "Nodes",         "TYPE": "long",  "DEFAULT": 24, "VALUES": [12,16,20,24,28,32,40], "LABELS": ["12","16","20","24","28","32","40"] },
-    { "NAME": "lineWidth",  "LABEL": "Line Thickness","TYPE": "float", "DEFAULT": 0.0018, "MIN": 0.0006, "MAX": 0.006 },
-    { "NAME": "nodeRadius", "LABEL": "Node Radius",   "TYPE": "float", "DEFAULT": 0.014,  "MIN": 0.005,  "MAX": 0.030 },
-    { "NAME": "motionSpeed","LABEL": "Motion Speed",  "TYPE": "float", "DEFAULT": 0.55,  "MIN": 0.0,    "MAX": 2.0 },
-    { "NAME": "audioDepth", "LABEL": "Audio Depth",   "TYPE": "float", "DEFAULT": 0.7,   "MIN": 0.0,    "MAX": 2.0 },
-    { "NAME": "depthAmount","LABEL": "Parallax Depth","TYPE": "float", "DEFAULT": 0.65,  "MIN": 0.0,    "MAX": 1.6 },
-    { "NAME": "labelScale", "LABEL": "Number Scale",  "TYPE": "float", "DEFAULT": 1.0,   "MIN": 0.4,    "MAX": 2.0 },
-
-    { "NAME": "palette",    "LABEL": "Palette", "TYPE": "long", "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Cream/Ink","Cyan/Magenta","Forest","Mono"] },
-    { "NAME": "paperColor", "LABEL": "Paper", "TYPE": "color", "DEFAULT": [0.93, 0.91, 0.86, 1.0] },
-    { "NAME": "inkColor",   "LABEL": "Ink",   "TYPE": "color", "DEFAULT": [0.08, 0.07, 0.09, 1.0] }
-  ,
-    { "NAME": "motionDrift",  "LABEL": "Drift Speed",      "TYPE": "float", "DEFAULT": 1.3,  "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "motionJitter", "LABEL": "Jitter",           "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionFlicker","LABEL": "Flicker",          "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionSway",   "LABEL": "Sway",             "TYPE": "float", "DEFAULT": 0.50, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionChaos",  "LABEL": "Chaos",            "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.0 }
-  ,
-    { "NAME": "fidBloom",    "LABEL": "Glow",      "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "fidDither",   "LABEL": "Dither",    "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fidGamma",    "LABEL": "Gamma",     "TYPE": "float", "DEFAULT": 0.60, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fidEdgeGlow", "LABEL": "Edge Glow", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "fidVignette", "LABEL": "Vignette",  "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "fidGrain",    "LABEL": "Grain",     "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.0 }
+    {
+      "NAME": "energyA",
+      "LABEL": "Player 1 Energy",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "BIND": "player[1].energy"
+    },
+    {
+      "NAME": "energyB",
+      "LABEL": "Player 2 Energy",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "BIND": "player[2].energy"
+    },
+    {
+      "NAME": "energyC",
+      "LABEL": "Player 3 Energy",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "BIND": "player[3].energy"
+    },
+    {
+      "NAME": "activeA",
+      "LABEL": "Player 1 Active",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "BIND": "player[1].active"
+    },
+    {
+      "NAME": "activeB",
+      "LABEL": "Player 2 Active",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "BIND": "player[2].active"
+    },
+    {
+      "NAME": "fidBloom",
+      "LABEL": "Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 1.5
+    },
+    {
+      "NAME": "fidDither",
+      "LABEL": "Dither",
+      "TYPE": "float",
+      "DEFAULT": 0.85,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "fidGamma",
+      "LABEL": "Gamma",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "fidEdgeGlow",
+      "LABEL": "Edge Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "fidVignette",
+      "LABEL": "Vignette",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1.5
+    },
+    {
+      "NAME": "fidGrain",
+      "LABEL": "Grain",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "nodeCount",
+      "LABEL": "Nodes",
+      "TYPE": "long",
+      "DEFAULT": 24,
+      "VALUES": [
+        12,
+        16,
+        20,
+        24,
+        28,
+        32,
+        40
+      ],
+      "LABELS": [
+        "12",
+        "16",
+        "20",
+        "24",
+        "28",
+        "32",
+        "40"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "lineWidth",
+      "LABEL": "Line Thickness",
+      "TYPE": "float",
+      "DEFAULT": 0.0018,
+      "MIN": 0.0006,
+      "MAX": 0.006,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "nodeRadius",
+      "LABEL": "Node Radius",
+      "TYPE": "float",
+      "DEFAULT": 0.014,
+      "MIN": 0.005,
+      "MAX": 0.03,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "motionSpeed",
+      "LABEL": "Motion Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionDrift",
+      "LABEL": "Drift Speed",
+      "TYPE": "float",
+      "DEFAULT": 1.3,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionJitter",
+      "LABEL": "Jitter",
+      "TYPE": "float",
+      "DEFAULT": 0.25,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionFlicker",
+      "LABEL": "Flicker",
+      "TYPE": "float",
+      "DEFAULT": 0.15,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionSway",
+      "LABEL": "Sway",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionChaos",
+      "LABEL": "Chaos",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "palette",
+      "LABEL": "Palette",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Cream/Ink",
+        "Cyan/Magenta",
+        "Forest",
+        "Mono"
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "inkColor",
+      "LABEL": "Ink",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.08,
+        0.07,
+        0.09,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "depthAmount",
+      "LABEL": "Parallax Depth",
+      "TYPE": "float",
+      "DEFAULT": 0.65,
+      "MIN": 0,
+      "MAX": 1.6,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "msg",
+      "LABEL": "Telemetry",
+      "TYPE": "text",
+      "DEFAULT": "CONNECT THE NUMBERS",
+      "MAX_LENGTH": 48,
+      "BIND": "cue.latest",
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "labelScale",
+      "LABEL": "Number Scale",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.4,
+      "MAX": 2,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "paperColor",
+      "LABEL": "Paper",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.93,
+        0.91,
+        0.86,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "bassDrive",
+      "LABEL": "Bass Drive",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "BIND": "audio.bass",
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "audioDepth",
+      "LABEL": "Audio Depth",
+      "TYPE": "float",
+      "DEFAULT": 0.7,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -300,6 +568,12 @@ void main() {
     // audioBass bus directly so the kinetic edge/node/glow response below
     // is real out of the box, not just when a host binding is present.
     float bass = clamp(max(bassDrive, audioBass), 0.0, 1.0);
+    // Soft-knee conditioned bands (playbook): low floors so sparse/soft
+    // hits (hiphop/jazz) register; headroom so EDM keeps breathing.
+    float bassK   = pow(smoothstep(0.04, 0.92, bass), 1.3);
+    float midK    = smoothstep(0.06, 0.90, clamp(audioMid, 0.0, 1.0));
+    float highK   = pow(smoothstep(0.08, 0.90, clamp(audioHigh, 0.0, 1.0)), 1.2);
+    float energyK = smoothstep(0.05, 0.90, clamp(audioEnergy, 0.0, 1.0));
 
     int totalNodes = int(nodeCount);
     if (totalNodes > MAX_NODES) totalNodes = MAX_NODES;
@@ -321,9 +595,12 @@ void main() {
     // plane uses the smoothed mean so an unbound 3rd player still moves.
     float E[3];
     float A[3];
-    E[0] = clamp(energyA, 0.0, 1.0);
-    E[1] = clamp(energyB, 0.0, 1.0);
-    E[2] = clamp(energyC, 0.0, 1.0);
+    // Player-bound channels win when wired; otherwise each plane follows its
+    // own audio band (frequency→space: bass=back, mids=middle, highs=front)
+    // so halos / tints / label shine / tick rates are live out of the box.
+    E[0] = clamp(max(energyA, bassK * aud * 0.7), 0.0, 1.0);
+    E[1] = clamp(max(energyB, midK  * aud * 0.7), 0.0, 1.0);
+    E[2] = clamp(max(energyC, highK * aud * 0.6), 0.0, 1.0);
     A[0] = clamp(activeA, 0.0, 1.0);
     A[1] = clamp(activeB, 0.0, 1.0);
     A[2] = 0.5 * (A[0] + A[1]);
@@ -372,7 +649,7 @@ void main() {
         float planeEdge = 1e6;
         // Edge thickness scales with depth (foreground a touch thicker)
         // and lifts on bass for a kinetic feel.
-        float lw = lineWidth * mix(0.65, 1.15, depth) * (1.0 + 0.6 * bass * aud);
+        float lw = lineWidth * mix(0.65, 1.15, depth) * (1.0 + 1.1 * bassK * aud);
 
         for (int i = 0; i < MAX_NODES; i++) {
             if (i >= planeN) break;
@@ -415,7 +692,7 @@ void main() {
             float seed = float(i) * 3.13 + fpl * 11.0;
             float rad  = nodeRadius * mix(0.7, 1.25, depth)
                        * (1.0 + 0.55 * e * (0.5 + 0.5 * sin(t * 2.1 + seed)))
-                       * (1.0 + 0.40 * bass * aud);
+                       * (1.0 + 0.75 * bassK * aud);
             float dN   = length(p - pos[i]) - rad;
 
             if (dN < nodeSdf) {
@@ -456,7 +733,7 @@ void main() {
 
     // Soft glow under edges driven by audio bass — never overpowers.
     float eGlow = exp(-max(edgeSdf, 0.0) * 220.0);
-    col += eGlow * edgeCol * 0.30 * bass * aud;
+    col += eGlow * edgeCol * 0.45 * bassK * aud;
 
     // Nodes: filled disc with thin ink ring for definition.
     float nw    = fwidth(nodeSdf);
@@ -529,6 +806,28 @@ void main() {
     col = col / (1.0 + 0.25 * max(col - 1.0, 0.0));
     col = clamp(col, 0.0, 1.5);
 
+    // Whole-frame breath (round-2): the round-1 version was 0.07 * kneed
+    // energy * audioDepth(0.7) — ±3% on bright paper, invisible. Linear
+    // bands, floored depth, and DARKEN-dips so the response reads on the
+    // near-white paper where brighten clips. Silence = exactly 1.0.
+    float aDb = 0.6 + 0.4 * min(aud, 1.0);
+    col *= 1.0 - aDb * (0.22 * clamp(audioBass, 0.0, 1.0)
+                      + 0.12 * clamp(audioMid,  0.0, 1.0));
+
     col *= mkFlicker(gl_FragCoord.xy / RENDERSIZE - 0.5, TIME);
-    gl_FragColor = vec4(fidApply(col, gl_FragCoord.xy), 1.0);
+
+    // ---- universal color block (defaults = no-op; bg via native Paper color) ----
+    vec3 uc = fidApply(col, gl_FragCoord.xy);
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+
+    gl_FragColor = vec4(uc, 1.0);
 }

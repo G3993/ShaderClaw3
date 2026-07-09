@@ -1,15 +1,111 @@
 /*{
   "DESCRIPTION": "Neon Circuit Board — 3D raymarched PCB surface. SDF circuit traces (copper extrusions) on dark substrate, RGB data pulses traveling along horizontal and vertical routes. Low-angle orbit camera. LINEAR HDR out, no tonemap.",
   "CREDIT": "ShaderClaw auto-improve 2026-05-12",
-  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "3D",
+    "Audio Reactive"
+  ],
   "INPUTS": [
-    { "NAME": "traceColor",  "LABEL": "Trace Metal",  "TYPE": "color", "DEFAULT": [0.90, 0.60, 0.10, 1.0] },
-    { "NAME": "boardColor",  "LABEL": "PCB Base",     "TYPE": "color", "DEFAULT": [0.04, 0.12, 0.06, 1.0] },
-    { "NAME": "pulseSpeed",  "LABEL": "Pulse Speed",  "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.55 },
-    { "NAME": "orbitSpeed",  "LABEL": "Orbit Speed",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.08 },
-    { "NAME": "hdrPeak",     "LABEL": "Pulse HDR",    "TYPE": "float", "MIN": 1.0, "MAX": 6.0, "DEFAULT": 3.0 },
-    { "NAME": "traceGrid",   "LABEL": "Trace Spacing","TYPE": "float", "MIN": 0.05,"MAX": 0.5, "DEFAULT": 0.20 },
-    { "NAME": "audioReact",  "LABEL": "Audio React",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
+    {
+      "NAME": "traceGrid",
+      "LABEL": "Trace Spacing",
+      "TYPE": "float",
+      "MIN": 0.05,
+      "MAX": 0.5,
+      "DEFAULT": 0.2,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "pulseSpeed",
+      "LABEL": "Pulse Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.55,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "orbitSpeed",
+      "LABEL": "Orbit Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.08,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "traceColor",
+      "LABEL": "Trace Metal",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.9,
+        0.6,
+        0.1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "boardColor",
+      "LABEL": "PCB Base",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.04,
+        0.12,
+        0.06,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hdrPeak",
+      "LABEL": "Pulse HDR",
+      "TYPE": "float",
+      "MIN": 1,
+      "MAX": 6,
+      "DEFAULT": 3,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -74,7 +170,10 @@ vec3 calcNormal(vec3 p, float sp) {
 // Data pulses: HDR dots traveling along H and V traces
 vec3 dataPulse(vec3 p, float sp) {
     vec3 acc = vec3(0.0);
-    float bass = clamp(audioBass, 0.0, 1.0) * audioReact;
+    // Soft-knee bass (low floor, top headroom); it drives a BOUNDED phase
+    // nudge on the pulses — never TIME·bass, which teleports the dots more
+    // and more violently as runtime grows.
+    float bass = pow(smoothstep(0.04, 0.90, audioBass), 1.3) * min(audioReact, 1.5);
 
     // Horizontal pulses along Z-slotted H-traces
     for (int i = 0; i < 6; i++) {
@@ -82,8 +181,8 @@ vec3 dataPulse(vec3 p, float sp) {
         float slot = floor(fi * 1.73 + 0.5);
         if (h11(slot*5.37+11.0) < 0.45) continue;   // trace absent
         float pz   = slot * sp;
-        float spd  = (0.4 + h11(fi*3.7) * 0.6) * pulseSpeed * (1.0 + bass * 0.4);
-        float px   = fract(TIME * spd + h11(fi*5.3)) * 6.0 - 3.0;
+        float spd  = (0.4 + h11(fi*3.7) * 0.6) * pulseSpeed;
+        float px   = fract(TIME * spd + h11(fi*5.3) + bass * 0.10) * 6.0 - 3.0;
         float d2   = dot(p.xz - vec2(px, pz), p.xz - vec2(px, pz));
         // RGB split: R leads, B trails
         float r    = exp(-dot(p.xz - vec2(px+0.012,pz), p.xz - vec2(px+0.012,pz)) * 220.0);
@@ -98,8 +197,8 @@ vec3 dataPulse(vec3 p, float sp) {
         float slot = floor(fi * 2.31 + 0.7);
         if (h11(slot*7.13+23.0) < 0.45) continue;
         float px   = slot * sp;
-        float spd  = (0.35 + h11(fi*4.1) * 0.55) * pulseSpeed * 0.85 * (1.0 + bass * 0.4);
-        float pz   = fract(TIME * spd * 0.8 + h11(fi*6.7)) * 6.0 - 3.0;
+        float spd  = (0.35 + h11(fi*4.1) * 0.55) * pulseSpeed * 0.85;
+        float pz   = fract(TIME * spd * 0.8 + h11(fi*6.7) + bass * 0.08) * 6.0 - 3.0;
         float r    = exp(-dot(p.xz - vec2(px,pz+0.012), p.xz - vec2(px,pz+0.012)) * 220.0);
         float g    = exp(-dot(p.xz - vec2(px,pz),       p.xz - vec2(px,pz))       * 240.0);
         float b    = exp(-dot(p.xz - vec2(px,pz-0.012), p.xz - vec2(px,pz-0.012)) * 220.0);
@@ -112,8 +211,12 @@ void main() {
     vec2 uv = (gl_FragCoord.xy / RENDERSIZE.xy) * 2.0 - 1.0;
     uv.x *= RENDERSIZE.x / RENDERSIZE.y;
 
-    float bass = clamp(audioBass, 0.0, 1.0) * audioReact;
-    float mid  = clamp(audioMid,  0.0, 1.0) * audioReact;
+    // Soft knees (playbook): respond from low levels (soft/sparse hits),
+    // keep headroom at the top (sustained loud styles keep varying).
+    float aR   = min(audioReact, 1.5);
+    float bass = pow(smoothstep(0.04, 0.90, audioBass), 1.3) * aR;
+    float mid  = pow(smoothstep(0.05, 0.95, audioMid),  1.2) * aR;
+    float beatP = audioBeatPulse * audioBeatPulse * aR;   // decaying accent
     float sp   = traceGrid;
 
     // Low-angle orbit — sweeps across the PCB surface
@@ -155,6 +258,9 @@ void main() {
 
         vec3 lit  = surfCol * (0.12 + 0.88*dKey);
         lit += vec3(0.95, 0.90, 0.75) * sp2 * (onTrace ? 2.2 : 0.35);
+        // Copper traces glow with the mids — continuous, visible follow for
+        // mid-dominant material (rock) and beatless swells (ambient).
+        if (onTrace) lit += traceColor.rgb * 0.55 * mid;
 
         // Data pulse glow (additive, in HDR range)
         vec3 pulse = dataPulse(p, sp) * hdrPeak * (1.0 + bass * (1.6 + 0.5 * float(onTrace)));
@@ -173,12 +279,31 @@ void main() {
         // Dark studio background
         col = vec3(0.008, 0.018, 0.010)
             + vec3(0.04, 0.10, 0.05) * exp(-length(uv)*1.8);
+        // universal background: blend the miss/void region toward bgColor
+        col = mix(col, bgColor.rgb, bgColor.a);
     }
 
     // Volumetric pulse glimmer along ray (very faint — gives depth)
     vec3 midP = ro + rd * min(t, 4.0);
     col += dataPulse(midP, sp) * vec3(0.0, 0.012, 0.006) * (1.0 + mid * 0.5);
-    col *= 1.0 + bass * 0.10;
+    // Whole-scene luminance follow — the board is mostly dark, so a moderate
+    // breath reads clearly (the old 10% bass-only lift was near-invisible,
+    // and the tiny pulse dots alone can't carry response magnitude).
+    col *= 1.0 + 0.32 * bass + 0.16 * mid + 0.22 * beatP;
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = col;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    col = uc;
 
     // LINEAR HDR — no tonemap, no clamp
     gl_FragColor = vec4(col, 1.0);

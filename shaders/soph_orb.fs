@@ -1,28 +1,240 @@
 /*{
-  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "3D",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "Sophic Orb — a single contemplative central orb rendered with curatorial conviction. Four surface treatments (Iridescent Pearl, Living Wood, Plasma Core, Marble + Gold Kintsugi) each carry their own material logic: thin-film interference, slow Voronoi morph, volumetric inner turbulence, or veined classical stone. Bass breathes the orb scale, mids drive the surface morph rate, treble ignites micro-flickers across the silhouette. Drifting mote field surrounds; complementary deep gradient backdrop. Returns LINEAR HDR.",
   "INPUTS": [
-    { "NAME": "camDist",       "LABEL": "Camera Distance", "TYPE": "float", "MIN": 1.5, "MAX": 12.0, "DEFAULT": 4.5 },
-    { "NAME": "camHeight",     "LABEL": "Camera Height",   "TYPE": "float", "MIN": -3.0, "MAX": 4.0, "DEFAULT": 1.2 },
-    { "NAME": "camOrbitSpeed", "LABEL": "Orbit Speed",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 0.18 },
-    { "NAME": "camAzimuth",    "LABEL": "Camera Azimuth",  "TYPE": "float", "MIN": 0.0, "MAX": 6.2832, "DEFAULT": 0.0 },
-    { "NAME": "keyAngle",      "LABEL": "Key Light Angle", "TYPE": "float", "MIN": 0.0, "MAX": 6.2832, "DEFAULT": 0.785 },
-    { "NAME": "keyElevation",  "LABEL": "Key Elevation",   "TYPE": "float", "MIN": 0.0, "MAX": 1.5708, "DEFAULT": 0.7 },
-    { "NAME": "keyColor",      "LABEL": "Key Light",       "TYPE": "color", "DEFAULT": [1.0, 0.94, 0.82, 1.0] },
-    { "NAME": "fillColor",     "LABEL": "Fill Light",      "TYPE": "color", "DEFAULT": [0.55, 0.70, 1.0, 1.0] },
-    { "NAME": "ambient",       "LABEL": "Ambient",         "TYPE": "float", "MIN": 0.0, "MAX": 0.5,  "DEFAULT": 0.08 },
-    { "NAME": "rimStrength",   "LABEL": "Rim Strength",    "TYPE": "float", "MIN": 0.0, "MAX": 1.5,  "DEFAULT": 0.5 },
-    { "NAME": "exposure",      "LABEL": "Exposure",        "TYPE": "float", "MIN": 0.3, "MAX": 3.0,  "DEFAULT": 1.0 },
-    { "NAME": "mood",          "LABEL": "Surface Treatment","TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Iridescent Pearl","Living Wood","Plasma Core","Marble + Gold"], "DEFAULT": 0 },
-    { "NAME": "orbScale",      "LABEL": "Orb Size",        "TYPE": "float", "MIN": 0.5, "MAX": 1.4, "DEFAULT": 0.95 },
-    { "NAME": "moteDensity",   "LABEL": "Mote Field",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55 },
-    { "NAME": "highlightStrength","LABEL": "Specular Key", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "morphSpeed",    "LABEL": "Surface Morph",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.6 },
-    { "NAME": "audioReact",    "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "kintsugiGold",  "LABEL": "Kintsugi Gold",   "TYPE": "float", "MIN": 0.0, "MAX": 2.5, "DEFAULT": 1.0 },
-    { "NAME": "pearlIridescence","LABEL": "Pearl Iridescence","TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
+    {
+      "NAME": "keyAngle",
+      "LABEL": "Key Light Angle",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 6.2832,
+      "DEFAULT": 0.785
+    },
+    {
+      "NAME": "keyElevation",
+      "LABEL": "Key Elevation",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5708,
+      "DEFAULT": 0.7
+    },
+    {
+      "NAME": "ambient",
+      "LABEL": "Ambient",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.5,
+      "DEFAULT": 0.08
+    },
+    {
+      "NAME": "rimStrength",
+      "LABEL": "Rim Strength",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.5
+    },
+    {
+      "NAME": "mood",
+      "LABEL": "Surface Treatment",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Iridescent Pearl",
+        "Living Wood",
+        "Plasma Core",
+        "Marble + Gold"
+      ],
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "highlightStrength",
+      "LABEL": "Specular Key",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "orbScale",
+      "LABEL": "Orb Size",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 1.4,
+      "DEFAULT": 0.95,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "moteDensity",
+      "LABEL": "Mote Field",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.55,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "morphSpeed",
+      "LABEL": "Surface Morph",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.6,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "keyColor",
+      "LABEL": "Key Light",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.94,
+        0.82,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "fillColor",
+      "LABEL": "Fill Light",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.55,
+        0.7,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "exposure",
+      "LABEL": "Exposure",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 3,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "kintsugiGold",
+      "LABEL": "Kintsugi Gold",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2.5,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "pearlIridescence",
+      "LABEL": "Pearl Iridescence",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "camDist",
+      "LABEL": "Camera Distance",
+      "TYPE": "float",
+      "MIN": 1.5,
+      "MAX": 12,
+      "DEFAULT": 4.5,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "camHeight",
+      "LABEL": "Camera Height",
+      "TYPE": "float",
+      "MIN": -3,
+      "MAX": 4,
+      "DEFAULT": 1.2,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "camOrbitSpeed",
+      "LABEL": "Orbit Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.18,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "camAzimuth",
+      "LABEL": "Camera Azimuth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 6.2832,
+      "DEFAULT": 0,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
+
+// ---- universal color block (defaults = no-op) ----
+vec3 ucApply(vec3 uc) {
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                      // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    return uc;
+}
+
 
 #define MAX_STEPS 80
 #define MAX_DIST  20.0
@@ -224,6 +436,7 @@ void main() {
     }
 
     vec3 col = backdrop(uv, moodID);
+    col = mix(col, bgColor.rgb, bgColor.a);   // universal background (a=0 -> no-op)
 
     if (hit) {
         vec3 p = ro + rd * dist;
@@ -285,5 +498,6 @@ void main() {
 
     col *= exposure;
     col = max(col, 0.0);
+    col = ucApply(col);
     gl_FragColor = vec4(col, 1.0);
 }

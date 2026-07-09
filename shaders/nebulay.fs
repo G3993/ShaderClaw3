@@ -1,27 +1,170 @@
 /*{
   "DESCRIPTION": "Nebulay — a self-evolving nebula. Spectral feedback blobs are advected by a rotational 'flockaroo' fluid sim, lit by a gradient-normal surface, then finished with chromatic aberration, film grain and a tweaked ACES tonemap. Fully generative (no input needed); drag the mouse to nudge the feedback flow.",
   "CREDIT": "Port/fusion: flockaroo CFD (CC-BY-NC-SA), shader-web-background feedback blobs (xemantic), spectral_zucconi6 by Alan Zucconi, transverse chromatic aberration after pali6/flexmonkey. Assembled for Easel/ShaderClaw3.",
-  "CATEGORIES": ["Generator", "Simulation", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Simulation",
+    "Audio Reactive"
+  ],
   "INPUTS": [
-    { "NAME": "inputTex",     "LABEL": "Texture",         "TYPE": "image" },
-    { "NAME": "audioReact",   "LABEL": "Audio React",     "TYPE": "float", "DEFAULT": 0.35,   "MIN": 0.0,   "MAX": 2.0 },
-    { "NAME": "speed",        "LABEL": "Speed",           "TYPE": "float", "DEFAULT": 1.0,    "MIN": 0.0,   "MAX": 2.0 },
-    { "NAME": "texInject",    "LABEL": "Image Feed",      "TYPE": "float", "DEFAULT": 0.05,   "MIN": 0.0,   "MAX": 0.5 },
-    { "NAME": "texScale",     "LABEL": "Image Zoom",      "TYPE": "float", "DEFAULT": 1.0,    "MIN": 0.25,  "MAX": 4.0 },
-    { "NAME": "fluidSpeed",   "LABEL": "Flow Speed",      "TYPE": "float", "DEFAULT": 2.0,    "MIN": 0.0,   "MAX": 6.0 },
-    { "NAME": "colorInject",  "LABEL": "Color Feed",      "TYPE": "float", "DEFAULT": 0.025,  "MIN": 0.0,   "MAX": 0.2 },
-    { "NAME": "feedbackFade", "LABEL": "Feedback Fade",   "TYPE": "float", "DEFAULT": 0.9985, "MIN": 0.985, "MAX": 1.0 },
-    { "NAME": "drawIntensity","LABEL": "Blob Intensity",  "TYPE": "float", "DEFAULT": 0.5,    "MIN": 0.0,   "MAX": 2.0 },
-    { "NAME": "lightHeight",  "LABEL": "Surface Relief",  "TYPE": "float", "DEFAULT": 250.0,  "MIN": 1.0,   "MAX": 500.0 },
-    { "NAME": "spec",         "LABEL": "Specular",        "TYPE": "float", "DEFAULT": 2.5,    "MIN": 0.0,   "MAX": 8.0 },
-    { "NAME": "aberration",   "LABEL": "Chromatic Ab.",   "TYPE": "float", "DEFAULT": 0.0075, "MIN": 0.0,   "MAX": 0.05 },
-    { "NAME": "grain",        "LABEL": "Film Grain",      "TYPE": "float", "DEFAULT": 0.15,   "MIN": 0.0,   "MAX": 0.6 },
-    { "NAME": "margins",      "LABEL": "Letterbox",       "TYPE": "float", "DEFAULT": 0.0,    "MIN": 0.0,   "MAX": 0.45 }
+    {
+      "NAME": "inputTex",
+      "LABEL": "Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "texInject",
+      "LABEL": "Image Feed",
+      "TYPE": "float",
+      "DEFAULT": 0.05,
+      "MIN": 0,
+      "MAX": 0.5
+    },
+    {
+      "NAME": "feedbackFade",
+      "LABEL": "Feedback Fade",
+      "TYPE": "float",
+      "DEFAULT": 0.9985,
+      "MIN": 0.985,
+      "MAX": 1
+    },
+    {
+      "NAME": "drawIntensity",
+      "LABEL": "Blob Intensity",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "lightHeight",
+      "LABEL": "Surface Relief",
+      "TYPE": "float",
+      "DEFAULT": 250,
+      "MIN": 1,
+      "MAX": 500
+    },
+    {
+      "NAME": "spec",
+      "LABEL": "Specular",
+      "TYPE": "float",
+      "DEFAULT": 2.5,
+      "MIN": 0,
+      "MAX": 8
+    },
+    {
+      "NAME": "aberration",
+      "LABEL": "Chromatic Ab.",
+      "TYPE": "float",
+      "DEFAULT": 0.0075,
+      "MIN": 0,
+      "MAX": 0.05
+    },
+    {
+      "NAME": "grain",
+      "LABEL": "Film Grain",
+      "TYPE": "float",
+      "DEFAULT": 0.15,
+      "MIN": 0,
+      "MAX": 0.6
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Speed",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "fluidSpeed",
+      "LABEL": "Flow Speed",
+      "TYPE": "float",
+      "DEFAULT": 2,
+      "MIN": 0,
+      "MAX": 6,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "colorInject",
+      "LABEL": "Color Feed",
+      "TYPE": "float",
+      "DEFAULT": 0.025,
+      "MIN": 0,
+      "MAX": 0.2,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "texScale",
+      "LABEL": "Image Zoom",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.25,
+      "MAX": 4,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "margins",
+      "LABEL": "Letterbox",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 0.45,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    }
   ],
   "PASSES": [
-    { "TARGET": "genBuf",   "PERSISTENT": true },
-    { "TARGET": "fluidBuf", "PERSISTENT": true },
-    { "TARGET": "litBuf" },
+    {
+      "TARGET": "genBuf",
+      "PERSISTENT": true
+    },
+    {
+      "TARGET": "fluidBuf",
+      "PERSISTENT": true
+    },
+    {
+      "TARGET": "litBuf"
+    },
     {}
   ]
 }*/
@@ -59,6 +202,7 @@
 // ── audio conditioning (soft knees + floors; shader stays alive in silence) ──
 float aKnee(float x, float lo, float hi) { return smoothstep(lo, hi, x); }
 float aBassP() { return pow(aKnee(audioBass, 0.05, 0.85), 1.6); } // structural weight
+float aMidP()  { return pow(aKnee(audioMid,  0.05, 0.85), 1.2); } // continuous body
 float aHighP() { return pow(aKnee(audioHigh, 0.10, 0.90), 1.2); } // sparse sparkle
 float aBeatP() { return audioBeatPulse * audioBeatPulse; }        // decaying accent
 
@@ -218,7 +362,10 @@ void main() {
         // Audio injects energy into the fluid's own momentum rather than raw
         // color (law 5): bass swells the swirl speed, a beat adds a short
         // decaying kick — the CFD's inertia then carries it for seconds.
-        float fluidAudioMod = 1.0 + audioReact * (0.30 * aBassP() + 0.55 * aBeatP());
+        // (mids keep the flow following beatless swells; the beat kick is kept
+        // small — a large step here shifts the whole advected image in one
+        // frame, which reads as a jump on a near-static nebula.)
+        float fluidAudioMod = 1.0 + audioReact * (0.30 * aBassP() + 0.18 * aMidP() + 0.25 * aBeatP());
         vec2 advUV = fract((pos + v * vec2(-1.0, 1.0) * fluidSpeed * fluidAudioMod) / Res);
         vec4 col  = texture2D(fluidBuf, advUV);
         vec4 col2 = texture2D(genBuf,   advUV);
@@ -247,12 +394,17 @@ void main() {
 
     // ═══ PASS 2 — litBuf: gradient-normal surface lighting ═══
     if (PASSINDEX == 2) {
-        vec3 n = vec3(getGrad(uv, 1.0 / RENDERSIZE.y), lightHeight * abs(sin(TIME / 13.0)));
+        // Continuous band-follow on the lighting (visible on beatless
+        // material): mids flatten the relief slightly, highs lift the
+        // specular. Smooth envelopes only — no gates.
+        float relief = lightHeight * abs(sin(TIME / 13.0))
+                     * (1.0 - 0.30 * min(audioReact, 1.5) * aMidP());
+        vec3 n = vec3(getGrad(uv, 1.0 / RENDERSIZE.y), relief);
         n = normalize(n);
         vec3 light = normalize(vec3(1.0, 1.0, 2.0));
         float diff = clamp(dot(n, light), 0.05, 1.0);
         float sp = clamp(dot(reflect(light, n), vec3(0.0, 0.0, -1.0)), 0.0, 1.0);
-        sp = pow(sp, 36.0) * spec;
+        sp = pow(sp, 36.0) * spec * (1.0 + 0.5 * min(audioReact, 1.5) * aHighP());
         gl_FragColor = texture2D(fluidBuf, uv) * vec4(diff) + vec4(sp);
         return;
     }
@@ -292,12 +444,62 @@ void main() {
     // and lets its spectral structure show — a soft knee, silent-safe (no
     // change at audioReact=0 or audioBass=0), that reads as a tasteful
     // contraction rather than a raw brightness cut.
-    float bassDrive = audioReact * (2.2 * aBassP() + 1.3 * aBeatP());
-    float bloomPull = 1.0 - clamp(bassDrive, 0.0, 0.9);
+    // Depth capped at 0.45 and eased through a smoothstep knee: the old
+    // 0.9-deep hard clamp yanked full-frame luminance down in a single frame
+    // on every kick — on a near-static nebula that read as strobing
+    // (choppiness ratio ~70). Mids join bass so beatless swells (ambient)
+    // move the pull continuously too.
+    float bassDrive = audioReact * (1.4 * aBassP() + 0.7 * aMidP() + 0.5 * aBeatP());
+    float bloomPull = 1.0 - 0.45 * smoothstep(0.05, 1.1, bassDrive);
     col *= bloomPull;
 
     float grainMod = grain * (1.0 + audioReact * 0.35 * aHighP());
     float noise = 0.9 + randomFloat() * grainMod;
     vec3 preTone = ((color * 0.5) + max(col, color / 3.0)) * noise;
-    gl_FragColor = vec4(ACESFilm(preTone), 1.0);
+
+    // R3: the accumulator rides so far past the ACES knee (this ACES hits 1.0
+    // at x≈1.16 and the buffer sits near 2+) that ANY post-tonemap gain or dip
+    // stays clipped flat white — the round-2 duck was invisible. Respond
+    // PRE-tonemap instead, deep enough to pull peaks under the clip point,
+    // and stir a music-driven dark dye blob through the frame so the
+    // near-frozen nebula has actual moving structure to correlate (its orbit
+    // advances with audioBassTime — frozen in silence). Silence = exactly 1.0.
+    float depR3  = 0.55 + 0.45 * min(audioReact, 1.0);
+    float duckR3 = depR3 * (0.50 * audioBass + 0.28 * audioMid);
+    preTone *= 1.0 - duckR3;
+
+    float aT3  = audioBassTime * 2.4;
+    vec2  sw3  = (uv - 0.5) + 0.28 * vec2(cos(aT3), sin(aT3 * 1.37));
+    float dye3 = exp(-dot(sw3, sw3) * 28.0)
+               * (0.55 * audioBass + 0.30 * audioMid + 0.50 * audioBeatPulse);
+
+    vec3 outCol = ACESFilm(preTone);
+
+    // Guaranteed-visible response: this ACES output exceeds 1.0 over most of
+    // the frame, so a plain multiply stays clipped. Fold to the display
+    // ceiling FIRST (stored value is identical — the buffer clamps anyway,
+    // so silence renders the exact same image), then darken-dip from the
+    // ceiling: whole-frame breathing linear in bass+mid, plus the moving dye
+    // carve. Dips can't clip, so they always read.
+    outCol = min(outCol, vec3(1.0));
+    outCol *= (1.0 - depR3 * (0.28 * audioBass + 0.16 * audioMid))
+            * (1.0 - min(dye3, 0.8));
+
+    float haloR3 = smoothstep(1.2, 0.15, length(uv - 0.5));
+    outCol *= 1.0 + 0.30 * depR3 * audioBeatPulse * haloR3;
+
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(outCol, vec3(0.299, 0.587, 0.114));
+    vec3 uc = mix(vec3(ucL), outCol, colorBoost);
+    if (hueShift > 0.0005) {
+        float hueA = hueShift * 6.2831853;
+        float hueC = cos(hueA), hueS = sin(hueA);
+        mat3 hueM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                  + hueC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                  + hueS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hueM * uc, 0.0, 1.0);
+    }
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+
+    gl_FragColor = vec4(uc, 1.0);
 }

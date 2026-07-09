@@ -11,30 +11,24 @@ let mediaIdCounter = 0;
 let _maskMediaId = null;
 let _maskMode = 0; // 0=off, 1=multiply, 2=invert
 
-// Audio-reactive system
+// Audio-reactive system.
+// media.js OWNS the analyser + activeAudioEntry state; ALL analysis and
+// smoothing lives in the shared EaselAudio core (js/easel-audio.js), which
+// is the single window._audioBus writer. AGC replaces the old noise-floor
+// gate + _AUDIO_GAIN; every envelope is dt-derived (no per-frame alphas).
 let audioCtx = null;
 let audioAnalyser = null;
 let audioDataArray = null;
 let audioFFTGLTexture = null;
 let audioFFTThreeTexture = null;
 let audioLevel = 0, audioBass = 0, audioMid = 0, audioHigh = 0;
-// Adaptive noise floor — slowly rises toward ambient, drops instantly on loud input
-let _audioNoiseFloor = 0;
-const _NOISE_FLOOR_RISE = 0.002;  // how fast floor creeps up to ambient
-const _NOISE_FLOOR_DROP = 0.1;    // how fast floor drops on loud sounds
-const _AUDIO_GAIN = 2.5;          // post-floor gain multiplier
 
-// --- Advanced audio signals (Synesthesia-style) ---
-// Hit detection: spectral flux per band, spikes on transients
+// --- Binding-source signals (state.js AUDIO_SIGNALS + app.js live panels) ---
+// Mirrored from the EaselAudio bus every analysis frame.
 var audioBassHit = 0, audioMidHit = 0, audioHighHit = 0;
-// Previous frame band values for flux computation
-var _prevBass = 0, _prevMid = 0, _prevHigh = 0;
-// Audio-driven time accumulators: advance faster when band is louder
 var audioBassTime = 0, audioMidTime = 0, audioHighTime = 0;
-// Asymmetric envelope followers (fast attack, slow decay)
+// Asymmetric envelope followers (fast attack ~10ms, release ~200ms, dt-derived)
 var _envBass = 0, _envMid = 0, _envHigh = 0, _envLevel = 0;
-const _ATTACK = 0.6;   // fast rise (0 = instant, 1 = no change)
-const _DECAY = 0.92;   // slow fall
 let activeAudioEntry = null;
 let _micAudioStream = null;
 let _micAudioSourceNode = null;
@@ -280,9 +274,27 @@ let _cachedAudioBarFill = null;
 let _cachedAudioBarId = null;
 let _audioFrameCount = 0;
 
+// Analysis throttle: render loops call updateAudioUniforms several times per
+// composited frame (main render + per layer). The bus is dt-derived so
+// multiple steps stay correct, but re-analyzing the same analyser snapshot is
+// wasted work — re-ingest at most every ~4ms.
+let _lastAudioIngestMs = 0;
+
 function updateAudioUniforms(gl) {
+  const engine = (typeof window !== 'undefined') ? window.EaselAudio : null;
+  const nowMs = performance.now();
+
   if (!audioAnalyser || !activeAudioEntry) {
     audioLevel = audioBass = audioMid = audioHigh = 0;
+    audioBassHit = audioMidHit = audioHighHit = 0;
+    _envBass = _envMid = _envHigh = _envLevel = 0;
+    // Bus must exist and keep being written even with no source (all zeros,
+    // Time clocks frozen) so consumers never see a null/stale bus.
+    if (engine && nowMs - _lastAudioIngestMs >= 4) {
+      _lastAudioIngestMs = nowMs;
+      engine.ingestSilence();
+      engine.publishBus();
+    }
     // Only update DOM every 8th frame when idle
     if ((_audioFrameCount++ & 7) === 0) {
       if (!_cachedAudioSignalFill) _cachedAudioSignalFill = document.getElementById('audio-signal-fill');
@@ -293,88 +305,87 @@ function updateAudioUniforms(gl) {
     return;
   }
   _audioFrameCount++;
-  audioAnalyser.getByteFrequencyData(audioDataArray);
-  const len = audioDataArray.length; // 128 bins
 
-  // Compute RMS level (raw)
-  let sum = 0;
-  for (let i = 0; i < len; i++) sum += audioDataArray[i] * audioDataArray[i];
-  const rawLevel = Math.sqrt(sum / len) / 255.0;
+  if (nowMs - _lastAudioIngestMs >= 4) {
+    const dtSec = Math.min(0.1, Math.max(0.001, (_lastAudioIngestMs > 0 ? nowMs - _lastAudioIngestMs : 16.7) / 1000));
+    _lastAudioIngestMs = nowMs;
+    audioAnalyser.getByteFrequencyData(audioDataArray);
+    const len = audioDataArray.length; // frequencyBinCount (1024 @ fftSize 2048)
 
-  // Bass (bins 0-15), Mid (16-80), High (81-127)
-  let bassSum = 0, midSum = 0, highSum = 0;
-  for (let i = 0; i < 16; i++) bassSum += audioDataArray[i];
-  for (let i = 16; i < 81; i++) midSum += audioDataArray[i];
-  for (let i = 81; i < len; i++) highSum += audioDataArray[i];
-  const rawBass = bassSum / (16 * 255);
-  const rawMid = midSum / (65 * 255);
-  const rawHigh = highSum / (47 * 255);
+    // Raw RMS level (linear) — the engine converts to dB for the level AGC
+    let sum = 0;
+    for (let i = 0; i < len; i++) sum += audioDataArray[i] * audioDataArray[i];
+    const rawLevel = Math.sqrt(sum / len) / 255.0;
 
-  // Adaptive noise floor: slowly rises to match ambient, drops fast on loud input
-  if (rawLevel < _audioNoiseFloor) {
-    _audioNoiseFloor += (rawLevel - _audioNoiseFloor) * _NOISE_FLOOR_DROP;
-  } else if (rawLevel < _audioNoiseFloor + 0.05) {
-    _audioNoiseFloor += (rawLevel - _audioNoiseFloor) * _NOISE_FLOOR_RISE;
-  }
-  // Subtract floor and apply gain so normal speech/sound fills 0–1 range
-  const floor = _audioNoiseFloor;
-  const adjLevel = Math.min(1, Math.max(0, (rawLevel - floor) / (1 - floor)) * _AUDIO_GAIN);
-  const adjBass  = Math.min(1, Math.max(0, (rawBass  - floor) / (1 - floor)) * _AUDIO_GAIN);
-  const adjMid   = Math.min(1, Math.max(0, (rawMid   - floor) / (1 - floor)) * _AUDIO_GAIN);
-  const adjHigh  = Math.min(1, Math.max(0, (rawHigh  - floor) / (1 - floor)) * _AUDIO_GAIN);
+    if (engine) {
+      engine.ingestSpectrum(audioDataArray, {
+        sampleRate: audioCtx ? audioCtx.sampleRate : 44100,
+        level: rawLevel,
+        byteMinDb: audioAnalyser.minDecibels,
+        byteMaxDb: audioAnalyser.maxDecibels,
+      });
+      const bus = engine.publishBus();
+      const fl = bus.floats;
+      // Legacy quartet: same names, same 0-1 ranges, AGC'd + visual-binding
+      // conditioned (10/500ms == the house 0.85 feel) under the hood.
+      audioLevel = fl.audioLevel;
+      audioBass = fl.audioBass;
+      audioMid = fl.audioMid;
+      audioHigh = fl.audioHigh;
+      // Binding-source mirrors (state.js AUDIO_SIGNALS)
+      audioBassHit = fl.audioBassHit;
+      audioMidHit = fl.audioMidHit;
+      audioHighHit = fl.audioHighHit;
+      audioBassTime = fl.audioBassTime;
+      audioMidTime = fl.audioMidTime;
+      audioHighTime = fl.audioHighTime;
+      // Envelope followers (fast attack, ~200ms release) over the raw AGC'd
+      // bands — punchier than the conditioned quartet, dt-derived.
+      const raw = engine.raw, slewAR = engine.dsp.slewAR;
+      _envBass = slewAR(_envBass, raw.bass, dtSec, 0.01, 0.2);
+      _envMid = slewAR(_envMid, raw.mid, dtSec, 0.01, 0.2);
+      _envHigh = slewAR(_envHigh, raw.high, dtSec, 0.01, 0.2);
+      _envLevel = slewAR(_envLevel, raw.level, dtSec, 0.01, 0.2);
+    } else {
+      // Core script missing (should not happen in index.html) — minimal
+      // unsmoothed fallback so the app still shows signal.
+      const nyquist = (audioCtx ? audioCtx.sampleRate : 44100) / 2;
+      const binAvg = (fLo, fHi) => {
+        let a = Math.max(0, Math.floor((fLo / nyquist) * len));
+        let b = Math.min(len, Math.ceil((fHi / nyquist) * len));
+        if (b <= a) b = a + 1;
+        let s = 0;
+        for (let i = a; i < b; i++) s += audioDataArray[i];
+        return s / ((b - a) * 255);
+      };
+      audioLevel = rawLevel;
+      audioBass = binAvg(20, 250);
+      audioMid = binAvg(250, 2000);
+      audioHigh = binAvg(2000, 16000);
+    }
 
-  // Smooth audio values (EMA) — ease in/out for less abrupt transitions
-  const ease = 0.25;
-  audioLevel += (adjLevel - audioLevel) * ease;
-  audioBass  += (adjBass  - audioBass)  * ease;
-  audioMid   += (adjMid   - audioMid)   * ease;
-  audioHigh  += (adjHigh  - audioHigh)  * ease;
-
-  // Asymmetric envelope: fast attack, slow decay (punchier than EMA)
-  _envBass  = adjBass  > _envBass  ? adjBass  * (1 - _ATTACK) + _envBass  * _ATTACK : _envBass  * _DECAY;
-  _envMid   = adjMid   > _envMid   ? adjMid   * (1 - _ATTACK) + _envMid   * _ATTACK : _envMid   * _DECAY;
-  _envHigh  = adjHigh  > _envHigh  ? adjHigh  * (1 - _ATTACK) + _envHigh  * _ATTACK : _envHigh  * _DECAY;
-  _envLevel = adjLevel > _envLevel ? adjLevel * (1 - _ATTACK) + _envLevel * _ATTACK : _envLevel * _DECAY;
-
-  // Hit detection: positive flux (current - previous), decays fast
-  const bassFlux = Math.max(0, adjBass - _prevBass);
-  const midFlux  = Math.max(0, adjMid  - _prevMid);
-  const highFlux = Math.max(0, adjHigh - _prevHigh);
-  audioBassHit = Math.max(bassFlux * 4.0, audioBassHit * 0.85);
-  audioMidHit  = Math.max(midFlux  * 4.0, audioMidHit  * 0.85);
-  audioHighHit = Math.max(highFlux * 4.0, audioHighHit * 0.85);
-  audioBassHit = Math.min(audioBassHit, 1.0);
-  audioMidHit  = Math.min(audioMidHit,  1.0);
-  audioHighHit = Math.min(audioHighHit, 1.0);
-  _prevBass = adjBass; _prevMid = adjMid; _prevHigh = adjHigh;
-
-  // Audio-driven time accumulators: advance proportional to band energy
-  const dt = 1.0 / 60.0; // approximate frame time
-  audioBassTime += dt * (0.2 + audioBass * 3.0);
-  audioMidTime  += dt * (0.2 + audioMid  * 3.0);
-  audioHighTime += dt * (0.2 + audioHigh * 3.0);
-
-  // Upload FFT data to GL texture (256x1 LUMINANCE)
-  // Use a dedicated texture unit to avoid overwriting the currently active unit
-  if (!audioFFTGLTexture) {
-    audioFFTGLTexture = gl.createTexture();
+    // Upload FFT data to GL texture (len x 1 LUMINANCE — layout unchanged)
+    // Use a dedicated texture unit to avoid overwriting the currently active unit
+    if (!audioFFTGLTexture) {
+      audioFFTGLTexture = gl.createTexture();
+      gl.activeTexture(gl.TEXTURE15);
+      gl.bindTexture(gl.TEXTURE_2D, audioFFTGLTexture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    }
     gl.activeTexture(gl.TEXTURE15);
     gl.bindTexture(gl.TEXTURE_2D, audioFFTGLTexture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  }
-  gl.activeTexture(gl.TEXTURE15);
-  gl.bindTexture(gl.TEXTURE_2D, audioFFTGLTexture);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, len, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, audioDataArray);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, len, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, audioDataArray);
 
-  // Update THREE DataTexture
-  if (!audioFFTThreeTexture) {
-    audioFFTThreeTexture = new THREE.DataTexture(audioDataArray, len, 1, THREE.LuminanceFormat);
-    audioFFTThreeTexture.needsUpdate = true;
-  } else {
-    audioFFTThreeTexture.needsUpdate = true;
+    // Update THREE DataTexture
+    if (!audioFFTThreeTexture) {
+      audioFFTThreeTexture = new THREE.DataTexture(audioDataArray, len, 1, THREE.LuminanceFormat);
+      audioFFTThreeTexture.needsUpdate = true;
+    } else {
+      audioFFTThreeTexture.needsUpdate = true;
+    }
   }
 
   // Update audio UI bars only every 4th frame (DOM writes are expensive)

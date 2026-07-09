@@ -1,15 +1,103 @@
 /*{
-  "CATEGORIES": ["Generator", "Text"],
+  "CATEGORIES": [
+    "Generator",
+    "Text"
+  ],
   "DESCRIPTION": "Text waving like a flag — sine wave displacement per letter",
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "ETHEREA", "MAX_LENGTH": 12 },
-    { "NAME": "speed", "TYPE": "float", "MIN": 0.2, "MAX": 5.0, "DEFAULT": 1.5 },
-    { "NAME": "amplitude", "TYPE": "float", "MIN": 0.0, "MAX": 0.15, "DEFAULT": 0.06 },
-    { "NAME": "frequency", "TYPE": "float", "MIN": 0.5, "MAX": 5.0, "DEFAULT": 2.0 },
-    { "NAME": "textColor", "TYPE": "color", "DEFAULT": [1.0, 0.9, 0.3, 1.0] },
-    { "NAME": "bgColor", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "textScale", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "transparentBg", "TYPE": "bool", "DEFAULT": true }
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": "ETHEREA",
+      "MAX_LENGTH": 12,
+      "LABEL": "Message",
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "textScale",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Text Size",
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "speed",
+      "TYPE": "float",
+      "MIN": 0.2,
+      "MAX": 5,
+      "DEFAULT": 1.5,
+      "LABEL": "Speed",
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "amplitude",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.15,
+      "DEFAULT": 0.06,
+      "LABEL": "Amplitude",
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "frequency",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 5,
+      "DEFAULT": 2,
+      "LABEL": "Frequency",
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "textColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.9,
+        0.3,
+        1
+      ],
+      "LABEL": "Text Color",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Background",
+      "LABEL": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background",
+      "LABEL": "Transparent BG"
+    }
   ]
 }*/
 
@@ -71,6 +159,15 @@ void main() {
 
     int numChars = charCount();
 
+    // ---- Soft-knee audio conditioning (playbook standard snippet) ----
+    float bassP = pow(clamp(smoothstep(0.05, 0.85, audioBass), 0.0, 1.0), 1.6);
+    float midP  = pow(clamp(smoothstep(0.08, 0.85, audioMid),  0.0, 1.0), 1.3);
+    float highP = pow(clamp(smoothstep(0.10, 0.90, audioHigh), 0.0, 1.0), 1.2);
+    float drive = 0.25 + 0.75 * clamp(smoothstep(0.05, 0.9, audioEnergy), 0.0, 1.0);
+    float kick  = audioBeatPulse * audioBeatPulse;
+    float musicTime = TIME * (0.85 + 0.30 * drive); // energy paces the wave
+    float amp = amplitude * (1.0 + 0.28 * bassP);   // bass swells the wave
+
     // Character cell dimensions
     float charW = 0.09 * textScale;
     float charH = charW * 1.5;
@@ -96,13 +193,13 @@ void main() {
         int ch = getChar(i);
 
         // Per-letter wave phase
-        float phase = float(i) * frequency + TIME * speed;
+        float phase = float(i) * frequency + musicTime * speed;
 
         // Vertical displacement
-        float yOff = sin(phase) * amplitude;
+        float yOff = sin(phase) * amp;
 
-        // Tilt from wave derivative (subtle rotation via skew)
-        float tilt = cos(phase) * amplitude * 3.0;
+        // Tilt from wave derivative (subtle rotation via skew; mids add ripple)
+        float tilt = cos(phase) * amp * 3.0 * (1.0 + 0.30 * midP);
 
         // Cell origin (bottom-left corner before displacement)
         float cellX = startX + float(i) * cellStep;
@@ -156,10 +253,24 @@ void main() {
         );
     }
 
-    // Main text layer on top
+    // Main text layer on top (highs + beat pulse sparkle the glyphs)
     if (mainHit > 0.5) {
-        result = vec4(textColor.rgb, textColor.a);
+        result = vec4(textColor.rgb * (1.0 + 0.35 * highP + 0.30 * kick), textColor.a);
     }
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = result.rgb;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    result.rgb = uc;
 
     gl_FragColor = result;
 }

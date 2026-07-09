@@ -1,22 +1,198 @@
 /*{
-    "DESCRIPTION": "Morphing 3D shape — box, prism, torus, knots with refraction and wave background",
-    "CREDIT": "ISF Import by Old Salt, glslsandbox #73426, adapted for ShaderClaw",
-    "CATEGORIES": ["Generator"],
-    "INPUTS": [
-        { "NAME": "uC1", "LABEL": "Color 1", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-        { "NAME": "uC2", "LABEL": "Color 2", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-        { "NAME": "uC3", "LABEL": "Color 3", "TYPE": "color", "DEFAULT": [1.0, 0.0, 0.0, 1.0] },
-        { "NAME": "uZoom", "LABEL": "Zoom", "TYPE": "float", "MAX": 1.0, "MIN": -1.0, "DEFAULT": 0.0 },
-        { "NAME": "uXYrotate", "LABEL": "XY Rotation", "TYPE": "float", "MAX": 180.0, "MIN": -180.0, "DEFAULT": 60.0 },
-        { "NAME": "uYZrotate", "LABEL": "YZ Rotation", "TYPE": "float", "MAX": 180.0, "MIN": -180.0, "DEFAULT": 68.0 },
-        { "NAME": "uXZrotate", "LABEL": "XZ Rotation", "TYPE": "float", "MAX": 180.0, "MIN": -180.0, "DEFAULT": 52.0 },
-        { "NAME": "uTorThick", "LABEL": "Toroid Thickness", "TYPE": "float", "MAX": 1.0, "MIN": 0.0, "DEFAULT": 0.25 },
-        { "NAME": "uDisplay", "LABEL": "Display", "TYPE": "long", "VALUES": [0, 1, 2], "LABELS": ["Object + BG", "Object Only", "Background Only"], "DEFAULT": 0 },
-        { "NAME": "uColMode", "LABEL": "Color Mode", "TYPE": "long", "VALUES": [0, 1], "LABELS": ["Default", "Custom Palette"], "DEFAULT": 0 },
-        { "NAME": "uIntensity", "LABEL": "Intensity", "TYPE": "float", "MAX": 4.0, "MIN": 0.0, "DEFAULT": 1.0 },
-        { "NAME": "uShape",     "LABEL": "Shape",     "TYPE": "long",  "VALUES": [0, 1, 2, 3, 4, 5, 6, 7], "LABELS": ["Auto Morph", "Cube", "Prism", "Torus", "Torus Knot", "Sphere", "Octahedron", "Heart"], "DEFAULT": 0 },
-        { "NAME": "uMorphSpeed","LABEL": "Morph Speed","TYPE": "float", "MAX": 4.0, "MIN": 0.0, "DEFAULT": 1.0 }
-    ]
+  "DESCRIPTION": "Morphing 3D shape — box, prism, torus, knots with refraction and wave background",
+  "CREDIT": "ISF Import by Old Salt, glslsandbox #73426, adapted for ShaderClaw",
+  "CATEGORIES": [
+    "Generator"
+  ],
+  "INPUTS": [
+    {
+      "NAME": "uIntensity",
+      "LABEL": "Intensity",
+      "TYPE": "float",
+      "MAX": 4,
+      "MIN": 0,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "uTorThick",
+      "LABEL": "Toroid Thickness",
+      "TYPE": "float",
+      "MAX": 1,
+      "MIN": 0,
+      "DEFAULT": 0.25,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "uShape",
+      "LABEL": "Shape",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "LABELS": [
+        "Auto Morph",
+        "Cube",
+        "Prism",
+        "Torus",
+        "Torus Knot",
+        "Sphere",
+        "Octahedron",
+        "Heart"
+      ],
+      "DEFAULT": 0,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "uXYrotate",
+      "LABEL": "XY Rotation",
+      "TYPE": "float",
+      "MAX": 180,
+      "MIN": -180,
+      "DEFAULT": 60,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "uYZrotate",
+      "LABEL": "YZ Rotation",
+      "TYPE": "float",
+      "MAX": 180,
+      "MIN": -180,
+      "DEFAULT": 68,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "uXZrotate",
+      "LABEL": "XZ Rotation",
+      "TYPE": "float",
+      "MAX": 180,
+      "MIN": -180,
+      "DEFAULT": 52,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "uMorphSpeed",
+      "LABEL": "Morph Speed",
+      "TYPE": "float",
+      "MAX": 4,
+      "MIN": 0,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "uC1",
+      "LABEL": "Color 1",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "uC2",
+      "LABEL": "Color 2",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "uC3",
+      "LABEL": "Color 3",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "uColMode",
+      "LABEL": "Color Mode",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1
+      ],
+      "LABELS": [
+        "Default",
+        "Custom Palette"
+      ],
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "uZoom",
+      "LABEL": "Zoom",
+      "TYPE": "float",
+      "MAX": 1,
+      "MIN": -1,
+      "DEFAULT": 0,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "uDisplay",
+      "LABEL": "Display",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2
+      ],
+      "LABELS": [
+        "Object + BG",
+        "Object Only",
+        "Background Only"
+      ],
+      "DEFAULT": 0,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    }
+  ]
 }*/
 
 #define PI 3.141592653589
@@ -120,7 +296,9 @@ vec3 background(vec3 rd) {
     bg += sin(a * 10.0 + TIME + 10.0) * sin(a * 2.0 + TIME + 10.0) * sin(a * 6.0 + 10.0) * fade * colM;
     bg += sin(a * 5.0 + TIME + 20.0) * sin(a * 3.0 + TIME + 30.0) * sin(a * 8.0 + 20.0) * fade * colK;
     bg += sin(a * 3.0 + TIME + 30.0) * sin(a * 5.0 + TIME + 20.0) * sin(a * 10.0 + 30.0) * fade * colH;
-    return bg;
+    // User background: blend the wave backdrop toward the chosen color
+    // (also seen through the refractive object, like a real environment).
+    return mix(bg, bgColor.rgb, bgColor.a);
 }
 
 void main() {
@@ -208,6 +386,20 @@ void main() {
         float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.20, 0.10, _ph);
         cOut = mix(cOut, 1.0 - cOut, _f);
     }
+
+    // ---- universal color block (defaults = no-op; max() keeps linear HDR) ----
+    vec3 uc = cOut;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = max(hM * uc, 0.0);
+    }
+    cOut = uc;
 
     // No tonemap: pass linear HDR straight through. Phase Q v4 bloom downstream
     // expects peaks in the 1.4–2.5 range, which the fresnel/spec/glow above

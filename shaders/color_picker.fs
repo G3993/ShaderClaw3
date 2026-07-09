@@ -1,14 +1,95 @@
 /*{
   "DESCRIPTION": "Soap Bubble Iridescence — 3D raymarched glass sphere with thin-film rainbow interference. Hue sweeps around the surface with viewing angle; HDR specular peaks on twin glints. Calm orbital camera. LINEAR HDR out, no tonemap.",
   "CREDIT": "ShaderClaw auto-improve 2026-05-12",
-  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "3D",
+    "Audio Reactive"
+  ],
   "INPUTS": [
-    { "NAME": "bubbleSize",  "LABEL": "Bubble Size",  "TYPE": "float", "MIN": 0.3, "MAX": 1.5,  "DEFAULT": 0.85 },
-    { "NAME": "filmSpeed",   "LABEL": "Film Speed",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 0.35 },
-    { "NAME": "filmTurns",   "LABEL": "Hue Turns",    "TYPE": "float", "MIN": 1.0, "MAX": 6.0,  "DEFAULT": 2.5 },
-    { "NAME": "orbitSpeed",  "LABEL": "Orbit Speed",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.07 },
-    { "NAME": "specPeak",    "LABEL": "Specular HDR", "TYPE": "float", "MIN": 1.0, "MAX": 6.0,  "DEFAULT": 3.5 },
-    { "NAME": "audioReact",  "LABEL": "Audio React",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 1.0 }
+    {
+      "NAME": "specPeak",
+      "LABEL": "Specular HDR",
+      "TYPE": "float",
+      "MIN": 1,
+      "MAX": 6,
+      "DEFAULT": 3.5
+    },
+    {
+      "NAME": "bubbleSize",
+      "LABEL": "Bubble Size",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 1.5,
+      "DEFAULT": 0.85,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "filmSpeed",
+      "LABEL": "Film Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.35,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "filmTurns",
+      "LABEL": "Hue Turns",
+      "TYPE": "float",
+      "MIN": 1,
+      "MAX": 6,
+      "DEFAULT": 2.5,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "orbitSpeed",
+      "LABEL": "Orbit Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.07,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -107,6 +188,23 @@ void main() {
     float bgR = length(uv);
     col += vec3(0.025, 0.008, 0.05) * exp(-bgR * bgR * 0.8);
     col += vec3(0.01, 0.02, 0.04)  * (1.0 - bgR * 0.5);
+
+    // User background: blend the void region (bubble miss) toward the chosen color.
+    if (!hit) col = mix(col, bgColor.rgb, bgColor.a);
+
+    // ---- universal color block (defaults = no-op; max() keeps linear HDR) ----
+    vec3 uc = col;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = max(hM * uc, 0.0);
+    }
+    col = uc;
 
     // LINEAR HDR — no tonemap, no clamp
     gl_FragColor = vec4(col, 1.0);

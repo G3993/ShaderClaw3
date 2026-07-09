@@ -1,14 +1,96 @@
 /*{
   "DESCRIPTION": "Volcanic Caldera — 3D raymarched molten lava landscape. Domain-warped FBM terrain with glowing obsidian rock and HDR lava channels flowing through deep rifts. Camera orbits the caldera rim at dusk. LINEAR HDR out, no tonemap.",
   "CREDIT": "ShaderClaw auto-improve 2026-05-12",
-  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "3D",
+    "Audio Reactive"
+  ],
   "INPUTS": [
-    { "NAME": "terrainRough",  "LABEL": "Terrain Rough", "TYPE": "float", "MIN": 1.0, "MAX": 6.0,  "DEFAULT": 3.5 },
-    { "NAME": "lavaGlow",      "LABEL": "Lava Glow HDR", "TYPE": "float", "MIN": 1.0, "MAX": 6.0,  "DEFAULT": 3.0 },
-    { "NAME": "orbitSpeed",    "LABEL": "Orbit Speed",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.06 },
-    { "NAME": "flowSpeed",     "LABEL": "Flow Speed",    "TYPE": "float", "MIN": 0.0, "MAX": 1.5,  "DEFAULT": 0.28 },
-    { "NAME": "calderaDepth",  "LABEL": "Caldera Depth", "TYPE": "float", "MIN": 0.1, "MAX": 1.0,  "DEFAULT": 0.55 },
-    { "NAME": "audioReact",    "LABEL": "Audio React",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 1.0 }
+    {
+      "NAME": "terrainRough",
+      "LABEL": "Terrain Rough",
+      "TYPE": "float",
+      "MIN": 1,
+      "MAX": 6,
+      "DEFAULT": 3.5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "calderaDepth",
+      "LABEL": "Caldera Depth",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 1,
+      "DEFAULT": 0.55,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "orbitSpeed",
+      "LABEL": "Orbit Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.06,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "flowSpeed",
+      "LABEL": "Flow Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.28,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "lavaGlow",
+      "LABEL": "Lava Glow HDR",
+      "TYPE": "float",
+      "MIN": 1,
+      "MAX": 6,
+      "DEFAULT": 3,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -77,6 +159,11 @@ void main() {
 
     float bass = clamp(audioBass, 0.0, 1.0) * audioReact;
     float mid  = clamp(audioMid,  0.0, 1.0) * audioReact;
+    // Soft-knee conditioned bands (playbook): low floor so sparse/soft hits
+    // (hiphop/jazz) still register, headroom so EDM doesn't peg a clamp.
+    float bassK = pow(smoothstep(0.04, 0.92, clamp(audioBass, 0.0, 1.0)), 1.3) * audioReact;
+    float midK  = smoothstep(0.06, 0.90, clamp(audioMid, 0.0, 1.0)) * audioReact;
+    float beatK = audioBeatPulse * audioReact;
 
     // Calm caldera-rim orbit camera
     float ang = TIME * orbitSpeed;
@@ -105,8 +192,11 @@ void main() {
         vec3 n = terrainNormal(p);
         float h = terrainH(p.xz);
 
-        // Lava intensity: low spots glow brightest
-        float lavaT = 1.0 - smoothstep(0.05, 0.45, h + calderaDepth * 0.6);
+        // Lava intensity: low spots glow brightest. Bass WIDENS the lava
+        // channels (spatial breathing — can't saturate at the display clamp
+        // the way brightness on already-HDR lava does).
+        float lavaT = 1.0 - smoothstep(0.05, 0.45,
+                          h + calderaDepth * 0.6 - 0.13 * bassK - 0.05 * midK);
         lavaT = pow(lavaT, 1.4);
 
         // Pulsing with TIME and audio-bass
@@ -128,20 +218,38 @@ void main() {
         float edgeMask = clamp(fwidth(h) * 160.0, 0.0, 1.0);
         col *= 1.0 - edgeMask * 0.40;
 
-        // Atmospheric haze (crimson smoke near surface)
+        // Atmospheric haze (crimson smoke near surface) — mids warm the haze
+        // (continuous band-following on the dark rock regions, has headroom).
         float fog = exp(-t * 0.15);
-        col = mix(vec3(0.14, 0.04, 0.02), col, fog);
+        col = mix(vec3(0.14, 0.04, 0.02) * (1.0 + 1.1 * midK + 0.6 * beatK), col, fog);
     } else {
         // Ashen caldera sky: charcoal to deep crimson at horizon
         float skyT  = clamp(uv.y * 0.5 + 0.5, 0.0, 1.0);
         col = mix(vec3(0.24, 0.06, 0.02), vec3(0.06, 0.04, 0.07), skyT);
-        // Lava-lake uplight glow at horizon
-        col += vec3(0.40, 0.13, 0.02) * exp(-skyT * skyT * 5.0);
+        // Lava-lake uplight glow at horizon — breathes with bass so sky
+        // pixels respond too (the raymarch miss half of the frame).
+        col += vec3(0.40, 0.13, 0.02) * exp(-skyT * skyT * 5.0)
+             * (1.0 + 0.9 * bassK + 0.5 * midK);
+        // universal background override — sky/miss region (a=0 -> untouched)
+        col = mix(col, bgColor.rgb, bgColor.a);
     }
 
-    // Global emissive breath from lava lake (audio-modulated)
-    col += vec3(0.045, 0.012, 0.0) * (0.6 + 0.4*sin(TIME*0.45)) * (1.0 + mid*2.2);
+    // Global emissive breath from lava lake (audio-modulated, whole frame)
+    col += vec3(0.045, 0.012, 0.0) * (0.6 + 0.4*sin(TIME*0.45))
+         * (1.0 + mid*2.2 + bassK*2.0 + beatK*1.5);
+
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    vec3 uc = mix(vec3(ucL), col, colorBoost);
+    if (hueShift > 0.0005) {
+        float hueA = hueShift * 6.2831853;
+        float hueC = cos(hueA), hueS = sin(hueA);
+        mat3 hueM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                  + hueC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                  + hueS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hueM * uc, 0.0, 1.0);
+    }
 
     // LINEAR HDR — no tonemap, no clamp
-    gl_FragColor = vec4(col, 1.0);
+    gl_FragColor = vec4(uc, 1.0);
 }

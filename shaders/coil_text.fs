@@ -1,15 +1,121 @@
 /*{
-  "CATEGORIES": ["Generator", "Text"],
+  "CATEGORIES": [
+    "Generator",
+    "Text"
+  ],
   "DESCRIPTION": "Text arranged along a spiral/coil path with rotating colored ring bands",
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "ETHEREA", "MAX_LENGTH": 12 },
-    { "NAME": "preset", "TYPE": "long", "VALUES": [0,1,2,3,4,5,6,7], "LABELS": ["Wide","Tight","Star","Hourglass","Lemniscate","Spacer","Dense","Pulse"], "DEFAULT": 0 },
-    { "NAME": "speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.3 },
-    { "NAME": "rings", "TYPE": "float", "MIN": 3.0, "MAX": 15.0, "DEFAULT": 8.0 },
-    { "NAME": "textColor", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "textScale", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "transparentBg", "TYPE": "bool", "DEFAULT": true }
+    {
+      "NAME": "preset",
+      "LABEL": "Coil Pattern",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "LABELS": [
+        "Wide",
+        "Tight",
+        "Star",
+        "Hourglass",
+        "Lemniscate",
+        "Spacer",
+        "Dense",
+        "Pulse"
+      ],
+      "DEFAULT": 0,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "rings",
+      "LABEL": "Rings",
+      "TYPE": "float",
+      "MIN": 3,
+      "MAX": 15,
+      "DEFAULT": 8,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Speed",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 3,
+      "DEFAULT": 0.3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "textColor",
+      "LABEL": "Text Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "msg",
+      "LABEL": "Message",
+      "TYPE": "text",
+      "DEFAULT": "ETHEREA",
+      "MAX_LENGTH": 12,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "textScale",
+      "LABEL": "Text Scale",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent Background",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background"
+    }
   ]
 }*/
 
@@ -69,6 +175,13 @@ void main() {
 
     int numChars = charCount();
     int presetIdx = int(preset);
+
+    // ── Soft-knee audio conditioning (playbook standard snippet) ─────
+    float bassP = pow(clamp(smoothstep(0.05, 0.85, audioBass), 0.0, 1.0), 1.6);
+    float midP  = pow(clamp(smoothstep(0.08, 0.85, audioMid),  0.0, 1.0), 1.3);
+    float highP = pow(clamp(smoothstep(0.10, 0.90, audioHigh), 0.0, 1.0), 1.2);
+    float drive = 0.25 + 0.75 * clamp(smoothstep(0.05, 0.9, audioEnergy), 0.0, 1.0);
+    float kick  = audioBeatPulse * audioBeatPulse;
 
     // ── Preset parameters ────────────────────────────────────────────
     float innerRadius = 0.1;
@@ -133,6 +246,8 @@ void main() {
     // ── Pixel to centered, aspect-corrected coordinates ──────────────
     vec2 center = vec2(0.5 * aspect, 0.5);
     vec2 p = vec2(uv.x * aspect, uv.y) - center;
+    // Bass breathes the whole coil outward (smoothed zoom, layout unchanged)
+    p /= 1.0 + 0.15 * bassP;
 
     // ── Polar coordinates ────────────────────────────────────────────
     float radius = length(p);
@@ -274,9 +389,11 @@ void main() {
 
     // ── Map local position to character cell UV ──────────────────────
     // Character cell is adjustedCharW wide, charH tall
+    // Energy + mids thicken the glyphs in place (cell centers untouched)
+    float swell = 1.0 + 0.04 * (drive - 0.25) + 0.12 * midP;
     vec2 cellUV;
-    cellUV.x = (localPos.x / adjustedCharW) + 0.5;
-    cellUV.y = 1.0 - ((localPos.y / charH) + 0.5);
+    cellUV.x = (localPos.x / (adjustedCharW * swell)) + 0.5;
+    cellUV.y = 1.0 - ((localPos.y / (charH * swell)) + 0.5);
 
     // ── Sample the character ─────────────────────────────────────────
     float textHit = 0.0;
@@ -322,6 +439,23 @@ void main() {
         alpha = textHit;
         finalCol = mix(vec3(0.0), textColor.rgb, textHit);
     }
+
+    // Highs + beat pulse sparkle the glyph pixels only
+    finalCol *= 1.0 + (0.30 * highP + 0.30 * kick) * textHit;
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = finalCol;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    finalCol = uc;
 
     gl_FragColor = vec4(finalCol, alpha);
 }

@@ -1,23 +1,187 @@
 /*{
   "DESCRIPTION": "Danger — hazard warning-tape stripes animate diagonally behind/through the message, black-yellow high-contrast with a slow amber pulse and rare klaxon flash.",
   "CREDIT": "ShaderClaw — original hazard-tape text treatment",
-  "CATEGORIES": ["Generator", "Text", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Text",
+    "Audio Reactive"
+  ],
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "DANGER", "MAX_LENGTH": 48 },
-    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"] },
-    { "NAME": "textScale", "LABEL": "Text Size", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.4, "MAX": 2.2 },
-    { "NAME": "stripeCount", "LABEL": "Stripe Density", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.1, "MAX": 1.0 },
-    { "NAME": "stripeAngle", "LABEL": "Stripe Angle", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "scrollSpeed", "LABEL": "Scroll Speed", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "stripeColorA", "LABEL": "Stripe Color A", "TYPE": "color", "DEFAULT": [1.0, 0.78, 0.0, 1.0] },
-    { "NAME": "stripeColorB", "LABEL": "Stripe Color B", "TYPE": "color", "DEFAULT": [0.05, 0.04, 0.02, 1.0] },
-    { "NAME": "textColor", "LABEL": "Text Color", "TYPE": "color", "DEFAULT": [0.05, 0.04, 0.02, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Punch Out Dark Stripes", "TYPE": "bool", "DEFAULT": false },
-    { "NAME": "inputTex", "TYPE": "image", "LABEL": "Texture" },
-    { "NAME": "texMix", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Texture Mix" }
+    {
+      "NAME": "stripeCount",
+      "LABEL": "Stripe Density",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0.1,
+      "MAX": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "stripeAngle",
+      "LABEL": "Stripe Angle",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "scrollSpeed",
+      "LABEL": "Scroll Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "stripeColorA",
+      "LABEL": "Stripe Color A",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.78,
+        0,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "stripeColorB",
+      "LABEL": "Stripe Color B",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.05,
+        0.04,
+        0.02,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "textColor",
+      "LABEL": "Text Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.05,
+        0.04,
+        0.02,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": "DANGER",
+      "MAX_LENGTH": 48,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "fontFamily",
+      "LABEL": "Font",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Inter",
+        "Times New Roman",
+        "Libre Caslon",
+        "Outfit"
+      ],
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "textScale",
+      "LABEL": "Text Size",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.4,
+      "MAX": 2.2,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Punch Out Dark Stripes",
+      "TYPE": "bool",
+      "DEFAULT": false,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "inputTex",
+      "TYPE": "image",
+      "LABEL": "Texture"
+    },
+    {
+      "NAME": "texMix",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "LABEL": "Texture Mix"
+    }
   ]
 }*/
+
+// ---- universal color block (defaults = no-op) ----
+vec3 ucApply(vec3 uc) {
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                      // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    return uc;
+}
+
 
 // ═══════════════════════════════════════════════════════════════════════
 // DANGER — diagonal hazard-tape stripes scroll behind a stenciled warning
@@ -79,13 +243,20 @@ void main() {
     // ─── Standard conditioning: soft knees + idle floor, never a strobe ───
     float audio  = clamp(audioReact, 0.0, 1.5);
     float bassP  = pow(knee(audioBass, 0.05, 0.85), 1.6);   // structural weight -> stripe scroll
+    float midP   = pow(knee(audioMid, 0.05, 0.92), 1.3);    // rock's sustained mids / jazz walking mids
     float highP  = pow(knee(audioHigh, 0.10, 0.90), 1.2);   // sparkle -> tape glint
     float drive  = 0.25 + 0.75 * knee(audioEnergy, 0.05, 0.9); // idle floor, alive in silence
     float breatheAmt = 0.10 + 0.06 * drive; // idle breathing always present, audio widens it slightly
+    // Decaying hit trace: every backbeat/accent leaves a brief eased glow.
+    // NOT squared (round 2): squaring crushed jazz's soft 0.4-0.5 accents.
+    float hitT   = audioBeatPulse;
+    // Follower depth floor (round 2): scaling response by raw audioReact
+    // (default 0.6) diluted the follower into invisibility for rock/jazz.
+    float folD   = 0.6 + 0.4 * audio;
 
-    // Rare klaxon flash: only fires on a hard punch peak, brief & eased,
-    // never every beat (refractory feel via the tight knee window + pow).
-    float flashRaw = pow(knee(audioPunch, 0.55, 0.95), 2.5);
+    // Klaxon flash: floor lowered to 0.25 + gentler curve so jazz's soft
+    // swung accents can fire it too — still punch-gated, brief & eased.
+    float flashRaw = pow(knee(audioPunch, 0.25, 0.90), 1.3);
     float flash = flashRaw * audio * 0.5; // audio is ~a third of total motion, flash stays subtle
 
     // ─── Diagonal hazard-tape stripes ───
@@ -97,9 +268,15 @@ void main() {
     float along = dot(p, dir);
 
     float stripeFreq = mix(6.0, 26.0, stripeCount);
-    // Base scroll always runs (silence-safe); bass adds ~1/3 extra energy
-    // on top — never the sole driver of the motion.
-    float scroll = TIME * scrollSpeed * (1.0 + 0.35 * bassP * audio);
+    // Round 3: the constant full-speed hard-edge stripe scroll flipped ~18%
+    // of the canvas between colorA/colorB EVERY frame — a huge uncorrelated
+    // delta source that drowned every brightness follower (rock corr 0).
+    // Calm the baseline to ~1/3 speed and drive the rest with INTEGRATED
+    // smoothed bass (audioBassTime only advances while bass plays): the
+    // dominant motion now literally speeds up and slows down with the music,
+    // phase-continuous, no jumps. Silence-safe: stripes still march at the
+    // calm base rate.
+    float scroll = (TIME * 0.35 + audioBassTime * 1.05) * scrollSpeed;
     float phase = along * stripeFreq - scroll * stripeFreq;
     float stripeMask = step(0.5, fract(phase));
 
@@ -108,6 +285,10 @@ void main() {
     // Slow amber breathing pulse across the whole tape (idle-alive, silence-safe).
     float breathe = 1.0 - breatheAmt + breatheAmt * (0.5 + 0.5 * sin(TIME * 0.6 + along * 1.3));
     tapeCol *= breathe;
+    // Continuous LINEAR mid follower (rock = sustained mids, no knee) +
+    // linear bass + decaying beat traces on the whole tape brightness —
+    // silence multiplies by exactly 1.0, so the idle look is untouched.
+    tapeCol *= 1.0 + folD * (0.26 * audioMid + 0.12 * audioBass + 0.18 * hitT);
     // Highs add a fine glint that rides the stripe edges only.
     float edgeGlint = highP * audio * 0.18 * smoothstep(0.42, 0.5, fract(phase)) * smoothstep(0.58, 0.5, fract(phase));
     tapeCol += edgeGlint;
@@ -162,5 +343,10 @@ void main() {
     float alpha = 1.0;
     if (transparentBg) alpha = clamp(max(stripeMask, pixel), 0.0, 1.0);
 
+    col = ucApply(col);
+    if (bgColor.a > 0.0005) {                      // universal background fill (a=0 -> no-op)
+        col = mix(col, bgColor.rgb, bgColor.a * (1.0 - alpha));
+        alpha = max(alpha, bgColor.a);
+    }
     gl_FragColor = vec4(col, alpha);
 }

@@ -1,63 +1,399 @@
 /*{
   "DESCRIPTION": "SketchPad — animated sketch on paper: rough circles, drifting lines/rectangles, scribble hatching, with outline or filled-color modes and halftone screen-print overlap blending",
   "CREDIT": "ShaderClaw",
-  "CATEGORIES": ["Generator"],
+  "CATEGORIES": [
+    "Generator"
+  ],
   "INPUTS": [
-    { "NAME": "paperType", "LABEL": "Paper", "TYPE": "long", "DEFAULT": 2,
-      "VALUES": [0, 1, 2, 3],
-      "LABELS": ["Plain", "Dot Grid", "Graph Paper", "Lined Paper"] },
-    { "NAME": "paperColor", "LABEL": "Paper Color", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "inkColor", "LABEL": "Ink Color", "TYPE": "color", "DEFAULT": [0.95, 0.97, 1.0, 1.0] },
-    { "NAME": "gridSize", "LABEL": "Grid Size", "TYPE": "float", "DEFAULT": 40.0, "MIN": 8.0, "MAX": 120.0 },
-    { "NAME": "gridLineStrength", "LABEL": "Grid Strength", "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "gridSubdiv", "LABEL": "Major Every", "TYPE": "float", "DEFAULT": 5.0, "MIN": 1.0, "MAX": 12.0 },
-
-    { "NAME": "renderMode", "LABEL": "Render Mode", "TYPE": "long", "DEFAULT": 0,
-      "VALUES": [0, 1, 2],
-      "LABELS": ["Outline (B&W)", "Filled Color", "Mixed (Outline + Fill)"] },
-    { "NAME": "shapeType", "LABEL": "Line Shape", "TYPE": "long", "DEFAULT": 0,
-      "VALUES": [0, 1, 2],
-      "LABELS": ["Lines", "Rectangles", "Mixed"] },
-
-    { "NAME": "inkIntensity", "LABEL": "Ink Intensity", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.2, "MAX": 2.5 },
-    { "NAME": "sketchSpeed", "LABEL": "Sketch Speed", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 2.5 },
-    { "NAME": "strokeWidth", "LABEL": "Stroke Width", "TYPE": "float", "DEFAULT": 1.6, "MIN": 0.3, "MAX": 6.0 },
-    { "NAME": "roughness", "LABEL": "Roughness", "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "doubleStroke", "LABEL": "Double Stroke", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fadeAmount", "LABEL": "Stroke Fade", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "decayAmount", "LABEL": "Line Decay", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "decayPeriod", "LABEL": "Decay Period", "TYPE": "float", "DEFAULT": 6.0, "MIN": 1.0, "MAX": 20.0 },
-    { "NAME": "decayCoverage", "LABEL": "Decay Coverage", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.0 },
-
-    { "NAME": "circleCount", "LABEL": "Circles", "TYPE": "float", "DEFAULT": 4.0, "MIN": 0.0, "MAX": 10.0 },
-    { "NAME": "lineCount", "LABEL": "Lines/Rects", "TYPE": "float", "DEFAULT": 6.0, "MIN": 0.0, "MAX": 14.0 },
-    { "NAME": "sizePulse", "LABEL": "Size Pulse", "TYPE": "float", "DEFAULT": 0.4, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "sizeVariance", "LABEL": "Size Variance", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.5 },
-
-    { "NAME": "hueBase", "LABEL": "Hue Base", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "hueSpread", "LABEL": "Hue Spread", "TYPE": "float", "DEFAULT": 0.75, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "colorSpeed", "LABEL": "Color Shift Speed", "TYPE": "float", "DEFAULT": 0.2, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "fillSaturation", "LABEL": "Fill Saturation", "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.0, "MAX": 1.2 },
-    { "NAME": "fillBrightness", "LABEL": "Fill Brightness", "TYPE": "float", "DEFAULT": 0.95, "MIN": 0.1, "MAX": 1.6 },
-
-    { "NAME": "screenAmount", "LABEL": "Halftone Blend", "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "screenSize", "LABEL": "Halftone Size", "TYPE": "float", "DEFAULT": 7.0, "MIN": 2.0, "MAX": 30.0 },
-    { "NAME": "screenAngle", "LABEL": "Halftone Angle", "TYPE": "float", "DEFAULT": 0.52, "MIN": 0.0, "MAX": 3.14 },
-    { "NAME": "screenContrast", "LABEL": "Screen Contrast", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 2.0 },
-
-    { "NAME": "scribbleDensity", "LABEL": "Scribble", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "hatchAngle", "LABEL": "Hatch Angle", "TYPE": "float", "DEFAULT": 0.78, "MIN": 0.0, "MAX": 3.14 },
-    { "NAME": "tickMarks", "LABEL": "Tick Marks", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.5 },
-
-    { "NAME": "audioBassPress", "LABEL": "Bass Pressure", "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "audioMidDraw", "LABEL": "Mid Draw", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "audioHighScribble", "LABEL": "High Scribble", "TYPE": "float", "DEFAULT": 0.9, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "audioSizePulse", "LABEL": "Audio Size Pulse", "TYPE": "float", "DEFAULT": 0.8, "MIN": 0.0, "MAX": 3.0 },
-
-    { "NAME": "paperGrain", "LABEL": "Paper Grain", "TYPE": "float", "DEFAULT": 0.12, "MIN": 0.0, "MAX": 0.5 },
-    { "NAME": "vignette", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "texInfluence", "LABEL": "Texture Influence", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "inputTex", "LABEL": "Reference", "TYPE": "image" }
+    {
+      "NAME": "renderMode",
+      "LABEL": "Render Mode",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2
+      ],
+      "LABELS": [
+        "Outline (B&W)",
+        "Filled Color",
+        "Mixed (Outline + Fill)"
+      ]
+    },
+    {
+      "NAME": "fadeAmount",
+      "LABEL": "Stroke Fade",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "screenAmount",
+      "LABEL": "Halftone Blend",
+      "TYPE": "float",
+      "DEFAULT": 0.85,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "screenAngle",
+      "LABEL": "Halftone Angle",
+      "TYPE": "float",
+      "DEFAULT": 0.52,
+      "MIN": 0,
+      "MAX": 3.14
+    },
+    {
+      "NAME": "hatchAngle",
+      "LABEL": "Hatch Angle",
+      "TYPE": "float",
+      "DEFAULT": 0.78,
+      "MIN": 0,
+      "MAX": 3.14
+    },
+    {
+      "NAME": "tickMarks",
+      "LABEL": "Tick Marks",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1.5
+    },
+    {
+      "NAME": "vignette",
+      "LABEL": "Vignette",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "texInfluence",
+      "LABEL": "Texture Influence",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "inputTex",
+      "LABEL": "Reference",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "gridSize",
+      "LABEL": "Grid Size",
+      "TYPE": "float",
+      "DEFAULT": 40,
+      "MIN": 8,
+      "MAX": 120,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "shapeType",
+      "LABEL": "Line Shape",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2
+      ],
+      "LABELS": [
+        "Lines",
+        "Rectangles",
+        "Mixed"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "strokeWidth",
+      "LABEL": "Stroke Width",
+      "TYPE": "float",
+      "DEFAULT": 1.6,
+      "MIN": 0.3,
+      "MAX": 6,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "roughness",
+      "LABEL": "Roughness",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "doubleStroke",
+      "LABEL": "Double Stroke",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "circleCount",
+      "LABEL": "Circles",
+      "TYPE": "float",
+      "DEFAULT": 4,
+      "MIN": 0,
+      "MAX": 10,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "lineCount",
+      "LABEL": "Lines/Rects",
+      "TYPE": "float",
+      "DEFAULT": 6,
+      "MIN": 0,
+      "MAX": 14,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "sizeVariance",
+      "LABEL": "Size Variance",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "screenSize",
+      "LABEL": "Halftone Size",
+      "TYPE": "float",
+      "DEFAULT": 7,
+      "MIN": 2,
+      "MAX": 30,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "scribbleDensity",
+      "LABEL": "Scribble",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "sketchSpeed",
+      "LABEL": "Sketch Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 2.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "decayAmount",
+      "LABEL": "Line Decay",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "decayPeriod",
+      "LABEL": "Decay Period",
+      "TYPE": "float",
+      "DEFAULT": 6,
+      "MIN": 1,
+      "MAX": 20,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "decayCoverage",
+      "LABEL": "Decay Coverage",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "sizePulse",
+      "LABEL": "Size Pulse",
+      "TYPE": "float",
+      "DEFAULT": 0.4,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "colorSpeed",
+      "LABEL": "Color Shift Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.2,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "inkColor",
+      "LABEL": "Ink Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.95,
+        0.97,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "inkIntensity",
+      "LABEL": "Ink Intensity",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.2,
+      "MAX": 2.5,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueBase",
+      "LABEL": "Hue Base",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueSpread",
+      "LABEL": "Hue Spread",
+      "TYPE": "float",
+      "DEFAULT": 0.75,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "fillSaturation",
+      "LABEL": "Fill Saturation",
+      "TYPE": "float",
+      "DEFAULT": 0.85,
+      "MIN": 0,
+      "MAX": 1.2,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "fillBrightness",
+      "LABEL": "Fill Brightness",
+      "TYPE": "float",
+      "DEFAULT": 0.95,
+      "MIN": 0.1,
+      "MAX": 1.6,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "screenContrast",
+      "LABEL": "Screen Contrast",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "paperType",
+      "LABEL": "Paper",
+      "TYPE": "long",
+      "DEFAULT": 2,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Plain",
+        "Dot Grid",
+        "Graph Paper",
+        "Lined Paper"
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "paperColor",
+      "LABEL": "Paper Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "gridLineStrength",
+      "LABEL": "Grid Strength",
+      "TYPE": "float",
+      "DEFAULT": 0.25,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "gridSubdiv",
+      "LABEL": "Major Every",
+      "TYPE": "float",
+      "DEFAULT": 5,
+      "MIN": 1,
+      "MAX": 12,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "paperGrain",
+      "LABEL": "Paper Grain",
+      "TYPE": "float",
+      "DEFAULT": 0.12,
+      "MIN": 0,
+      "MAX": 0.5,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioBassPress",
+      "LABEL": "Bass Pressure",
+      "TYPE": "float",
+      "DEFAULT": 0.8,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "audioMidDraw",
+      "LABEL": "Mid Draw",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "audioHighScribble",
+      "LABEL": "High Scribble",
+      "TYPE": "float",
+      "DEFAULT": 0.9,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "audioSizePulse",
+      "LABEL": "Audio Size Pulse",
+      "TYPE": "float",
+      "DEFAULT": 0.8,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 

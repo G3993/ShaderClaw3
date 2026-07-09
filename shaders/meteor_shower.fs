@@ -1,19 +1,144 @@
 /*{
-  "CATEGORIES": ["Generator", "Atmospheric", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Atmospheric",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "Perseid-style radiant meteor shower — bright streaks of varying intensity radiating outward from a single radiant point in the sky, with persistent twinkling stars, milky-way band, and audio-bass triggering bright fireball bolides. Each meteor has a hot leading edge and a glowing trail that fades, plus occasional rare sub-branching",
   "INPUTS": [
-    { "NAME": "radiantX",          "LABEL": "Radiant X",        "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.78 },
-    { "NAME": "radiantY",          "LABEL": "Radiant Y",        "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.82 },
-    { "NAME": "meteorCount",       "LABEL": "Meteors",          "TYPE": "float", "MIN": 1.0, "MAX": 15.0, "DEFAULT": 9.0 },
-    { "NAME": "meteorSpeed",       "LABEL": "Meteor Speed",     "TYPE": "float", "MIN": 0.1, "MAX": 3.0,  "DEFAULT": 1.0 },
-    { "NAME": "trailLength",       "LABEL": "Trail Length",     "TYPE": "float", "MIN": 0.05,"MAX": 0.8,  "DEFAULT": 0.32 },
-    { "NAME": "starDensity",       "LABEL": "Star Density",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.6 },
-    { "NAME": "milkyWayBrightness","LABEL": "Milky Way",        "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.4 },
-    { "NAME": "boliderProb",       "LABEL": "Bolide Chance",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.18 },
-    { "NAME": "skyTop",            "LABEL": "Sky Top",          "TYPE": "color", "DEFAULT": [0.01, 0.02, 0.06, 1.0] },
-    { "NAME": "skyHorizon",        "LABEL": "Sky Horizon",      "TYPE": "color", "DEFAULT": [0.04, 0.05, 0.12, 1.0] },
-    { "NAME": "nebulaTint",        "LABEL": "Nebula Tint",      "TYPE": "color", "DEFAULT": [0.18, 0.10, 0.30, 1.0] },
-    { "NAME": "audioReact",        "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 1.0 }
+    {
+      "NAME": "milkyWayBrightness",
+      "LABEL": "Milky Way",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.4
+    },
+    {
+      "NAME": "boliderProb",
+      "LABEL": "Bolide Chance",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.18
+    },
+    {
+      "NAME": "meteorCount",
+      "LABEL": "Meteors",
+      "TYPE": "float",
+      "MIN": 1,
+      "MAX": 15,
+      "DEFAULT": 9,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "trailLength",
+      "LABEL": "Trail Length",
+      "TYPE": "float",
+      "MIN": 0.05,
+      "MAX": 0.8,
+      "DEFAULT": 0.32,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "starDensity",
+      "LABEL": "Star Density",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.6,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "meteorSpeed",
+      "LABEL": "Meteor Speed",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 3,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "skyTop",
+      "LABEL": "Sky Top",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.01,
+        0.02,
+        0.06,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "skyHorizon",
+      "LABEL": "Sky Horizon",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.04,
+        0.05,
+        0.12,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "nebulaTint",
+      "LABEL": "Nebula Tint",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.18,
+        0.1,
+        0.3,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "radiantX",
+      "LABEL": "Radiant X",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.78,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "radiantY",
+      "LABEL": "Radiant Y",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.82,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -58,9 +183,12 @@ void main() {
     float aspect = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
     vec2 auv = vec2(uv.x * aspect, uv.y);
 
-    // Audio bands (with safe fallbacks if absent the engine sends zero)
-    float bass   = audioBass   * audioReact;
-    float treble = audioHigh   * audioReact;
+    // Audio bands — LINEAR (r2 ambient fix): the envelopes arrive pre-smoothed,
+    // and the round-1 pow/knee crushed ambient's 0.1-0.8 swells into tiny
+    // variance. Continuous envelopes, never gated.
+    float bass   = smoothstep(0.02, 0.97, audioBass) * audioReact;
+    float midK   = smoothstep(0.02, 0.95, audioMid)  * audioReact;
+    float treble = smoothstep(0.02, 0.95, audioHigh) * audioReact;
 
     // ---- Sky gradient with subtle nebula tint ----
     float vGrad = smoothstep(0.0, 1.0, uv.y);
@@ -80,14 +208,17 @@ void main() {
         vec2 r = vec2(ca * c.x - sa * c.y, sa * c.x + ca * c.y);
         float band = exp(-pow(r.y * 5.5, 2.0));
         float clumps = 0.5 + 0.5 * sin(r.x * 18.0) * sin(r.x * 7.3 + 1.4);
-        col += vec3(0.55, 0.60, 0.85) * band * clumps * milkyWayBrightness * 0.18;
+        // Milky way breathes with bass/mid swells — a large visible area, so
+        // beatless (ambient) material still registers as luminance change.
+        col += vec3(0.55, 0.60, 0.85) * band * clumps * milkyWayBrightness * 0.18
+             * (1.0 + 0.45 * bass + 0.30 * midK);
     }
 
     // ---- Star fields (two layers) ----
     float twkSpeed = 4.0 + treble * 8.0;
     float s1 = starLayer(auv, 70.0,  0.985, twkSpeed, TIME);
     float s2 = starLayer(auv, 130.0, 0.992, twkSpeed * 1.4, TIME);
-    float starBoost = 1.0 + treble * 0.6;
+    float starBoost = 1.0 + treble * 0.7 + midK * 0.4;
     col += vec3(1.0, 0.96, 0.88) * s1 * starDensity * 1.1 * starBoost;
     col += vec3(0.85, 0.90, 1.00) * s2 * starDensity * 0.7 * starBoost;
 
@@ -169,12 +300,29 @@ void main() {
         }
     }
 
-    col += meteorAccum * (1.0 + bass * 0.5);
+    // Decaying beat flash on the streaks (audioBeatPulse decays 300ms+) —
+    // restores per-kick variation on EDM where smoothed bass rides high.
+    col += meteorAccum * (1.0 + bass * 0.5 + 0.35 * audioBeatPulse * audioReact);
+
+    // r2 ambient fix: whole-frame linear follower — the per-region follows
+    // (sky/milky way/streaks) alone moved too few pixels. Silence = 1.0.
+    col *= 1.0 + 0.22 * bass + 0.14 * midK;
 
     // Subtle vignette so the sky settles into the corners.
     vec2 vc = uv - 0.5;
     float vig = smoothstep(0.95, 0.35, length(vc));
     col *= mix(0.85, 1.0, vig);
 
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(vec3(ucL), col, colorBoost);
+    if (hueShift > 0.0005) {
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        col = clamp(hM * col, 0.0, 1.0);
+    }
     gl_FragColor = vec4(col, 1.0);
 }

@@ -1,14 +1,92 @@
 /*{
   "DESCRIPTION": "Dancing Cubes — a raymarched grid of rounded cubes whose heights rise and fall from the brightness of the bound image (or its motion), lit with orange specular, ambient occlusion and a procedural sky reflection. A built-in 'Dance' wobble keeps them moving even on a still image. Ported from a Shadertoy: iChannel1 (height + colour source) -> input image, iChannel0 cubemap -> procedural environment.",
   "CREDIT": "Shadertoy 'Dancing Cubes' (AO by Shane) — ISF port for Easel",
-  "CATEGORIES": ["3D", "Effect", "Geometric"],
+  "CATEGORIES": [
+    "3D",
+    "Effect",
+    "Geometric"
+  ],
   "INPUTS": [
-    { "NAME": "inputImage", "LABEL": "Texture",   "TYPE": "image" },
-    { "NAME": "scale",      "LABEL": "Scale",      "TYPE": "float", "MIN": 20.0, "MAX": 100.0, "DEFAULT": 60.0 },
-    { "NAME": "height",     "LABEL": "Height",     "TYPE": "float", "MIN": 0.0,  "MAX": 16.0,  "DEFAULT": 8.0 },
-    { "NAME": "dance",      "LABEL": "Dance",      "TYPE": "float", "MIN": 0.0,  "MAX": 3.0,   "DEFAULT": 1.0 },
-    { "NAME": "danceSpeed", "LABEL": "Dance Speed","TYPE": "float", "MIN": 0.0,  "MAX": 4.0,   "DEFAULT": 1.5 },
-    { "NAME": "audioReact", "LABEL": "Audio React","TYPE": "float", "MIN": 0.0,  "MAX": 2.0,   "DEFAULT": 0.35 }
+    {
+      "NAME": "inputImage",
+      "LABEL": "Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "scale",
+      "LABEL": "Scale",
+      "TYPE": "float",
+      "MIN": 20,
+      "MAX": 100,
+      "DEFAULT": 60,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "height",
+      "LABEL": "Height",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 16,
+      "DEFAULT": 8,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "dance",
+      "LABEL": "Dance",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "danceSpeed",
+      "LABEL": "Dance Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 4,
+      "DEFAULT": 1.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.35,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -169,10 +247,26 @@ void main() {
     vec3 sp = ro + rd * t.x;
     vec3 sn = normal(sp);
 
-    vec3 color = (t.x > FAR) ? env(rd) : lighting(sp, sn, lp, rd);
+    // universal background: raymarch miss (sky) blends toward bgColor
+    vec3 color = (t.x > FAR) ? mix(env(rd), bgColor.rgb, bgColor.a)
+                             : lighting(sp, sn, lp, rd);
 
     float vig = 1.0 - smoothstep(1.0, 3.5, length(uv));
     color *= mix(0.8, 1.0, vig);
     color = pow(color, vec3(0.75));
-    gl_FragColor = vec4(color, 1.0);
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = color;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                   // saturation
+    if (hueShift > 0.0005) {                               // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+
+    gl_FragColor = vec4(uc, 1.0);
 }

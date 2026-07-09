@@ -1,39 +1,308 @@
 /*{
   "DESCRIPTION": "Robot arm choreography — 1 or 2 articulated industrial arms (forward kinematics) tracing audio-reactive paths in a workshop environment. Bass triggers pose snaps, mids drive speed, treble adds servo-jitter. Inspired by Madeline Gannon's Manus, Quayola's Asymmetric Archeology, and KUKA pick-and-place choreographies.",
   "CREDIT": "ShaderClaw — curated revision",
-  "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "3D",
+    "Audio Reactive"
+  ],
   "INPUTS": [
-    { "NAME": "camDist",       "LABEL": "Camera Distance", "TYPE": "float", "MIN": 1.5, "MAX": 12.0, "DEFAULT": 4.5 },
-    { "NAME": "camHeight",     "LABEL": "Camera Height",   "TYPE": "float", "MIN": -3.0, "MAX": 4.0, "DEFAULT": 1.2 },
-    { "NAME": "camOrbitSpeed", "LABEL": "Orbit Speed",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 0.18 },
-    { "NAME": "camAzimuth",    "LABEL": "Camera Azimuth",  "TYPE": "float", "MIN": 0.0, "MAX": 6.2832, "DEFAULT": 0.0 },
-    { "NAME": "keyAngle",      "LABEL": "Key Light Angle", "TYPE": "float", "MIN": 0.0, "MAX": 6.2832, "DEFAULT": 0.785 },
-    { "NAME": "keyElevation",  "LABEL": "Key Elevation",   "TYPE": "float", "MIN": 0.0, "MAX": 1.5708, "DEFAULT": 0.7 },
-    { "NAME": "keyColor",      "LABEL": "Key Light",       "TYPE": "color", "DEFAULT": [1.0, 0.94, 0.82, 1.0] },
-    { "NAME": "fillColor",     "LABEL": "Fill Light",      "TYPE": "color", "DEFAULT": [0.55, 0.70, 1.0, 1.0] },
-    { "NAME": "ambient",       "LABEL": "Ambient",         "TYPE": "float", "MIN": 0.0, "MAX": 0.5,  "DEFAULT": 0.08 },
-    { "NAME": "rimStrength",   "LABEL": "Rim Strength",    "TYPE": "float", "MIN": 0.0, "MAX": 1.5,  "DEFAULT": 0.5 },
-    { "NAME": "exposure",      "LABEL": "Exposure",        "TYPE": "float", "MIN": 0.3, "MAX": 3.0,  "DEFAULT": 1.0 },
-    { "NAME": "mood", "LABEL": "Mood", "TYPE": "long", "DEFAULT": 0,
-      "VALUES": [0, 1, 2, 3],
-      "LABELS": ["Solo Reach", "Dual Choreography", "Pick & Place", "Conductor"] },
-    { "NAME": "armSegments", "LABEL": "Arm Segments", "TYPE": "long", "DEFAULT": 5,
-      "VALUES": [4, 5, 6, 7],
-      "LABELS": ["4-link", "5-link", "6-link", "7-link"] },
-    { "NAME": "paintColor",  "LABEL": "Arm Paint",    "TYPE": "color", "DEFAULT": [0.08, 0.08, 0.10, 1.0] },
-    { "NAME": "jointColor",  "LABEL": "Joint",        "TYPE": "color", "DEFAULT": [0.18, 0.20, 0.24, 1.0] },
-    { "NAME": "warningColor","LABEL": "Warning",      "TYPE": "color", "DEFAULT": [1.00, 0.78, 0.10, 1.0] },
-    { "NAME": "ledColor",    "LABEL": "LED",          "TYPE": "color", "DEFAULT": [1.00, 0.18, 0.12, 1.0] },
-    { "NAME": "floorColor",  "LABEL": "Floor",        "TYPE": "color", "DEFAULT": [0.13, 0.14, 0.16, 1.0] },
-    { "NAME": "floorReflection", "LABEL": "Floor Reflection", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.35 },
-    { "NAME": "audioReact",  "LABEL": "Audio React",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "armScale",    "LABEL": "Size",         "TYPE": "float", "MIN": 0.4, "MAX": 1.6, "DEFAULT": 1.0 },
-    { "NAME": "armCount",    "LABEL": "Arm Count",    "TYPE": "long", "DEFAULT": 1,
-      "VALUES": [1, 2, 3, 4],
-      "LABELS": ["1 Arm", "2 Arms", "3 Arms", "4 Arms"] },
-    { "NAME": "mouseX",      "LABEL": "Mouse X",      "TYPE": "float", "MIN": -1.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "mouseY",      "LABEL": "Mouse Y",      "TYPE": "float", "MIN": -1.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "showGrid",    "LABEL": "Engineering Grid", "TYPE": "bool", "DEFAULT": true }
+    {
+      "NAME": "keyAngle",
+      "LABEL": "Key Light Angle",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 6.2832,
+      "DEFAULT": 0.785
+    },
+    {
+      "NAME": "keyElevation",
+      "LABEL": "Key Elevation",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5708,
+      "DEFAULT": 0.7
+    },
+    {
+      "NAME": "ambient",
+      "LABEL": "Ambient",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.5,
+      "DEFAULT": 0.08
+    },
+    {
+      "NAME": "rimStrength",
+      "LABEL": "Rim Strength",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.5
+    },
+    {
+      "NAME": "mood",
+      "LABEL": "Mood",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Solo Reach",
+        "Dual Choreography",
+        "Pick & Place",
+        "Conductor"
+      ]
+    },
+    {
+      "NAME": "floorReflection",
+      "LABEL": "Floor Reflection",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.35
+    },
+    {
+      "NAME": "mouseX",
+      "LABEL": "Mouse X",
+      "TYPE": "float",
+      "MIN": -1,
+      "MAX": 1,
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "mouseY",
+      "LABEL": "Mouse Y",
+      "TYPE": "float",
+      "MIN": -1,
+      "MAX": 1,
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "armSegments",
+      "LABEL": "Arm Segments",
+      "TYPE": "long",
+      "DEFAULT": 5,
+      "VALUES": [
+        4,
+        5,
+        6,
+        7
+      ],
+      "LABELS": [
+        "4-link",
+        "5-link",
+        "6-link",
+        "7-link"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "armScale",
+      "LABEL": "Size",
+      "TYPE": "float",
+      "MIN": 0.4,
+      "MAX": 1.6,
+      "DEFAULT": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "armCount",
+      "LABEL": "Arm Count",
+      "TYPE": "long",
+      "DEFAULT": 1,
+      "VALUES": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "LABELS": [
+        "1 Arm",
+        "2 Arms",
+        "3 Arms",
+        "4 Arms"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "keyColor",
+      "LABEL": "Key Light",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.94,
+        0.82,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "fillColor",
+      "LABEL": "Fill Light",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.55,
+        0.7,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "exposure",
+      "LABEL": "Exposure",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 3,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "paintColor",
+      "LABEL": "Arm Paint",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.08,
+        0.08,
+        0.1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "jointColor",
+      "LABEL": "Joint",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.18,
+        0.2,
+        0.24,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "warningColor",
+      "LABEL": "Warning",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.78,
+        0.1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "ledColor",
+      "LABEL": "LED",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.18,
+        0.12,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "floorColor",
+      "LABEL": "Floor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.13,
+        0.14,
+        0.16,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "camDist",
+      "LABEL": "Camera Distance",
+      "TYPE": "float",
+      "MIN": 1.5,
+      "MAX": 12,
+      "DEFAULT": 4.5,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "camHeight",
+      "LABEL": "Camera Height",
+      "TYPE": "float",
+      "MIN": -3,
+      "MAX": 4,
+      "DEFAULT": 1.2,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "camOrbitSpeed",
+      "LABEL": "Orbit Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.18,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "camAzimuth",
+      "LABEL": "Camera Azimuth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 6.2832,
+      "DEFAULT": 0,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "showGrid",
+      "LABEL": "Engineering Grid",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -259,7 +528,13 @@ void main() {
     float orbit = camAzimuth + TIME * camOrbitSpeed;
     float camOffsetX = sin(orbit) * 0.15;
     float zoom = 4.5 / max(camDist, 0.1);
-    p = p / max(zoom, 0.01);
+    // Continuous band-follow (ambient fix r2): LINEAR bands — the bands are
+    // already smoothed upstream, and any knee crushes ambient's 0.1-0.8
+    // swells. Bass breathes the camera zoom so beatless swells move every
+    // edge — no beat gating, silence = exactly the authored framing.
+    float bassF = clamp(audioBass, 0.0, 1.0) * audioReact;
+    float midF  = clamp(audioMid,  0.0, 1.0) * audioReact;
+    p = p / (max(zoom, 0.01) * (1.0 + 0.11 * bassF));
     p.x += camOffsetX;
     p.y -= camHeight * 0.08;
 
@@ -423,8 +698,24 @@ void main() {
     float vig = 1.0 - smoothstep(0.4, 1.05, length(p));
     col *= mix(0.78, 1.0, vig);
 
-    // Universal exposure + bass HDR boost
-    col *= exposure * (1.0 + bass * 0.18);
+    // Universal exposure + bass HDR boost + continuous smooth band-follow
+    // (bass/mid lift the workshop light so beatless material reads).
+    // r3 (measured): 0.40 total bass depth x meanLuma 0.18 gave rMag 0.0006 —
+    // no clipping involved, just underpowered. Deepened to clear the floor.
+    col *= exposure * (1.0 + bass * 0.18 + 0.50 * bassF + 0.48 * midF + 0.16 * treb);
 
-    gl_FragColor = vec4(col, 1.0);
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    vec3 uc = mix(vec3(ucL), col, colorBoost);
+    if (hueShift > 0.0005) {
+        float hueA = hueShift * 6.2831853;
+        float hueC = cos(hueA), hueS = sin(hueA);
+        mat3 hueM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                  + hueC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                  + hueS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hueM * uc, 0.0, 1.0);
+    }
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+
+    gl_FragColor = vec4(uc, 1.0);
 }

@@ -1,16 +1,114 @@
 /*{
-  "CATEGORIES": ["Generator", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "Sound made literally visible — concentric ripples rolling across stacked depth-planes, audio frequencies sculpting cymatic interference patterns in 3D space. Pure black background edition.",
   "INPUTS": [
-    {"NAME":"layers","TYPE":"float","MIN":1.0,"MAX":6.0,"DEFAULT":6.0},
-    {"NAME":"freqScale","TYPE":"float","MIN":4.0,"MAX":40.0,"DEFAULT":16.0},
-    {"NAME":"speed","TYPE":"float","MIN":0.0,"MAX":4.0,"DEFAULT":1.5},
-    {"NAME":"refraction","TYPE":"float","MIN":0.0,"MAX":0.08,"DEFAULT":0.02},
-    {"NAME":"parallax","TYPE":"float","MIN":0.0,"MAX":0.3,"DEFAULT":0.08},
-    {"NAME":"idleAmp","TYPE":"float","MIN":0.0,"MAX":0.5,"DEFAULT":0.15},
-    {"NAME":"bloomStr","TYPE":"float","MIN":0.0,"MAX":2.0,"DEFAULT":1.0},
-    {"NAME":"inputTex","TYPE":"image"},
-    {"NAME":"texMix","TYPE":"float","MIN":0.0,"MAX":1.0,"DEFAULT":0.0}
+    {
+      "NAME": "refraction",
+      "LABEL": "Refraction",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.08,
+      "DEFAULT": 0.02
+    },
+    {
+      "NAME": "bloomStr",
+      "LABEL": "Bloom Strength",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "inputTex",
+      "LABEL": "Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "texMix",
+      "LABEL": "Texture Mix",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "layers",
+      "LABEL": "Layers",
+      "TYPE": "float",
+      "MIN": 1,
+      "MAX": 6,
+      "DEFAULT": 6,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "freqScale",
+      "LABEL": "Frequency Scale",
+      "TYPE": "float",
+      "MIN": 4,
+      "MAX": 40,
+      "DEFAULT": 16,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 4,
+      "DEFAULT": 1.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "idleAmp",
+      "LABEL": "Idle Amplitude",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.5,
+      "DEFAULT": 0.15,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "parallax",
+      "LABEL": "Parallax",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.3,
+      "DEFAULT": 0.08,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    }
   ]
 }*/
 
@@ -137,5 +235,17 @@ void main() {
     col = col / (col + vec3(0.75));
     col = pow(col, vec3(0.88)); // slight gamma lift for screen display
 
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(vec3(ucL), col, colorBoost);
+    if (hueShift > 0.0005) {
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        col = clamp(hM * col, 0.0, 1.0);
+    }
+    col = mix(col, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
     gl_FragColor = vec4(col, 1.0);
 }

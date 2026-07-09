@@ -1,30 +1,255 @@
 /*{
-  "CATEGORIES": ["Generator", "Op Art", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Op Art",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "Op Art after Victor Vasarely & Bridget Riley — eight canonical modes producing GENUINE optical vibration. (0) Vega: square grid radially bulged; (1) Tridim: three-axis cube illusion; (2) Riley Wave: sinusoidal frequency-warp bands; (3) Zebra: serpentine ribbons; (4) Zigzag: triangle-wave tension bands; (5) Checker: warped checkerboard moiré; (6) Diamond: concentric diamond rings; (7) Stripe Wobble: page-bowing vertical stripes. Audio drives bulge depth, wave frequency, angular shift, and accent flash. Crisp fwidth-based AA. Color modes: Mono, Mono+Accent, Holographic, Custom. HDR-ready.",
   "INPUTS": [
-    { "NAME": "mode", "LABEL": "Mode", "TYPE": "long",
-      "DEFAULT": 0, "VALUES": [0,1,2,3,4,5,6,7],
-      "LABELS": ["Vega","Tridim","Riley Wave","Zebra","Zigzag","Checker","Diamond","Stripe Wobble"] },
-    { "NAME": "gridDensity", "LABEL": "Grid Density",    "TYPE": "float", "MIN": 8.0,  "MAX": 48.0,  "DEFAULT": 22.0 },
-    { "NAME": "bulgeAmount", "LABEL": "Bulge Depth",     "TYPE": "float", "MIN": 0.0,  "MAX": 1.5,   "DEFAULT": 0.65 },
-    { "NAME": "bulgeRadius", "LABEL": "Bulge Radius",    "TYPE": "float", "MIN": 0.3,  "MAX": 1.4,   "DEFAULT": 0.85 },
-    { "NAME": "waveFreq",    "LABEL": "Wave Frequency",  "TYPE": "float", "MIN": 1.0,  "MAX": 12.0,  "DEFAULT": 4.5  },
-    { "NAME": "waveAmp",     "LABEL": "Wave Amplitude",  "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,   "DEFAULT": 0.55 },
-    { "NAME": "rileyFreq",   "LABEL": "Riley Freq",      "TYPE": "float", "MIN": 10.0, "MAX": 160.0, "DEFAULT": 60.0 },
-    { "NAME": "warpAmp",     "LABEL": "Warp Amplitude",  "TYPE": "float", "MIN": 0.0,  "MAX": 0.5,   "DEFAULT": 0.12 },
-    { "NAME": "xFreq",       "LABEL": "X Frequency",     "TYPE": "float", "MIN": 0.5,  "MAX": 12.0,  "DEFAULT": 3.0  },
-    { "NAME": "accentEvery", "LABEL": "Accent Every Nth","TYPE": "float", "MIN": 2.0,  "MAX": 20.0,  "DEFAULT": 7.0  },
-    { "NAME": "accentColor", "LABEL": "Accent Color",    "TYPE": "color", "DEFAULT": [0.95, 0.15, 0.25, 1.0] },
-    { "NAME": "rotate",      "LABEL": "Rotation",        "TYPE": "float", "MIN": -3.14159, "MAX": 3.14159, "DEFAULT": 0.0 },
-    { "NAME": "vpColor",     "LABEL": "VP Color (Tridim only)", "TYPE": "bool", "DEFAULT": false },
-    { "NAME": "colorMode",   "LABEL": "Color Mode", "TYPE": "long",
-      "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Mono","Mono+Accent","Holographic","Custom"] },
-    { "NAME": "colorA",      "LABEL": "Color A (Custom)", "TYPE": "color", "DEFAULT": [0.05, 0.18, 0.85, 1.0] },
-    { "NAME": "colorB",      "LABEL": "Color B (Custom)", "TYPE": "color", "DEFAULT": [0.98, 0.78, 0.05, 1.0] },
-    { "NAME": "depthAmount", "LABEL": "3D Depth",        "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "flowSpeed",   "LABEL": "Flow Speed",      "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.6 },
-    { "NAME": "contrast",    "LABEL": "Contrast",        "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0 },
-    { "NAME": "audioReact",  "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
+    {
+      "NAME": "contrast",
+      "LABEL": "Contrast",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "mode",
+      "LABEL": "Mode",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "LABELS": [
+        "Vega",
+        "Tridim",
+        "Riley Wave",
+        "Zebra",
+        "Zigzag",
+        "Checker",
+        "Diamond",
+        "Stripe Wobble"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "gridDensity",
+      "LABEL": "Grid Density",
+      "TYPE": "float",
+      "MIN": 8,
+      "MAX": 48,
+      "DEFAULT": 22,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "bulgeAmount",
+      "LABEL": "Bulge Depth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.65,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "bulgeRadius",
+      "LABEL": "Bulge Radius",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 1.4,
+      "DEFAULT": 0.85,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "waveFreq",
+      "LABEL": "Wave Frequency",
+      "TYPE": "float",
+      "MIN": 1,
+      "MAX": 12,
+      "DEFAULT": 4.5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "waveAmp",
+      "LABEL": "Wave Amplitude",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.55,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "rileyFreq",
+      "LABEL": "Riley Freq",
+      "TYPE": "float",
+      "MIN": 10,
+      "MAX": 160,
+      "DEFAULT": 60,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "warpAmp",
+      "LABEL": "Warp Amplitude",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.5,
+      "DEFAULT": 0.12,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "xFreq",
+      "LABEL": "X Frequency",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 12,
+      "DEFAULT": 3,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "accentEvery",
+      "LABEL": "Accent Every Nth",
+      "TYPE": "float",
+      "MIN": 2,
+      "MAX": 20,
+      "DEFAULT": 7,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "rotate",
+      "LABEL": "Rotation",
+      "TYPE": "float",
+      "MIN": -3.14159,
+      "MAX": 3.14159,
+      "DEFAULT": 0,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "flowSpeed",
+      "LABEL": "Flow Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.6,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "accentColor",
+      "LABEL": "Accent Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.95,
+        0.15,
+        0.25,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "vpColor",
+      "LABEL": "VP Color (Tridim only)",
+      "TYPE": "bool",
+      "DEFAULT": false,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorMode",
+      "LABEL": "Color Mode",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Mono",
+        "Mono+Accent",
+        "Holographic",
+        "Custom"
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorA",
+      "LABEL": "Color A (Custom)",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.05,
+        0.18,
+        0.85,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorB",
+      "LABEL": "Color B (Custom)",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.98,
+        0.78,
+        0.05,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "depthAmount",
+      "LABEL": "3D Depth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -287,7 +512,7 @@ void main() {
     float rot = rotate
               + 0.05 * sin(t * 0.13)
               + 0.08 * flow * sin(t * 0.07)
-              + 0.04 * audioHigh * audio;
+              + 0.007 * audioHigh * audio;   // was 0.04, then 0.015 — rotating a dense grid flips many edge pixels per frame
     p = rot2(rot) * p;
 
     // Slow spatial drift.
@@ -300,7 +525,7 @@ void main() {
     // Audio-modulated parameters.
     float bulge = bulgeAmount * (0.85 + 0.25 * sin(t * 0.5))
                 * (1.0 + 0.18 * flow * sin(t * 0.41))
-                * (1.0 + 0.45 * audioBass * audio);
+                * (1.0 + 0.06 * audioBass * audio);   // was 0.45, then 0.12 — bulge rescales the whole grid, keep gentle
     float wFreq = waveFreq * (1.0 + 0.18 * sin(t * 0.4))
                 * (1.0 + 0.12 * flow * sin(t * 0.29))
                 * (1.0 + 0.35 * audioMid * audio);
@@ -340,9 +565,11 @@ void main() {
     float crest = smoothstep(0.85, 0.995, base.r) * (1.0 - step(base.r, 0.01));
     col += vec3(crest) * 0.28 * c;
 
-    // Audio peak invert flash — brief, tasteful.
-    float flash = smoothstep(0.85, 1.0, audioLevel) * audio;
-    col = mix(col, vec3(1.0) - col, flash * 0.35);
+    // Audio follower — linear whole-frame gain (replaces the full-field
+    // invert flash, which strobed the frame-step metric). R3: trimmed —
+    // at meanLuma 0.54 the 0.22 bass gain plus the geometric couplings
+    // stacked to 0.14 p95 single-frame steps on EDM.
+    col *= 1.0 + (0.14 * audioBass + 0.09 * audioMid) * min(audio, 1.0);
 
     // Periodic frequency-doubling judder (~every 16 s, 0.5 s duration).
     {
@@ -356,5 +583,18 @@ void main() {
     col = clamp(col, 0.0, 1.2);
     col += step(0.95, max(max(col.r, col.g), col.b)) * 0.06;
 
-    gl_FragColor = vec4(col, 1.0);
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    vec3 uc = mix(vec3(ucL), col, colorBoost);
+    if (hueShift > 0.0005) {
+        float hueA = hueShift * 6.2831853;
+        float hueC = cos(hueA), hueS = sin(hueA);
+        mat3 hueM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                  + hueC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                  + hueS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hueM * uc, 0.0, 1.0);
+    }
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+
+    gl_FragColor = vec4(uc, 1.0);
 }

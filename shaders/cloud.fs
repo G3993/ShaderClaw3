@@ -1,13 +1,78 @@
 /*{
   "DESCRIPTION": "Cloud — a single volumetric blob raymarched in real time: a rotating, self-shadowing cloud of procedural fBm noise lit by a sun with coloured shadow scattering and ambient fill. Ported from a multi-buffer Shadertoy (which baked a 3D density volume into a 2D buffer and sampled a 3D noise texture); rebuilt for Easel as one pass with fully procedural 3D noise so it needs no external textures or buffers.",
   "CREDIT": "Shadertoy volumetric cloud — single-pass procedural ISF port for Easel",
-  "CATEGORIES": ["3D", "Generator", "Atmospheric"],
+  "CATEGORIES": [
+    "3D",
+    "Generator",
+    "Atmospheric"
+  ],
   "INPUTS": [
-    { "NAME": "density",    "LABEL": "Density",     "TYPE": "float", "MIN": 8.0,  "MAX": 64.0, "DEFAULT": 32.0 },
-    { "NAME": "rotSpeed",   "LABEL": "Rotate",      "TYPE": "float", "MIN": 0.0,  "MAX": 1.5,  "DEFAULT": 0.5 },
-    { "NAME": "colorSpeed", "LABEL": "Color Drift", "TYPE": "float", "MIN": 0.0,  "MAX": 3.0,  "DEFAULT": 1.0 },
-    { "NAME": "bgColor",    "LABEL": "Sky",         "TYPE": "color", "DEFAULT": [0.5, 0.6, 0.8, 1.0] },
-    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.35 }
+    {
+      "NAME": "density",
+      "LABEL": "Density",
+      "TYPE": "float",
+      "MIN": 8,
+      "MAX": 64,
+      "DEFAULT": 32,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "rotSpeed",
+      "LABEL": "Rotate",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "colorSpeed",
+      "LABEL": "Color Drift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Sky",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.5,
+        0.6,
+        0.8,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.35,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -189,12 +254,20 @@ vec4 Render(vec3 ro, vec3 rd, float rand) {
 
 void main() {
     // Non-gating audio: alive at audio=0; audioReact only adds on top.
-    float bassP = pow(smoothstep(0.05, 0.85, audioBass), 1.6);
+    // Low knee + sub coupling + gentler pow so sparse hiphop kicks and soft
+    // jazz accents clear the floor; mids give a second continuous phase so
+    // beatless (ambient) swells keep the cloud moving.
+    float bassP = smoothstep(0.02, 0.95, max(audioBass, audioSub)); // LINEAR (r2): pow knee crushed swells
+    float midP  = smoothstep(0.02, 0.95, audioMid);
     float highP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
-    float beatP = audioBeatPulse * audioBeatPulse;
-    gDensityScale = 1.0 + audioReact * 0.7  * bassP;  // cloud swells with bass (dominant structure)
-    gFlash        = audioReact * 0.8  * beatP;         // brief decaying brightness pulse on the beat
-    gGlint        = audioReact * 1.4  * highP;         // sparse sunlit-edge sparkle on highs
+    float beatP = smoothstep(0.02, 0.85, audioBeatPulse); // low floor: soft accents register
+    // r2 fix: audioReact DEFAULTS to 0.35, which quietly diluted every depth
+    // to about a third. Followers ride a floored gain instead; silence is
+    // still exactly 1.0/0.0 because the bands themselves are 0.
+    float aGain = 0.7 + 0.6 * audioReact;   // default 0.35 -> 0.91
+    gDensityScale = 1.0 + aGain * (0.6 * bassP + 0.25 * midP); // cloud swells with bass
+    gFlash        = aGain * 0.5  * beatP;   // brief decaying brightness pulse on the beat
+    gGlint        = aGain * 1.2  * highP;   // sparse sunlit-edge sparkle on highs
 
     vec3 ro, rd;
     RORD(gl_FragCoord.xy, RENDERSIZE.xy, ro, rd);
@@ -211,5 +284,33 @@ void main() {
     col += vec3(1.0, 0.92, 0.75) * gGlint * sunAlign * result.a * step(0.85, rand);
 
     col = pow(col, vec3(1.0 / 2.2));
+
+    // r3 (measured): bassP's smoothstep knee + max(bass,sub) decorrelated the
+    // ambient swells (corr literally 0) — follow the RAW bands linearly here.
+    // The multiplicative gain only reaches the cloud body (~10% of pixels), so
+    // an additive sky-haze breath carries the rest: the sky is ~90% of the
+    // frame and is what actually buys ambient responseMag. Silence: bands = 0
+    // -> gain exactly 1.0, haze exactly 0.
+    float bassLin = clamp(audioBass, 0.0, 1.0);
+    float midLin  = clamp(audioMid,  0.0, 1.0);
+    float highLin = clamp(audioHigh, 0.0, 1.0);
+    col *= 1.0 + aGain * (0.55 * bassLin + 0.40 * midLin);
+    col += vec3(0.36, 0.41, 0.52) * (1.0 - result.a)
+         * aGain * (0.34 * bassLin + 0.26 * midLin + 0.16 * highLin);
+
+    // ---- universal color block (defaults = no-op; bg via native Sky color) ----
+    vec3 uc = col;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    col = uc;
+
     gl_FragColor = vec4(col, 1.0);
 }

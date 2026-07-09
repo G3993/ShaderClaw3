@@ -1,34 +1,259 @@
 /*{
   "DESCRIPTION": "Poster Type Text — editorial typographic poster. The `msg` is the hero: a huge two-line blocky headline locks the top band, a vertical micro-caption strip threads the right gutter, and a bottom rail breaks into corner notes. Between them sits an oval LENS — a parallax window into a multi-plane horizon (sky stratum, sun disc, far mountains, midground field, drifting foreground veil) that genuinely orbits as motion accumulates. Player channels drive distinct elements: A dollies the camera, B pulses the sun + chromatic separation, C twitches a registration-mark and shears the headline; bass lifts the sun radiance. Quiet reads as a still poster on warm paper; loud breaks it into a torn, jittering compositional event. No spectrum bars, no waveform — just type, depth, and intent.",
   "CREDIT": "ShaderClaw — A-List drop",
-  "CATEGORIES": ["Generator", "Text", "A-List"],
+  "CATEGORIES": [
+    "Generator",
+    "Text",
+    "A-List"
+  ],
   "INPUTS": [
-    { "NAME": "msg",           "TYPE": "text",  "DEFAULT": "POSTER TYPE COLLECTION VOL. 1", "MAX_LENGTH": 48, "BIND": "cue.latest" },
-    { "NAME": "headlineSize",  "LABEL": "Headline Size",   "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.5,  "MAX": 1.8 },
-    { "NAME": "palette",       "LABEL": "Palette",         "TYPE": "long",  "DEFAULT": 0,
-      "VALUES": [0,1,2,3,4], "LABELS": ["Paper / Ink","Cream / Indigo","Mint / Oxblood","Linen / Cobalt","Onyx / Sulphur"] },
-    { "NAME": "layoutVariant", "LABEL": "Layout",          "TYPE": "long",  "DEFAULT": 0,
-      "VALUES": [0,1,2,3], "LABELS": ["Lens Center","Lens Low","Lens Wide","Lens Off-Axis"] },
-    { "NAME": "motionSpeed",   "LABEL": "Motion Speed",    "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 3.0 },
-    { "NAME": "audioDepth",    "LABEL": "Lens Depth (treble)","TYPE": "float", "DEFAULT": 0.7, "MIN": 0.0, "MAX": 2.0, "BIND": "audio.high" },
-    { "NAME": "energyA",       "LABEL": "Player A — Dolly",  "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[1].energy" },
-    { "NAME": "energyB",       "LABEL": "Player B — Sun",    "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[2].energy" },
-    { "NAME": "energyC",       "LABEL": "Player C — Twitch", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[3].energy" },
-    { "NAME": "bassPunch",     "LABEL": "Sun Pulse (bass)",  "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 2.0, "BIND": "audio.bass" },
-    { "NAME": "transparentBg", "LABEL": "Transparent BG",    "TYPE": "bool",  "DEFAULT": 0.0 }
-  ,
-    { "NAME": "motionDrift",  "LABEL": "Drift Speed",      "TYPE": "float", "DEFAULT": 1.3,  "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "motionJitter", "LABEL": "Jitter",           "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionFlicker","LABEL": "Flicker",          "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionSway",   "LABEL": "Sway",             "TYPE": "float", "DEFAULT": 0.50, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionChaos",  "LABEL": "Chaos",            "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.0 }
-  ,
-    { "NAME": "fidBloom",    "LABEL": "Glow",      "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "fidDither",   "LABEL": "Dither",    "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fidGamma",    "LABEL": "Gamma",     "TYPE": "float", "DEFAULT": 0.60, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fidEdgeGlow", "LABEL": "Edge Glow", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "fidVignette", "LABEL": "Vignette",  "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "fidGrain",    "LABEL": "Grain",     "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.0 }
+    {
+      "NAME": "fidBloom",
+      "LABEL": "Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 1.5
+    },
+    {
+      "NAME": "fidDither",
+      "LABEL": "Dither",
+      "TYPE": "float",
+      "DEFAULT": 0.85,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "fidGamma",
+      "LABEL": "Gamma",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "fidEdgeGlow",
+      "LABEL": "Edge Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "fidVignette",
+      "LABEL": "Vignette",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1.5
+    },
+    {
+      "NAME": "fidGrain",
+      "LABEL": "Grain",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "motionSpeed",
+      "LABEL": "Motion Speed",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionDrift",
+      "LABEL": "Drift Speed",
+      "TYPE": "float",
+      "DEFAULT": 1.3,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionJitter",
+      "LABEL": "Jitter",
+      "TYPE": "float",
+      "DEFAULT": 0.25,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionFlicker",
+      "LABEL": "Flicker",
+      "TYPE": "float",
+      "DEFAULT": 0.15,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionSway",
+      "LABEL": "Sway",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionChaos",
+      "LABEL": "Chaos",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "palette",
+      "LABEL": "Palette",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "LABELS": [
+        "Paper / Ink",
+        "Cream / Indigo",
+        "Mint / Oxblood",
+        "Linen / Cobalt",
+        "Onyx / Sulphur"
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "layoutVariant",
+      "LABEL": "Layout",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Lens Center",
+        "Lens Low",
+        "Lens Wide",
+        "Lens Off-Axis"
+      ],
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": "POSTER TYPE COLLECTION VOL. 1",
+      "MAX_LENGTH": 48,
+      "BIND": "cue.latest",
+      "GROUP": "Text",
+      "LABEL": "Message"
+    },
+    {
+      "NAME": "headlineSize",
+      "LABEL": "Headline Size",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.5,
+      "MAX": 1.8,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent BG",
+      "TYPE": "bool",
+      "DEFAULT": 0,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioDepth",
+      "LABEL": "Lens Depth (treble)",
+      "TYPE": "float",
+      "DEFAULT": 0.7,
+      "MIN": 0,
+      "MAX": 2,
+      "BIND": "audio.high",
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "energyA",
+      "LABEL": "Player A — Dolly",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "BIND": "player[1].energy",
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "energyB",
+      "LABEL": "Player B — Sun",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "BIND": "player[2].energy",
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "energyC",
+      "LABEL": "Player C — Twitch",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "BIND": "player[3].energy",
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "bassPunch",
+      "LABEL": "Sun Pulse (bass)",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 2,
+      "BIND": "audio.bass",
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -494,6 +719,8 @@ void main() {
     float tooth = fbm(uv * vec2(res.x, res.y) * 0.008) * 0.5
                 + fbm(uv * vec2(res.x, res.y) * 0.04 + 17.0) * 0.5;
     vec3 col = paper * (0.96 + (tooth - 0.5) * 0.06);
+    // universal background override — tint the paper base (a=0 -> untouched)
+    col = mix(col, bgColor.rgb, bgColor.a);
     // Subtle vignette
     vec2 cv = uv - 0.5;
     col *= 1.0 - dot(cv, cv) * 0.22;
@@ -700,5 +927,18 @@ void main() {
     }
 
     col *= mkFlicker(gl_FragCoord.xy / RENDERSIZE - 0.5, TIME);
-    gl_FragColor = vec4(fidApply(col, gl_FragCoord.xy), alpha);
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = fidApply(col, gl_FragCoord.xy);
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);
+    if (hueShift > 0.0005) {
+        float hueA = hueShift * 6.2831853;
+        float hueC = cos(hueA), hueS = sin(hueA);
+        mat3 hueM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                  + hueC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                  + hueS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hueM * uc, 0.0, 1.0);
+    }
+    gl_FragColor = vec4(uc, alpha);
 }

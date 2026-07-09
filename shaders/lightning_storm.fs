@@ -1,25 +1,200 @@
 /*{
-  "CATEGORIES": ["Generator", "Atmospheric", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Atmospheric",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "High-fidelity branching forked lightning bolts with continuous polyline SDF, hot core + cyan plasma sheath, stochastic Brownian forks, parallax stormcloud layers, diagonal rain streaks, screen flash with chromatic aberration, ground silhouette, bloom, grain, and vignette. Bass triggers strikes, mids amplify the storm, highs shimmer the clouds.",
   "INPUTS": [
-    { "NAME": "stormDensity",   "LABEL": "Storm Density",    "TYPE": "float", "MIN": 0.0,  "MAX": 1.5,  "DEFAULT": 0.92 },
-    { "NAME": "cloudDrift",     "LABEL": "Cloud Drift",      "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.20 },
-    { "NAME": "boltProbability","LABEL": "Bolt Chance",      "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.55 },
-    { "NAME": "boltBranchDepth","LABEL": "Branch Depth",     "TYPE": "float", "MIN": 1.0,  "MAX": 4.0,  "DEFAULT": 3.0 },
-    { "NAME": "boltLifetime",   "LABEL": "Bolt Lifetime",    "TYPE": "float", "MIN": 0.15, "MAX": 2.5,  "DEFAULT": 0.95 },
-    { "NAME": "boltJitter",     "LABEL": "Bolt Jitter",      "TYPE": "float", "MIN": 0.0,  "MAX": 0.3,  "DEFAULT": 0.085 },
-    { "NAME": "boltCoreWidth",  "LABEL": "Core Width",       "TYPE": "float", "MIN": 0.0005, "MAX": 0.012, "DEFAULT": 0.0025 },
-    { "NAME": "boltSheathWidth","LABEL": "Sheath Width",     "TYPE": "float", "MIN": 0.005, "MAX": 0.05, "DEFAULT": 0.018 },
-    { "NAME": "flashIntensity", "LABEL": "Flash Intensity",  "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.95 },
-    { "NAME": "rainDensity",    "LABEL": "Rain Density",     "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.55 },
-    { "NAME": "rainAngle",      "LABEL": "Rain Angle",       "TYPE": "float", "MIN": -0.6, "MAX": 0.6,  "DEFAULT": 0.26 },
-    { "NAME": "rainSpeed",      "LABEL": "Rain Speed",       "TYPE": "float", "MIN": 0.0,  "MAX": 3.0,  "DEFAULT": 1.5 },
-    { "NAME": "groundLine",     "LABEL": "Ground Silhouette","TYPE": "float", "MIN": 0.0,  "MAX": 0.30, "DEFAULT": 0.075 },
-    { "NAME": "audioReact",     "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
-    { "NAME": "skyTopColor",    "LABEL": "Sky Top",          "TYPE": "color", "DEFAULT": [0.018, 0.022, 0.052, 1.0] },
-    { "NAME": "skyBotColor",    "LABEL": "Sky Bottom",       "TYPE": "color", "DEFAULT": [0.10, 0.12, 0.18, 1.0] },
-    { "NAME": "boltCoreColor",  "LABEL": "Bolt Core",        "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "boltSheathColor","LABEL": "Bolt Sheath",      "TYPE": "color", "DEFAULT": [0.55, 0.78, 1.0, 1.0] }
+    {
+      "NAME": "boltProbability",
+      "LABEL": "Bolt Chance",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.55
+    },
+    {
+      "NAME": "flashIntensity",
+      "LABEL": "Flash Intensity",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.95
+    },
+    {
+      "NAME": "rainAngle",
+      "LABEL": "Rain Angle",
+      "TYPE": "float",
+      "MIN": -0.6,
+      "MAX": 0.6,
+      "DEFAULT": 0.26
+    },
+    {
+      "NAME": "stormDensity",
+      "LABEL": "Storm Density",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.92,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "boltBranchDepth",
+      "LABEL": "Branch Depth",
+      "TYPE": "float",
+      "MIN": 1,
+      "MAX": 4,
+      "DEFAULT": 3,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "boltCoreWidth",
+      "LABEL": "Core Width",
+      "TYPE": "float",
+      "MIN": 0.0005,
+      "MAX": 0.012,
+      "DEFAULT": 0.0025,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "boltSheathWidth",
+      "LABEL": "Sheath Width",
+      "TYPE": "float",
+      "MIN": 0.005,
+      "MAX": 0.05,
+      "DEFAULT": 0.018,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "rainDensity",
+      "LABEL": "Rain Density",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.55,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "cloudDrift",
+      "LABEL": "Cloud Drift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "boltLifetime",
+      "LABEL": "Bolt Lifetime",
+      "TYPE": "float",
+      "MIN": 0.15,
+      "MAX": 2.5,
+      "DEFAULT": 0.95,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "boltJitter",
+      "LABEL": "Bolt Jitter",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.3,
+      "DEFAULT": 0.085,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "rainSpeed",
+      "LABEL": "Rain Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 1.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "skyTopColor",
+      "LABEL": "Sky Top",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.018,
+        0.022,
+        0.052,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "skyBotColor",
+      "LABEL": "Sky Bottom",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.1,
+        0.12,
+        0.18,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "boltCoreColor",
+      "LABEL": "Bolt Core",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "boltSheathColor",
+      "LABEL": "Bolt Sheath",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.55,
+        0.78,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "groundLine",
+      "LABEL": "Ground Silhouette",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.3,
+      "DEFAULT": 0.075,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -249,7 +424,25 @@ void main() {
     float bass = clamp(audioBass * audioReact, 0.0, 2.0);
     float mid  = clamp(audioMid  * audioReact, 0.0, 2.0);
     float high = clamp(audioHigh * audioReact, 0.0, 2.0);
-    float kick = step(0.42, bass);
+    // LINEAR band conditioning (round 2): the round-1 pow(smoothstep(...))
+    // knees crushed jazz's soft 0.4-0.5 swung accents and hiphop's sparse
+    // sub-heavy kicks to near-zero. The bands are already smoothed upstream —
+    // use them linearly; reserve shaping for event terms only.
+    float aR     = min(audioReact, 1.5);
+    float bassP  = clamp(audioBass, 0.0, 1.0) * aR;
+    float subP   = clamp(audioSub,  0.0, 1.0) * aR;
+    float midP   = clamp(audioMid,  0.0, 1.0) * aR;
+    float punchP = clamp(audioPunch, 0.0, 1.0) * aR;
+    // Smooth kick weight — floor lowered to 0.03 so sparse soft kicks count.
+    float kick = smoothstep(0.03, 0.50, max(audioBass, audioSub) * audioReact);
+    // R3: music-present bolt gate. The free-running slot timer fires huge
+    // flashes with no relation to the music (hiphop scored 0.0 with p95 0.25).
+    // When audio is present, bolt brightness follows the decaying kick trace
+    // instead; between kicks stray bolts dim to 10%. Silence → presence 0 →
+    // gate is exactly 1.0 and the original self-timed storm is untouched.
+    float presence  = smoothstep(0.06, 0.30, audioLevel * aR);
+    float kickTrace = clamp(1.35 * audioBeatPulse + 0.9 * audioPunch + 0.5 * subP, 0.0, 1.0);
+    float boltGate  = mix(1.0, 0.10 + 0.90 * kickTrace, presence);
     float stormAmp = stormDensity * (1.0 + 0.45 * mid);
 
     // ===== STORMCLOUDS — multi-layer parallax =====
@@ -285,6 +478,11 @@ void main() {
     // Top-of-canvas darkness gradient for atmospheric depth.
     col *= mix(0.55, 1.0, smoothstep(0.95, 0.10, uv.y));
 
+    // Continuous band-follow: cloud luminance breathes with bass/mids so the
+    // storm tracks beatless material (ambient) too — smooth, no gates.
+    // Sub joins so hiphop's sub-heavy kicks move the sky too.
+    col *= 1.0 + 0.22 * bassP + 0.12 * midP + 0.12 * subP;
+
     // ===== BOLT SCHEDULING =====
     // Slot-based time buckets; each slot may fire with hashed probability.
     float slot = max(boltLifetime * 0.85, 0.28);
@@ -304,7 +502,9 @@ void main() {
         float seed = slotIdx * 13.37 + 1.0;
         float chance = hash11(seed * 0.917);
         // Bass kicks lower the threshold; mid contributes baseline storm activity.
-        float thresh = 1.0 - clamp(boltProbability + 0.45 * kick + 0.18 * mid, 0.0, 1.0);
+        // Cap below 1.0 so constant loud input (edm) can't saturate the
+        // schedule into a fixed audio-blind pulse train.
+        float thresh = 1.0 - clamp(boltProbability + 0.35 * kick + 0.12 * mid, 0.0, 0.95);
         if (chance < thresh) continue;
 
         // Up to 2 bolts on heavy bass.
@@ -316,6 +516,12 @@ void main() {
             vec3 sd = boltSDF(uva, bseed, boltBranchDepth, boltJitter, life01);
             float d = sd.x;          // unsigned distance to skeleton
             float env = boltEnv(life01, bseed);
+            // Bolt luminance follows the music: the slot schedule alone can't
+            // carry correlation, so brightness tracks bass (sub couples the
+            // sparse hiphop kicks, punch accents soft jazz transients).
+            // Base restored to 1.0 so silence = exact original bolt look.
+            env *= 1.0 + 0.40 * bassP + 0.35 * subP + 0.30 * punchP;
+            env *= boltGate;
 
             // HOT CORE: very tight Gaussian falloff at near-white intensity.
             float coreR = boltCoreWidth;
@@ -410,6 +616,13 @@ void main() {
         col.b *= 1.0 + length(ca) * 6.0 * 0.7;
     }
 
+    // ===== WHOLE-FRAME LINEAR FOLLOWER + DECAYING BEAT TRACE =====
+    // Sub carries hiphop's sparse kicks; audioBeatPulse (decays ~300ms+)
+    // leaves a visible tail between hits; linear bass/mid carry jazz's soft
+    // accents and ambient swells. Silence multiplies by exactly 1.0.
+    col *= 1.0 + 0.12 * bassP + 0.15 * subP + 0.08 * midP
+               + 0.22 * audioBeatPulse * aR;
+
     // ===== POST: bloom approximation on bright pixels =====
     float bright = max(max(col.r, col.g), col.b);
     float bloom = smoothstep(0.85, 1.6, bright);
@@ -424,6 +637,17 @@ void main() {
     float vig = 1.0 - dot(vc, vc) * 0.85;
     col *= vig;
 
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(vec3(ucL), col, colorBoost);
+    if (hueShift > 0.0005) {
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        col = clamp(hM * col, 0.0, 1.0);
+    }
     col = clamp(col, 0.0, 1.8);
     gl_FragColor = vec4(col, 1.0);
 }

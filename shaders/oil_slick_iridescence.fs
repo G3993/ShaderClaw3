@@ -1,23 +1,148 @@
 /*{
-  "CATEGORIES": ["Generator", "Atmospheric", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Atmospheric",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "Thin-film interference colours on a flowing surface — rainbow patches that shift hue as the film thickness varies, computed from real Fresnel-ish thin-film equations. Like a soap bubble or oil-on-water in slow flow. Drop an image in: its luminance moulds the film thickness so the iridescence crawls over the picture, and the image bleeds through the slick. Audio-driven thickness modulation.",
   "INPUTS": [
-    { "NAME": "inputTex",           "LABEL": "Texture",             "TYPE": "image" },
-    { "NAME": "imageThickness",     "LABEL": "Image → Film",        "TYPE": "float", "MIN": 0.0,   "MAX": 1.0,   "DEFAULT": 0.6 },
-    { "NAME": "imageBleed",         "LABEL": "Image Bleed",         "TYPE": "float", "MIN": 0.0,   "MAX": 1.0,   "DEFAULT": 0.30 },
-    { "NAME": "imageWarp",          "LABEL": "Image Warp",          "TYPE": "float", "MIN": 0.0,   "MAX": 1.0,   "DEFAULT": 0.35 },
-    { "NAME": "filmScale",          "LABEL": "Film Scale",          "TYPE": "float", "MIN": 0.5,   "MAX": 8.0,   "DEFAULT": 2.4 },
-    { "NAME": "filmDriftSpeed",     "LABEL": "Drift Speed",         "TYPE": "float", "MIN": 0.0,   "MAX": 1.0,   "DEFAULT": 0.18 },
-    { "NAME": "filmThicknessBase",  "LABEL": "Thickness Base (nm)", "TYPE": "float", "MIN": 100.0, "MAX": 900.0, "DEFAULT": 420.0 },
-    { "NAME": "filmThicknessRange", "LABEL": "Thickness Range (nm)","TYPE": "float", "MIN": 0.0,   "MAX": 700.0, "DEFAULT": 320.0 },
-    { "NAME": "secondaryNoise",     "LABEL": "Secondary Detail",    "TYPE": "float", "MIN": 0.0,   "MAX": 1.0,   "DEFAULT": 0.45 },
-    { "NAME": "refractIndex",       "LABEL": "Refraction Index n",  "TYPE": "float", "MIN": 1.0,   "MAX": 2.0,   "DEFAULT": 1.33 },
-    { "NAME": "viewAngle",          "LABEL": "View Angle",          "TYPE": "float", "MIN": 0.0,   "MAX": 1.4,   "DEFAULT": 0.0 },
-    { "NAME": "audioReact",         "LABEL": "Audio React",         "TYPE": "float", "MIN": 0.0,   "MAX": 2.0,   "DEFAULT": 1.0 },
-    { "NAME": "hueRotate",          "LABEL": "Hue Rotate",          "TYPE": "float", "MIN": -1.0,  "MAX": 1.0,   "DEFAULT": 0.0 },
-    { "NAME": "saturation",         "LABEL": "Saturation",          "TYPE": "float", "MIN": 0.0,   "MAX": 2.0,   "DEFAULT": 1.15 },
-    { "NAME": "filmGloss",          "LABEL": "Gloss",               "TYPE": "float", "MIN": 0.0,   "MAX": 1.5,   "DEFAULT": 0.7 },
-    { "NAME": "bgColor",            "LABEL": "Background",          "TYPE": "color", "DEFAULT": [0.012, 0.018, 0.028, 1.0] }
+    {
+      "NAME": "inputTex",
+      "LABEL": "Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "imageThickness",
+      "LABEL": "Image → Film",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.6
+    },
+    {
+      "NAME": "imageBleed",
+      "LABEL": "Image Bleed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.3
+    },
+    {
+      "NAME": "imageWarp",
+      "LABEL": "Image Warp",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.35
+    },
+    {
+      "NAME": "secondaryNoise",
+      "LABEL": "Secondary Detail",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.45
+    },
+    {
+      "NAME": "refractIndex",
+      "LABEL": "Refraction Index n",
+      "TYPE": "float",
+      "MIN": 1,
+      "MAX": 2,
+      "DEFAULT": 1.33
+    },
+    {
+      "NAME": "filmGloss",
+      "LABEL": "Gloss",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.7
+    },
+    {
+      "NAME": "filmScale",
+      "LABEL": "Film Scale",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 8,
+      "DEFAULT": 2.4,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "filmThicknessBase",
+      "LABEL": "Thickness Base (nm)",
+      "TYPE": "float",
+      "MIN": 100,
+      "MAX": 900,
+      "DEFAULT": 420,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "filmThicknessRange",
+      "LABEL": "Thickness Range (nm)",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 700,
+      "DEFAULT": 320,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "filmDriftSpeed",
+      "LABEL": "Drift Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.18,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "hueRotate",
+      "LABEL": "Hue Rotate",
+      "TYPE": "float",
+      "MIN": -1,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "saturation",
+      "LABEL": "Saturation",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1.15,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "viewAngle",
+      "LABEL": "View Angle",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.4,
+      "DEFAULT": 0,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.012,
+        0.018,
+        0.028,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -119,6 +244,12 @@ void main() {
     float bass = audioBass * audioReact;
     float trbl = audioHigh * audioReact;
     float midA = audioMid  * audioReact;
+    // Gentle near-linear conditioning — the old pow(smoothstep(0.05,0.9,x),1.4)
+    // knee steepened the mid-range, so even the pre-smoothed bands produced
+    // large per-frame thickness deltas (whole-frame hue jumps = chop).
+    float bassP = smoothstep(0.02, 0.98, min(bass, 1.2));
+    float trebP = smoothstep(0.02, 0.98, min(trbl, 1.2));
+    float midP  = smoothstep(0.02, 0.98, min(midA, 1.2));
 
     // Curl-noise flow advection: rainbow patches drift on a divergence-free
     // velocity field so the slick keeps moving without sinks/sources.
@@ -149,11 +280,15 @@ void main() {
 
     float thick01 = baseN
                   + (detailN - 0.5) * secondaryNoise * 0.9
-                  + (ripple  - 0.5) * (0.15 + trbl * 0.6);
+                  + (ripple  - 0.5) * (0.15 + trebP * 0.22);
 
     // Map to nanometres; bass thickens the film globally. Image luminance
     // pushes thickness up/down so the interference bands contour the picture.
-    float t_nm = filmThicknessBase + (thick01 - 0.5) * filmThicknessRange + bass * 140.0;
+    // Bass thickening capped at ~32nm (~1/8 fringe): thin-film hue is the
+    // highest-delta channel in this shader — a global thickness swing recolors
+    // every pixel at once, so its depth stays small and the correlation it
+    // gives up is carried by the film-brightness follower below instead.
+    float t_nm = filmThicknessBase + (thick01 - 0.5) * filmThicknessRange + bassP * 32.0;
     if (hasTex) t_nm += (imgLum - 0.5) * imageThickness * 420.0;
     t_nm = max(t_nm, 60.0);
 
@@ -161,6 +296,9 @@ void main() {
     float cosTheta = clamp(cos(viewAngle), 0.25, 1.0);
 
     vec3 film = thinFilm(t_nm, refractIndex, cosTheta);
+    // Bass/mid lift film brightness — a smooth, low-frame-delta luminance
+    // channel that carries the correlation the reduced thickness swing gave up.
+    film *= 1.0 + 0.30 * bassP + 0.14 * midP;
     film = satAdjust(film, saturation);
     film = hueShift(film, hueRotate);
 

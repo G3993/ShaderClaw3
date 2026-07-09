@@ -1,16 +1,129 @@
 /*{
-  "CATEGORIES": ["Generator", "Text"],
+  "CATEGORIES": [
+    "Generator",
+    "Text"
+  ],
   "DESCRIPTION": "Text on a waving flag surface with 3D shading and presets",
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "ETHEREA", "MAX_LENGTH": 12 },
-    { "NAME": "preset", "TYPE": "long", "VALUES": [0,1,2,3,4,5,6,7], "LABELS": ["Banner","Twist","Flat Sea","Barber","Origami","Cola Waves","B&W","Newsprint"], "DEFAULT": 0 },
-    { "NAME": "speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
-    { "NAME": "waveSize", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "rowCount", "TYPE": "float", "MIN": 4.0, "MAX": 20.0, "DEFAULT": 10.0 },
-    { "NAME": "textColor", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "textScale", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "transparentBg", "TYPE": "bool", "DEFAULT": true }
+    {
+      "NAME": "preset",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "LABELS": [
+        "Banner",
+        "Twist",
+        "Flat Sea",
+        "Barber",
+        "Origami",
+        "Cola Waves",
+        "B&W",
+        "Newsprint"
+      ],
+      "DEFAULT": 0,
+      "LABEL": "Preset"
+    },
+    {
+      "NAME": "waveSize",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5,
+      "GROUP": "Shape / Geometry",
+      "LABEL": "Wave Size"
+    },
+    {
+      "NAME": "rowCount",
+      "TYPE": "float",
+      "MIN": 4,
+      "MAX": 20,
+      "DEFAULT": 10,
+      "GROUP": "Shape / Geometry",
+      "LABEL": "Row Count"
+    },
+    {
+      "NAME": "speed",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 3,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation",
+      "LABEL": "Speed"
+    },
+    {
+      "NAME": "textColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color",
+      "LABEL": "Text Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": "ETHEREA",
+      "MAX_LENGTH": 12,
+      "GROUP": "Text",
+      "LABEL": "Message"
+    },
+    {
+      "NAME": "textScale",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Text",
+      "LABEL": "Text Scale"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Background",
+      "LABEL": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background",
+      "LABEL": "Transparent Background"
+    }
   ]
 }*/
 
@@ -44,6 +157,14 @@ void main() {
 
     int numChars = charCount();
     int presetIdx = int(preset);
+
+    // ── Soft-knee audio conditioning (playbook standard snippet) ─────
+    float bassP = pow(clamp(smoothstep(0.05, 0.85, audioBass), 0.0, 1.0), 1.6);
+    float midP  = pow(clamp(smoothstep(0.08, 0.85, audioMid),  0.0, 1.0), 1.3);
+    float highP = pow(clamp(smoothstep(0.10, 0.90, audioHigh), 0.0, 1.0), 1.2);
+    float drive = 0.25 + 0.75 * clamp(smoothstep(0.05, 0.9, audioEnergy), 0.0, 1.0);
+    float kick  = audioBeatPulse * audioBeatPulse;
+    float wS = waveSize * (1.0 + 0.25 * bassP); // bass billows the flag
 
     // ── Preset parameters ────────────────────────────────────────────
     float waveAmp = 1.0;      // vertical wave amplitude
@@ -98,8 +219,8 @@ void main() {
     float envelope = mix(1.0, flagX, anchorAmt);
     envelope = clamp(envelope, 0.0, 1.0);
 
-    // Primary wave: Y displacement based on X position
-    float t = TIME * speed * 2.5;
+    // Primary wave: Y displacement based on X position (energy paces the wind)
+    float t = TIME * speed * (2.1 + 1.0 * drive);
     float wavePhase = flagX * waveFreq * 6.2832 - t;
     float yWave;
     if (sharpFold) {
@@ -118,14 +239,14 @@ void main() {
         yWave += sin(flagY * 4.0 * 6.2832 + t * 0.7) * 0.3;
     }
 
-    float yDisp = yWave * waveSize * waveAmp * 0.15 * envelope;
+    float yDisp = yWave * wS * waveAmp * 0.15 * envelope;
 
     // Warp the Y coordinate
     float warpedY = flagY + yDisp;
 
-    // X displacement based on wave derivative (horizontal ripple)
+    // X displacement based on wave derivative (horizontal ripple; mids add turbulence)
     float dWave = cos(wavePhase) * waveFreq * 6.2832;
-    float xDisp = dWave * waveSize * xShiftAmp * 0.02 * envelope;
+    float xDisp = dWave * wS * xShiftAmp * 0.02 * envelope * (1.0 + 0.35 * midP);
     float warpedX = flagX + xDisp;
 
     // ── Determine row from warped Y ──────────────────────────────────
@@ -136,7 +257,7 @@ void main() {
 
     // ── 3D shading from wave surface normal ──────────────────────────
     // The derivative of Y displacement w.r.t. X gives the surface tilt
-    float surfSlope = dWave * waveSize * waveAmp * 0.15 * envelope;
+    float surfSlope = dWave * wS * waveAmp * 0.15 * envelope;
     // Light from the right: shade based on slope
     float shade = 0.5 + 0.5 * (surfSlope / (abs(surfSlope) + 0.3));
     shade = clamp(shade * shadeMult, 0.08, 1.0);
@@ -209,5 +330,22 @@ void main() {
         finalCol = textColor.rgb * shade;
     }
 
-    gl_FragColor = vec4(finalCol, alpha);
+    // Highs + beat pulse sparkle the glyph pixels only
+    finalCol *= 1.0 + (0.30 * highP + 0.30 * kick) * textHit;
+
+    // ---- universal color block (defaults = no-op) ----
+    // (background handled by the existing bgColor/transparentBg inputs)
+    vec3 uc = finalCol;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                   // saturation
+    if (hueShift > 0.0005) {                               // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+
+    gl_FragColor = vec4(uc, alpha);
 }

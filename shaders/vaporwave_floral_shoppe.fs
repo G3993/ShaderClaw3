@@ -1,17 +1,154 @@
 /*{
-  "CATEGORIES": ["Generator", "Vaporwave", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Vaporwave",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "Macintosh Plus — Floral Shoppe (2011). Hot-pink/magenta/indigo sunset with twin sun-discs (one slumped into its plaza-tile reflection), Tron-era cyan/magenta perspective grid scrolling toward camera, and a swarm of drifting Y2K junk: chrome stars, wireframe cubes, holo-CDs, sparkle dust, dolphin silhouettes, floppy disks, globe outlines, lens flares. Optional fake-katakana glyphs. VHS scanlines, RGB chromatic aberration, treble-triggered tear-glitches. Stays alive in silence. Single-pass, LINEAR HDR.",
   "INPUTS": [
-    { "NAME": "y2kCount",      "LABEL": "Y2K Junk Count",  "TYPE": "long",  "DEFAULT": 16, "VALUES": [8,12,16,20,24], "LABELS": ["8","12","16","20","24"] },
-    { "NAME": "horizonY",      "LABEL": "Horizon",         "TYPE": "float", "MIN": 0.40, "MAX": 0.70, "DEFAULT": 0.55 },
-    { "NAME": "gridSpeed",     "LABEL": "Grid Speed",      "TYPE": "float", "MIN": 0.0,  "MAX": 1.5,  "DEFAULT": 0.45 },
-    { "NAME": "gridDensity",   "LABEL": "Grid Density",    "TYPE": "float", "MIN": 4.0,  "MAX": 24.0, "DEFAULT": 10.0 },
-    { "NAME": "sunSize",       "LABEL": "Sun Size",        "TYPE": "float", "MIN": 0.06, "MAX": 0.30, "DEFAULT": 0.16 },
-    { "NAME": "katakanaCount", "LABEL": "Katakana Glyphs", "TYPE": "long",  "DEFAULT": 0, "VALUES": [0,4,6,9,12,16], "LABELS": ["Off","4","6","9","12","16"] },
-    { "NAME": "scanlineAmp",   "LABEL": "Scanlines",       "TYPE": "float", "MIN": 0.0,  "MAX": 0.5,  "DEFAULT": 0.22 },
-    { "NAME": "chromaShift",   "LABEL": "Chroma Aberration","TYPE": "float","MIN": 0.0,  "MAX": 0.020,"DEFAULT": 0.006 },
-    { "NAME": "tearAmount",    "LABEL": "VHS Tear",        "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.55 },
-    { "NAME": "audioReact",    "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 }
+    {
+      "NAME": "y2kCount",
+      "LABEL": "Y2K Junk Count",
+      "TYPE": "long",
+      "DEFAULT": 16,
+      "VALUES": [
+        8,
+        12,
+        16,
+        20,
+        24
+      ],
+      "LABELS": [
+        "8",
+        "12",
+        "16",
+        "20",
+        "24"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "gridDensity",
+      "LABEL": "Grid Density",
+      "TYPE": "float",
+      "MIN": 4,
+      "MAX": 24,
+      "DEFAULT": 10,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "sunSize",
+      "LABEL": "Sun Size",
+      "TYPE": "float",
+      "MIN": 0.06,
+      "MAX": 0.3,
+      "DEFAULT": 0.16,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "katakanaCount",
+      "LABEL": "Katakana Glyphs",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        4,
+        6,
+        9,
+        12,
+        16
+      ],
+      "LABELS": [
+        "Off",
+        "4",
+        "6",
+        "9",
+        "12",
+        "16"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "gridSpeed",
+      "LABEL": "Grid Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.45,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "horizonY",
+      "LABEL": "Horizon",
+      "TYPE": "float",
+      "MIN": 0.4,
+      "MAX": 0.7,
+      "DEFAULT": 0.55,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "scanlineAmp",
+      "LABEL": "Scanlines",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.5,
+      "DEFAULT": 0.22
+    },
+    {
+      "NAME": "chromaShift",
+      "LABEL": "Chroma Aberration",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.02,
+      "DEFAULT": 0.006
+    },
+    {
+      "NAME": "tearAmount",
+      "LABEL": "VHS Tear",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.55
+    }
   ]
 }*/
 
@@ -407,6 +544,8 @@ vec3 composeScene(vec2 uv, float aspect, float horizon, float density,
     float sy = clamp((uv.y - horizon) / (1.0 - horizon), 0.0, 1.0);
     vec3  col = mix(PINK,  MAGEN,  smoothstep(0.0,  0.55, sy));
           col = mix(col,   INDIGO, smoothstep(0.55, 1.0,  sy));
+    // universal background: blend the sky backdrop toward bgColor
+    col = mix(col, bgColor.rgb, bgColor.a);
 
     // Twin suns above grid
     col += twinSun(uv, aspect, horizon, sunSz, mid * audio, t);
@@ -467,6 +606,20 @@ void main() {
     float vig = smoothstep(1.05, 0.45, length((uv - 0.5) * vec2(aspect, 1.0)));
     col *= mix(0.78, 1.0, vig);
     col += (hash21(uv * RENDERSIZE.xy + t) - 0.5) * 0.03 * (0.6 + bass * audio * 0.4);
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = col;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    col = uc;
 
     gl_FragColor = vec4(col, 1.0);
 }

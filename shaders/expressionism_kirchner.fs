@@ -1,30 +1,249 @@
 /*{
-  "CATEGORIES": ["Generator", "Art Movement", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Art Movement",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "Abstract Paint Strokes × Pop Art Fusion — Dense HDR expressionist gestural brushstrokes (Kirchner/Brücke/Soutine) fused with Lichtenstein Ben-Day halftone dots, hard pop outlines, and Kandinsky 3D Lissajous-orbiting geometric solids. Woodcut-bone ink linework edges every stroke. Central angular figure silhouette with shadow double. Floating 3D shapes cast halo glows over the paint field. Bass springs shapes outward, treble shimmers dots, audio drives gesture and stroke width. Mood blends expressionist palette with pop-art panel colours. LINEAR HDR out.",
   "INPUTS": [
-    { "NAME": "mood",          "LABEL": "Expr. Mood",    "TYPE": "long",  "DEFAULT": 2, "VALUES": [0,1,2,3], "LABELS": ["Soutine Twist","Schiele Nervous Line","Brücke Storm","War Charcoal"] },
-    { "NAME": "brushDensity",  "LABEL": "Brush Density", "TYPE": "float", "MIN": 12.0, "MAX": 48.0, "DEFAULT": 28.0 },
-    { "NAME": "gestureSpeed",  "LABEL": "Gesture Speed", "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.7 },
-    { "NAME": "paletteWarmth", "LABEL": "Palette Warmth","TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.5 },
-    { "NAME": "audioReact",    "LABEL": "Audio React",   "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
-    { "NAME": "showFigure",    "LABEL": "Show Figure",   "TYPE": "bool",  "DEFAULT": true },
-    { "NAME": "figureX",       "LABEL": "Figure X",      "TYPE": "float", "MIN": -1.0, "MAX": 1.0,  "DEFAULT": 0.0 },
-    { "NAME": "figureY",       "LABEL": "Figure Y",      "TYPE": "float", "MIN": -1.0, "MAX": 1.0,  "DEFAULT": 0.0 },
-    { "NAME": "figureScale",   "LABEL": "Figure Scale",  "TYPE": "float", "MIN": 0.5,  "MAX": 1.8,  "DEFAULT": 1.0 },
-    { "NAME": "shadowDepth",   "LABEL": "Shadow Double", "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.6 },
-    { "NAME": "crisp",         "LABEL": "Crispness",     "TYPE": "float", "MIN": 0.0,  "MAX": 2.5,  "DEFAULT": 1.1 },
-    { "NAME": "dotDensity",    "LABEL": "Ben-Day Density","TYPE": "float","MIN": 20.0, "MAX": 140.0,"DEFAULT": 60.0 },
-    { "NAME": "dotRadius",     "LABEL": "Dot Radius",    "TYPE": "float", "MIN": 0.15, "MAX": 0.48, "DEFAULT": 0.30 },
-    { "NAME": "dotMix",        "LABEL": "Dot Mix",       "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.40 },
-    { "NAME": "outlineWeight", "LABEL": "Pop Outline",   "TYPE": "float", "MIN": 0.001,"MAX": 0.012,"DEFAULT": 0.0042 },
-    { "NAME": "shapeCount",    "LABEL": "Shape Count",   "TYPE": "float", "MIN": 0.0,  "MAX": 20.0, "DEFAULT": 9.0 },
-    { "NAME": "shapeSize",     "LABEL": "Shape Size",    "TYPE": "float", "MIN": 0.02, "MAX": 0.18, "DEFAULT": 0.07 },
-    { "NAME": "orbitSpeed",    "LABEL": "Orbit Speed",   "TYPE": "float", "MIN": 0.0,  "MAX": 1.5,  "DEFAULT": 0.28 },
-    { "NAME": "orbitRange",    "LABEL": "Orbit Range",   "TYPE": "float", "MIN": 0.0,  "MAX": 0.45, "DEFAULT": 0.18 },
-    { "NAME": "haloStrength",  "LABEL": "Halo Strength", "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.55 },
-    { "NAME": "depth3D",       "LABEL": "3D Depth",      "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.60 },
-    { "NAME": "springReact",   "LABEL": "Bass Spring",   "TYPE": "float", "MIN": 0.0,  "MAX": 0.5,  "DEFAULT": 0.14 },
-    { "NAME": "compositionSeed","LABEL":"Shape Seed",    "TYPE": "float", "MIN": 0.0,  "MAX": 50.0, "DEFAULT": 0.0 }
+    {
+      "NAME": "mood",
+      "LABEL": "Expr. Mood",
+      "TYPE": "long",
+      "DEFAULT": 2,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Soutine Twist",
+        "Schiele Nervous Line",
+        "Brücke Storm",
+        "War Charcoal"
+      ]
+    },
+    {
+      "NAME": "showFigure",
+      "LABEL": "Show Figure",
+      "TYPE": "bool",
+      "DEFAULT": true
+    },
+    {
+      "NAME": "shadowDepth",
+      "LABEL": "Shadow Double",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.6
+    },
+    {
+      "NAME": "crisp",
+      "LABEL": "Crispness",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2.5,
+      "DEFAULT": 1.1
+    },
+    {
+      "NAME": "dotMix",
+      "LABEL": "Dot Mix",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.4
+    },
+    {
+      "NAME": "haloStrength",
+      "LABEL": "Halo Strength",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.55
+    },
+    {
+      "NAME": "compositionSeed",
+      "LABEL": "Shape Seed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 50,
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "brushDensity",
+      "LABEL": "Brush Density",
+      "TYPE": "float",
+      "MIN": 12,
+      "MAX": 48,
+      "DEFAULT": 28,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "figureX",
+      "LABEL": "Figure X",
+      "TYPE": "float",
+      "MIN": -1,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "figureY",
+      "LABEL": "Figure Y",
+      "TYPE": "float",
+      "MIN": -1,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "figureScale",
+      "LABEL": "Figure Scale",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 1.8,
+      "DEFAULT": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "dotDensity",
+      "LABEL": "Ben-Day Density",
+      "TYPE": "float",
+      "MIN": 20,
+      "MAX": 140,
+      "DEFAULT": 60,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "dotRadius",
+      "LABEL": "Dot Radius",
+      "TYPE": "float",
+      "MIN": 0.15,
+      "MAX": 0.48,
+      "DEFAULT": 0.3,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "outlineWeight",
+      "LABEL": "Pop Outline",
+      "TYPE": "float",
+      "MIN": 0.001,
+      "MAX": 0.012,
+      "DEFAULT": 0.0042,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "shapeCount",
+      "LABEL": "Shape Count",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 20,
+      "DEFAULT": 9,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "shapeSize",
+      "LABEL": "Shape Size",
+      "TYPE": "float",
+      "MIN": 0.02,
+      "MAX": 0.18,
+      "DEFAULT": 0.07,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "gestureSpeed",
+      "LABEL": "Gesture Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.7,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "orbitSpeed",
+      "LABEL": "Orbit Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.28,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "orbitRange",
+      "LABEL": "Orbit Range",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.45,
+      "DEFAULT": 0.18,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "paletteWarmth",
+      "LABEL": "Palette Warmth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "depth3D",
+      "LABEL": "3D Depth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.6,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "springReact",
+      "LABEL": "Bass Spring",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.5,
+      "DEFAULT": 0.14,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -549,5 +768,20 @@ void main() {
         col = mix(col, LL_BLACK,  step(abs(fr-flashR),0.008)*bass);
     }
 
-    gl_FragColor = vec4(max(col, 0.0), 1.0);
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = max(col, 0.0);
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                   // saturation
+    if (hueShift > 0.0005) {                               // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    // background = darkest end of the paint field (ink/charcoal depths)
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+
+    gl_FragColor = vec4(uc, 1.0);
 }

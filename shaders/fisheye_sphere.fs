@@ -1,39 +1,310 @@
 /*{
   "DESCRIPTION": "Cloud Sphere — a volumetric procedural cloud raymarched inside a 3D glass fisheye sphere with chromatic dispersion, neon rim, lens flare, audio reactivity, and rich color controls. Bass pulses the cloud density, mids warp the lens, highs energise the neon ring.",
   "CREDIT": "ShaderClaw × Shadertoy cloud fusion",
-  "CATEGORIES": ["3D", "Effect", "Atmospheric", "Audio"],
+  "CATEGORIES": [
+    "3D",
+    "Effect",
+    "Atmospheric",
+    "Audio"
+  ],
   "INPUTS": [
-    { "NAME": "inputTex",          "LABEL": "Source (optional)", "TYPE": "image" },
-    { "NAME": "speed",             "LABEL": "Speed",            "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 4.0 },
-    { "NAME": "intensity",         "LABEL": "Intensity",        "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 3.0 },
-    { "NAME": "cloudScale",        "LABEL": "Cloud Scale",      "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.1,  "MAX": 3.0 },
-    { "NAME": "density",           "LABEL": "Cloud Density",    "TYPE": "float", "DEFAULT": 28.0, "MIN": 4.0,  "MAX": 72.0 },
-    { "NAME": "rotSpeed",          "LABEL": "Cloud Rotation",   "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0,  "MAX": 2.0 },
-    { "NAME": "colorSpeed",        "LABEL": "Color Drift",      "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 4.0 },
-    { "NAME": "lensSize",          "LABEL": "Lens Size",        "TYPE": "float", "DEFAULT": 0.88, "MIN": 0.3,  "MAX": 1.3 },
-    { "NAME": "ior",               "LABEL": "IOR",              "TYPE": "float", "DEFAULT": 1.45, "MIN": 1.0,  "MAX": 2.5 },
-    { "NAME": "chromatic",         "LABEL": "Chromatic Split",  "TYPE": "float", "DEFAULT": 0.05, "MIN": 0.0,  "MAX": 0.25 },
-    { "NAME": "perspective",       "LABEL": "Perspective",      "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.0,  "MAX": 1.5 },
-    { "NAME": "spin",              "LABEL": "Spin Speed",       "TYPE": "float", "DEFAULT": 0.08, "MIN": -2.0, "MAX": 2.0 },
-    { "NAME": "fresnel",           "LABEL": "Fresnel",          "TYPE": "float", "DEFAULT": 0.4,  "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "rimSoftness",       "LABEL": "Rim Softness",     "TYPE": "float", "DEFAULT": 0.008,"MIN": 0.0,  "MAX": 0.08 },
-    { "NAME": "rimGlow",           "LABEL": "Rim Glow",         "TYPE": "float", "DEFAULT": 0.3,  "MIN": 0.0,  "MAX": 1.5 },
-    { "NAME": "neonIntensity",     "LABEL": "Neon Ring",        "TYPE": "float", "DEFAULT": 1.2,  "MIN": 0.0,  "MAX": 4.0 },
-    { "NAME": "neonWidth",         "LABEL": "Neon Width",       "TYPE": "float", "DEFAULT": 0.012,"MIN": 0.002,"MAX": 0.08 },
-    { "NAME": "neonBloom",         "LABEL": "Neon Bloom",       "TYPE": "float", "DEFAULT": 0.10, "MIN": 0.01, "MAX": 0.6 },
-    { "NAME": "neonColor",         "LABEL": "Neon Color",       "TYPE": "color", "DEFAULT": [0.2, 0.7, 1.0, 1.0] },
-    { "NAME": "neonPulse",         "LABEL": "Neon Pulse",       "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "cloudColorA",       "LABEL": "Cloud Color A",    "TYPE": "color", "DEFAULT": [0.9, 0.95, 1.0, 1.0] },
-    { "NAME": "cloudColorB",       "LABEL": "Cloud Color B",    "TYPE": "color", "DEFAULT": [0.3, 0.5, 0.9, 1.0] },
-    { "NAME": "bgColor",           "LABEL": "Sky / BG",         "TYPE": "color", "DEFAULT": [0.04, 0.05, 0.12, 1.0] },
-    { "NAME": "flare",             "LABEL": "Lens Flare",       "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0,  "MAX": 2.0 },
-    { "NAME": "flareAngle",        "LABEL": "Flare Angle",      "TYPE": "float", "DEFAULT": -0.6, "MIN": -3.14159,"MAX": 3.14159 },
-    { "NAME": "flareColor",        "LABEL": "Flare Color",      "TYPE": "color", "DEFAULT": [1.0, 0.92, 0.78, 1.0] },
-    { "NAME": "shadowStrength",    "LABEL": "Shadow",           "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "shadowOffsetX",     "LABEL": "Shadow X",         "TYPE": "float", "DEFAULT": 0.06, "MIN": -1.0, "MAX": 1.0 },
-    { "NAME": "shadowOffsetY",     "LABEL": "Shadow Y",         "TYPE": "float", "DEFAULT": -0.09,"MIN": -1.0, "MAX": 1.0 },
-    { "NAME": "reactivity",        "LABEL": "Audio Reactivity", "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 3.0 },
-    { "NAME": "transparentBg",     "LABEL": "Transparent BG",   "TYPE": "bool",  "DEFAULT": false }
+    {
+      "NAME": "inputTex",
+      "LABEL": "Source (optional)",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "intensity",
+      "LABEL": "Intensity",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 3
+    },
+    {
+      "NAME": "ior",
+      "LABEL": "IOR",
+      "TYPE": "float",
+      "DEFAULT": 1.45,
+      "MIN": 1,
+      "MAX": 2.5
+    },
+    {
+      "NAME": "fresnel",
+      "LABEL": "Fresnel",
+      "TYPE": "float",
+      "DEFAULT": 0.4,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "rimSoftness",
+      "LABEL": "Rim Softness",
+      "TYPE": "float",
+      "DEFAULT": 0.008,
+      "MIN": 0,
+      "MAX": 0.08
+    },
+    {
+      "NAME": "rimGlow",
+      "LABEL": "Rim Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.3,
+      "MIN": 0,
+      "MAX": 1.5
+    },
+    {
+      "NAME": "neonIntensity",
+      "LABEL": "Neon Ring",
+      "TYPE": "float",
+      "DEFAULT": 1.2,
+      "MIN": 0,
+      "MAX": 4
+    },
+    {
+      "NAME": "neonBloom",
+      "LABEL": "Neon Bloom",
+      "TYPE": "float",
+      "DEFAULT": 0.1,
+      "MIN": 0.01,
+      "MAX": 0.6
+    },
+    {
+      "NAME": "flare",
+      "LABEL": "Lens Flare",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "shadowStrength",
+      "LABEL": "Shadow",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "cloudScale",
+      "LABEL": "Cloud Scale",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.1,
+      "MAX": 3,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "density",
+      "LABEL": "Cloud Density",
+      "TYPE": "float",
+      "DEFAULT": 28,
+      "MIN": 4,
+      "MAX": 72,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "lensSize",
+      "LABEL": "Lens Size",
+      "TYPE": "float",
+      "DEFAULT": 0.88,
+      "MIN": 0.3,
+      "MAX": 1.3,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "neonWidth",
+      "LABEL": "Neon Width",
+      "TYPE": "float",
+      "DEFAULT": 0.012,
+      "MIN": 0.002,
+      "MAX": 0.08,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "shadowOffsetX",
+      "LABEL": "Shadow X",
+      "TYPE": "float",
+      "DEFAULT": 0.06,
+      "MIN": -1,
+      "MAX": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "shadowOffsetY",
+      "LABEL": "Shadow Y",
+      "TYPE": "float",
+      "DEFAULT": -0.09,
+      "MIN": -1,
+      "MAX": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Speed",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 4,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "rotSpeed",
+      "LABEL": "Cloud Rotation",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "colorSpeed",
+      "LABEL": "Color Drift",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 4,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "spin",
+      "LABEL": "Spin Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.08,
+      "MIN": -2,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "neonPulse",
+      "LABEL": "Neon Pulse",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "chromatic",
+      "LABEL": "Chromatic Split",
+      "TYPE": "float",
+      "DEFAULT": 0.05,
+      "MIN": 0,
+      "MAX": 0.25,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "neonColor",
+      "LABEL": "Neon Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.2,
+        0.7,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "cloudColorA",
+      "LABEL": "Cloud Color A",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.9,
+        0.95,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "cloudColorB",
+      "LABEL": "Cloud Color B",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.3,
+        0.5,
+        0.9,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "flareColor",
+      "LABEL": "Flare Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.92,
+        0.78,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "perspective",
+      "LABEL": "Perspective",
+      "TYPE": "float",
+      "DEFAULT": 0.18,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "flareAngle",
+      "LABEL": "Flare Angle",
+      "TYPE": "float",
+      "DEFAULT": -0.6,
+      "MIN": -3.14159,
+      "MAX": 3.14159,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Sky / BG",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.04,
+        0.05,
+        0.12,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent BG",
+      "TYPE": "bool",
+      "DEFAULT": false,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "reactivity",
+      "LABEL": "Audio Reactivity",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -483,6 +754,21 @@ void main(){
     // Final vignette
     float vign = 1.0 - smoothstep(0.6, 1.5, length(p) / max(aspect, 1.0));
     col.rgb *= 0.92 + 0.08*vign;
+
+    // ---- universal color block (defaults = no-op) ----
+    // (background handled by the existing bgColor "Sky / BG" input)
+    vec3 uc = col.rgb;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                   // saturation
+    if (hueShift > 0.0005) {                               // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    col.rgb = uc;
 
     gl_FragColor = col;
 }

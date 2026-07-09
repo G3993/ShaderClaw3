@@ -1,15 +1,110 @@
 /*{
-  "CATEGORIES": ["Generator"],
+  "CATEGORIES": [
+    "Generator"
+  ],
   "DESCRIPTION": "ASCII Matrix — falling columns of animated ASCII characters",
   "INPUTS": [
-    { "NAME": "charSize", "TYPE": "float", "MIN": 4.0, "MAX": 32.0, "DEFAULT": 6.24 },
-    { "NAME": "scrollSpeed", "TYPE": "float", "MIN": 0.1, "MAX": 5.0, "DEFAULT": 0.15 },
-    { "NAME": "colorMode", "TYPE": "long", "VALUES": [0,1,2], "LABELS": ["Mono Green","Mono White","Rainbow"], "DEFAULT": 0 },
-    { "NAME": "contrast", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6 },
-    { "NAME": "density", "TYPE": "float", "MIN": 0.1, "MAX": 1.0, "DEFAULT": 0.27 },
-    { "NAME": "charColor", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "TYPE": "bool", "DEFAULT": true }
+    {
+      "NAME": "contrast",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.6,
+      "LABEL": "Contrast"
+    },
+    {
+      "NAME": "charSize",
+      "TYPE": "float",
+      "MIN": 4,
+      "MAX": 32,
+      "DEFAULT": 6.24,
+      "LABEL": "Char Size",
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "density",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 1,
+      "DEFAULT": 0.27,
+      "LABEL": "Density",
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "scrollSpeed",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 5,
+      "DEFAULT": 0.15,
+      "LABEL": "Scroll Speed",
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "colorMode",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2
+      ],
+      "LABELS": [
+        "Mono Green",
+        "Mono White",
+        "Rainbow"
+      ],
+      "DEFAULT": 0,
+      "LABEL": "Color Mode",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "charColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "LABEL": "Char Color",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Background",
+      "LABEL": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background",
+      "LABEL": "Transparent"
+    }
   ]
 }*/
 
@@ -54,6 +149,17 @@ void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     vec2 px = gl_FragCoord.xy;
 
+    // Soft-knee audio conditioning. Sub coupled in for hiphop's sub-heavy
+    // kicks; 0.95 ceiling keeps headroom so EDM's sustained bass still
+    // breathes instead of pegging the knee; 0.03 floor catches soft hits.
+    float bassP = pow(smoothstep(0.03, 0.95, max(audioBass, 0.85 * audioSub)), 1.3);
+    float midP  = smoothstep(0.08, 0.85, audioMid);
+    float highP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+    float drive = 0.25 + 0.75 * smoothstep(0.05, 0.9, audioEnergy);
+    float hitT  = audioBeatPulse * audioBeatPulse; // decaying hit trace (300-1200ms)
+    // Rain falls with the music, drifts gently in silence
+    float musicTime = TIME * (0.9 + 0.4 * (drive - 0.25));
+
     // Grid of character cells
     float cellW = charSize;
     float cellH = charSize * 1.4;  // 5:7 aspect
@@ -66,7 +172,7 @@ void main() {
     float colOffset = colSeed * 100.0;
 
     // Scrolling: each column scrolls at its own rate
-    float scroll = TIME * scrollSpeed * colSpeed + colOffset;
+    float scroll = musicTime * scrollSpeed * colSpeed + colOffset;
     float scrolledY = cell.y + floor(scroll);
 
     // Character selection: pseudo-random per cell, changes with scroll
@@ -79,7 +185,7 @@ void main() {
     float headPos = fract(scroll);
     float distFromHead = mod(cell.y / (RENDERSIZE.y / cellH) + headPos, 1.0);
     // Trail fade: bright at head, dims toward tail
-    float trail = pow(1.0 - distFromHead, 2.0 + contrast * 3.0);
+    float trail = pow(1.0 - distFromHead, (2.0 + contrast * 3.0) * (1.0 - 0.25 * bassP));  // bass lengthens the trails
 
     // Map brightness to ASCII density character (0-9)
     float brightness = trail * colActive;
@@ -97,7 +203,7 @@ void main() {
 
     // Character change animation: occasionally swap characters
     float changeRate = hash2(vec2(cell.x, floor(TIME * 3.0 + cell.y * 0.1)));
-    if (changeRate > 0.85) {
+    if (changeRate > 0.85 - 0.10 * midP) {  // mids churn more characters
         // Re-pick character for flickering effect
         int newIdx = int(floor(hash2(vec2(cell.x * 7.0, floor(TIME * 8.0))) * 9.99));
         if (newIdx < 0) newIdx = 0;
@@ -125,14 +231,32 @@ void main() {
     // Final color: character pixel * brightness * color
     vec3 finalCol = bgColor.rgb;
     float finalAlpha = transparentBg ? 0.0 : 1.0;
-    float mask = pixel * brightness;
+    // Bass follow deepened to a visible ±35%, plus a decaying trace on each
+    // hit so hiphop's two-kicks-a-bar still read seconds apart (no gate,
+    // beatPulse eases out on its own).
+    float mask = pixel * brightness * (1.0 + 0.35 * bassP + 0.45 * hitT);
 
-    // Brighten the leading edge characters
+    // Brighten the leading edge characters (highs whiten the head sparkle,
+    // hits flash the heads then ease back)
     float headGlow = smoothstep(0.8, 1.0, 1.0 - distFromHead) * colActive;
-    vec3 glowCol = mix(charCol, vec3(1.0), headGlow * 0.6);
+    vec3 glowCol = mix(charCol, vec3(1.0), headGlow * (0.6 + 0.25 * highP + 0.3 * hitT));
 
     finalCol = mix(finalCol, glowCol, clamp(mask, 0.0, 1.0));
     if (transparentBg) finalAlpha = clamp(mask, 0.0, 1.0);
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = finalCol;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    finalCol = uc;
 
     gl_FragColor = vec4(finalCol, finalAlpha);
 }

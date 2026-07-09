@@ -1,21 +1,143 @@
 /*{
-    "DESCRIPTION": "Electric arc — simplex noise plasma with glowing discharge line",
-    "CREDIT": "Port of Humus Electro demo, simplex noise by Nikita Miropolskiy",
-    "CATEGORIES": ["Generator"],
-    "INPUTS": [
-        { "NAME": "midSize1", "LABEL": "Mid Size 1", "TYPE": "float", "DEFAULT": 0.60, "MIN": 0.0, "MAX": 2.0 },
-        { "NAME": "midSize2", "LABEL": "Mid Size 2", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 0.4 },
-        { "NAME": "burn", "LABEL": "Burn", "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.0 },
-        { "NAME": "wiggleAmp", "LABEL": "Wiggle Amp", "TYPE": "float", "DEFAULT": 45.0, "MIN": 0.0, "MAX": 100.0 },
-        { "NAME": "freak", "LABEL": "Freak", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.5, "MAX": 10.0 },
-        { "NAME": "freak2", "LABEL": "Freak 2", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.0 },
-        { "NAME": "arcCount",   "LABEL": "Arc Count",    "TYPE": "float", "DEFAULT": 3.0,  "MIN": 1.0, "MAX": 8.0 },
-        { "NAME": "branching",  "LABEL": "Branch Forks", "TYPE": "float", "DEFAULT": 0.40, "MIN": 0.0, "MAX": 1.0 },
-        { "NAME": "flicker",    "LABEL": "Flicker",      "TYPE": "float", "DEFAULT": 0.30, "MIN": 0.0, "MAX": 1.0 },
-        { "NAME": "hueShift",   "LABEL": "Hue Shift",    "TYPE": "float", "DEFAULT": 0.0,  "MIN": 0.0, "MAX": 1.0 },
-        { "NAME": "audioReact", "LABEL": "Audio React",  "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0, "MAX": 2.0 },
-        { "NAME": "arcColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [0.95, 0.95, 0.95, 1.0] }
-    ]
+  "DESCRIPTION": "Electric arc — simplex noise plasma with glowing discharge line",
+  "CREDIT": "Port of Humus Electro demo, simplex noise by Nikita Miropolskiy",
+  "CATEGORIES": [
+    "Generator"
+  ],
+  "INPUTS": [
+    {
+      "NAME": "midSize1",
+      "LABEL": "Mid Size 1",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "midSize2",
+      "LABEL": "Mid Size 2",
+      "TYPE": "float",
+      "DEFAULT": 0.15,
+      "MIN": 0,
+      "MAX": 0.4,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "arcCount",
+      "LABEL": "Arc Count",
+      "TYPE": "float",
+      "DEFAULT": 3,
+      "MIN": 1,
+      "MAX": 8,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "branching",
+      "LABEL": "Branch Forks",
+      "TYPE": "float",
+      "DEFAULT": 0.4,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "wiggleAmp",
+      "LABEL": "Wiggle Amp",
+      "TYPE": "float",
+      "DEFAULT": 45,
+      "MIN": 0,
+      "MAX": 100,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "freak",
+      "LABEL": "Freak",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0.5,
+      "MAX": 10,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "freak2",
+      "LABEL": "Freak 2",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "flicker",
+      "LABEL": "Flicker",
+      "TYPE": "float",
+      "DEFAULT": 0.3,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "burn",
+      "LABEL": "Burn",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "arcColor",
+      "LABEL": "Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.95,
+        0.95,
+        0.95,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    }
+  ]
 }*/
 
 vec3 random3(vec3 c) {
@@ -70,7 +192,10 @@ void main() {
     // Guitar-string pluck: mouse crossing center amplifies wiggle
     float mouseDist = abs(mousePos.y - 0.5) * 2.0; // 0 at center, 1 at edges
     float pluck = 1.0 - smoothstep(0.0, 0.4, mouseDist); // strong near center, fades out
-    float ampBoost = 1.0 + pluck * 3.0 + audioBass * 5.0; // mouse pluck + bass shakes the arc
+    // Soft-kneed bass (sub coupled for sparse hiphop kicks): low 0.03 floor so
+    // jazz's soft accents shake the arc too; 0.95 ceiling keeps EDM headroom.
+    float bassC = pow(smoothstep(0.03, 0.95, max(audioBass, 0.8 * audioSub)), 1.3);
+    float ampBoost = 1.0 + pluck * 3.0 + bassC * 4.5; // mouse pluck + bass shakes the arc
 
     vec2 p = gl_FragCoord.xy / RENDERSIZE.x;
 
@@ -117,6 +242,26 @@ void main() {
     float fl = 1.0 + (fract(sin(floor(TIME * 30.0) * 91.7) * 43758.5453) - 0.5) * flicker * 0.6;
     col *= fl;
 
+    // Continuous band-follow on the whole discharge glow + decaying hit
+    // traces. The arc's own fbm churn drowns subtle geometry shifts, so the
+    // music must also ride the luminance directly: rock's sustained mids and
+    // jazz's walking mids lift it continuously, each kick/snare/accent lands
+    // a trace that eases out (beatPulse/punch decay — never a strobe).
+    // Silence multiplies by exactly 1.0.
+    {
+        // r2 jazz fix: LINEAR mid/bass followers (jazz walks its mids), and
+        // events with a low 0.02-0.03 floor, never squared — squaring turned
+        // jazz's soft 0.4-0.5 accents into ~0.2 and they vanished. The kneed
+        // bassC stays on the arc geometry above. Decaying envelopes, never a
+        // strobe; silence multiplies by exactly 1.0.
+        float aMidC  = smoothstep(0.02, 0.98, audioMid);
+        float aBassL = smoothstep(0.02, 0.98, max(audioBass, 0.8 * audioSub));
+        float aHitT  = max(smoothstep(0.02, 0.80, audioBeatPulse),
+                           smoothstep(0.03, 0.85, audioPunch));
+        col *= 1.0 + clamp(audioReact, 0.0, 2.0)
+                   * (0.26 * aMidC + 0.22 * aBassL + 0.38 * aHitT);
+    }
+
     // Surprise: every ~11s a brief power-out — the entire field cuts to
     // black for ~80ms then resumes. Distant thunder behind the bolt.
     {
@@ -125,5 +270,13 @@ void main() {
         col = mix(col, vec3(0.0), _cut * 0.85);
     }
 
-    gl_FragColor = vec4(col, 1.0);
+    // ---- universal color block (defaults = no-op) ----
+    // (hue handled by the existing `hueShift` arc-palette input)
+    vec3 uc = col;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                   // saturation
+    // background = darkest end of the field (the void around the arcs)
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+
+    gl_FragColor = vec4(uc, 1.0);
 }

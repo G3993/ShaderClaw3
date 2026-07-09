@@ -1,22 +1,133 @@
 /*{
   "DESCRIPTION": "Ripples — multi-scale reaction-diffusion fluid on a Gaussian pyramid. Two RD fields advected through an auto-driven vortex stir, blurred across a packed mip pyramid (Buffer C horizontal, Buffer D vertical) and composited with gradient-lit highlights into a flowing liquid surface. Ported from Shadertoy multi-buffer (trirop-style RD pyramid) to Easel ISF: iChannels mapped to named persistent buffers, mouse replaced by an autonomous stir, noise made procedural.",
   "CREDIT": "Shadertoy RD-pyramid (original author) — ISF port for Easel",
-  "CATEGORIES": ["Generator", "Fluid", "Simulation"],
+  "CATEGORIES": [
+    "Generator",
+    "Fluid",
+    "Simulation"
+  ],
   "INPUTS": [
-    { "NAME": "stirSpeed",   "LABEL": "Stir Speed",   "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.25 },
-    { "NAME": "stirStrength","LABEL": "Stir Strength", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.4 },
-    { "NAME": "tintLow",     "LABEL": "Tint Low",     "TYPE": "color", "DEFAULT": [0.1, 0.0, 0.4, 1.0] },
-    { "NAME": "tintHigh",    "LABEL": "Tint High",    "TYPE": "color", "DEFAULT": [0.25, 0.75, 1.0, 1.0] },
-    { "NAME": "exposure",    "LABEL": "Exposure",     "TYPE": "float", "MIN": 0.3, "MAX": 2.5, "DEFAULT": 1.0 },
-    { "NAME": "audioReact",  "LABEL": "Audio React",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.35 },
-    { "NAME": "inputTex",    "TYPE": "image", "LABEL": "Texture" },
-    { "NAME": "texMix",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "LABEL": "Texture Mix" }
+    {
+      "NAME": "inputTex",
+      "TYPE": "image",
+      "LABEL": "Texture"
+    },
+    {
+      "NAME": "texMix",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Texture Mix"
+    },
+    {
+      "NAME": "stirSpeed",
+      "LABEL": "Stir Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.25,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "stirStrength",
+      "LABEL": "Stir Strength",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 1.4,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "tintLow",
+      "LABEL": "Tint Low",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.1,
+        0,
+        0.4,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "tintHigh",
+      "LABEL": "Tint High",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.25,
+        0.75,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "exposure",
+      "LABEL": "Exposure",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2.5,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.35,
+      "GROUP": "Audio Reactivity"
+    }
   ],
   "PASSES": [
-    { "TARGET": "bufA", "PERSISTENT": true },
-    { "TARGET": "bufB", "PERSISTENT": true },
-    { "TARGET": "bufC", "PERSISTENT": true },
-    { "TARGET": "bufD", "PERSISTENT": true },
+    {
+      "TARGET": "bufA",
+      "PERSISTENT": true
+    },
+    {
+      "TARGET": "bufB",
+      "PERSISTENT": true
+    },
+    {
+      "TARGET": "bufC",
+      "PERSISTENT": true
+    },
+    {
+      "TARGET": "bufD",
+      "PERSISTENT": true
+    },
     {}
   ]
 }*/
@@ -185,7 +296,9 @@ vec4 blur_vertical_left_column(vec2 uv, int depth) {
 // applied identically every frame (deterministic, no feedback-loop shock).
 float audioStirMod() {
     float aReact = clamp(audioReact, 0.0, 2.0);
-    float aBassP = pow(smoothstep(0.05, 0.85, audioBass), 1.6);
+    // Low floor + sub coupling: hiphop's sparse sub-heavy kicks and jazz's
+    // soft accents must move the stir too, not just loud full-band bass.
+    float aBassP = pow(smoothstep(0.03, 0.85, max(audioBass, 0.9 * audioSub)), 1.3);
     return 1.0 + 0.55 * aReact * aBassP;
 }
 
@@ -301,16 +414,25 @@ void main() {
 
     // ─── Native audio bus (soft-kneed, idle-floor safe) ───────────────────
     float aReact = clamp(audioReact, 0.0, 2.0);
-    float aBassP = pow(smoothstep(0.05, 0.85, audioBass), 1.6);
+    // Low knee floor (0.03) + sub coupling so sparse hiphop subs and soft
+    // jazz kicks register; gentler pow keeps small hits visible.
+    float aBassP = pow(smoothstep(0.03, 0.85, max(audioBass, 0.9 * audioSub)), 1.3);
+    float aMidP  = pow(smoothstep(0.04, 0.85, audioMid), 1.2);
     float aHighP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
     float aBeat  = audioBeatPulse * audioBeatPulse;
+    // Decaying hit trace (beat pulse OR punch) — sparse hits leave a mark.
+    float aHit   = max(aBeat, pow(clamp(audioPunch, 0.0, 1.0), 1.5));
 
     vec3 outCol = fragColor.rgb * exposure;
     // The surface runs highlight-hot by design (many channels already near
     // full white), so a brightening push has nowhere to go — instead bass
     // pulls the surface into a cooler, deeper "inhale" that reads clearly
     // even against the blown-out highlights, then releases on the exhale.
-    outCol *= mix(vec3(1.0), vec3(0.10, 0.13, 0.22), clamp(aReact * aBassP * 1.4, 0.0, 1.0));
+    // Hits join the same pull-down channel as a decaying darkening trace,
+    // which actually reads on a clipped-bright surface (additive flash can't).
+    outCol *= mix(vec3(1.0), vec3(0.10, 0.13, 0.22), clamp(aReact * (aBassP * 1.4 + 0.8 * aHit), 0.0, 1.0));
+    // Jazz's walking mids: continuous cool pull following the mid band.
+    outCol = mix(outCol, outCol * vec3(0.72, 0.70, 0.85), 0.45 * aReact * aMidP);
     // Highs -> fine surface sparkle: a cool desaturating pull on a thin band,
     // same reasoning — pulls DOWN off the clipped ceiling so it reads.
     outCol = mix(outCol, outCol * vec3(0.60, 0.70, 0.88), 0.6 * aReact * aHighP);
@@ -327,5 +449,18 @@ void main() {
         outCol = mix(outCol, refracted, texMix);
     }
 
-    gl_FragColor = vec4(outCol, 1.0);
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(outCol, vec3(0.299, 0.587, 0.114));
+    vec3 uc = mix(vec3(ucL), outCol, colorBoost);
+    if (hueShift > 0.0005) {
+        float hueA = hueShift * 6.2831853;
+        float hueC = cos(hueA), hueS = sin(hueA);
+        mat3 hueM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                  + hueC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                  + hueS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hueM * uc, 0.0, 1.0);
+    }
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+
+    gl_FragColor = vec4(uc, 1.0);
 }

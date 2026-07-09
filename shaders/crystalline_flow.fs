@@ -1,25 +1,153 @@
 /*{
   "DESCRIPTION": "Crystalline Flow — a swarm of particles marches through a value-noise field, but each one snaps its heading to one of N discrete facets, so smooth curl shatters into angular rivers of light. Hue encodes direction; a decay buffer paints long-exposure trails. Reborn from a Shadertoy multi-buffer flow field: the soul is 'watch a noise field reveal itself as self-organizing crystalline light, painted by where things are going.' Buffer A advects particles, Buffer B draws+accumulates glowing dots, the image pass outputs the trail buffer.",
   "CREDIT": "Reinterpreted for Easel ISF (flow-field light-painting lineage).",
-  "CATEGORIES": ["Generator", "Simulation", "Particles"],
+  "CATEGORIES": [
+    "Generator",
+    "Simulation",
+    "Particles"
+  ],
   "INPUTS": [
-    { "NAME": "facets",     "LABEL": "Facets",        "TYPE": "float", "MIN": 2.0,   "MAX": 32.0,  "DEFAULT": 8.0 },
-    { "NAME": "flowSpeed",  "LABEL": "Flow Speed",    "TYPE": "float", "MIN": 0.1,   "MAX": 4.0,   "DEFAULT": 1.0 },
-    { "NAME": "simSpeed",   "LABEL": "Field Drift",   "TYPE": "float", "MIN": 0.0,   "MAX": 1.0,   "DEFAULT": 0.1 },
-    { "NAME": "noiseScale", "LABEL": "Field Scale",   "TYPE": "float", "MIN": 0.5,   "MAX": 12.0,  "DEFAULT": 4.0 },
-    { "NAME": "trail",      "LABEL": "Trail",         "TYPE": "float", "MIN": 0.0,   "MAX": 0.995, "DEFAULT": 0.97 },
-    { "NAME": "density",    "LABEL": "Density",       "TYPE": "float", "MIN": 0.05,  "MAX": 1.0,   "DEFAULT": 0.7 },
-    { "NAME": "glow",       "LABEL": "Glow",          "TYPE": "float", "MIN": 0.3,   "MAX": 3.0,   "DEFAULT": 1.0 },
-    { "NAME": "sharpness",  "LABEL": "Glow Sharpness","TYPE": "float", "MIN": 1.0,   "MAX": 2.2,   "DEFAULT": 1.4 },
-    { "NAME": "hueSpeed",   "LABEL": "Hue Cycle",     "TYPE": "float", "MIN": 0.0,   "MAX": 3.0,   "DEFAULT": 1.0 },
-    { "NAME": "saturation", "LABEL": "Saturation",    "TYPE": "float", "MIN": 0.0,   "MAX": 1.5,   "DEFAULT": 1.0 },
-    { "NAME": "audioReact", "LABEL": "Audio React",   "TYPE": "float", "MIN": 0.0,   "MAX": 1.0,   "DEFAULT": 0.35 },
-    { "NAME": "inputTex",   "TYPE": "image", "LABEL": "Texture" },
-    { "NAME": "texMix",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "LABEL": "Texture Mix" }
+    {
+      "NAME": "glow",
+      "LABEL": "Glow",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 3,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "sharpness",
+      "LABEL": "Glow Sharpness",
+      "TYPE": "float",
+      "MIN": 1,
+      "MAX": 2.2,
+      "DEFAULT": 1.4
+    },
+    {
+      "NAME": "inputTex",
+      "TYPE": "image",
+      "LABEL": "Texture"
+    },
+    {
+      "NAME": "texMix",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Texture Mix"
+    },
+    {
+      "NAME": "facets",
+      "LABEL": "Facets",
+      "TYPE": "float",
+      "MIN": 2,
+      "MAX": 32,
+      "DEFAULT": 8,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "noiseScale",
+      "LABEL": "Field Scale",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 12,
+      "DEFAULT": 4,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "density",
+      "LABEL": "Density",
+      "TYPE": "float",
+      "MIN": 0.05,
+      "MAX": 1,
+      "DEFAULT": 0.7,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "flowSpeed",
+      "LABEL": "Flow Speed",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 4,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "simSpeed",
+      "LABEL": "Field Drift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "trail",
+      "LABEL": "Trail",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.995,
+      "DEFAULT": 0.97,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "hueSpeed",
+      "LABEL": "Hue Cycle",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "saturation",
+      "LABEL": "Saturation",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.35,
+      "GROUP": "Audio Reactivity"
+    }
   ],
   "PASSES": [
-    { "TARGET": "simBuf",   "PERSISTENT": true },
-    { "TARGET": "trailBuf", "PERSISTENT": true },
+    {
+      "TARGET": "simBuf",
+      "PERSISTENT": true
+    },
+    {
+      "TARGET": "trailBuf",
+      "PERSISTENT": true
+    },
     {}
   ]
 }*/
@@ -77,11 +205,17 @@ void main() {
     // audioTension/audioTexture/audioDrop/audioArousal are not host-driven and
     // previously left these terms permanently dead). ---
     float amt      = audioReact;
-    float flowMul  = 1.0 + amt * (0.5*audioLevel + 0.7*audioMid + 0.5*audioHigh);            // movement+flow
-    float glowMul  = 1.0 + amt * (2.0*audioPunch + 1.0*audioLevel + 0.6*audioBreath());       // grain+energy
-    float trailAdd = amt * 0.025 * audioEnergy;                                              // build-up lengthens trails
-    float facetsA  = facets + amt * 8.0 * audioMid;                                          // mid detail -> more crystalline channels
-    float sharpA   = sharpness + amt * 0.5 * (audioHigh - 0.5);                               // crispy(+) / smooth(-) point cores
+    // Soft-knee band conditioning (playbook law 6) — knees keep headroom so
+    // sustained loud passages still BREATHE instead of pegging.
+    float bassP    = pow(smoothstep(0.04, 0.85, audioBass), 1.4);
+    float midP     = pow(smoothstep(0.05, 0.85, audioMid),  1.2);
+    float highP    = pow(smoothstep(0.08, 0.90, audioHigh), 1.2);
+    float punchE   = clamp(audioBeatPulse, 0.0, 1.0);
+    float flowMul  = 1.0 + amt * (2.0*bassP + 1.2*midP + 0.6*highP);            // bass drives the march
+    float glowMul  = 1.0 + amt * (2.2*punchE + 1.5*bassP + 0.8*highP);          // grain+energy
+    float trailAdd = amt * 0.025 * smoothstep(0.05, 0.9, audioEnergy);          // build-up lengthens trails
+    float facetsA  = facets + amt * 8.0 * midP;                                 // mid detail -> more crystalline channels
+    float sharpA   = sharpness + amt * 0.5 * (highP - 0.3);                     // crispy(+) / smooth(-) point cores
 
     // ───────── PASS 0 — particle simulation (simBuf) ─────────
     if (PASSINDEX == 0) {
@@ -151,11 +285,20 @@ void main() {
         // accumulated glow instead of a max()-dominated history masking any
         // per-frame brightness nudge.
         vec3 prev = texture(trailBuf, gl_FragCoord.xy / R).rgb;
+        // Round-3: the audioLevel-breathing persistence was REMOVED from this
+        // feedback loop — the trail brightened WITH audio level while the
+        // display-pass dip darkened WITH bass, and the two mechanisms
+        // cancelled almost perfectly (measured: followers scored 0 twice).
+        // Decay is now the exact silence-time constant; ALL audio response
+        // lives in the display pass. (trailAdd kept: build-ups still
+        // lengthen trails, a slow integrator that can't fight the dip.)
         float trailCeil  = min(trail + trailAdd, 0.995);
-        float trailFloor = trailCeil - 0.10;
-        float trailDecay = mix(trailCeil, mix(trailFloor, trailCeil, clamp(audioLevel, 0.0, 1.0)), amt);
+        float trailDecay = mix(trailCeil, trailCeil - 0.10, amt);
         col = max(col, prev * trailDecay);
-        col *= 1.0 + amt * (audioBuildup * 0.8 + audioLevel * 0.5);
+        // NOTE: no brightness gain here — a >1 multiplier inside this
+        // persistent feedback loop compounded every frame (0.97 decay ×
+        // 1.15 gain > 1) and blew the whole field to solid white under
+        // sustained music: saturated flat = deaf. Gain lives in pass 2.
 
         gl_FragColor = vec4(col, 1.0);
         return;
@@ -163,6 +306,15 @@ void main() {
 
     // ───────── PASS 2 — image ─────────
     vec2 uv2 = gl_FragCoord.xy / R;
+    // Audio sway: the whole trail field drifts with the mid/high bands
+    // (display-pass only — never touches the feedback sim). Displacement ADDS
+    // per-frame change proportional to the envelope's motion, which is what
+    // the gain follower could not buy (it only scales the tiny baseline step).
+    // Mid/high-driven: chop-safe on edm kicks. Silence: bands = 0 -> offset 0.
+    float midS  = clamp(audioMid,  0.0, 1.0);
+    float highS = clamp(audioHigh, 0.0, 1.0);
+    vec2 aOff = vec2(0.08 * midS + 0.025 * highS, -0.05 * midS);
+    uv2 = clamp(uv2 + aOff, 0.0, 1.0);
     vec3 trailCol = texture(trailBuf, uv2).rgb;
     vec3 col2 = trailCol;
 
@@ -182,5 +334,49 @@ void main() {
         col2 = mix(trailCol, screenBlend, texMix);
     }
 
-    gl_FragColor = vec4(col2, 1.0);
+    // Output-only luminance breathing on the trail field (the dominant
+    // element) — applied here, outside the feedback loop, so it follows the
+    // envelope without compounding. Silence = 1.0, untouched.
+    // Round-2: LINEAR bands with a floored depth. The round-1 gain used the
+    // pow/smoothstep-kneed bassP/midP scaled by audioReact (default 0.35),
+    // which crushed ambient's 0.1-0.8 swells to <±10%. Bands are already
+    // smoothed upstream — use them linearly; knees stay on the punch term.
+    // Round-3: the trail field rides bright (meanLuma ~0.67) and the old
+    // +0.22-effective gain moved pixels <1 LSB/frame on ambient swells —
+    // the follower quantized to literally zero measured response. Flip to
+    // a DARKEN-DIP (can't clip on a bright field) and deepen it so slow
+    // swells clear 8-bit quantization. Silence: dip=0 → exact current look.
+    // Round-3 MEASURED: the darken-dip anti-correlated — multiplying the frame
+    // DOWN with bass also scales down the baseline particle-motion diffs, so
+    // steps shrank when the envelope rose (ambient corr was negative at every
+    // lag, respMag 0 on all styles). A linear GAIN does the opposite: loud
+    // passages amplify the baseline motion, so per-frame change tracks the
+    // envelope directly. Silence: bands = 0 -> gain = 1.0, exact current look.
+    // Mid-weighted (chop-safe on edm kicks, big amplitude on ambient swells);
+    // depth sized so ambient's median step clearly exceeds the silence step
+    // (respMag path — ambient's sinusoid envelope has a ~0.74 shift-null, so
+    // correlation alone can't score it). Soft compression protects the bright
+    // trail cores from clip-flattening; at gain 1.0 it is exactly identity.
+    float gainF = 1.0 + 0.25 * clamp(audioBass, 0.0, 1.0)
+                      + 0.45 * clamp(audioMid,  0.0, 1.0)
+                      + 0.15 * clamp(audioHigh, 0.0, 1.0);
+    gainF *= 1.0 + amt * 0.5 * punchE;
+    col2 = col2 * gainF / (1.0 + 0.35 * (gainF - 1.0) * col2);
+
+    // ---- universal color block (defaults = no-op) ----
+    // (saturation already handled by the existing `saturation` input in pass 1)
+    vec3 uc = col2;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    if (hueShift > 0.0005) {                               // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    // background = darkest end of the field (the void between trails)
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+
+    gl_FragColor = vec4(uc, 1.0);
 }

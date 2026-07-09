@@ -1,19 +1,157 @@
 /*{
-  "CATEGORIES": ["Generator", "Text"],
+  "CATEGORIES": [
+    "Generator",
+    "Text"
+  ],
   "DESCRIPTION": "Coil - text on spiral rings",
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
-    { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Coil Wide","Coil Star","Coil Lemniscate","Coil Pulse"], "DEFAULT": 0 },
-    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
-    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
-    { "NAME": "intensity", "LABEL": "Ring Size", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "density", "LABEL": "Rings", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    {
+      "NAME": "preset",
+      "LABEL": "Style",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Coil Wide",
+        "Coil Star",
+        "Coil Lemniscate",
+        "Coil Pulse"
+      ],
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "intensity",
+      "LABEL": "Ring Size",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "density",
+      "LABEL": "Rings",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Speed",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 3,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "textColor",
+      "LABEL": "Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": " ETHEREA",
+      "MAX_LENGTH": 48,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "fontFamily",
+      "LABEL": "Font",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Inter",
+        "Times New Roman",
+        "Libre Caslon",
+        "Outfit"
+      ],
+      "DEFAULT": 0,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "textScale",
+      "LABEL": "Size",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background"
+    }
   ]
 }*/
+
+// ---- universal color block (defaults = no-op) ----
+vec3 ucApply(vec3 uc) {
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                      // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    return uc;
+}
+
 
 const float PI = 3.14159265;
 const float TWO_PI = 6.28318530;
@@ -97,6 +235,17 @@ float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 vec4 effectCoil(vec2 uv, int sub) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
     int numChars = charCount();
+
+    // Soft-knee audio conditioning (playbook standard snippet).
+    float bassP = pow(clamp(smoothstep(0.05, 0.85, audioBass), 0.0, 1.0), 1.6);
+    float midP  = pow(clamp(smoothstep(0.08, 0.85, audioMid),  0.0, 1.0), 1.3);
+    float highP = pow(clamp(smoothstep(0.10, 0.90, audioHigh), 0.0, 1.0), 1.2);
+    float drive = 0.25 + 0.75 * clamp(smoothstep(0.05, 0.9, audioEnergy), 0.0, 1.0);
+    float kick  = audioBeatPulse * audioBeatPulse;
+    // LINEAR followers (ambient fix r2): the bands are pre-smoothed, so no
+    // knee at all — ambient's 0.1-0.8 band swells pass through 1:1.
+    float bassSm = clamp(audioBass, 0.0, 1.0);
+    float midSm  = clamp(audioMid,  0.0, 1.0);
     float rings = mix(3.0, 15.0, density);
     float charSpacing = mix(0.5, 3.0, intensity);
 
@@ -115,8 +264,12 @@ vec4 effectCoil(vec2 uv, int sub) {
 
     vec2 center = vec2(0.5*aspect, 0.5);
     vec2 p = vec2(uv.x*aspect, uv.y) - center;
+    p /= 1.0 + 0.28 * bassSm; // bass breathes the whole coil (deep smoothed zoom)
     float radius = length(p);
-    float angle = atan(p.y, p.x) - TIME*speed;
+    // Mid swells swing the whole coil by up to ~26 deg (bounded, smooth,
+    // eases back with the envelope) — continuous rotational follow.
+    float angOff = 0.45 * midSm;
+    float angle = atan(p.y, p.x) - TIME*speed + angOff;
     angle = mod(angle + PI, TWO_PI) - PI;
 
     float eR = radius;
@@ -144,7 +297,7 @@ vec4 effectCoil(vec2 uv, int sub) {
     float ci = floor(ap);
     int ti = int(mod(ci, tLen));
 
-    float ca2 = ((ci+0.5)/tca)*TWO_PI - PI - ringIdx*0.7 + TIME*speed;
+    float ca2 = ((ci+0.5)/tca)*TWO_PI - PI - ringIdx*0.7 + TIME*speed - angOff;
     float ca = cos(ca2), sa = sin(ca2);
 
     float car = rcR;
@@ -154,7 +307,8 @@ vec4 effectCoil(vec2 uv, int sub) {
     vec2 cc = vec2(ca, sa)*car;
     vec2 po = p - cc;
     vec2 lp = vec2(dot(po, vec2(-sa, ca)), dot(po, vec2(ca, sa)));
-    vec2 cellUV = vec2(lp.x/acW + 0.5, 1.0 - (lp.y/cH + 0.5));
+    float swell = 1.0 + 0.04 * (drive - 0.25) + 0.12 * midP; // energy+mids thicken glyphs in place
+    vec2 cellUV = vec2(lp.x/(acW*swell) + 0.5, 1.0 - (lp.y/(cH*swell) + 0.5));
 
     float textHit = 0.0;
     if (cellUV.x >= 0.0 && cellUV.x <= 1.0 && cellUV.y >= 0.0 && cellUV.y <= 1.0) {
@@ -168,6 +322,11 @@ vec4 effectCoil(vec2 uv, int sub) {
     vec3 fc = mix(bg, fg, textHit);
     float a = 1.0;
     if (transparentBg) { a = textHit; fc = textColor.rgb; }
+    // Bass/mid darken-dip on the glyphs (default text is pure white — a
+    // multiplicative GAIN clips invisibly there, a dip always reads) plus
+    // the original highs/beats sparkle on top.
+    fc *= 1.0 - (0.20*bassSm + 0.12*midSm) * textHit;
+    fc *= 1.0 + (0.30*highP + 0.30*kick) * textHit;
     return vec4(fc, a);
 }
 
@@ -205,5 +364,5 @@ void main() {
         col = mix(col, glitched, smoothstep(0.0, 0.3, g));
     }
 
-    gl_FragColor = col;
+    gl_FragColor = vec4(ucApply(col.rgb), col.a);
 }

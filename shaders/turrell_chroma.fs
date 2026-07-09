@@ -1,19 +1,157 @@
 /*{
-  "CATEGORIES": ["Generator", "Light", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Light",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "Turrell Chroma — pure colored light as material. Slowly evolving Ganzfeld fields cycle through curated triads. cycleDuration sets pace (20–600s). colorHold gives each hue a steady dwell before it changes; transitionEase softens the crossfade in/out. Organic breathing, cinematic vignette, and film grain add atmosphere. Output LINEAR HDR.",
   "INPUTS": [
-    { "NAME": "mood",           "LABEL": "Mood",            "TYPE": "long",  "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Aten Reign","Wedgework","Ganzfeld","Skyspace"] },
-    { "NAME": "cycleDuration",  "LABEL": "Cycle (s)",       "TYPE": "float", "MIN": 20.0, "MAX": 600.0, "DEFAULT": 90.0 },
-    { "NAME": "colorHold",      "LABEL": "Color Hold",      "TYPE": "float", "MIN": 0.0,  "MAX": 0.95, "DEFAULT": 0.55 },
-    { "NAME": "transitionEase", "LABEL": "Transition Ease", "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.6 },
-    { "NAME": "wedgeAngle",     "LABEL": "Wedge Angle",     "TYPE": "float", "MIN": 0.0,  "MAX": 6.2832, "DEFAULT": 1.05 },
-    { "NAME": "wedgeStrength",  "LABEL": "Wedge Strength",  "TYPE": "float", "MIN": 0.0,  "MAX": 0.35, "DEFAULT": 0.16 },
-    { "NAME": "vignette",       "LABEL": "Edge Falloff",    "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.42 },
-    { "NAME": "luminance",      "LABEL": "Luminance",       "TYPE": "float", "MIN": 0.4,  "MAX": 1.6,  "DEFAULT": 1.0 },
-    { "NAME": "audioReact",     "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
-    { "NAME": "organicStrength","LABEL": "Organic Movement","TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.38 },
-    { "NAME": "grainStrength",  "LABEL": "Film Grain",      "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.32 },
-    { "NAME": "vignetteDepth",  "LABEL": "Vignette Depth",  "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.55 }
+    {
+      "NAME": "mood",
+      "LABEL": "Mood",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Aten Reign",
+        "Wedgework",
+        "Ganzfeld",
+        "Skyspace"
+      ]
+    },
+    {
+      "NAME": "wedgeAngle",
+      "LABEL": "Wedge Angle",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 6.2832,
+      "DEFAULT": 1.05,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "wedgeStrength",
+      "LABEL": "Wedge Strength",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.35,
+      "DEFAULT": 0.16,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "cycleDuration",
+      "LABEL": "Cycle (s)",
+      "TYPE": "float",
+      "MIN": 20,
+      "MAX": 600,
+      "DEFAULT": 90,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "colorHold",
+      "LABEL": "Color Hold",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.95,
+      "DEFAULT": 0.55,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "transitionEase",
+      "LABEL": "Transition Ease",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.6,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "organicStrength",
+      "LABEL": "Organic Movement",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.38,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "luminance",
+      "LABEL": "Luminance",
+      "TYPE": "float",
+      "MIN": 0.4,
+      "MAX": 1.6,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "vignette",
+      "LABEL": "Edge Falloff",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.42,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "vignetteDepth",
+      "LABEL": "Vignette Depth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.55,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "grainStrength",
+      "LABEL": "Film Grain",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.32
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -167,12 +305,22 @@ void main() {
     float bassIdle = 0.55 + 0.45 * sin(t * 0.7);
     float midIdle  = 0.50 + 0.50 * sin(t * 0.36 + 1.3);
     float trebIdle = 0.50 + 0.50 * sin(t * 2.1 + 2.1);
-    float bassLive = pow(smoothstep(0.05, 0.85, audioBass), 1.4);
-    float midLive  = pow(smoothstep(0.05, 0.85, audioMid),  1.2);
-    float trebLive = pow(smoothstep(0.05, 0.85, audioHigh), 1.2);
-    float bass = a * mix(bassIdle, 1.0, bassLive);
-    float mid  = a * mix(midIdle,  1.0, midLive);
-    float treb = a * mix(trebIdle, 1.0, trebLive);
+    // LINEAR live followers (ambient fix r2): the bands are pre-smoothed —
+    // round 1's pow(smoothstep, 1.2-1.3) knees crushed ambient's 0.1-0.8
+    // swells into tiny variance. Linear keeps EDM headroom just as well.
+    float bassLive = clamp(audioBass, 0.0, 1.0);
+    float midLive  = clamp(audioMid,  0.0, 1.0);
+    float trebLive = clamp(audioHigh, 0.0, 1.0);
+    // SATURATION FIX: mix(idle, 1.0, live) pinned the driver at a constant
+    // 1.0 whenever the track was loud — on EDM the response stopped varying
+    // entirely (zero correlation). Instead, when music is present the
+    // drivers FOLLOW the live band envelopes (which keep breathing at high
+    // input thanks to the knee headroom); in silence they fall back to the
+    // idle sines so the sound-off look is unchanged.
+    float present = smoothstep(0.02, 0.12, max(audioLevel, audioEnergy));
+    float bass = a * mix(bassIdle, 0.12 + 1.08 * bassLive, present);
+    float mid  = a * mix(midIdle,  0.12 + 1.08 * midLive,  present);
+    float treb = a * mix(trebIdle, 0.12 + 1.08 * trebLive, present);
     bass = max(bass, 0.0);
     mid  = max(mid,  0.0);
     treb = max(treb, 0.0);
@@ -272,9 +420,16 @@ void main() {
     vec3  shimmer  = vec3(shimmerN, hash21(uv + 13.7), hash21(uv + 91.1)) - 0.5;
     field += shimmer * corner * treb * 0.036;
 
-    // Overall audio-driven luminance breath — small, present across the
-    // whole field so a driving track reads even away from the corners.
-    field *= 1.0 + 0.10 * bass;
+    // Overall audio-driven luminance breath — present across the whole
+    // field so a driving track reads even away from the corners. r2: the
+    // extra calibrated depth (bass to ~0.24 effective + a mid band) is
+    // gated by `present` so the sound-off idle look is exactly unchanged.
+    // r3 (measured): UP-gains half-vanish into clipping on this near-white
+    // field (predicted rMag 0.0014, measured 0.0008) — under music the
+    // luminance breath becomes a darken-DIP, which cannot clip. The idle-sine
+    // breath is preserved verbatim in silence via the (1 - present) fade.
+    field *= 1.0 + 0.14 * bass * (1.0 - present);
+    field *= 1.0 - present * a * (0.36 * bassLive + 0.26 * midLive + 0.12 * trebLive);
 
     // ── Skyspace sun-arc ───────────────────────────────────────────────
     if (moodI == 3) {
@@ -300,7 +455,11 @@ void main() {
     float barrelV = smoothstep(0.55, 1.35, vigR);
     // Inner roll-off — very gentle, starts at center edge
     float innerV  = smoothstep(0.0, 0.8, vigR) * 0.18;
-    float cinemaVig = 1.0 - clamp(vignetteDepth, 0.0, 1.0) * (barrelV * 0.85 + innerV);
+    // r2: bass opens the barrel — the dark vignette border is the one part
+    // of this near-white field with real headroom, so breathing it reads
+    // even where the center clips. Music-gated; silence = authored barrel.
+    float vigOpen = 1.0 - 0.50 * clamp(bass * 0.833, 0.0, 1.0) * present;
+    float cinemaVig = 1.0 - clamp(vignetteDepth, 0.0, 1.0) * (barrelV * 0.85 + innerV) * vigOpen;
     field *= cinemaVig;
 
     // Original architectural edge falloff (separate from cinema vignette)
@@ -322,6 +481,22 @@ void main() {
 
     // Overall luminance
     field *= luminance;
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = field;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    // background: tint the darkest end (vignetted edges) toward bgColor
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+    field = uc;
 
     // The output is LINEAR HDR; host applies tone mapping.
     gl_FragColor = vec4(field, 1.0);

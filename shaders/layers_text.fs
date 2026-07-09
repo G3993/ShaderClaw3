@@ -1,17 +1,116 @@
 /*{
-	"CATEGORIES": ["Generator", "Text"],
-	"DESCRIPTION": "Text repeated at multiple depth layers with parallax and scale",
-	"INPUTS": [
-		{ "NAME": "msg", "TYPE": "text", "DEFAULT": "ETHEREA", "MAX_LENGTH": 12 },
-		{ "NAME": "speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
-		{ "NAME": "layerCount", "TYPE": "float", "MIN": 2.0, "MAX": 6.0, "DEFAULT": 4.0 },
-		{ "NAME": "depthSpread", "TYPE": "float", "MIN": 0.1, "MAX": 1.0, "DEFAULT": 0.5 },
-		{ "NAME": "frontColor", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-		{ "NAME": "backColor", "TYPE": "color", "DEFAULT": [0.3, 0.3, 0.5, 1.0] },
-		{ "NAME": "bgColor", "TYPE": "color", "DEFAULT": [0.03, 0.03, 0.08, 1.0] },
-		{ "NAME": "textScale", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 0.8 },
-		{ "NAME": "transparentBg", "TYPE": "bool", "DEFAULT": true }
-	]
+  "CATEGORIES": [
+    "Generator",
+    "Text"
+  ],
+  "DESCRIPTION": "Text repeated at multiple depth layers with parallax and scale",
+  "INPUTS": [
+    {
+      "NAME": "layerCount",
+      "LABEL": "Layer Count",
+      "TYPE": "float",
+      "MIN": 2,
+      "MAX": 6,
+      "DEFAULT": 4,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "depthSpread",
+      "LABEL": "Depth Spread",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 1,
+      "DEFAULT": 0.5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Speed",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 3,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "frontColor",
+      "LABEL": "Front Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "backColor",
+      "LABEL": "Back Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.3,
+        0.3,
+        0.5,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "msg",
+      "LABEL": "Message",
+      "TYPE": "text",
+      "DEFAULT": "ETHEREA",
+      "MAX_LENGTH": 12,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "textScale",
+      "LABEL": "Text Scale",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2,
+      "DEFAULT": 0.8,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.03,
+        0.03,
+        0.08,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent Background",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background"
+    }
+  ]
 }*/
 
 // ---- Font engine ----
@@ -57,6 +156,15 @@ void main() {
 
 	int numChars = charCount();
 
+	// Soft-knee audio conditioning (playbook standard snippet).
+	float bassP = pow(smoothstep(0.05, 0.85, audioBass), 1.6);
+	float midP  = pow(smoothstep(0.08, 0.85, audioMid), 1.3);
+	float highP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+	float drive = 0.25 + 0.75 * smoothstep(0.05, 0.9, audioEnergy);
+	// Time-warp clock: parallax drifts with the track's energy.
+	float musicTime = TIME * (0.7 + 0.6 * drive);
+	float textAmt = 0.0;
+
 	// Start with background color
 	vec3 col = bgColor.rgb;
 	float alpha = transparentBg ? 0.0 : 1.0;
@@ -68,15 +176,16 @@ void main() {
 		// Depth: 0.0 = back, 1.0 = front
 		float depth = float(L) / (layerCount - 1.0);
 
-		// Scale increases with depth (front layers are larger)
-		float layerScale = textScale * (0.5 + depth * 0.8);
+		// Scale increases with depth (front layers are larger; bass swells the front)
+		float layerScale = textScale * (0.5 + depth * 0.8) * (1.0 + 0.06 * bassP * depth);
 
 		// Parallax drift: back layers move slower, front layers faster
-		float drift = sin(TIME * speed * (0.3 + depth * 0.7) + depth * 2.0) * 0.1 * depthSpread;
-		float vDrift = cos(TIME * speed * (0.2 + depth * 0.5) + depth * 3.5) * 0.03 * depthSpread;
+		// (bass widens the horizontal spread, mids stir the vertical drift)
+		float drift = sin(musicTime * speed * (0.3 + depth * 0.7) + depth * 2.0) * 0.1 * depthSpread * (1.0 + 0.3 * bassP);
+		float vDrift = cos(musicTime * speed * (0.2 + depth * 0.5) + depth * 3.5) * 0.03 * depthSpread * (1.0 + 0.35 * midP);
 
-		// Color interpolation from backColor to frontColor
-		vec3 layerCol = mix(backColor.rgb, frontColor.rgb, depth);
+		// Color interpolation from backColor to frontColor (highs glint the front layers)
+		vec3 layerCol = mix(backColor.rgb, frontColor.rgb, depth) * (1.0 + 0.3 * highP * depth);
 
 		// Opacity: back layers more transparent, front more opaque
 		float layerAlpha = 0.3 + depth * 0.7;
@@ -127,9 +236,25 @@ void main() {
 				// Alpha-blend this layer onto the result
 				col = mix(col, layerCol, filled * layerAlpha);
 				alpha = mix(alpha, 1.0, filled * layerAlpha);
+				textAmt = max(textAmt, filled * layerAlpha);
 			}
 		}
 	}
 
+	// Beat accent: brief glint on the glyphs, easing back.
+	float kick = audioBeatPulse * audioBeatPulse;
+	col += frontColor.rgb * textAmt * kick * 0.25;
+
+	// ---- universal color block (defaults = no-op) ----
+	float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+	col = mix(vec3(ucL), col, colorBoost);
+	if (hueShift > 0.0005) {
+	    float hA = hueShift * 6.2831853;
+	    float hC = cos(hA), hS = sin(hA);
+	    mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+	            + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+	            + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+	    col = clamp(hM * col, 0.0, 1.0);
+	}
 	gl_FragColor = vec4(col, alpha);
 }

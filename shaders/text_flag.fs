@@ -1,19 +1,157 @@
 /*{
-  "CATEGORIES": ["Generator", "Text"],
+  "CATEGORIES": [
+    "Generator",
+    "Text"
+  ],
   "DESCRIPTION": "Flag - waving flag surface",
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
-    { "NAME": "preset", "LABEL": "Style", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Flag Banner","Flag Origami","Flag Barber","Flag Newsprint"], "DEFAULT": 0 },
-    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
-    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
-    { "NAME": "intensity", "LABEL": "Wave", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "density", "LABEL": "Folds", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    {
+      "NAME": "preset",
+      "LABEL": "Style",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Flag Banner",
+        "Flag Origami",
+        "Flag Barber",
+        "Flag Newsprint"
+      ],
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "density",
+      "LABEL": "Folds",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Speed",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 3,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "intensity",
+      "LABEL": "Wave",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "textColor",
+      "LABEL": "Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": " ETHEREA",
+      "MAX_LENGTH": 48,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "fontFamily",
+      "LABEL": "Font",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Inter",
+        "Times New Roman",
+        "Libre Caslon",
+        "Outfit"
+      ],
+      "DEFAULT": 0,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "textScale",
+      "LABEL": "Size",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background"
+    }
   ]
 }*/
+
+// ---- universal color block (defaults = no-op) ----
+vec3 ucApply(vec3 uc) {
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                      // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    return uc;
+}
+
 
 const float PI = 3.14159265;
 const float TWO_PI = 6.28318530;
@@ -97,7 +235,15 @@ float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 vec4 effectFlag(vec2 uv, int sub) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
     int numChars = charCount();
-    float waveSize = intensity;
+
+    // Soft-knee audio conditioning (playbook standard snippet).
+    float bassP = pow(clamp(smoothstep(0.05, 0.85, audioBass), 0.0, 1.0), 1.6);
+    float midP  = pow(clamp(smoothstep(0.08, 0.85, audioMid),  0.0, 1.0), 1.3);
+    float highP = pow(clamp(smoothstep(0.10, 0.90, audioHigh), 0.0, 1.0), 1.2);
+    float drive = 0.25 + 0.75 * clamp(smoothstep(0.05, 0.9, audioEnergy), 0.0, 1.0);
+    float kick  = audioBeatPulse * audioBeatPulse;
+
+    float waveSize = intensity * (1.0 + 0.25 * bassP); // bass billows the flag
     float rows = floor(mix(4.0, 20.0, density));
 
     float wA=1.0, wF=3.0, xSA=1.0, anch=0.5, sM=1.0, rM=1.0;
@@ -110,7 +256,7 @@ vec4 effectFlag(vec2 uv, int sub) {
 
     rows = floor(rows * rM);
     float env = clamp(mix(1.0, uv.x, anch), 0.0, 1.0);
-    float t = TIME*speed*2.5;
+    float t = TIME*speed*(2.1 + 1.0*drive); // energy paces the wind
     float wp = uv.x*wF*TWO_PI - t;
 
     float yW = sharp ? abs(sin(wp))*2.0-1.0 : sin(wp);
@@ -119,7 +265,7 @@ vec4 effectFlag(vec2 uv, int sub) {
     float yD = yW*waveSize*wA*0.15*env;
     float wY = uv.y + yD;
     float dW = cos(wp)*wF*TWO_PI;
-    float wX = uv.x + dW*waveSize*xSA*0.02*env;
+    float wX = uv.x + dW*waveSize*xSA*0.02*env*(1.0 + 0.35*midP); // mids add horizontal ripple
 
     float rH = 1.0/rows;
     float ri = clamp(floor(wY/rH), 0.0, rows-1.0);
@@ -151,6 +297,7 @@ vec4 effectFlag(vec2 uv, int sub) {
     vec3 fc = mix(bg*shade, fg*shade, textHit);
     float a = 1.0;
     if (transparentBg) { a = textHit; fc = textColor.rgb*shade; }
+    fc *= 1.0 + (0.30*highP + 0.30*kick) * textHit; // highs + beats sparkle glyphs
     return vec4(fc, a);
 }
 
@@ -188,5 +335,5 @@ void main() {
         col = mix(col, glitched, smoothstep(0.0, 0.3, g));
     }
 
-    gl_FragColor = col;
+    gl_FragColor = vec4(ucApply(col.rgb), col.a);
 }

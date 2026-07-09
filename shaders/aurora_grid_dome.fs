@@ -1,24 +1,152 @@
 /*{
-  "DESCRIPTION":"Aurora Grid Dome: a raymarched neon grid floor stretching to a black horizon under a soft flowing aurora dome. The dome's flow-noise field lives in a persistent buffer that is advected each frame by an analytic curl flow (Milkdrop-style feedback) — audio injects energy into the drift, the field's own dynamics carry it. Bass breathes the dome open, mid drives flow speed + hue drift, beats ripple a bright color-shift through the bands, highs twinkle the starfield behind it.",
-  "CREDIT":"ShaderClaw3",
-  "CATEGORIES":["Generator","3D","Audio Reactive"],
-  "INPUTS":[
-    { "NAME":"audioReact", "LABEL":"Sound Reactivity", "TYPE":"float", "DEFAULT":1.0, "MIN":0.0, "MAX":2.0 },
-    { "NAME":"flowSpeed", "LABEL":"Aurora Flow Speed", "TYPE":"float", "DEFAULT":0.6, "MIN":0.0, "MAX":2.0 },
-    { "NAME":"domeRadius", "LABEL":"Dome Radius", "TYPE":"float", "DEFAULT":1.3, "MIN":0.6, "MAX":2.2 },
-    { "NAME":"domePulseAmt", "LABEL":"Bass Dome Breathe", "TYPE":"float", "DEFAULT":0.16, "MIN":0.0, "MAX":0.5 },
-    { "NAME":"auroraGlow", "LABEL":"Aurora Glow", "TYPE":"float", "DEFAULT":1.0, "MIN":0.0, "MAX":2.0 },
-    { "NAME":"gridGlow", "LABEL":"Grid Glow", "TYPE":"float", "DEFAULT":0.85, "MIN":0.0, "MAX":2.0 },
-    { "NAME":"gridScale", "LABEL":"Grid Density", "TYPE":"float", "DEFAULT":7.0, "MIN":2.0, "MAX":20.0 },
-    { "NAME":"pulseTrail", "LABEL":"Beat Ripple Trail", "TYPE":"float", "DEFAULT":0.965, "MIN":0.90, "MAX":0.99 },
-    { "NAME":"hueShift", "LABEL":"Aurora Hue Shift", "TYPE":"float", "DEFAULT":0.0, "MIN":0.0, "MAX":1.0 },
-    { "NAME":"gridTint", "LABEL":"Grid Tint", "TYPE":"color", "DEFAULT":[0.10,0.55,0.85,1.0] },
-    { "NAME":"texMix", "LABEL":"Starfield Image Mix", "TYPE":"float", "DEFAULT":0.0, "MIN":0.0, "MAX":1.0 },
-    { "NAME":"camSpin", "LABEL":"Camera Spin", "TYPE":"float", "DEFAULT":0.10, "MIN":0.0, "MAX":1.0 },
-    { "NAME":"inputImage", "TYPE":"image" }
+  "DESCRIPTION": "Aurora Grid Dome: a raymarched neon grid floor stretching to a black horizon under a soft flowing aurora dome. The dome's flow-noise field lives in a persistent buffer that is advected each frame by an analytic curl flow (Milkdrop-style feedback) — audio injects energy into the drift, the field's own dynamics carry it. Bass breathes the dome open, mid drives flow speed + hue drift, beats ripple a bright color-shift through the bands, highs twinkle the starfield behind it.",
+  "CREDIT": "ShaderClaw3",
+  "CATEGORIES": [
+    "Generator",
+    "3D",
+    "Audio Reactive"
   ],
-  "PASSES":[
-    { "TARGET":"auroraBuf", "PERSISTENT": true },
+  "INPUTS": [
+    {
+      "NAME": "auroraGlow",
+      "LABEL": "Aurora Glow",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "gridGlow",
+      "LABEL": "Grid Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.85,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "texMix",
+      "LABEL": "Starfield Image Mix",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "inputImage",
+      "TYPE": "image",
+      "LABEL": "Starfield Image"
+    },
+    {
+      "NAME": "domeRadius",
+      "LABEL": "Dome Radius",
+      "TYPE": "float",
+      "DEFAULT": 1.3,
+      "MIN": 0.6,
+      "MAX": 2.2,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "gridScale",
+      "LABEL": "Grid Density",
+      "TYPE": "float",
+      "DEFAULT": 7,
+      "MIN": 2,
+      "MAX": 20,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "flowSpeed",
+      "LABEL": "Aurora Flow Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Aurora Hue Shift",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "gridTint",
+      "LABEL": "Grid Tint",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.1,
+        0.55,
+        0.85,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "camSpin",
+      "LABEL": "Camera Spin",
+      "TYPE": "float",
+      "DEFAULT": 0.1,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Sound Reactivity",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "domePulseAmt",
+      "LABEL": "Bass Dome Breathe",
+      "TYPE": "float",
+      "DEFAULT": 0.16,
+      "MIN": 0,
+      "MAX": 0.5,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "pulseTrail",
+      "LABEL": "Beat Ripple Trail",
+      "TYPE": "float",
+      "DEFAULT": 0.965,
+      "MIN": 0.9,
+      "MAX": 0.99,
+      "GROUP": "Audio Reactivity"
+    }
+  ],
+  "PASSES": [
+    {
+      "TARGET": "auroraBuf",
+      "PERSISTENT": true
+    },
     {}
   ]
 }*/
@@ -251,6 +379,8 @@ void screenPass(){
         vec3 imgCol = texture2D(inputImage, clamp(suv, 0.0, 1.0)).rgb;
         bg = mix(bgProc, bgProc * 0.35 + imgCol * 0.9, clamp(texMix, 0.0, 1.0));
     }
+    // User background: blend the sky region toward the chosen color.
+    bg = mix(bg, bgColor.rgb, bgColor.a);
 
     // --- floor ---------------------------------------------------------------
     bool hitFloor;
@@ -272,6 +402,11 @@ void screenPass(){
     // tonemap + gamma
     col = col / (1.0 + col);
     col = pow(max(col, 0.0), vec3(1.0 / 2.2));
+
+    // ---- universal color block (defaults = no-op; hueShift already native) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(vec3(ucL), col, colorBoost);                    // saturation
+
     gl_FragColor = vec4(col, 1.0);
 }
 

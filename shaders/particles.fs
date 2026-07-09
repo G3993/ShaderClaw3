@@ -1,18 +1,113 @@
 /*{
   "DESCRIPTION": "3D instanced billboard particles — rainbow HSL cloud orbiting in perspective",
   "CREDIT": "ShaderClaw",
-  "CATEGORIES": ["Generator", "3D", "Particles"],
+  "CATEGORIES": [
+    "Generator",
+    "3D",
+    "Particles"
+  ],
   "INPUTS": [
-    { "NAME": "particleCount", "TYPE": "float", "DEFAULT": 200.0, "MIN": 50.0, "MAX": 500.0, "LABEL": "Particles" },
-    { "NAME": "spread", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.2, "MAX": 3.0, "LABEL": "Spread" },
-    { "NAME": "particleSize", "TYPE": "float", "DEFAULT": 0.04, "MIN": 0.005, "MAX": 0.15, "LABEL": "Size" },
-    { "NAME": "speed", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 4.0, "LABEL": "Speed" },
-    { "NAME": "rotateSpeed", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 2.0, "LABEL": "Camera Spin" },
-    { "NAME": "pulseAmount", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.0, "LABEL": "Pulse" },
-    { "NAME": "hueShift", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "LABEL": "Hue Shift" },
-    { "NAME": "brightness", "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.1, "MAX": 1.0, "LABEL": "Brightness" },
-    { "NAME": "fov", "TYPE": "float", "DEFAULT": 2.0, "MIN": 0.5, "MAX": 5.0, "LABEL": "FOV" },
-    { "NAME": "bgColor", "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.04, 1.0], "LABEL": "Background" }
+    {
+      "NAME": "brightness",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0.1,
+      "MAX": 1,
+      "LABEL": "Brightness"
+    },
+    {
+      "NAME": "particleCount",
+      "TYPE": "float",
+      "DEFAULT": 200,
+      "MIN": 50,
+      "MAX": 500,
+      "LABEL": "Particles",
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "spread",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.2,
+      "MAX": 3,
+      "LABEL": "Spread",
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "particleSize",
+      "TYPE": "float",
+      "DEFAULT": 0.04,
+      "MIN": 0.005,
+      "MAX": 0.15,
+      "LABEL": "Size",
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "speed",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 4,
+      "LABEL": "Speed",
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "rotateSpeed",
+      "TYPE": "float",
+      "DEFAULT": 0.3,
+      "MIN": 0,
+      "MAX": 2,
+      "LABEL": "Camera Spin",
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "pulseAmount",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1,
+      "LABEL": "Pulse",
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "fov",
+      "TYPE": "float",
+      "DEFAULT": 2,
+      "MIN": 0.5,
+      "MAX": 5,
+      "LABEL": "FOV",
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.02,
+        0.02,
+        0.04,
+        1
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    }
   ]
 }*/
 
@@ -60,7 +155,14 @@ void main() {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
     vec2 p = (uv - 0.5) * vec2(aspect, 1.0);
 
-    float t = TIME * speed;
+    // Soft-knee audio conditioning (playbook standard snippet)
+    float bassP = pow(smoothstep(0.05, 0.85, audioBass), 1.6);
+    float midP  = smoothstep(0.08, 0.85, audioMid);
+    float highP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+    float drive = 0.25 + 0.75 * smoothstep(0.05, 0.9, audioEnergy);
+
+    // Time-warp clock — the cloud breathes with the track's energy
+    float t = TIME * speed * (0.9 + 0.4 * (drive - 0.25));
     int N = int(particleCount);
 
     vec3 col = bgColor.rgb;
@@ -79,7 +181,8 @@ void main() {
         // Sine-based pulsing (matching Three.js example)
         vec3 trTime = pos + t;
         float scale = sin(trTime.x * 2.1) + sin(trTime.y * 3.2) + sin(trTime.z * 4.3);
-        float sizeScale = mix(1.0, (scale * 0.5 + 1.0), pulseAmount);
+        // Mids deepen the per-particle pulse
+        float sizeScale = mix(1.0, (scale * 0.5 + 1.0), pulseAmount * (1.0 + 0.30 * midP));
 
         // Rotate world by camera angle
         pos = rotateY(pos, camAngleY);
@@ -90,8 +193,8 @@ void main() {
         if (z < 0.1) continue;
         vec2 projected = pos.xy / z;
 
-        // Screen-space size with perspective
-        float sz = particleSize * sizeScale / z;
+        // Screen-space size with perspective (bass swells the whole cloud)
+        float sz = particleSize * sizeScale * (1.0 + 0.22 * bassP) / z;
 
         // Draw billboard
         float d = billboard(p, projected, sz);
@@ -100,6 +203,8 @@ void main() {
             // HSL coloring based on scale (like Three.js example)
             float hue = scale / 5.0 + hueShift;
             vec3 particleCol = hsl2rgb(hue, 1.0, brightness);
+            // Highs light up a sparse subset of particles
+            particleCol *= 1.0 + 0.40 * highP * step(0.75, hash(fi * 17.3));
 
             // Depth fade — farther particles are dimmer
             float depthFade = smoothstep(fov + spread * 2.0, 0.5, z);
@@ -119,6 +224,10 @@ void main() {
         float _pulse = exp(-_r * 8.0) * exp(-pow(_ph * 5.0 - 0.5, 2.0));
         col += vec3(0.7, 0.85, 1.0) * _pulse * _f * 1.2;
     }
+
+    // ---- universal color block (defaults = no-op; hueShift/bgColor already native) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(vec3(ucL), col, colorBoost);
 
     gl_FragColor = vec4(col, 1.0);
 }

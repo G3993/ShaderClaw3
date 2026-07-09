@@ -1,48 +1,406 @@
 /*{
-  "CATEGORIES": ["Generator", "Art Movement", "Audio Reactive", "VFX", "Simulation"],
+  "CATEGORIES": [
+    "Generator",
+    "Art Movement",
+    "Audio Reactive",
+    "VFX",
+    "Simulation"
+  ],
   "DESCRIPTION": "Rothko color-field painting dissolved by a UV-advection fluid simulation. Luminous stacked bands breathe and melt while fluid dynamics warp the canvas like pigment dissolving in warm, living light.",
   "INPUTS": [
-    { "NAME": "rothkoWork",    "LABEL": "Painting",          "TYPE": "long",  "DEFAULT": 0, "VALUES": [0,1,2,3,4], "LABELS": ["Orange Red Yellow","No.61 Rust+Blue","White Center","Seagram Maroon","Black on Maroon"] },
-    { "NAME": "topColor",      "LABEL": "Top Color",         "TYPE": "color", "DEFAULT": [0.92,0.50,0.22,1.0] },
-    { "NAME": "midColor",      "LABEL": "Mid Color",         "TYPE": "color", "DEFAULT": [0.85,0.20,0.14,1.0] },
-    { "NAME": "botColor",      "LABEL": "Bot Color",         "TYPE": "color", "DEFAULT": [0.95,0.78,0.30,1.0] },
-    { "NAME": "groundColor",   "LABEL": "Ground",            "TYPE": "color", "DEFAULT": [0.28,0.08,0.08,1.0] },
-    { "NAME": "breathSpeed",   "LABEL": "Breath Speed",      "TYPE": "float", "MIN": 0.0,  "MAX": 0.6,  "DEFAULT": 0.09 },
-    { "NAME": "meltDepth",     "LABEL": "Melt / Bleed",      "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.72 },
-    { "NAME": "feather",       "LABEL": "Edge Feather",      "TYPE": "float", "MIN": 0.05, "MAX": 0.55, "DEFAULT": 0.28 },
-    { "NAME": "innerInset",    "LABEL": "Rectangle Inset",   "TYPE": "float", "MIN": 0.0,  "MAX": 0.18, "DEFAULT": 0.05 },
-    { "NAME": "bandCount",     "LABEL": "Bands",             "TYPE": "float", "MIN": 2.0,  "MAX": 4.0,  "DEFAULT": 3.0 },
-    { "NAME": "waveAmount",    "LABEL": "Edge Waviness",     "TYPE": "float", "MIN": 0.0,  "MAX": 0.04, "DEFAULT": 0.010 },
-    { "NAME": "shimmer",       "LABEL": "Surface Shimmer",   "TYPE": "float", "MIN": 0.0,  "MAX": 0.18, "DEFAULT": 0.05 },
-    { "NAME": "shimmerScale",  "LABEL": "Shimmer Scale",     "TYPE": "float", "MIN": 0.5,  "MAX": 8.0,  "DEFAULT": 2.2 },
-    { "NAME": "paintTexture",  "LABEL": "Paint Texture",     "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.38 },
-    { "NAME": "textureScale",  "LABEL": "Texture Scale",     "TYPE": "float", "MIN": 1.0,  "MAX": 16.0, "DEFAULT": 4.5 },
-    { "NAME": "chrShimmer",    "LABEL": "Chromatic Edge",    "TYPE": "float", "MIN": 0.0,  "MAX": 0.025,"DEFAULT": 0.008 },
-    { "NAME": "vignette",      "LABEL": "Vignette",          "TYPE": "float", "MIN": 0.0,  "MAX": 0.8,  "DEFAULT": 0.30 },
-    { "NAME": "grain",         "LABEL": "Film Grain",        "TYPE": "float", "MIN": 0.0,  "MAX": 0.05, "DEFAULT": 0.014 },
-    { "NAME": "audioInfluence","LABEL": "Audio Influence",   "TYPE": "float", "MIN": 0.0,  "MAX": 0.12, "DEFAULT": 0.04 },
-    { "NAME": "fluidSpeed",    "LABEL": "Fluid Speed",       "TYPE": "float", "DEFAULT": 5.0,  "MIN": 0.5,  "MAX": 20.0 },
-    { "NAME": "advectSpeed",   "LABEL": "Advect Speed",      "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.1,  "MAX": 5.0 },
-    { "NAME": "returnRate",    "LABEL": "Return Rate",       "TYPE": "float", "DEFAULT": 0.005,"MIN": 0.0,  "MAX": 0.05 },
-    { "NAME": "vorticity",     "LABEL": "Vorticity",         "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 5.0 },
-    { "NAME": "viscosity",     "LABEL": "Viscosity",         "TYPE": "float", "DEFAULT": 0.0,  "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "splatForce",    "LABEL": "Splat Force",       "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.1,  "MAX": 10.0 },
-    { "NAME": "splatRadius",   "LABEL": "Splat Radius",      "TYPE": "float", "DEFAULT": 0.05, "MIN": 0.01, "MAX": 0.2 },
-    { "NAME": "bumpHeight",    "LABEL": "Surface Depth",     "TYPE": "float", "DEFAULT": 80.0, "MIN": 0.0,  "MAX": 300.0 },
-    { "NAME": "specAmount",    "LABEL": "Specular",          "TYPE": "float", "DEFAULT": 1.5,  "MIN": 0.0,  "MAX": 5.0 },
-    { "NAME": "specPow",       "LABEL": "Spec Power",        "TYPE": "float", "DEFAULT": 36.0, "MIN": 4.0,  "MAX": 128.0 },
-    { "NAME": "moveMode",      "LABEL": "Movement",          "TYPE": "long",  "VALUES": [0,1,2,3,4], "LABELS": ["None","Freeform","Center","Wave","Vortex"], "DEFAULT": 2 },
-    { "NAME": "moveSpeed",     "LABEL": "Move Speed",        "TYPE": "float", "DEFAULT": 0.3,  "MIN": 0.05, "MAX": 2.0 },
-    { "NAME": "moveSpread",    "LABEL": "Move Spread",       "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "moveIntensity", "LABEL": "Move Intensity",    "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "fluidAudio",    "LABEL": "Fluid Audio React", "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "inputTex",      "TYPE": "image", "LABEL": "Texture" },
-    { "NAME": "texMix",        "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "LABEL": "Texture Mix" }
+    {
+      "NAME": "feather",
+      "LABEL": "Edge Feather",
+      "TYPE": "float",
+      "MIN": 0.05,
+      "MAX": 0.55,
+      "DEFAULT": 0.28
+    },
+    {
+      "NAME": "paintTexture",
+      "LABEL": "Paint Texture",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.38
+    },
+    {
+      "NAME": "textureScale",
+      "LABEL": "Texture Scale",
+      "TYPE": "float",
+      "MIN": 1,
+      "MAX": 16,
+      "DEFAULT": 4.5
+    },
+    {
+      "NAME": "grain",
+      "LABEL": "Film Grain",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.05,
+      "DEFAULT": 0.014
+    },
+    {
+      "NAME": "specAmount",
+      "LABEL": "Specular",
+      "TYPE": "float",
+      "DEFAULT": 1.5,
+      "MIN": 0,
+      "MAX": 5
+    },
+    {
+      "NAME": "specPow",
+      "LABEL": "Spec Power",
+      "TYPE": "float",
+      "DEFAULT": 36,
+      "MIN": 4,
+      "MAX": 128
+    },
+    {
+      "NAME": "inputTex",
+      "TYPE": "image",
+      "LABEL": "Texture"
+    },
+    {
+      "NAME": "texMix",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Texture Mix"
+    },
+    {
+      "NAME": "innerInset",
+      "LABEL": "Rectangle Inset",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.18,
+      "DEFAULT": 0.05,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "bandCount",
+      "LABEL": "Bands",
+      "TYPE": "float",
+      "MIN": 2,
+      "MAX": 4,
+      "DEFAULT": 3,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "splatRadius",
+      "LABEL": "Splat Radius",
+      "TYPE": "float",
+      "DEFAULT": 0.05,
+      "MIN": 0.01,
+      "MAX": 0.2,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "bumpHeight",
+      "LABEL": "Surface Depth",
+      "TYPE": "float",
+      "DEFAULT": 80,
+      "MIN": 0,
+      "MAX": 300,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "breathSpeed",
+      "LABEL": "Breath Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.6,
+      "DEFAULT": 0.09,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "meltDepth",
+      "LABEL": "Melt / Bleed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.72,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "waveAmount",
+      "LABEL": "Edge Waviness",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.04,
+      "DEFAULT": 0.01,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "shimmer",
+      "LABEL": "Surface Shimmer",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.18,
+      "DEFAULT": 0.05,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "shimmerScale",
+      "LABEL": "Shimmer Scale",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 8,
+      "DEFAULT": 2.2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "fluidSpeed",
+      "LABEL": "Fluid Speed",
+      "TYPE": "float",
+      "DEFAULT": 5,
+      "MIN": 0.5,
+      "MAX": 20,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "advectSpeed",
+      "LABEL": "Advect Speed",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.1,
+      "MAX": 5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "returnRate",
+      "LABEL": "Return Rate",
+      "TYPE": "float",
+      "DEFAULT": 0.005,
+      "MIN": 0,
+      "MAX": 0.05,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "vorticity",
+      "LABEL": "Vorticity",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "viscosity",
+      "LABEL": "Viscosity",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "splatForce",
+      "LABEL": "Splat Force",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.1,
+      "MAX": 10,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "moveMode",
+      "LABEL": "Movement",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "LABELS": [
+        "None",
+        "Freeform",
+        "Center",
+        "Wave",
+        "Vortex"
+      ],
+      "DEFAULT": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "moveSpeed",
+      "LABEL": "Move Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.3,
+      "MIN": 0.05,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "moveSpread",
+      "LABEL": "Move Spread",
+      "TYPE": "float",
+      "DEFAULT": 0.7,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "moveIntensity",
+      "LABEL": "Move Intensity",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "rothkoWork",
+      "LABEL": "Painting",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "LABELS": [
+        "Orange Red Yellow",
+        "No.61 Rust+Blue",
+        "White Center",
+        "Seagram Maroon",
+        "Black on Maroon"
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "topColor",
+      "LABEL": "Top Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.92,
+        0.5,
+        0.22,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "midColor",
+      "LABEL": "Mid Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.85,
+        0.2,
+        0.14,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "botColor",
+      "LABEL": "Bot Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.95,
+        0.78,
+        0.3,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "groundColor",
+      "LABEL": "Ground",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.28,
+        0.08,
+        0.08,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "chrShimmer",
+      "LABEL": "Chromatic Edge",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.025,
+      "DEFAULT": 0.008,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "vignette",
+      "LABEL": "Vignette",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.8,
+      "DEFAULT": 0.3,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioInfluence",
+      "LABEL": "Audio Influence",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.12,
+      "DEFAULT": 0.04,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "fluidAudio",
+      "LABEL": "Fluid Audio React",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ],
   "PASSES": [
-    { "TARGET": "velBuf", "PERSISTENT": true },
-    { "TARGET": "uvBuf",  "PERSISTENT": true },
-    { "TARGET": "rothkoBuf", "PERSISTENT": false },
+    {
+      "TARGET": "velBuf",
+      "PERSISTENT": true
+    },
+    {
+      "TARGET": "uvBuf",
+      "PERSISTENT": true
+    },
+    {
+      "TARGET": "rothkoBuf",
+      "PERSISTENT": false
+    },
     {}
   ]
 }*/
@@ -240,10 +598,17 @@ vec4 rothkoPaint(vec2 uv) {
     float g = hash21(uv * RENDERSIZE + vec2(float(FRAMEINDEX) * 0.317, 0.0));
     col += (g - 0.5) * grain;
 
-    float audioMod = 1.0 + audioBass  * audioInfluence * 3.2
-                        + audioMid   * audioInfluence * 1.6
-                        + audioLevel * audioInfluence * 1.2;
-    col *= audioMod;
+    // Soft-knee band following (playbook law 6). The old linear col*mod
+    // clipped flat against the bright default palette (~0.9 values), so the
+    // response never showed; a gamma lift brightens mid-tones clip-free.
+    // Punch term makes sparse rock/hiphop/jazz hits read below the old floor.
+    float bassP  = pow(smoothstep(0.04, 0.85, audioBass), 1.4);
+    float midP   = pow(smoothstep(0.05, 0.85, audioMid),  1.2);
+    float highP  = pow(smoothstep(0.08, 0.90, audioHigh), 1.2);
+    float punchE = audioBeatPulse * audioBeatPulse;
+    float audioMod = 1.0 + audioInfluence * (6.0 * bassP + 3.0 * midP
+                                           + 1.5 * highP + 3.5 * punchE);
+    col = pow(clamp(col, 0.0, 1.0), vec3(1.0 / audioMod));
 
     return vec4(clamp(col, 0.0, 1.0), 1.0);
 }
@@ -402,9 +767,13 @@ void main() {
             col.xy += vec2(-gDiff.y, gDiff.x) * rotSign * intensity * 0.3 * rotFalloff;
         }
 
-        // Audio splats — bass creates fluid bursts
-        if (audioBass > 0.2 && fluidAudio > 0.01) {
-            float at = float(FRAMEINDEX) * 0.1;
+        // Audio splats — bass creates fluid bursts. Splat position holds for
+        // ~10 frames (the old un-floored seed teleported it EVERY frame —
+        // pure uncorrelated noise), and the hard >0.2 gate is now a smooth
+        // knee so soft hiphop/jazz kicks still inject.
+        if (fluidAudio > 0.01) {
+            float bassK = smoothstep(0.10, 0.45, audioBass);
+            float at = floor(float(FRAMEINDEX) * 0.1);
             vec2 splatPos = vec2(hash21(vec2(at, 1.0)), hash21(vec2(at, 2.0)));
             vec2 mDiff = uv - splatPos; mDiff.x *= aspect;
             float dist2 = dot(mDiff, mDiff);
@@ -413,14 +782,14 @@ void main() {
                 float falloff = exp(-dist2 / (ar * ar));
                 float splatAngle = hash21(vec2(at, 3.0)) * PI2;
                 col.xy += vec2(cos(splatAngle), sin(splatAngle))
-                          * audioBass * 0.9 * splatForce * fluidAudio * falloff;
+                          * bassK * audioBass * 0.9 * splatForce * fluidAudio * falloff;
                 col.xy = clamp(col.xy, 0.0, 1.0);
             }
         }
-        // audioMid: global swirl boost
-        if (audioMid > 0.15 && fluidAudio > 0.01) {
+        // audioMid: global swirl boost (smooth knee, no binary gate)
+        if (fluidAudio > 0.01) {
             vec2 cd = uv - 0.5; cd.x *= aspect;
-            float swAmp = audioMid * fluidAudio * 0.22;
+            float swAmp = smoothstep(0.08, 0.6, audioMid) * audioMid * fluidAudio * 0.22;
             col.xy += vec2(-cd.y, cd.x) * swAmp * exp(-dot(cd,cd) * 8.0);
             col.xy = clamp(col.xy, 0.0, 1.0);
         }
@@ -465,6 +834,11 @@ void main() {
     // PASS 3 — Composite: sample Rothko at warped UVs + surface lighting
     // ═════════════════════════════════════════════════════════════════════════
     vec2 warpedUV = IMG_PIXEL(uvBuf, pos).rg;
+
+    // Bass leans into the fluid warp itself — amplify the stored displacement
+    // around its rest state (dominant visual element; silence = unchanged).
+    float warpBassP = pow(smoothstep(0.04, 0.85, audioBass), 1.4);
+    warpedUV = clamp(uv + (warpedUV - uv) * (1.0 + 0.45 * warpBassP * fluidAudio), 0.0, 1.0);
 
     // Sample the Rothko painting at the fluid-warped UV coordinates
     vec3 col = IMG_NORM_PIXEL(rothkoBuf, warpedUV).rgb;
@@ -520,6 +894,30 @@ void main() {
 
         col = col * diff + vec3(spec) + hdrPeak;
     }
+
+    // R2 ambient fix: linear whole-frame follower at the final composite,
+    // outside the fluid feedback and NOT scaled by audioInfluence — the
+    // round-1 gamma lift was diluted twice (knee'd bands x audioInfluence
+    // default 0.04) to a ~3% response. The bands are already smoothed;
+    // dark ground/vignette regions give the multiply headroom even under
+    // the bright default palette. Silence -> exactly 1.0.
+    col *= 1.0 + 0.25 * audioBass + 0.15 * audioMid;
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = clamp(col, 0.0, 1.0);
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    // Full-field painting: tint the darkest end toward the chosen background.
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+    col = uc;
 
     gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }

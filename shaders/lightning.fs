@@ -1,17 +1,121 @@
 /*{
-    "DESCRIPTION": "Recursive black hole — fractal tiled glow rings with cosine palette, depth iterations, and audio reactivity",
-    "CATEGORIES": ["Generator"],
-    "INPUTS": [
-        { "NAME": "iterations", "LABEL": "Depth", "TYPE": "float", "DEFAULT": 4.0, "MIN": 1.0, "MAX": 8.0 },
-        { "NAME": "ringScale", "LABEL": "Ring Scale", "TYPE": "float", "DEFAULT": 1.5, "MIN": 0.5, "MAX": 4.0 },
-        { "NAME": "ringSpeed", "LABEL": "Ring Speed", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-        { "NAME": "glowIntensity", "LABEL": "Glow", "TYPE": "float", "DEFAULT": 0.02, "MIN": 0.005, "MAX": 0.1 },
-        { "NAME": "hueShift", "LABEL": "Hue Shift", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
-        { "NAME": "colorSpeed", "LABEL": "Color Speed", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-        { "NAME": "zoom", "LABEL": "Zoom", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.3, "MAX": 5.0 },
-        { "NAME": "warp", "LABEL": "Warp", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 2.0 },
-        { "NAME": "palette", "LABEL": "Palette", "TYPE": "long", "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Neon","Fire","Ice","Acid"] }
-    ]
+  "DESCRIPTION": "Recursive black hole — fractal tiled glow rings with cosine palette, depth iterations, and audio reactivity",
+  "CATEGORIES": [
+    "Generator"
+  ],
+  "INPUTS": [
+    {
+      "NAME": "glowIntensity",
+      "LABEL": "Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.02,
+      "MIN": 0.005,
+      "MAX": 0.1
+    },
+    {
+      "NAME": "iterations",
+      "LABEL": "Depth",
+      "TYPE": "float",
+      "DEFAULT": 4,
+      "MIN": 1,
+      "MAX": 8,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "ringScale",
+      "LABEL": "Ring Scale",
+      "TYPE": "float",
+      "DEFAULT": 1.5,
+      "MIN": 0.5,
+      "MAX": 4,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "ringSpeed",
+      "LABEL": "Ring Speed",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "colorSpeed",
+      "LABEL": "Color Speed",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "warp",
+      "LABEL": "Warp",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "palette",
+      "LABEL": "Palette",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Neon",
+        "Fire",
+        "Ice",
+        "Acid"
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "zoom",
+      "LABEL": "Zoom",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.3,
+      "MAX": 5,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    }
+  ]
 }*/
 
 // Cosine palette — art-grade color from distance + time
@@ -64,7 +168,14 @@ void main() {
     vec2 mp = (mousePos - 0.5) * 2.0;
     mp.x *= RENDERSIZE.x / RENDERSIZE.y;
 
-    float t = TIME * ringSpeed;
+    // Soft-knee audio conditioning (playbook law 6): audioLevel pegs near
+    // constant under sustained music, so follow per-band envelopes instead.
+    float bassP = pow(smoothstep(0.04, 0.90, audioBass), 1.3);
+    float midP  = pow(smoothstep(0.05, 0.90, audioMid),  1.2);
+    float highP = pow(smoothstep(0.08, 0.90, audioHigh), 1.2);
+
+    // Mids push the ring phase (bounded smooth offset — visible inward motion).
+    float t = TIME * ringSpeed + midP * 1.2;
     int iters = int(iterations);
     int pal = int(palette);
 
@@ -86,11 +197,10 @@ void main() {
 
         // "Black hole" effect: add time to distance inside sin()
         // Makes rings appear to be sucked into the center
-        d = sin(d * 8.0 + t + fi * 0.5) / 8.0;
+        // Bass breathes the ring frequency — rings visibly widen on kicks.
+        d = sin(d * (8.0 - 2.0 * bassP) + t + fi * 0.5) / 8.0;
         d = abs(d);
 
-        // Audio reactivity — bass pulses the ring width, mid shifts phase
-        d += audioBass * 0.02;
         float audioPhase = audioMid * 0.3;
 
         // Cosine palette color — driven by original UV distance + time + iteration
@@ -101,8 +211,9 @@ void main() {
         // Closer to ring = brighter, falls off with distance
         float glow = glowIntensity / d;
 
-        // Audio boost to glow
-        glow *= 1.0 + audioLevel * 2.0;
+        // Audio boost to glow — knee'd bands keep headroom so the response
+        // still breathes at EDM levels (raw audioLevel*2 saturated flat).
+        glow *= 1.0 + 0.9 * bassP + 0.5 * highP;
 
         // Pow for sharper, more defined rings (less muddy)
         glow = pow(glow, 1.2);
@@ -114,13 +225,22 @@ void main() {
     // Tone mapping — prevent blowout while keeping the neon punch
     finalColor = finalColor / (1.0 + finalColor);
 
-    // Surprise: every ~7s a full-canvas white flash — the strike.
-    // Brief and unmistakable.
+    // The strike: in silence, the old ~7s timer flash survives untouched;
+    // under music the timer yields to beat-driven strikes (audioBeatPulse
+    // already decays, capped depth) so flashes correlate with the track
+    // instead of polluting it.
     {
         float _ph = fract(TIME / 7.0);
         float _flash = smoothstep(0.0, 0.005, _ph) * smoothstep(0.08, 0.04, _ph);
-        finalColor = mix(finalColor, vec3(1.0), _flash * 0.95);
+        float _music = smoothstep(0.05, 0.6, audioEnergy);
+        _flash *= 1.0 - 0.9 * _music;
+        _flash = max(_flash, audioBeatPulse * audioBeatPulse * 0.35);
+        finalColor = mix(finalColor, vec3(1.0), clamp(_flash, 0.0, 1.0) * 0.95);
     }
 
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(finalColor, vec3(0.299, 0.587, 0.114));
+    finalColor = mix(vec3(ucL), finalColor, colorBoost);
+    finalColor = mix(finalColor, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
     gl_FragColor = vec4(finalColor, 1.0);
 }

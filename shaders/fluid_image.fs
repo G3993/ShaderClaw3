@@ -1,33 +1,238 @@
 /*{
   "DESCRIPTION": "UV-advection fluid sim — warp any image/video with fluid dynamics, image stays crisp and returns when fluid settles",
   "CREDIT": "Based on Paketa12/Bruno Imbrizi UV-advection technique, ported to ISF by ShaderClaw",
-  "CATEGORIES": ["VFX", "Simulation"],
+  "CATEGORIES": [
+    "VFX",
+    "Simulation"
+  ],
   "INPUTS": [
-    { "NAME": "inputTex", "LABEL": "Image/Video", "TYPE": "image" },
-    { "NAME": "fluidSpeed", "LABEL": "Fluid Speed", "TYPE": "float", "DEFAULT": 5.0, "MIN": 0.5, "MAX": 20.0 },
-    { "NAME": "advectSpeed", "LABEL": "Advect Speed", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 5.0 },
-    { "NAME": "returnRate", "LABEL": "Return Rate", "TYPE": "float", "DEFAULT": 0.005, "MIN": 0.0, "MAX": 0.05 },
-    { "NAME": "vorticity", "LABEL": "Vorticity", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 5.0 },
-    { "NAME": "viscosity", "LABEL": "Viscosity", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "splatForce", "LABEL": "Splat Force", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.1, "MAX": 10.0 },
-    { "NAME": "splatRadius", "LABEL": "Splat Radius", "TYPE": "float", "DEFAULT": 0.05, "MIN": 0.01, "MAX": 0.2 },
-    { "NAME": "bumpHeight", "LABEL": "Surface Depth", "TYPE": "float", "DEFAULT": 80.0, "MIN": 0.0, "MAX": 300.0 },
-    { "NAME": "specAmount", "LABEL": "Specular", "TYPE": "float", "DEFAULT": 1.5, "MIN": 0.0, "MAX": 5.0 },
-    { "NAME": "specPow", "LABEL": "Spec Power", "TYPE": "float", "DEFAULT": 36.0, "MIN": 4.0, "MAX": 128.0 },
-    { "NAME": "showUV", "LABEL": "Show UV", "TYPE": "bool", "DEFAULT": false },
-    { "NAME": "moveMode", "LABEL": "Movement", "TYPE": "long", "VALUES": [0,1,2,3,4], "LABELS": ["None","Freeform","Center","Wave","Vortex"], "DEFAULT": 0 },
-    { "NAME": "moveSpeed", "LABEL": "Move Speed", "TYPE": "float", "DEFAULT": 0.3, "MIN": 0.05, "MAX": 2.0 },
-    { "NAME": "moveSpread", "LABEL": "Move Spread", "TYPE": "float", "DEFAULT": 0.7, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "moveIntensity", "LABEL": "Move Intensity", "TYPE": "float", "DEFAULT": 0.5, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "poseForce", "LABEL": "Body Force", "TYPE": "float", "DEFAULT": 2.0, "MIN": 0.0, "MAX": 6.0 },
-    { "NAME": "poseSpawn", "LABEL": "Body Spawn", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "poseRadius", "LABEL": "Body Radius", "TYPE": "float", "DEFAULT": 0.08, "MIN": 0.02, "MAX": 0.25 },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    {
+      "NAME": "inputTex",
+      "LABEL": "Image/Video",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "specAmount",
+      "LABEL": "Specular",
+      "TYPE": "float",
+      "DEFAULT": 1.5,
+      "MIN": 0,
+      "MAX": 5
+    },
+    {
+      "NAME": "specPow",
+      "LABEL": "Spec Power",
+      "TYPE": "float",
+      "DEFAULT": 36,
+      "MIN": 4,
+      "MAX": 128
+    },
+    {
+      "NAME": "showUV",
+      "LABEL": "Show UV",
+      "TYPE": "bool",
+      "DEFAULT": false
+    },
+    {
+      "NAME": "splatForce",
+      "LABEL": "Splat Force",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.1,
+      "MAX": 10,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "splatRadius",
+      "LABEL": "Splat Radius",
+      "TYPE": "float",
+      "DEFAULT": 0.05,
+      "MIN": 0.01,
+      "MAX": 0.2,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "bumpHeight",
+      "LABEL": "Surface Depth",
+      "TYPE": "float",
+      "DEFAULT": 80,
+      "MIN": 0,
+      "MAX": 300,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "moveSpread",
+      "LABEL": "Move Spread",
+      "TYPE": "float",
+      "DEFAULT": 0.7,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "poseForce",
+      "LABEL": "Body Force",
+      "TYPE": "float",
+      "DEFAULT": 2,
+      "MIN": 0,
+      "MAX": 6,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "poseSpawn",
+      "LABEL": "Body Spawn",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "poseRadius",
+      "LABEL": "Body Radius",
+      "TYPE": "float",
+      "DEFAULT": 0.08,
+      "MIN": 0.02,
+      "MAX": 0.25,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "fluidSpeed",
+      "LABEL": "Fluid Speed",
+      "TYPE": "float",
+      "DEFAULT": 5,
+      "MIN": 0.5,
+      "MAX": 20,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "advectSpeed",
+      "LABEL": "Advect Speed",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.1,
+      "MAX": 5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "returnRate",
+      "LABEL": "Return Rate",
+      "TYPE": "float",
+      "DEFAULT": 0.005,
+      "MIN": 0,
+      "MAX": 0.05,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "vorticity",
+      "LABEL": "Vorticity",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "viscosity",
+      "LABEL": "Viscosity",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "moveMode",
+      "LABEL": "Movement",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "LABELS": [
+        "None",
+        "Freeform",
+        "Center",
+        "Wave",
+        "Vortex"
+      ],
+      "DEFAULT": 0,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "moveSpeed",
+      "LABEL": "Move Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.3,
+      "MIN": 0.05,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "moveIntensity",
+      "LABEL": "Move Intensity",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    }
   ],
   "PASSES": [
-    { "TARGET": "velBuf", "PERSISTENT": true },
-    { "TARGET": "uvBuf", "PERSISTENT": true },
-    { "TARGET": "prevPoseBuf", "PERSISTENT": true, "WIDTH": "33", "HEIGHT": "1" },
+    {
+      "TARGET": "velBuf",
+      "PERSISTENT": true
+    },
+    {
+      "TARGET": "uvBuf",
+      "PERSISTENT": true
+    },
+    {
+      "TARGET": "prevPoseBuf",
+      "PERSISTENT": true,
+      "WIDTH": "33",
+      "HEIGHT": "1"
+    },
     {}
   ]
 }*/
@@ -493,5 +698,23 @@ void main() {
         alpha = smoothstep(0.02, 0.15, lum);
     }
 
-    gl_FragColor = vec4(col, alpha);
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = col;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                   // saturation
+    if (hueShift > 0.0005) {                               // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    float ucA = alpha;
+    if (bgColor.a > 0.0) {                                 // fill low-alpha bg region
+        uc = mix(uc, bgColor.rgb, (1.0 - ucA) * bgColor.a);
+        ucA = ucA + (1.0 - ucA) * bgColor.a;
+    }
+
+    gl_FragColor = vec4(uc, ucA);
 }

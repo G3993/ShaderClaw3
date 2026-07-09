@@ -1,31 +1,273 @@
 /*{
   "DESCRIPTION": "Clusters — text lives inside soft cell circles that fuse into metaball clusters (Flüx-style). Each chunk of the message gets its own circle; circles within the same cluster bridge with smooth-min SDFs into organic blobs. New clusters keep spawning across the canvas, popping in and fading out so the composition is always evolving. Two-color palette with text-on-color contrast.",
   "CREDIT": "ShaderClaw — inspired by Clear Supply Flüx Modular soft cell kit",
-  "CATEGORIES": ["Generator", "Text"],
+  "CATEGORIES": [
+    "Generator",
+    "Text"
+  ],
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "BUBBLES APPEAR AS YOU SPEAK", "MAX_LENGTH": 48 },
-    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Inter","Times","Caslon","Outfit"] },
-    { "NAME": "textScale", "LABEL": "Cluster Text Size", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.5, "MAX": 2.0 },
-    { "NAME": "kerning", "LABEL": "Kerning", "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.55, "MAX": 1.4 },
-    { "NAME": "audioReact", "LABEL": "Audio React", "TYPE": "float", "DEFAULT": 0.7, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "autoTextColor", "LABEL": "Auto Text Color", "TYPE": "bool", "DEFAULT": 1.0 },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.42, 0.42, 0.45, 1.0] },
-    { "NAME": "cellA", "LABEL": "Cell Color A", "TYPE": "color", "DEFAULT": [0.84, 0.66, 0.86, 1.0] },
-    { "NAME": "cellB", "LABEL": "Cell Color B", "TYPE": "color", "DEFAULT": [1.00, 0.49, 0.39, 1.0] },
-    { "NAME": "manualTextColor", "LABEL": "Manual Text", "TYPE": "color", "DEFAULT": [0.05, 0.05, 0.07, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent BG", "TYPE": "bool", "DEFAULT": 1.0 },
-
-    { "NAME": "clusterCount", "LABEL": "Clusters", "TYPE": "long", "DEFAULT": 9, "VALUES": [4,6,8,9,10,12,14,16], "LABELS": ["4","6","8","9","10","12","14","16"] },
-    { "NAME": "nodesPerCluster", "LABEL": "Nodes / Cluster", "TYPE": "long", "DEFAULT": 1, "VALUES": [1,2,3,4,5], "LABELS": ["1","2","3","4","5"] },
-    { "NAME": "nodeRadius", "LABEL": "Node Radius", "TYPE": "float", "DEFAULT": 0.095, "MIN": 0.025, "MAX": 0.18 },
-    { "NAME": "radiusVariance", "LABEL": "Radius Variance", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "orbitSpeed", "LABEL": "Orbit Speed", "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "spawnRate", "LABEL": "Spawn Rate", "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.04, "MAX": 0.8 },
-    { "NAME": "bridgeK", "LABEL": "Bridge Smoothness", "TYPE": "float", "DEFAULT": 0.045, "MIN": 0.0, "MAX": 0.12 },
-    { "NAME": "interBridgeK", "LABEL": "Inter-Cluster Bridge", "TYPE": "float", "DEFAULT": 0.02, "MIN": 0.0, "MAX": 0.35 },
-    { "NAME": "morphAmp", "LABEL": "Bridge Morph", "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.5 }
+    {
+      "NAME": "clusterCount",
+      "LABEL": "Clusters",
+      "TYPE": "long",
+      "DEFAULT": 9,
+      "VALUES": [
+        4,
+        6,
+        8,
+        9,
+        10,
+        12,
+        14,
+        16
+      ],
+      "LABELS": [
+        "4",
+        "6",
+        "8",
+        "9",
+        "10",
+        "12",
+        "14",
+        "16"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "nodesPerCluster",
+      "LABEL": "Nodes / Cluster",
+      "TYPE": "long",
+      "DEFAULT": 1,
+      "VALUES": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "LABELS": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "nodeRadius",
+      "LABEL": "Node Radius",
+      "TYPE": "float",
+      "DEFAULT": 0.095,
+      "MIN": 0.025,
+      "MAX": 0.18,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "radiusVariance",
+      "LABEL": "Radius Variance",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "bridgeK",
+      "LABEL": "Bridge Smoothness",
+      "TYPE": "float",
+      "DEFAULT": 0.045,
+      "MIN": 0,
+      "MAX": 0.12,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "interBridgeK",
+      "LABEL": "Inter-Cluster Bridge",
+      "TYPE": "float",
+      "DEFAULT": 0.02,
+      "MIN": 0,
+      "MAX": 0.35,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "orbitSpeed",
+      "LABEL": "Orbit Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.15,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "spawnRate",
+      "LABEL": "Spawn Rate",
+      "TYPE": "float",
+      "DEFAULT": 0.18,
+      "MIN": 0.04,
+      "MAX": 0.8,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "morphAmp",
+      "LABEL": "Bridge Morph",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "autoTextColor",
+      "LABEL": "Auto Text Color",
+      "TYPE": "bool",
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "cellA",
+      "LABEL": "Cell Color A",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.84,
+        0.66,
+        0.86,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "cellB",
+      "LABEL": "Cell Color B",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.49,
+        0.39,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "manualTextColor",
+      "LABEL": "Manual Text",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.05,
+        0.05,
+        0.07,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": "BUBBLES APPEAR AS YOU SPEAK",
+      "MAX_LENGTH": 48,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "fontFamily",
+      "LABEL": "Font",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Inter",
+        "Times",
+        "Caslon",
+        "Outfit"
+      ],
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "textScale",
+      "LABEL": "Cluster Text Size",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.5,
+      "MAX": 2,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "kerning",
+      "LABEL": "Kerning",
+      "TYPE": "float",
+      "DEFAULT": 0.85,
+      "MIN": 0.55,
+      "MAX": 1.4,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.42,
+        0.42,
+        0.45,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent BG",
+      "TYPE": "bool",
+      "DEFAULT": 1,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "DEFAULT": 0.7,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
+
+// ---- universal color block (defaults = no-op) ----
+vec3 ucApply(vec3 uc) {
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                      // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    return uc;
+}
+
 
 // =====================================================================
 // Clusters — text lives in metaball-fused circles. Each "node" is a
@@ -220,6 +462,10 @@ void main() {
 
     float audio = clamp(audioReact, 0.0, 2.0);
     float bass  = audioBass;
+    // Continuous smooth band-followers (ambient fix): low knee so ambient's
+    // 0.1-0.8 swells span the travel, hi 0.95 keeps EDM headroom.
+    float bassSm = smoothstep(0.04, 0.95, audioBass);
+    float midSm  = smoothstep(0.05, 0.95, audioMid);
 
     // Long-typed inputs can arrive unset (0) on the mobile/eval path —
     // fall back to their documented defaults (app never sends 0).
@@ -250,7 +496,7 @@ void main() {
     // full immediately and bubbles use the static fallback below.
     if (total <= 0) {
         if (transparentBg) { gl_FragColor = vec4(0.0); return; }
-        gl_FragColor = vec4(bgColor.rgb, 1.0);
+        gl_FragColor = vec4(ucApply(bgColor.rgb), 1.0);
         return;
     }
     bool liveUtterance = msgAge >= 0.0;
@@ -424,7 +670,7 @@ void main() {
             // isn't swallowed by the neighbour-collision clamp above.
             // Always-on (not just the spawn window) so live clusters keep
             // breathing with the music for their whole hold phase.
-            rad *= 1.0 + 0.10 * bass * audio;
+            rad *= 1.0 + (0.18 * bassSm + 0.10 * midSm) * audio;
             rad *= clusterScale;
 
             // Circle SDF.
@@ -714,7 +960,7 @@ void main() {
     // blob tissue up a touch so the cell color itself breathes with
     // the music (audible even when node-radius pulse alone would be
     // too thin a band to read at a glance).
-    vec3 blobColLit = blobCol * (1.0 + 0.07 * bass * audio);
+    vec3 blobColLit = blobCol * (1.0 + (0.16 * bassSm + 0.08 * midSm) * audio);
     float blobFw   = fwidth(blobSdf);
     float blobFill = 1.0 - smoothstep(-blobFw, blobFw, blobSdf);
     col = mix(col, blobColLit, blobFill);
@@ -726,5 +972,5 @@ void main() {
         col   = mix(blobColLit, textCol, charMask);
     }
 
-    gl_FragColor = vec4(col, alpha);
+    gl_FragColor = vec4(ucApply(col), alpha);
 }

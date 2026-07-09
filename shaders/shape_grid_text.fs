@@ -1,44 +1,353 @@
 /*{
   "DESCRIPTION": "Shape Grid · Text — an editorial contact-sheet plate. Each cell of an R×C grid hosts a DISTINCT SDF specimen (square / triangle / diamond / cross / star / halfmoon / arc / hexagon / chevron / capsule / blade / lens), framed by hairline rules and corner index numerals — a typography research sheet, not a checkerboard. Three player channels each own a parallax depth band (Back / Mid / Front): cells in that band swell, brighten, and tilt forward when their player speaks. Bass thickens hairlines; mid pumps shape rotation; high crisps highlights. The live cue line types out across the bottom slab as caption, glued under the loudest cell. Real depth: three parallax planes + per-cell pseudo-3D tilt on energy spikes. Premium fwidth-AA. Returns LINEAR HDR.",
   "CREDIT": "ShaderClaw — A-List drop · shape_grid_text",
-  "CATEGORIES": ["Generator", "Text", "A-List"],
+  "CATEGORIES": [
+    "Generator",
+    "Text",
+    "A-List"
+  ],
   "INPUTS": [
-    { "NAME": "msg", "LABEL": "Caption", "TYPE": "text", "DEFAULT": "SHAPE GRID PLATE 01 IS A GALLERY", "MAX_LENGTH": 48, "BIND": "cue.latest" },
-
-    { "NAME": "energyA", "LABEL": "Player 1 (Back)",  "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[1].energy" },
-    { "NAME": "energyB", "LABEL": "Player 2 (Mid)",   "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[2].energy" },
-    { "NAME": "energyC", "LABEL": "Player 3 (Front)", "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[3].energy" },
-    { "NAME": "activeA", "LABEL": "Player 1 Active",  "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[1].active" },
-    { "NAME": "activeB", "LABEL": "Player 2 Active",  "TYPE": "float", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 1.0, "BIND": "player[2].active" },
-
-    { "NAME": "bassDrive", "LABEL": "Bass (Stroke)",  "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.0, "BIND": "audio.bass" },
-    { "NAME": "midDrive",  "LABEL": "Mid (Rotation)", "TYPE": "float", "DEFAULT": 0.30, "MIN": 0.0, "MAX": 1.0, "BIND": "audio.mid" },
-    { "NAME": "highDrive", "LABEL": "High (Crisp)",   "TYPE": "float", "DEFAULT": 0.30, "MIN": 0.0, "MAX": 1.0, "BIND": "audio.high" },
-
-    { "NAME": "rows",        "LABEL": "Rows",          "TYPE": "long",  "DEFAULT": 4, "VALUES": [3,4,5,6], "LABELS": ["3","4","5","6"] },
-    { "NAME": "cols",        "LABEL": "Cols",          "TYPE": "long",  "DEFAULT": 4, "VALUES": [3,4,5,6], "LABELS": ["3","4","5","6"] },
-    { "NAME": "paletteMode", "LABEL": "Palette",       "TYPE": "long",  "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Hi-Vis","Paper","Editorial","Mono"] },
-    { "NAME": "variantMix",  "LABEL": "Variant Mix",   "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "motionSpeed", "LABEL": "Motion Speed",  "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.6 },
-    { "NAME": "audioDepth",  "LABEL": "Audio Depth",   "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "parallax",    "LABEL": "Parallax",      "TYPE": "float", "DEFAULT": 0.95, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "tilt3D",      "LABEL": "Pseudo-3D Tilt","TYPE": "float", "DEFAULT": 0.70, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "popAmount",   "LABEL": "Pop (per cell)","TYPE": "float", "DEFAULT": 0.65, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "labelScale",  "LABEL": "Caption Scale", "TYPE": "float", "DEFAULT": 1.0, "MIN": 0.5, "MAX": 1.8 },
-    { "NAME": "kerning",     "LABEL": "Kerning",       "TYPE": "float", "DEFAULT": 0.95, "MIN": 0.55, "MAX": 1.4 }
-  ,
-    { "NAME": "motionDrift",  "LABEL": "Drift Speed",      "TYPE": "float", "DEFAULT": 1.3,  "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "motionJitter", "LABEL": "Jitter",           "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionFlicker","LABEL": "Flicker",          "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionSway",   "LABEL": "Sway",             "TYPE": "float", "DEFAULT": 0.50, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionChaos",  "LABEL": "Chaos",            "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.0 }
-  ,
-    { "NAME": "fidBloom",    "LABEL": "Glow",      "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "fidDither",   "LABEL": "Dither",    "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fidGamma",    "LABEL": "Gamma",     "TYPE": "float", "DEFAULT": 0.60, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fidEdgeGlow", "LABEL": "Edge Glow", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "fidVignette", "LABEL": "Vignette",  "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "fidGrain",    "LABEL": "Grain",     "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.0 }
+    {
+      "NAME": "fidBloom",
+      "LABEL": "Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 1.5
+    },
+    {
+      "NAME": "fidDither",
+      "LABEL": "Dither",
+      "TYPE": "float",
+      "DEFAULT": 0.85,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "fidGamma",
+      "LABEL": "Gamma",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "fidEdgeGlow",
+      "LABEL": "Edge Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "fidVignette",
+      "LABEL": "Vignette",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1.5
+    },
+    {
+      "NAME": "fidGrain",
+      "LABEL": "Grain",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "rows",
+      "LABEL": "Rows",
+      "TYPE": "long",
+      "DEFAULT": 4,
+      "VALUES": [
+        3,
+        4,
+        5,
+        6
+      ],
+      "LABELS": [
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "cols",
+      "LABEL": "Cols",
+      "TYPE": "long",
+      "DEFAULT": 4,
+      "VALUES": [
+        3,
+        4,
+        5,
+        6
+      ],
+      "LABELS": [
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "variantMix",
+      "LABEL": "Variant Mix",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "motionSpeed",
+      "LABEL": "Motion Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 1.6,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "popAmount",
+      "LABEL": "Pop (per cell)",
+      "TYPE": "float",
+      "DEFAULT": 0.65,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionDrift",
+      "LABEL": "Drift Speed",
+      "TYPE": "float",
+      "DEFAULT": 1.3,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionJitter",
+      "LABEL": "Jitter",
+      "TYPE": "float",
+      "DEFAULT": 0.25,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionFlicker",
+      "LABEL": "Flicker",
+      "TYPE": "float",
+      "DEFAULT": 0.15,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionSway",
+      "LABEL": "Sway",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionChaos",
+      "LABEL": "Chaos",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "paletteMode",
+      "LABEL": "Palette",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Hi-Vis",
+        "Paper",
+        "Editorial",
+        "Mono"
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "parallax",
+      "LABEL": "Parallax",
+      "TYPE": "float",
+      "DEFAULT": 0.95,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "tilt3D",
+      "LABEL": "Pseudo-3D Tilt",
+      "TYPE": "float",
+      "DEFAULT": 0.7,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "msg",
+      "LABEL": "Caption",
+      "TYPE": "text",
+      "DEFAULT": "SHAPE GRID PLATE 01 IS A GALLERY",
+      "MAX_LENGTH": 48,
+      "BIND": "cue.latest",
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "labelScale",
+      "LABEL": "Caption Scale",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.5,
+      "MAX": 1.8,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "kerning",
+      "LABEL": "Kerning",
+      "TYPE": "float",
+      "DEFAULT": 0.95,
+      "MIN": 0.55,
+      "MAX": 1.4,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "energyA",
+      "LABEL": "Player 1 (Back)",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "BIND": "player[1].energy",
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "energyB",
+      "LABEL": "Player 2 (Mid)",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "BIND": "player[2].energy",
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "energyC",
+      "LABEL": "Player 3 (Front)",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "BIND": "player[3].energy",
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "activeA",
+      "LABEL": "Player 1 Active",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "BIND": "player[1].active",
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "activeB",
+      "LABEL": "Player 2 Active",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "BIND": "player[2].active",
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "bassDrive",
+      "LABEL": "Bass (Stroke)",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 1,
+      "BIND": "audio.bass",
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "midDrive",
+      "LABEL": "Mid (Rotation)",
+      "TYPE": "float",
+      "DEFAULT": 0.3,
+      "MIN": 0,
+      "MAX": 1,
+      "BIND": "audio.mid",
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "highDrive",
+      "LABEL": "High (Crisp)",
+      "TYPE": "float",
+      "DEFAULT": 0.3,
+      "MIN": 0,
+      "MAX": 1,
+      "BIND": "audio.high",
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "audioDepth",
+      "LABEL": "Audio Depth",
+      "TYPE": "float",
+      "DEFAULT": 0.85,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -356,6 +665,8 @@ void main() {
     float vign = 1.0 - 0.10 * dot(p * 1.05, p * 1.05);
     float grain = hash12(floor(gl_FragCoord.xy * 0.5)) - 0.5;
     vec3 col = bg * vign + grain * 0.012;
+    // universal background override — tint the plate base (a=0 -> untouched)
+    col = mix(col, bgColor.rgb, bgColor.a);
 
     // ─── Grid layout ─────────────────────────────────────────────────────
     int Rc = int(rows); if (Rc < 3) Rc = 3; if (Rc > 6) Rc = 6;
@@ -625,5 +936,18 @@ void main() {
     col *= 1.0 - 0.30 * clamp(bass, 0.0, 1.4);
 
     col *= mkFlicker(gl_FragCoord.xy / RENDERSIZE - 0.5, TIME);
-    gl_FragColor = vec4(fidApply(col, gl_FragCoord.xy), 1.0);
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = fidApply(col, gl_FragCoord.xy);
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);
+    if (hueShift > 0.0005) {
+        float hueA = hueShift * 6.2831853;
+        float hueC = cos(hueA), hueS = sin(hueA);
+        mat3 hueM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                  + hueC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                  + hueS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hueM * uc, 0.0, 1.0);
+    }
+    gl_FragColor = vec4(uc, 1.0);
 }

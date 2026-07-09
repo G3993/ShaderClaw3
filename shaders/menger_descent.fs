@@ -1,16 +1,111 @@
 /*{
-  "DESCRIPTION":"Menger Descent — minimal monochrome fly-through of an infinite 3D Menger sponge. Cool-white architecture on near-black, thin glowing edges, depth fog. Bass drives descent speed, treble adds faint edge shimmer, mid slowly rotates the whole structure.",
-  "CREDIT":"ShaderClaw3",
-  "CATEGORIES":["Generator","Fractal","3D","Audio Reactive"],
-  "INPUTS":[
-    {"NAME":"camSpeed","LABEL":"Descent Speed","TYPE":"float","DEFAULT":0.09,"MIN":0.0,"MAX":1.0},
-    {"NAME":"edgeGlow","LABEL":"Edge Glow","TYPE":"float","DEFAULT":0.6,"MIN":0.0,"MAX":2.0},
-    {"NAME":"fogDensity","LABEL":"Fog Density","TYPE":"float","DEFAULT":0.12,"MIN":0.0,"MAX":0.5},
-    {"NAME":"accentColor","LABEL":"Accent Color","TYPE":"color","DEFAULT":[0.7,0.85,1.0,1.0]},
-    {"NAME":"iterations","LABEL":"Sponge Detail","TYPE":"float","DEFAULT":5.0,"MIN":2.0,"MAX":6.0},
-    {"NAME":"inputImage","LABEL":"Your Image","TYPE":"image"},
-    {"NAME":"texMix","LABEL":"Image Amount","TYPE":"float","DEFAULT":0.0,"MIN":0.0,"MAX":1.0},
-    {"NAME":"audioReact","LABEL":"Sound Reactivity","TYPE":"float","DEFAULT":1.0,"MIN":0.0,"MAX":2.0}
+  "DESCRIPTION": "Menger Descent — minimal monochrome fly-through of an infinite 3D Menger sponge. Cool-white architecture on near-black, thin glowing edges, depth fog. Bass drives descent speed, treble adds faint edge shimmer, mid slowly rotates the whole structure.",
+  "CREDIT": "ShaderClaw3",
+  "CATEGORIES": [
+    "Generator",
+    "Fractal",
+    "3D",
+    "Audio Reactive"
+  ],
+  "INPUTS": [
+    {
+      "NAME": "edgeGlow",
+      "LABEL": "Edge Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "fogDensity",
+      "LABEL": "Fog Density",
+      "TYPE": "float",
+      "DEFAULT": 0.12,
+      "MIN": 0,
+      "MAX": 0.5
+    },
+    {
+      "NAME": "inputImage",
+      "LABEL": "Your Image",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "texMix",
+      "LABEL": "Image Amount",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "iterations",
+      "LABEL": "Sponge Detail",
+      "TYPE": "float",
+      "DEFAULT": 5,
+      "MIN": 2,
+      "MAX": 6,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "camSpeed",
+      "LABEL": "Descent Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.09,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "accentColor",
+      "LABEL": "Accent Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.7,
+        0.85,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Sound Reactivity",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -35,11 +130,10 @@ float mengerDE(vec3 p){
 // ---- helpers ---------------------------------------------------------------
 mat2 rot(float a){ float c=cos(a), s=sin(a); return mat2(c,-s,s,c); }
 
-// scene wrapper: slowly rotate the whole sponge with mid
+// scene wrapper: infinite lattice — the sponge repeats forever so the
+// descending camera never leaves the geometry (rotation moved to camera roll)
 float map(vec3 p){
-  float ang = TIME*0.04 + (audioMid*audioReact)*0.6;  // calm rotation, mid eases it
-  p.xz = rot(ang) * p.xz;
-  p.xy = rot(ang*0.5) * p.xy;
+  p = mod(p + 1.0, 2.0) - 1.0;
   return mengerDE(p);
 }
 
@@ -61,8 +155,8 @@ void main(){
   vec2 uv = (gl_FragCoord.xy - 0.5*RENDERSIZE) / min(RENDERSIZE.x, RENDERSIZE.y);
 
   // ---- camera: descend THROUGH the sponge -----------------------------------
-  float spd = camSpeed * (1.0 + bass*0.7);          // bass quickens descent, K<=0.7
-  float t0  = TIME * spd;
+  // constant descent rate + small BOUNDED bass push (no TIME-rate teleports)
+  float t0  = TIME * camSpeed + 0.25 * bass;
   vec3 ro = vec3(0.18*sin(t0*0.6), t0, 0.18*cos(t0*0.4)); // drift down the y axis
 
   vec3 rd = normalize(vec3(uv, 1.5));
@@ -71,6 +165,9 @@ void main(){
   float pitch = cos(TIME*0.04) * 0.05;
   rd.xz = rot(yaw)   * rd.xz;
   rd.yz = rot(pitch) * rd.yz;
+  // slow camera roll; mid nudges it gently (bounded phase offset, not a rate)
+  float roll = TIME*0.04 + mid*0.2;
+  rd.xy = rot(roll) * rd.xy;
 
   // ---- raymarch -------------------------------------------------------------
   float t = 0.0;
@@ -82,7 +179,7 @@ void main(){
     float d = map(p);
     if(d < 0.001){ hit = true; break; }
     if(t > 30.0) break;
-    t += d;
+    t += max(d * 0.75, 0.002);   // conservative step: wrapped SDF can overshoot cells
     steps += 1.0;
   }
 
@@ -132,10 +229,28 @@ void main(){
     // background: near-black, faint vertical glow so it stays alive
     float bg = 0.015 + 0.01*smoothstep(0.7, -0.2, abs(uv.y));
     col = accent * bg;
+    col = mix(col, bgColor.rgb, bgColor.a);  // universal background
   }
+
+  // ---- audio: linear whole-frame follower + decaying beat accent ------------
+  float ar = clamp(audioReact, 0.0, 1.5);
+  col *= 1.0 + (0.25*audioBass + 0.15*audioMid) * ar;
+  float kick = pow(max(audioBeatPulse, 0.8*audioPunch), 1.3);
+  col *= 1.0 + 0.30 * kick * ar;
 
   // ---- output ---------------------------------------------------------------
   col = col/(1.0+col);
   col = pow(col, vec3(0.4545));
+  // ---- universal color block (defaults = no-op) ----
+  float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+  col = mix(vec3(ucL), col, colorBoost);
+  if (hueShift > 0.0005) {
+      float hA = hueShift * 6.2831853;
+      float hC = cos(hA), hS = sin(hA);
+      mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+              + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+              + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+      col = clamp(hM * col, 0.0, 1.0);
+  }
   gl_FragColor = vec4(col, 1.0);
 }

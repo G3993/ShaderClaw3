@@ -1,16 +1,109 @@
 /*{
   "DESCRIPTION": "Turbulence Flight — a glowing volumetric ride through a rotating turbulent field (after a Xor commented raymarcher). 100 raymarch steps accumulate neon glow off a sine-warped plane; nested frequencies fold the space and a slow rotation tumbles it. Bass swells the warp + glow, mid spins it faster, treble shimmers the detail. Optional image tints the glow in screen space.",
   "CREDIT": "ShaderClaw3 (after Xor, shadertoy tXlXDX)",
-  "CATEGORIES": ["Generator", "3D", "Abstract", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "3D",
+    "Abstract",
+    "Audio Reactive"
+  ],
   "INPUTS": [
-    { "NAME": "speed",       "LABEL": "Speed",            "TYPE": "float", "MIN": 0.0,  "MAX": 3.0,  "DEFAULT": 1.0 },
-    { "NAME": "detail",      "LABEL": "Detail",           "TYPE": "float", "MIN": 6.0,  "MAX": 28.0, "DEFAULT": 16.0 },
-    { "NAME": "warp",        "LABEL": "Warp",             "TYPE": "float", "MIN": 0.0,  "MAX": 0.03, "DEFAULT": 0.01 },
-    { "NAME": "glow",        "LABEL": "Glow",             "TYPE": "float", "MIN": 0.3,  "MAX": 2.5,  "DEFAULT": 1.0 },
-    { "NAME": "colorShift",  "LABEL": "Color Shift",      "TYPE": "float", "MIN": 0.0,  "MAX": 6.2832, "DEFAULT": 0.0 },
-    { "NAME": "audioReact",  "LABEL": "Sound Reactivity", "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
-    { "NAME": "inputImage",  "LABEL": "Tint Image",       "TYPE": "image" },
-    { "NAME": "texMix",      "LABEL": "Image Tint",       "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.0 }
+    {
+      "NAME": "detail",
+      "LABEL": "Detail",
+      "TYPE": "float",
+      "MIN": 6,
+      "MAX": 28,
+      "DEFAULT": 16,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "glow",
+      "LABEL": "Glow",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2.5,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorShift",
+      "LABEL": "Color Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 6.2832,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Sound Reactivity",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "warp",
+      "LABEL": "Warp",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.03,
+      "DEFAULT": 0.01
+    },
+    {
+      "NAME": "inputImage",
+      "LABEL": "Tint Image",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "texMix",
+      "LABEL": "Image Tint",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0
+    }
   ]
 }*/
 
@@ -68,6 +161,22 @@ void main(){
     vec3 img = texture2D(inputImage, iuv).rgb;
     o.rgb = mix(o.rgb, o.rgb * img * 2.0, texMix);
   }
+
+  // ---- universal color block (defaults = no-op) ----
+  vec3 uc = o.rgb;
+  float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+  uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+  if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+    float hA = hueShift * 6.2831853;
+    float hC = cos(hA), hS = sin(hA);
+    mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+            + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+            + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+    uc = clamp(hM * uc, 0.0, 1.0);
+  }
+  // background: tint the darkest end (the void between glow) toward bgColor
+  uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+  o.rgb = uc;
 
   gl_FragColor = vec4(o.rgb, 1.0);
 }

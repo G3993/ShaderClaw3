@@ -1,17 +1,8 @@
-/*
-{
+/*{
   "CATEGORIES": [
     "Generator"
   ],
   "INPUTS": [
-    {
-      "NAME": "speed",
-      "LABEL": "Speed",
-      "TYPE": "float",
-      "DEFAULT": 0.3,
-      "MIN": 0.0,
-      "MAX": 5.0
-    },
     {
       "NAME": "intensity",
       "LABEL": "Intensity",
@@ -21,42 +12,116 @@
       "MAX": 0.05
     },
     {
-      "NAME": "zoom",
-      "LABEL": "Scale",
+      "NAME": "beamCount",
+      "LABEL": "Beam Count",
+      "TYPE": "long",
+      "VALUES": [
+        1,
+        2,
+        3,
+        4,
+        6,
+        8,
+        12
+      ],
+      "LABELS": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "6",
+        "8",
+        "12"
+      ],
+      "DEFAULT": 4,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Speed",
       "TYPE": "float",
-      "DEFAULT": 4.0,
-      "MIN": 0.2,
-      "MAX": 4.0
+      "DEFAULT": 0.3,
+      "MIN": 0,
+      "MAX": 5,
+      "GROUP": "Motion / Animation"
     },
     {
       "NAME": "color1",
       "LABEL": "Color A",
       "TYPE": "color",
-      "DEFAULT": [1.0, 1.0, 1.0, 1.0]
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color"
     },
     {
       "NAME": "color2",
       "LABEL": "Color B",
       "TYPE": "color",
-      "DEFAULT": [1.0, 1.0, 1.0, 1.0]
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color"
     },
     {
       "NAME": "color3",
       "LABEL": "Color C",
       "TYPE": "color",
-      "DEFAULT": [1.0, 0.0, 0.0, 1.0]
+      "DEFAULT": [
+        1,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Color"
     },
     {
-      "NAME": "beamCount",
-      "LABEL": "Beam Count",
-      "TYPE": "long",
-      "VALUES": [1, 2, 3, 4, 6, 8, 12],
-      "LABELS": ["1", "2", "3", "4", "6", "8", "12"],
-      "DEFAULT": 4
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "zoom",
+      "LABEL": "Scale",
+      "TYPE": "float",
+      "DEFAULT": 4,
+      "MIN": 0.2,
+      "MAX": 4,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
     }
   ]
-}
-*/
+}*/
 
 // RGB Laser Globe — by @paulofalcao
 
@@ -155,6 +220,14 @@ float laserKnee(float x, float lo, float hi) { return smoothstep(lo, hi, x); }
 void main(void) {
    vec2 p = (gl_FragCoord.xy / RENDERSIZE.x) * 2.0 - vec2(1.0, RENDERSIZE.y / RENDERSIZE.x);
    p *= zoom;
+   // Audio conditioning: low floor (knee from 0.04) + sub coupling so
+   // hiphop's sparse sub-heavy kicks register; audioBeatPulse is a host-side
+   // decaying event envelope, so each sparse hit leaves a visible trace.
+   float bassP = pow(laserKnee(max(audioBass, audioSub), 0.04, 0.9), 1.3);
+   float levelK = laserKnee(audioLevel, 0.04, 0.85);
+   float hitT = audioBeatPulse;
+   // Bass/hit breathe the globe scale (~±10%, geometric, never clamps).
+   p /= 1.0 + 0.10 * bassP + 0.05 * hitT;
    // Was raw audioHigh*2.0 (up to 3x speed on any transient high-freq spike)
    // — soft knee + much smaller depth so it's a subtle lift, not a lurch.
    float highP = pow(laserKnee(audioHigh, 0.10, 0.90), 1.2);
@@ -175,11 +248,9 @@ void main(void) {
    vec2 alt = vec2(1.0 - mousePos.x, mousePos.y);
    d += laserCluster(p - toCenter(alt) - drift, t, bc) * 0.6;
 
-   // Audio non-gating: alive at audio=0. Bass adds kick-coupled flare on top.
-   // Was raw audioBass*5.0 (a 6x brightness surge on any bass hit) — soft
-   // knee + much smaller depth for a subtle lift instead of a strobe.
-   float bassP = pow(laserKnee(audioBass, 0.05, 0.85), 1.6);
-   float boost = 1.0 + bassP * 0.7;
+   // Audio non-gating: alive at audio=0. Bass flare + continuous level
+   // follow + a decaying per-hit trace (all smooth envelopes, no gates).
+   float boost = 1.0 + bassP * 0.55 + levelK * 0.25 + hitT * 0.45;
    d *= intensity * boost;
 
    // HDR PEAKS for Phase Q v4 bloom — lift beam cores into 1.6–2.5 linear so
@@ -193,5 +264,17 @@ void main(void) {
    float hdrGain = 1.0 + over * 2.2;
    d *= hdrGain;
 
+   // ---- universal color block (defaults = no-op) ----
+   float ucL = dot(d, vec3(0.299, 0.587, 0.114));
+   d = mix(vec3(ucL), d, colorBoost);
+   if (hueShift > 0.0005) {
+       float hA = hueShift * 6.2831853;
+       float hC = cos(hA), hS = sin(hA);
+       mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+               + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+               + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+       d = clamp(hM * d, 0.0, 1.0);
+   }
+   d = mix(d, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
    gl_FragColor = vec4(d, 1.0);
 }

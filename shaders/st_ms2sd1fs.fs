@@ -1,68 +1,123 @@
-/*
-{
+/*{
   "CATEGORIES": [
     "Automatically Converted"
   ],
   "DESCRIPTION": "Automatically converted from https://www.shadertoy.com/view/Ms2SD1",
-  "IMPORTED": [
-    
-  ],
+  "IMPORTED": [],
   "INPUTS": [
     {
       "NAME": "iMouse",
-      "TYPE": "point2D"
-    },
-    {
-      "NAME": "SEA_FREQ",
-      "MIN": 0.0,
-      "MAX": 1.0,
-      "TYPE": "float",
-      "DEFAULT": 0.16
-    },
-    {
-      "NAME": "SEA_CHOPPY",
-      "MIN": 0.0,
-      "MAX": 8.0,
-      "TYPE": "float",
-      "DEFAULT": 4.0
+      "TYPE": "point2D",
+      "LABEL": "Mouse"
     },
     {
       "NAME": "SEA_HEIGHT",
-      "MIN": 0.0,
-      "MAX": 3.0,
+      "MIN": 0,
+      "MAX": 3,
       "TYPE": "float",
-      "DEFAULT": 0.6
+      "DEFAULT": 0.6,
+      "GROUP": "Shape / Geometry",
+      "LABEL": "Sea Height"
+    },
+    {
+      "NAME": "SEA_FREQ",
+      "MIN": 0,
+      "MAX": 1,
+      "TYPE": "float",
+      "DEFAULT": 0.16,
+      "GROUP": "Shape / Geometry",
+      "LABEL": "Sea Frequency"
+    },
+    {
+      "NAME": "SEA_CHOPPY",
+      "MIN": 0,
+      "MAX": 8,
+      "TYPE": "float",
+      "DEFAULT": 4,
+      "GROUP": "Motion / Animation",
+      "LABEL": "Sea Choppiness"
     },
     {
       "NAME": "SEA_SPEED",
-      "MIN": 0.0,
-      "MAX": 2.0,
+      "MIN": 0,
+      "MAX": 2,
       "TYPE": "float",
-      "DEFAULT": 0.8
+      "DEFAULT": 0.8,
+      "GROUP": "Motion / Animation",
+      "LABEL": "Sea Speed"
     },
-	{
-		"NAME": "SEA_BASE",
-		"TYPE": "color",
-		"DEFAULT": [
-			0.1,
-			0.19,
-			0.22,
-			1.0
-		]
-	},
-	{
-		"NAME": "SEA_WATER_COLOR",
-		"TYPE": "color",
-		"DEFAULT": [
-			0.91,
-			0.25,
-			0.34,
-			1.0
-		]
-	}	
+    {
+      "NAME": "SEA_BASE",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.1,
+        0.19,
+        0.22,
+        1
+      ],
+      "GROUP": "Color",
+      "LABEL": "Sea Base Color"
+    },
+    {
+      "NAME": "SEA_WATER_COLOR",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.91,
+        0.25,
+        0.34,
+        1
+      ],
+      "GROUP": "Color",
+      "LABEL": "Water Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    }
   ]
+}*/
+
+// ---- universal color block (defaults = no-op) ----
+vec3 ucApply(vec3 uc) {
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                      // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    return uc;
 }
-*/
+
 
 
 // "Seascape" by Alexander Alekseev aka TDM - 2014
@@ -82,7 +137,15 @@ const int ITER_FRAGMENT = 5;
 //const float SEA_FREQ = 0.16;
 //const vec3 SEA_BASE = vec3(0.1,0.19,0.22);
 //const vec3 SEA_WATER_COLOR = vec3(0.8,0.9,0.6);
-float SEA_TIME = TIME * SEA_SPEED;
+// audio conditioning (playbook soft knees)
+// Wider knees: top headroom at 0.95 so EDM's sustained near-peg bass keeps
+// BREATHING through the knee instead of clamping flat (saturation fix).
+float A_BASS  = pow(smoothstep(0.03, 0.95, audioBass), 1.3);
+float A_MID   = pow(smoothstep(0.05, 0.92, audioMid), 1.2);
+float A_HIGH  = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+float A_DRIVE = 0.25 + 0.75 * smoothstep(0.05, 0.9, audioEnergy);
+// time-warp clock: the sea travels with the track's energy
+float SEA_TIME = TIME * SEA_SPEED * (0.7 + 0.5 * A_DRIVE);
 mat2 octave_m = mat2(1.6,1.2,-1.2,1.6);
 
 // math
@@ -144,8 +207,8 @@ float sea_octave(vec2 uv, float choppy) {
 
 float map(vec3 p) {
     float freq = SEA_FREQ;
-    float amp = SEA_HEIGHT;
-    float choppy = SEA_CHOPPY;
+    float amp = SEA_HEIGHT * (1.0 + 0.25 * A_BASS);   // bass swells the sea
+    float choppy = SEA_CHOPPY * (1.0 + 0.2 * A_MID);  // mids chop the surface
     vec2 uv = p.xz; uv.x *= 0.75;
     
     float d, h = 0.0;    
@@ -161,8 +224,8 @@ float map(vec3 p) {
 
 float map_detailed(vec3 p) {
     float freq = SEA_FREQ;
-    float amp = SEA_HEIGHT;
-    float choppy = SEA_CHOPPY;
+    float amp = SEA_HEIGHT * (1.0 + 0.25 * A_BASS);   // keep in sync with map()
+    float choppy = SEA_CHOPPY * (1.0 + 0.2 * A_MID);
     vec2 uv = p.xz; uv.x *= 0.75;
     
     float d, h = 0.0;    
@@ -189,9 +252,10 @@ vec3 getSeaColor(vec3 p, vec3 n, vec3 l, vec3 eye, vec3 dist) {
     color += SEA_WATER_COLOR.rgb * (p.y - SEA_HEIGHT) * 0.18 * atten;
 
     // HDR specular peaks: sharp highlight core lifted to ~2.2 linear so bloom catches it
+    // (highs sparkle the glints; punch adds a decaying flash on hits)
     float spec = specular(n,l,eye,60.0);
     float specCore = pow(max(dot(reflect(eye,n),l),0.0), 220.0);
-    color += vec3(spec) + vec3(1.0,0.95,0.85) * specCore * 2.2;
+    color += vec3(spec) * (1.0 + 0.3 * A_HIGH) + vec3(1.0,0.95,0.85) * specCore * 2.2 * (1.0 + 0.4 * A_HIGH + 0.5 * audioPunch);
 
     return color;
 }
@@ -251,10 +315,18 @@ void main(){
     // color — soft AA on horizon mix using fwidth
     float horizonAA = max(fwidth(dir.y) * 1.5, 1e-4);
     float horizonMix = pow(smoothstep(horizonAA, -0.05 - horizonAA, dir.y), 0.3);
+    vec3 skyCol = mix(getSkyColor(dir), bgColor.rgb, bgColor.a); // universal background (a=0 -> no-op)
     vec3 color = mix(
-        getSkyColor(dir),
+        skyCol,
         getSeaColor(p,n,light,dir,dist),
         horizonMix);
+
+    // Whole-frame luminance follower + decaying kick trace: the sea-geometry
+    // swell alone is too slow/subtle to correlate; this keeps a visible,
+    // non-pegging response at high input (audioBeatPulse already decays).
+    color *= 1.0 + 0.22 * A_BASS + 0.10 * A_MID + 0.10 * audioBeatPulse;
+
+    color = ucApply(color);
 
     // linear HDR out — host applies ACES tonemap
     gl_FragColor = vec4(color, 1.0);

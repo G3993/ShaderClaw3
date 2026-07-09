@@ -1,27 +1,216 @@
 /*{
-  "CATEGORIES": ["3D", "Generator", "Audio Reactive"],
+  "CATEGORIES": [
+    "3D",
+    "Generator",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "PBR Glass Dispersion 3D — refractive crystal sculpture with per-channel index of refraction producing prism-style rainbow dispersion. SDF glass (twisted torus + sphere smooth-union) over a colored grid floor; Fresnel mix between reflected sky and refracted floor; specular highlight + rim halo on the glass surface. Audio modulates twist and dispersion strength. Returns LINEAR HDR — host applies ACES.",
   "INPUTS": [
-    { "NAME": "camDist",       "LABEL": "Camera Distance", "TYPE": "float", "MIN": 1.5, "MAX": 12.0, "DEFAULT": 4.5 },
-    { "NAME": "camHeight",     "LABEL": "Camera Height",   "TYPE": "float", "MIN": -3.0, "MAX": 4.0, "DEFAULT": 1.2 },
-    { "NAME": "camOrbitSpeed", "LABEL": "Orbit Speed",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 0.18 },
-    { "NAME": "camAzimuth",    "LABEL": "Camera Azimuth",  "TYPE": "float", "MIN": 0.0, "MAX": 6.2832, "DEFAULT": 0.0 },
-    { "NAME": "keyAngle",      "LABEL": "Key Light Angle", "TYPE": "float", "MIN": 0.0, "MAX": 6.2832, "DEFAULT": 0.785 },
-    { "NAME": "keyElevation",  "LABEL": "Key Elevation",   "TYPE": "float", "MIN": 0.0, "MAX": 1.5708, "DEFAULT": 0.7 },
-    { "NAME": "keyColor",      "LABEL": "Key Light",       "TYPE": "color", "DEFAULT": [1.0, 0.94, 0.82, 1.0] },
-    { "NAME": "fillColor",     "LABEL": "Fill Light",      "TYPE": "color", "DEFAULT": [0.55, 0.70, 1.0, 1.0] },
-    { "NAME": "ambient",       "LABEL": "Ambient",         "TYPE": "float", "MIN": 0.0, "MAX": 0.5,  "DEFAULT": 0.08 },
-    { "NAME": "rimStrength",   "LABEL": "Rim Strength",    "TYPE": "float", "MIN": 0.0, "MAX": 1.5,  "DEFAULT": 0.5 },
-    { "NAME": "exposure",      "LABEL": "Exposure",        "TYPE": "float", "MIN": 0.3, "MAX": 3.0,  "DEFAULT": 1.0 },
-    { "NAME": "dispersion",    "LABEL": "Dispersion",      "TYPE": "float", "MIN": 0.0, "MAX": 0.15, "DEFAULT": 0.045 },
-    { "NAME": "twist",         "LABEL": "Glass Twist",     "TYPE": "float", "MIN": 0.0, "MAX": 2.5,  "DEFAULT": 0.6 },
-    { "NAME": "iorBase",       "LABEL": "IOR (Green)",     "TYPE": "float", "MIN": 1.1, "MAX": 1.8,  "DEFAULT": 1.45 },
-    { "NAME": "internalAbsorption", "LABEL": "Internal Absorption", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 0.4 },
-    { "NAME": "causticBoost",  "LABEL": "Caustic Boost",   "TYPE": "float", "MIN": 0.0, "MAX": 2.5,  "DEFAULT": 0.0 },
-    { "NAME": "audioReact",    "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 1.0 },
-    { "NAME": "bgColor",       "LABEL": "Background",      "TYPE": "color", "DEFAULT": [0.03, 0.04, 0.07, 1.0] },
-    { "NAME": "gridA",         "LABEL": "Grid Color A",    "TYPE": "color", "DEFAULT": [1.0, 0.42, 0.28, 1.0] },
-    { "NAME": "gridB",         "LABEL": "Grid Color B",    "TYPE": "color", "DEFAULT": [0.28, 0.55, 1.0, 1.0] }
+    {
+      "NAME": "keyAngle",
+      "LABEL": "Key Light Angle",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 6.2832,
+      "DEFAULT": 0.785
+    },
+    {
+      "NAME": "keyElevation",
+      "LABEL": "Key Elevation",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5708,
+      "DEFAULT": 0.7
+    },
+    {
+      "NAME": "ambient",
+      "LABEL": "Ambient",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.5,
+      "DEFAULT": 0.08
+    },
+    {
+      "NAME": "rimStrength",
+      "LABEL": "Rim Strength",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.5
+    },
+    {
+      "NAME": "exposure",
+      "LABEL": "Exposure",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 3,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "iorBase",
+      "LABEL": "IOR (Green)",
+      "TYPE": "float",
+      "MIN": 1.1,
+      "MAX": 1.8,
+      "DEFAULT": 1.45
+    },
+    {
+      "NAME": "internalAbsorption",
+      "LABEL": "Internal Absorption",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 0.4
+    },
+    {
+      "NAME": "causticBoost",
+      "LABEL": "Caustic Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2.5,
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "twist",
+      "LABEL": "Glass Twist",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2.5,
+      "DEFAULT": 0.6,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "camOrbitSpeed",
+      "LABEL": "Orbit Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.18,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "keyColor",
+      "LABEL": "Key Light",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.94,
+        0.82,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "fillColor",
+      "LABEL": "Fill Light",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.55,
+        0.7,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "dispersion",
+      "LABEL": "Dispersion",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.15,
+      "DEFAULT": 0.045,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "gridA",
+      "LABEL": "Grid Color A",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.42,
+        0.28,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "gridB",
+      "LABEL": "Grid Color B",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.28,
+        0.55,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "camDist",
+      "LABEL": "Camera Distance",
+      "TYPE": "float",
+      "MIN": 1.5,
+      "MAX": 12,
+      "DEFAULT": 4.5,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "camHeight",
+      "LABEL": "Camera Height",
+      "TYPE": "float",
+      "MIN": -3,
+      "MAX": 4,
+      "DEFAULT": 1.2,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "camAzimuth",
+      "LABEL": "Camera Azimuth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 6.2832,
+      "DEFAULT": 0,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.03,
+        0.04,
+        0.07,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -215,5 +404,17 @@ void main() {
     // caustic/dispersion response above so the whole piece breathes with it.
     col *= exposure * (1.0 + 0.35 * audioLvl);
 
-    gl_FragColor = vec4(col, 1.0);
+    // ---- universal color block (defaults = no-op; bgColor already native) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    vec3 uc = mix(vec3(ucL), col, colorBoost);
+    if (hueShift > 0.0005) {
+        float hueA = hueShift * 6.2831853;
+        float hueC = cos(hueA), hueS = sin(hueA);
+        mat3 hueM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                  + hueC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                  + hueS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hueM * uc, 0.0, 1.0);
+    }
+
+    gl_FragColor = vec4(uc, 1.0);
 }

@@ -1,16 +1,120 @@
 /*{
-  "CATEGORIES": ["Generator", "Audio Reactive", "Geometric"],
+  "CATEGORIES": [
+    "Generator",
+    "Audio Reactive",
+    "Geometric"
+  ],
   "DESCRIPTION": "Perfect rectangular constellation; every cell bound to one FFT bin, bass at left, treble at right, breathing in unison. Kraftwerk + Ryoji Ikeda data.matrix.",
   "INPUTS": [
-    {"NAME":"cols","TYPE":"float","MIN":8.0,"MAX":96.0,"DEFAULT":48.0},
-    {"NAME":"rows","TYPE":"float","MIN":4.0,"MAX":48.0,"DEFAULT":24.0},
-    {"NAME":"cellRadius","TYPE":"float","MIN":0.05,"MAX":0.5,"DEFAULT":0.32},
-    {"NAME":"jitter","TYPE":"float","MIN":0.0,"MAX":0.4,"DEFAULT":0.05},
-    {"NAME":"decay","TYPE":"float","MIN":0.5,"MAX":0.99,"DEFAULT":0.9},
-    {"NAME":"useTex","TYPE":"bool","DEFAULT":false},
-    {"NAME":"lowColor","TYPE":"color","DEFAULT":[1.0,0.2,0.3,1.0]},
-    {"NAME":"highColor","TYPE":"color","DEFAULT":[0.2,0.8,1.0,1.0]},
-    {"NAME":"inputTex","TYPE":"image"}
+    {
+      "NAME": "decay",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 0.99,
+      "DEFAULT": 0.9,
+      "LABEL": "Decay"
+    },
+    {
+      "NAME": "useTex",
+      "TYPE": "bool",
+      "DEFAULT": false,
+      "LABEL": "Use Texture"
+    },
+    {
+      "NAME": "inputTex",
+      "TYPE": "image",
+      "LABEL": "Texture"
+    },
+    {
+      "NAME": "cols",
+      "TYPE": "float",
+      "MIN": 8,
+      "MAX": 96,
+      "DEFAULT": 48,
+      "LABEL": "Columns",
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "rows",
+      "TYPE": "float",
+      "MIN": 4,
+      "MAX": 48,
+      "DEFAULT": 24,
+      "LABEL": "Rows",
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "cellRadius",
+      "TYPE": "float",
+      "MIN": 0.05,
+      "MAX": 0.5,
+      "DEFAULT": 0.32,
+      "LABEL": "Cell Radius",
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "jitter",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.4,
+      "DEFAULT": 0.05,
+      "LABEL": "Jitter",
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "lowColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.2,
+        0.3,
+        1
+      ],
+      "LABEL": "Low Color",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "highColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.2,
+        0.8,
+        1,
+        1
+      ],
+      "LABEL": "High Color",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    }
   ]
 }*/
 
@@ -69,5 +173,18 @@ void main() {
         col += vec3(1.0, 0.85, 0.55) * dotMask * _front * 0.7;
     }
 
-    gl_FragColor = vec4(col, 1.0);
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    vec3 uc = mix(vec3(ucL), col, colorBoost);
+    if (hueShift > 0.0005) {
+        float hueA = hueShift * 6.2831853;
+        float hueC = cos(hueA), hueS = sin(hueA);
+        mat3 hueM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                  + hueC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                  + hueS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hueM * uc, 0.0, 1.0);
+    }
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+
+    gl_FragColor = vec4(uc, 1.0);
 }

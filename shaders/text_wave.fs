@@ -1,20 +1,158 @@
 /*{
-  "CATEGORIES": ["Generator", "Text"],
+  "CATEGORIES": [
+    "Generator",
+    "Text"
+  ],
   "DESCRIPTION": "Wave - sine displacement per letter",
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": " ETHEREA", "MAX_LENGTH": 48 },
-    { "NAME": "fontFamily", "LABEL": "Font", "TYPE": "long", "VALUES": [0,1,2,3], "LABELS": ["Inter","Times New Roman","Libre Caslon","Outfit"], "DEFAULT": 0 },
-    { "NAME": "speed", "LABEL": "Speed", "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 0.5 },
-    { "NAME": "intensity", "LABEL": "Amplitude", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "density", "LABEL": "Frequency", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5 },
-    { "NAME": "textScale", "LABEL": "Size", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "kerning", "LABEL": "Spacing", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0 },
-    { "NAME": "oscSpeed", "LABEL": "Osc Speed", "TYPE": "float", "MIN": 0.0, "MAX": 10.0, "DEFAULT": 0.0 },
-    { "NAME": "oscAmount", "LABEL": "Osc Amount", "TYPE": "float", "MIN": 0.0, "MAX": 0.2, "DEFAULT": 0.0 },
-    { "NAME": "oscSpread", "LABEL": "Osc Spread", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5 },
-    { "NAME": "textColor", "LABEL": "Color", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "LABEL": "Background", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "LABEL": "Transparent", "TYPE": "bool", "DEFAULT": true }
+    {
+      "NAME": "msg",
+      "TYPE": "text",
+      "DEFAULT": " ETHEREA",
+      "MAX_LENGTH": 48,
+      "LABEL": "Message",
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "fontFamily",
+      "LABEL": "Font",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Inter",
+        "Times New Roman",
+        "Libre Caslon",
+        "Outfit"
+      ],
+      "DEFAULT": 0,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "textScale",
+      "LABEL": "Size",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "kerning",
+      "LABEL": "Spacing",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 1,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Speed",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 3,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "intensity",
+      "LABEL": "Amplitude",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "density",
+      "LABEL": "Frequency",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "oscSpeed",
+      "LABEL": "Osc Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 10,
+      "DEFAULT": 0,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "oscAmount",
+      "LABEL": "Osc Amount",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.2,
+      "DEFAULT": 0,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "oscSpread",
+      "LABEL": "Osc Spread",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "textColor",
+      "LABEL": "Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background"
+    }
   ]
 }*/
 
@@ -101,10 +239,23 @@ float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 vec4 effectWave(vec2 uv) {
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
     int numChars = charCount();
-    float amplitude = mix(0.0, 0.15, intensity);
+
+    // Soft-knee audio conditioning (playbook standard snippet).
+    float bassP = pow(clamp(smoothstep(0.05, 0.85, audioBass), 0.0, 1.0), 1.6);
+    float midP  = pow(clamp(smoothstep(0.08, 0.85, audioMid),  0.0, 1.0), 1.3);
+    float highP = pow(clamp(smoothstep(0.10, 0.90, audioHigh), 0.0, 1.0), 1.2);
+    float drive = 0.25 + 0.75 * clamp(smoothstep(0.05, 0.9, audioEnergy), 0.0, 1.0);
+    float kick  = audioBeatPulse * audioBeatPulse;
+    // Un-powed low-knee follower: ambient's 0.1-0.8 bass swells live here.
+    float bassSm = clamp(smoothstep(0.03, 0.92, audioBass), 0.0, 1.0);
+    float musicTime = TIME * (0.85 + 0.30 * drive); // energy paces the wave
+
+    float amplitude = mix(0.0, 0.15, intensity) * (1.0 + 0.55 * bassSm); // bass swells amplitude (deep, continuous)
     float frequency = mix(0.5, 5.0, density);
 
     vec2 p = vec2((uv.x - 0.5) * aspect + 0.5, uv.y);
+    // Bass zoom breathing (±10%) — whole line scales with the smoothed envelope.
+    p = vec2(0.5, 0.5) + (p - vec2(0.5, 0.5)) / (1.0 + 0.10 * bassSm);
 
     // Single-line layout — scale down on portrait so text fits width
     float cW = 0.09 * textScale;
@@ -137,11 +288,11 @@ vec4 effectWave(vec2 uv) {
         if (i >= numChars) break;
         int ch = getChar(i);
 
-        float phase = float(i) * frequency + TIME * speed;
+        float phase = float(i) * frequency + musicTime * speed;
         float yOff = sin(phase) * amplitude;
         float oscY = oscAmount * sin(TIME * oscSpeed * 6.2832 + float(i) * oscSpread * 3.14159);
         yOff += oscY;
-        float tilt = cos(phase) * amplitude * 3.0;
+        float tilt = cos(phase) * amplitude * 3.0 * (1.0 + 0.30 * midP); // mids add skew detail
         float cellX = rowStartX + float(i) * cellStep;
         float cellY = startY;
 
@@ -159,7 +310,7 @@ vec4 effectWave(vec2 uv) {
     vec4 result = transparentBg ? vec4(0.0) : bgColor;
     if (shadowHit > 0.5)
         result = vec4(mix(result.rgb, vec3(0.0), 0.3), result.a + 0.3*(1.0-result.a));
-    if (mainHit > 0.5) result = vec4(textColor.rgb, textColor.a);
+    if (mainHit > 0.5) result = vec4(textColor.rgb * (1.0 + 0.28 * bassSm + 0.22 * midP + 0.35 * highP + 0.30 * kick), textColor.a); // continuous band glow + beat sparkle
     return result;
 }
 
@@ -195,6 +346,20 @@ void main() {
         glitched.rgb *= 1.0 - dropout;
         col = mix(col, glitched, smoothstep(0.0, 0.3, g));
     }
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = col.rgb;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    col.rgb = uc;
 
     gl_FragColor = col;
 }

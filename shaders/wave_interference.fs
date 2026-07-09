@@ -1,18 +1,148 @@
 /*{
-  "CATEGORIES": ["Generator", "Physical", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Physical",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "Wave Interference Field — Multiple point-source ripples on a water surface — concentric wavefronts radiating from N sources, summing constructively + destructively into shimmering moiré patterns. Bass kicks add new sources at hashed positions; treble shortens wavelength; the grid is a real PHYSICAL standing-wave field.",
   "INPUTS": [
-    { "NAME": "sourceCount",    "LABEL": "Sources",         "TYPE": "float", "MIN": 1.0,  "MAX": 12.0, "DEFAULT": 5.0 },
-    { "NAME": "waveFrequency",  "LABEL": "Frequency",       "TYPE": "float", "MIN": 4.0,  "MAX": 80.0, "DEFAULT": 28.0 },
-    { "NAME": "waveSpeed",      "LABEL": "Wave Speed",      "TYPE": "float", "MIN": 0.1,  "MAX": 8.0,  "DEFAULT": 2.4 },
-    { "NAME": "drift",          "LABEL": "Source Drift",    "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.35 },
-    { "NAME": "falloff",        "LABEL": "Energy Falloff",  "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
-    { "NAME": "audioReact",     "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
-    { "NAME": "peakColor",      "LABEL": "Peak (Crest)",    "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "midColor",       "LABEL": "Mid (Cyan)",      "TYPE": "color", "DEFAULT": [0.18, 0.78, 0.92, 1.0] },
-    { "NAME": "deepColor",      "LABEL": "Deep (Indigo)",   "TYPE": "color", "DEFAULT": [0.04, 0.08, 0.28, 1.0] },
-    { "NAME": "troughColor",    "LABEL": "Trough (Magenta)","TYPE": "color", "DEFAULT": [0.62, 0.10, 0.55, 1.0] },
-    { "NAME": "sourceMarkers",  "LABEL": "Show Sources",    "TYPE": "bool",  "DEFAULT": true }
+    {
+      "NAME": "sourceCount",
+      "LABEL": "Sources",
+      "TYPE": "float",
+      "MIN": 1,
+      "MAX": 12,
+      "DEFAULT": 5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "waveFrequency",
+      "LABEL": "Frequency",
+      "TYPE": "float",
+      "MIN": 4,
+      "MAX": 80,
+      "DEFAULT": 28,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "waveSpeed",
+      "LABEL": "Wave Speed",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 8,
+      "DEFAULT": 2.4,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "drift",
+      "LABEL": "Source Drift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.35,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "peakColor",
+      "LABEL": "Peak (Crest)",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "midColor",
+      "LABEL": "Mid (Cyan)",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.18,
+        0.78,
+        0.92,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "deepColor",
+      "LABEL": "Deep (Indigo)",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.04,
+        0.08,
+        0.28,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "troughColor",
+      "LABEL": "Trough (Magenta)",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.62,
+        0.1,
+        0.55,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "falloff",
+      "LABEL": "Energy Falloff",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "sourceMarkers",
+      "LABEL": "Show Sources",
+      "TYPE": "bool",
+      "DEFAULT": true
+    }
   ]
 }*/
 
@@ -149,6 +279,22 @@ void main() {
             col += (core + halo) * pulse * w * peakColor.rgb;
         }
     }
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = col;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    // background: tint the darkest end (deep-water troughs) toward bgColor
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+    col = uc;
 
     gl_FragColor = vec4(col, 1.0);
 }

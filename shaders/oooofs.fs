@@ -1,48 +1,92 @@
 /*{
-	"DESCRIPTION": "Animated spherical fibonacci dot pattern on a rotating sphere",
-	"CREDIT": "isf convert vdmo",
-	"CATEGORIES": [
-		"Generator"
-	],
-	"INPUTS": [
-		{
-			"NAME": "rotSpeed",
-			"TYPE": "float",
-			"MIN": 0.0,
-			"MAX": 1.0,
-			"DEFAULT": 0.15
-		},
-		{
-			"NAME": "animSpeed",
-			"TYPE": "float",
-			"MIN": 0.0,
-			"MAX": 5.0,
-			"DEFAULT": 1.0
-		},
-		{
-			"NAME": "dotColor",
-			"TYPE": "color",
-			"DEFAULT": [1.0, 1.0, 1.0, 1.0]
-		},
-		{
-			"NAME": "bgColor",
-			"TYPE": "color",
-			"DEFAULT": [0.013, 0.014, 0.017, 1.0]
-		},
-		{
-			"NAME": "innerColor",
-			"TYPE": "color",
-			"DEFAULT": [0.0, 0.0, 0.0, 1.0]
-		},
-		{
-			"NAME": "audioReact",
-			"LABEL": "Audio React",
-			"TYPE": "float",
-			"MIN": 0.0,
-			"MAX": 2.0,
-			"DEFAULT": 1.0
-		}
-    ]
+  "DESCRIPTION": "Animated spherical fibonacci dot pattern on a rotating sphere",
+  "CREDIT": "isf convert vdmo",
+  "CATEGORIES": [
+    "Generator"
+  ],
+  "INPUTS": [
+    {
+      "NAME": "rotSpeed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.15,
+      "LABEL": "Rotation Speed",
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "animSpeed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 5,
+      "DEFAULT": 1,
+      "LABEL": "Animation Speed",
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "dotColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "LABEL": "Dot Color",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "innerColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "LABEL": "Inner Color",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.013,
+        0.014,
+        0.017,
+        1
+      ],
+      "GROUP": "Background",
+      "LABEL": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
+  ]
 }*/
 
 vec3 iResolution = vec3(RENDERSIZE, 1.);
@@ -273,9 +317,14 @@ float SphX0(float d, float rr0, float rr1) { return 0.5 * (d + (rr0 - rr1) / d);
 vec3 EvalSceneCol(vec3 cpos, mat3 cam_mat, float focalLen, vec2 uv0)
 {
     // Non-gating audio: alive at audio=0; audioReact only adds on top.
-    float aLvl = audioLevel * audioReact;
-    float aBas = audioBass  * audioReact;
-    float aHi  = audioHigh  * audioReact;
+    // Soft knees with 0.90-0.95 ceilings: raw audioLevel sat near-constant on
+    // EDM (pegged = deaf), so follow the bands that keep oscillating instead,
+    // plus a decaying beat trace. Low floors catch ambient's gentle swells.
+    float aR   = clamp(audioReact, 0.0, 2.0);
+    float aBas = pow(smoothstep(0.03, 0.95, audioBass), 1.3) * aR;
+    float aMid = pow(smoothstep(0.04, 0.90, audioMid), 1.2) * aR;
+    float aHi  = pow(smoothstep(0.08, 0.95, audioHigh), 1.2) * aR;
+    float aHit = audioBeatPulse * audioBeatPulse * aR;
     vec3 cBG = bgColor.rgb;
 
         
@@ -323,9 +372,11 @@ vec3 EvalSceneCol(vec3 cpos, mat3 cam_mat, float focalLen, vec2 uv0)
 	rra = (Pow2(rra)*2.-1.);
     #endif
         
-	rra = mix(abs(rra), Pow2(rra), 0.75);        
-      
-    rr = 0.0025/s * rra; 
+	rra = mix(abs(rra), Pow2(rra), 0.75);
+
+    // Bass breathes the dot radius (visible structural depth for ambient
+    // swells); each beat pops it slightly then eases back. Silence = 1.0x.
+    rr = 0.0025/s * rra * (1.0 + 0.50 * aBas + 0.30 * aHit);
     }
     
     
@@ -395,7 +446,7 @@ vec3 EvalSceneCol(vec3 cpos, mat3 cam_mat, float focalLen, vec2 uv0)
     // catches them. Base shell at 1.4x linear, accent flash on rra (sin-driven
     // anim peak) lifts to ~2.5x, with audio adding non-gating boost on top.
     // Outer dot stays in canonical range; inner core does the HDR work.
-    float corePeak = 1.4 + 0.85 * Pow2(rra) + aLvl * 0.6 + aHi * 0.4;
+    float corePeak = 1.4 + 0.85 * Pow2(rra) + aMid * 0.7 + aHi * 0.4 + aHit * 0.5;
     vec3 cCore = mix(cR, innerColor.rgb, cmask2) * corePeak;
     // Outer disk gets a gentler audio-driven lift so bass beats add weight
     // without altering the silhouette.
@@ -497,4 +548,16 @@ void mainImage( out vec4 outCol, in vec2 uv0 )
 
 void main(void) {
     mainImage(gl_FragColor, gl_FragCoord.xy);
+    // ---- universal color block (defaults = no-op; bgColor already native) ----
+    float ucL = dot(gl_FragColor.rgb, vec3(0.299, 0.587, 0.114));
+    vec3 uc = mix(vec3(ucL), gl_FragColor.rgb, colorBoost);
+    if (hueShift > 0.0005) {
+        float hueA = hueShift * 6.2831853;
+        float hueC = cos(hueA), hueS = sin(hueA);
+        mat3 hueM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                  + hueC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                  + hueS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hueM * uc, 0.0, 1.0);
+    }
+    gl_FragColor.rgb = uc;
 }

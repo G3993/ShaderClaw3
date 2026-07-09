@@ -1,14 +1,97 @@
 /*{
   "DESCRIPTION": "Data Sculpture — abstract data-art (Anadol / Koblin / Paley lineage). A synthetic 32-band FFT, hash-driven and audio-modulated, drives five moods: Bar Forest, Particle Stream, Skyline Grid, Fingerprint Field, Ribbon Cloud. Single-pass LINEAR HDR.",
-  "CATEGORIES": ["Generator", "Data", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Data",
+    "Audio Reactive"
+  ],
   "INPUTS": [
-    { "NAME": "mood",       "LABEL": "Mood",         "TYPE": "long",  "DEFAULT": 0,
-      "VALUES": [0,1,2,3,4],
-      "LABELS": ["Bar Forest","Particle Stream","Skyline Grid","Fingerprint Field","Ribbon Cloud"] },
-    { "NAME": "audioReact", "LABEL": "Audio React",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "density",    "LABEL": "Data Density", "TYPE": "float", "MIN": 0.4, "MAX": 1.6, "DEFAULT": 1.0 },
-    { "NAME": "flow",       "LABEL": "Flow Speed",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "intensity",  "LABEL": "Intensity",    "TYPE": "float", "MIN": 0.4, "MAX": 1.8, "DEFAULT": 1.0 }
+    {
+      "NAME": "intensity",
+      "LABEL": "Intensity",
+      "TYPE": "float",
+      "MIN": 0.4,
+      "MAX": 1.8,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "mood",
+      "LABEL": "Mood",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "LABELS": [
+        "Bar Forest",
+        "Particle Stream",
+        "Skyline Grid",
+        "Fingerprint Field",
+        "Ribbon Cloud"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "density",
+      "LABEL": "Data Density",
+      "TYPE": "float",
+      "MIN": 0.4,
+      "MAX": 1.6,
+      "DEFAULT": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "flow",
+      "LABEL": "Flow Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -240,5 +323,21 @@ void main() {
     else             col = moodRibbonCloud    (uv, t, bass, mid, treble);
 
     col += (h21(uv * RENDERSIZE.xy + floor(t * 60.0)) - 0.5) * 0.010;
-    gl_FragColor = vec4(max(col, 0.0), 1.0);
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = max(col, 0.0);
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                   // saturation
+    if (hueShift > 0.0005) {                               // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    // background = darkest end of the field (the void behind the data)
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+
+    gl_FragColor = vec4(uc, 1.0);
 }

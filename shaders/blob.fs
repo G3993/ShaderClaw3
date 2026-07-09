@@ -1,40 +1,310 @@
 /*{
   "DESCRIPTION": "Blob — flockaroo's 'mud planet' with expanded warp, scale, flow, texture and lighting controls. Buffer A advects a velocity/concentration field packed as two hemispheres; the image pass raymarches the sphere, displaces it by the field, and shades it.",
   "CREDIT": "Florian Berger (flockaroo) 2017 — CC BY-NC-SA 3.0. ISF port + extensions for Easel.",
-  "CATEGORIES": ["3D", "Generator", "Fluid", "Simulation"],
+  "CATEGORIES": [
+    "3D",
+    "Generator",
+    "Fluid",
+    "Simulation"
+  ],
   "INPUTS": [
-    { "NAME": "orbitSpeed",      "LABEL": "Orbit Speed",        "TYPE": "float",  "MIN": 0.0,  "MAX": 3.0,   "DEFAULT": 0.5  },
-    { "NAME": "flowSpeed",       "LABEL": "Flow Speed",         "TYPE": "float",  "MIN": 0.0,  "MAX": 5.0,   "DEFAULT": 1.0  },
-    { "NAME": "simSpeed",        "LABEL": "Sim Step Speed",     "TYPE": "float",  "MIN": 0.0,  "MAX": 3.0,   "DEFAULT": 1.0  },
-    { "NAME": "blobScale",       "LABEL": "Blob Scale",         "TYPE": "float",  "MIN": 0.2,  "MAX": 3.0,   "DEFAULT": 1.0  },
-    { "NAME": "displacement",    "LABEL": "Displacement",       "TYPE": "float",  "MIN": 0.0,  "MAX": 2.0,   "DEFAULT": 0.75 },
-    { "NAME": "warpTwist",       "LABEL": "Warp Twist",         "TYPE": "float",  "MIN": 0.0,  "MAX": 3.0,   "DEFAULT": 0.0  },
-    { "NAME": "warpPinch",       "LABEL": "Warp Pinch/Bulge",   "TYPE": "float",  "MIN": -2.0, "MAX": 2.0,   "DEFAULT": 0.0  },
-    { "NAME": "warpNoise",       "LABEL": "Warp Noise Amount",  "TYPE": "float",  "MIN": 0.0,  "MAX": 2.0,   "DEFAULT": 0.0  },
-    { "NAME": "warpNoiseScale",  "LABEL": "Warp Noise Scale",   "TYPE": "float",  "MIN": 0.5,  "MAX": 8.0,   "DEFAULT": 2.0  },
-    { "NAME": "flowIntensity",   "LABEL": "Flow Intensity",     "TYPE": "float",  "MIN": 0.0,  "MAX": 3.0,   "DEFAULT": 1.0  },
-    { "NAME": "flowCurl",        "LABEL": "Flow Curl Bias",     "TYPE": "float",  "MIN": -2.0, "MAX": 2.0,   "DEFAULT": 1.0  },
-    { "NAME": "sunInfluence",    "LABEL": "Sun Drive Strength", "TYPE": "float",  "MIN": 0.0,  "MAX": 2.0,   "DEFAULT": 1.0  },
-    { "NAME": "surfaceRoughness","LABEL": "Surface Roughness",  "TYPE": "float",  "MIN": 0.0,  "MAX": 1.0,   "DEFAULT": 0.5  },
-    { "NAME": "specPower",       "LABEL": "Specular Power",     "TYPE": "float",  "MIN": 0.1,  "MAX": 2.0,   "DEFAULT": 0.5  },
-    { "NAME": "fresnelStr",      "LABEL": "Fresnel Strength",   "TYPE": "float",  "MIN": 0.0,  "MAX": 2.0,   "DEFAULT": 0.9  },
-    { "NAME": "aoStrength",      "LABEL": "AO Strength",        "TYPE": "float",  "MIN": 0.0,  "MAX": 2.0,   "DEFAULT": 1.0  },
-    { "NAME": "deepColor",       "LABEL": "Deep Color",         "TYPE": "color",  "DEFAULT": [0.03, 0.13, 0.28, 1.0] },
-    { "NAME": "midColor",        "LABEL": "Mid Color",          "TYPE": "color",  "DEFAULT": [0.1,  0.35, 0.55, 1.0] },
-    { "NAME": "highColor",       "LABEL": "Highlight Color",    "TYPE": "color",  "DEFAULT": [0.9,  0.95, 1.0,  1.0] },
-    { "NAME": "sunColor",        "LABEL": "Sun Color",          "TYPE": "color",  "DEFAULT": [1.0,  0.85, 0.6,  1.0] },
-    { "NAME": "exposure",        "LABEL": "Exposure",           "TYPE": "float",  "MIN": 0.1,  "MAX": 4.0,   "DEFAULT": 1.0  },
-    { "NAME": "gamma",           "LABEL": "Gamma",              "TYPE": "float",  "MIN": 0.5,  "MAX": 2.5,   "DEFAULT": 1.0  },
-    { "NAME": "vignette",        "LABEL": "Vignette",           "TYPE": "float",  "MIN": 0.0,  "MAX": 1.0,   "DEFAULT": 0.3  },
-    { "NAME": "cameraDistance",  "LABEL": "Camera Distance",    "TYPE": "float",  "MIN": 4.0,  "MAX": 30.0,  "DEFAULT": 13.5 },
-    { "NAME": "cameraFOV",       "LABEL": "Camera FOV",         "TYPE": "float",  "MIN": 2.0,  "MAX": 14.0,  "DEFAULT": 8.0  },
-    { "NAME": "cameraOrbitX",    "LABEL": "Camera Tilt",        "TYPE": "float",  "MIN": -1.0, "MAX": 1.0,   "DEFAULT": 0.27 },
-    { "NAME": "audioReact",      "LABEL": "Audio React",        "TYPE": "float",  "MIN": 0.0,  "MAX": 2.0,   "DEFAULT": 0.35 },
-    { "NAME": "inputTex",        "TYPE": "image", "LABEL": "Texture" },
-    { "NAME": "texMix",          "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "LABEL": "Texture Mix" }
+    {
+      "NAME": "sunInfluence",
+      "LABEL": "Sun Drive Strength",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "surfaceRoughness",
+      "LABEL": "Surface Roughness",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5
+    },
+    {
+      "NAME": "specPower",
+      "LABEL": "Specular Power",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 2,
+      "DEFAULT": 0.5
+    },
+    {
+      "NAME": "fresnelStr",
+      "LABEL": "Fresnel Strength",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.9
+    },
+    {
+      "NAME": "aoStrength",
+      "LABEL": "AO Strength",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "exposure",
+      "LABEL": "Exposure",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 4,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "gamma",
+      "LABEL": "Gamma",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 2.5,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "inputTex",
+      "TYPE": "image",
+      "LABEL": "Texture"
+    },
+    {
+      "NAME": "texMix",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Texture Mix"
+    },
+    {
+      "NAME": "blobScale",
+      "LABEL": "Blob Scale",
+      "TYPE": "float",
+      "MIN": 0.2,
+      "MAX": 3,
+      "DEFAULT": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "displacement",
+      "LABEL": "Displacement",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.75,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "warpTwist",
+      "LABEL": "Warp Twist",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 0,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "warpPinch",
+      "LABEL": "Warp Pinch/Bulge",
+      "TYPE": "float",
+      "MIN": -2,
+      "MAX": 2,
+      "DEFAULT": 0,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "warpNoise",
+      "LABEL": "Warp Noise Amount",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "warpNoiseScale",
+      "LABEL": "Warp Noise Scale",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 8,
+      "DEFAULT": 2,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "orbitSpeed",
+      "LABEL": "Orbit Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "flowSpeed",
+      "LABEL": "Flow Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 5,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "simSpeed",
+      "LABEL": "Sim Step Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "flowIntensity",
+      "LABEL": "Flow Intensity",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "flowCurl",
+      "LABEL": "Flow Curl Bias",
+      "TYPE": "float",
+      "MIN": -2,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "deepColor",
+      "LABEL": "Deep Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.03,
+        0.13,
+        0.28,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "midColor",
+      "LABEL": "Mid Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.1,
+        0.35,
+        0.55,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "highColor",
+      "LABEL": "Highlight Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.9,
+        0.95,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "sunColor",
+      "LABEL": "Sun Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.85,
+        0.6,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "vignette",
+      "LABEL": "Vignette",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.3,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "cameraDistance",
+      "LABEL": "Camera Distance",
+      "TYPE": "float",
+      "MIN": 4,
+      "MAX": 30,
+      "DEFAULT": 13.5,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "cameraFOV",
+      "LABEL": "Camera FOV",
+      "TYPE": "float",
+      "MIN": 2,
+      "MAX": 14,
+      "DEFAULT": 8,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "cameraOrbitX",
+      "LABEL": "Camera Tilt",
+      "TYPE": "float",
+      "MIN": -1,
+      "MAX": 1,
+      "DEFAULT": 0.27,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.35,
+      "GROUP": "Audio Reactivity"
+    }
   ],
   "PASSES": [
-    { "TARGET": "bufA", "PERSISTENT": true },
+    {
+      "TARGET": "bufA",
+      "PERSISTENT": true
+    },
     {}
   ]
 }*/
@@ -225,6 +495,9 @@ void main() {
             vec3 p2 = b;
             for (int i = 0; i < RotNum; i++) {
                 float str = 0.01 * flowSpeed * flowIntensity * simSpeed;
+                // Continuous advection-speed follow: mids quicken the mud's
+                // flow (smooth band, no beat gating; silence = authored speed).
+                str *= 1.0 + audioReact * 1.1 * smoothstep(0.04, 0.85, audioMid);
                 str *= pow(dot(b, b), 0.25) * 5.0;
                 v += cross(getRot(pos + p2, b), p2) * str;
                 p2 = rotAx(p2, n * ang);
@@ -336,6 +609,10 @@ void main() {
     float sunmix = pow(sdot, 600.0) * 2.0 + 0.3 * sdot;
     c = c * (0.8 - 2.0 * sunmix) + sunColor.rgb * bg * sunmix;
 
+    // User background: blend the space/void region toward the chosen color
+    // (corona + audio rim still composite on top below).
+    if (bg > 0.5) c = mix(c, bgColor.rgb, bgColor.a);
+
     // Audio corona: a soft energy rim breathing around the planet's
     // silhouette against the black — bass swells it, a beat kicks a bright
     // pulse. Only lives on background pixels; silent = no ring at all.
@@ -346,12 +623,33 @@ void main() {
         c += midColor.rgb * ring * (0.9 * aB + 1.4 * aBeat);
     }
 
+    // Continuous band-follow (ambient fix): smooth bass lifts the planet's
+    // luminance, mids add a smaller second phase — no beat gating, so
+    // beatless swells read as breathing light. Silence: exactly 1.0.
+    float aFolB = audioReact * smoothstep(0.02, 0.85, audioBass);
+    float aFolM = audioReact * smoothstep(0.04, 0.85, audioMid);
+    c *= 1.0 + 0.7 * aFolB + 0.35 * aFolM;
+
     // Vignette
     float vign = mix(1.0, 1.06 - length(sc.xy) * 0.5, vignette);
 
     // Exposure + gamma
     c = c * vign * exposure;
     c = pow(max(c, vec3(0.0)), vec3(1.0 / max(gamma, 0.01)));
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = c;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    c = uc;
 
     gl_FragColor = vec4(c, 1.0);
 }

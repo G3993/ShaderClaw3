@@ -1,29 +1,186 @@
 /*{
-  "DESCRIPTION":"Liquid Chrome: six raymarched metaball droplets, shaded as chrome/oil-slick liquid, floating and orbiting a central gravity well in a black void. This is a real 2D physics simulation, not decorative motion — a persistent buffer stores each droplet's actual position + velocity and integrates gravity, mutual soft repulsion and damping every frame. Bass transiently widens the metaball merge radius (a droplet 'merge' event), mid drives orbit speed and the oil hue drift, treble sharpens the chrome specular shimmer, and beat kicks an outward velocity impulse into the droplets' own dynamics.",
-  "CREDIT":"ShaderClaw3",
-  "CATEGORIES":["Generator","3D","Fluid","Audio Reactive"],
-  "INPUTS":[
-    { "NAME":"audioReact",     "LABEL":"Sound Reactivity",  "TYPE":"float", "DEFAULT":1.0,   "MIN":0.0,  "MAX":2.0 },
-    { "NAME":"gravityStrength","LABEL":"Gravity Well",      "TYPE":"float", "DEFAULT":0.55,  "MIN":0.0,  "MAX":2.0 },
-    { "NAME":"repelStrength",  "LABEL":"Mutual Repel",      "TYPE":"float", "DEFAULT":0.65,  "MIN":0.0,  "MAX":2.0 },
-    { "NAME":"repelRadius",    "LABEL":"Repel Radius",      "TYPE":"float", "DEFAULT":0.34,  "MIN":0.05, "MAX":1.0 },
-    { "NAME":"orbitSpin",      "LABEL":"Orbit Drift",       "TYPE":"float", "DEFAULT":0.42,  "MIN":0.0,  "MAX":1.5 },
-    { "NAME":"damping",        "LABEL":"Damping",           "TYPE":"float", "DEFAULT":0.965, "MIN":0.85, "MAX":0.999 },
-    { "NAME":"dropletSize",    "LABEL":"Droplet Size",      "TYPE":"float", "DEFAULT":0.17,  "MIN":0.06, "MAX":0.4 },
-    { "NAME":"mergeSoftness",  "LABEL":"Merge Softness",    "TYPE":"float", "DEFAULT":0.22,  "MIN":0.05, "MAX":0.6 },
-    { "NAME":"mergeBoost",     "LABEL":"Bass Merge Boost",  "TYPE":"float", "DEFAULT":0.9,   "MIN":0.0,  "MAX":2.0 },
-    { "NAME":"scatterKick",    "LABEL":"Beat Scatter Kick", "TYPE":"float", "DEFAULT":0.85,  "MIN":0.0,  "MAX":2.0 },
-    { "NAME":"bobAmount",      "LABEL":"Vertical Bob",      "TYPE":"float", "DEFAULT":0.22,  "MIN":0.0,  "MAX":0.6 },
-    { "NAME":"hueBase",        "LABEL":"Chrome Hue",        "TYPE":"float", "DEFAULT":0.56,  "MIN":0.0,  "MAX":1.0 },
-    { "NAME":"hueDriftSpeed",  "LABEL":"Hue Drift (Mid)",   "TYPE":"float", "DEFAULT":0.16,  "MIN":0.0,  "MAX":1.0 },
-    { "NAME":"chromeGloss",    "LABEL":"Chrome Gloss",      "TYPE":"float", "DEFAULT":1.15,  "MIN":0.2,  "MAX":3.0 },
-    { "NAME":"camSpin",        "LABEL":"Camera Spin",       "TYPE":"float", "DEFAULT":0.14,  "MIN":0.0,  "MAX":1.0 },
-    { "NAME":"texMix",         "LABEL":"Env Image Mix",     "TYPE":"float", "DEFAULT":0.0,   "MIN":0.0,  "MAX":1.0 },
-    { "NAME":"bgColor",        "LABEL":"Void Color",        "TYPE":"color", "DEFAULT":[0.006,0.008,0.015,1.0] },
-    { "NAME":"inputImage",     "TYPE":"image" }
+  "DESCRIPTION": "Liquid Chrome: six raymarched metaball droplets, shaded as chrome/oil-slick liquid, floating and orbiting a central gravity well in a black void. This is a real 2D physics simulation, not decorative motion — a persistent buffer stores each droplet's actual position + velocity and integrates gravity, mutual soft repulsion and damping every frame. Bass transiently widens the metaball merge radius (a droplet 'merge' event), mid drives orbit speed and the oil hue drift, treble sharpens the chrome specular shimmer, and beat kicks an outward velocity impulse into the droplets' own dynamics.",
+  "CREDIT": "ShaderClaw3",
+  "CATEGORIES": [
+    "Generator",
+    "3D",
+    "Fluid",
+    "Audio Reactive"
   ],
-  "PASSES":[
-    { "TARGET":"simBuf", "PERSISTENT": true },
+  "INPUTS": [
+    {
+      "NAME": "mergeSoftness",
+      "LABEL": "Merge Softness",
+      "TYPE": "float",
+      "DEFAULT": 0.22,
+      "MIN": 0.05,
+      "MAX": 0.6
+    },
+    {
+      "NAME": "chromeGloss",
+      "LABEL": "Chrome Gloss",
+      "TYPE": "float",
+      "DEFAULT": 1.15,
+      "MIN": 0.2,
+      "MAX": 3
+    },
+    {
+      "NAME": "texMix",
+      "LABEL": "Env Image Mix",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "inputImage",
+      "LABEL": "Input Image",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "repelRadius",
+      "LABEL": "Repel Radius",
+      "TYPE": "float",
+      "DEFAULT": 0.34,
+      "MIN": 0.05,
+      "MAX": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "dropletSize",
+      "LABEL": "Droplet Size",
+      "TYPE": "float",
+      "DEFAULT": 0.17,
+      "MIN": 0.06,
+      "MAX": 0.4,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "gravityStrength",
+      "LABEL": "Gravity Well",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "repelStrength",
+      "LABEL": "Mutual Repel",
+      "TYPE": "float",
+      "DEFAULT": 0.65,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "orbitSpin",
+      "LABEL": "Orbit Drift",
+      "TYPE": "float",
+      "DEFAULT": 0.42,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "damping",
+      "LABEL": "Damping",
+      "TYPE": "float",
+      "DEFAULT": 0.965,
+      "MIN": 0.85,
+      "MAX": 0.999,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "bobAmount",
+      "LABEL": "Vertical Bob",
+      "TYPE": "float",
+      "DEFAULT": 0.22,
+      "MIN": 0,
+      "MAX": 0.6,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "hueBase",
+      "LABEL": "Chrome Hue",
+      "TYPE": "float",
+      "DEFAULT": 0.56,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueDriftSpeed",
+      "LABEL": "Hue Drift (Mid)",
+      "TYPE": "float",
+      "DEFAULT": 0.16,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "camSpin",
+      "LABEL": "Camera Spin",
+      "TYPE": "float",
+      "DEFAULT": 0.14,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Void Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.006,
+        0.008,
+        0.015,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Sound Reactivity",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "mergeBoost",
+      "LABEL": "Bass Merge Boost",
+      "TYPE": "float",
+      "DEFAULT": 0.9,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "scatterKick",
+      "LABEL": "Beat Scatter Kick",
+      "TYPE": "float",
+      "DEFAULT": 0.85,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    }
+  ],
+  "PASSES": [
+    {
+      "TARGET": "simBuf",
+      "PERSISTENT": true
+    },
     {}
   ]
 }*/
@@ -362,6 +519,9 @@ void screenPass(float bassP, float midP, float highP, float drive){
     // tonemap + gamma
     col = col / (1.0 + col);
     col = pow(max(col, 0.0), vec3(1.0 / 2.2));
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(vec3(ucL), col, colorBoost);
     gl_FragColor = vec4(col, 1.0);
 }
 

@@ -1,21 +1,130 @@
 /*{
-    "DESCRIPTION": "Infinite Mandelbrot set zoom on a curated path of interesting points (sea-horse valley, elephant valley, mini-Mandelbrot near 0.286+0.011i). Smooth iteration count for continuous colour, audio-driven palette rotation, and zoom speed responds to bass. Pure mathematics as light show",
-    "CREDIT": "ShaderClaw3",
-    "CATEGORIES": ["Generator", "Fractal"],
-    "INPUTS": [
-        { "NAME": "maxIterations", "TYPE": "float", "DEFAULT": 160.0, "MIN": 50.0, "MAX": 200.0 },
-        { "NAME": "zoomSpeed",     "TYPE": "float", "DEFAULT": 0.18,  "MIN": 0.02, "MAX": 0.6 },
-        { "NAME": "zoomDepth",     "TYPE": "float", "DEFAULT": 14.0,  "MIN": 4.0,  "MAX": 22.0 },
-        { "NAME": "palettePhase",  "TYPE": "float", "DEFAULT": 0.0,   "MIN": 0.0,  "MAX": 1.0 },
-        { "NAME": "paletteFreq",   "TYPE": "float", "DEFAULT": 0.06,  "MIN": 0.005, "MAX": 0.25 },
-        { "NAME": "audioReact",    "TYPE": "float", "DEFAULT": 0.7,   "MIN": 0.0,  "MAX": 1.5 },
-        { "NAME": "fringeBoost",   "TYPE": "float", "DEFAULT": 0.5,   "MIN": 0.0,  "MAX": 1.5 },
-        { "NAME": "interiorGlow",  "TYPE": "float", "DEFAULT": 0.25,  "MIN": 0.0,  "MAX": 1.0 },
-        { "NAME": "insideColor",   "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.08, 1.0] },
-        { "NAME": "bass",          "TYPE": "float", "DEFAULT": 0.0,   "MIN": 0.0,  "MAX": 1.0 },
-        { "NAME": "mid",           "TYPE": "float", "DEFAULT": 0.0,   "MIN": 0.0,  "MAX": 1.0 },
-        { "NAME": "treble",        "TYPE": "float", "DEFAULT": 0.0,   "MIN": 0.0,  "MAX": 1.0 }
-    ]
+  "DESCRIPTION": "Infinite Mandelbrot set zoom on a curated path of interesting points (sea-horse valley, elephant valley, mini-Mandelbrot near 0.286+0.011i). Smooth iteration count for continuous colour, audio-driven palette rotation, and zoom speed responds to bass. Pure mathematics as light show",
+  "CREDIT": "ShaderClaw3",
+  "CATEGORIES": [
+    "Generator",
+    "Fractal"
+  ],
+  "INPUTS": [
+    {
+      "NAME": "interiorGlow",
+      "TYPE": "float",
+      "DEFAULT": 0.25,
+      "MIN": 0,
+      "MAX": 1,
+      "LABEL": "Interior Glow"
+    },
+    {
+      "NAME": "maxIterations",
+      "TYPE": "float",
+      "DEFAULT": 160,
+      "MIN": 50,
+      "MAX": 200,
+      "LABEL": "Max Iterations",
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "palettePhase",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "LABEL": "Palette Phase",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "paletteFreq",
+      "TYPE": "float",
+      "DEFAULT": 0.06,
+      "MIN": 0.005,
+      "MAX": 0.25,
+      "LABEL": "Palette Frequency",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "fringeBoost",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1.5,
+      "LABEL": "Fringe Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "insideColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.02,
+        0.02,
+        0.08,
+        1
+      ],
+      "LABEL": "Inside Color",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "zoomSpeed",
+      "TYPE": "float",
+      "DEFAULT": 0.18,
+      "MIN": 0.02,
+      "MAX": 0.6,
+      "LABEL": "Zoom Speed",
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "zoomDepth",
+      "TYPE": "float",
+      "DEFAULT": 14,
+      "MIN": 4,
+      "MAX": 22,
+      "LABEL": "Zoom Depth",
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "audioReact",
+      "TYPE": "float",
+      "DEFAULT": 0.7,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "bass",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "LABEL": "Bass",
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "mid",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "LABEL": "Mid",
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "treble",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "LABEL": "Treble",
+      "GROUP": "Audio Reactivity"
+    }
+  ]
 }*/
 
 // ---------------------------------------------------------------------------
@@ -147,5 +256,8 @@ void main() {
     col = col / (1.0 + col);
     col = pow(col, vec3(0.85));
 
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(vec3(ucL), col, colorBoost);
     gl_FragColor = vec4(col, 1.0);
 }

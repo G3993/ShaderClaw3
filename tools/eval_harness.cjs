@@ -85,7 +85,10 @@ async function main() {
     results.push(res);
     const s = res.ok ? (res.scores ? res.scores.overall.toFixed(1) : '?') : 'FAIL';
     const audio = res.scores ? res.scores.audio.toFixed(1) : '-';
-    console.log(`[${idx}/${files.length}] ${res.ok ? 'ok ' : 'BAD'} ${f.padEnd(34)} overall=${s} audio=${audio}${res.errors && res.errors.length ? ' | ' + res.errors[0].slice(0, 120) : ''}`);
+    const st = res.scores && res.scores.audioStyles
+      ? ` styles[${Object.values(res.scores.audioStyles).map((v) => v.toFixed(1)).join(',')}] min=${res.scores.audioMin.toFixed(1)} diff=${res.scores.styleDiff.toFixed(1)}${res.choppy ? ' CHOPPY' : ''}`
+      : '';
+    console.log(`[${idx}/${files.length}] ${res.ok ? 'ok ' : 'BAD'} ${f.padEnd(34)} overall=${s} audio=${audio}${st}${res.errors && res.errors.length ? ' | ' + res.errors[0].slice(0, 120) : ''}`);
   }
 
   fs.writeFileSync(outFile, JSON.stringify({ generated: new Date().toISOString(), count: results.length, results }, null, 1));

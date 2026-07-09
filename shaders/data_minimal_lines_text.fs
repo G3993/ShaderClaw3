@@ -1,50 +1,285 @@
 /*{
   "DESCRIPTION": "Data Minimal Lines — a typographic data score on warm paper. Three quiet agents lay marks across the page: thin technical hairlines, asemic clusters of dots/brackets/symbols, and sparse solid black bars. The live cue lays in as the central spoken line, typewriter-revealed. Generous whitespace, gallery restraint — at silence the page is almost still; with voice and energy, marks drift, bars elongate, hairlines tilt. Three player channels, three mark types. Abstract — never a chart, never bars-as-EQ.",
   "CREDIT": "easel a-list — data_minimal_lines_text",
-  "CATEGORIES": ["Generator", "Text", "A-List"],
+  "CATEGORIES": [
+    "Generator",
+    "Text",
+    "A-List"
+  ],
   "INPUTS": [
-    { "NAME": "msg",         "LABEL": "Spoken Line",   "TYPE": "text",  "DEFAULT": "what we require is silence",
-      "MAX_LENGTH": 48, "BIND": "cue.latest" },
-    { "NAME": "energyA",     "LABEL": "Lines Agent",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0,
-      "DEFAULT": 0.35, "BIND": "player[1].energy" },
-    { "NAME": "energyB",     "LABEL": "Glyph Agent",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0,
-      "DEFAULT": 0.35, "BIND": "player[2].energy" },
-    { "NAME": "energyC",     "LABEL": "Bars Agent",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0,
-      "DEFAULT": 0.35, "BIND": "player[3].energy" },
-    { "NAME": "aliveA",      "LABEL": "Lines Active",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0,
-      "DEFAULT": 1.0, "BIND": "player[1].active" },
-    { "NAME": "aliveB",      "LABEL": "Glyph Active",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0,
-      "DEFAULT": 1.0, "BIND": "player[2].active" },
-    { "NAME": "aliveC",      "LABEL": "Bars Active",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0,
-      "DEFAULT": 1.0, "BIND": "player[3].active" },
-    { "NAME": "drift",       "LABEL": "Score Drift",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0,
-      "DEFAULT": 0.7, "BIND": "audio.level" },
-    { "NAME": "lineDensity", "LABEL": "Line Density",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0,
-      "DEFAULT": 0.55 },
-    { "NAME": "shapeCount",  "LABEL": "Shape Count",   "TYPE": "long",
-      "DEFAULT": 6, "VALUES": [3,4,6,8,10,12], "LABELS": ["3","4","6","8","10","12"] },
-    { "NAME": "palette",     "LABEL": "Palette",       "TYPE": "long",
-      "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Ivory Score","Slate","Vellum","Inverse"] },
-    { "NAME": "motionSpeed", "LABEL": "Motion Speed",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0,
-      "DEFAULT": 0.7 },
-    { "NAME": "audioDepth",  "LABEL": "Audio Depth",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0,
-      "DEFAULT": 0.9 },
-    { "NAME": "grain",       "LABEL": "Paper Grain",   "TYPE": "float", "MIN": 0.0, "MAX": 1.5,
-      "DEFAULT": 0.55 }
-  ,
-    { "NAME": "motionDrift",  "LABEL": "Drift Speed",      "TYPE": "float", "DEFAULT": 1.3,  "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "motionJitter", "LABEL": "Jitter",           "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionFlicker","LABEL": "Flicker",          "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionSway",   "LABEL": "Sway",             "TYPE": "float", "DEFAULT": 0.50, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionChaos",  "LABEL": "Chaos",            "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.0 }
-  ,
-    { "NAME": "fidBloom",  "LABEL": "Glow",   "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "fidDither", "LABEL": "Dither", "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fidGamma",  "LABEL": "Gamma",  "TYPE": "float", "DEFAULT": 0.6, "MIN": 0.0, "MAX": 1.0 }
-  ,
-    { "NAME": "fidEdgeGlow", "LABEL": "Edge Glow", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "fidVignette", "LABEL": "Vignette", "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "fidGrain",    "LABEL": "Grain",    "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.0 }
+    {
+      "NAME": "energyA",
+      "LABEL": "Lines Agent",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.35,
+      "BIND": "player[1].energy"
+    },
+    {
+      "NAME": "energyB",
+      "LABEL": "Glyph Agent",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.35,
+      "BIND": "player[2].energy"
+    },
+    {
+      "NAME": "energyC",
+      "LABEL": "Bars Agent",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.35,
+      "BIND": "player[3].energy"
+    },
+    {
+      "NAME": "aliveA",
+      "LABEL": "Lines Active",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 1,
+      "BIND": "player[1].active"
+    },
+    {
+      "NAME": "aliveB",
+      "LABEL": "Glyph Active",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 1,
+      "BIND": "player[2].active"
+    },
+    {
+      "NAME": "aliveC",
+      "LABEL": "Bars Active",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 1,
+      "BIND": "player[3].active"
+    },
+    {
+      "NAME": "grain",
+      "LABEL": "Paper Grain",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.55
+    },
+    {
+      "NAME": "fidBloom",
+      "LABEL": "Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 1.5
+    },
+    {
+      "NAME": "fidDither",
+      "LABEL": "Dither",
+      "TYPE": "float",
+      "DEFAULT": 0.85,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "fidGamma",
+      "LABEL": "Gamma",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "fidEdgeGlow",
+      "LABEL": "Edge Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "fidVignette",
+      "LABEL": "Vignette",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1.5
+    },
+    {
+      "NAME": "fidGrain",
+      "LABEL": "Grain",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "lineDensity",
+      "LABEL": "Line Density",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.55,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "shapeCount",
+      "LABEL": "Shape Count",
+      "TYPE": "long",
+      "DEFAULT": 6,
+      "VALUES": [
+        3,
+        4,
+        6,
+        8,
+        10,
+        12
+      ],
+      "LABELS": [
+        "3",
+        "4",
+        "6",
+        "8",
+        "10",
+        "12"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "motionSpeed",
+      "LABEL": "Motion Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.7,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionDrift",
+      "LABEL": "Drift Speed",
+      "TYPE": "float",
+      "DEFAULT": 1.3,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionJitter",
+      "LABEL": "Jitter",
+      "TYPE": "float",
+      "DEFAULT": 0.25,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionFlicker",
+      "LABEL": "Flicker",
+      "TYPE": "float",
+      "DEFAULT": 0.15,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionSway",
+      "LABEL": "Sway",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionChaos",
+      "LABEL": "Chaos",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "palette",
+      "LABEL": "Palette",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Ivory Score",
+        "Slate",
+        "Vellum",
+        "Inverse"
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "msg",
+      "LABEL": "Spoken Line",
+      "TYPE": "text",
+      "DEFAULT": "what we require is silence",
+      "MAX_LENGTH": 48,
+      "BIND": "cue.latest",
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "drift",
+      "LABEL": "Score Drift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.7,
+      "BIND": "audio.level",
+      "GROUP": "Audio Reactivity"
+    },
+    {
+      "NAME": "audioDepth",
+      "LABEL": "Audio Depth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.9,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -336,6 +571,8 @@ void main() {
     float eC = clamp(energyC, 0.0, 1.0) * clamp(aliveC, 0.0, 1.0);
 
     Pal P = getPalette(int(palette));
+    // universal background: the paper IS this shader's background region
+    P.paper = mix(P.paper, bgColor.rgb, bgColor.a);
 
     // ─── Paper ground with subtle marbling — keeps the page alive ──
     float wob = fbm2(p * 1.4 + vec2(t * 0.04, 0.0));
@@ -572,5 +809,18 @@ void main() {
     // just the marks) visibly answers the mix — musical, not garish.
     col += (P.ink - P.paper) * 0.020 * bassHit;
 
-    gl_FragColor = vec4(fidApply(clamp(col, 0.0, 1.0), gl_FragCoord.xy), 1.0);
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = fidApply(clamp(col, 0.0, 1.0), gl_FragCoord.xy);
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                   // saturation
+    if (hueShift > 0.0005) {                               // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+
+    gl_FragColor = vec4(uc, 1.0);
 }

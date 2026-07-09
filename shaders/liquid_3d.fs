@@ -1,23 +1,174 @@
 /*{
   "DESCRIPTION": "3D Liquid — a self-contained, single-pass raymarched violet metaball fluid in the spirit of Wyatt's 3D SPH shader (shadertoy.com/view/mstfzS). An orbiting liquid blob raymarched with diffuse + environment reflection + fresnel rim. Drop in YOUR OWN image as the background: 'Wrap Environment' wraps it around the scene so the liquid genuinely reflects/refracts your picture, or 'Backdrop' places it flat behind the blob. Knobs: BLOBS, VISCOSITY (merge smoothness), SPEED, SIZE, REFLECT, AUTO SPIN, two liquid colors, BACKGROUND MIX/MODE/SPIN, RIM GLOW, and live SOUND REACTIVITY (bass swells the droplets, mid makes them merge gooier).",
   "CREDIT": "Easel · liquid_3d  (after Wyatt 'SPH 3D', shadertoy.com/view/mstfzS)",
-  "CATEGORIES": ["Generator", "3D", "Fluid"],
+  "CATEGORIES": [
+    "Generator",
+    "3D",
+    "Fluid"
+  ],
   "INPUTS": [
-    { "NAME": "blobs",     "LABEL": "Blobs",     "TYPE": "float", "MIN": 3.0, "MAX": 16.0, "DEFAULT": 11.0 },
-    { "NAME": "viscosity", "LABEL": "Viscosity", "TYPE": "float", "MIN": 0.2, "MAX": 2.5,  "DEFAULT": 1.2 },
-    { "NAME": "speed",     "LABEL": "Speed",     "TYPE": "float", "MIN": 0.0, "MAX": 3.0,  "DEFAULT": 0.7 },
-    { "NAME": "blobSize",  "LABEL": "Size",      "TYPE": "float", "MIN": 0.4, "MAX": 1.6,  "DEFAULT": 0.9 },
-    { "NAME": "reflAmt",   "LABEL": "Reflect",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.6 },
-    { "NAME": "spin",      "LABEL": "Auto Spin", "TYPE": "float", "MIN": 0.0, "MAX": 1.5,  "DEFAULT": 0.25 },
-    { "NAME": "colA", "LABEL": "Deep", "TYPE": "color", "DEFAULT": [0.220, 0.349, 1.000, 1.0] },
-    { "NAME": "colB", "LABEL": "Glow", "TYPE": "color", "DEFAULT": [0.420, 0.302, 0.996, 1.0] },
-
-    { "NAME": "inputImage",  "LABEL": "Your Background", "TYPE": "image" },
-    { "NAME": "bgMix",       "LABEL": "Background Mix",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0 },
-    { "NAME": "bgMode",      "LABEL": "Background Mode", "TYPE": "long",  "VALUES": [0, 1], "LABELS": ["Backdrop (flat)", "Wrap Environment"], "DEFAULT": 1 },
-    { "NAME": "bgSpin",      "LABEL": "Background Spin", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.05 },
-    { "NAME": "rimGlow",     "LABEL": "Rim Glow",        "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.40 },
-    { "NAME": "audioReact",  "LABEL": "Sound Reactivity","TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 }
+    {
+      "NAME": "reflAmt",
+      "LABEL": "Reflect",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.6
+    },
+    {
+      "NAME": "inputImage",
+      "LABEL": "Your Background",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "rimGlow",
+      "LABEL": "Rim Glow",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.4
+    },
+    {
+      "NAME": "blobs",
+      "LABEL": "Blobs",
+      "TYPE": "float",
+      "MIN": 3,
+      "MAX": 16,
+      "DEFAULT": 11,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "blobSize",
+      "LABEL": "Size",
+      "TYPE": "float",
+      "MIN": 0.4,
+      "MAX": 1.6,
+      "DEFAULT": 0.9,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "viscosity",
+      "LABEL": "Viscosity",
+      "TYPE": "float",
+      "MIN": 0.2,
+      "MAX": 2.5,
+      "DEFAULT": 1.2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 0.7,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "spin",
+      "LABEL": "Auto Spin",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.25,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "colA",
+      "LABEL": "Deep",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.22,
+        0.349,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colB",
+      "LABEL": "Glow",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.42,
+        0.302,
+        0.996,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgMix",
+      "LABEL": "Background Mix",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "bgMode",
+      "LABEL": "Background Mode",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1
+      ],
+      "LABELS": [
+        "Backdrop (flat)",
+        "Wrap Environment"
+      ],
+      "DEFAULT": 1,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "bgSpin",
+      "LABEL": "Background Spin",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.05,
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Sound Reactivity",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -181,5 +332,17 @@ void main(){
     // Tonemap + gamma.
     col = col / (1.0 + col);
     col = pow(max(col, 0.0), vec3(1.0 / 2.2));
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(vec3(ucL), col, colorBoost);
+    if (hueShift > 0.0005) {
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        col = clamp(hM * col, 0.0, 1.0);
+    }
+    col = mix(col, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
     gl_FragColor = vec4(col, 1.0);
 }

@@ -1,24 +1,208 @@
 /*{
-  "CATEGORIES": ["3D", "Generator", "Audio Reactive"],
+  "CATEGORIES": [
+    "3D",
+    "Generator",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "PBR Reference 3D — a curated luxury museum piece. One BRDF, four art-historical moods: Kapoor's chrome sphere, Brancusi's polished bronze, Klein's IKB monochromes, Judd's anodized stack. Real Cook-Torrance GGX + Schlick fresnel; per-mood SDF scenes, lighting rigs, and procedural environments. Bass breathes the form, mid drives slow monumental orbit, treble shimmers reflections. Returns LINEAR HDR — host applies ACES.",
   "INPUTS": [
-    { "NAME": "mood",          "LABEL": "Mood",            "TYPE": "long",  "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Kapoor Mirror","Brancusi Bronze","Klein Monochrome","Judd Stack"] },
-    { "NAME": "camDist",       "LABEL": "Camera Distance", "TYPE": "float", "MIN": 1.5, "MAX": 12.0, "DEFAULT": 4.5 },
-    { "NAME": "camHeight",     "LABEL": "Camera Height",   "TYPE": "float", "MIN": -3.0, "MAX": 4.0, "DEFAULT": 1.2 },
-    { "NAME": "camOrbitSpeed", "LABEL": "Orbit Speed",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 0.18 },
-    { "NAME": "camAzimuth",    "LABEL": "Camera Azimuth",  "TYPE": "float", "MIN": 0.0, "MAX": 6.2832, "DEFAULT": 0.0 },
-    { "NAME": "keyAngle",      "LABEL": "Key Light Angle", "TYPE": "float", "MIN": 0.0, "MAX": 6.2832, "DEFAULT": 0.785 },
-    { "NAME": "keyElevation",  "LABEL": "Key Elevation",   "TYPE": "float", "MIN": 0.0, "MAX": 1.5708, "DEFAULT": 0.7 },
-    { "NAME": "keyColor",      "LABEL": "Key Light",       "TYPE": "color", "DEFAULT": [1.0, 0.94, 0.82, 1.0] },
-    { "NAME": "fillColor",     "LABEL": "Fill Light",      "TYPE": "color", "DEFAULT": [0.55, 0.70, 1.0, 1.0] },
-    { "NAME": "ambient",       "LABEL": "Ambient",         "TYPE": "float", "MIN": 0.0, "MAX": 0.5,  "DEFAULT": 0.08 },
-    { "NAME": "rimStrength",   "LABEL": "Rim Strength",    "TYPE": "float", "MIN": 0.0, "MAX": 1.5,  "DEFAULT": 0.5 },
-    { "NAME": "exposure",      "LABEL": "Exposure",        "TYPE": "float", "MIN": 0.3, "MAX": 3.0,  "DEFAULT": 1.0 },
-    { "NAME": "roughnessTrim", "LABEL": "Roughness Trim",  "TYPE": "float", "MIN": -0.3, "MAX": 0.3, "DEFAULT": 0.0 },
-    { "NAME": "metalnessTrim", "LABEL": "Metalness Trim",  "TYPE": "float", "MIN": -0.3, "MAX": 0.3, "DEFAULT": 0.0 },
-    { "NAME": "audioReact",    "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0,  "DEFAULT": 1.0 },
-    { "NAME": "accentA",       "LABEL": "Accent A",        "TYPE": "color", "DEFAULT": [0.06, 0.10, 0.78, 1.0] },
-    { "NAME": "accentB",       "LABEL": "Accent B",        "TYPE": "color", "DEFAULT": [0.92, 0.72, 0.22, 1.0] }
+    {
+      "NAME": "mood",
+      "LABEL": "Mood",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Kapoor Mirror",
+        "Brancusi Bronze",
+        "Klein Monochrome",
+        "Judd Stack"
+      ]
+    },
+    {
+      "NAME": "keyAngle",
+      "LABEL": "Key Light Angle",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 6.2832,
+      "DEFAULT": 0.785
+    },
+    {
+      "NAME": "keyElevation",
+      "LABEL": "Key Elevation",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5708,
+      "DEFAULT": 0.7
+    },
+    {
+      "NAME": "ambient",
+      "LABEL": "Ambient",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.5,
+      "DEFAULT": 0.08
+    },
+    {
+      "NAME": "rimStrength",
+      "LABEL": "Rim Strength",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.5
+    },
+    {
+      "NAME": "exposure",
+      "LABEL": "Exposure",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 3,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "roughnessTrim",
+      "LABEL": "Roughness Trim",
+      "TYPE": "float",
+      "MIN": -0.3,
+      "MAX": 0.3,
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "metalnessTrim",
+      "LABEL": "Metalness Trim",
+      "TYPE": "float",
+      "MIN": -0.3,
+      "MAX": 0.3,
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "camOrbitSpeed",
+      "LABEL": "Orbit Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.18,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "keyColor",
+      "LABEL": "Key Light",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        0.94,
+        0.82,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "fillColor",
+      "LABEL": "Fill Light",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.55,
+        0.7,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "accentA",
+      "LABEL": "Accent A",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.06,
+        0.1,
+        0.78,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "accentB",
+      "LABEL": "Accent B",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.92,
+        0.72,
+        0.22,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "camDist",
+      "LABEL": "Camera Distance",
+      "TYPE": "float",
+      "MIN": 1.5,
+      "MAX": 12,
+      "DEFAULT": 4.5,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "camHeight",
+      "LABEL": "Camera Height",
+      "TYPE": "float",
+      "MIN": -3,
+      "MAX": 4,
+      "DEFAULT": 1.2,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "camAzimuth",
+      "LABEL": "Camera Azimuth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 6.2832,
+      "DEFAULT": 0,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -330,10 +514,23 @@ vec3 shade(vec3 p, vec3 n, vec3 v, Material mat, int mood, float breath, float s
     return direct + fill + iblDiff + iblSpec + amb + rimL;
 }
 
-// ─── Audio scaffolding ─────────────────────────────────────────────────
-float bassPulse(float aR)  { return 0.5 + 0.5 * sin(TIME * 1.6) * aR * 0.9; }
-float midDrift(float aR)   { return 0.5 + 0.5 * sin(TIME * 0.5) * aR * 0.6; }
-float treShimmer(float aR) { return 0.5 + 0.5 * sin(TIME * 4.7) * aR * 0.7; }
+// ─── Audio scaffolding — live uniforms, soft knees (playbook), with a
+//     gentle sine idle floor so the piece still breathes in silence ─────
+float bassPulse(float aR)  {
+    // Sub coupling + low floor: hiphop's sparse kicks live in audioSub and
+    // sat below the old 0.05..0.85^1.6 knee. Gentler curve so soft jazz
+    // accents register too.
+    float bP = pow(smoothstep(0.03, 0.85, audioBass + 0.6 * audioSub), 1.3);
+    return 0.5 + (0.10 * sin(TIME * 1.6) + 0.40 * bP) * aR * 0.9;
+}
+float midDrift(float aR)   {
+    float mP = smoothstep(0.04, 0.85, audioMid);
+    return 0.5 + (0.20 * sin(TIME * 0.5) + 0.30 * mP) * aR * 0.6;
+}
+float treShimmer(float aR) {
+    float hP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+    return 0.5 + (0.10 * sin(TIME * 4.7) + 0.40 * hP) * aR * 0.7;
+}
 
 // ─── main ──────────────────────────────────────────────────────────────
 void main() {
@@ -395,11 +592,34 @@ void main() {
         col = mix(col, envSample(rd, m, shimmer, aA, aB), fog * 0.45);
     } else {
         col = envSample(rd, m, shimmer, aA, aB);
+        // universal background override (a=0 -> untouched environment)
+        col = mix(col, bgColor.rgb, bgColor.a);
     }
 
     // Museum vignette
     col *= 1.0 - 0.16 * length(uv * 0.55);
 
-    col *= exposure;
-    gl_FragColor = vec4(col, 1.0);
+    // Whole-frame exposure follower (r2 ambient fix): LINEAR bass/sub + mid
+    // followers — the round-1 pow/knee crushed ambient's slow swells, and
+    // 0.16 depth was too shallow once the host's ACES compressed it. Plus a
+    // decaying kick trace (audioBeatPulse decays 300ms+). The geometric
+    // breath (~1%) is far too subtle to score; luminance is the visible
+    // channel for this museum piece. Silence -> 0.97 as before.
+    float bassF = smoothstep(0.02, 0.95, audioBass + 0.5 * audioSub);
+    float midF  = smoothstep(0.02, 0.95, audioMid);
+    float hitT  = clamp(audioBeatPulse, 0.0, 1.0);
+    col *= exposure * (0.97 + (0.28 * bassF + 0.16 * midF + 0.12 * hitT) * aR);
+
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    vec3 uc = mix(vec3(ucL), col, colorBoost);
+    if (hueShift > 0.0005) {
+        float hueA = hueShift * 6.2831853;
+        float hueC = cos(hueA), hueS = sin(hueA);
+        mat3 hueM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                  + hueC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                  + hueS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hueM * uc, 0.0, 1.0);
+    }
+    gl_FragColor = vec4(uc, 1.0);
 }

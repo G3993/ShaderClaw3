@@ -1,23 +1,137 @@
 /*{
   "DESCRIPTION": "Metal — a stable-fluids liquid-metal sim. Semi-Lagrangian velocity advection + an auto-driven stir injects dye and momentum; divergence is removed by a Jacobi pressure projection (cheap one-iteration-per-frame solve that converges temporally — real-time, unlike the original's ~760-tap single-pass convolution). Visualizes the concentration field as a fake-3D shaded metallic surface, with velocity/pressure debug views. Ported to Easel ISF from Schuetze/Vimont stable-fluids.",
   "CREDIT": "Robert Schuetze (trirop) + Ulysse Vimont 2017, CC BY-NC-SA 3.0. Fast-adapted ISF port for Easel.",
-  "CATEGORIES": ["VFX", "Fluid", "Simulation", "Generator"],
+  "CATEGORIES": [
+    "VFX",
+    "Fluid",
+    "Simulation",
+    "Generator"
+  ],
   "INPUTS": [
-    { "NAME": "stirSpeed",   "LABEL": "Stir Speed",   "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.3 },
-    { "NAME": "force",       "LABEL": "Stir Force",   "TYPE": "float", "MIN": 0.0, "MAX": 6.0, "DEFAULT": 3.0 },
-    { "NAME": "dye",         "LABEL": "Dye Rate",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6 },
-    { "NAME": "dissipation", "LABEL": "Dissipation",  "TYPE": "float", "MIN": 0.95, "MAX": 1.0, "DEFAULT": 0.997 },
-    { "NAME": "flowSpeed",   "LABEL": "Flow Speed",   "TYPE": "float", "MIN": 0.2, "MAX": 4.0, "DEFAULT": 1.6 },
-    { "NAME": "viewMode",    "LABEL": "View (0 shaded,1 conc,2 vel,3 pressure)", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 0.0 },
-    { "NAME": "exposure",    "LABEL": "Exposure",     "TYPE": "float", "MIN": 0.3, "MAX": 2.5, "DEFAULT": 1.0 },
-    { "NAME": "audioReact",  "LABEL": "Audio React",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.35 },
-    { "NAME": "inputTex",    "TYPE": "image", "LABEL": "Texture" },
-    { "NAME": "texMix",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "LABEL": "Texture Mix" }
+    {
+      "NAME": "dye",
+      "LABEL": "Dye Rate",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.6
+    },
+    {
+      "NAME": "dissipation",
+      "LABEL": "Dissipation",
+      "TYPE": "float",
+      "MIN": 0.95,
+      "MAX": 1,
+      "DEFAULT": 0.997
+    },
+    {
+      "NAME": "viewMode",
+      "LABEL": "View (0 shaded,1 conc,2 vel,3 pressure)",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "exposure",
+      "LABEL": "Exposure",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2.5,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "inputTex",
+      "TYPE": "image",
+      "LABEL": "Texture"
+    },
+    {
+      "NAME": "texMix",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Texture Mix"
+    },
+    {
+      "NAME": "stirSpeed",
+      "LABEL": "Stir Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "force",
+      "LABEL": "Stir Force",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 6,
+      "DEFAULT": 3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "flowSpeed",
+      "LABEL": "Flow Speed",
+      "TYPE": "float",
+      "MIN": 0.2,
+      "MAX": 4,
+      "DEFAULT": 1.6,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.35,
+      "GROUP": "Audio Reactivity"
+    }
   ],
   "PASSES": [
-    { "TARGET": "velBuf", "PERSISTENT": true },
-    { "TARGET": "divBuf" },
-    { "TARGET": "prsBuf", "PERSISTENT": true },
+    {
+      "TARGET": "velBuf",
+      "PERSISTENT": true
+    },
+    {
+      "TARGET": "divBuf"
+    },
+    {
+      "TARGET": "prsBuf",
+      "PERSISTENT": true
+    },
     {}
   ]
 }*/
@@ -73,7 +187,19 @@ void main() {
     if (PASSINDEX == 0) {
         if (FRAMEINDEX < 4) { gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
 
-        float dt = flowSpeed;
+        // Continuous band-follow on advection rate: ambient's beat-less swells
+        // speed up / relax the whole pour directly (frame change tracks the
+        // band), while beat styles keep their existing stir/gleam paths.
+        // Low floors catch gentle swells; silence -> exactly flowSpeed.
+        // Round 3 (measured): this sim churns at ~0.08/frame during ambient,
+        // so no image-pass follower can register (uniform luma shifts are
+        // quadratically suppressed in frame-diff under that churn). The only
+        // lever that reads is modulating the churn itself — and scaling by
+        // audioReact (default 0.35) crushed the depth to ~±12%. UNSCALED,
+        // deeper coupling; silence still -> exactly flowSpeed.
+        float aFlow = 1.0 + 0.70 * aKnee(audioBass, 0.02, 0.90)
+                          + 0.40 * aKnee(audioMid, 0.03, 0.90);
+        float dt = flowSpeed * aFlow;
         vec2 vel = texture(velBuf, uv).xy;
 
         // Semi-Lagrangian backtrace (advect velocity + dye by the field).
@@ -201,8 +327,18 @@ void main() {
     }
 
     // Bass warms/brightens the whole pour; a beat lands a short decaying
-    // gleam. Idle floor: audio 0 -> exactly the authored look.
-    float aGain = 1.0 + audioReact * (2.6 * aBassP() + 1.8 * aBeatP());
+    // gleam; a gentle mid-band follow keeps beat-less ambient swells visible.
+    // Idle floor: audio 0 -> exactly the authored look.
+    // Round 3 (measured): the kneed terms are all scaled by audioReact
+    // (default 0.35) which crushed ambient's 0.1-0.8 swells to ~0 (ambient
+    // 0.59). Add an UNSCALED LINEAR whole-frame follower on the image pass —
+    // dark scene (meanLuma 0.21) so gains are clip-safe; weights track the
+    // bass/mid/high mix of the music itself.
+    float aGain = 1.0 + 0.28 * clamp(audioBass, 0.0, 1.0)
+                      + 0.18 * clamp(audioMid, 0.0, 1.0)
+                      + 0.10 * clamp(audioHigh, 0.0, 1.0)
+                      + audioReact * (2.6 * aBassP() + 1.8 * aBeatP()
+                                    + 0.7 * pow(aKnee(audioMid, 0.03, 0.90), 1.2));
 
     if (texMix > 0.001) {
         // Pour the texture into the melt: refract the lookup by the dye
@@ -215,5 +351,18 @@ void main() {
         col = mix(col, modCol, texMix);
     }
 
-    gl_FragColor = vec4(col * aGain * exposure, 1.0);
+    vec3 ucCol = col * aGain * exposure;
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(ucCol, vec3(0.299, 0.587, 0.114));
+    ucCol = mix(vec3(ucL), ucCol, colorBoost);
+    if (hueShift > 0.0005) {
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        ucCol = clamp(hM * ucCol, 0.0, 1.0);
+    }
+    ucCol = mix(ucCol, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+    gl_FragColor = vec4(ucCol, 1.0);
 }

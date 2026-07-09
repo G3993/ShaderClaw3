@@ -1,37 +1,297 @@
 /*{
   "DESCRIPTION": "Grid Colors Text — a bold editorial poster as a parallax z-stack of colored publication tiles. Three depth layers of cells (back/mid/front) drift at different speeds against a slow camera dolly so the sheet has *real* room. Each layer's palette is owned by a player channel: when player[i].energy spikes the tiles on that layer swell forward in z, tilt off-axis, and burn a chromatic-stripe insert across their face; silent players collapse to a quiet constellation of flat slabs. `cue.latest` types across the tiles as a typewriter — the same headline scattered, fragmented, re-rendered. Cells are alive (corner-jitter, micro-skew, fresnel rim, drop-shadow under each), so the dominant texture is never a checkerboard. Returns LINEAR HDR.",
   "CREDIT": "easel auto-loop — A-List daily / Pulkki ‘Musical Analogues’ broadside reference",
-  "CATEGORIES": ["Generator", "Text", "A-List"],
+  "CATEGORIES": [
+    "Generator",
+    "Text",
+    "A-List"
+  ],
   "INPUTS": [
-    { "NAME": "msg",          "TYPE": "text",  "DEFAULT": "MUSICAL ANALOGUES OF MATHEMATICAL CONCEPTS", "MAX_LENGTH": 48, "BIND": "cue.latest" },
-    { "NAME": "energyA",      "LABEL": "Layer A Energy (back)",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "BIND": "player[1].energy" },
-    { "NAME": "energyB",      "LABEL": "Layer B Energy (mid)",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "BIND": "player[2].energy" },
-    { "NAME": "energyC",      "LABEL": "Layer C Energy (front)", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "BIND": "player[3].energy" },
-    { "NAME": "activeA",      "LABEL": "Layer A Active",         "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "BIND": "player[1].active" },
-    { "NAME": "activeB",      "LABEL": "Layer B Active",         "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "BIND": "player[2].active" },
-    { "NAME": "audioDepth",   "LABEL": "Audio Depth Push",       "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.7, "BIND": "audio.bass" },
-    { "NAME": "rows",         "LABEL": "Rows",                   "TYPE": "float", "MIN": 3.0, "MAX": 10.0, "DEFAULT": 6.0 },
-    { "NAME": "cols",         "LABEL": "Columns",                "TYPE": "float", "MIN": 2.0, "MAX": 7.0,  "DEFAULT": 4.0 },
-    { "NAME": "palette",      "LABEL": "Palette",                "TYPE": "long",  "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Pulkki","Broadside","Riso","Mono"] },
-    { "NAME": "variant",      "LABEL": "Cell Variant",           "TYPE": "long",  "DEFAULT": 0, "VALUES": [0,1,2], "LABELS": ["Tile","Tilted","Stack"] },
-    { "NAME": "motionSpeed",  "LABEL": "Motion Speed",           "TYPE": "float", "MIN": 0.0, "MAX": 2.5, "DEFAULT": 1.0 },
-    { "NAME": "parallax",     "LABEL": "Parallax Depth",         "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "textSize",     "LABEL": "Text Size",              "TYPE": "float", "MIN": 0.4, "MAX": 2.4, "DEFAULT": 1.0 },
-    { "NAME": "stripeAmount", "LABEL": "Chromatic Stripes",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.65 },
-    { "NAME": "shadow",       "LABEL": "Drop Shadow",            "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.9 }
-  ,
-    { "NAME": "motionDrift",  "LABEL": "Drift Speed",      "TYPE": "float", "DEFAULT": 1.3,  "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "motionJitter", "LABEL": "Jitter",           "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionFlicker","LABEL": "Flicker",          "TYPE": "float", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionSway",   "LABEL": "Sway",             "TYPE": "float", "DEFAULT": 0.50, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "motionChaos",  "LABEL": "Chaos",            "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.0 }
-  ,
-    { "NAME": "fidBloom",    "LABEL": "Glow",      "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "fidDither",   "LABEL": "Dither",    "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fidGamma",    "LABEL": "Gamma",     "TYPE": "float", "DEFAULT": 0.60, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fidEdgeGlow", "LABEL": "Edge Glow", "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "fidVignette", "LABEL": "Vignette",  "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "fidGrain",    "LABEL": "Grain",     "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 1.0 }
+    {
+      "NAME": "energyA",
+      "LABEL": "Layer A Energy (back)",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "BIND": "player[1].energy"
+    },
+    {
+      "NAME": "energyB",
+      "LABEL": "Layer B Energy (mid)",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "BIND": "player[2].energy"
+    },
+    {
+      "NAME": "energyC",
+      "LABEL": "Layer C Energy (front)",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "BIND": "player[3].energy"
+    },
+    {
+      "NAME": "activeA",
+      "LABEL": "Layer A Active",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "BIND": "player[1].active"
+    },
+    {
+      "NAME": "activeB",
+      "LABEL": "Layer B Active",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "BIND": "player[2].active"
+    },
+    {
+      "NAME": "shadow",
+      "LABEL": "Drop Shadow",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.9
+    },
+    {
+      "NAME": "fidBloom",
+      "LABEL": "Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 1.5
+    },
+    {
+      "NAME": "fidDither",
+      "LABEL": "Dither",
+      "TYPE": "float",
+      "DEFAULT": 0.85,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "fidGamma",
+      "LABEL": "Gamma",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "fidEdgeGlow",
+      "LABEL": "Edge Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "fidVignette",
+      "LABEL": "Vignette",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1.5
+    },
+    {
+      "NAME": "fidGrain",
+      "LABEL": "Grain",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "rows",
+      "LABEL": "Rows",
+      "TYPE": "float",
+      "MIN": 3,
+      "MAX": 10,
+      "DEFAULT": 6,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "cols",
+      "LABEL": "Columns",
+      "TYPE": "float",
+      "MIN": 2,
+      "MAX": 7,
+      "DEFAULT": 4,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "variant",
+      "LABEL": "Cell Variant",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2
+      ],
+      "LABELS": [
+        "Tile",
+        "Tilted",
+        "Stack"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "motionSpeed",
+      "LABEL": "Motion Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2.5,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionDrift",
+      "LABEL": "Drift Speed",
+      "TYPE": "float",
+      "DEFAULT": 1.3,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionJitter",
+      "LABEL": "Jitter",
+      "TYPE": "float",
+      "DEFAULT": 0.25,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionFlicker",
+      "LABEL": "Flicker",
+      "TYPE": "float",
+      "DEFAULT": 0.15,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionSway",
+      "LABEL": "Sway",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "motionChaos",
+      "LABEL": "Chaos",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "palette",
+      "LABEL": "Palette",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Pulkki",
+        "Broadside",
+        "Riso",
+        "Mono"
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "stripeAmount",
+      "LABEL": "Chromatic Stripes",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.65,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "parallax",
+      "LABEL": "Parallax Depth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "msg",
+      "LABEL": "Message",
+      "TYPE": "text",
+      "DEFAULT": "MUSICAL ANALOGUES OF MATHEMATICAL CONCEPTS",
+      "MAX_LENGTH": 48,
+      "BIND": "cue.latest",
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "textSize",
+      "LABEL": "Text Size",
+      "TYPE": "float",
+      "MIN": 0.4,
+      "MAX": 2.4,
+      "DEFAULT": 1,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioDepth",
+      "LABEL": "Audio Depth Push",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.7,
+      "BIND": "audio.bass",
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -491,6 +751,7 @@ void main() {
     vec3 bg = vec3(0.045, 0.040, 0.055);
     bg += 0.020 * vec3(0.6, 0.4, 0.9) * vnoise(uv * 7.0);
     bg *= 1.0 - 0.25 * dot((uv - 0.5), (uv - 0.5));
+    bg = mix(bg, bgColor.rgb, bgColor.a);  // universal background
 
     // ── shadow pass (sample each layer offset to bottom-right) ──────
     vec2 shadowOff = vec2(0.012, -0.014) * shadow;
@@ -549,6 +810,17 @@ void main() {
     col = col / (1.0 + 0.45 * col);
     col = pow(max(col, 0.0), vec3(0.94));
 
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(vec3(ucL), col, colorBoost);
+    if (hueShift > 0.0005) {
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        col = clamp(hM * col, 0.0, 1.0);
+    }
     col *= mkFlicker(gl_FragCoord.xy / RENDERSIZE - 0.5, TIME);
     gl_FragColor = vec4(fidApply(col, gl_FragCoord.xy), 1.0);
 }

@@ -1,18 +1,96 @@
-/*
-{
-  "CATEGORIES": ["Generator", "Text"],
+/*{
+  "CATEGORIES": [
+    "Generator",
+    "Text"
+  ],
   "DESCRIPTION": "Animated text with cycling font styles per letter",
   "INPUTS": [
-    { "NAME": "msg", "TYPE": "text", "DEFAULT": "ETHEREA", "MAX_LENGTH": 12 },
-    { "NAME": "cycleSpeed", "TYPE": "float", "MIN": 0.2, "MAX": 5.0, "DEFAULT": 1.5 },
-    { "NAME": "textScale", "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "bounce", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.3 },
-    { "NAME": "textColor", "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "bgColor", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0] },
-    { "NAME": "transparentBg", "TYPE": "bool", "DEFAULT": true }
+    {
+      "NAME": "cycleSpeed",
+      "LABEL": "Cycle Speed",
+      "TYPE": "float",
+      "MIN": 0.2,
+      "MAX": 5,
+      "DEFAULT": 1.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "bounce",
+      "LABEL": "Bounce",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "textColor",
+      "LABEL": "Text Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "msg",
+      "LABEL": "Message",
+      "TYPE": "text",
+      "DEFAULT": "ETHEREA",
+      "MAX_LENGTH": 12,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "textScale",
+      "LABEL": "Text Scale",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "transparentBg",
+      "LABEL": "Transparent Background",
+      "TYPE": "bool",
+      "DEFAULT": true,
+      "GROUP": "Background"
+    }
   ]
-}
-*/
+}*/
 
 // --- 5x7 bitmap font, packed as 2 floats per character ---
 // lo = row0 + row1*32 + row2*1024 + row3*32768  (rows 0-3)
@@ -150,6 +228,17 @@ void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
 
+    // Soft-knee audio conditioning: low floors (0.03/0.04) so ambient's
+    // gentle band swells and jazz's soft accents register; 0.9+ ceilings
+    // keep headroom under sustained loud material.
+    float bassP = pow(smoothstep(0.03, 0.92, audioBass), 1.3);
+    float midP  = pow(smoothstep(0.04, 0.90, audioMid), 1.2);
+    float highP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+    float drive = 0.25 + 0.75 * smoothstep(0.05, 0.9, audioEnergy);
+    float kick  = audioBeatPulse * audioBeatPulse; // decaying hit trace
+    // Time-warp clock: style cycling and bounce pace themselves to the track.
+    float musicTime = TIME * (0.7 + 0.6 * drive);
+
     vec3 col = bgColor.rgb;
     float alpha = 1.0;
 
@@ -183,12 +272,16 @@ void main() {
         int ch = getChar(i);
         if (ch == 26) continue;
 
-        float phase = float(i) * 1.3 + TIME * cycleSpeed;
+        float phase = float(i) * 1.3 + musicTime * cycleSpeed;
         int style = int(mod(floor(phase), 8.0));
 
-        float bouncePhase = float(i) * 0.8 + TIME * 2.5;
-        float yOff = sin(bouncePhase) * 0.015 * bounce;
-        float scalePulse = 1.0 + sin(bouncePhase + 1.0) * 0.05 * bounce;
+        // Bass deepens the bounce and scale pulse
+        float bouncePhase = float(i) * 0.8 + musicTime * 2.5;
+        float yOff = sin(bouncePhase) * 0.015 * bounce * (1.0 + 0.3 * bassP);
+        float scalePulse = 1.0 + sin(bouncePhase + 1.0) * 0.05 * bounce * (1.0 + 0.3 * bassP);
+        // Continuous size breathing on the bands (geometry reads even where
+        // white glyphs clip additive brightness); kicks pop then ease back.
+        scalePulse *= 1.0 + 0.09 * bassP + 0.05 * midP + 0.05 * kick;
 
         float cx = startX + float(i) * (charW + gap);
         float cy = baseY + yOff;
@@ -230,7 +323,7 @@ void main() {
                         intensity = styleNeon(lp);
                     }
 
-                    vec3 lc = textColor.rgb;
+                    vec3 lc = textColor.rgb * (1.0 + 0.25 * highP); // highs glint the glyphs
 
                     if (style == 7) {
                         intensity *= 1.3;
@@ -244,7 +337,7 @@ void main() {
 
         vec2 cellCenter = vec2(cx + charW * 0.5, cy + charH * 0.5);
         float glowDist = length((p - cellCenter) * vec2(1.0, 0.7));
-        float glow = exp(-glowDist * glowDist / (charW * charW * 2.0)) * 0.15;
+        float glow = exp(-glowDist * glowDist / (charW * charW * 2.0)) * 0.15 * (1.0 + 0.35 * midP); // mids feed the halo
         float glowPulse = 0.8 + 0.2 * sin(phase * 2.0);
         glowAccum += glow * glowPulse;
     }
@@ -260,6 +353,9 @@ void main() {
     float vig = 1.0 - 0.3 * length((uv - 0.5) * 1.5);
     col *= vig;
 
+    // Beat accent: brief brightening of the glyphs, easing back.
+    col += textColor.rgb * textMask * kick * 0.3;
+
     // Alpha: text + glow visible, background transparent if toggled
     if (transparentBg) {
         alpha = clamp(textMask, 0.0, 1.0);
@@ -273,5 +369,16 @@ void main() {
         col += vec3(1.0, 0.78, 0.32) * textMask * _f * 0.5;
     }
 
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(vec3(ucL), col, colorBoost);
+    if (hueShift > 0.0005) {
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        col = clamp(hM * col, 0.0, 1.0);
+    }
     gl_FragColor = vec4(col, alpha);
 }

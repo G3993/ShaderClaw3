@@ -1,19 +1,131 @@
 /*{
   "DESCRIPTION": "NYC — procedural 3D city flythrough. Raymarched building grid with lit windows and LED ad walls (ad1/ad2/ad3 sample user textures). Time of day, mood, speed, drive/fly height, variety, ad brightness all exposed.",
-  "CATEGORIES": ["Generator", "3D"],
+  "CATEGORIES": [
+    "Generator",
+    "3D"
+  ],
   "INPUTS": [
-    { "NAME": "ad1",           "LABEL": "Ad Texture A",       "TYPE": "image" },
-    { "NAME": "ad2",           "LABEL": "Ad Texture B",       "TYPE": "image" },
-    { "NAME": "ad3",           "LABEL": "Ad Texture C",       "TYPE": "image" },
-    { "NAME": "timeOfDay",     "LABEL": "Time of Day",        "TYPE": "float", "DEFAULT": 0.12, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "windowLights",  "LABEL": "Window Lights",      "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "mood",          "LABEL": "Mood (dark / bright)","TYPE": "float","DEFAULT": 0.5,  "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "adIntensity",   "LABEL": "Ad Brightness",      "TYPE": "float", "DEFAULT": 1.4,  "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "variety",       "LABEL": "Building Variety",   "TYPE": "float", "DEFAULT": 0.85, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "speed",         "LABEL": "Movement Speed",     "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0, "MAX": 3.0 },
-    { "NAME": "flightMode",    "LABEL": "Drive(0) / Fly(1)",  "TYPE": "float", "DEFAULT": 0.0,  "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fog",           "LABEL": "Fog Density",        "TYPE": "float", "DEFAULT": 0.5,  "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "audioReact",    "LABEL": "Audio React",        "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 2.0 }
+    {
+      "NAME": "ad1",
+      "LABEL": "Ad Texture A",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "ad2",
+      "LABEL": "Ad Texture B",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "ad3",
+      "LABEL": "Ad Texture C",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "timeOfDay",
+      "LABEL": "Time of Day",
+      "TYPE": "float",
+      "DEFAULT": 0.12,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "windowLights",
+      "LABEL": "Window Lights",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "mood",
+      "LABEL": "Mood (dark / bright)",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "adIntensity",
+      "LABEL": "Ad Brightness",
+      "TYPE": "float",
+      "DEFAULT": 1.4,
+      "MIN": 0,
+      "MAX": 3
+    },
+    {
+      "NAME": "fog",
+      "LABEL": "Fog Density",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "variety",
+      "LABEL": "Building Variety",
+      "TYPE": "float",
+      "DEFAULT": 0.85,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Movement Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.7,
+      "MIN": 0,
+      "MAX": 3,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "flightMode",
+      "LABEL": "Drive(0) / Fly(1)",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "LABEL": "Background",
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -25,9 +137,13 @@
 // flash the LED ad walls, highs flick on extra scattered windows. Everything
 // is gated on audioReact with soft knees — silence renders the baseline city.
 
-float aBassP() { return pow(smoothstep(0.05, 0.85, audioBass), 1.6); }
+// 0.97 ceiling + gentler pow: EDM's sustained kick bass was pegging the old
+// 0.85 knee (constant output = deaf); this keeps the response breathing.
+float aBassP() { return pow(smoothstep(0.05, 0.97, audioBass), 1.4); }
 float aHighP() { return pow(smoothstep(0.10, 0.90, audioHigh), 1.2); }
-float aKickP() { return audioBeatPulse * audioBeatPulse; }
+// Linear decay trace (was beatPulse² — squaring crushed the tail, and on
+// EDM's constant energy the kick trace is the only frame-to-frame variance).
+float aKickP() { return audioBeatPulse; }
 
 #define CELL        8.0        // grid spacing in world units
 #define BUILD_HALF  3.0        // half-width of a typical building footprint
@@ -138,7 +254,7 @@ vec3 skyColor(vec3 rd, float tod) {
     }
     // City-glow haze pulses with the music near the horizon (zero in silence).
     col += vec3(0.06, 0.08, 0.14)
-         * (audioReact * smoothstep(0.05, 0.90, audioLevel))
+         * (audioReact * smoothstep(0.05, 0.97, audioLevel))
          * pow(1.0 - abs(rd.y), 2.0);
     return col;
 }
@@ -199,7 +315,7 @@ void surfaceShade(vec3 p, vec3 n, vec2 cell, vec4 info,
 
     // Which windows are lit — hash + windowLights threshold. The music raises
     // the density: the city literally lights up with the level (idle = knob).
-    float wl = min(windowLights * (1.0 + audioReact * 0.30 * smoothstep(0.05, 0.90, audioLevel)), 1.0);
+    float wl = min(windowLights * (1.0 + audioReact * 0.30 * smoothstep(0.05, 0.97, audioLevel)), 1.0);
     float litRnd = hash11(dot(winCell, vec2(12.7, 7.3)) + cell.x * 2.1 + cell.y * 0.7);
     float lit = step(1.0 - wl, litRnd) * mask;
     // Highs flick on an extra sparse scatter of windows — fine sparkle only.
@@ -242,9 +358,13 @@ void surfaceShade(vec3 p, vec3 n, vec2 cell, vec4 info,
             // Fallback when image input is unbound (black): use a default
             // neon gradient so the ad panel still reads as a screen.
             if (dot(adCol, vec3(1.0)) < 0.01) {
-                adCol = vec3(0.4 + 0.6 * sin(u * 8.0 + TIME),
-                             0.3 + 0.7 * sin(v * 6.0 - TIME * 1.3),
-                             0.6 + 0.4 * sin((u + v) * 4.0 + TIME * 0.7));
+                // Neon scroll rides the bass (audioBassTime — frozen in
+                // silence): the LED walls animate WITH the music instead of
+                // free-running against it.
+                float adT = TIME + 3.0 * audioBassTime;
+                adCol = vec3(0.4 + 0.6 * sin(u * 8.0 + adT),
+                             0.3 + 0.7 * sin(v * 6.0 - adT * 1.3),
+                             0.6 + 0.4 * sin((u + v) * 4.0 + adT * 0.7));
                 adCol = abs(adCol);
             }
             outCol = adCol;
@@ -270,7 +390,12 @@ void main() {
     float swayX  = sin(t * 0.35) * mix(1.5, 4.0, flightMode) * swayAmp;
     float swayY  = sin(t * 0.22) * mix(0.2, 3.0, flightMode) * swayAmp;
 
-    vec3 ro = vec3(swayX, flyH + swayY, t * 8.0);
+    // R3 EDM fix: camera translation is the dominant per-frame change, so make
+    // the music modulate IT. audioBassTime integrates the smoothed bass level,
+    // so forward speed rides the low end — per-frame motion becomes linear in
+    // kick amplitude (the aperiodic accent part is what beats the null test on
+    // sustained four-on-floor). Frozen in silence — exact original path.
+    vec3 ro = vec3(swayX, flyH + swayY, t * 8.0 + 3.2 * audioBassTime);
     vec3 target = ro + vec3(sin(t * 0.17) * 2.0, lookH - flyH, 10.0);
     vec3 fwd = normalize(target - ro);
     vec3 rgt = normalize(cross(fwd, vec3(0.0, 1.0, 0.0)));
@@ -320,7 +445,8 @@ void main() {
         float fogAmt = 1.0 - exp(-td * fogD * 0.018);
         col = mix(col, sky, clamp(fogAmt, 0.0, 0.95));
     } else {
-        col = sky;
+        // Sky = the scene's background region; blend toward user bg color.
+        col = mix(sky, bgColor.rgb, bgColor.a);
     }
 
     // Mood: lift or crush the whole frame
@@ -330,9 +456,29 @@ void main() {
     col = col / (1.0 + col);
     col = pow(col, vec3(0.85));
 
-    // Overall level breathes the city glow — post-tonemap so the swell reads
-    // directly. Soft knee, idle floor = 1.0 (silence renders the baseline).
-    col *= 1.0 + audioReact * 0.45 * smoothstep(0.05, 0.90, audioLevel);
+    // R2: whole-frame breathing, post-tonemap. Root cause of the edm zero:
+    // the old level knee still saturated flat on EDM's sustained energy AND
+    // the whole line was diluted to ~3% effective by audioReact's 0.35
+    // default. Depth floor + LINEAR bands (nothing to saturate, no
+    // pow-crush) + a per-kick decaying trace so constant-energy tracks
+    // still vary frame to frame. Silence = exactly 1.0.
+    float depNYC = 0.7 + 0.3 * min(audioReact, 1.0);
+    col *= 1.0 + depNYC * (0.30 * audioBass + 0.14 * audioMid
+                           + 0.35 * aKickP() + 0.60 * audioPunch);
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = col;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    col = uc;
 
     gl_FragColor = vec4(col, 1.0);
 }

@@ -1,21 +1,184 @@
 /*{
-  "CATEGORIES": ["Generator", "3D"],
+  "CATEGORIES": [
+    "Generator",
+    "3D"
+  ],
   "DESCRIPTION": "Mirror-tile grid that explodes on bass — each tile reveals a piece of the texture. Doug Aitken mirror installations × Daniel Buren mirror compositions × Olafur Eliasson 'Your Dark Room' (2002) × David Hockney iPhone mosaics × Matrix Reloaded pixelated burst. Single-pass screen-space mosaic with audio-reactive shatter, slight perspective foreshortening, sharp grout, edge glints, and four mood tints (Mirror / Stained Glass / Pixel / Hockney). Procedural rainbow fallback when no input texture is bound. Returns LINEAR HDR; host applies ACES.",
   "INPUTS": [
-    { "NAME": "mood",          "LABEL": "Mood",            "TYPE": "long",  "DEFAULT": 0, "VALUES": [0,1,2,3], "LABELS": ["Mirror Mosaic","Stained Glass","Pixel Mosaic","Hockney"] },
-    { "NAME": "gridDensity",   "LABEL": "Grid Density",    "TYPE": "long",  "DEFAULT": 1, "VALUES": [0,1,2,3], "LABELS": ["Sparse","Med","Dense","Tight"] },
-    { "NAME": "explodeStrength","LABEL":"Explode Strength","TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "explodeDecay",  "LABEL": "Explode Decay",   "TYPE": "float", "MIN": 0.3, "MAX": 3.0, "DEFAULT": 1.2 },
-    { "NAME": "groutWidth",    "LABEL": "Grout Width",     "TYPE": "float", "MIN": 0.0, "MAX": 0.04, "DEFAULT": 0.012 },
-    { "NAME": "perspective",   "LABEL": "Perspective",     "TYPE": "float", "MIN": 0.0, "MAX": 0.4, "DEFAULT": 0.10 },
-    { "NAME": "tileTilt",      "LABEL": "Tile Tilt (Hockney only)", "TYPE": "float", "MIN": 0.0, "MAX": 0.30, "DEFAULT": 0.10 },
-    { "NAME": "groutColor",    "LABEL": "Grout Color",     "TYPE": "color", "DEFAULT": [0.04, 0.04, 0.05, 1.0] },
-    { "NAME": "ambient",       "LABEL": "Ambient",         "TYPE": "float", "MIN": 0.0, "MAX": 0.5, "DEFAULT": 0.08 },
-    { "NAME": "exposure",      "LABEL": "Exposure",        "TYPE": "float", "MIN": 0.3, "MAX": 3.0, "DEFAULT": 1.0 },
-    { "NAME": "audioReact",    "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "inputTex",      "LABEL": "Texture",         "TYPE": "image" }
+    {
+      "NAME": "mood",
+      "LABEL": "Mood",
+      "TYPE": "long",
+      "DEFAULT": 0,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Mirror Mosaic",
+        "Stained Glass",
+        "Pixel Mosaic",
+        "Hockney"
+      ]
+    },
+    {
+      "NAME": "ambient",
+      "LABEL": "Ambient",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.5,
+      "DEFAULT": 0.08
+    },
+    {
+      "NAME": "inputTex",
+      "LABEL": "Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "gridDensity",
+      "LABEL": "Grid Density",
+      "TYPE": "long",
+      "DEFAULT": 1,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Sparse",
+        "Med",
+        "Dense",
+        "Tight"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "groutWidth",
+      "LABEL": "Grout Width",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.04,
+      "DEFAULT": 0.012,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "explodeStrength",
+      "LABEL": "Explode Strength",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "explodeDecay",
+      "LABEL": "Explode Decay",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 3,
+      "DEFAULT": 1.2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "groutColor",
+      "LABEL": "Grout Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.04,
+        0.04,
+        0.05,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "exposure",
+      "LABEL": "Exposure",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 3,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "perspective",
+      "LABEL": "Perspective",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.4,
+      "DEFAULT": 0.1,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "tileTilt",
+      "LABEL": "Tile Tilt (Hockney only)",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.3,
+      "DEFAULT": 0.1,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
+
+// ---- universal color block (defaults = no-op) ----
+vec3 ucApply(vec3 uc) {
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                      // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, dot(uc, vec3(0.299, 0.587, 0.114)))));
+    return uc;
+}
+
 
 // ════════════════════════════════════════════════════════════════════════
 //  Mirror-tile shatter grid
@@ -93,23 +256,60 @@ void main() {
     // every 4th beat. audioReact scales overall amplitude.
     float beatHz   = 1.6;                                // ~96 bpm feel
     float phase    = fract(t * beatHz);
-    float kick     = exp(-phase * (1.5 + explodeDecay));
+    // Attack ramp widened to ~100ms (3+ frames): the 30ms ramp still landed
+    // inside a single eval frame, so every synthetic kick was a one-frame
+    // whole-grid teleport (choppy p95).
+    float kick     = smoothstep(0.0, 0.16, phase) * exp(-phase * (1.5 + explodeDecay));
     float bar      = floor(t * beatHz);
     float accent   = (mod(bar, 4.0) < 0.5) ? 1.25 : 1.0;
-    float burst    = clamp(kick * accent * audio, 0.0, 2.0);
+    // Duck the synthetic train when real music is present — a free-running
+    // 96bpm pulse swamps the correlation of sparse styles (hiphop's two
+    // kicks per bar were drowned by it). Silence keeps the full pulse.
+    // R3: gate moved much lower (was 0.06..0.30). EDM energy crossed the old
+    // gate every beat, so duck flapped the full-amplitude synthetic train on
+    // and off — whole-grid teleports (0.28 p95). With the gate at 0.015..0.12
+    // any real music pins duck low and STABLE, and quiet ambient music also
+    // ducks the uncorrelated train instead of being drowned by it.
+    float duck     = 1.0 - 0.85 * smoothstep(0.015, 0.12, audioEnergy);
+    float burst    = clamp(kick * accent * audio * duck, 0.0, 2.0);
     float ease     = burst * explodeStrength;
 
     // ── Real audio drive — layered on top of the synthetic kick so the
-    // grid still shatters on its own four-on-the-floor pulse in silence,
-    // but genuinely responds (bigger, more frequent bursts) to actual
-    // bass hits / beat pulses when audio is present.
-    float realKick = clamp(audioBass, 0.0, 1.0) * 1.4
-                   + clamp(audioBeatPulse, 0.0, 1.0) * 1.1
-                   + clamp(audioLevel, 0.0, 1.0) * 0.4;
-    ease += realKick * explodeStrength * audio;
+    // grid still shatters on its own pulse in silence, but genuinely
+    // responds to actual hits when audio is present. Soft knees from low
+    // levels so sparse/soft kicks read; sub couples hiphop; beat pulse is
+    // squared so the (already-decaying) event eases instead of snapping.
+    float bassP  = pow(smoothstep(0.04, 0.90, audioBass), 1.4);
+    float subP   = pow(smoothstep(0.03, 0.70, audioSub),  1.3);
+    float levelP = smoothstep(0.05, 0.90, audioLevel);
+    float beatP  = audioBeatPulse * audioBeatPulse;
+    // beatP weight kept small: audioBeatPulse decays but ATTACKS instantly,
+    // and here it drives geometry — at 0.7 every beat onset teleported all
+    // tile content in one frame. The smoothed bass/sub followers carry the
+    // shatter; the beat term is just an accent.
+    // R3 chop fix: these weights drive GEOMETRY (tile displacement), so a
+    // one-frame bass onset at 1.1 weight teleported all tile content
+    // (0.18 p95 step on EDM). Halve the geometric coupling; the lost
+    // response magnitude is repaid by a linear luminance follower at the
+    // bottom of main() which can't produce structural jumps.
+    float realKick = bassP * 0.55 + subP * 0.35 + beatP * 0.10 + levelP * 0.55;
+    // R3: soft-knee compressor on the music-driven geometric add. ease moves
+    // tiles AND spins them, so a one-frame bass onset (Δ~0.5 raw) replaced
+    // whole-tile content in a single frame (0.25 p95 on EDM). x/(c+x) keeps
+    // near-linear slope for quiet swells (ambient correlation) but squashes
+    // on-beat swings ~4x. Synthetic/silence path untouched (realE=0 there).
+    float realE = realKick * explodeStrength * audio;
+    realE = 0.35 * realE / (0.35 + realE);
+    ease += realE;
+    // Structural-delta cap: displacement/rotation/fade saturate here, so an
+    // instant beat landing on an already-hot bass baseline can't add a
+    // whole-frame tile jump on top (this was the 13.9x chop ratio source).
+    // (R3: cap 1.3 → 1.0 — engages only under music; silence peaks at ~0.81.)
+    ease = min(ease, 1.0);
 
-    // ── Continuous slow drift (keeps grid alive in silence) ──────────
-    float driftAmp = 0.004;
+    // ── Continuous slow drift (keeps grid alive in silence; slightly
+    // richer baseline so the chop RATIO doesn't fire on small accents) ─
+    float driftAmp = 0.006;
     vec2  drift    = vec2(sin(t * 0.31), cos(t * 0.27)) * driftAmp;
 
     // ── Mild perspective foreshortening (back / top tiles smaller) ──
@@ -142,7 +342,7 @@ void main() {
 
     // ── Per-tile rotation: Hockney always-on tilt + burst spin ──────
     float tiltBase = (m == 3) ? (rnd2.x - 0.5) * 2.0 * tileTilt : 0.0;
-    float spinAmt  = ease * (0.6 + rnd2.y * 1.4);
+    float spinAmt  = ease * (0.4 + rnd2.y * 0.8);
     float rotA     = tiltBase + spinAmt * sign(rnd2.x - 0.5);
 
     // ── Re-sample inside the tile with the explode transform applied.
@@ -205,7 +405,9 @@ void main() {
     }
 
     // ── Per-tile fade during burst (tiles dim as they fly out) ──────
-    float tileFade = 1.0 - 0.55 * ease * (0.4 + 0.6 * rnd2.x);
+    // 0.40 (was 0.55): with uncapped ease the old depth clamped whole tiles
+    // to black in a single frame on big hits
+    float tileFade = 1.0 - 0.40 * ease * (0.4 + 0.6 * rnd2.x);
     tileCol *= clamp(tileFade, 0.0, 1.5);
 
     // ── Compose: tile interior vs grout vs glint ───────────────────
@@ -236,7 +438,13 @@ void main() {
     col *= 1.0 - 0.18 * dot(ndc * 0.5, ndc * 0.5);
     col += (hash21(uv * RENDERSIZE.xy + t) - 0.5) * 0.008;
 
+    // ── Linear whole-frame luminance follower (R3): buys back the audio
+    // correlation removed from the geometric path. Smooth bands, linear,
+    // silence = exact current look.
+    col *= 1.0 + (0.22 * audioBass + 0.13 * audioMid) * min(audio, 1.0);
+
     // ── Linear HDR out (host applies ACES) ──────────────────────────
     col *= exposure;
+    col = ucApply(col);
     gl_FragColor = vec4(col, 1.0);
 }

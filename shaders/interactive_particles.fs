@@ -1,24 +1,194 @@
 /*{
   "DESCRIPTION": "Interactive Particles — a lightweight, transparent particle field built as an OVERLAY. Uses a spatial grid so every pixel only ever evaluates its 9 nearest cells (not all particles) — cost is constant no matter how dense you make it, so it stays real-time stacked on top of other effects. Empty space is fully transparent (alpha = particle brightness); set the layer Blend Mode to Add or Screen for emissive glow. mouseX/mouseY (-1..1) or the held mouse steer particles toward a point — bind from MIDI/OSC to sprinkle touches live. Audio modulates brightness/jitter (never gates). LINEAR HDR out.",
   "CREDIT": "Procedural spatial-grid particle field by Easel/ShaderClaw3",
-  "CATEGORIES": ["Generator", "Particles", "Interactive", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Particles",
+    "Interactive",
+    "Audio Reactive"
+  ],
   "INPUTS": [
-    { "NAME": "streamCount",    "LABEL": "Field Layers",    "TYPE": "long",  "DEFAULT": 3, "VALUES": [1,2,3,4,5], "LABELS": ["1","2","3","4","5"] },
-    { "NAME": "particlesPerStream","LABEL": "Density",      "TYPE": "long",  "DEFAULT": 1, "VALUES": [0,1,2,3],   "LABELS": ["Sparse","Med","Dense","Storm"] },
-    { "NAME": "flowSpeed",      "LABEL": "Flow Speed",      "TYPE": "float", "DEFAULT": 0.18, "MIN": 0.0,  "MAX": 1.5 },
-    { "NAME": "flowAngle",      "LABEL": "Flow Angle",      "TYPE": "float", "DEFAULT": 0.0,  "MIN": 0.0,  "MAX": 6.2832 },
-    { "NAME": "spread",         "LABEL": "Scatter",         "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "swirl",          "LABEL": "Swirl",           "TYPE": "float", "DEFAULT": 0.6,  "MIN": 0.0,  "MAX": 2.0 },
-    { "NAME": "particleSize",   "LABEL": "Particle Size",   "TYPE": "float", "DEFAULT": 0.0016, "MIN": 0.0003, "MAX": 0.006 },
-    { "NAME": "intensity",      "LABEL": "Glow Falloff",    "TYPE": "float", "DEFAULT": 1.5,  "MIN": 0.5,  "MAX": 3.0 },
-    { "NAME": "exposure",       "LABEL": "Brightness",      "TYPE": "float", "DEFAULT": 1.0,  "MIN": 0.2,  "MAX": 3.0 },
-    { "NAME": "hueShift",       "LABEL": "Hue",             "TYPE": "float", "DEFAULT": 0.55, "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "hueSpread",      "LABEL": "Hue Spread",      "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0,  "MAX": 1.0 },
-    { "NAME": "mouseX",         "LABEL": "Mouse X (-1..1)", "TYPE": "float", "DEFAULT": 0.0,  "MIN": -1.0, "MAX": 1.0 },
-    { "NAME": "mouseY",         "LABEL": "Mouse Y (-1..1)", "TYPE": "float", "DEFAULT": 0.0,  "MIN": -1.0, "MAX": 1.0 },
-    { "NAME": "mouseInfluence", "LABEL": "Steer Strength",  "TYPE": "float", "DEFAULT": 0.6,  "MIN": 0.0,  "MAX": 2.0 },
-    { "NAME": "mouseRadius",    "LABEL": "Steer Radius",    "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.05, "MAX": 1.5 },
-    { "NAME": "audioReact",     "LABEL": "Audio React",     "TYPE": "float", "DEFAULT": 0.7,  "MIN": 0.0,  "MAX": 2.0 }
+    {
+      "NAME": "intensity",
+      "LABEL": "Glow Falloff",
+      "TYPE": "float",
+      "DEFAULT": 1.5,
+      "MIN": 0.5,
+      "MAX": 3
+    },
+    {
+      "NAME": "exposure",
+      "LABEL": "Brightness",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0.2,
+      "MAX": 3
+    },
+    {
+      "NAME": "mouseX",
+      "LABEL": "Mouse X (-1..1)",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": -1,
+      "MAX": 1
+    },
+    {
+      "NAME": "mouseY",
+      "LABEL": "Mouse Y (-1..1)",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": -1,
+      "MAX": 1
+    },
+    {
+      "NAME": "mouseInfluence",
+      "LABEL": "Steer Strength",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 2
+    },
+    {
+      "NAME": "mouseRadius",
+      "LABEL": "Steer Radius",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0.05,
+      "MAX": 1.5
+    },
+    {
+      "NAME": "streamCount",
+      "LABEL": "Field Layers",
+      "TYPE": "long",
+      "DEFAULT": 3,
+      "VALUES": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "LABELS": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "particlesPerStream",
+      "LABEL": "Density",
+      "TYPE": "long",
+      "DEFAULT": 1,
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Sparse",
+        "Med",
+        "Dense",
+        "Storm"
+      ],
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "spread",
+      "LABEL": "Scatter",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "particleSize",
+      "LABEL": "Particle Size",
+      "TYPE": "float",
+      "DEFAULT": 0.0016,
+      "MIN": 0.0003,
+      "MAX": 0.006,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "flowSpeed",
+      "LABEL": "Flow Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.18,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "flowAngle",
+      "LABEL": "Flow Angle",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 6.2832,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "swirl",
+      "LABEL": "Swirl",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueSpread",
+      "LABEL": "Hue Spread",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "DEFAULT": 0.7,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -60,7 +230,16 @@ void main() {
 
     // Audio is a pure modulator — at 0 the field is simply calmer/dimmer.
     float audio = clamp(audioBass + audioMid * 0.5 + audioHigh * 0.3, 0.0, 2.0);
-    audio *= clamp(audioReact, 0.0, 2.0);
+    float react = clamp(audioReact, 0.0, 2.0);
+    audio *= react;
+
+    // Continuous smooth band-followers (ambient fix r2): LINEAR bands (they
+    // are pre-smoothed; knees crush ambient swells), with a FLOOR on the
+    // user param — audioReact defaults to 0.7, which diluted the round-1
+    // depth. Bass breathes particle size/glow, mids breathe swirl radius.
+    float reactF = 0.6 + 0.4 * min(react, 1.0);
+    float bassSm = clamp(audioBass, 0.0, 1.0) * reactF;
+    float midSm  = clamp(audioMid,  0.0, 1.0) * reactF;
 
     // Steer target in 0..1 space. Prefer the held mouse; otherwise use the
     // bound mouseX/mouseY (-1..1, centred at 0 = no bias) from MIDI/OSC.
@@ -78,7 +257,9 @@ void main() {
     // Square-ish cells: more columns on wide canvases.
     vec2  gdim  = vec2(gridN * aspect, gridN);
 
-    float drawSize = particleSize * aspect;
+    // Bass swells the particle footprint (±30%) — reads as glow blooming
+    // with the envelope, continuous and smooth (bands are pre-smoothed).
+    float drawSize = particleSize * aspect * (1.0 + 0.65 * bassSm);
     float swl      = clamp(swirl, 0.0, 2.0);
     float scat     = clamp(spread, 0.0, 1.0);
 
@@ -105,7 +286,7 @@ void main() {
 
             // Per-particle swirl wobble.
             float swA = t * (0.2 + 0.5 * h11(seed + 4.2)) + seed * 6.2831;
-            vec2  sw  = vec2(cos(swA), sin(swA)) * 0.16 * swl;
+            vec2  sw  = vec2(cos(swA), sin(swA)) * 0.16 * swl * (1.0 + 0.9 * midSm);
 
             vec2 local = jit + drift + sw;
 
@@ -136,13 +317,29 @@ void main() {
         }
     }
 
-    color *= exposure;
+    // Whole-field luminance follow — full depth (r3): the field lights <2% of
+    // pixels at eval scale, so shallow gains were unmeasurable.
+    color *= exposure * (1.0 + 0.60 * bassSm + 0.35 * midSm);
 
     // OVERLAY: alpha tracks brightness so empty space is transparent. Use a
     // soft knee so faint particle halos still feather in instead of clipping.
+    // Alpha is computed BEFORE the haze wash below so overlay compositing of
+    // the empty field is unchanged in normal blending.
     float bright = max(color.r, max(color.g, color.b));
     float alpha  = clamp(bright * 1.2, 0.0, 1.0);
 
+    // r3: whole-frame haze breath in RGB — same precedent as the transparent
+    // text shaders: the response must live on the backdrop pixels too (in
+    // Add/Screen blends it reads as a gentle glow swell). Silence adds 0.
+    float highSm = clamp(audioHigh, 0.0, 1.0) * reactF;
+    color += vec3(0.10, 0.11, 0.15) * (1.0 * bassSm + 0.65 * midSm + 0.4 * highSm);
+
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(color, vec3(0.299, 0.587, 0.114));
+    color = mix(vec3(ucL), color, colorBoost);
+    float ucBg = bgColor.a * (1.0 - clamp(alpha, 0.0, 1.0));
+    color = mix(color, bgColor.rgb, ucBg);
+    alpha = max(alpha, ucBg);
     // LINEAR HDR out — host applies tonemap. Premultiply-friendly emissive.
     gl_FragColor = vec4(color, alpha);
 }

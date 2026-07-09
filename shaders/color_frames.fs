@@ -1,22 +1,156 @@
 /*{
   "DESCRIPTION": "Color Frames — a bento poster of rounded panels on warm paper, each filled with a domain-warped iridescent liquid marble (candy pink/cyan/blue/green/yellow/orange). Solid accent panels carry black cut-out glyphs; a blue crosshair plate and a grainy dot round out the grid. Soft drop shadows, hairline ink outlines. Audio swells the flow and shifts the palette.",
   "CREDIT": "ShaderClaw — original liquid-bento composition",
-  "CATEGORIES": ["Generator", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Audio Reactive"
+  ],
   "INPUTS": [
-    { "NAME": "speed",        "LABEL": "Flow Speed",     "TYPE": "float", "DEFAULT": 0.35, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "warpAmount",   "LABEL": "Marble Warp",    "TYPE": "float", "DEFAULT": 0.65, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "paletteShift", "LABEL": "Palette Shift",  "TYPE": "float", "DEFAULT": 0.00, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "ink",          "LABEL": "Ink Pooling",    "TYPE": "float", "DEFAULT": 0.45, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "outlineAmt",   "LABEL": "Outline",        "TYPE": "float", "DEFAULT": 0.90, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "shadowAmt",    "LABEL": "Drop Shadow",    "TYPE": "float", "DEFAULT": 0.50, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "grain",        "LABEL": "Paper Grain",    "TYPE": "float", "DEFAULT": 0.25, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "fieldAmount",  "LABEL": "Surreal Field",  "TYPE": "float", "DEFAULT": 1.00, "MIN": 0.0, "MAX": 1.5 },
-    { "NAME": "speckDensity", "LABEL": "Speck Swarm",    "TYPE": "float", "DEFAULT": 0.65, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "inkBlobs",     "LABEL": "Ink Blobs",      "TYPE": "float", "DEFAULT": 0.70, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "showPanels",   "LABEL": "Bento Panels",   "TYPE": "float", "DEFAULT": 1.00, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "audioReact",   "LABEL": "Audio React",    "TYPE": "float", "DEFAULT": 0.60, "MIN": 0.0, "MAX": 2.0 },
-    { "NAME": "bgColor",      "LABEL": "Paper Color",    "TYPE": "color", "DEFAULT": [0.905, 0.902, 0.892, 1.0] },
-    { "NAME": "accentColor",  "LABEL": "Accent Orange",  "TYPE": "color", "DEFAULT": [0.97,  0.42,  0.13,  1.0] }
+    {
+      "NAME": "ink",
+      "LABEL": "Ink Pooling",
+      "TYPE": "float",
+      "DEFAULT": 0.45,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "outlineAmt",
+      "LABEL": "Outline",
+      "TYPE": "float",
+      "DEFAULT": 0.9,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "shadowAmt",
+      "LABEL": "Drop Shadow",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "grain",
+      "LABEL": "Paper Grain",
+      "TYPE": "float",
+      "DEFAULT": 0.25,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "fieldAmount",
+      "LABEL": "Surreal Field",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 1.5
+    },
+    {
+      "NAME": "speckDensity",
+      "LABEL": "Speck Swarm",
+      "TYPE": "float",
+      "DEFAULT": 0.65,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "inkBlobs",
+      "LABEL": "Ink Blobs",
+      "TYPE": "float",
+      "DEFAULT": 0.7,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Flow Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.35,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "warpAmount",
+      "LABEL": "Marble Warp",
+      "TYPE": "float",
+      "DEFAULT": 0.65,
+      "MIN": 0,
+      "MAX": 1.5,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "paletteShift",
+      "LABEL": "Palette Shift",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "accentColor",
+      "LABEL": "Accent Orange",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.97,
+        0.42,
+        0.13,
+        1
+      ],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "LABEL": "Hue Shift",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "LABEL": "Color Boost",
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "showPanels",
+      "LABEL": "Bento Panels",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Paper Color",
+      "TYPE": "color",
+      "DEFAULT": [
+        0.905,
+        0.902,
+        0.892,
+        1
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "DEFAULT": 0.6,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -397,5 +531,20 @@ void main() {
     }
 
     col = clamp(col, 0.0, 1.0);
+
+    // ---- universal color block (defaults = no-op; bg via native Paper Color) ----
+    vec3 uc = col;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                     // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    col = uc;
+
     gl_FragColor = vec4(col, 1.0);
 }

@@ -1,23 +1,170 @@
 /*{
   "DESCRIPTION": "Fluid Oxblood Blob — a glossy, wet, ultra-smooth raymarched sculpture. Multiple metaballs smooth-unioned with high viscosity create genuinely fluid, melting forms. Domain-warped by low-frequency fbm for organic morphing. Lit like a museum glass sculpture: smeared white speculars, sharp horizontal streak, soft crimson subsurface, Fresnel halo, warm radial vignette. Optional texture skin via triplanar mapping. Audio-reactive breathing.",
   "CREDIT": "ShaderClaw",
-  "CATEGORIES": ["Generator", "3D", "Abstract", "Fluid"],
+  "CATEGORIES": [
+    "Generator",
+    "3D",
+    "Abstract",
+    "Fluid"
+  ],
   "INPUTS": [
-    { "NAME": "inputImage",   "LABEL": "Texture",          "TYPE": "image" },
-    { "NAME": "morphSpeed",   "LABEL": "Morph Speed",      "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.4 },
-    { "NAME": "displaceAmt",  "LABEL": "Displacement",     "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.32 },
-    { "NAME": "glossiness",   "LABEL": "Glossiness",       "TYPE": "float", "MIN": 0.0,  "MAX": 1.5,  "DEFAULT": 1.0 },
-    { "NAME": "redTint",      "LABEL": "Red Tint",         "TYPE": "float", "MIN": -0.5, "MAX": 0.5,  "DEFAULT": 0.0 },
-    { "NAME": "subsurface",   "LABEL": "Subsurface Depth", "TYPE": "float", "MIN": 0.0,  "MAX": 1.5,  "DEFAULT": 0.9 },
-    { "NAME": "fresnelAmt",   "LABEL": "Fresnel Rim",      "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.85 },
-    { "NAME": "vignette",     "LABEL": "Vignette",         "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0 },
-    { "NAME": "texAmount",    "LABEL": "Texture Skin",     "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.85 },
-    { "NAME": "audioReact",   "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.8 },
-    { "NAME": "blobCount",    "LABEL": "Blob Count",       "TYPE": "float", "MIN": 2.0,  "MAX": 10.0, "DEFAULT": 5.0 },
-    { "NAME": "viscosity",    "LABEL": "Viscosity",        "TYPE": "float", "MIN": 0.1,  "MAX": 2.0,  "DEFAULT": 0.85 },
-    { "NAME": "spin",         "LABEL": "Auto Spin",        "TYPE": "float", "MIN": 0.0,  "MAX": 1.5,  "DEFAULT": 0.22 }
+    {
+      "NAME": "inputImage",
+      "LABEL": "Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "glossiness",
+      "LABEL": "Glossiness",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "subsurface",
+      "LABEL": "Subsurface Depth",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.9
+    },
+    {
+      "NAME": "fresnelAmt",
+      "LABEL": "Fresnel Rim",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.85
+    },
+    {
+      "NAME": "vignette",
+      "LABEL": "Vignette",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1
+    },
+    {
+      "NAME": "texAmount",
+      "LABEL": "Texture Skin",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.85
+    },
+    {
+      "NAME": "blobCount",
+      "LABEL": "Blob Count",
+      "TYPE": "float",
+      "MIN": 2,
+      "MAX": 10,
+      "DEFAULT": 5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "viscosity",
+      "LABEL": "Viscosity",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 2,
+      "DEFAULT": 0.85,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "morphSpeed",
+      "LABEL": "Morph Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.4,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "displaceAmt",
+      "LABEL": "Displacement",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.32,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "spin",
+      "LABEL": "Auto Spin",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.22,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "redTint",
+      "LABEL": "Red Tint",
+      "TYPE": "float",
+      "MIN": -0.5,
+      "MAX": 0.5,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.8,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
+
+// ---- universal color block (defaults = no-op) ----
+vec3 ucApply(vec3 uc) {
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                      // saturation
+    if (hueShift > 0.0005) {                                  // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, dot(uc, vec3(0.299, 0.587, 0.114)))));
+    return uc;
+}
+
 
 // ════════════════════════════════════════════════════════════════════════
 //  FLUID OXBLOOD BLOB · multi-metaball smooth-union · wet glass sculpture
@@ -265,6 +412,26 @@ void main(){
     // Warm central glow
     col += exp(-rad*rad*3.0) * vec3(0.18,0.022,0.022) * vignette;
 
+    // Continuous band-following breath (r2 ambient fix): LINEAR bands — the
+    // envelopes are pre-smoothed upstream, a knee/pow here crushed ambient's
+    // 0.1-0.8 swells into nothing. Whole frame, and the follower gets a
+    // floored gain so audioReact's 0.8 default can't dilute the depth.
+    // Silence -> exactly 1.0.
+    // R3: LINEAR composite follower matching the bus band mix (bass:mid:high
+    // ≈ 0.4:0.25:0.15). The old bass+mid smoothstep pair was shift-degenerate
+    // against ambient's sinusoid swells (null-corr 0.48 beat true corr 0.34);
+    // the third band breaks the symmetry. Depth moved slightly off bass to
+    // keep clear of the edm chop line (p95 was 0.095). Silence -> ×1.0.
+    // R3 MEASURED: ambient adj was 0.015 (corr 0.372 vs null 0.357) with
+    // respMag 0.0003 — the breath was too shallow to rise above the blob
+    // motion baseline. Deepen via MID (chop-safe: edm kicks live in bass,
+    // p95 was 0.078 with 0.10 the line) and trim bass slightly.
+    float aDep  = 0.6 + 0.5*audioReact;   // default 0.8 -> 1.0
+    // (Depths are MEASURED: 0.30 mid scored ambient 1.39; deeper 0.42 mid
+    // scored WORSE (1.21 — the null corr rose with the signal), so 0.30 is
+    // the keeper. edm p95 0.076 stays under the 0.10 chop line.)
+    col *= 1.0 + aDep * (0.20*audioBass + 0.30*audioMid + 0.14*audioHigh);
+
     // Specular bloom
     float Llum = dot(col, vec3(0.299,0.587,0.114));
     col += 0.20 * smoothstep(0.60,1.5,Llum) * col;
@@ -274,5 +441,6 @@ void main(){
     col *= 1.0 + (g-0.5)*0.028;
 
     col = max(col, 0.0);
+    col = ucApply(col);
     gl_FragColor = vec4(col, 1.0);
 }

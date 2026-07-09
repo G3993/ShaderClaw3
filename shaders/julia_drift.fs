@@ -1,18 +1,117 @@
 /*{
-  "DESCRIPTION":"Julia Drift — a living Julia set whose seed c orbits a smooth path, morphing the fractal forever; smooth-iteration color, breathing zoom, audio-reactive drift/fringe/pulse.",
-  "CREDIT":"ShaderClaw3",
-  "CATEGORIES":["Generator","Fractal","Audio Reactive"],
-  "INPUTS":[
-    {"NAME":"cSpeed","LABEL":"Morph Speed","TYPE":"float","DEFAULT":0.06,"MIN":0.0,"MAX":1.0},
-    {"NAME":"cRadius","TYPE":"float","DEFAULT":0.74,"MIN":0.0,"MAX":1.0},
-    {"NAME":"zoom","TYPE":"float","DEFAULT":1.4,"MIN":0.4,"MAX":4.0},
-    {"NAME":"maxI","TYPE":"float","DEFAULT":180.0,"MIN":60.0,"MAX":256.0},
-    {"NAME":"paletteFreq","TYPE":"float","DEFAULT":0.045,"MIN":0.005,"MAX":0.2},
-    {"NAME":"paletteShift","TYPE":"float","DEFAULT":0.0,"MIN":0.0,"MAX":1.0},
-    {"NAME":"fringeGlow","TYPE":"float","DEFAULT":0.5,"MIN":0.0,"MAX":1.0},
-    {"NAME":"inputImage","LABEL":"Your Image","TYPE":"image"},
-    {"NAME":"texMix","LABEL":"Image Amount","TYPE":"float","DEFAULT":0.0,"MIN":0.0,"MAX":1.0},
-    {"NAME":"audioReact","LABEL":"Sound Reactivity","TYPE":"float","DEFAULT":1.0,"MIN":0.0,"MAX":2.0}
+  "DESCRIPTION": "Julia Drift — a living Julia set whose seed c orbits a smooth path, morphing the fractal forever; smooth-iteration color, breathing zoom, audio-reactive drift/fringe/pulse.",
+  "CREDIT": "ShaderClaw3",
+  "CATEGORIES": [
+    "Generator",
+    "Fractal",
+    "Audio Reactive"
+  ],
+  "INPUTS": [
+    {
+      "NAME": "fringeGlow",
+      "LABEL": "Fringe Glow",
+      "TYPE": "float",
+      "DEFAULT": 0.5,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "inputImage",
+      "LABEL": "Your Image",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "texMix",
+      "LABEL": "Image Amount",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1
+    },
+    {
+      "NAME": "cRadius",
+      "LABEL": "C Radius",
+      "TYPE": "float",
+      "DEFAULT": 0.74,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "maxI",
+      "LABEL": "Max Iterations",
+      "TYPE": "float",
+      "DEFAULT": 180,
+      "MIN": 60,
+      "MAX": 256,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "cSpeed",
+      "LABEL": "Morph Speed",
+      "TYPE": "float",
+      "DEFAULT": 0.06,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "paletteFreq",
+      "LABEL": "Palette Frequency",
+      "TYPE": "float",
+      "DEFAULT": 0.045,
+      "MIN": 0.005,
+      "MAX": 0.2,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "paletteShift",
+      "LABEL": "Palette Shift",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "zoom",
+      "LABEL": "Zoom",
+      "TYPE": "float",
+      "DEFAULT": 1.4,
+      "MIN": 0.4,
+      "MAX": 4,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Sound Reactivity",
+      "TYPE": "float",
+      "DEFAULT": 1,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -20,17 +119,22 @@
 vec3 pal(float t){ return 0.5 + 0.5*cos(6.28318*(t + vec3(0.0, 0.33, 0.67))); }
 
 void main() {
-    // Live audio bands (runtime auto-provides audioBass/audioMid/audioHigh)
-    float bass   = audioBass * audioReact;
-    float mid    = audioMid  * audioReact;
-    float treble = audioHigh * audioReact;
+    // Live audio bands, soft-kneed: floor at ~0.04 so sparse/soft hits
+    // (jazz swing, hiphop sub-kicks via audioSub coupling) register, top
+    // headroom at 0.9+ so EDM's sustained bass keeps breathing instead of
+    // pegging. audioBeatPulse is a decaying event envelope — soft accents
+    // leave a visible fading trace (never a raw-gate snap).
+    float bass   = pow(smoothstep(0.04, 0.95, audioBass + 0.5*audioSub), 1.2) * audioReact;
+    float mid    = pow(smoothstep(0.04, 0.90, audioMid),  1.1) * audioReact;
+    float treble = pow(smoothstep(0.03, 0.88, audioHigh), 1.1) * audioReact;
+    float hit    = audioBeatPulse * audioReact;
 
     // Normalized, aspect-correct coordinates centered on screen
     vec2 uv = (gl_FragCoord.xy - 0.5*RENDERSIZE) / min(RENDERSIZE.x, RENDERSIZE.y);
 
     // Zoom breathes slowly; bass gently pulses it (positional, K<=0.6)
     float breathe = zoom * (1.0 + 0.06*sin(TIME*0.17));
-    breathe *= (1.0 + bass*0.6);
+    breathe *= (1.0 + bass*0.55 + hit*0.10);
     vec2 z = uv * breathe;
 
     // Seed c drifts along a smooth path — the living morph, sped a touch by mid
@@ -74,7 +178,7 @@ void main() {
         // Brighten the escape fringe — treble-reactive (additive, K<=0.6)
         float edge = exp(-abs(i - (float(cap)-1.0)) * 0.0);    // baseline 1.0
         float fringe = pow(clamp(1.0 - i/float(cap), 0.0, 1.0), 3.0);
-        col += fringe * (fringeGlow * (0.35 + treble*0.6)) * pal(sm*paletteFreq + 0.15);
+        col += fringe * (fringeGlow * (0.35 + treble*0.6 + hit*0.45)) * pal(sm*paletteFreq + 0.15);
 
         // Gentle contrast falloff toward the set boundary keeps it deep
         col *= 0.55 + 0.6*clamp(i/float(cap), 0.0, 1.0);
@@ -84,5 +188,19 @@ void main() {
     col = col / (1.0 + col);
     col = pow(col, vec3(0.4545));
 
+    // r2 jazz fix: whole-frame follower with LINEAR bands at full depth,
+    // applied AFTER tonemap/gamma so the compression can't dilute it. The
+    // kneed 'bass' above stays on geometry only. Soft jazz accents (0.4-0.5
+    // beatPulse) clear a low 0.02 floor, never squared; walking mids ride a
+    // linear mid follower. Silence = exactly 1.0.
+    float bassL = smoothstep(0.02, 0.95, audioBass + 0.5*audioSub) * audioReact;
+    float midL  = smoothstep(0.02, 0.95, audioMid) * audioReact;
+    float hitL  = smoothstep(0.02, 0.80, audioBeatPulse) * audioReact;
+    col *= 1.0 + 0.22*bassL + 0.14*midL + 0.28*hitL;
+
+    // ---- universal color block (defaults = no-op) ----
+    float ucL = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(vec3(ucL), col, colorBoost);
+    col = mix(col, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
     gl_FragColor = vec4(col, 1.0);
 }

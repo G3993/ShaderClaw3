@@ -1,13 +1,105 @@
 /*{
-  "CATEGORIES": ["Generator", "Art Movement", "Audio Reactive"],
+  "CATEGORIES": [
+    "Generator",
+    "Art Movement",
+    "Audio Reactive"
+  ],
   "DESCRIPTION": "De Stijl after late Mondrian — Broadway Boogie Woogie (1942–43) and Victory Boogie Woogie (1942–44). Asymmetric black grid lines partition a cream canvas into rectangles, some filled with pure cadmium red / cobalt blue / Naples yellow. Down each line marches a syncopated stream of small coloured squares at harmonic tempi (1x, 1.5x, 2x, 2.5x of base) — Mondrian's literal jazz. The grid quietly REPARTITIONS via smoothstep. Bass throws extra red squares; treble throws yellow. Rare audio-bass-triggered cell colour swaps. Five-colour palette only, no gradients. Stays alive in silence. Linear HDR.",
   "INPUTS": [
-    { "NAME": "lineThickness",       "LABEL": "Line Thickness",        "TYPE": "float", "MIN": 0.001, "MAX": 0.012, "DEFAULT": 0.0035 },
-    { "NAME": "gridDensity",         "LABEL": "Grid Density",          "TYPE": "long",  "VALUES": [0, 1, 2, 3], "LABELS": ["Sparse", "Medium", "Dense", "Very Dense"], "DEFAULT": 1 },
-    { "NAME": "repartitionPeriod",   "LABEL": "Repartition Period (s)","TYPE": "float", "MIN": 8.0,   "MAX": 30.0,  "DEFAULT": 16.0 },
-    { "NAME": "colorPulseIntensity", "LABEL": "Color Pulse Intensity", "TYPE": "float", "MIN": 0.0,   "MAX": 1.0,   "DEFAULT": 1.0 },
-    { "NAME": "whiteSaturation",     "LABEL": "White Tint Saturation", "TYPE": "float", "MIN": 0.0,   "MAX": 0.3,   "DEFAULT": 0.0 },
-    { "NAME": "audioReact",          "LABEL": "Audio React",           "TYPE": "float", "MIN": 0.0,   "MAX": 2.0,   "DEFAULT": 1.0 }
+    {
+      "NAME": "lineThickness",
+      "LABEL": "Line Thickness",
+      "TYPE": "float",
+      "MIN": 0.001,
+      "MAX": 0.012,
+      "DEFAULT": 0.0035,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "gridDensity",
+      "LABEL": "Grid Density",
+      "TYPE": "long",
+      "VALUES": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "LABELS": [
+        "Sparse",
+        "Medium",
+        "Dense",
+        "Very Dense"
+      ],
+      "DEFAULT": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "repartitionPeriod",
+      "LABEL": "Repartition Period (s)",
+      "TYPE": "float",
+      "MIN": 8,
+      "MAX": 30,
+      "DEFAULT": 16,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "colorPulseIntensity",
+      "LABEL": "Color Pulse Intensity",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "whiteSaturation",
+      "LABEL": "White Tint Saturation",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.3,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
+    }
   ]
 }*/
 
@@ -118,6 +210,10 @@ vec3 lineSquares(float along, float coord, float lineSalt, float t,
 
     vec3 outCol = PAL_BLACK; // the line itself
 
+    // Continuous band-following: the marching squares BREATHE in size with
+    // bass (smooth envelope, never gated) so beat-less material still reads.
+    float sqSz = SQUARE * clamp(0.92 + 0.35 * audioBass, 0.5, 1.30);
+
     // Iterate over slots; each slot has a phase offset and a colour.
     for (int k = 0; k < 8; k++) {
         if (float(k) >= density) break;
@@ -149,17 +245,21 @@ vec3 lineSquares(float along, float coord, float lineSalt, float t,
         // Square drawn iff |dA| < SQUARE and |dCross| < SQUARE — caller
         // already guarantees |dCross| < small via line proximity. We
         // require BOTH explicitly (cross dist passed via 'coord').
-        if (dA < SQUARE && abs(coord) < SQUARE) {
+        if (dA < sqSz && abs(coord) < sqSz) {
             outCol = pal5(sqIdx);
         }
     }
     // Audio-bass extra-red sprinkle: occasional bonus square mid-line.
-    // Gated by pulseAmt so a fully muted boogie stays bare.
-    if (audioBass * audioReact > 0.18 && pulseAmt > 0.05) {
+    // Eased presence (was a hard `> 0.18` gate that popped in/out): the
+    // bonus square GROWS from nothing as bass rises, shrinks as it falls.
+    float sprinkle = smoothstep(0.12, 0.35, audioBass * audioReact)
+                   * step(0.05, pulseAmt);
+    if (sprinkle > 0.001) {
         float bspawn = fract(t * 0.22 + lineSalt * 1.11);
-        float dA = abs(along - bspawn);
-        dA = min(dA, 1.0 - dA);
-        if (dA < SQUARE && abs(coord) < SQUARE) outCol = PAL_RED;
+        float dS = abs(along - bspawn);
+        dS = min(dS, 1.0 - dS);
+        float sR = SQUARE * sprinkle;
+        if (dS < sR && abs(coord) < sR) outCol = PAL_RED;
     }
     return outCol;
 }
@@ -186,13 +286,19 @@ void main() {
     // blended with a gentle TIME idle so the boogie never dies in silence.
     float idleB = 0.5 + 0.5 * sin(t * 1.7);       // 0..1, slow
     float idleT = 0.5 + 0.5 * sin(t * 4.3 + 1.3); // 0..1, fast
-    float bassSig   = clamp(idleB * 0.30 + audioBass * 1.0
-                            + audioBeatPulse * 0.35, 0.0, 1.3) * aR;
-    float trebleSig = clamp(idleT * 0.30 + audioHigh * 1.1, 0.0, 1.3) * aR;
+    // Soft-knee conditioning with headroom: the old `bass*1.0 + idle*0.3`
+    // pegged the 1.3 clamp for entire EDM sections (zero variance = deaf),
+    // and the 0.03 knee floor lets jazz/hiphop's soft sparse kicks register.
+    float bassSig   = clamp(idleB * 0.25
+                            + pow(smoothstep(0.03, 0.95, audioBass), 1.2) * 0.75
+                            + audioBeatPulse * 0.25, 0.0, 1.15) * aR;
+    float trebleSig = clamp(idleT * 0.25
+                            + smoothstep(0.04, 0.95, audioHigh) * 0.85, 0.0, 1.15) * aR;
 
-    // Rare cell-colour swap key — bass-triggered, holds for several
-    // seconds so the swap reads as a "decision" not a strobe.
-    float swapKey = floor(t / 7.0 + bassSig * 0.6);
+    // Cell-colour swap key — fixed slow epochs. (Previously bass fed the
+    // floor() argument directly, so cells strobed between palettes every
+    // frame the bass crossed an integer boundary — the main CHOPPY source.)
+    float swapKey = floor(t / 7.0);
 
     // ─── compute current line positions (with smoothstep repartition) ─
     // Arrays are sized to LINES_V/LINES_H maxima; only the first
@@ -236,11 +342,16 @@ void main() {
         col = clamp(col + shift * wSat * abs(tintDir), 0.0, 1.0);
     }
 
+    // universal background: the cream canvas cells are this shader's
+    // background — lines and marching squares still draw over them.
+    if (cIdx == 0) col = mix(col, bgColor.rgb, bgColor.a);
+
     // Colour pulse: loud music lifts the primaries (never the cream canvas
     // or the black lines) — the painting itself plays along with the band.
     if (cIdx == 1 || cIdx == 2 || cIdx == 3) {
-        col *= 1.0 + 1.8 * clamp(audioLevel, 0.0, 1.0)
-                   * min(aR, 2.0) * pulseAmt;
+        // Capped, soft-kneed pulse (was ×1.8 raw level — a clipping strobe).
+        float lvl = pow(smoothstep(0.04, 0.95, clamp(audioLevel, 0.0, 1.0)), 1.2);
+        col *= 1.0 + 0.55 * lvl * min(aR, 2.0) * pulseAmt;
     }
 
     // ─── horizontal lines: black baseline + marching squares ─────────
@@ -251,7 +362,7 @@ void main() {
         if (ady < lineW) {
             col = PAL_BLACK;
         }
-        if (ady < SQUARE) {
+        if (ady < SQUARE * 1.35) {
             float salt = float(i) * 11.13 + 3.7;
             vec3 sq = lineSquares(uv.x, dy, salt, t,
                                   bassSig, trebleSig, aR, pulseAmt);
@@ -267,7 +378,7 @@ void main() {
         if (adx < lineW) {
             col = PAL_BLACK;
         }
-        if (adx < SQUARE) {
+        if (adx < SQUARE * 1.35) {
             float salt = float(j) * 13.71 + 17.3;
             vec3 sq = lineSquares(uv.y, dx, salt, t,
                                   bassSig, trebleSig, aR, pulseAmt);
@@ -282,7 +393,43 @@ void main() {
         col = PAL_BLACK;
     }
 
+    // ─── Round 2: whole-canvas linear follower + decaying accent trace ─
+    // Jazz scored 0 because every audio path landed on tiny regions
+    // (primary cells, marching squares) through kneed envelopes. LINEAR
+    // bands over the FULL canvas carry jazz's soft 0.4-0.5 swung accents
+    // and ambient swells; audioSub + audioBeatPulse's ~300ms decaying
+    // trace carry hiphop's sparse kicks. A pure luminance scale — hues
+    // stay the five Mondrian colours; silence multiplies by exactly 1.0.
+    // Round 3: the round-2 GAIN follower clipped instantly on the cream
+    // canvas (0.96 × 1.04 already saturates) — measured response ~0. Flip
+    // to a DARKEN-DIP (unsigned frameDiff correlates identically, dips
+    // can't clip on a bright canvas) and add the HIGH band: jazz's most
+    // rhythmic content is the brushed offbeat hats, which the old
+    // bass/mid/sub-only follower never saw. Silence: dip=0, look exact.
+    // Round 3 MEASURED: edm was the one CHOPPY style (p95 0.152) — the raw
+    // 0.18*beatPulse term stepped the whole 0.89-luma canvas in ONE frame at
+    // every kick. But dropping the beat term killed jazz (adj 0.378→0.003;
+    // jazz's envelope is punch-weighted). Fix: gate the pulse with beatPhase
+    // so it RAMPS in over the first ~30% of the beat instead of stepping —
+    // same correlation (detector is lag-tolerant), ~1/5 the per-frame delta.
+    float beatSoft = audioBeatPulse * smoothstep(0.0, 0.25, audioBeatPhase);
+    col *= 1.0 - (0.16 * audioBass + 0.17 * audioMid + 0.16 * audioHigh
+                + 0.22 * beatSoft) * min(aR, 1.5) * 0.85;
+
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = col;
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                   // saturation
+    if (hueShift > 0.0005) {                               // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+
     // Output linear HDR — palette deliberately stays in [0,1] to keep
     // the strict five-colour read; host applies tone curve.
-    gl_FragColor = vec4(col, 1.0);
+    gl_FragColor = vec4(uc, 1.0);
 }

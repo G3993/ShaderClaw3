@@ -1,25 +1,175 @@
 /*{
   "DESCRIPTION": "Follow — a self-organizing particle flow. Each cell carries mass + velocity; mass is pushed along its velocity toward the local centre-of-mass gradient while a 1/r^2 gravity clumps the streams into travelling points. Movement drivers (like the fluid sim): a left-edge Feed, a rotational Swirl, a wandering Turbulence, and a 'Dual Cursors' dance — two invisible cursors that orbit, twirl around each other and weave in and out, dragging the particles as if two hands were playing with the field. Palette-coloured with an additive glow. Ported from Cole Peterson's Shadertoy.",
   "CREDIT": "Cole Peterson (Plento) — ISF port + movement drivers for Easel",
-  "CATEGORIES": ["Simulation", "Generator", "Abstract"],
+  "CATEGORIES": [
+    "Simulation",
+    "Generator",
+    "Abstract"
+  ],
   "INPUTS": [
-    { "NAME": "inputImage",   "LABEL": "Texture",    "TYPE": "image" },
-    { "NAME": "textureMix",   "LABEL": "Tex Color",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.7 },
-    { "NAME": "textureFeed",  "LABEL": "Tex Feed",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.0 },
-    { "NAME": "movement",     "LABEL": "Movement",   "TYPE": "long",  "DEFAULT": 2, "VALUES": [0,1,2], "LABELS": ["Side Feed","Dual Cursors","Both"] },
-    { "NAME": "speed",        "LABEL": "Speed",      "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0 },
-    { "NAME": "sideForce",    "LABEL": "Feed",       "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0 },
-    { "NAME": "danceStrength","LABEL": "Dance",      "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.2 },
-    { "NAME": "danceSpeed",   "LABEL": "Dance Speed","TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 1.0 },
-    { "NAME": "danceScale",   "LABEL": "Dance Range","TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0 },
-    { "NAME": "swirl",        "LABEL": "Swirl",      "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.0 },
-    { "NAME": "turb",         "LABEL": "Turbulence", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.0 },
-    { "NAME": "gravity",      "LABEL": "Clump",      "TYPE": "float", "MIN": 0.5, "MAX": 3.0, "DEFAULT": 1.0 },
-    { "NAME": "glowAmt",      "LABEL": "Glow",       "TYPE": "float", "MIN": 0.0, "MAX": 0.4, "DEFAULT": 0.08 },
-    { "NAME": "audioReact",   "LABEL": "Audio React","TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.35 }
+    {
+      "NAME": "inputImage",
+      "LABEL": "Texture",
+      "TYPE": "image"
+    },
+    {
+      "NAME": "textureMix",
+      "LABEL": "Tex Color",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.7
+    },
+    {
+      "NAME": "textureFeed",
+      "LABEL": "Tex Feed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0
+    },
+    {
+      "NAME": "glowAmt",
+      "LABEL": "Glow",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.4,
+      "DEFAULT": 0.08
+    },
+    {
+      "NAME": "movement",
+      "LABEL": "Movement",
+      "TYPE": "long",
+      "DEFAULT": 2,
+      "VALUES": [
+        0,
+        1,
+        2
+      ],
+      "LABELS": [
+        "Side Feed",
+        "Dual Cursors",
+        "Both"
+      ],
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "speed",
+      "LABEL": "Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "sideForce",
+      "LABEL": "Feed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "danceStrength",
+      "LABEL": "Dance",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 1.2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "danceSpeed",
+      "LABEL": "Dance Speed",
+      "TYPE": "float",
+      "MIN": 0.1,
+      "MAX": 3,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "danceScale",
+      "LABEL": "Dance Range",
+      "TYPE": "float",
+      "MIN": 0.3,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "swirl",
+      "LABEL": "Swirl",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "turb",
+      "LABEL": "Turbulence",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "gravity",
+      "LABEL": "Clump",
+      "TYPE": "float",
+      "MIN": 0.5,
+      "MAX": 3,
+      "DEFAULT": 1,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "hueShift",
+      "LABEL": "Hue Shift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorBoost",
+      "LABEL": "Color Boost",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "DEFAULT": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "GROUP": "Background"
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.35,
+      "GROUP": "Audio Reactivity"
+    }
   ],
   "PASSES": [
-    { "TARGET": "bufA", "PERSISTENT": true },
+    {
+      "TARGET": "bufA",
+      "PERSISTENT": true
+    },
     {}
   ]
 }*/
@@ -227,5 +377,20 @@ void main() {
         col = mix(col, imgCol, textureMix);
     }
 
-    gl_FragColor = vec4(sqrt(clamp(col, 0.0, 1.0)), 1.0);
+    // ---- universal color block (defaults = no-op) ----
+    vec3 uc = sqrt(clamp(col, 0.0, 1.0));
+    float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
+    uc = mix(vec3(ucL), uc, colorBoost);                   // saturation
+    if (hueShift > 0.0005) {                               // cheap hue rotate (YIQ)
+        float hA = hueShift * 6.2831853;
+        float hC = cos(hA), hS = sin(hA);
+        mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
+                + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)
+                + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
+        uc = clamp(hM * uc, 0.0, 1.0);
+    }
+    // background = darkest end of the field (the void between particle streams)
+    uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
+
+    gl_FragColor = vec4(uc, 1.0);
 }
