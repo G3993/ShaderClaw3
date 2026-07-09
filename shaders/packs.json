@@ -840,13 +840,5 @@
   "wave_text": {
     "group": "text",
     "surfaces": []
-  },
-  "world_cup_3d": {
-    "group": "lines",
-    "surfaces": [
-      "ceiling",
-      "piano",
-      "outside"
-    ]
   }
 }

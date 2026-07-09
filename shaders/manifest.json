@@ -1712,19 +1712,6 @@
   },
   {
     "categories": [
-      "3D",
-      "Generator",
-      "Audio Reactive",
-      "Sports"
-    ],
-    "description": "World Cup neon 3D \u2014 all 48 national crests as extruded neon pixel-slabs on a black void with synthwave grid floor + reflection. Auto-cycles every team, or pick two for a head-to-head VERSUS. Audio reactive.",
-    "file": "world_cup_3d.fs",
-    "id": 1100,
-    "title": "World Cup 3D",
-    "type": "generator"
-  },
-  {
-    "categories": [
       "3D"
     ],
     "description": "Audio-reactive exploding cube grid \u2014 276 cubes with beat detection, bass pump, and scatter physics",
