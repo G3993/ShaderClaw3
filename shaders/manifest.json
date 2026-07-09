@@ -548,19 +548,6 @@
   {
     "categories": [
       "Generator",
-      "Simulation",
-      "3D"
-    ],
-    "description": "Fluid Sound \u2014 sound is the brush: a self-advecting fluid field births lit volumetric metaball blobs from audio energy. Quiet dims + settles to center; loud erupts and flows. The best audio-reactive fluid.",
-    "file": "fluid_sound.fs",
-    "hasVertex": false,
-    "id": 1042,
-    "title": "Fluid Sound",
-    "type": "generator"
-  },
-  {
-    "categories": [
-      "Generator",
       "Atmospheric",
       "Audio Reactive"
     ],
@@ -653,18 +640,6 @@
     "hidden": false,
     "id": 532,
     "title": "Ink In Water",
-    "type": "generator"
-  },
-  {
-    "categories": [
-      "Generator",
-      "Particles",
-      "Interactive"
-    ],
-    "description": "1024 particles attracted to a center point and the cursor. Click and drag to pull them around. Ported from Shadertoy McXXzH.",
-    "file": "interactive_particles.fs",
-    "id": 496,
-    "title": "Interactive Particles",
     "type": "generator"
   },
   {
@@ -1839,5 +1814,59 @@
     "id": 109,
     "title": "Veroni 3",
     "type": "scene"
+  },
+  {
+    "categories": [
+      "Generator",
+      "warp"
+    ],
+    "description": "Candywarp \u2014 swirling candy-colored warp tunnel (mojovideotech).",
+    "file": "candywarp.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": "candywarp",
+    "title": "Candywarp",
+    "type": "isf"
+  },
+  {
+    "categories": [
+      "Generator",
+      "voxels"
+    ],
+    "description": "Simple to reuse, fast voxel engine.",
+    "file": "cubes_voxel.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": "cubes_voxel",
+    "title": "Cubes Voxel",
+    "type": "isf"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Fractal"
+    ],
+    "description": "Fractilian \u2014 parabolic circle-inversion fractal (mojovideotech).",
+    "file": "fractilian_parabolic_circle_inversion.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": "fractilian_parabolic_circle_inversion",
+    "title": "Fractilian Parabolic Circle Inversion",
+    "type": "isf"
+  },
+  {
+    "categories": [
+      "Generator",
+      "rainbow",
+      "circular",
+      "rotation"
+    ],
+    "description": "Rainbow ring with cubic twist (mojovideotech).",
+    "file": "rainbow_ring_cubic_twist.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": "rainbow_ring_cubic_twist",
+    "title": "Rainbow Ring Cubic Twist",
+    "type": "isf"
   }
 ]

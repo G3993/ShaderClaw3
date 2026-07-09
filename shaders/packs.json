@@ -77,6 +77,12 @@
     "group": "text",
     "surfaces": []
   },
+  "candywarp": {
+    "group": "fluid",
+    "surfaces": [
+      "outside"
+    ]
+  },
   "cascade_text": {
     "group": "text",
     "surfaces": []
@@ -160,6 +166,10 @@
       "piano",
       "outside"
     ]
+  },
+  "cubes_voxel": {
+    "group": "3d",
+    "surfaces": []
   },
   "cymatics_chladni": {
     "group": "lines",
@@ -277,14 +287,6 @@
       "outside"
     ]
   },
-  "fluid_sound": {
-    "group": "fluid",
-    "surfaces": [
-      "ceiling",
-      "piano",
-      "outside"
-    ]
-  },
   "fog_machine": {
     "group": "text",
     "surfaces": []
@@ -292,6 +294,12 @@
   "follow": {
     "group": "artsy",
     "surfaces": []
+  },
+  "fractilian_parabolic_circle_inversion": {
+    "group": "fractals",
+    "surfaces": [
+      "outside"
+    ]
   },
   "gemstones_border_text": {
     "group": "text",
@@ -328,12 +336,6 @@
     "surfaces": [
       "ceiling",
       "piano",
-      "outside"
-    ]
-  },
-  "interactive_particles": {
-    "group": "artsy",
-    "surfaces": [
       "outside"
     ]
   },
@@ -571,6 +573,12 @@
   },
   "rainbow_flower": {
     "group": "music",
+    "surfaces": [
+      "outside"
+    ]
+  },
+  "rainbow_ring_cubic_twist": {
+    "group": "lines",
     "surfaces": [
       "outside"
     ]
