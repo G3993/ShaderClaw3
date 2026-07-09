@@ -451,17 +451,17 @@ void screenPass(){
     float midP  = knee(audioMid, 0.04, 0.90) * audioReact;
     float drive = 0.25 + 0.75 * knee(audioEnergy, 0.05, 0.9);
 
-    // Track the flock's rough centroid so the camera keeps it framed.
-    vec2 centroid = vec2(0.0);
+    // Track the flock's rough flockCenter so the camera keeps it framed.
+    vec2 flockCenter = vec2(0.0);
     for (int i = 0; i < 8; i++){
         vec4 st = agentState(i);
-        centroid += decodePos(st.rg);
+        flockCenter += decodePos(st.rg);
     }
-    centroid /= 8.0;
+    flockCenter /= 8.0;
 
     // --- camera: slow orbit around the flock, gently eased by energy -------
     float camAngle = TIME * 0.14 * camOrbitSpeed * (0.8 + 0.3 * drive);
-    vec3 ta = vec3(centroid.x, 0.05, centroid.y);
+    vec3 ta = vec3(flockCenter.x, 0.05, flockCenter.y);
     vec3 ro = ta + vec3(sin(camAngle), 0.0, cos(camAngle)) * camDist;
     ro.y += 0.55 + 0.15 * sin(TIME * 0.2);
 

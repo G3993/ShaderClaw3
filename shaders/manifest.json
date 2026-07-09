@@ -1859,111 +1859,111 @@
   {
     "id": 1237,
     "file": "flagship_particles.fs",
-    "name": "Stem Swarm",
     "description": "Three particle populations bound to stems: bass motes, drum sparks (born on hits), melody streamers on curl flow. EaselAudio flagship.",
     "categories": [
       "Generator",
       "Audio"
     ],
-    "hasVertex": false
+    "hasVertex": false,
+    "title": "Stem Swarm"
   },
   {
     "id": 1238,
     "file": "flagship_fluids.fs",
-    "name": "Soundcurrent",
     "description": "Analytic curl-noise fluid: dye advected by bass time, kicks inject decaying vortex rings, air stem shimmers the surface. EaselAudio flagship.",
     "categories": [
       "Generator",
       "Audio"
     ],
-    "hasVertex": false
+    "hasVertex": false,
+    "title": "Soundcurrent"
   },
   {
     "id": 1239,
     "file": "flagship_orbs.fs",
-    "name": "Aura Drift",
     "description": "Soft drifting radial-gradient orbs; per-band radius breathing, brightness-driven color temperature, bar-phase choreography. EaselAudio flagship.",
     "categories": [
       "Generator",
       "Audio"
     ],
-    "hasVertex": false
+    "hasVertex": false,
+    "title": "Aura Drift"
   },
   {
     "id": 1204,
     "file": "flagship_shapes.fs",
-    "name": "Meter Made",
     "description": "Crisp 2.5D geometric composition step-sequenced on beat-phase ramps; mids thicken outlines, hits dip fills, bass breathes the zoom. EaselAudio flagship.",
     "categories": [
       "Generator",
       "Audio"
     ],
-    "hasVertex": false
+    "hasVertex": false,
+    "title": "Meter Made"
   },
   {
     "id": 1205,
     "file": "flagship_abstract.fs",
-    "name": "Synesthete",
     "description": "Domain-warped gradients + ribbon interference; mood follows energy/presence, stems map to warp/ribbon/sheen, palette rotates on beat toggle. EaselAudio flagship.",
     "categories": [
       "Generator",
       "Audio"
     ],
-    "hasVertex": false
+    "hasVertex": false,
+    "title": "Synesthete"
   },
   {
     "id": 1240,
     "file": "alist_chromastack.fs",
-    "name": "Chromastack",
     "description": "Stacked sliced color terraces warping in waves; bass swells the terrain, mids ripple slice offsets, highs satin the edges. No text, 3D, multi-layer.",
     "categories": [
       "Generator",
       "Audio"
     ],
-    "hasVertex": false
+    "hasVertex": false,
+    "title": "Chromastack"
   },
   {
     "id": 1212,
     "file": "alist_neongrowth.fs",
-    "name": "Neon Growth",
     "description": "Neon coral colonies growing over an ink skeleton; melody stem feeds growth, drum hits spawn spores, treble edges glow. No text, multi-layer.",
     "categories": [
       "Generator",
       "Audio"
     ],
-    "hasVertex": false
+    "hasVertex": false,
+    "title": "Neon Growth"
   },
   {
     "id": 1241,
     "file": "alist_gridfog.fs",
-    "name": "Grid Fog",
     "description": "Molten translucent neon fog draped over a dark blueprint grid; bass-time flow, brightness-driven inner spectrum, beat-phase drips. No text, 3D, multi-layer.",
     "categories": [
       "Generator",
       "Audio"
     ],
-    "hasVertex": false
+    "hasVertex": false,
+    "title": "Grid Fog"
   },
   {
     "id": 1242,
     "file": "alist_bloomfield.fs",
-    "name": "Bloomfield",
     "description": "Layered rippling rosettes blooming radially; per-band rosette breathing, mid-driven scallop detail, hit-dipped cores. No text, multi-layer.",
     "categories": [
       "Generator",
       "Audio"
     ],
-    "hasVertex": false
+    "hasVertex": false,
+    "title": "Bloomfield"
   },
   {
     "id": 1215,
     "file": "alist_chromespike.fs",
-    "name": "Chromespike",
     "description": "Raymarched chrome barbed strands against a sky gradient; brightness shifts reflections, hits fire star glints, presence breathes the sky. No text, 3D, multi-layer.",
     "categories": [
       "Generator",
       "Audio"
     ],
-    "hasVertex": false
+    "hasVertex": false,
+    "title": "Chromespike"
   }
 ]

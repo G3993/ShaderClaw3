@@ -209,7 +209,7 @@ void main(){
   float colId = floor((p.x / aspect + 0.5) * 22.0);
   float hc = h21(vec2(colId, 7.0));
   float hc2 = h21(vec2(colId, 41.0));
-  float active = step(hc, 0.60);
+  float dripOn = step(hc, 0.60);
   float prog = fract(audioBarPhase + TIME * 0.05 * flowSpeed + hc * 7.0);
   float len = (0.10 + 0.30 * hc2) * smoothstep(0.0, 0.45, prog);
   float tipFade = 1.0 - smoothstep(0.72, 1.0, prog); // ease out before the ramp wraps
@@ -222,11 +222,11 @@ void main(){
   float rTip = length(p - vec2(cx, yTip));
   float drop  = smoothstep(w * 2.0, w * 2.0 - 1.5 * px, rTip);       // crisp droplet at the tip
   float dCore = smoothstep(w, w - 1.5 * px, dx) * inBand;            // crisp drip column
-  float drip = active * tipFade * max(dCore, drop) * plate;
+  float drip = dripOn * tipFade * max(dCore, drop) * plate;
   // crisp 1px outline hugging the drip silhouette
   float dEdge = max(smoothstep(1.4 * px, 0.3 * px, abs(dx - w)) * inBand,
                     smoothstep(1.4 * px, 0.3 * px, abs(rTip - w * 2.0)));
-  dEdge *= active * tipFade * plate;
+  dEdge *= dripOn * tipFade * plate;
   col = mix(col, milk * 1.00, drip * dripAmount * 0.9);
   col = mix(col, milk * 1.06, dEdge * dripAmount * 0.70);
   col += neon * (drip + 0.5 * dEdge) * dripAmount * glow * 0.4; // tips catch the inner light

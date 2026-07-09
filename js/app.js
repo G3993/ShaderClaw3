@@ -4737,11 +4737,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
       if (q && !item.title.toLowerCase().includes(q) && !(item.description || '').toLowerCase().includes(q)) return;
       const cats = item.categories || [];
       if (cats.includes('Text')) {
-        if (!categories['Text'].find(x => x.id === item.id)) categories['Text'].push(item);
+        if (!categories['Text'].find(x => x.file === item.file)) categories['Text'].push(item);
       } else if (cats.includes('3D') || item.type === 'scene') {
-        if (!categories['3D'].find(x => x.id === item.id)) categories['3D'].push(item);
+        if (!categories['3D'].find(x => x.file === item.file)) categories['3D'].push(item);
       } else {
-        if (!categories['VFX'].find(x => x.id === item.id)) categories['VFX'].push(item);
+        if (!categories['VFX'].find(x => x.file === item.file)) categories['VFX'].push(item);
       }
     });
 
