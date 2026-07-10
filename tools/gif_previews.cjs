@@ -19,8 +19,12 @@ const { execFileSync } = require('child_process');
 const puppeteer = require('puppeteer-core');
 
 const ROOT = path.join(__dirname, '..');
-const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const FFMPEG = '/opt/homebrew/bin/ffmpeg';
+// Cross-platform: env overrides first, then the platform's usual spots.
+const CHROME = process.env.CHROME_PATH || (process.platform === 'win32'
+  ? 'C:/Program Files/Google/Chrome/Application/chrome.exe'
+  : '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome');
+const FFMPEG = process.env.FFMPEG_PATH || (process.platform === 'win32'
+  ? 'ffmpeg' : '/opt/homebrew/bin/ffmpeg');
 
 const args = process.argv.slice(2);
 function argVal(flag, dflt) { const i = args.indexOf(flag); return i >= 0 ? args[i + 1] : dflt; }
