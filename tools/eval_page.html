@@ -632,6 +632,39 @@ window.evalShader = async function(file, opts) {
       ctx2d.drawImage(raw, 0, 0);
       out.thumbnail = tmp.toDataURL('image/png');
     }
+    // Opt-in ANIMATED capture (gif_previews.cjs): keep rendering past the
+    // sampled window and grab `captureFrames` consecutive frames `frameStep`
+    // seconds apart, each flattened onto black exactly like the still
+    // thumbnail (text shaders are transparent overlays by design). Returned
+    // as PNG data URLs; the node side assembles the gif.
+    if (opts.captureFrames) {
+      const flattenToPng = (px) => {
+        const raw = document.createElement('canvas');
+        raw.width = W; raw.height = H;
+        const flipped = new Uint8ClampedArray(px.length);
+        for (let y = 0; y < H; y++) {
+          const srcStart = (H - 1 - y) * W * 4;
+          flipped.set(px.subarray(srcStart, srcStart + W * 4), y * W * 4);
+        }
+        raw.getContext('2d').putImageData(new ImageData(flipped, W, H), 0, 0);
+        const tmp = document.createElement('canvas');
+        tmp.width = W; tmp.height = H;
+        const c = tmp.getContext('2d');
+        c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
+        c.drawImage(raw, 0, 0);
+        return tmp.toDataURL('image/png');
+      };
+      const n = Math.max(2, Math.min(32, opts.captureFrames | 0));
+      const step = opts.frameStep || 0.125;
+      const seq = [];
+      for (let i = 0; i < n; i++) {
+        let target = t + step;
+        let fb;
+        while (t < target) { t += dt; fb = drawFrame(t, dt, baseAudio); }
+        seq.push(flattenToPng(framePixels(fb.fbo)));
+      }
+      out.previewFrames = seq;
+    }
     out.meanLuma = stats.reduce((s, x) => s + x.meanLuma, 0) / stats.length;
     out.variance = stats.reduce((s, x) => s + x.variance, 0) / stats.length;
     out.blackFrac = stats.reduce((s, x) => s + x.blackFrac, 0) / stats.length;
