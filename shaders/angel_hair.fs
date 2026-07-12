@@ -113,6 +113,8 @@ bool resetPulse() {
 
 // pass 0 — particle flow (divergence-free field from noise angle)
 vec4 passAgents() {
+    // particle state lives in the bottom pixel row only — skip the fbm flow elsewhere
+    if (gl_FragCoord.y > 1.0) return vec4(0.0);
     int texel = int(gl_FragCoord.x);
     int i = texel / 2;
     bool isPos = (texel - 2 * i) == 0;
@@ -162,12 +164,15 @@ vec4 passTrail() {
 
     vec3 ink = vec3(0.0);
     float T = TIME * speed;
+    float phaseBase = T * 0.07 + 2.5 + ar * 0.3 * highP;
     for (int i = 0; i < N_PARTICLES; i++) {
         vec2 pos = agentPos(i);
         float d = dot(p - pos, p - pos) * 500.0;
+        // ink weight would be < 6e-4 out here — strand is invisible to this
+        // pixel, skip the per-particle color sines
+        if (d > 16.0) continue;
         d = 0.01 / (d + 0.001);
-        ink += d * abs(sin(vec3(2.0, 3.4, 1.2) * (T * 0.07 + float(i) * 0.0017 + 2.5
-                                                  + ar * 0.3 * highP)
+        ink += d * abs(sin(vec3(2.0, 3.4, 1.2) * (phaseBase + float(i) * 0.0017)
                            + vec3(0.8, 0.0, 1.2)) * 0.7 + 0.3) * 0.04;
     }
     ink *= 0.5 * mix(1.0, 0.4 + 1.6 * bassP + 0.6 * levelP, ar);

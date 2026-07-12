@@ -88,6 +88,8 @@ vec3 hsv2rgb(vec3 c) {
 
 // pass 0 — SPH-lite update
 vec4 passAgents() {
+    // particle state lives in the bottom pixel row only — skip the SPH loop elsewhere
+    if (gl_FragCoord.y > 1.0) return vec4(0.0);
     int texel = int(gl_FragCoord.x);
     int i = texel / 3;
     int part = texel - 3 * i;
@@ -151,6 +153,9 @@ vec4 passTrail() {
     for (int k = 0; k < N_PARTICLES; k++) {
         vec2 d2 = (uv - pPos(k)) * vec2(aspect, 1.0);
         float d = dot(d2, d2);
+        // beyond this, both gaussians are < 3e-5 — skip the velocity fetches,
+        // atan and hsv work for a particle this pixel can't see
+        if (d > 0.02) continue;
         vec2 v = pVel(k);
         float sp = length(v) / VEL_R;
         float hue = fract(atan(v.y, v.x) / TAU + 0.6 + ar * 0.12 * highP);
