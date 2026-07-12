@@ -27,6 +27,33 @@
       "LABEL": "Ink Color",
       "TYPE": "color",
       "DEFAULT": [0.85, 0.9, 1.0, 1.0]
+    },
+    {
+      "NAME": "wander",
+      "LABEL": "Wander",
+      "TYPE": "float",
+      "GROUP": "Motion / Animation",
+      "DEFAULT": 0.5,
+      "MIN": 0.0,
+      "MAX": 1.0
+    },
+    {
+      "NAME": "chaos",
+      "LABEL": "Chaos",
+      "TYPE": "float",
+      "GROUP": "Motion / Animation",
+      "DEFAULT": 0.35,
+      "MIN": 0.0,
+      "MAX": 1.0
+    },
+    {
+      "NAME": "jitter",
+      "LABEL": "Jitter",
+      "TYPE": "float",
+      "GROUP": "Motion / Animation",
+      "DEFAULT": 0.2,
+      "MIN": 0.0,
+      "MAX": 1.0
     }
   ],
   "PASSES": [
@@ -64,9 +91,25 @@ float presAt(vec2 C) { return decS(texture2D(presBuf, C / RENDERSIZE.xy).x); }
 float divAt(vec2 C) { return decS(texture2D(divBuf, C / RENDERSIZE.xy).x); }
 vec4 advAt(vec2 C) { return texture2D(advBuf, C / RENDERSIZE.xy); }
 
-// the animated emitter (replaces the mouse)
+vec2 hash2e(float n) {
+    return fract(sin(vec2(n * 12.9898, n * 78.233 + 4.7)) * 43758.5453);
+}
+
+// the animated emitter (replaces the mouse) — motion-kit style:
+// base figure sweep + smooth wander + darting jumps + fine jitter
 vec2 emitterPos(float T) {
-    return vec2(pow(abs(sin(T)), 2.0) - 0.5, 0.2 * sin(T * 4.0) + 0.2);
+    vec2 p = vec2(pow(abs(sin(T)), 2.0) - 0.5, 0.2 * sin(T * 4.0) + 0.2);
+    // wander: layered incommensurate sines = smooth random walk
+    vec2 w = vec2(sin(T * 0.73 + 1.7) + 0.5 * sin(T * 1.31 + 0.4) + 0.25 * sin(T * 2.17),
+                  cos(T * 0.61)       + 0.5 * cos(T * 1.13 + 2.1) + 0.25 * cos(T * 1.87 + 0.9));
+    p = mix(p, w * 0.22, wander);
+    // chaos: eased darts to random spots, holding briefly between jumps
+    float seg = floor(T * 0.55);
+    float ft = smoothstep(0.25, 0.75, fract(T * 0.55));
+    p += mix(hash2e(seg) - 0.5, hash2e(seg + 1.0) - 0.5, ft) * 0.55 * chaos;
+    // jitter: fast small trembles
+    p += vec2(sin(T * 13.7), cos(T * 17.3)) * 0.012 * jitter;
+    return p;
 }
 
 // pass 0 — RK4 backward advection of the divergence-free field
