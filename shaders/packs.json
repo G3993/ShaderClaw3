@@ -9,6 +9,12 @@
       "outside"
     ]
   },
+  "angel_hair": {
+    "group": "toybox"
+  },
+  "arcade": {
+    "group": "toybox"
+  },
   "ascii_filter": {
     "group": "text",
     "surfaces": []
@@ -30,6 +36,9 @@
       "piano",
       "outside"
     ]
+  },
+  "ball_pit": {
+    "group": "toybox"
   },
   "balls": {
     "group": "music",
@@ -209,6 +218,9 @@
       "outside"
     ]
   },
+  "dibujito": {
+    "group": "toybox"
+  },
   "digifade_text": {
     "group": "text",
     "surfaces": []
@@ -216,6 +228,9 @@
   "dispersion": {
     "group": "text",
     "surfaces": []
+  },
+  "dripping": {
+    "group": "toybox"
   },
   "electricity": {
     "group": "lines",
@@ -244,6 +259,9 @@
       "piano",
       "outside"
     ]
+  },
+  "finding_color": {
+    "group": "toybox"
   },
   "fisheye_sphere": {
     "group": "3d",
@@ -415,6 +433,9 @@
       "outside"
     ]
   },
+  "liquid_toy": {
+    "group": "toybox"
+  },
   "mandelbox_dive": {
     "group": "fractals",
     "surfaces": []
@@ -455,9 +476,51 @@
       "outside"
     ]
   },
+  "mono_dust": {
+    "group": "mono",
+    "surfaces": [
+      "piano",
+      "ceiling"
+    ]
+  },
+  "mono_halo": {
+    "group": "mono",
+    "surfaces": [
+      "ceiling"
+    ]
+  },
+  "mono_ink": {
+    "group": "mono",
+    "surfaces": []
+  },
+  "mono_murmuration": {
+    "group": "mono",
+    "surfaces": []
+  },
+  "mono_rings": {
+    "group": "mono",
+    "surfaces": [
+      "ceiling"
+    ]
+  },
+  "mono_stripes": {
+    "group": "mono",
+    "surfaces": [
+      "piano"
+    ]
+  },
+  "mono_tiles": {
+    "group": "mono",
+    "surfaces": [
+      "piano"
+    ]
+  },
   "morphing_organic_text": {
     "group": "text",
     "surfaces": []
+  },
+  "moving_around": {
+    "group": "toybox"
   },
   "multi_gradient": {
     "group": "moody",
@@ -515,6 +578,9 @@
     "group": "3d",
     "surfaces": []
   },
+  "pattern_4": {
+    "group": "toybox"
+  },
   "pbr_glass_dispersion": {
     "group": "lines",
     "surfaces": [
@@ -570,6 +636,9 @@
     "surfaces": [
       "outside"
     ]
+  },
+  "rainbow_around": {
+    "group": "toybox"
   },
   "rainbow_flower": {
     "group": "music",
@@ -635,6 +704,9 @@
     "group": "text",
     "surfaces": []
   },
+  "shooting_stars": {
+    "group": "toybox"
+  },
   "sketchpad": {
     "group": "lines",
     "surfaces": [
@@ -642,6 +714,9 @@
       "piano",
       "outside"
     ]
+  },
+  "snowing": {
+    "group": "toybox"
   },
   "soph_orb": {
     "group": "lines",
@@ -668,6 +743,9 @@
   "st_ms2sd1fs": {
     "group": "3d",
     "surfaces": []
+  },
+  "star_trek": {
+    "group": "toybox"
   },
   "text_3d": {
     "group": "text",
@@ -787,6 +865,9 @@
       "outside"
     ]
   },
+  "ufos": {
+    "group": "toybox"
+  },
   "underwater": {
     "group": "fluid",
     "surfaces": [
@@ -794,6 +875,9 @@
       "piano",
       "outside"
     ]
+  },
+  "upside_down": {
+    "group": "toybox"
   },
   "vapor_hologram": {
     "group": "fluid",
@@ -840,44 +924,5 @@
   "wave_text": {
     "group": "text",
     "surfaces": []
-  },
-  "mono_ink": {
-    "group": "mono",
-    "surfaces": []
-  },
-  "mono_murmuration": {
-    "group": "mono",
-    "surfaces": []
-  },
-  "mono_dust": {
-    "group": "mono",
-    "surfaces": [
-      "piano",
-      "ceiling"
-    ]
-  },
-  "mono_stripes": {
-    "group": "mono",
-    "surfaces": [
-      "piano"
-    ]
-  },
-  "mono_tiles": {
-    "group": "mono",
-    "surfaces": [
-      "piano"
-    ]
-  },
-  "mono_halo": {
-    "group": "mono",
-    "surfaces": [
-      "ceiling"
-    ]
-  },
-  "mono_rings": {
-    "group": "mono",
-    "surfaces": [
-      "ceiling"
-    ]
   }
 }
