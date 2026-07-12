@@ -21,6 +21,47 @@
       "DEFAULT": 0.5,
       "MIN": 0.0,
       "MAX": 1.0
+    },
+    {
+      "NAME": "dropSize",
+      "LABEL": "Drop Size",
+      "TYPE": "float",
+      "DEFAULT": 1.0,
+      "MIN": 0.4,
+      "MAX": 2.5
+    },
+    {
+      "NAME": "fadeAmt",
+      "LABEL": "Liquid Memory",
+      "TYPE": "float",
+      "DEFAULT": 0.4,
+      "MIN": 0.15,
+      "MAX": 0.8
+    },
+    {
+      "NAME": "rainbowAmt",
+      "LABEL": "Rainbow",
+      "TYPE": "float",
+      "GROUP": "Color",
+      "DEFAULT": 1.0,
+      "MIN": 0.0,
+      "MAX": 2.0
+    },
+    {
+      "NAME": "tintColor",
+      "LABEL": "Tint",
+      "TYPE": "color",
+      "GROUP": "Color",
+      "DEFAULT": [1.0, 1.0, 1.0, 1.0]
+    },
+    {
+      "NAME": "brightness",
+      "LABEL": "Brightness",
+      "TYPE": "float",
+      "GROUP": "Color",
+      "DEFAULT": 1.0,
+      "MIN": 0.2,
+      "MAX": 3.0
     }
   ],
   "PASSES": [
@@ -83,11 +124,11 @@ vec4 passSim() {
     float t = T * 2.0;
     float orbitR = 0.3 + ar * 0.08 * levelP;
     vec2 duv = uv - vec2(cos(t), sin(t)) * orbitR;
-    float brush = 0.1 * (1.0 + ar * 0.6 * bassP);
+    float brush = 0.1 * dropSize * (1.0 + ar * 0.6 * bassP);
     float paint = ss(brush, 0.0, length(duv));
     // a second droplet appears opposite when the music hits
     vec2 duv2 = uv + vec2(cos(t * 0.7), sin(t * 0.7)) * orbitR;
-    paint = max(paint, ss(0.05, 0.0, length(duv2)) * ar * bassP);
+    paint = max(paint, ss(0.05 * dropSize, 0.0, length(duv2)) * ar * bassP);
 
     // expansion along the heightmap normal
     vec2 offset = vec2(0.0);
@@ -108,7 +149,7 @@ vec4 passSim() {
     float frame = texture2D(heightBuf, uv).x;
 
     // loudness stretches the liquid's memory
-    float fade = mix(0.40, 0.70, ar * levelP);
+    float fade = fadeAmt * mix(1.0, 1.75, ar * levelP);
     float dt = clamp(TIMEDELTA, 0.001, 0.1);
     paint = max(paint, frame - dt * fade);
     if (FRAMEINDEX < 2) paint = 0.0;
@@ -142,7 +183,7 @@ vec4 passImage() {
     // rainbow fringe; highs shimmer its phase
     vec3 tint = 0.5 + 0.5 * cos(vec3(1, 2, 3) * 1.0 + dot(normal, dir) * 4.0
                                 - uv.y * 3.0 - 3.0 + ar * 2.0 * highP);
-    color += tint * smoothstep(0.35, 0.0, gray);
+    color += tint * rainbowAmt * smoothstep(0.35, 0.0, gray);
 
     color -= dither * 0.1;
 
@@ -151,6 +192,7 @@ vec4 passImage() {
 
     // sustained loudness dims the dish slightly so quiet/loud read differently
     color *= 1.0 - ar * 0.15 * knee(audioLevel, 0.05, 0.9);
+    color *= tintColor.rgb * brightness;
     return vec4(color, 1.0);
 }
 

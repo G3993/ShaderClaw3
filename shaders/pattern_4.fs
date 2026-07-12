@@ -30,6 +30,22 @@
       "DEFAULT": 1.0,
       "MIN": 0.0,
       "MAX": 1.0
+    },
+    {
+      "NAME": "tintColor",
+      "LABEL": "Tint",
+      "TYPE": "color",
+      "GROUP": "Color",
+      "DEFAULT": [1.0, 1.0, 1.0, 1.0]
+    },
+    {
+      "NAME": "brightness",
+      "LABEL": "Brightness",
+      "TYPE": "float",
+      "GROUP": "Color",
+      "DEFAULT": 1.0,
+      "MIN": 0.2,
+      "MAX": 3.0
     }
   ]
 }*/
@@ -182,5 +198,5 @@ void main() {
         color += c / (AA*AA);
     }
 
-    gl_FragColor = vec4(color, 1.0);
+    gl_FragColor = vec4(color * tintColor.rgb * brightness, 1.0);
 }

@@ -46,6 +46,38 @@
       "LABEL": "Light 3",
       "TYPE": "color",
       "DEFAULT": [0.0, 1.0, 0.5, 1.0]
+    },
+    {
+      "NAME": "bgColor",
+      "LABEL": "Background",
+      "TYPE": "color",
+      "GROUP": "Color",
+      "DEFAULT": [1.0, 1.0, 1.0, 1.0]
+    },
+    {
+      "NAME": "checkerAmt",
+      "LABEL": "Checker",
+      "TYPE": "float",
+      "GROUP": "Color",
+      "DEFAULT": 1.0,
+      "MIN": 0.0,
+      "MAX": 1.0
+    },
+    {
+      "NAME": "tintColor",
+      "LABEL": "Tint",
+      "TYPE": "color",
+      "GROUP": "Color",
+      "DEFAULT": [1.0, 1.0, 1.0, 1.0]
+    },
+    {
+      "NAME": "brightness",
+      "LABEL": "Brightness",
+      "TYPE": "float",
+      "GROUP": "Color",
+      "DEFAULT": 1.0,
+      "MIN": 0.2,
+      "MAX": 3.0
     }
   ]
 }*/
@@ -226,7 +258,9 @@ void main() {
     } else {
         float aa = (1.2 + dot(bn, rd)) * 20.0 / RENDERSIZE.y;
         float ch = checker(buv * 4.25 - 0.5, aa);
-        col = shadeSurface(p, n, mix(vec3(1.0), vec3(0.5), ch), -1, t);
+        // walls: checker fades into a flat colored background
+        vec3 wall = mix(bgColor.rgb, mix(vec3(1.0), vec3(0.5), ch) * bgColor.rgb, checkerAmt);
+        col = shadeSurface(p, n, wall, -1, t);
     }
 
     // vignette (Ippokratis / lsKSWR)
@@ -236,6 +270,7 @@ void main() {
     col *= vig;
 
     col *= mix(1.0, 0.75 + 0.7 * gLevel, audioReact);
-    col = pow(ACESFilm(col * 2.2), vec3(1.0 / 2.2));
+    col = pow(ACESFilm(col * 2.2 * brightness), vec3(1.0 / 2.2));
+    col *= tintColor.rgb;
     gl_FragColor = vec4(col, 1.0);
 }

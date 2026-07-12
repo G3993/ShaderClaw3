@@ -22,6 +22,22 @@
       "DEFAULT": 0.6,
       "MIN": 0.0,
       "MAX": 1.0
+    },
+    {
+      "NAME": "tintColor",
+      "LABEL": "Tint",
+      "TYPE": "color",
+      "GROUP": "Color",
+      "DEFAULT": [1.0, 1.0, 1.0, 1.0]
+    },
+    {
+      "NAME": "brightness",
+      "LABEL": "Brightness",
+      "TYPE": "float",
+      "GROUP": "Color",
+      "DEFAULT": 1.0,
+      "MIN": 0.2,
+      "MAX": 3.0
     }
   ],
   "PASSES": [
@@ -156,7 +172,7 @@ vec4 passImage() {
     // sustained lift lives here (outside the feedback loop)
     float lift = 1.0 + ar * (0.45 * knee(audioLevel, 0.05, 0.9)
                            + 0.35 * pow(knee(audioBass, 0.05, 0.85), 1.6));
-    return vec4(bg + c * lift, 1.0);
+    return vec4((bg + c * lift) * tintColor.rgb * brightness, 1.0);
 }
 
 void main() {

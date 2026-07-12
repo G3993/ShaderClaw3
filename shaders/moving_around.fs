@@ -29,6 +29,13 @@
       "DEFAULT": 1.0,
       "MIN": 0.2,
       "MAX": 3.0
+    },
+    {
+      "NAME": "tintColor",
+      "LABEL": "Tint",
+      "TYPE": "color",
+      "GROUP": "Color",
+      "DEFAULT": [1.0, 1.0, 1.0, 1.0]
     }
   ],
   "PASSES": [
@@ -83,7 +90,7 @@ float Scene(vec2 uv) {
     d = opS(sdBox(0.2, uv), d);
     d = opU(sdRing(0.08, 0.09, uv), d);
     // rotor: bass gives the spin a smoothed extra swing
-    d = opS(sdRect(vec2(0.11,0.03), uv * Rotate(gMT + 0.6 * audioReact * gBass)), d);
+    d = opS(sdRect(vec2(0.11,0.03), uv * Rotate(gMT + 0.2 * audioReact * gBass)), d);
     return d;
 }
 
@@ -93,7 +100,7 @@ vec2 lightOrigin(int id) {
     if (id == 2) return -vec2(cos(gMT*0.29), sin(gMT*0.41)) * 0.32;
     if (id == 3) {
         float a = -gMT * 0.3;
-        return vec2(cos(a), sin(a)) * (0.2 + 0.07 * audioReact * gBass);
+        return vec2(cos(a), sin(a)) * (0.2 + 0.04 * audioReact * gBass);
     }
     if (id == 4) return vec2( 0.4, sin(3.0*gMT - TAU/4.0) * 0.2);
     return vec2(-0.4, sin(3.0*gMT) * 0.2);
@@ -110,11 +117,14 @@ vec3 lightColor(int id) {
     return vec3(1.0, 0.4, 1.0) * mix(1.0, 0.3 + 2.2*gHigh, ar);
 }
 
-// Pass 0 — one radial shadow map row per light, distance packed 16-bit in rg
+// Pass 0 — radial shadow map. Each light owns a horizontal x-band (width/6),
+// written identically down every row, so decoding never depends on which way
+// the host orients its render targets. Distance packed 16-bit in rg.
 vec4 passShadow() {
-    if (gl_FragCoord.y >= float(NUM_LIGHTS)) return vec4(0.0);
-    int id = int(gl_FragCoord.y);
-    float a = (gl_FragCoord.x / RENDERSIZE.x) * TAU;
+    float fx = gl_FragCoord.x * float(NUM_LIGHTS) / RENDERSIZE.x;
+    int id = int(fx);
+    id = int(min(float(id), float(NUM_LIGHTS - 1)));
+    float a = fract(fx) * TAU;
     vec2 dir = vec2(cos(a), sin(a));
     vec2 orig = lightOrigin(id);
     float d = 0.0;
@@ -129,9 +139,12 @@ vec4 passShadow() {
 
 float sampleShadow(int id, vec2 rel) {
     float a = fract(atan(rel.y, rel.x)/TAU + 0.5);
-    // snap to texel centers: hi/lo packed channels must not be filtered
-    a = (floor(a * RENDERSIZE.x) + 0.5) / RENDERSIZE.x;
-    vec4 sm = texture2D(shadowMap, vec2(a, (float(id)+0.5)/RENDERSIZE.y));
+    // band-local coordinate, snapped to texel centers: hi/lo packed
+    // channels must not be filtered
+    float bandW = RENDERSIZE.x / float(NUM_LIGHTS);
+    float x = (float(id) + clamp(a, 0.001, 0.999)) * bandW;
+    x = (floor(x) + 0.5) / RENDERSIZE.x;
+    vec4 sm = texture2D(shadowMap, vec2(x, 0.5));
     float s = (sm.r + sm.g/255.0) * DIST_MAX;
     return 1.0 - smoothstep(s, s + 0.02, length(rel));
 }
@@ -152,7 +165,7 @@ vec4 passImage() {
     float psz = 1.0 / RENDERSIZE.y;
     float d = Scene(uv);
     vec3 col = mix(FLOOR_COLOR, WALL_COLOR, smoothstep(psz, 0.0, d));
-    col *= mixLights(uv) * brightness;
+    col *= mixLights(uv) * brightness * tintColor.rgb;
     return vec4(col, 1.0);
 }
 

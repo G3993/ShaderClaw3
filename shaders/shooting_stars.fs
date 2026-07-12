@@ -42,6 +42,22 @@
       "DEFAULT": 0.5,
       "MIN": 0.0,
       "MAX": 1.0
+    },
+    {
+      "NAME": "tintColor",
+      "LABEL": "Tint",
+      "TYPE": "color",
+      "GROUP": "Color",
+      "DEFAULT": [1.0, 1.0, 1.0, 1.0]
+    },
+    {
+      "NAME": "brightness",
+      "LABEL": "Brightness",
+      "TYPE": "float",
+      "GROUP": "Color",
+      "DEFAULT": 1.0,
+      "MIN": 0.2,
+      "MAX": 3.0
     }
   ],
   "PASSES": [
@@ -100,5 +116,5 @@ vec4 passStars() {
 
 void main() {
     if (PASSINDEX == 0) gl_FragColor = passStars();
-    else gl_FragColor = vec4(texture2D(starBuf, gl_FragCoord.xy / RENDERSIZE.xy).rgb, 1.0);
+    else gl_FragColor = vec4(texture2D(starBuf, gl_FragCoord.xy / RENDERSIZE.xy).rgb * tintColor.rgb * brightness, 1.0);
 }

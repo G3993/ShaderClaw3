@@ -54,6 +54,22 @@
       "DEFAULT": 0.2,
       "MIN": 0.0,
       "MAX": 1.0
+    },
+    {
+      "NAME": "tintColor",
+      "LABEL": "Tint",
+      "TYPE": "color",
+      "GROUP": "Color",
+      "DEFAULT": [1.0, 1.0, 1.0, 1.0]
+    },
+    {
+      "NAME": "brightness",
+      "LABEL": "Brightness",
+      "TYPE": "float",
+      "GROUP": "Color",
+      "DEFAULT": 1.0,
+      "MIN": 0.2,
+      "MAX": 3.0
     }
   ],
   "PASSES": [
@@ -217,6 +233,7 @@ vec4 passImage() {
     col += 0.3 * concentration * vec3(0.5 + 0.5 * v.x, 0.4, 0.5 + 0.5 * v.y);
 
     col *= 1.0 + ar * 0.35 * levelP;
+    col *= tintColor.rgb * brightness;
     return vec4(col, 1.0);
 }
 

@@ -36,6 +36,22 @@
       "LABEL": "Show Charges",
       "TYPE": "bool",
       "DEFAULT": false
+    },
+    {
+      "NAME": "tintColor",
+      "LABEL": "Tint",
+      "TYPE": "color",
+      "GROUP": "Color",
+      "DEFAULT": [1.0, 1.0, 1.0, 1.0]
+    },
+    {
+      "NAME": "brightness",
+      "LABEL": "Brightness",
+      "TYPE": "float",
+      "GROUP": "Color",
+      "DEFAULT": 1.0,
+      "MIN": 0.2,
+      "MAX": 3.0
     }
   ]
 }*/
@@ -97,5 +113,5 @@ void main() {
     vec3 col = hsv2rgb(vec3(hue, saturation, val));
     fragColor += vec4(col, 1.0);
 
-    gl_FragColor = vec4(fragColor.rgb, 1.0);
+    gl_FragColor = vec4(fragColor.rgb * tintColor.rgb * brightness, 1.0);
 }

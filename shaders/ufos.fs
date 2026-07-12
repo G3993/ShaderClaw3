@@ -30,6 +30,22 @@
       "DEFAULT": 0.35,
       "MIN": 0.0,
       "MAX": 1.0
+    },
+    {
+      "NAME": "tintColor",
+      "LABEL": "Tint",
+      "TYPE": "color",
+      "GROUP": "Color",
+      "DEFAULT": [1.0, 1.0, 1.0, 1.0]
+    },
+    {
+      "NAME": "brightness",
+      "LABEL": "Brightness",
+      "TYPE": "float",
+      "GROUP": "Color",
+      "DEFAULT": 1.0,
+      "MIN": 0.2,
+      "MAX": 3.0
     }
   ],
   "PASSES": [
@@ -154,5 +170,5 @@ void main() {
     gLevel = knee(audioLevel, 0.05, 0.90);
 
     if (PASSINDEX == 0) gl_FragColor = passTrace();
-    else gl_FragColor = vec4(texture2D(trailBuf, gl_FragCoord.xy / RENDERSIZE.xy).rgb, 1.0);
+    else gl_FragColor = vec4(texture2D(trailBuf, gl_FragCoord.xy / RENDERSIZE.xy).rgb * tintColor.rgb * brightness, 1.0);
 }

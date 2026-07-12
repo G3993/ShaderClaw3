@@ -22,6 +22,22 @@
       "DEFAULT": 0.5,
       "MIN": 0.0,
       "MAX": 1.0
+    },
+    {
+      "NAME": "tintColor",
+      "LABEL": "Tint",
+      "TYPE": "color",
+      "GROUP": "Color",
+      "DEFAULT": [1.0, 1.0, 1.0, 1.0]
+    },
+    {
+      "NAME": "brightness",
+      "LABEL": "Brightness",
+      "TYPE": "float",
+      "GROUP": "Color",
+      "DEFAULT": 1.0,
+      "MIN": 0.2,
+      "MAX": 3.0
     }
   ],
   "PASSES": [
@@ -171,7 +187,7 @@ vec4 passImage() {
     vec3 paper = vec3(1.0, 0.98, 0.9) * (1.0 - m * 0.1);
     vec3 c = clamp(paper - texture2D(trailBuf, q).rgb, 0.0, 1.0);
     vec3 col = mix(c, 1.0 - c, smoothstep(-0.3, 0.3, sin(q.y + TIME * 0.0717 + 3.4)));
-    return vec4(col, 1.0);
+    return vec4(col * tintColor.rgb * brightness, 1.0);
 }
 
 void main() {

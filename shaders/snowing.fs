@@ -28,6 +28,22 @@
       "LABEL": "Glitter Color",
       "TYPE": "color",
       "DEFAULT": [0.4, 0.05, 0.9, 1.0]
+    },
+    {
+      "NAME": "tintColor",
+      "LABEL": "Tint",
+      "TYPE": "color",
+      "GROUP": "Color",
+      "DEFAULT": [1.0, 1.0, 1.0, 1.0]
+    },
+    {
+      "NAME": "brightness",
+      "LABEL": "Brightness",
+      "TYPE": "float",
+      "GROUP": "Color",
+      "DEFAULT": 1.0,
+      "MIN": 0.2,
+      "MAX": 3.0
     }
   ],
   "PASSES": [
@@ -232,6 +248,7 @@ void main() {
         color += bloom;
         // sustained loudness lift keeps quiet/loud states distinguishable
         color *= 1.0 + audioReact * 0.3 * gLevel;
+        color *= tintColor.rgb * brightness;
         gl_FragColor = vec4(color, 1.0);
     }
 }

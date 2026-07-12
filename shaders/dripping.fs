@@ -28,6 +28,30 @@
       "MAX": 40.0
     },
     {
+      "NAME": "flareAmt",
+      "LABEL": "Flare",
+      "TYPE": "float",
+      "DEFAULT": 1.0,
+      "MIN": 0.0,
+      "MAX": 3.0
+    },
+    {
+      "NAME": "tintColor",
+      "LABEL": "Tint",
+      "TYPE": "color",
+      "GROUP": "Color",
+      "DEFAULT": [1.0, 1.0, 1.0, 1.0]
+    },
+    {
+      "NAME": "brightness",
+      "LABEL": "Brightness",
+      "TYPE": "float",
+      "GROUP": "Color",
+      "DEFAULT": 1.0,
+      "MIN": 0.2,
+      "MAX": 3.0
+    },
+    {
       "NAME": "meltAmt",
       "LABEL": "Melt Strength",
       "TYPE": "float",
@@ -69,8 +93,8 @@ vec2 decLoc(vec4 t) { return vec2(t.r + t.g / 255.0, t.b + t.a / 255.0); }
 vec4 srcAt(vec2 loc) {
     if (IMG_SIZE(inputTex).x > 0.5) return IMG_NORM_PIXEL(inputTex, loc);
     vec2 p = loc * 12.0;
-    vec3 c = 0.5 + 0.5 * cos(vec3(0.0, 2.1, 4.2) + p.x + sin(p.y * 1.3)
-                             + floor(p.y) * 1.7);
+    vec3 c = 0.45 + 0.3 * cos(vec3(0.0, 2.1, 4.2) + p.x + sin(p.y * 1.3)
+                              + floor(p.y) * 1.7);
     float grid = step(0.08, fract(p.x)) * step(0.08, fract(p.y));
     float check = mod(floor(p.x) + floor(p.y), 2.0);
     c *= 0.55 + 0.45 * check;
@@ -109,8 +133,10 @@ vec4 passFluid() {
     float py = 0.25 * (pres(n) - pres(s));
     Q += 0.25 * (n.w + e.y + s.z + w.x) - pres(Q) - vec4(px, -px, py, -py);
 
-    // darker picture areas melt faster; bass pulls the drips harder
-    float z = 0.8 - length(texture2D(litBuf, U / R).xyz);
+    // darker picture areas melt faster; z stays positive so drips always
+    // fall the same way (a signed z churned instead of dripping)
+    float lum = dot(texture2D(litBuf, U / R).xyz, vec3(0.333));
+    float z = clamp(0.9 - lum, 0.08, 1.0);
     Q = mix(mix(Q, 0.25 * (n + e + s + w), 0.01), vec4(pres(Q)), 0.01 * (1.0 - z));
     Q.zw -= 0.001 * meltAmt * z * vec2(1, -1)
           * (1.0 + 2.2 * audioReact * bassP);
@@ -168,8 +194,9 @@ vec4 passFinal() {
         Q += flareTap(U, -vec2(-i, i));
         Q += flareTap(U, -vec2(i, i));
     }
-    float flareGain = 1.0 + 2.0 * audioReact * highP;
+    float flareGain = flareAmt * (1.0 + 2.0 * audioReact * highP);
     Q = texture2D(litBuf, U / RENDERSIZE.xy) * 0.9 + 1e-5 * flareGain * Q;
+    Q.rgb *= tintColor.rgb * brightness;
     Q = atan(Q);
     Q.a = 1.0;
     return Q;

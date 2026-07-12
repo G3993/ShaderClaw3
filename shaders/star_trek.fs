@@ -30,6 +30,22 @@
       "DEFAULT": 0.05,
       "MIN": 0.0,
       "MAX": 1.0
+    },
+    {
+      "NAME": "tintColor",
+      "LABEL": "Tint",
+      "TYPE": "color",
+      "GROUP": "Color",
+      "DEFAULT": [1.0, 1.0, 1.0, 1.0]
+    },
+    {
+      "NAME": "brightness",
+      "LABEL": "Brightness",
+      "TYPE": "float",
+      "GROUP": "Color",
+      "DEFAULT": 1.0,
+      "MIN": 0.2,
+      "MAX": 3.0
     }
   ],
   "PASSES": [
@@ -396,6 +412,7 @@ vec4 passImage() {
     vec3 col = render(ro, rd, time);
     col = pow(clamp(col, 0.0, 1.0), vec3(0.45));
     col *= 1.0 + audioReact * 0.35 * knee(audioLevel, 0.05, 0.9);
+    col *= tintColor.rgb * brightness;
     return vec4(col, 1.0);
 }
 

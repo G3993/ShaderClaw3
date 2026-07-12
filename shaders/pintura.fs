@@ -29,6 +29,22 @@
       "DEFAULT": 1.0,
       "MIN": 0.3,
       "MAX": 3.0
+    },
+    {
+      "NAME": "tintColor",
+      "LABEL": "Tint",
+      "TYPE": "color",
+      "GROUP": "Color",
+      "DEFAULT": [1.0, 1.0, 1.0, 1.0]
+    },
+    {
+      "NAME": "brightness",
+      "LABEL": "Brightness",
+      "TYPE": "float",
+      "GROUP": "Color",
+      "DEFAULT": 1.0,
+      "MIN": 0.2,
+      "MAX": 3.0
     }
   ],
   "PASSES": [
@@ -323,7 +339,7 @@ vec4 passImage() {
     vec4 col = diffuse + 4.0 * mix(vec4(spec), 1.5 * diffuse * spec, 0.3);
     float contrast = 4.5 * mix(1.0, 0.8 + 0.5 * levelP, ar);
     col = mix(1.0, occ, 0.7) * softclamp4(0.0, 1.0, contrast * (col - 0.5) + 0.5, 3.0);
-    return vec4(col.rgb, 1.0);
+    return vec4(col.rgb * tintColor.rgb * brightness, 1.0);
 }
 
 void main() {

@@ -30,6 +30,22 @@
       "DEFAULT": 0.94,
       "MIN": 0.80,
       "MAX": 0.98
+    },
+    {
+      "NAME": "tintColor",
+      "LABEL": "Tint",
+      "TYPE": "color",
+      "GROUP": "Color",
+      "DEFAULT": [1.0, 1.0, 1.0, 1.0]
+    },
+    {
+      "NAME": "brightness",
+      "LABEL": "Brightness",
+      "TYPE": "float",
+      "GROUP": "Color",
+      "DEFAULT": 1.0,
+      "MIN": 0.2,
+      "MAX": 3.0
     }
   ],
   "PASSES": [
@@ -285,6 +301,7 @@ vec4 passImage() {
 
     // sustained loudness lift (mid-range colors, survives the diff metric)
     col *= 1.0 + ar * (0.5 * knee(audioLevel, 0.05, 0.9) + 0.25 * aBass());
+    col *= tintColor.rgb * brightness;
     return vec4(col, 1.0);
 }
 
