@@ -17,6 +17,7 @@
       "NAME": "audioReact",
       "LABEL": "Audio React",
       "TYPE": "float",
+      "GROUP": "Audio Reactivity",
       "DEFAULT": 0.5,
       "MIN": 0.0,
       "MAX": 1.0

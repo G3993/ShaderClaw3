@@ -17,6 +17,7 @@
       "NAME": "audioReact",
       "LABEL": "Audio React",
       "TYPE": "float",
+      "GROUP": "Audio Reactivity",
       "DEFAULT": 0.5,
       "MIN": 0.0,
       "MAX": 1.0
@@ -132,16 +133,16 @@ vec4 passImage() {
         heightAt(uv - unit.zy) - heightAt(uv + unit.zy),
         gray * gray * gray));
 
-    vec3 color = vec3(0.3) * (1.0 - abs(dot(normal, vec3(0, 0, 1))));
+    vec3 color = vec3(0.45) * (1.0 - abs(dot(normal, vec3(0, 0, 1))));
 
     vec3 dir = normalize(vec3(0, 1, 2));
     float specular = pow(dot(normal, dir) * 0.5 + 0.5, 20.0);
-    color += vec3(0.5) * ss(0.2, 1.0, specular);
+    color += vec3(0.5) * ss(0.1, 1.0, specular);
 
     // rainbow fringe; highs shimmer its phase
     vec3 tint = 0.5 + 0.5 * cos(vec3(1, 2, 3) * 1.0 + dot(normal, dir) * 4.0
                                 - uv.y * 3.0 - 3.0 + ar * 2.0 * highP);
-    color += tint * smoothstep(0.15, 0.0, gray);
+    color += tint * smoothstep(0.35, 0.0, gray);
 
     color -= dither * 0.1;
 

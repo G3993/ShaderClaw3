@@ -17,6 +17,7 @@
       "NAME": "audioReact",
       "LABEL": "Audio React",
       "TYPE": "float",
+      "GROUP": "Audio Reactivity",
       "DEFAULT": 0.5,
       "MIN": 0.0,
       "MAX": 1.0
@@ -246,7 +247,7 @@ vec4 passVel() {
     adv /= float(ADV_STEPS);
 
     // side pumps breathe with bass (audio scales injection, not the field)
-    float pumpScale = 0.004 * mix(1.0, 0.4 + 2.6 * bassP, ar);
+    float pumpScale = 0.02 * mix(1.0, 0.4 + 2.6 * bassP, ar);
     vec2 pq = 2.0 * (uv * 2.0 - 1.0) * vec2(1.0, tx.x / tx.y);
     vec2 pump = vec2(0.0);
     float uvy0 = exp(-50.0 * pq.y * pq.y);

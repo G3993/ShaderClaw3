@@ -14,6 +14,7 @@
       "NAME": "audioReact",
       "LABEL": "Audio React",
       "TYPE": "float",
+      "GROUP": "Audio Reactivity",
       "DEFAULT": 0.5,
       "MIN": 0.0,
       "MAX": 1.0
@@ -67,11 +68,13 @@ vec2 decLoc(vec4 t) { return vec2(t.r + t.g / 255.0, t.b + t.a / 255.0); }
 // source with a procedural fallback so the effect is alive with no input bound
 vec4 srcAt(vec2 loc) {
     if (IMG_SIZE(inputTex).x > 0.5) return IMG_NORM_PIXEL(inputTex, loc);
-    vec2 p = loc * 6.0;
+    vec2 p = loc * 12.0;
     vec3 c = 0.5 + 0.5 * cos(vec3(0.0, 2.1, 4.2) + p.x + sin(p.y * 1.3)
                              + floor(p.y) * 1.7);
-    float grid = step(0.06, fract(p.x)) * step(0.06, fract(p.y));
-    return vec4(c * (0.25 + 0.75 * grid), 1.0);
+    float grid = step(0.08, fract(p.x)) * step(0.08, fract(p.y));
+    float check = mod(floor(p.x) + floor(p.y), 2.0);
+    c *= 0.55 + 0.45 * check;
+    return vec4(c * (0.18 + 0.55 * grid), 1.0);
 }
 
 vec4 TA(vec2 U) { return decA(texture2D(fluidA, U / RENDERSIZE.xy)); }
@@ -138,16 +141,15 @@ vec4 passLit() {
     vec2 U = gl_FragCoord.xy;
     vec2 R = RENDERSIZE.xy;
     vec4 img = srcAt(locAt(U));
-    vec4 Q = 1.2 - 2.2 * img;
-    Q.xyz = Q.xyz + 0.5 * normalize(Q.xyz + vec3(1e-4));
     float n = length(srcAt(locAt(U + vec2(0, 1))));
     float e = length(srcAt(locAt(U + vec2(1, 0))));
     float s = length(srcAt(locAt(U - vec2(0, 1))));
     float w = length(srcAt(locAt(U - vec2(1, 0))));
-    vec3 no = normalize(vec3(e - w, n - s, 1.0));
+    vec3 no = normalize(vec3(e - w, n - s, 0.35));
     float d = dot(reflect(no, vec3(0, 0, 1)), normalize(vec3(1.0)));
-    Q *= 8.0 * exp(-3.0 * d * d);
-    return Q;
+    float sheen = exp(-2.5 * d * d);
+    vec3 col = img.rgb * (0.45 + 0.55 * sheen) + vec3(0.18) * pow(sheen, 3.0);
+    return vec4(col, 1.0);
 }
 
 // pass 3 — diagonal lens-flair bloom composite
@@ -167,7 +169,7 @@ vec4 passFinal() {
         Q += flareTap(U, -vec2(i, i));
     }
     float flareGain = 1.0 + 2.0 * audioReact * highP;
-    Q = texture2D(litBuf, U / RENDERSIZE.xy) * 0.15 + 1e-5 * flareGain * Q;
+    Q = texture2D(litBuf, U / RENDERSIZE.xy) * 0.9 + 1e-5 * flareGain * Q;
     Q = atan(Q);
     Q.a = 1.0;
     return Q;

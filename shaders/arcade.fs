@@ -18,6 +18,7 @@
       "NAME": "audioReact",
       "LABEL": "Audio React",
       "TYPE": "float",
+      "GROUP": "Audio Reactivity",
       "DEFAULT": 0.5,
       "MIN": 0.0,
       "MAX": 1.0
@@ -204,7 +205,7 @@ vec4 passTrails() {
     B.rgb *= decay;
     float dm = nearestDist(gl_FragCoord.xy, RENDERSIZE.xy);
     // hits inject brighter deposits — injection stays audio-locked through persistence
-    B.rgb += vec3(smoothstep(2.5, 0.0, dm))
+    B.rgb += vec3(smoothstep(4.0, 0.0, dm))
            * (1.0 + audioReact * (1.5 * aBass() + 0.8 * aLevel()));
     B.rgb = clamp(B.rgb, 0.0, 1.0);
     B.a = clamp(dm / 64.0, 0.0, 1.0);
@@ -233,14 +234,14 @@ vec4 passField() {
     float d = distance(gl_FragCoord.xy, p * 5.0);
     float circleRadius = (50.0 + 75.0 * sin(T * 2.0)) * mix(1.0, 0.4 + 1.8 * aBass(), ar);
     float circle = smoothstep(circleRadius, circleRadius - 10.0, d);
-    C += vec4(circle);
+    C += vec4(circle) * 0.65;
 
     // two roaming energy sources (mids feed them)
     vec2 p1 = RENDERSIZE.xy * vec2(0.3 + 0.3 * cos(T), 0.5 + 0.2 * sin(T));
     vec2 p2 = RENDERSIZE.xy * vec2(0.7 + 0.2 * cos(T * 1.3), 0.5 + 0.2 * sin(T * 0.8));
     float c1 = smoothstep(60.0, 5.0,  distance(gl_FragCoord.xy, p1));
     float c2 = smoothstep(50.0, 35.0, distance(gl_FragCoord.xy, p2));
-    C += vec4(c1 + c2) * mix(1.0, 0.3 + 1.9 * aMid(), ar);
+    C += vec4(c1 + c2) * 0.65 * mix(1.0, 0.3 + 1.9 * aMid(), ar);
 
     C = clamp(C, 0.0, 1.0);
     return mix(C, prev, 0.25);
@@ -272,7 +273,7 @@ vec4 passImage() {
     vec3 bg = 0.08 + 0.05 * cos(vec3(0.0, 1.5, 3.0) + TIME + uv.xyx * 8.0);
 
     vec3 col = bg;
-    col += 0.28 * sugar * palette;      // sugar field glows through
+    col += 0.15 * sugar * palette;      // sugar field glows through
     col += warpedTrail * palette * 2.4;
     col += vec3(0.0, 1.95, 0.9) * core * 6.8;
 

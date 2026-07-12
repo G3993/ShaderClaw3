@@ -2208,7 +2208,7 @@
     "description": "Multiscale paint fluid: Large-Eddy turbulence, vorticity confinement and a multiscale Poisson heightmap churn thick liquid pigment lit with GGX specular and cheap occlusion \u2014 embossed wet paint. Side pumps breathe with bass, highs glint the specular, loudness deepens contrast.",
     "file": "pintura.fs",
     "hasVertex": false,
-    "hidden": false,
+    "hidden": true,
     "id": 1260,
     "title": "Pintura",
     "type": "generator"

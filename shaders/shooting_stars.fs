@@ -18,6 +18,7 @@
       "NAME": "audioReact",
       "LABEL": "Audio React",
       "TYPE": "float",
+      "GROUP": "Audio Reactivity",
       "DEFAULT": 0.6,
       "MIN": 0.0,
       "MAX": 1.0
@@ -77,7 +78,7 @@ vec4 passStars() {
 
         vec2 p = uv - fract(i * 0.01) * vec2(cos(a), sin(a));
 
-        float att = (0.00004 + flare * 0.000005 * (1.0 - i / 250.0)) / (dot(p, p) + 0.0004);
+        float att = (0.00004 + flare * 0.000005 * (1.0 - i / 250.0)) / (dot(p, p) + 0.00015);
 
         vec3 starCol = mix(colorA.rgb, colorB.rgb, mod(i, 2.0));
         starCol.g += ar * 0.06 * bassP;

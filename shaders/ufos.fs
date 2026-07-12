@@ -18,6 +18,7 @@
       "NAME": "audioReact",
       "LABEL": "Audio React",
       "TYPE": "float",
+      "GROUP": "Audio Reactivity",
       "DEFAULT": 0.5,
       "MIN": 0.0,
       "MAX": 1.0
@@ -45,7 +46,7 @@
 #define MAX_NUM 96
 
 #define SPHERE_RADIUS 1.0
-#define LIGHT_INTENSITY 0.35
+#define LIGHT_INTENSITY 0.11
 #define MIN_RADIUS 0.4
 #define LOOPING_INTERVAL 10.0
 #define BASE_SPEED 0.5
@@ -101,7 +102,7 @@ vec3 traceLights(vec3 ro, vec3 rd, float t) {
     // light population waves; mids feed the swarm
     float drive = (-cos(t * BASE_SPEED) * 0.5 + 0.5)
                 * mix(1.0, 0.3 + 1.4 * gMid, audioReact);
-    float numF = mix(float(NUM_LIGHTS), float(MAX_NUM), clamp(drive, 0.0, 1.0));
+    float numF = mix(float(NUM_LIGHTS), float(MAX_NUM), clamp(drive, 0.0, 0.85));
     int num = int(ceil(numF));
 
     for (int i = 0; i < MAX_NUM; i++) {

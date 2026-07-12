@@ -18,6 +18,7 @@
       "NAME": "audioReact",
       "LABEL": "Audio React",
       "TYPE": "float",
+      "GROUP": "Audio Reactivity",
       "DEFAULT": 0.6,
       "MIN": 0.0,
       "MAX": 1.0
@@ -96,7 +97,7 @@ vec4 passAgents() {
         float d = length(dx) + 1e-4;
         if (d > 0.25) continue;
         vec2 ndir = dx / d;
-        F += ndir * (0.00030 * exp(-d / 0.09) - 0.0011 * exp(-d / 0.028));
+        F += ndir * (0.00004 * exp(-d / 0.09) - 0.0016 * exp(-d / 0.06));
         F += (pVel(k) - vel) * visc * exp(-d * d / 0.004);
     }
 
@@ -112,7 +113,7 @@ vec4 passAgents() {
 
     if (FRAMEINDEX < 2) {
         vec2 h = hash2(float(i) * 3.17);
-        pos = vec2(0.15 + 0.7 * h.x, 0.1 + 0.5 * h.y);
+        pos = vec2(0.08 + 0.84 * h.x, 0.08 + 0.84 * h.y);
         vel = vec2(0.0);
     }
 
@@ -128,7 +129,7 @@ vec4 passTrail() {
     float highP  = pow(knee(audioHigh, 0.10, 0.90), 1.2);
     float levelP = knee(audioLevel, 0.05, 0.90);
 
-    vec3 prev = texture2D(trailBuf, uv).rgb * 0.90;
+    vec3 prev = texture2D(trailBuf, uv).rgb * 0.86;
     vec3 acc = vec3(0.0);
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
     for (int k = 0; k < N_PARTICLES; k++) {
@@ -137,10 +138,11 @@ vec4 passTrail() {
         vec2 v = pVel(k);
         float sp = length(v) / VEL_R;
         float hue = fract(atan(v.y, v.x) / TAU + 0.6 + ar * 0.12 * highP);
-        vec3 c = hsv2rgb(vec3(hue, 0.75, 0.35 + 1.6 * sp));
-        acc += c * exp(-d * 2200.0);
-        acc += c * exp(-d * 260.0) * 0.12;
+        vec3 c = hsv2rgb(vec3(hue, 0.8, 0.22 + 1.1 * sp));
+        acc += c * exp(-d * 7000.0);
+        acc += c * exp(-d * 400.0) * 0.08;
     }
+    acc = acc / (1.0 + 0.85 * acc); // soft-knee so clusters never blow out
     vec3 outC = max(prev, acc);
     if (FRAMEINDEX < 2) outC = vec3(0.0);
     return vec4(clamp(outC, 0.0, 1.0), 1.0);

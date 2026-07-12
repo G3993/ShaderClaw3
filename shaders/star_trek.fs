@@ -18,6 +18,7 @@
       "NAME": "audioReact",
       "LABEL": "Audio React",
       "TYPE": "float",
+      "GROUP": "Audio Reactivity",
       "DEFAULT": 0.6,
       "MIN": 0.0,
       "MAX": 1.0
@@ -26,7 +27,7 @@
       "NAME": "camHeight",
       "LABEL": "Camera Height",
       "TYPE": "float",
-      "DEFAULT": 0.1,
+      "DEFAULT": 0.05,
       "MIN": 0.0,
       "MAX": 1.0
     }
@@ -367,6 +368,7 @@ vec3 render(vec3 ro, vec3 rd, float time) {
             vec3 single_col = max(0.0, dot(norm, lig_pos) * 0.5 + 0.5) * light_color(int(id)) * 2.0;
             vec4 fluid = get_fluid_texture(id, cap_uv + vec2(0.0, 0.1));
             vec2 comet_dist = comet_distance(ro, rd, int(id), time);
+            col += single_col * 0.05 * accum_dist; // faint base glow keeps the tunnel readable
             if (comet_dist.y > 0.5 && fluid.w > 0.0) {
                 col += max(vec3(0.0),
                     single_col * sin(fluid.w * 1.5 * fluid.x * 10.0 * fluid.y * 5.2 * fluid.z * vec3(1, 2, 3)));
