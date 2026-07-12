@@ -840,5 +840,44 @@
   "wave_text": {
     "group": "text",
     "surfaces": []
+  },
+  "mono_ink": {
+    "group": "mono",
+    "surfaces": []
+  },
+  "mono_murmuration": {
+    "group": "mono",
+    "surfaces": []
+  },
+  "mono_dust": {
+    "group": "mono",
+    "surfaces": [
+      "piano",
+      "ceiling"
+    ]
+  },
+  "mono_stripes": {
+    "group": "mono",
+    "surfaces": [
+      "piano"
+    ]
+  },
+  "mono_tiles": {
+    "group": "mono",
+    "surfaces": [
+      "piano"
+    ]
+  },
+  "mono_halo": {
+    "group": "mono",
+    "surfaces": [
+      "ceiling"
+    ]
+  },
+  "mono_rings": {
+    "group": "mono",
+    "surfaces": [
+      "ceiling"
+    ]
   }
 }

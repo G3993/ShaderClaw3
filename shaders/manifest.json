@@ -1383,19 +1383,6 @@
   "categories": [
    "Text",
    "Generator",
-   "3D",
-   "Audio Reactive"
-  ],
-  "description": "Message wraps around a raymarched chrome cylinder; audio pops relief, ripples chrome, sparkles characters.",
-  "file": "text_cylinder.fs",
-  "id": 1225,
-  "title": "Text Cylinder",
-  "type": "generator"
- },
- {
-  "categories": [
-   "Text",
-   "Generator",
    "Audio Reactive"
   ],
   "description": "Hazard-tape diagonal warning stripes animate through the message with beat-triggered flashes.",
@@ -1608,20 +1595,6 @@
   "file": "turrell_chroma.fs",
   "id": 467,
   "title": "Turrell Chroma",
-  "type": "generator"
- },
- {
-  "categories": [
-   "Generator",
-   "3D",
-   "Audio Reactive"
-  ],
-  "description": "Underwater \u2014 looking up from the deep. Volumetric god rays pierce down through dancing caustics, rising bubbles trail upward toward the rippling surface. HDR linear output for bloom-catching highlights.",
-  "file": "underwater.fs",
-  "hasVertex": false,
-  "hidden": false,
-  "id": 569,
-  "title": "Underwater",
   "type": "generator"
  },
  {
@@ -1857,149 +1830,247 @@
   "type": "isf"
  },
  {
-  "id": 1237,
-  "file": "flagship_particles.fs",
-  "description": "Three particle populations bound to stems: bass motes, drum sparks (born on hits), melody streamers on curl flow. EaselAudio flagship.",
   "categories": [
    "Generator",
    "Audio"
   ],
+  "description": "Three particle populations bound to stems: bass motes, drum sparks (born on hits), melody streamers on curl flow. EaselAudio flagship.",
+  "file": "flagship_particles.fs",
   "hasVertex": false,
+  "id": 1237,
   "title": "Stem Swarm"
  },
  {
-  "id": 1238,
-  "file": "flagship_fluids.fs",
-  "description": "Analytic curl-noise fluid: dye advected by bass time, kicks inject decaying vortex rings, air stem shimmers the surface. EaselAudio flagship.",
   "categories": [
    "Generator",
    "Audio"
   ],
+  "description": "Analytic curl-noise fluid: dye advected by bass time, kicks inject decaying vortex rings, air stem shimmers the surface. EaselAudio flagship.",
+  "file": "flagship_fluids.fs",
   "hasVertex": false,
+  "id": 1238,
   "title": "Soundcurrent"
  },
  {
-  "id": 1239,
-  "file": "flagship_orbs.fs",
-  "description": "Soft drifting radial-gradient orbs; per-band radius breathing, brightness-driven color temperature, bar-phase choreography. EaselAudio flagship.",
   "categories": [
    "Generator",
    "Audio"
   ],
+  "description": "Soft drifting radial-gradient orbs; per-band radius breathing, brightness-driven color temperature, bar-phase choreography. EaselAudio flagship.",
+  "file": "flagship_orbs.fs",
   "hasVertex": false,
+  "id": 1239,
   "title": "Aura Drift"
  },
  {
-  "id": 1204,
-  "file": "flagship_shapes.fs",
-  "description": "Crisp 2.5D geometric composition step-sequenced on beat-phase ramps; mids thicken outlines, hits dip fills, bass breathes the zoom. EaselAudio flagship.",
   "categories": [
    "Generator",
    "Audio"
   ],
+  "description": "Crisp 2.5D geometric composition step-sequenced on beat-phase ramps; mids thicken outlines, hits dip fills, bass breathes the zoom. EaselAudio flagship.",
+  "file": "flagship_shapes.fs",
   "hasVertex": false,
+  "id": 1204,
   "title": "Meter Made"
  },
  {
-  "id": 1205,
-  "file": "flagship_abstract.fs",
-  "description": "Domain-warped gradients + ribbon interference; mood follows energy/presence, stems map to warp/ribbon/sheen, palette rotates on beat toggle. EaselAudio flagship.",
   "categories": [
    "Generator",
    "Audio"
   ],
+  "description": "Domain-warped gradients + ribbon interference; mood follows energy/presence, stems map to warp/ribbon/sheen, palette rotates on beat toggle. EaselAudio flagship.",
+  "file": "flagship_abstract.fs",
   "hasVertex": false,
+  "id": 1205,
   "title": "Synesthete"
  },
  {
-  "id": 1240,
-  "file": "alist_chromastack.fs",
-  "description": "Stacked sliced color terraces warping in waves; bass swells the terrain, mids ripple slice offsets, highs satin the edges. No text, 3D, multi-layer.",
   "categories": [
    "Generator",
    "Audio"
   ],
+  "description": "Stacked sliced color terraces warping in waves; bass swells the terrain, mids ripple slice offsets, highs satin the edges. No text, 3D, multi-layer.",
+  "file": "alist_chromastack.fs",
   "hasVertex": false,
+  "id": 1240,
   "title": "Chromastack"
  },
  {
-  "id": 1212,
-  "file": "alist_neongrowth.fs",
-  "description": "Neon coral colonies growing over an ink skeleton; melody stem feeds growth, drum hits spawn spores, treble edges glow. No text, multi-layer.",
   "categories": [
    "Generator",
    "Audio"
   ],
+  "description": "Neon coral colonies growing over an ink skeleton; melody stem feeds growth, drum hits spawn spores, treble edges glow. No text, multi-layer.",
+  "file": "alist_neongrowth.fs",
   "hasVertex": false,
+  "id": 1212,
   "title": "Neon Growth"
  },
  {
-  "id": 1241,
-  "file": "alist_gridfog.fs",
-  "description": "Molten translucent neon fog draped over a dark blueprint grid; bass-time flow, brightness-driven inner spectrum, beat-phase drips. No text, 3D, multi-layer.",
   "categories": [
    "Generator",
    "Audio"
   ],
+  "description": "Molten translucent neon fog draped over a dark blueprint grid; bass-time flow, brightness-driven inner spectrum, beat-phase drips. No text, 3D, multi-layer.",
+  "file": "alist_gridfog.fs",
   "hasVertex": false,
+  "id": 1241,
   "title": "Grid Fog"
  },
  {
-  "id": 1242,
-  "file": "alist_bloomfield.fs",
-  "description": "Layered rippling rosettes blooming radially; per-band rosette breathing, mid-driven scallop detail, hit-dipped cores. No text, multi-layer.",
   "categories": [
    "Generator",
    "Audio"
   ],
+  "description": "Layered rippling rosettes blooming radially; per-band rosette breathing, mid-driven scallop detail, hit-dipped cores. No text, multi-layer.",
+  "file": "alist_bloomfield.fs",
   "hasVertex": false,
+  "id": 1242,
   "title": "Bloomfield"
  },
  {
-  "id": 1215,
-  "file": "alist_chromespike.fs",
-  "description": "Raymarched chrome barbed strands against a sky gradient; brightness shifts reflections, hits fire star glints, presence breathes the sky. No text, 3D, multi-layer.",
   "categories": [
    "Generator",
    "Audio"
   ],
+  "description": "Raymarched chrome barbed strands against a sky gradient; brightness shifts reflections, hits fire star glints, presence breathes the sky. No text, 3D, multi-layer.",
+  "file": "alist_chromespike.fs",
   "hasVertex": false,
+  "id": 1215,
   "title": "Chromespike"
  },
  {
-  "id": 1216,
-  "file": "fluid3d_flat.fs",
-  "description": "Flat-shaded 3D fluid \u2014 white and gray discs with true depth occlusion on black; particles wander randomly, bass pumps and bursts, mids swirl, highs shimmer. The flat-design take on the 3D Fluid.",
   "categories": [
    "Generator",
    "Audio",
    "3D"
   ],
+  "description": "Flat-shaded 3D fluid \u2014 white and gray discs with true depth occlusion on black; particles wander randomly, bass pumps and bursts, mids swirl, highs shimmer. The flat-design take on the 3D Fluid.",
+  "file": "fluid3d_flat.fs",
   "hasVertex": false,
+  "id": 1216,
   "title": "3D Fluid \u2014 Flat"
  },
  {
-  "id": 1217,
-  "file": "fluid3d_prism.fs",
-  "description": "Prismatic 3D fluid \u2014 full-spectrum glowing particle cloud on black; per-particle hue, hue wheel rides the mids, bass pumps and bursts, highs sparkle whites. The all-colorful take on the 3D Fluid.",
   "categories": [
    "Generator",
    "Audio",
    "3D"
   ],
+  "description": "Prismatic 3D fluid \u2014 full-spectrum glowing particle cloud on black; per-particle hue, hue wheel rides the mids, bass pumps and bursts, highs sparkle whites. The all-colorful take on the 3D Fluid.",
+  "file": "fluid3d_prism.fs",
   "hasVertex": false,
+  "id": 1217,
   "title": "3D Fluid \u2014 Prism"
  },
  {
-  "id": 1218,
-  "file": "fluid3d_ivory.fs",
-  "description": "Ivory 3D fluid \u2014 an all-white particle cloud, depth does the shading (near bright, far quiet gray) on black; bass pumps, mids swirl, highs put crystalline sparkle on the nearest particles.",
   "categories": [
    "Generator",
    "Audio",
    "3D"
   ],
+  "description": "Ivory 3D fluid \u2014 an all-white particle cloud, depth does the shading (near bright, far quiet gray) on black; bass pumps, mids swirl, highs put crystalline sparkle on the nearest particles.",
+  "file": "fluid3d_ivory.fs",
   "hasVertex": false,
+  "id": 1218,
   "title": "3D Fluid \u2014 Ivory"
+ },
+ {
+  "categories": [
+   "Generator",
+   "Audio Reactive",
+   "Minimal"
+  ],
+  "description": "Sumi-e ink in water \u2014 monochrome fluid. White wisps bloom and advect through black water; bass drops fresh ink at a wandering brush point, mids stir turbulence, highs raise paper-fiber shimmer.",
+  "file": "mono_ink.fs",
+  "hasVertex": false,
+  "hidden": false,
+  "id": 1243,
+  "title": "Mono \u2014 Ink",
+  "type": "generator"
+ },
+ {
+  "categories": [
+   "Generator",
+   "Audio Reactive",
+   "Minimal"
+  ],
+  "description": "A starling flock in monochrome: hundreds of tiny white birds streaming along a shared wind field; bass tightens the flock, beats bank the formation, highs flicker sparse wingbeats.",
+  "file": "mono_murmuration.fs",
+  "hasVertex": false,
+  "hidden": false,
+  "id": 1244,
+  "title": "Mono \u2014 Murmuration",
+  "type": "generator"
+ },
+ {
+  "categories": [
+   "Generator",
+   "Audio Reactive",
+   "Minimal"
+  ],
+  "description": "Depth-layered particle field: near motes are white bokeh discs, far ones faint specks. Kicks send a shockwave ring that lights particles as it passes; highs twinkle a sparse subset.",
+  "file": "mono_dust.fs",
+  "hasVertex": false,
+  "hidden": false,
+  "id": 1245,
+  "title": "Mono \u2014 Dust",
+  "type": "generator"
+ },
+ {
+  "categories": [
+   "Generator",
+   "Audio Reactive",
+   "Minimal"
+  ],
+  "description": "Riley op-art stripes: crisp black/white bands bending through a travelling lens; bass bulges the lens, beats flip stripe phase, mids raise moir\u00e9 shimmer.",
+  "file": "mono_stripes.fs",
+  "hasVertex": false,
+  "hidden": false,
+  "id": 1246,
+  "title": "Mono \u2014 Stripes",
+  "type": "generator"
+ },
+ {
+  "categories": [
+   "Generator",
+   "Audio Reactive",
+   "Minimal"
+  ],
+  "description": "Bauhaus geometric grid: one primitive per cell, each listening to its own spectral band and inverting when it speaks; beats rotate a scattered subset ninety degrees.",
+  "file": "mono_tiles.fs",
+  "hasVertex": false,
+  "hidden": false,
+  "id": 1247,
+  "title": "Mono \u2014 Tiles",
+  "type": "generator"
+ },
+ {
+  "categories": [
+   "Generator",
+   "Audio Reactive",
+   "Minimal"
+  ],
+  "description": "Ethereal light: two soft shafts leaning through slow fog around a breathing orb halo; bass swells the beams, highs wake dust motes drifting inside the light.",
+  "file": "mono_halo.fs",
+  "hasVertex": false,
+  "hidden": false,
+  "id": 1248,
+  "title": "Mono \u2014 Halo",
+  "type": "generator"
+ },
+ {
+  "categories": [
+   "Generator",
+   "Audio Reactive",
+   "Minimal"
+  ],
+  "description": "Abstract line-work: hairline concentric rings and orbiting arc fragments; kicks birth travelling shockwave rings, each arc spins at its own band's speed, highs spark the tips.",
+  "file": "mono_rings.fs",
+  "hasVertex": false,
+  "hidden": false,
+  "id": 1249,
+  "title": "Mono \u2014 Rings",
+  "type": "generator"
  }
 ]
