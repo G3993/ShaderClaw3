@@ -15,7 +15,8 @@ const puppeteer = require('puppeteer-core');
 
 const ROOT = path.join(__dirname, '..');
 const SHADER_DIR = path.join(ROOT, 'shaders');
-const OUT_DIR = '/Users/lu/easel-mobile-james-merge-scratch/EaselMobile/EaselMobile/Resources/ShaderThumbnails';
+const OUT_DIR = process.env.THUMB_OUT ||
+  '/Users/lu/easel-mobile-v2/EaselMobile/EaselMobile/Resources/ShaderThumbnails';
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const ONLY = process.env.THUMB_ONLY ? new Set(process.env.THUMB_ONLY.split(',')) : null;
 const RESTART_EVERY = 30;

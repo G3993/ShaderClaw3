@@ -543,7 +543,7 @@ void main() {
     vec2 uv01 = isf_FragNormCoord;
 
     float t = TIME * (0.4 + gestureSpeed);
-    int moodI = clamp(mood, 0, 3);
+    int moodI = int(clamp(float(mood), 0.0, 3.0)); // WebGL: long inputs arrive as float
     vec3 bands = audioBands(t, audioReact);
 
     float bass   = clamp(audioBass,  0.0, 1.0) * audioReact;
