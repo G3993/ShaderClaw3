@@ -104,6 +104,15 @@
       "GROUP": "Shape / Geometry"
     },
     {
+      "NAME": "plasmaAmt",
+      "LABEL": "Plasma Flame",
+      "TYPE": "float",
+      "DEFAULT": 0.55,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
       "NAME": "lensSize",
       "LABEL": "Lens Size",
       "TYPE": "float",
@@ -532,6 +541,52 @@ bool traceRefractionRay(vec3 ro, vec3 rd, vec3 sc, float r, float eta,
 }
 
 // ═══════════════════════════════════════════════════════
+//  PLASMA FLAME INTERIOR
+//  Fusion of the lens-coupled sine-swirl (the lens distance seeds the
+//  advection field) and a warped fbm flame ridge that is advected BY the
+//  swirl — one coupled system living inside the refracted sphere.
+// ═══════════════════════════════════════════════════════
+
+float fbm3s(vec3 p){
+    float v = 0.0, w = 0.5;
+    for(int i = 0; i < 4; i++){
+        v += (vnoise3(p)*2.0 - 1.0)*w;
+        p  = NOISE_ROT * p;
+        w *= 0.5;
+    }
+    return v;
+}
+
+vec3 tanh3(vec3 x){
+    vec3 e = exp(2.0*clamp(x, -8.0, 8.0));
+    return (e - 1.0)/(e + 1.0);
+}
+
+float s1f(float v){ return sin(v)*0.5 + 0.5; }
+
+vec3 plasmaFlame(vec2 q, float T2, float bass, float mid, float high){
+    // swirl essence: the lens term itself seeds the advection velocity
+    float l = abs(0.7 - dot(q, q));
+    vec2 v = q * (1.0 - l) / 0.2;
+    vec4 o = vec4(0.0);
+    for (float i = 1.0; i <= 8.0; i += 1.0) {
+        o += (sin(v.xyyx) + 1.0) * abs(v.x - v.y) * 0.2;
+        v += cos(v.yx * i + vec2(0.0, i) + T2) / i + 0.7;
+    }
+    // flame essence: fbm ridge riding the swirl's velocity field
+    float n = vnoise3(vec3(q * 1.4 + vec2(T2, 0.0), T2 * 0.5));
+    vec2 q2 = mix(q, vec2(n), 0.2) + v * 0.04;
+    float dEnv = fbm3s(vec3(q2 * vec2(0.5, 3.0) + vec2(-T2 * 0.5, 0.0), T2 * 0.5)) + 0.5;
+    vec3 flame = vec3(s1f(3.0 + dEnv*10.0), s1f(2.0 + dEnv*10.0), s1f(1.0 + dEnv*10.0));
+    flame = pow(flame + 0.6, vec3(2.1));
+    // audio in tone-mapping only (tanh clamps; domains stay audio-free)
+    vec3 swirl = tanh3(exp(q.y * vec3(1.0, -1.0, -2.0)) * exp(-4.0 * l)
+                       / max(o.rgb, vec3(1e-3)) * (0.8 + 0.7*bass + 0.25*mid));
+    return swirl * mix(vec3(1.0), flame * 1.5, 0.75)
+         + flame * max(dEnv, 0.0) * (0.25 + 0.25*high);
+}
+
+// ═══════════════════════════════════════════════════════
 //  HASH JITTER
 // ═══════════════════════════════════════════════════════
 
@@ -622,8 +677,9 @@ void main(){
 
         // Render cloud for each channel
         float colR = 0.0, colG = 0.0, colB = 0.0, colA = 0.0;
+        bool wantCloud = plasmaAmt < 0.999;
 
-        if(hitG){
+        if(hitG && wantCloud){
             vec4 cloudG = renderCloud(cRo_G, cRd_G, randVal, bass, T);
             vec3 sky2 = bgColor.rgb;
             vec3 cg = cloudG.a > 0.0 ? cloudG.rgb / cloudG.a : vec3(0.0);
@@ -634,17 +690,29 @@ void main(){
             colR = blendG.r;
             colB = blendG.b;
         }
-        if(hitR){
+        if(hitR && wantCloud){
             vec4 cloudR = renderCloud(cRo_R, cRd_R, randVal, bass, T);
             vec3 sky2 = bgColor.rgb;
             vec3 cr2 = cloudR.a > 0.0 ? cloudR.rgb / cloudR.a : vec3(0.0);
             colR = mix(sky2, cr2, cloudR.a).r;
         }
-        if(hitB){
+        if(hitB && wantCloud){
             vec4 cloudB = renderCloud(cRo_B, cRd_B, randVal, bass, T);
             vec3 sky2 = bgColor.rgb;
             vec3 cb2 = cloudB.a > 0.0 ? cloudB.rgb / cloudB.a : vec3(0.0);
             colB = mix(sky2, cb2, cloudB.a).b;
+        }
+
+        // Plasma-flame interior, seen through the same refracted rays
+        if(plasmaAmt > 0.001 && hitG){
+            float T3 = T * 0.6;
+            vec3 plasG = plasmaFlame(cRo_G.xy * 1.4, T3, bass, mid, high);
+            vec3 plasR = hitR ? plasmaFlame(cRo_R.xy * 1.4, T3, bass, mid, high) : plasG;
+            vec3 plasB = hitB ? plasmaFlame(cRo_B.xy * 1.4, T3, bass, mid, high) : plasG;
+            colR = mix(colR, plasR.r, plasmaAmt);
+            colG = mix(colG, plasG.g, plasmaAmt);
+            colB = mix(colB, plasB.b, plasmaAmt);
+            colA = max(colA, plasmaAmt);
         }
 
         // Check if source texture is bound, blend over cloud
