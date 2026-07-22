@@ -99,7 +99,16 @@
       	"NAME" : 		"c2",
       	"TYPE" : 		"color",
       	"DEFAULT" :	[ 0.7, 1.0, 0.1, 1.0 ]
-   	}
+   	},
+	{
+		"NAME" : 		"audioReact",
+		"LABEL" : 		"Audio React",
+		"TYPE" : 		"float",
+		"DEFAULT" : 	1.0,
+		"MIN" : 		0.0,
+		"MAX" : 		2.0,
+		"GROUP" : 		"Audio Reactivity"
+	}
   ],
   "ISFVSN" : 2.0
 }
@@ -164,6 +173,10 @@ void main() {
 	float dist;
     vec3 eye, center, norm;
     float zoom = setCamera(eye, center);
+    // Audio: bass breathes the camera, level lifts the light (silence = original)
+    float aB = pow(smoothstep(0.05, 0.85, audioBass), 1.4) * audioReact;
+    float aL = smoothstep(0.05, 0.9, audioLevel) * audioReact;
+    zoom *= 1.0 + 0.12 * aB;
     vec3 lightDir = vec3(light.xy, 0.8);
     vec3 forward = normalize(center - eye);
     vec3 right = normalize(cross(forward, vec3(0.0, 0.0, 1.0)));
@@ -177,5 +190,5 @@ void main() {
     float illuminated = 1.0 - castRay(pos + 0.001 * norm, lightDir, dist, norm);
     float light = (3.0 + shadow * (illuminated * max(shade, 0.0) - 1.0)) * (1.0 - max(-shade, 0.0));
 
-    gl_FragColor = vec4(mix(backgroundColor, light * col, hit), 1.0);
+    gl_FragColor = vec4(mix(backgroundColor, light * col * (1.0 + 0.45 * aL + 0.20 * aB), hit), 1.0);
 }

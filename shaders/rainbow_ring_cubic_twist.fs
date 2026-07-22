@@ -43,6 +43,15 @@
         "DEFAULT" : 0.454545,
         "MIN" :     0.25,
         "MAX" :     1.0
+    },
+    {
+        "NAME" :    "audioReact",
+        "LABEL" :   "Audio React",
+        "TYPE" :    "float",
+        "DEFAULT" : 1.0,
+        "MIN" :     0.0,
+        "MAX" :     2.0,
+        "GROUP" :   "Audio Reactivity"
     }
     ]
 }
@@ -67,13 +76,17 @@ precision highp float;
 void main() 
 {
     float T = TIME * rate;
-    vec2 R = RENDERSIZE;  
+    // Audio: bass fattens the ring and drives the twist phase, highs brighten (silence = original)
+    float aB = pow(smoothstep(0.05, 0.85, audioBass), 1.4) * audioReact;
+    float aH = smoothstep(0.05, 0.85, audioHigh) * audioReact;
+    T += 0.8 * aB;
+    vec2 R = RENDERSIZE;
     vec2 P = (gl_FragCoord.xy - 0.5*R)*(2.1 - scale);
     vec4 S, E, F;
-    P = vec2(length(P) / R.y - 0.333, atan(P.y,P.x));  
-    P *= vec2(2.6 - thickness,floor(twists));                                                                                                             ;
+    P = vec2(length(P) / R.y - 0.333, atan(P.y,P.x));
+    P *= vec2(2.6 - thickness - 0.30*aB,floor(twists));                                                                                                             ;
     S = 0.08*cos(1.5*vec4(0.0, 1.0, 2.0, 3.0) + T + P.y + sin(P.y)*cos(T));
-    E = S.yzwx; 
+    E = S.yzwx;
     F = max(P.x - S, E - P.x);
-    gl_FragColor = pow(dot(clamp(F*R.y, 0.0, 1.0), 72.0*(S - E))*(S - 0.1), vec4(gamma));
+    gl_FragColor = pow(dot(clamp(F*R.y, 0.0, 1.0), 72.0*(S - E))*(S - 0.1), vec4(gamma * (1.0 - 0.15*aH)));
 }

@@ -168,6 +168,15 @@
       "MIN": 1,
       "MAX": 4,
       "DEFAULT": 2
+    },
+    {
+      "NAME": "audioReact",
+      "LABEL": "Audio React",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 1,
+      "GROUP": "Audio Reactivity"
     }
   ]
 }*/
@@ -394,6 +403,11 @@ void main() {
         uc = clamp(hM * uc, 0.0, 1.0);
     }
     col.rgb = uc;
+
+    // Audio: bass swells, highs sparkle the glow (silence = original)
+    float aB = pow(smoothstep(0.05, 0.85, audioBass), 1.4) * audioReact;
+    float aH = smoothstep(0.05, 0.85, audioHigh) * audioReact;
+    col.rgb *= 1.0 + 0.16 * aB + 0.14 * aH;
 
     gl_FragColor = col;
 }

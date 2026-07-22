@@ -156,6 +156,35 @@ class Renderer {
   }
 
   resize() {
+    // Locked size (user picked an explicit canvas size / aspect): keep the
+    // backing store fixed and refit the letterboxed display to the container.
+    if (this.lockedSize) {
+      const lw = this.lockedSize[0], lh = this.lockedSize[1];
+      if (this.canvas.width !== lw || this.canvas.height !== lh) {
+        this.canvas.width = lw;
+        this.canvas.height = lh;
+      }
+      this.gl.viewport(0, 0, lw, lh);
+      const parentEl = this.canvas.parentElement;
+      if (parentEl) {
+        const vpW = parentEl.clientWidth || window.innerWidth;
+        const vpH = parentEl.clientHeight || window.innerHeight;
+        const canvasAspect = lw / lh;
+        if (canvasAspect > vpW / vpH) {
+          this.canvas.style.width = '100%';
+          this.canvas.style.height = (vpW / canvasAspect) + 'px';
+        } else {
+          this.canvas.style.height = '100%';
+          this.canvas.style.width = (vpH * canvasAspect) + 'px';
+        }
+        const threeCanvas = document.getElementById('three-canvas');
+        if (threeCanvas) {
+          threeCanvas.style.width = this.canvas.style.width;
+          threeCanvas.style.height = this.canvas.style.height;
+        }
+      }
+      return;
+    }
     // Cap DPR at 2 on mobile to prevent oversized canvases that kill GPU
     const isMobile = window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
     const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 2 : 3);

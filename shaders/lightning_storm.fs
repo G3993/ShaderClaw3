@@ -4,7 +4,7 @@
     "Atmospheric",
     "Audio Reactive"
   ],
-  "DESCRIPTION": "High-fidelity branching forked lightning bolts with continuous polyline SDF, hot core + cyan plasma sheath, stochastic Brownian forks, parallax stormcloud layers, diagonal rain streaks, screen flash with chromatic aberration, ground silhouette, bloom, grain, and vignette. Bass triggers strikes, mids amplify the storm, highs shimmer the clouds.",
+  "DESCRIPTION": "High-fidelity branching forked lightning bolts with hot core + cyan plasma sheath, stochastic Brownian forks, parallax stormcloud layers, diagonal rain, abstract thunder forms (ribbon, plasma ball, sheet flash, ground crawl), screen flash with chromatic aberration, ground silhouette, bloom, grain, and vignette. Bass triggers strikes, mids amplify the storm, highs shimmer the clouds.",
   "INPUTS": [
     {
       "NAME": "boltProbability",
@@ -76,6 +76,15 @@
       "GROUP": "Shape / Geometry"
     },
     {
+      "NAME": "abstractThunderMix",
+      "LABEL": "Abstract Thunder",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.5,
+      "GROUP": "Shape / Geometry"
+    },
+    {
       "NAME": "cloudDrift",
       "LABEL": "Cloud Drift",
       "TYPE": "float",
@@ -115,48 +124,28 @@
       "NAME": "skyTopColor",
       "LABEL": "Sky Top",
       "TYPE": "color",
-      "DEFAULT": [
-        0.018,
-        0.022,
-        0.052,
-        1
-      ],
+      "DEFAULT": [0.018, 0.022, 0.052, 1],
       "GROUP": "Color"
     },
     {
       "NAME": "skyBotColor",
       "LABEL": "Sky Bottom",
       "TYPE": "color",
-      "DEFAULT": [
-        0.1,
-        0.12,
-        0.18,
-        1
-      ],
+      "DEFAULT": [0.1, 0.12, 0.18, 1],
       "GROUP": "Color"
     },
     {
       "NAME": "boltCoreColor",
       "LABEL": "Bolt Core",
       "TYPE": "color",
-      "DEFAULT": [
-        1,
-        1,
-        1,
-        1
-      ],
+      "DEFAULT": [1, 1, 1, 1],
       "GROUP": "Color"
     },
     {
       "NAME": "boltSheathColor",
       "LABEL": "Bolt Sheath",
       "TYPE": "color",
-      "DEFAULT": [
-        0.55,
-        0.78,
-        1,
-        1
-      ],
+      "DEFAULT": [0.55, 0.78, 1, 1],
       "GROUP": "Color"
     },
     {
@@ -224,16 +213,24 @@ float fbm(vec2 p) {
     return v;
 }
 
+float fbm3(vec2 p) {
+    float v = 0.0, a = 0.5;
+    mat2 r = mat2(0.8, -0.6, 0.6, 0.8);
+    for (int i = 0; i < 3; i++) {
+        v += a * vnoise(p);
+        p = r * p * 2.04;
+        a *= 0.5;
+    }
+    return v;
+}
+
 // ---------- continuous polyline distance ----------
-// True point-to-segment distance — pixel-exact, no per-segment "dot connecting".
 float sdSeg(vec2 p, vec2 a, vec2 b) {
     vec2 pa = p - a, ba = b - a;
     float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-8), 0.0, 1.0);
     return length(pa - ba * h);
 }
 
-// Distance from p to a tapered segment: width interpolates from wA at a to wB at b.
-// Returns SIGNED distance (negative inside the tapered tube). Use abs for SDF.
 float sdTaperedSeg(vec2 p, vec2 a, vec2 b, float wA, float wB) {
     vec2 pa = p - a, ba = b - a;
     float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-8), 0.0, 1.0);
@@ -242,55 +239,38 @@ float sdTaperedSeg(vec2 p, vec2 a, vec2 b, float wA, float wB) {
 }
 
 // ---------- bolt construction ----------
-// We compute, per pixel, the MINIMUM signed distance to the entire bolt polyline
-// (trunk + branches + sub-branches), each segment tapered. The result is a single
-// continuous SDF from which core + sheath + glow are derived.
-//
-// Parameters returned packed:
-//   .x = min unsigned distance to core line (for core SDF)
-//   .y = min unsigned distance to sheath envelope (for sheath SDF)
-//   .z = signed core SDF (negative inside)
 vec3 boltSDF(vec2 uv, float seed, float depth, float jitter, float life01) {
-    // Bolt anchors.
     float topX = mix(0.18, 0.82, hash11(seed * 7.13 + 1.0));
     float botX = topX + (hash11(seed * 3.7 + 11.0) - 0.5) * 0.55;
     vec2 a = vec2(topX, 1.08);
     vec2 b = vec2(botX, -0.06);
 
-    // Coverage envelope: at life01=0 head emerges, by ~0.15 it has fully struck.
     float strike = smoothstep(0.0, 0.18, life01);
 
-    // Trunk direction (normalized) and perpendicular for proper random-walk offset.
     vec2 trunkDir = normalize(b - a);
     vec2 perp = vec2(-trunkDir.y, trunkDir.x);
 
     const int SEGS = 22;
-    float minDC = 1e9;     // min distance to core skeleton
-    float minDS = 1e9;     // min distance to sheath skeleton (signed via taper)
+    float minDC = 1e9;
+    float minDS = 1e9;
 
-    // Brownian-style accumulator: each segment adds a hashed perpendicular kick.
     vec2 prev = a;
     float walk = 0.0;
-    // Endpoint reachable so far (for spawning branches).
     vec2 segPivots[6];
     float segPivotT[6];
     int pivotCount = 0;
 
     for (int i = 1; i <= SEGS; i++) {
         float t = float(i) / float(SEGS);
-        // Reveal segments progressively as the bolt strikes.
         if (t > strike + 0.05) break;
 
-        // Brownian walk: hashed delta added to running perpendicular offset.
         float h = hash11(seed * 19.7 + float(i) * 3.1) - 0.5;
-        // Stronger kicks in the middle, anchor to endpoints.
         float taperJ = sin(t * 3.14159);
         walk += h * jitter * 0.42;
-        walk *= 0.86; // damping toward zero so trunk doesn't drift far
+        walk *= 0.86;
         vec2 base = mix(a, b, t);
         vec2 cur = base + perp * walk * taperJ;
 
-        // Trunk width tapers from full at top to ~0.4 near the tip.
         float wA = mix(0.0030, 0.0014, (t - 1.0/float(SEGS)));
         float wB = mix(0.0030, 0.0014, t);
 
@@ -299,8 +279,6 @@ vec3 boltSDF(vec2 uv, float seed, float depth, float jitter, float life01) {
         minDC = min(minDC, dc);
         minDS = min(minDS, ds);
 
-        // Stash a few pivots for branch spawning.
-        // (GLSL ES 1.0: array writes need const/loop indices — store via const loop.)
         if (pivotCount < 6 && hash11(seed * 5.0 + float(i) * 2.13) > 0.55) {
             for (int s = 0; s < 6; s++) {
                 if (s == pivotCount) { segPivots[s] = cur; segPivotT[s] = t; break; }
@@ -311,7 +289,6 @@ vec3 boltSDF(vec2 uv, float seed, float depth, float jitter, float life01) {
         prev = cur;
     }
 
-    // ---------- branches ----------
     int branches = int(clamp(depth, 1.0, 4.0));
     for (int k = 0; k < 4; k++) {
         if (k >= branches || k >= pivotCount) break;
@@ -320,7 +297,6 @@ vec3 boltSDF(vec2 uv, float seed, float depth, float jitter, float life01) {
         vec2 bp = segPivots[k];
         float bs = seed * 41.0 + float(k) * 17.31;
 
-        // Branch direction = trunk direction rotated by 30-60°.
         float ang = mix(0.52, 1.05, hash11(bs + 1.7));
         ang *= (hash11(bs + 5.5) > 0.5) ? 1.0 : -1.0;
         float ca = cos(ang), sa = sin(ang);
@@ -332,7 +308,6 @@ vec3 boltSDF(vec2 uv, float seed, float depth, float jitter, float life01) {
         const int BSEGS = 11;
         vec2 bprev = bp;
         float bwalk = 0.0;
-        // Branch sub-pivots for sub-branches.
         vec2 subPivots[3];
         int subCount = 0;
 
@@ -344,7 +319,6 @@ vec3 boltSDF(vec2 uv, float seed, float depth, float jitter, float life01) {
             vec2 bbase = mix(bp, brEnd, tt);
             vec2 bcur = bbase + brPerp * bwalk * sin(tt * 3.14159);
 
-            // Branches at 60% trunk width, tapering toward tip.
             float bwA = mix(0.0019, 0.0007, (tt - 1.0/float(BSEGS)));
             float bwB = mix(0.0019, 0.0007, tt);
 
@@ -362,7 +336,6 @@ vec3 boltSDF(vec2 uv, float seed, float depth, float jitter, float life01) {
             bprev = bcur;
         }
 
-        // ---------- sub-branches (1-2 recursive levels) ----------
         for (int m = 0; m < 3; m++) {
             if (m >= subCount) break;
             if (depth < 2.5) break;
@@ -378,7 +351,7 @@ vec3 boltSDF(vec2 uv, float seed, float depth, float jitter, float life01) {
             vec2 sEnd = sp + sDir * sReach;
 
             const int SSEGS = 6;
-            vec2 sprev = sp;
+            vec2 sprev2 = sp;
             float swalk = 0.0;
             for (int q = 1; q <= SSEGS; q++) {
                 float qt = float(q) / float(SSEGS);
@@ -388,15 +361,14 @@ vec3 boltSDF(vec2 uv, float seed, float depth, float jitter, float life01) {
                 vec2 sbase = mix(sp, sEnd, qt);
                 vec2 scur = sbase + sPerp * swalk * sin(qt * 3.14159);
 
-                // Sub-branches at 40% width.
                 float swA = mix(0.0012, 0.0004, (qt - 1.0/float(SSEGS)));
                 float swB = mix(0.0012, 0.0004, qt);
 
-                float dc = sdSeg(uv, sprev, scur);
-                float ds = sdTaperedSeg(uv, sprev, scur, swA, swB);
+                float dc = sdSeg(uv, sprev2, scur);
+                float ds = sdTaperedSeg(uv, sprev2, scur, swA, swB);
                 minDC = min(minDC, dc);
                 minDS = min(minDS, ds);
-                sprev = scur;
+                sprev2 = scur;
             }
         }
     }
@@ -404,7 +376,6 @@ vec3 boltSDF(vec2 uv, float seed, float depth, float jitter, float life01) {
     return vec3(minDC, minDS, minDS);
 }
 
-// Lifetime envelope: sharp white onset, exp decay, fast flicker tail.
 float boltEnv(float life01, float seed) {
     float onset = smoothstep(0.0, 0.04, life01);
     float decay = exp(-life01 * 4.2);
@@ -414,216 +385,355 @@ float boltEnv(float life01, float seed) {
     return onset * decay * flick;
 }
 
+// ---------- ABSTRACT THUNDER FORMS ----------
+
+// 1. RIBBON DISCHARGE: a sinuous horizontal plasma ribbon
+float ribbonThunder(vec2 uv, float seed, float life01, float aspect) {
+    float env = exp(-life01 * 5.5) * smoothstep(0.0, 0.06, life01);
+    float yBase = mix(0.25, 0.85, hash11(seed * 3.71));
+    float xStart = hash11(seed * 1.13) * 0.3;
+    float xEnd   = 0.7 + hash11(seed * 2.31) * 0.3;
+    float minD = 1e9;
+    const int RSEGS = 18;
+    vec2 prev = vec2(xStart, yBase);
+    for (int i = 1; i <= RSEGS; i++) {
+        float t = float(i) / float(RSEGS);
+        if (t > smoothstep(0.0, 0.22, life01) + 0.05) break;
+        float xc = mix(xStart, xEnd, t);
+        float yc = yBase
+            + 0.12 * sin(t * 9.31 + seed * 5.0)
+            + 0.06 * sin(t * 23.7 + seed * 11.0)
+            + 0.04 * (hash11(seed * 7.0 + float(i) * 1.9) - 0.5);
+        vec2 cur = vec2(xc * aspect, yc);
+        vec2 prevA = vec2(prev.x * aspect, prev.y);
+        float d = sdSeg(uv, prevA, cur);
+        minD = min(minD, d);
+        prev = vec2(xc, yc);
+    }
+    float core = exp(-(minD * minD) / (0.002 * 0.002)) * env;
+    float glow = exp(-(minD * minD) / (0.018 * 0.018)) * env * 0.5;
+    return core + glow;
+}
+
+// 2. PLASMA BALL: expanding ring discharge from a point
+float plasmaBall(vec2 uv, float seed, float life01, float aspect) {
+    float env = exp(-life01 * 6.0) * smoothstep(0.0, 0.05, life01);
+    vec2 center = vec2(
+        mix(0.2, 0.8, hash11(seed * 4.11)) * aspect,
+        mix(0.3, 0.9, hash11(seed * 6.77))
+    );
+    float r = life01 * 0.55 * aspect;
+    float d = abs(length(uv - center) - r);
+    float ring = exp(-(d * d) / (0.012 * 0.012)) * env;
+    // Inner spokes: radial discharge lines
+    float spokeAmt = 0.0;
+    for (int si = 0; si < 8; si++) {
+        float ang = float(si) * 0.7854 + hash11(seed + float(si) * 1.3) * 0.4;
+        float ca = cos(ang), sa = sin(ang);
+        vec2 dir = vec2(ca, sa);
+        float spokeR = r * (0.4 + 0.6 * hash11(seed * 9.0 + float(si)));
+        vec2 tip = center + dir * spokeR;
+        float sd = sdSeg(uv, center, tip);
+        float w = 0.003 + 0.004 * hash11(seed * 3.0 + float(si));
+        spokeAmt += exp(-(sd * sd) / (w * w)) * env * 0.6;
+    }
+    return ring + spokeAmt;
+}
+
+// 3. SHEET LIGHTNING: broad diffuse glow behind clouds (no defined bolt path)
+float sheetLightning(vec2 uv, float seed, float life01) {
+    float env = exp(-life01 * 8.0) * smoothstep(0.0, 0.03, life01);
+    float cx = mix(0.15, 0.85, hash11(seed * 5.3));
+    float cy = mix(0.55, 0.98, hash11(seed * 2.9));
+    vec2 d = uv - vec2(cx, cy);
+    d.y *= 0.5; // flatten vertically
+    float dist = length(d);
+    float sheet = exp(-(dist * dist) / (0.18 * 0.18)) * env;
+    // Layered noise structure inside the sheet
+    float n = fbm3(uv * 5.0 + seed * 0.37 + TIME * 0.1);
+    sheet *= 0.6 + 0.4 * n;
+    return sheet;
+}
+
+// 4. GROUND CRAWL: horizontal branching discharge near ground level
+float groundCrawl(vec2 uv, float seed, float life01, float aspect, float groundY) {
+    float env = exp(-life01 * 7.0) * smoothstep(0.0, 0.08, life01);
+    float startX = mix(0.1, 0.9, hash11(seed * 8.1)) * aspect;
+    float y0 = groundY + 0.01 + 0.03 * hash11(seed * 2.0);
+    float minD = 1e9;
+
+    // Main crawl arm
+    const int CSEGS = 14;
+    vec2 cprev = vec2(startX, y0);
+    float cwalk = 0.0;
+    float reveal = smoothstep(0.0, 0.25, life01);
+    for (int i = 1; i <= CSEGS; i++) {
+        float t = float(i) / float(CSEGS);
+        if (t > reveal + 0.06) break;
+        float dir = (hash11(seed * 3.0) > 0.5) ? 1.0 : -1.0;
+        float xc = startX + dir * t * 0.55 * aspect;
+        cwalk += (hash11(seed * 11.0 + float(i) * 1.7) - 0.5) * 0.025;
+        cwalk *= 0.88;
+        float yc = y0 + cwalk + 0.008 * sin(t * 17.0 + seed);
+        vec2 ccur = vec2(xc, yc);
+        float d = sdSeg(uv, cprev, ccur);
+        minD = min(minD, d);
+        cprev = ccur;
+    }
+
+    float core = exp(-(minD * minD) / (0.0015 * 0.0015)) * env;
+    float glow = exp(-(minD * minD) / (0.012 * 0.012)) * env * 0.45;
+    return core + glow;
+}
+
+// ---------- RAIN FUNCTIONS ----------
+// Fine misty rain: very short, dense, faint streaks
+float mistyRain(vec2 uv, float speed, float angle, float density, float t) {
+    vec2 ruv = uv;
+    ruv.x += ruv.y * angle;
+    ruv *= vec2(320.0, 55.0);
+    ruv.y += t * speed * 28.0;
+    ruv.x += hash11(floor(ruv.y) * 2.3) * 0.5;
+    vec2 rip = floor(ruv);
+    vec2 rfp = fract(ruv);
+    float rh = hash12(rip + vec2(77.0, 0.0));
+    float on = step(1.0 - density * 0.35, rh);
+    float xProf = smoothstep(0.48, 0.44, abs(rfp.x - 0.5));
+    float yProf = smoothstep(0.0, 0.2, rfp.y) * (1.0 - smoothstep(0.3, 0.7, rfp.y));
+    float streak = xProf * yProf * on * (0.3 + 0.7 * hash11(rh * 3.1));
+    return streak;
+}
+
+// Puddle ripple: subtle circular expanding rings on lower portion of frame
+float puddleRipple(vec2 uv, float t) {
+    float result = 0.0;
+    for (int i = 0; i < 5; i++) {
+        float fi = float(i);
+        float cx = mix(0.1, 0.9, hash11(fi * 7.31 + 5.0));
+        float cy = mix(0.0, 0.12, hash11(fi * 3.17 + 2.0));
+        float period = 0.6 + hash11(fi * 1.9) * 0.8;
+        float phase = mod(t * (0.7 + hash11(fi * 2.3) * 0.6) + fi * 0.37, period) / period;
+        float r = phase * 0.06;
+        float d = abs(length(uv - vec2(cx, cy)) - r);
+        float fade = (1.0 - phase) * (1.0 - phase);
+        result += exp(-(d * d) / (0.003 * 0.003)) * fade * 0.4;
+    }
+    return result;
+}
+
 // ---------- main ----------
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     float aspect = RENDERSIZE.x / max(RENDERSIZE.y, 1.0);
     vec2 uva = vec2(uv.x * aspect, uv.y);
 
-    // Audio: bass triggers strikes, mid amplifies storm, high adds cloud shimmer.
-    float bass = clamp(audioBass * audioReact, 0.0, 2.0);
-    float mid  = clamp(audioMid  * audioReact, 0.0, 2.0);
-    float high = clamp(audioHigh * audioReact, 0.0, 2.0);
-    // LINEAR band conditioning (round 2): the round-1 pow(smoothstep(...))
-    // knees crushed jazz's soft 0.4-0.5 swung accents and hiphop's sparse
-    // sub-heavy kicks to near-zero. The bands are already smoothed upstream —
-    // use them linearly; reserve shaping for event terms only.
     float aR     = min(audioReact, 1.5);
     float bassP  = clamp(audioBass, 0.0, 1.0) * aR;
     float subP   = clamp(audioSub,  0.0, 1.0) * aR;
     float midP   = clamp(audioMid,  0.0, 1.0) * aR;
     float punchP = clamp(audioPunch, 0.0, 1.0) * aR;
-    // Smooth kick weight — floor lowered to 0.03 so sparse soft kicks count.
     float kick = smoothstep(0.03, 0.50, max(audioBass, audioSub) * audioReact);
-    // R3: music-present bolt gate. The free-running slot timer fires huge
-    // flashes with no relation to the music (hiphop scored 0.0 with p95 0.25).
-    // When audio is present, bolt brightness follows the decaying kick trace
-    // instead; between kicks stray bolts dim to 10%. Silence → presence 0 →
-    // gate is exactly 1.0 and the original self-timed storm is untouched.
+    float bass = clamp(audioBass * audioReact, 0.0, 2.0);
+    float mid  = clamp(audioMid  * audioReact, 0.0, 2.0);
+    float high = clamp(audioHigh * audioReact, 0.0, 2.0);
     float presence  = smoothstep(0.06, 0.30, audioLevel * aR);
     float kickTrace = clamp(1.35 * audioBeatPulse + 0.9 * audioPunch + 0.5 * subP, 0.0, 1.0);
     float boltGate  = mix(1.0, 0.10 + 0.90 * kickTrace, presence);
     float stormAmp = stormDensity * (1.0 + 0.45 * mid);
 
-    // ===== STORMCLOUDS — multi-layer parallax =====
-    // Atmospheric darkness gradient (top darker than bottom).
+    // ===== STORMCLOUDS =====
     vec3 sky = mix(skyBotColor.rgb, skyTopColor.rgb, smoothstep(-0.05, 1.05, uv.y));
 
-    // Layer 1: far high cumulus — large scale, slow drift.
     vec2 farUv = uv * vec2(1.6, 0.95);
     farUv.x *= aspect;
     float farDrift = TIME * cloudDrift * 0.35;
     float farClouds = fbm(farUv + vec2(farDrift, farDrift * 0.18));
     farClouds = pow(farClouds, mix(1.7, 0.9, stormAmp));
 
-    // Layer 2: near low scud — smaller scale, faster drift.
     vec2 nearUv = uv * vec2(3.6, 1.8);
     nearUv.x *= aspect;
     float nearDrift = TIME * cloudDrift * 1.25;
     float nearClouds = fbm(nearUv + vec2(nearDrift, -nearDrift * 0.4));
     nearClouds = pow(nearClouds, mix(1.4, 0.7, stormAmp));
 
-    // High-frequency shimmer driven by treble.
     float shimmer = vnoise(uv * 22.0 + TIME * (0.6 + high * 1.4));
     float shimmerMix = high * 0.18;
 
-    // Compose clouds: dark grey-blue mass, denser/lower = darker.
     vec3 col = sky;
     vec3 farTone  = sky * 0.6  + vec3(0.018, 0.022, 0.030);
     vec3 nearTone = sky * 0.32 + vec3(0.008, 0.010, 0.018);
-    col = mix(col, farTone, clamp(farClouds * stormAmp * 1.05, 0.0, 1.0));
+    col = mix(col, farTone,  clamp(farClouds  * stormAmp * 1.05, 0.0, 1.0));
     col = mix(col, nearTone, clamp(nearClouds * stormAmp * 0.85, 0.0, 1.0));
     col += vec3(0.04, 0.05, 0.08) * shimmer * shimmerMix * stormAmp;
-
-    // Top-of-canvas darkness gradient for atmospheric depth.
     col *= mix(0.55, 1.0, smoothstep(0.95, 0.10, uv.y));
-
-    // Continuous band-follow: cloud luminance breathes with bass/mids so the
-    // storm tracks beatless material (ambient) too — smooth, no gates.
-    // Sub joins so hiphop's sub-heavy kicks move the sky too.
     col *= 1.0 + 0.22 * bassP + 0.12 * midP + 0.12 * subP;
 
     // ===== BOLT SCHEDULING =====
-    // Slot-based time buckets; each slot may fire with hashed probability.
     float slot = max(boltLifetime * 0.85, 0.28);
-    float boltCore = 0.0;
+    float boltCore   = 0.0;
     float boltSheath = 0.0;
-    float boltOuter = 0.0;
-    float flashEnv = 0.0;
-    float aliveAmt = 0.0;
+    float boltOuter  = 0.0;
+    float flashEnv   = 0.0;
+    float aliveAmt   = 0.0;
+
+    // Abstract thunder accumulators
+    float absRibbon  = 0.0;
+    float absPlasma  = 0.0;
+    float absSheet   = 0.0;
+    float absCrawl   = 0.0;
 
     for (int s = -1; s <= 1; s++) {
-        float slotIdx = floor(TIME / slot) + float(s);
+        float slotIdx  = floor(TIME / slot) + float(s);
         float slotStart = slotIdx * slot;
-        float life = TIME - slotStart;
-        float life01 = clamp(life / boltLifetime, 0.0, 1.0);
+        float life      = TIME - slotStart;
+        float life01    = clamp(life / boltLifetime, 0.0, 1.0);
         if (life < 0.0 || life > boltLifetime) continue;
 
-        float seed = slotIdx * 13.37 + 1.0;
+        float seed   = slotIdx * 13.37 + 1.0;
         float chance = hash11(seed * 0.917);
-        // Bass kicks lower the threshold; mid contributes baseline storm activity.
-        // Cap below 1.0 so constant loud input (edm) can't saturate the
-        // schedule into a fixed audio-blind pulse train.
         float thresh = 1.0 - clamp(boltProbability + 0.35 * kick + 0.12 * mid, 0.0, 0.95);
         if (chance < thresh) continue;
 
-        // Up to 2 bolts on heavy bass.
         float boltCount = 1.0 + step(0.55, bass) * step(0.5, hash11(seed + 31.7));
+
         for (float bi = 0.0; bi < 2.0; bi += 1.0) {
             if (bi >= boltCount) break;
             float bseed = seed + bi * 91.7;
 
-            vec3 sd = boltSDF(uva, bseed, boltBranchDepth, boltJitter, life01);
-            float d = sd.x;          // unsigned distance to skeleton
+            // --- standard forked bolt ---
+            vec3 sd  = boltSDF(uva, bseed, boltBranchDepth, boltJitter, life01);
+            float d  = sd.x;
             float env = boltEnv(life01, bseed);
-            // Bolt luminance follows the music: the slot schedule alone can't
-            // carry correlation, so brightness tracks bass (sub couples the
-            // sparse hiphop kicks, punch accents soft jazz transients).
-            // Base restored to 1.0 so silence = exact original bolt look.
             env *= 1.0 + 0.40 * bassP + 0.35 * subP + 0.30 * punchP;
             env *= boltGate;
 
-            // HOT CORE: very tight Gaussian falloff at near-white intensity.
-            float coreR = boltCoreWidth;
-            float core = exp(-(d * d) / (coreR * coreR)) * env;
-
-            // COOL SHEATH: wider Gaussian at cyan-blue, lower intensity.
+            float coreR  = boltCoreWidth;
+            float core   = exp(-(d * d) / (coreR * coreR)) * env;
             float sheathR = boltSheathWidth;
-            float sheath = exp(-(d * d) / (sheathR * sheathR)) * env * 0.65;
-
-            // OUTER GLOW: very wide faint plasma halo.
-            float outerR = boltSheathWidth * 4.0;
-            float outer = exp(-(d * d) / (outerR * outerR)) * env * 0.22;
+            float sheath  = exp(-(d * d) / (sheathR * sheathR)) * env * 0.65;
+            float outerR  = boltSheathWidth * 4.0;
+            float outer   = exp(-(d * d) / (outerR * outerR)) * env * 0.22;
 
             boltCore   += core;
             boltSheath += sheath;
             boltOuter  += outer;
 
-            // Flash envelope: peaks at strike onset, decays in ~200ms.
             float fenv = exp(-life * 9.5) * step(life, 0.30);
             flashEnv = max(flashEnv, fenv * env);
             aliveAmt = max(aliveAmt, env);
+
+            // --- abstract thunder forms ---
+            // Each slot picks one abstract form based on a hash, weighted by abstractThunderMix.
+            float formHash = hash11(bseed * 0.331 + 7.0);
+            float absEnv   = boltGate * (1.0 + 0.35 * bassP + 0.25 * subP);
+            absEnv *= abstractThunderMix;
+
+            if (formHash < 0.28) {
+                // Ribbon discharge
+                absRibbon += ribbonThunder(uva, bseed + 0.1, life01, aspect) * absEnv;
+            } else if (formHash < 0.52) {
+                // Plasma ball
+                absPlasma += plasmaBall(uva, bseed + 0.2, life01, aspect) * absEnv;
+            } else if (formHash < 0.76) {
+                // Sheet lightning
+                absSheet  += sheetLightning(uv, bseed + 0.3, life01) * absEnv;
+            } else {
+                // Ground crawl
+                absCrawl  += groundCrawl(uva, bseed + 0.4, life01, aspect, groundLine) * absEnv;
+            }
         }
     }
 
-    // ===== APPLY BOLT WITH HOT CORE + COOL SHEATH =====
-    vec3 coreCol = boltCoreColor.rgb;
+    // ===== APPLY BOLT =====
+    vec3 coreCol   = boltCoreColor.rgb;
     vec3 sheathCol = boltSheathColor.rgb;
-    // Outer halo same hue as sheath but desaturated toward grey-blue.
-    vec3 outerCol = mix(sheathCol, vec3(0.35, 0.45, 0.65), 0.4);
+    vec3 outerCol  = mix(sheathCol, vec3(0.35, 0.45, 0.65), 0.4);
 
     col += outerCol  * clamp(boltOuter,  0.0, 4.0) * 0.85;
     col += sheathCol * clamp(boltSheath, 0.0, 4.0) * 1.10;
     col += coreCol   * clamp(boltCore,   0.0, 6.0) * 1.25;
 
+    // ===== APPLY ABSTRACT THUNDER =====
+    // Ribbon: warm white-blue
+    col += vec3(0.75, 0.88, 1.0) * clamp(absRibbon, 0.0, 3.5) * 0.90;
+    // Plasma ball: violet-cyan
+    col += vec3(0.60, 0.72, 1.0) * clamp(absPlasma, 0.0, 3.5) * 0.85;
+    // Sheet: soft diffuse blue-white
+    col += vec3(0.65, 0.78, 1.0) * clamp(absSheet,  0.0, 2.5) * 0.70;
+    // Ground crawl: orange-white ground discharge
+    col += vec3(1.0, 0.82, 0.55) * clamp(absCrawl,  0.0, 3.0) * 0.80;
+
     // ===== WHOLE-CANVAS FLASH WASH =====
-    // Brief bright tint multiplied across everything when bolt is alive.
     vec3 flashTint = vec3(0.95, 0.97, 1.0);
     float flashAmt = flashEnv * flashIntensity;
-    // Multiply existing scene up (illumination) and add white wash.
     col *= 1.0 + flashAmt * 1.4;
     col += flashTint * flashAmt * 0.55;
 
-    // ===== DIAGONAL RAIN — long thin streak capsules at ~15° =====
+    // ===== RAIN =====
     if (rainDensity > 0.0) {
-        // Two layers of rain for depth.
+        // Layer 1: primary heavy rain
         for (int rl = 0; rl < 2; rl++) {
             float layer = float(rl);
             float scale = mix(1.0, 0.55, layer);
             float alpha = mix(0.22, 0.10, layer);
             vec2 ruv = uv;
-            // Skew to rainAngle (default ~15°).
             ruv.x += ruv.y * rainAngle;
             ruv *= vec2(180.0 * scale, 22.0 * scale);
             ruv.y += TIME * rainSpeed * (16.0 + 8.0 * layer);
-            // Slight horizontal jitter per row for organic feel.
             ruv.x += hash11(floor(ruv.y) * 1.7 + layer * 13.0) * 0.7;
             vec2 rip = floor(ruv);
             vec2 rfp = fract(ruv);
             float rh = hash12(rip + vec2(layer * 31.0, 0.0));
-            // Streaks are sparse: only some cells light up.
             float on = step(1.0 - rainDensity * 0.45, rh);
-            // Thin vertical capsule: narrow x extent, long y extent within cell.
             float xProf = smoothstep(0.50, 0.46, abs(rfp.x - 0.5));
             float yProf = smoothstep(0.0, 0.15, rfp.y) * (1.0 - smoothstep(0.55, 1.0, rfp.y));
             float streak = xProf * yProf * on;
-            // Length variation.
             streak *= 0.5 + 0.5 * hash11(rh * 7.0 + layer * 3.0);
-            // Dim during flash so flash doesn't blow out rain.
             streak *= (1.0 - flashEnv * 0.55);
             col += vec3(0.55, 0.65, 0.82) * streak * alpha;
         }
+
+        // Layer 2: fine mist / micro-droplets (always subtle)
+        float mist = mistyRain(uv, rainSpeed, rainAngle * 0.6, rainDensity, TIME);
+        mist *= (1.0 - flashEnv * 0.7) * 0.06;
+        col += vec3(0.62, 0.72, 0.88) * mist;
+
+        // Layer 3: puddle ripples near ground
+        if (groundLine > 0.01) {
+            float rippleUVy = uv.y / max(groundLine + 0.06, 0.08);
+            float rippleMask = smoothstep(0.0, 1.0, 1.0 - uv.y / max(groundLine + 0.08, 0.09));
+            float ripple = puddleRipple(vec2(uv.x, rippleUVy * 0.12), TIME);
+            ripple *= rippleMask * rainDensity * 0.18;
+            col += vec3(0.45, 0.58, 0.78) * ripple;
+        }
     }
 
-    // ===== GROUND SILHOUETTE — jagged horizon =====
+    // ===== GROUND SILHOUETTE =====
     if (groundLine > 0.0) {
         float horizon = groundLine
             + 0.022 * fbm(vec2(uv.x * 7.0, 0.0))
             + 0.012 * vnoise(vec2(uv.x * 22.0, 0.0));
         float ground = smoothstep(horizon + 0.004, horizon - 0.004, uv.y);
         col = mix(col, vec3(0.005, 0.008, 0.014), ground);
-        // Bolt + flash illuminates ground rim.
-        float rimGlow = aliveAmt * 0.35 + flashAmt * 0.55;
+        float rimGlow = aliveAmt * 0.35 + flashAmt * 0.55
+                      + clamp(absCrawl, 0.0, 1.0) * 0.45;
         col += vec3(0.45, 0.55, 0.72) * ground * rimGlow;
+        // Ground crawl orange tint on rim
+        col += vec3(0.9, 0.65, 0.25) * ground * clamp(absCrawl, 0.0, 1.0) * 0.35;
     }
 
     // ===== POST: chromatic aberration during flash =====
     if (flashAmt > 0.02) {
         vec2 ca = (uv - 0.5) * flashAmt * 0.012;
-        // Subtle channel separation by sampling computed color through faux offsets:
-        // since we can't resample the buffer, we apply a hue-shift approximation.
         col.r *= 1.0 + length(ca) * 6.0;
         col.b *= 1.0 + length(ca) * 6.0 * 0.7;
     }
 
-    // ===== WHOLE-FRAME LINEAR FOLLOWER + DECAYING BEAT TRACE =====
-    // Sub carries hiphop's sparse kicks; audioBeatPulse (decays ~300ms+)
-    // leaves a visible tail between hits; linear bass/mid carry jazz's soft
-    // accents and ambient swells. Silence multiplies by exactly 1.0.
+    // ===== WHOLE-FRAME AUDIO FOLLOW =====
     col *= 1.0 + 0.12 * bassP + 0.15 * subP + 0.08 * midP
                + 0.22 * audioBeatPulse * aR;
 
-    // ===== POST: bloom approximation on bright pixels =====
+    // ===== POST: bloom =====
     float bright = max(max(col.r, col.g), col.b);
     float bloom = smoothstep(0.85, 1.6, bright);
     col += col * bloom * 0.35;
@@ -637,7 +747,7 @@ void main() {
     float vig = 1.0 - dot(vc, vc) * 0.85;
     col *= vig;
 
-    // ---- universal color block (defaults = no-op) ----
+    // ===== COLOR GRADE =====
     float ucL = dot(col, vec3(0.299, 0.587, 0.114));
     col = mix(vec3(ucL), col, colorBoost);
     if (hueShift > 0.0005) {

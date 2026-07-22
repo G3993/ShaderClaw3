@@ -94,28 +94,147 @@
     propertiesPanel.classList.add('visible');
   }
 
-  // Mobile: panel collapse/expand via pill drag or toggle button
+  // Mobile: CapCut-style — centered stage, bottom dock of effects. Tapping a
+  // dock item opens a sheet with just that effect's controls. Drag the pill
+  // between half and full; drag down (or tap the active item) to close.
   if (_isMobileUI && propertiesPanel) {
-    propertiesPanel.classList.add('visible', 'collapsed');
+    propertiesPanel.classList.add('visible', 'sheet-hidden');
     const pill = document.getElementById('panel-pill');
     const toggleBtn = document.getElementById('mobile-panel-toggle');
-    let collapsed = true;
+    const canvasTab = document.querySelector('.sc3-tab-content[data-tab-content="canvas"]');
+    let sheetState = 'hidden';
+    let activeDock = null;
+    if (toggleBtn) toggleBtn.classList.add('hidden');
 
-    function togglePanel() {
-      collapsed = !collapsed;
-      propertiesPanel.classList.toggle('collapsed', collapsed);
-      if (toggleBtn) {
-        toggleBtn.querySelector('svg').style.transform = collapsed ? '' : 'rotate(180deg)';
+    function applyState(s) {
+      sheetState = s;
+      propertiesPanel.classList.toggle('sheet-hidden', s === 'hidden');
+      propertiesPanel.classList.toggle('sheet-full', s === 'full');
+      propertiesPanel.style.height = '';
+      document.body.classList.toggle('sheet-half', s === 'half');
+      document.body.classList.toggle('sheet-full', s === 'full');
+      if (s === 'hidden') {
+        activeDock = null;
+        document.querySelectorAll('.dock-item').forEach(b => b.classList.remove('active'));
       }
     }
 
-    // Tap pill to toggle
-    if (pill) pill.addEventListener('click', togglePanel);
-    // Tap toggle button to expand
-    if (toggleBtn) toggleBtn.addEventListener('click', togglePanel);
-    // Tap tab bar to expand if collapsed
-    const tabBar = propertiesPanel.querySelector('.sc3-tab-bar');
-    if (tabBar) tabBar.addEventListener('click', () => { if (collapsed) togglePanel(); });
+    function soloSection(sectionKey) {
+      if (!canvasTab) return;
+      canvasTab.classList.toggle('solo', !!sectionKey);
+      propertiesPanel.classList.toggle('sheet-solo', !!sectionKey);
+      canvasTab.querySelectorAll(':scope > .sc3-section').forEach(sec => {
+        const match = sectionKey && sec.querySelector('[data-section="' + sectionKey + '"]');
+        sec.classList.toggle('solo-target', !!match);
+        if (match) sec.classList.remove('collapsed'); // open the controls
+      });
+      canvasTab.scrollTop = 0;
+    }
+
+    // Dock items
+    const ASPECTS = [
+      { label: '16:9', value: '1920x1080' },
+      { label: '9:16', value: '1080x1920' },
+      { label: '1:1',  value: '1080x1080' },
+    ];
+    let aspectIdx = 0;
+    function applyAspect(i) {
+      aspectIdx = ((i % ASPECTS.length) + ASPECTS.length) % ASPECTS.length;
+      const a = ASPECTS[aspectIdx];
+      const sel = document.getElementById('canvas-size-select');
+      const lbl = document.getElementById('dock-aspect-label');
+      if (lbl) lbl.textContent = a.label;
+      if (sel) {
+        sel.value = a.value;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+
+    document.querySelectorAll('.dock-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.dock;
+        if (key === 'expand') {
+          document.body.classList.add('sc3-fs');
+          return;
+        }
+        if (key === 'aspect') {
+          applyAspect(aspectIdx + 1);
+          return;
+        }
+        // Toggle off if tapping the already-active item
+        if (activeDock === key && sheetState !== 'hidden') {
+          applyState('hidden');
+          return;
+        }
+        activeDock = key;
+        document.querySelectorAll('.dock-item').forEach(b =>
+          b.classList.toggle('active', b === btn));
+        if (key.startsWith('tab:')) {
+          soloSection(null);
+          activateTab(key.slice(4));
+        } else {
+          activateTab('canvas');
+          soloSection(key);
+        }
+        if (sheetState === 'hidden') applyState('half');
+      });
+    });
+
+    // Fullscreen exit chip
+    const fsExit = document.getElementById('fs-exit');
+    if (fsExit) fsExit.addEventListener('click', () => document.body.classList.remove('sc3-fs'));
+
+    // Default aspect on phones: vertical 9:16, once the renderer is ready
+    const aspectPoll = setInterval(() => {
+      if (window.getLayer && window.getLayer('shader') &&
+          (window.getLayer('shader').program || window.getLayer('shader')._fluidActive)) {
+        clearInterval(aspectPoll);
+        if (window.innerHeight > window.innerWidth) applyAspect(1);
+      }
+    }, 400);
+    setTimeout(() => clearInterval(aspectPoll), 20000);
+
+    // Drag pill: follow the finger; snap to half or full, drag down to close
+    if (pill) {
+      let startY = 0, startH = 0, moved = false, activeId = null;
+      function detents() {
+        const vh = window.innerHeight;
+        return { half: Math.round(vh * 0.44), full: vh - 132 };
+      }
+      pill.addEventListener('pointerdown', (e) => {
+        activeId = e.pointerId;
+        startY = e.clientY;
+        startH = propertiesPanel.getBoundingClientRect().height;
+        moved = false;
+        propertiesPanel.classList.add('dragging');
+        try { pill.setPointerCapture(e.pointerId); } catch (err) {}
+      });
+      pill.addEventListener('pointermove', (e) => {
+        if (activeId !== e.pointerId) return;
+        const dy = e.clientY - startY;
+        if (Math.abs(dy) > 6) moved = true;
+        if (!moved) return;
+        const d = detents();
+        const h = Math.max(40, Math.min(d.full, startH - dy));
+        propertiesPanel.style.height = h + 'px';
+      });
+      function endDrag(e) {
+        if (activeId !== e.pointerId) return;
+        activeId = null;
+        propertiesPanel.classList.remove('dragging');
+        if (!moved) {
+          // Tap: toggle half <-> full
+          applyState(sheetState === 'full' ? 'half' : 'full');
+          return;
+        }
+        const d = detents();
+        const h = propertiesPanel.getBoundingClientRect().height;
+        if (h < d.half * 0.6) { applyState('hidden'); return; }
+        applyState(Math.abs(d.half - h) < Math.abs(d.full - h) ? 'half' : 'full');
+      }
+      pill.addEventListener('pointerup', endDrag);
+      pill.addEventListener('pointercancel', endDrag);
+    }
 
     // Mobile floating input buttons — proxy clicks to the real panel buttons
     document.querySelectorAll('.sc3-mobile-input-btn').forEach(btn => {

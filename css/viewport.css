@@ -35,90 +35,61 @@
   z-index: 5;
 }
 
-/* ===== CANVAS CONTROLS (bottom-center, above error bar) ===== */
+/* ===== CANVAS CONTROLS — one floating glass capsule ===== */
 .canvas-controls {
   position: absolute;
   bottom: calc(var(--sc-space-4) + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
-  display: flex; gap: var(--sc-space-1);
+  display: flex; gap: 2px;
+  align-items: center;
+  padding: 4px;
+  background: rgba(12, 12, 14, 0.55);
+  backdrop-filter: blur(20px) saturate(1.5);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--sc-radius-pill);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.4);
   z-index: 35;
 }
 .canvas-btn {
-  background: rgba(0,0,0,0.5);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.7);
-  width: 28px; height: 28px;
-  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.75);
+  width: 32px; height: 32px;
+  border-radius: 50%;
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   font-size: 14px;
-  transition: all var(--sc-duration);
+  transition: background var(--sc-duration), color var(--sc-duration), transform var(--sc-duration) var(--sc-ease-out);
 }
 .canvas-btn:hover {
-  background: rgba(0,0,0,0.7);
-  border-color: rgba(255,255,255,0.15);
-  color: var(--sc-text);
+  background: rgba(255,255,255,0.12);
+  color: #fff;
 }
+.canvas-btn:active { transform: scale(0.92); }
 .canvas-btn.active {
-  border-color: #0f0;
-  color: #0f0;
-  box-shadow: 0 0 10px rgba(0, 255, 0, 0.25);
+  color: var(--sc-accent);
 }
-.canvas-btn.active svg { stroke: #0f0; }
+.canvas-btn.active svg { stroke: var(--sc-accent); }
 
-/* ===== EXPORT BUTTON — accent glow on hover ===== */
-.export-btn {
-  position: relative;
-  overflow: hidden;
-}
-.export-btn::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  background: conic-gradient(from var(--export-angle, 0deg), transparent 60%, rgba(232, 64, 87, 0.5) 80%, transparent 100%);
-  animation: export-spin 3s linear infinite;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-.export-btn:hover::before { opacity: 1; }
-.export-btn::after {
-  content: '';
-  position: absolute;
-  inset: 1px;
-  border-radius: 5px;
-  background: rgba(0, 0, 0, 0.7);
-  z-index: 0;
-}
-.export-btn svg { position: relative; z-index: 1; }
+/* ===== EXPORT BUTTON ===== */
 .export-btn:hover {
-  background: linear-gradient(135deg, rgba(232, 64, 87, 0.4), rgba(180, 40, 200, 0.35));
-  border-color: rgba(232, 64, 87, 0.7);
-  color: #ff5a72;
-  box-shadow: 0 0 12px rgba(232, 64, 87, 0.3), 0 0 4px rgba(232, 64, 87, 0.15) inset;
+  background: var(--sc-accent);
+  color: #fff;
 }
-.export-btn:active {
-  transform: scale(0.92);
-  box-shadow: 0 0 20px rgba(232, 64, 87, 0.5);
-}
-@keyframes export-spin {
-  to { --export-angle: 360deg; }
-}
-@property --export-angle {
-  syntax: '<angle>';
-  initial-value: 0deg;
-  inherits: false;
-}
+.export-btn:hover svg { stroke: #fff; }
+.export-btn:active { transform: scale(0.92); }
 
 /* ===== ERROR BAR ===== */
 #error-bar {
   position: absolute;
   bottom: 0; left: 0; right: 0;
-  background: rgba(232, 64, 87, 0.1);
-  border-top: 1px solid var(--sc-accent);
-  color: var(--sc-accent);
+  background: rgba(232, 64, 87, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(232, 64, 87, 0.5);
+  color: #ff8a9e;
   font-size: var(--sc-font-size-base);
   padding: 6px var(--sc-space-3);
   display: none;
@@ -153,16 +124,47 @@
 .sc3-chat-bar { display: none !important; }
 .sc3-chat-history { display: none !important; }
 
+/* ===== INTERACT HINT — transient, first load ===== */
+#interact-hint {
+  position: absolute;
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 18px;
+  background: rgba(12, 12, 14, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--sc-radius-pill);
+  color: rgba(255,255,255,0.85);
+  font-family: var(--sc-font);
+  font-size: var(--sc-font-size-md);
+  font-weight: 500;
+  letter-spacing: var(--sc-tracking);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 34;
+  opacity: 0;
+  animation: hint-cycle 7s var(--sc-ease) 1.2s forwards;
+}
+#interact-hint.dismissed { animation: none; opacity: 0; }
+@keyframes hint-cycle {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  8%   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  82%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+}
+
 /* ===== NDI INDICATOR ===== */
 .ndi-indicator {
   display: flex; align-items: center; gap: 5px;
-  padding: 3px 8px; border-radius: 10px;
-  background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.08);
-  font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px;
+  padding: 0 12px; border-radius: var(--sc-radius-pill);
+  background: transparent; border: none;
+  height: 32px;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.4px;
   color: var(--sc-text-dim); transition: all 0.3s;
   pointer-events: auto; cursor: pointer; user-select: none;
 }
-.ndi-indicator.active { border-color: var(--sc-accent); }
 .ndi-indicator.active .ndi-label { color: var(--sc-accent); }
 .ndi-indicator.active .ndi-dot { background: var(--sc-accent); box-shadow: 0 0 6px var(--sc-accent); }
 .ndi-dot {
@@ -177,14 +179,14 @@
 
 /* Audio level (canvas) */
 .audio-level-indicator {
-  display: none; align-items: center; gap: 5px;
-  background: rgba(0,0,0,0.5); backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,0.08); border-radius: 6px;
-  padding: 0 8px; height: 28px;
+  display: none; align-items: center; gap: 6px;
+  background: transparent;
+  border: none; border-radius: var(--sc-radius-pill);
+  padding: 0 10px; height: 32px;
 }
 .audio-level-indicator.active { display: flex; }
 .audio-level-indicator svg { color: var(--sc-accent); flex-shrink: 0; }
-.audio-level-track { width: 80px; height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
+.audio-level-track { width: 72px; height: 4px; background: rgba(255,255,255,0.12); border-radius: 2px; overflow: hidden; }
 .audio-level-fill { display: block; height: 100%; width: 0%; background: var(--sc-accent); border-radius: 2px; transition: width 0.06s; }
 
 #canvas-logo { display: none; }
@@ -202,12 +204,65 @@
   cursor: default;
 }
 
-/* ===== MOBILE: canvas controls touch targets ===== */
+/* ===== MOBILE: centered stage + touch targets ===== */
 @media (max-width: 900px) {
+  /* Stage — the shader is a framed canvas in the center, CapCut-style */
+  #preview, .sc3-preview {
+    inset: auto;
+    position: absolute;
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+    left: 10px;
+    right: 10px;
+    border-radius: 14px;
+    overflow: hidden;
+    transition: top 0.3s cubic-bezier(0.16, 1, 0.3, 1), bottom 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                left 0.3s cubic-bezier(0.16, 1, 0.3, 1), right 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                border-radius 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #gl-canvas, #three-canvas {
+    position: relative;
+    top: auto; left: auto;
+    margin: auto;
+  }
+
+  /* Sheet open at half — stage stays visible above it */
+  body.sheet-half #preview { bottom: calc(44dvh + 84px + env(safe-area-inset-bottom, 0px) + 10px); }
+
+  /* Pseudo-fullscreen — stage fills the phone */
+  body.sc3-fs #preview {
+    top: 0; bottom: 0; left: 0; right: 0;
+    border-radius: 0;
+  }
+  body.sc3-fs #fs-exit {
+    display: flex;
+    position: absolute;
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    right: 12px;
+    width: 40px; height: 40px;
+    align-items: center; justify-content: center;
+    background: rgba(10, 10, 12, 0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 50%;
+    color: rgba(255,255,255,0.85);
+    z-index: 40;
+  }
+
   .canvas-btn {
     width: 44px; height: 44px;
-    border-radius: 10px;
+    border-radius: 50%;
     font-size: 18px;
   }
-  .canvas-controls { gap: var(--sc-space-2); }
+  .canvas-controls {
+    gap: 2px;
+    bottom: auto;
+    top: 10px;
+  }
+  #interact-hint {
+    bottom: auto;
+    top: 64px;
+  }
 }

@@ -230,7 +230,7 @@ function generateControls(inputs, container, onChange) {
       addBtn.className = 'bind-add-btn';
       addBtn.dataset.paramName = inp.NAME;
       addBtn.title = 'Link to signal';
-      addBtn.textContent = '\u26A1';
+      addBtn.textContent = '\u26A1\uFE0E'; // text presentation \u2014 monochrome, not emoji
       addBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         window.openMpPicker(addBtn, inp.NAME, container);

@@ -314,6 +314,10 @@
         </div>
       </div>
       <div id="error-bar" data-init="1"></div>
+      <div id="interact-hint">Touch the canvas. It reacts.</div>
+      <button id="fs-exit" title="Exit fullscreen">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+      </button>
       <div id="debug-overlay" style="display:none;pointer-events:none"></div>
       <!-- Hidden file inputs (must exist for JS) -->
       <input type="file" id="image-file-input" accept="image/jpeg,image/png,image/gif,image/webp" multiple style="display:none">
@@ -353,6 +357,42 @@
     <div id="mobile-drag-handle"><span class="drag-pill"></span></div>
   </main>
 
+  <!-- ===== MOBILE DOCK (bottom scroll strip — opens per-effect panels) ===== -->
+  <nav id="mobile-dock">
+    <button class="dock-item" data-dock="shader-layer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.4z"/><circle cx="19" cy="19" r="1.6"/><circle cx="5" cy="19" r="1.2"/></svg>
+      <span>Shader</span>
+    </button>
+    <button class="dock-item" data-dock="text-layer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+      <span>Text</span>
+    </button>
+    <button class="dock-item" data-dock="input-triggers">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h3l2-7 4 14 3-10 2 3h6"/></svg>
+      <span>Signals</span>
+    </button>
+    <button class="dock-item" data-dock="movement">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+      <span>Motion</span>
+    </button>
+    <button class="dock-item" data-dock="tab:gallery">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      <span>Gallery</span>
+    </button>
+    <button class="dock-item" data-dock="tab:assets">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+      <span>Assets</span>
+    </button>
+    <button class="dock-item" data-dock="aspect">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="2"/></svg>
+      <span id="dock-aspect-label">16:9</span>
+    </button>
+    <button class="dock-item" data-dock="expand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+      <span>Full</span>
+    </button>
+  </nav>
+
   <!-- ===== RIGHT: UNIFIED PANEL (tabs + content) ===== -->
   <aside class="sc3-properties sc3-panel visible">
     <div class="sc3-panel-pill" id="panel-pill"><span class="drag-pill"></span></div>
@@ -365,19 +405,6 @@
       <button class="sc3-tab" data-tab="assets">Assets</button>
       <button class="sc3-tab" data-tab="gallery">Gallery</button>
     </nav>
-
-    <!-- Canvas Size Selector -->
-    <div class="sc3-canvas-size-row">
-      <label class="sc3-canvas-size-label">Canvas</label>
-      <select id="canvas-size-select" class="sc3-canvas-size-select">
-        <option value="1920x1080" selected>1920x1080 (HD)</option>
-        <option value="2560x1440">2560x1440 (2K)</option>
-        <option value="3840x2160">3840x2160 (4K)</option>
-        <option value="8000x1800">8000x1800 (Ultra Wide)</option>
-        <option value="custom">Custom...</option>
-      </select>
-      <input type="text" id="canvas-size-custom" class="sc3-canvas-size-custom" placeholder="WxH" style="display:none">
-    </div>
 
     <!-- Tab Content: Controls (properties) -->
     <div class="sc3-tab-content active" data-tab-content="canvas">
@@ -870,6 +897,21 @@
       <span id="ndi-status"></span>
     </div>
 
+    <!-- Canvas Size Selector -->
+    <div class="sc3-canvas-size-row">
+      <label class="sc3-canvas-size-label">Canvas</label>
+      <select id="canvas-size-select" class="sc3-canvas-size-select">
+        <option value="1920x1080" selected>1920x1080 (HD)</option>
+        <option value="1080x1920">1080x1920 (Vertical)</option>
+        <option value="1080x1080">1080x1080 (Square)</option>
+        <option value="2560x1440">2560x1440 (2K)</option>
+        <option value="3840x2160">3840x2160 (4K)</option>
+        <option value="8000x1800">8000x1800 (Ultra Wide)</option>
+        <option value="custom">Custom...</option>
+      </select>
+      <input type="text" id="canvas-size-custom" class="sc3-canvas-size-custom" placeholder="WxH" style="display:none">
+    </div>
+
     </div><!-- /sc3-tab-content canvas -->
 
     <!-- Tab Content: Assets (includes code editor + content tiles) -->
@@ -907,11 +949,21 @@
 <script src="js/data.js"></script>
 <script src="js/mcp-bridge.js"></script>
 <script src="js/ui/toolbar-strip.js"></script>
+<script src="js/ui/slider-fill.js"></script>
 <script src="js/app.js"></script>
 <script src="js/voxterm-display.js"></script>
 <script src="js/layer-export.js"></script>
 <script type="module" src="js/ui/new-shader-modal.js"></script>
 <script>
+// Interact hint — dismiss on first touch/drag of the canvas
+(function(){
+  var hint = document.getElementById('interact-hint');
+  if (!hint) return;
+  var preview = document.getElementById('preview');
+  function dismiss(){ hint.classList.add('dismissed'); }
+  if (preview) preview.addEventListener('pointerdown', dismiss, { once: true });
+  setTimeout(dismiss, 10000);
+})();
 // Diagnostic reporter
 (function(){
   var _errs = [];

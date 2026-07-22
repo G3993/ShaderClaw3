@@ -113,7 +113,16 @@
    		"NAME" : 		"invert",
      	"TYPE" : 		"bool",
      	"DEFAULT" : 	false
-   	}
+   	},
+	{
+		"NAME" : 		"audioReact",
+		"LABEL" : 		"Audio React",
+		"TYPE" : 		"float",
+		"DEFAULT" : 	1.0,
+		"MIN" : 		0.0,
+		"MAX" : 		2.0,
+		"GROUP" : 		"Audio Reactivity"
+	}
 
 
 	]
@@ -149,6 +158,10 @@ void main()
 	if (flipH) { pos.x = 1.0 - pos.x; }
 	if (flipV) { pos.y = 1.0 - pos.y; }
 	float T = TIME * rate + fine;
+	// Audio: bass drives the spin phase, level lifts brightness (silence = original)
+	float aB = pow(smoothstep(0.05, 0.85, audioBass), 1.4) * audioReact;
+	float aL = smoothstep(0.05, 0.9, audioLevel) * audioReact;
+	T += 0.6 * aB;
 	float TT = T * 0.05;
 	float drift = mix(pos.x+sin(TT),sin(pos.x)*cos(pos.x-TT),sin(pos.y-TT));
 	vec2 spin = vec2( sin(T*r1), -sin(T*r2))+center;
@@ -165,7 +178,7 @@ void main()
 		if (b>loops) break; 
 }
 	
-	vec3 col = color.rgb * l * l * brightness;
+	vec3 col = color.rgb * l * l * brightness * (1.0 + 0.25 * aL + 0.12 * aB);
 	col = mix(col,pow(col,vec3(m)),1.0-edge);
 	col = mix(col,col*fract(m*col+m),bleed);
 	if (blend) { col = 1.0 - exp(-col); }

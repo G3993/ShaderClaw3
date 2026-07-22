@@ -4695,9 +4695,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     exportAction(tile.dataset.action);
     exportHub.classList.remove('show');
   });
-  // Close on outside click
-  document.addEventListener('click', (e) => {
-    if (exportHub.classList.contains('show') && !exportHub.contains(e.target) && e.target.id !== 'export-hub-btn') {
+  // Close on outside press — pointerdown, not click: the canvas cancels
+  // touchstart (preventDefault), which suppresses synthetic clicks on mobile
+  document.addEventListener('pointerdown', (e) => {
+    if (exportHub.classList.contains('show') && !exportHub.contains(e.target) &&
+        e.target.id !== 'export-hub-btn' && !e.target.closest('#export-hub-btn')) {
       exportHub.classList.remove('show');
     }
   });
@@ -6529,8 +6531,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   (async function loadDefaults() {
     dbg('loadDefaults: fetching...');
 
-    // Default shader: metamorphosis
-    const _defaultShader = manifest.find(m => m.file === 'metamorphosis.fs') || otherShaders[0] || null;
+    // Featured auto-open: a different shader greets you on every launch.
+    // Pool = visible generator shaders (safe to render with no media inputs).
+    const _pool = manifest.filter(m =>
+      !m.hidden && /\.fs$/.test(m.file || '') &&
+      (m.folder || 'shaders') === 'shaders' &&
+      !(m.categories || []).includes('Text') &&
+      (m.type === 'generator' || (m.categories || []).includes('Generator'))
+    );
+    const _defaultShader = (_pool.length ? _pool[Math.floor(Math.random() * _pool.length)] : null)
+      || manifest.find(m => m.file === 'metamorphosis.fs') || otherShaders[0] || null;
     const _randomFile = _defaultShader ? (_defaultShader.folder || 'shaders') + '/' + _defaultShader.file : 'shaders/metamorphosis.fs';
     dbg('default shader: ' + (_defaultShader ? _defaultShader.file : 'metamorphosis.fs'));
 
@@ -6543,26 +6553,30 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Yield frames between each heavy GPU operation to prevent context loss
     await yieldFrame();
 
-    // 1. Shader layer FIRST — default to Fluid Simulation
+    // 1. Shader layer FIRST — auto-open the featured shader, fluid as fallback
+    let _shaderLoaded = false;
     try {
-      activateFluidOnLayer('shader');
-      const sel = document.querySelector('.layer-shader-select[data-layer="shader"]');
-      if (sel) sel.value = '__fluid__';
-      dbg('shader: Fluid Simulation activated');
-    } catch (e) {
-      console.error('fluid init exception, falling back to ISF shader:', e);
-      // Fallback to metamorphosis if fluid fails
-      try {
-        const src = shaderSrc || DEFAULT_SHADER;
-        const shaderResult = compileToLayer('shader', src);
-        if (shaderResult && shaderResult.ok) {
-          if (shaderSrc && _defaultShader) {
-            getLayer('shader').manifestEntry = _defaultShader;
-            const sel = document.querySelector('.layer-shader-select[data-layer="shader"]');
-            if (sel) sel.value = _defaultShader.file;
-          }
-          if (focusedLayerId === 'shader') editor.setValue(src);
+      const src = shaderSrc || DEFAULT_SHADER;
+      const shaderResult = compileToLayer('shader', src);
+      if (shaderResult && shaderResult.ok) {
+        _shaderLoaded = true;
+        if (shaderSrc && _defaultShader) {
+          getLayer('shader').manifestEntry = _defaultShader;
+          const sel = document.querySelector('.layer-shader-select[data-layer="shader"]');
+          if (sel) sel.value = _defaultShader.file;
         }
+        if (focusedLayerId === 'shader') editor.setValue(src);
+        dbg('shader: auto-opened ' + (_defaultShader ? _defaultShader.file : 'default'));
+      }
+    } catch (e) {
+      console.error('featured shader exception, falling back to fluid:', e);
+    }
+    if (!_shaderLoaded) {
+      try {
+        activateFluidOnLayer('shader');
+        const sel = document.querySelector('.layer-shader-select[data-layer="shader"]');
+        if (sel) sel.value = '__fluid__';
+        dbg('shader: Fluid Simulation activated (fallback)');
       } catch (e2) {
         errorBar.textContent = 'Shader exception: ' + e2.message;
         errorBar.classList.add('show');
@@ -6679,6 +6693,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     sceneRenderer.resize();
     // Start composition loop now that everything is ready
     compositionLoop();
+    // Mark the auto-opened shader in the gallery
+    try { updateGalleryActiveStates(); } catch (e) {}
+    // Live data on by default: a clock feed gives every shader a real-time signal
+    try {
+      if (window._dataSources && window._dataSources.getSources && window._dataSources.getSources().length === 0) {
+        window._dataSources.addSource('clock');
+        dbg('data: clock feed started');
+      }
+    } catch (e) { dbg('clock feed: ' + e.message); }
     // Auto-hide debug overlay
     const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
     setTimeout(() => { if (_dbg) _dbg.style.display = 'none'; }, isLocal ? 5000 : 0);
@@ -7471,7 +7494,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     }
 
     function applyCanvasSize(w, h) {
-      // Resize the main canvas
+      // Resize the main canvas and lock it — resize() keeps this size and
+      // only refits the letterboxed display from now on
+      isfRenderer.lockedSize = [w, h];
       glCanvas.width = w;
       glCanvas.height = h;
       isfRenderer.gl.viewport(0, 0, w, h);

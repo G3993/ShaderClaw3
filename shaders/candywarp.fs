@@ -66,7 +66,16 @@
    		"NAME" : 		"invert",
      	"TYPE" : 		"bool",
      	"DEFAULT" : 	false
-   	}
+   	},
+	{
+		"NAME" : 		"audioReact",
+		"LABEL" : 		"Audio React",
+		"TYPE" : 		"float",
+		"DEFAULT" : 	1.0,
+		"MIN" : 		0.0,
+		"MAX" : 		2.0,
+		"GROUP" : 		"Audio Reactivity"
+	}
   ]
 }
 */
@@ -93,12 +102,17 @@ void main(void)
 	vec2 pos = gl_FragCoord.xy - RENDERSIZE.xy * 0.5;
 	float d = length(pos);
 	float T = TIME * rate;
+	// Audio: bass pulses the flow phase, highs add shimmer (soft knees, silence = original)
+	float aB = pow(smoothstep(0.05, 0.85, audioBass), 1.4) * audioReact;
+	float aH = smoothstep(0.05, 0.85, audioHigh) * audioReact;
+	T += 0.9 * aB;
 	d += warp * (sin(pos.y * 0.25 / s + T) * sin(pos.x * 0.25 / s + T * 0.5)) * s * 5.0;
 	float v = mod(d + radius / (loops * 2.0), radius / loops);
 	v = abs(v - radius / (loops * 2.0));
 	v = clamp(v - gap, 0.0, 1.0);
 	d /= radius - T;
 	vec3 m = fract((d - 1.0) * vec3(loops * hue, -loops, loops * tint) * 0.5);
-	if (invert) 	gl_FragColor = vec4(m / v, 1.0);
-	else gl_FragColor = vec4(m * v, 1.0);
+	float aGain = 1.0 + 0.20 * aH + 0.12 * aB;
+	if (invert) 	gl_FragColor = vec4(m / v * aGain, 1.0);
+	else gl_FragColor = vec4(m * v * aGain, 1.0);
 }
