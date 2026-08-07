@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "PP — it's raining PPs: an endless downpour of tumbling 3D replicas of the uploaded pp.glb model (SDF rebuilt from its measured profile — twin base spheres, barrel shaft, rounded tip), raymarched in a black void with neon rim lighting. Every instance gets its own hashed color, size, and inflation ('expansion'), and a hashed ~40% of them are AUDIO REACTIVE: they inflate with bass, flash emissive on beats, and spin-kick with the music while the rest fall serenely. The rain clock itself rides the song — mids and level pour the rain faster. Silence = a slow, elegant, faintly absurd drizzle.",
+  "DESCRIPTION": "PP — it's raining PPs: an endless downpour of tumbling 3D replicas of the uploaded pp.glb model (SDF rebuilt from its measured profile — twin base spheres, barrel shaft, rounded tip), raymarched in a black void with neon rim lighting. Every instance gets its own hashed color, size, and inflation ('expansion'); an optional Material Image input wraps any picture/video onto the models (triplanar, tumbles with them; unbound = pure neon), and a hashed ~40% of them are AUDIO REACTIVE: they inflate with bass, flash emissive on beats, and spin-kick with the music while the rest fall serenely. The rain clock itself rides the song — mids and level pour the rain faster. Silence = a slow, elegant, faintly absurd drizzle.",
   "CREDIT": "ShaderClaw3 — PP.",
   "CATEGORIES": [
     "Generator",
@@ -11,6 +11,9 @@
     { "NAME": "hueSpread",    "LABEL": "Color Variety",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.8,  "GROUP": "Color" },
     { "NAME": "paletteShift", "LABEL": "Palette Shift",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0,  "GROUP": "Color" },
     { "NAME": "brightness",   "LABEL": "Brightness",     "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0,  "GROUP": "Color" },
+    { "NAME": "matTex",       "LABEL": "Material Image", "TYPE": "image",                                          "GROUP": "Material" },
+    { "NAME": "texAmount",    "LABEL": "Texture Mix",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.85, "GROUP": "Material" },
+    { "NAME": "texScale",     "LABEL": "Texture Scale",  "TYPE": "float", "MIN": 0.25,"MAX": 4.0, "DEFAULT": 1.0,  "GROUP": "Material" },
     { "NAME": "modelSize",    "LABEL": "Model Size",     "TYPE": "float", "MIN": 0.5, "MAX": 1.8, "DEFAULT": 1.0,  "GROUP": "Shape / Geometry" },
     { "NAME": "sizeJitter",   "LABEL": "Size Variety",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.7,  "GROUP": "Shape / Geometry" },
     { "NAME": "expansion",    "LABEL": "Expansion",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5,  "GROUP": "Shape / Geometry" },
@@ -232,15 +235,42 @@ void main() {
         vec3 icol = mix(base, vari, hueSpread);
         icol = icol / max(max(icol.r, icol.g), max(icol.b, 0.05));
 
-        // lighting: colored fill + hot fresnel rim (neon-on-black signature)
+        // ── material texture: triplanar in instance-LOCAL space, so the
+        // image sticks to each model as it tumbles. Re-derive the exact
+        // transform map() used for this cell.
+        float sclM, fatM, reactM, spinAM, spinBM, fallPhM; vec2 jitM;
+        cellParams(hitCell, sclM, fatM, reactM, spinAM, spinBM, fallPhM, jitM);
+        vec3 q = pos;
+        q.xz -= (hitCell + 0.5 + jitM) * cs;
+        float fspdM = 0.7 + 0.6 * hash21(hitCell + 11.7);
+        q.y = mod(pos.y + clock * fspdM + fallPhM, FALL_H) - 0.5 * FALL_H;
+        q.yz = rot2(q.yz, spinAM);
+        q.xy = rot2(q.xy, spinBM);
+        float sM = min(0.55 * modelSize * sclM, cs * 0.42);
+        vec3 lp = q / sM;                       // local point, ~[-0.5, 0.5]
+        vec3 ln = n;                            // local normal (pure rotations)
+        ln.yz = rot2(ln.yz, spinAM);
+        ln.xy = rot2(ln.xy, spinBM);
+        vec3 tw = pow(abs(ln), vec3(4.0));
+        tw /= (tw.x + tw.y + tw.z + 1e-4);
+        vec3 tcol = texture2D(matTex, lp.zy * texScale + 0.5).rgb * tw.x
+                  + texture2D(matTex, lp.xz * texScale + 0.5).rgb * tw.y
+                  + texture2D(matTex, lp.xy * texScale + 0.5).rgb * tw.z;
+        // unbound image inputs sample black — fade the texture in only where
+        // it actually has content, so the default look stays pure neon
+        float texM = texAmount * smoothstep(0.01, 0.05, dot(tcol, vec3(0.3333)));
+        vec3 matCol = mix(icol, tcol, texM);
+
+        // lighting: textured fill + fresnel rim (rim keeps a neon bias)
         float ndl = max(dot(n, normalize(vec3(0.5, 0.8, 0.4))), 0.0);
         float rim = pow(1.0 - max(dot(n, -rd), 0.0), 2.2);
         float fill = 0.16 + 0.30 * ndl + amt * 0.10 * midP;
-        vec3 obj = icol * fill
-                 + icol * rim * (1.9 + amt * (0.7 * highP + 0.7 * levelS))
+        // textured surfaces read the image, not just its rim: lift fill
+        vec3 obj = matCol * (fill + texM * (0.55 + 0.25 * ndl))
+                 + mix(matCol, icol, 0.35) * rim * (1.9 + amt * (0.7 * highP + 0.7 * levelS))
                  + vec3(1.0) * pow(rim, 6.0) * 0.55;
         // reactive instances: emissive beat flash + bass ember
-        obj += icol * reactive * amt * (1.1 * beatP + 0.45 * bassP);
+        obj += mix(icol, matCol, 0.5 * texM) * reactive * amt * (1.1 * beatP + 0.45 * bassP);
 
         // depth fog into the void (shallow: far rows stay visible so the
         // rain reads as filling the WHOLE screen, not a front curtain)
