@@ -332,10 +332,17 @@ vec4 passTrail(vec2 uv) {
 vec4 passFinal(vec2 uv) {
     vec4 trailCol = texture2D(trail, uv);
     vec3 col = trailCol.rgb / (1.0 + trailCol.rgb);
-    // Whole field swells with the music; a soft ambient glow rides on top so
-    // the effect reads even over the empty (near-black) canvas, not just the trails.
+    // TRANSPARENT BACKGROUND: alpha 0 where there are no particles/trails;
+    // coverage comes from the trail buffer (soft alpha edges on the glow).
+    float lum0 = max(max(col.r, col.g), col.b);
+    // Audio swell rides the particles; the ambient glow lift now lives only
+    // where particles are (scaled by coverage) so the empty canvas stays clear.
+    // The soft alpha fringe itself breathes with the level (smooth envelope),
+    // so the glow visibly swells over the host on loud passages.
     float drive = audioLevel * audioDrive;
-    col = col * (1.0 + drive * 2.2) + drive * 0.55;
+    float cov = clamp(trailCol.a * (1.15 + 0.55 * drive)
+                      + smoothstep(0.015, 0.30, lum0) * (0.8 + 0.4 * drive), 0.0, 1.0);
+    col = col * (1.0 + drive * 2.2) + drive * 0.55 * cov;
 
     // Optional texture — particles reveal/tint it, they don't flatly crossfade over it
     if (texMix > 0.001) {
@@ -358,7 +365,10 @@ vec4 passFinal(vec2 uv) {
     }
     uc = mix(uc, bgColor.rgb, bgColor.a * (1.0 - smoothstep(0.0, 0.35, ucL)));
 
-    return vec4(uc, 1.0);
+    // Premultiplied output: background transparent unless the user paints one
+    // back in via bgColor's alpha; particles keep their soft alpha edges.
+    float alphaOut = max(cov, bgColor.a);
+    return vec4(uc * alphaOut, alphaOut);
 }
 
 // ============================================================

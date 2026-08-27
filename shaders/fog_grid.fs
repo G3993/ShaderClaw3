@@ -70,7 +70,7 @@
       "LABEL": "Fog Flow Speed",
       "TYPE": "float",
       "MIN": 0,
-      "MAX": 2.5,
+      "MAX": 10,
       "DEFAULT": 1,
       "GROUP": "Motion / Animation"
     },
@@ -145,6 +145,11 @@ vec4 passFog() {
 
     // domain-warped fbm gel body — anisotropic so it drapes vertically
     vec2 q = p * vec2(1.9, 1.30);
+    // extra flowing warp layer: a large slow curl that carries the whole gel
+    // in winding ribbons, so high flow speeds read as flowing, not sliding
+    vec2 curl = vec2(fbm(q * 0.62 + vec2(t * 0.50, 3.1)) - 0.5,
+                     fbm(q * 0.62 + vec2(9.4, t * 0.44)) - 0.5);
+    q += curl * (0.62 + 0.22 * sin(t * 0.17));
     float w1 = fbm(q * 1.5 + vec2(0.0, t * 0.42));
     float w2 = fbm(q * 1.5 + vec2(5.2, -t * 0.33));
     float churn = 1.05 + 0.85 * gA * gMidP;                    // mids churn the billow
@@ -204,6 +209,8 @@ vec4 passFog() {
     vec2 flow = vec2(vnoise(p * 2.6 + vec2(t * 0.5, 0.0)) - 0.5,
                      vnoise(p * 2.6 + vec2(7.7, -t * 0.4)) - 0.5) * 0.0026;
     flow *= (1.0 + 0.9 * gA * gMidP);
+    // faster flow settings advect the buffer harder so the memory flows too
+    flow *= (0.7 + 0.3 * clamp(flowSpeed, 0.0, 4.0));
     flow.y += 0.00045;                                          // sampling above = flowing down
     vec4 prev = texture2D(fogBuf, clamp(uv + flow, 0.001, 0.999));
     vec4 fresh = vec4(fogCol, density);

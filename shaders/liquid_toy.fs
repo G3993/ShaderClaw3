@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Liquid Toy — a glowing droplet orbits a white dish, painting a fake-fluid heightmap that expands, swirls with fbm turbulence and fades, shaded with backlight, specular and a rainbow fringe. Bass fattens the paint brush, loudness stretches the liquid's memory, highs shimmer the rainbow.",
+  "DESCRIPTION": "Liquid Toy — two glowing orbs dance across a white dish on wandering Lissajous paths (approach, swirl around each other, separate), trailed by three small satellites tracing squiggle loops, all painting a fake-fluid heightmap that a vortex between the pair keeps swirling. Backlight, specular and rainbow-fringe shading. Bass fattens the brushes, beats flare the satellites, mids stir the vortex, loudness stretches the liquid's memory, highs shimmer the rainbow.",
   "CREDIT": "Liquid toy by Leon Denise (2022), CC — procedural-noise ShaderClaw audio port",
   "CATEGORIES": [
     "Generator"
@@ -114,21 +114,42 @@ vec4 passSim() {
     float bassP  = pow(knee(audioBass, 0.05, 0.85), 1.6);
     float midP   = pow(knee(audioMid,  0.08, 0.90), 1.3);
     float levelP = knee(audioLevel, 0.05, 0.90);
+    float beatP  = clamp(audioBeatPulse, 0.0, 1.0);
 
     vec2 uv = (gl_FragCoord.xy - RENDERSIZE.xy / 2.0) / RENDERSIZE.y;
+    vec2 cuv = uv;                       // keep centered coords for the vortex
     vec2 aspect = vec2(RENDERSIZE.x / RENDERSIZE.y, 1.0);
 
     vec3 spice = fbm3(vec3(uv * 0.1, T * 0.01));
 
-    // orbiting droplet; bass fattens the brush, loudness widens the orbit
-    float t = T * 2.0;
-    float orbitR = 0.3 + ar * 0.08 * levelP;
-    vec2 duv = uv - vec2(cos(t), sin(t)) * orbitR;
-    float brush = 0.1 * dropSize * (1.0 + ar * 0.6 * bassP);
-    float paint = ss(brush, 0.0, length(duv));
-    // a second droplet appears opposite when the music hits
-    vec2 duv2 = uv + vec2(cos(t * 0.7), sin(t * 0.7)) * orbitR;
-    paint = max(paint, ss(0.05 * dropSize, 0.0, length(duv2)) * ar * bassP);
+    // ── Two orbs dancing: the pair's center wanders a Lissajous path, the
+    // orbs swing around it while their separation breathes — they approach,
+    // swirl tight around each other, then part again. No plain circles.
+    float t = T * 0.9;
+    vec2 C = vec2(0.30 * sin(t * 0.21 + 1.7) + 0.10 * sin(t * 0.53),
+                  0.22 * sin(t * 0.317)      + 0.08 * cos(t * 0.61 + 0.9));
+    float sep = 0.085 + 0.125 * (0.5 + 0.5 * sin(t * 0.37 + 1.1))
+              + ar * 0.05 * levelP;
+    float th = t * 1.15 + 0.8 * sin(t * 0.27);         // wandering swirl rate
+    vec2 e1 = vec2(cos(th), sin(th));
+    vec2 orbA = C + e1 * sep;
+    vec2 orbB = C - e1 * sep * 0.82
+              + 0.03 * vec2(sin(t * 1.9), cos(t * 1.7)); // B wobbles freely
+    float brushA = 0.085 * dropSize * (1.0 + ar * 1.0 * bassP);
+    float paint = ss(brushA, 0.0, length(uv - orbA));
+    paint = max(paint, ss(brushA * 0.85, 0.0, length(uv - orbB)));
+
+    // ── Three small satellites tracing squiggle loops around the dance
+    for (int i = 0; i < 3; i++) {
+        float fi = float(i);
+        vec2 sat = C
+            + 0.30 * vec2(sin(t * (0.50 + 0.17 * fi) + fi * 2.1),
+                          cos(t * (0.43 + 0.13 * fi) + fi * 1.3))
+            + 0.055 * vec2(sin(t * (3.1 + fi) + fi * 4.0),
+                           cos(t * (2.6 + 0.8 * fi)));
+        float satR = 0.032 * dropSize * (1.0 + ar * 1.7 * beatP);
+        paint = max(paint, ss(satR, 0.0, length(uv - sat)));
+    }
 
     // expansion along the heightmap normal
     vec2 offset = vec2(0.0);
@@ -145,11 +166,20 @@ vec4 passSim() {
     float sx = spice.x * 6.28 * 2.0 + T;
     offset += vec2(cos(sx), sin(sx)) * (1.0 + ar * 0.5 * midP);
 
+    // ── Vortex between the orbs: the field near the pair keeps swirling
+    // around their center, so the paint smears into spirals (mids stir it).
+    {
+        vec2 rv = cuv - C;
+        float rl = length(rv) + 1e-4;
+        vec2 swirlV = vec2(-rv.y, rv.x) / rl;
+        offset += swirlV * 2.6 * exp(-rl * 3.4) * (1.0 + ar * 0.9 * midP);
+    }
+
     uv += offset / aspect / 472.0;
     float frame = texture2D(heightBuf, uv).x;
 
     // loudness stretches the liquid's memory
-    float fade = fadeAmt * mix(1.0, 1.75, ar * levelP);
+    float fade = fadeAmt * mix(1.0, 1.9, ar * levelP);
     float dt = clamp(TIMEDELTA, 0.001, 0.1);
     paint = max(paint, frame - dt * fade);
     if (FRAMEINDEX < 2) paint = 0.0;
@@ -163,7 +193,9 @@ vec4 passImage() {
     float highP = pow(knee(audioHigh, 0.10, 0.90), 1.2);
 
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
-    float dither = h31(vec3(gl_FragCoord.xy * 0.37, fract(TIME) * 3.0));
+    // static spatial dither: the old time-reseeded grain flooded every frame
+    // with noise (and drowned any audio response in the churn)
+    float dither = h31(vec3(gl_FragCoord.xy * 0.37, 1.7));
 
     float gray = texture2D(heightBuf, uv).x;
 
@@ -185,7 +217,7 @@ vec4 passImage() {
                                 - uv.y * 3.0 - 3.0 + ar * 2.0 * highP);
     color += tint * rainbowAmt * smoothstep(0.35, 0.0, gray);
 
-    color -= dither * 0.1;
+    color -= dither * 0.06;
 
     vec3 background = vec3(1.0) * smoothstep(1.5, -0.5, length(uv - 0.5));
     color = mix(background, clamp(color, 0.0, 1.0), ss(0.01, 0.1, gray));

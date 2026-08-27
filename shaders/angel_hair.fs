@@ -422,14 +422,16 @@ vec4 passImage() {
         paperTone
     ) * (1.0 - vd*0.25);
 
-    // inked strands
-    vec3 inkColor = trail * palette * (1.5 + glowAmount);
+    // inked strands — settle in over the first seconds instead of
+    // opening at full chaos (the sim needs a moment to organize)
+    float settle = mix(0.35, 1.0, smoothstep(0.3, 4.5, TIME));
+    vec3 inkColor = trail * palette * (1.5 + glowAmount) * settle;
 
     // paper composite: paper minus ink = print effect
     vec3 printed = clamp(paper - inkColor, 0.0, 1.0);
 
     // field glow on top
-    vec3 glow = sugarLen * palette * glowAmount * 0.6;
+    vec3 glow = sugarLen * palette * glowAmount * 0.6 * settle;
     vec3 col = printed + glow;
 
     // swarm core dots

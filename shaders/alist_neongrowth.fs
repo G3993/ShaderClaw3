@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Neon Growth — neon coral/lichen colonies growing over a scratchy ink skeleton on tan paper. stemMelody (+ its Presence) feeds continuous colony growth via a domain-warped field advected on the audioMidTime clock; stemDrums spawns spore pops that ride audioPhase2 ramps; treble makes the lavender outline glow breathe. Ink skeleton moves freely with music. Colonies are lit as puffy 3D matter (gradient lighting + cast shadow). No text.",
+  "DESCRIPTION": "Neon Growth — electric blue / red / hot pink / yellow neon colonies growing over a glowing blue ink skeleton on near-black, high contrast. stemMelody (+ its Presence) feeds continuous colony growth via a domain-warped field advected on the audioMidTime clock; stemDrums spawns spore pops that ride audioPhase2 ramps; treble makes the electric-blue outline glow breathe. Ink skeleton moves freely with music. Colonies are lit as puffy 3D matter (gradient lighting + cast shadow). No text.",
   "CREDIT": "ShaderClaw",
   "CATEGORIES": [
     "Generator",
@@ -73,10 +73,10 @@
       "LABEL": "Background",
       "TYPE": "color",
       "DEFAULT": [
-        0,
-        0,
-        0,
-        0
+        0.012,
+        0.012,
+        0.03,
+        1
       ],
       "GROUP": "Background"
     },
@@ -217,8 +217,8 @@ void main(){
   // Diagonal coordinate for rotated strokes (uses pi, not p)
   vec2 piR = rot2(pi, 0.7854); // 45 deg — same for all diagonal strokes
 
-  // --- layer 0: tan paper ---
-  vec3 paper = (bgColor.a > 0.004) ? bgColor.rgb : vec3(0.760, 0.700, 0.585);
+  // --- layer 0: near-black ground ---
+  vec3 paper = (bgColor.a > 0.004) ? bgColor.rgb : vec3(0.012, 0.012, 0.03);
   paper *= 0.895 + 0.21 * smoothstep(0.5 - 10.0 * px, 0.5 + 10.0 * px, vnoise(p * 90.0));
   paper *= 1.0 - 0.60 * dot(uv - 0.5, uv - 0.5);
 
@@ -230,7 +230,7 @@ void main(){
   float l4 = 1.0 - smoothstep(44.0 * pw * 0.5, 44.0 * pw * 1.3, abs(vnoise(pi * vec2(44.0, 12.0) + 14.9) - 0.5));
   float ink = mask * clamp(l1 + 0.9 * l2 + 0.85 * l3 + 0.7 * l4, 0.0, 1.0);
   ink = clamp(ink * inkAmount, 0.0, 1.0);
-  vec3 col = mix(paper, vec3(0.05, 0.04, 0.05), ink * 0.94);
+  vec3 col = mix(paper, vec3(0.04, 0.14, 0.45), ink * 0.94);   // electric-blue skeleton
 
   // pale speckle dots (static — on paper, not warped)
   vec2 spCell = floor(p * 70.0);
@@ -241,7 +241,7 @@ void main(){
   // pencil under-hatch (warped with ink)
   float l5 = 1.0 - smoothstep(36.0 * pw * 0.5, 36.0 * pw * 1.3,
                               abs(vnoise(piR * vec2(36.0, 9.0) + 21.7) - 0.5));
-  col = mix(col, vec3(0.24, 0.20, 0.22), (1.0 - mask) * l5 * clamp(inkAmount, 0.0, 1.0) * 0.64);
+  col = mix(col, vec3(0.08, 0.16, 0.38), (1.0 - mask) * l5 * clamp(inkAmount, 0.0, 1.0) * 0.64);
 
   // --- layer 2: neon colonies (uses original p) ---
   float F = colonyField(p, t1);
@@ -256,44 +256,44 @@ void main(){
   float shad = smoothstep(thr, thr + 0.05, Fs) * (1.0 - body) * 0.25;
   col *= 1.0 - shad;
 
-  // contact rim
+  // contact rim — electric blue on the black ground
   float rim = exp(-abs(s + 0.020) / (2.7 * px)) * (1.0 - body);
-  col = mix(col, vec3(0.07, 0.05, 0.08), rim * 0.80);
+  col = mix(col, vec3(0.05, 0.30, 0.95), rim * 0.85);
 
-  // satellite lime colonies
+  // satellite neon-yellow colonies
   float g = fbm3(p * 2.8 + vec2(13.1, 7.7) + t1 * 0.25);
   float thrG = 0.660 - 0.045 * colonyGrowth * melL;
   float gBody = smoothstep(thrG, thrG + 4.0 * px, g) * (1.0 - body);
-  vec3 limeC = vec3(0.62, 0.86, 0.08) * (1.0 + 0.25 * melL);
-  col = mix(col, vec3(0.10, 0.08, 0.06), exp(-abs(g - thrG) / (3.0 * px)) * (1.0 - body) * (1.0 - gBody) * 0.55);
+  vec3 limeC = vec3(1.00, 0.86, 0.05) * (1.0 + 0.25 * melL);
+  col = mix(col, vec3(0.10, 0.08, 0.02), exp(-abs(g - thrG) / (3.0 * px)) * (1.0 - body) * (1.0 - gBody) * 0.55);
   col = mix(col, limeC, gBody * 0.95);
-  col = mix(col, vec3(0.83, 0.80, 0.97),
+  col = mix(col, vec3(0.40, 0.60, 1.00),
             exp(-abs(g - thrG) / (4.5 * px)) * (1.0 - body) * glowAmount * (0.12 + 0.30 * highL));
 
   if (s > -0.20){
     float tt = smoothstep(0.0, 0.24, s);
-    vec3 cc = mix(vec3(1.00, 0.30, 0.26), vec3(1.00, 0.55, 0.06), tt);
-    cc = mix(cc, vec3(1.00, 0.83, 0.15), smoothstep(0.75, 1.0, tt));
-    cc = mix(cc, vec3(0.62, 0.86, 0.08), smoothstep(0.60, 0.72, g) * 0.9);
+    vec3 cc = mix(vec3(1.00, 0.04, 0.10), vec3(1.00, 0.12, 0.58), tt);   // red -> hot pink
+    cc = mix(cc, vec3(1.00, 0.88, 0.10), smoothstep(0.75, 1.0, tt));     // yellow crowns
+    cc = mix(cc, vec3(0.10, 0.40, 1.00), smoothstep(0.60, 0.72, g) * 0.9); // electric-blue islands
     float pores = smoothstep(0.54, 0.60, vnoise(p * 34.0 + 3.7));
-    cc = mix(cc, vec3(0.42, 0.09, 0.05), pores * (0.45 + 0.55 * tt));
+    cc = mix(cc, vec3(0.30, 0.01, 0.12), pores * (0.45 + 0.55 * tt));
     float e = 0.016;
     float Fx = colonyField(p + vec2(e, 0.0), t1) - F;
     float Fy = colonyField(p + vec2(0.0, e), t1) - F;
     float lit = clamp((Fx * (-0.6) + Fy * 0.8) / e, -1.0, 1.0);
     cc *= 1.0 + 0.28 * lit;
     cc += vec3(1.0, 0.9, 0.7) * pow(max(lit, 0.0), 3.0) * 0.25;
-    cc *= 1.0 + 0.18 * melL + 0.14 * bassL;
+    cc *= 1.16 + 0.18 * melL + 0.14 * bassL;   // hotter neon on the black ground
     col = mix(col, cc, body);
   }
 
-  // --- layer 4: lavender outline glow ---
+  // --- layer 4: electric-blue outline glow ---
   float halo = exp(-abs(s) * (38.0 - 16.0 * clamp(highL, 0.0, 1.0)));
-  col = mix(col, vec3(0.80, 0.76, 1.00), halo * glowAmount * (0.25 + 0.60 * highL));
+  col = mix(col, vec3(0.30, 0.52, 1.00), halo * glowAmount * (0.34 + 0.62 * highL));
   float tubeCore = smoothstep(5.2 * px, 1.6 * px, abs(s));
-  col = mix(col, vec3(0.90, 0.87, 1.00), tubeCore * min(glowAmount, 1.0) * (0.85 + 0.15 * highL));
+  col = mix(col, vec3(0.88, 0.94, 1.00), tubeCore * min(glowAmount, 1.0) * (0.85 + 0.15 * highL));
   float tubeCoreG = smoothstep(5.2 * px, 1.6 * px, abs(g - thrG)) * (1.0 - body);
-  col = mix(col, vec3(0.86, 0.90, 0.78), tubeCoreG * min(glowAmount, 1.0) * (0.50 + 0.30 * highL));
+  col = mix(col, vec3(1.00, 0.92, 0.50), tubeCoreG * min(glowAmount, 1.0) * (0.50 + 0.30 * highL));
 
   // --- layer 3: spore pops ---
   vec2 sp = p * 6.5;
@@ -310,8 +310,8 @@ void main(){
     float ring = smoothstep(1.4 * pxs, 0.2 * pxs, abs(r - R)) * 0.75
                + smoothstep(0.16, 0.0, abs(r - R)) * 0.18;
     float hue = hash21(cell + 5.5);
-    vec3 scol = hue < 0.4 ? vec3(1.00, 0.35, 0.25)
-              : (hue < 0.75 ? vec3(0.65, 0.88, 0.10) : vec3(0.95, 0.92, 0.85));
+    vec3 scol = hue < 0.4 ? vec3(1.00, 0.14, 0.60)
+              : (hue < 0.75 ? vec3(0.25, 0.55, 1.00) : vec3(1.00, 0.90, 0.28));
     float ringD = smoothstep(1.6 * pxs, 0.4 * pxs, abs(r - R - 1.2 * pxs));
     col = mix(col, vec3(0.08, 0.06, 0.08),
               ringD * alpha * (0.62 + 0.30 * drumK) * sporeAmount);
@@ -319,7 +319,7 @@ void main(){
     col = mix(col, scol, clamp(sInt, 0.0, 1.0) * 0.85);
   }
 
-  col *= 1.0 - clamp(react * (0.20 * audioBass + 0.10 * audioMid), 0.0, 0.40);
+  col *= 1.0 - clamp(react * (0.14 * audioBass + 0.07 * audioMid), 0.0, 0.26);
 
   col = hueRotate(col, hueShift);
   float lum = dot(col, vec3(0.299, 0.587, 0.114));

@@ -61,7 +61,7 @@
       "LABEL": "Flow Speed",
       "TYPE": "float",
       "MIN": 0,
-      "MAX": 2.5,
+      "MAX": 8,
       "DEFAULT": 1,
       "GROUP": "Motion / Animation"
     },

@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Note Field — a generative musical score painting itself: warm-white paper with faint staff-line groups, Miró-primary note dots (red/blue/green/yellow/black) stamped on a rhythmic grid, joined into little phrases by short beams, stems and slur arcs. A writing head fills the page, then gently re-writes it column by column. Beats stamp new notes, bass swells the freshest marks, mids sweep a playhead shimmer that brightens the column it crosses, highs add tiny black tick accents. No glyphs — only dots, bars and arcs.",
+  "DESCRIPTION": "Note Field — a generative musical score painting itself: warm-white paper with faint staff-line groups, Miró-primary note dots (red/blue/green/yellow/black) stamped on a rhythmic grid, joined into little phrases by short beams, stems and slur arcs. A living subset of dots hops between adjacent staff lines with eased leaps and every dot drifts gently along its line — mids and beats wind the hop clock so the music visibly flows through the score. A writing head fills the page, then gently re-writes it column by column. Beats stamp new notes, bass swells the freshest marks, mids sweep a playhead shimmer, highs add tiny black tick accents. No glyphs — only dots, bars and arcs.",
   "CREDIT": "Easel original — A-List batch 2 (datadots lineage).",
   "CATEGORIES": ["Generator", "Geometry", "Audio"],
   "INPUTS": [
@@ -89,8 +89,14 @@ void main() {
             // the beam's VELOCITY tracks the envelope (the idle drift itself
             // is TIME-analytic in the display pass).
             phM = fract(phM + 0.0166 * amt * (2.2 * midP + 1.2 * levP));
+            // Hop accumulator: mids + beats wind the migrating dots' hop
+            // clock forward — more music, more dots hopping between lines.
+            // Wrap-safe: consumers scale it by 4 and read it mod 4.
+            float phH = s1.y;
+            if (FRAMEINDEX < 4) phH = 0.10;
+            phH = fract(phH + 0.0166 * amt * (1.8 * midP + 2.4 * beatP * beatP) * 0.9);
             if (ip.x == 0) gl_FragColor = vec4(pInt / 64.0, pFrac, lap / 16.0, 1.0);
-            else           gl_FragColor = vec4(phM, 0.0, 0.0, 1.0);
+            else           gl_FragColor = vec4(phM, phH, 0.0, 1.0);
             return;
         }
         gl_FragColor = vec4(0.0);
@@ -154,8 +160,14 @@ void main() {
         vec3 colG = vec3(0.075, 0.500, 0.270);
         vec3 colY = vec3(0.950, 0.760, 0.080);
 
+        // playhead x (needed by the hoppers below — dots surge near the beam)
+        float xph = MRG + ph * span;
+        // audio-wound hop clock (×4, consumed mod 4 → wrap-safe)
+        float phH4 = 4.0 * s1.y;
+        float slotH = span * hg / G;              // one slot height in uv
+
         for (int dc = -3; dc <= 0; dc++) {
-            for (int dj = -2; dj <= 1; dj++) {
+            for (int dj = -2; dj <= 2; dj++) {
                 float ccl = cF + float(dc);
                 float jj  = jF + float(dj);
                 if (ccl < -0.5 || ccl > NC - 0.5) continue;
@@ -201,6 +213,25 @@ void main() {
                 // anchor position (x jitters inside the cell, y snaps)
                 vec2 p0 = vec2(MRG + (ccl + 0.5 + (hash21(sd + 5.5) - 0.5) * 0.45) * cw,
                                MRG + span * (gI + 0.5 + (jj - 6.0) * hg) / G);
+
+                // ── living dots: a hashed subset migrates between adjacent
+                // lines with eased hops (line above → home → line below → home),
+                // and every dot drifts gently along its line. Music flows
+                // through: dots near the sweeping playhead hop bigger, and the
+                // audio-wound clock (phH4) makes hops come faster with mids
+                // and beats.
+                float hmg = hash21(sd + 21.7);
+                float mig = step(hmg, 0.40);          // ~40% of dots migrate
+                float hopSp = 0.13 + 0.24 * hash21(sd + 27.1);
+                float phHop = TIME * hopSp + hash21(sd + 31.7) * 8.0 + phH4;
+                float stq = floor(phHop) + smoothstep(0.18, 0.82, fract(phHop));
+                float lvl = abs(mod(stq, 4.0) - 2.0) - 1.0;   // eased -1..1 staircase
+                float nearPh = exp(-pow((p0.x - xph) * ASP / 0.10, 2.0));
+                float hopAmp = mig * (0.90 + 0.10 * levP
+                                      + 0.30 * amt * (0.5 * midP + 0.8 * beatP) * nearPh);
+                p0.y += lvl * hopAmp * slotH;
+                p0.x += cw * (0.30 * mig + 0.10)
+                      * sin(TIME * (0.35 + 0.45 * h4) + h4 * 6.2832);
 
                 float alpha = reveal * fadeO;
                 float h2 = hash21(sd + 7.7);
@@ -255,7 +286,6 @@ void main() {
         }
 
         // ── playhead shimmer: a soft bright band sweeping left→right ──
-        float xph = MRG + ph * span;
         float bx = (puv.x - xph) * ASP;
         float bw = 0.021 * (1.0 + 0.7 * amt * midP);
         float band = exp(-bx * bx / (bw * bw));

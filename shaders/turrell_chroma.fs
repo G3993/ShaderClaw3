@@ -48,7 +48,7 @@
       "TYPE": "float",
       "MIN": 20,
       "MAX": 600,
-      "DEFAULT": 90,
+      "DEFAULT": 180,
       "GROUP": "Motion / Animation"
     },
     {

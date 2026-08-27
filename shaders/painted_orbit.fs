@@ -135,7 +135,7 @@ float sdEllipse(vec2 p, vec2 r) {
 }
 
 // audio / motion globals
-float gA, gBassP, gMidP, gHighP, gT, gSway, gRim;
+float gA, gBassP, gMidP, gHighP, gT, gSway, gRim, gGap, gOrbBr;
 vec3  gOrb, gSky;
 
 // paint one shape with AA + a soft airbrushed inner-edge density; d in canvas units
@@ -166,6 +166,18 @@ void main() {
     // mids sway the blades — amplitude modulation, phase stays continuous
     gSway = (0.055 + 0.075 * gA * gMidP);
 
+    // eased breathing cycle: a slow inhale-exhale that pumps the gap between
+    // the orb and everything orbiting it — the arrangement drifts out, dwells,
+    // and eases back in. Audio deepens the breath via the kneed pre-smoothed
+    // bass follower (amplitude only — chop-free).
+    float bw = 0.5 + 0.5 * sin(gT * 0.24);
+    float bE = bw * bw * (3.0 - 2.0 * bw);
+    bE = bE * bE * (3.0 - 2.0 * bE);              // dwell at full inhale/exhale
+    float bSgn = bE * 2.0 - 1.0;
+    float bDepth = 0.07 + 0.075 * gA * gBassP;
+    gGap   = 1.0 + bDepth * bSgn;                 // satellites breathe out / in
+    gOrbBr = 1.0 - 0.5 * bDepth * bSgn;           // orb counter-breathes (pump)
+
     float hs = paletteShift * 0.6283;
     gOrb = clamp(hueRot(orbInk.rgb, hs), 0.0, 1.0);
     gSky = clamp(hueRot(skyInk.rgb, hs), 0.0, 1.0);
@@ -185,11 +197,11 @@ void main() {
     // ── layout ──
     float drift = gT * 0.09; // slow orbital drift — the whole arrangement breathes
     vec2 orbC = vec2(0.01, -0.055) + 0.019 * vec2(sin(gT * 0.42), cos(gT * 0.31));
-    float orbR = 0.315 * orbSize * (1.0 + 0.010 * sin(gT * 0.26) + 0.13 * gA * gBassP);
+    float orbR = 0.315 * orbSize * gOrbBr * (1.0 + 0.010 * sin(gT * 0.26) + 0.13 * gA * gBassP);
 
     // ── thin looping wire line (behind the orb — loops off to the right) ──
     {
-        vec2 wp = rot2(uv - (orbC + vec2(0.26, -0.03)), -0.40 + 0.06 * sin(gT * 0.37));
+        vec2 wp = rot2(uv - (orbC + gGap * vec2(0.26, -0.03)), -0.40 + 0.06 * sin(gT * 0.37));
         float dw = abs(sdEllipse(wp, vec2(0.50, 0.29))) - 0.0038;
         vec3 wcol = mix(vec3(0.92, 0.90, 0.87), vec3(0.36, 0.39, 0.56), smoothstep(-0.1, 0.25, wp.y));
         lay(col, wcol, dw, px);
@@ -220,7 +232,7 @@ void main() {
     // ── sage-green blade, left side, apex pointing left ──
     {
         float sway = gSway * sin(gT * 0.31 + 1.7);
-        vec2 bp = rot2(uv - (orbC + vec2(-0.40, 0.05)), 2.75 + 0.05 * sin(drift * 0.9) + sway);
+        vec2 bp = rot2(uv - (orbC + gGap * vec2(-0.40, 0.05)), 2.75 + 0.05 * sin(drift * 0.9) + sway);
         float d = sdBlade(bp, 0.30 * bladeSweep, 1.5, 0.082);
         dropShadow(col, sdBlade(bp - rot2(vec2(-0.028, -0.042), 3.05), 0.30 * bladeSweep, 1.5, 0.082), 0.08, 0.20);
         float t = gBladeT;
@@ -232,7 +244,7 @@ void main() {
     // ── second small sage sliver, lower left ──
     {
         float sway = gSway * sin(gT * 0.27 + 4.0);
-        vec2 bp = rot2(uv - (orbC + vec2(-0.31, -0.20)), 2.25 + sway * 0.7);
+        vec2 bp = rot2(uv - (orbC + gGap * vec2(-0.31, -0.20)), 2.25 + sway * 0.7);
         float d = sdBlade(bp, 0.21 * bladeSweep, 1.15, 0.042);
         float t = gBladeT;
         vec3 sage2 = mix(vec3(0.46, 0.56, 0.35), vec3(0.73, 0.78, 0.55), t);
@@ -242,7 +254,7 @@ void main() {
     // ── cream blade sweeping over the orb's crown, tilted toward the right ──
     {
         float sway = gSway * sin(gT * 0.36);
-        vec2 bp = rot2(uv - (orbC + vec2(-0.01, -0.02)), -1.28 + 0.045 * sin(drift * 1.1) + sway);
+        vec2 bp = rot2(uv - (orbC + gGap * vec2(-0.01, -0.02)), -1.28 + 0.045 * sin(drift * 1.1) + sway);
         float d = sdBlade(bp, 0.46 * bladeSweep, 1.45, 0.098);
         dropShadow(col, sdBlade(bp - rot2(vec2(-0.026, -0.048), -1.28), 0.46 * bladeSweep, 1.45, 0.098), 0.09, 0.26);
         float t = gBladeT;
@@ -254,7 +266,7 @@ void main() {
     // ── big black blade: asymmetric sweep, apex up-left, long tail to the right ──
     {
         float sway = gSway * sin(gT * 0.33 + 0.8);
-        vec2 bp = rot2(uv - (orbC + vec2(0.06, -0.045)), -1.98 + 0.04 * sin(drift) + sway);
+        vec2 bp = rot2(uv - (orbC + gGap * vec2(0.06, -0.045)), -1.98 + 0.04 * sin(drift) + sway);
         float d = sdBlade(bp, 0.55 * bladeSweep, 1.58, 0.078);
         dropShadow(col, sdBlade(bp - rot2(vec2(-0.028, -0.05), -1.98), 0.55 * bladeSweep, 1.58, 0.078), 0.10, 0.32);
         float t = gBladeT;
@@ -266,7 +278,7 @@ void main() {
     // ── second black hook, right side, diving down ──
     {
         float sway = gSway * sin(gT * 0.29 + 2.6);
-        vec2 bp = rot2(uv - (orbC + vec2(0.34, 0.03)), 0.95 + 0.05 * sin(drift * 1.3) + sway);
+        vec2 bp = rot2(uv - (orbC + gGap * vec2(0.34, 0.03)), 0.95 + 0.05 * sin(drift * 1.3) + sway);
         float d = sdBlade(bp, 0.27 * bladeSweep, 1.05, 0.046);
         dropShadow(col, sdBlade(bp - rot2(vec2(-0.022, -0.04), 0.95), 0.27 * bladeSweep, 1.05, 0.046), 0.07, 0.24);
         float t = gBladeT;
@@ -277,7 +289,7 @@ void main() {
     // ── satellite pebbles ──
     {
         // teal-green glossy ellipse, right of the orb (slow orbit)
-        vec2 pc = orbC + vec2(0.40 + 0.012 * sin(drift * 2.1), 0.185 + 0.010 * cos(drift * 1.6));
+        vec2 pc = orbC + gGap * vec2(0.40 + 0.012 * sin(drift * 2.1), 0.185 + 0.010 * cos(drift * 1.6));
         vec2 pp = rot2(uv - pc, -0.35);
         float d = sdEllipse(pp, vec2(0.088, 0.046));
         dropShadow(col, sdEllipse(pp - vec2(-0.018, -0.028), vec2(0.088, 0.046)), 0.055, 0.20);
@@ -288,7 +300,7 @@ void main() {
     }
     {
         // small crimson pebble upper-left
-        vec2 pc = orbC + vec2(-0.345 + 0.010 * sin(drift * 1.8), 0.315);
+        vec2 pc = orbC + gGap * vec2(-0.345 + 0.010 * sin(drift * 1.8), 0.315);
         float d = sdCircle(uv - pc, 0.035);
         dropShadow(col, sdCircle(uv - pc - vec2(-0.011, -0.017), 0.035), 0.038, 0.18);
         float rr = length(uv - pc - vec2(-0.010, 0.010)) / 0.035;
@@ -297,7 +309,7 @@ void main() {
     }
     {
         // tiny slate pebble near the top
-        vec2 pc = orbC + vec2(0.155 + 0.008 * cos(drift * 2.4), 0.415);
+        vec2 pc = orbC + gGap * vec2(0.155 + 0.008 * cos(drift * 2.4), 0.415);
         float d = sdCircle(uv - pc, 0.019);
         float rr = length(uv - pc - vec2(-0.006, 0.006)) / 0.019;
         vec3 sl = mix(vec3(0.62, 0.60, 0.78), vec3(0.24, 0.22, 0.38), smoothstep(0.1, 1.1, rr));
@@ -306,7 +318,7 @@ void main() {
 
     // ── front segment of the wire crossing over the lower right ──
     {
-        vec2 wp = rot2(uv - (orbC + vec2(0.24, -0.185)), 0.30 + 0.05 * sin(gT * 0.37 + 1.1));
+        vec2 wp = rot2(uv - (orbC + gGap * vec2(0.24, -0.185)), 0.30 + 0.05 * sin(gT * 0.37 + 1.1));
         float dw = abs(sdEllipse(wp, vec2(0.36, 0.16))) - 0.0034;
         // only the lower-front sweep is drawn on top
         float gate = smoothstep(0.02, -0.06, wp.y);

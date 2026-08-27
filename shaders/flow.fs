@@ -89,6 +89,42 @@
       "GROUP": "Motion / Animation"
     },
     {
+      "NAME": "swirlAmt",
+      "LABEL": "Orbit Swirl",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Motion / Animation"
+    },
+    {
+      "NAME": "kaleido",
+      "LABEL": "Kaleidoscope",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 8,
+      "GROUP": "Camera / Layout"
+    },
+    {
+      "NAME": "shimmer",
+      "LABEL": "Iridescence",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "colorDrift",
+      "LABEL": "Color Drift",
+      "TYPE": "float",
+      "DEFAULT": 0,
+      "MIN": 0,
+      "MAX": 2,
+      "GROUP": "Color"
+    },
+    {
       "NAME": "palette",
       "LABEL": "Palette",
       "TYPE": "long",
@@ -293,6 +329,19 @@ vec2 particlePos(int id, float t) {
     x = clamp(x, 0.02, 0.98);
     y = clamp(y, 0.02, 0.98);
 
+    // Orbit swirl: the whole constellation slowly revolves, with a radius-
+    // dependent twist so outer particles shear past the inner ones. Applied
+    // in analytic space so trails, normals and orbs all agree.
+    if (swirlAmt > 0.001) {
+        vec2 c = vec2(x, y) - 0.5;
+        float rr = length(c);
+        float ang = swirlAmt * (t * 0.12 + rr * 1.8 * sin(t * 0.07));
+        float ca = cos(ang), sa = sin(ang);
+        c = vec2(ca * c.x - sa * c.y, sa * c.x + ca * c.y);
+        x = clamp(0.5 + c.x, 0.02, 0.98);
+        y = clamp(0.5 + c.y, 0.02, 0.98);
+    }
+
     return vec2(x, y) * RENDERSIZE;
 }
 
@@ -418,6 +467,21 @@ void main() {
     }
 
     // ===== PASS 2: Compositing =====
+    // Kaleidoscope fold: mirror the composite into N wedges (2+ = on).
+    if (kaleido >= 1.5) {
+        float segs = floor(kaleido + 0.5);
+        float ar = Res.x / Res.y;
+        vec2 kc = (uv - 0.5) * vec2(ar, 1.0);
+        float kAng = atan(kc.y, kc.x);
+        float kRad = length(kc);
+        float sector = 6.2831853 / segs;
+        kAng = mod(kAng, sector);
+        kAng = abs(kAng - sector * 0.5);
+        kc = kRad * vec2(cos(kAng), sin(kAng)) / vec2(ar, 1.0);
+        uv = clamp(kc + 0.5, 0.001, 0.999);
+        pos = uv * Res;
+    }
+
     vec4 albedo = texture2D(albedoBuf, uv);
     vec3 rawN = texture2D(normalBuf, uv).xyz;
     vec3 normal = length(rawN) > 0.01 ? normalize(rawN) : vec3(0.0, 0.0, 1.0);
@@ -481,6 +545,14 @@ void main() {
         result += pc * hdrCore * glowAmount * 0.9 * aGlow;
     }
 
+    // Iridescence: thin-film shimmer bands across the lit tube ridges —
+    // fine high-frequency color interference that follows the surface normal.
+    if (shimmer > 0.001) {
+        float film = sin(normal.x * 9.0 + normal.y * 7.0 + normal.z * 5.0 + TIME * 1.1);
+        vec3 irid = 0.5 + 0.5 * cos(vec3(0.0, 2.094, 4.188) + film * 2.6);
+        result += irid * albedo.rgb * albedo.a * shimmer * 0.9 * (0.3 + 0.7 * nDot);
+    }
+
     // Level breathes overall trail luminance (~11% at default depth);
     // mids shimmer the hue of the whole field — turbulence in color space.
     result *= 1.0 + audioReact * 0.38 * lvlP;
@@ -514,8 +586,10 @@ void main() {
     vec3 uc = result;
     float ucL = dot(uc, vec3(0.299, 0.587, 0.114));
     uc = mix(vec3(ucL), uc, colorBoost);                   // saturation
-    if (hueShift > 0.0005) {                               // cheap hue rotate (YIQ)
-        float hA = hueShift * 6.2831853;
+    // Color Drift: the whole palette slowly cycles around the hue wheel.
+    float hueTot = hueShift + fract(TIME * 0.022 * colorDrift);
+    if (hueTot > 0.0005) {                                 // cheap hue rotate (YIQ)
+        float hA = hueTot * 6.2831853;
         float hC = cos(hA), hS = sin(hA);
         mat3 hM = mat3(0.299,0.587,0.114, 0.299,0.587,0.114, 0.299,0.587,0.114)
                 + hC * mat3(0.701,-0.587,-0.114, -0.299,0.413,-0.114, -0.300,-0.588,0.886)

@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Electric arc — simplex noise plasma with glowing discharge line",
+  "DESCRIPTION": "Electric arc — simplex-noise plasma discharge lines woven into a full electric grid: horizontal AND vertical arcs (gridMix blends them in), crackling energy packets traveling along every line, hot white cores, branch forks and micro-tendrils. Bass shakes the arcs, beats surge the crackle.",
   "CREDIT": "Port of Humus Electro demo, simplex noise by Nikita Miropolskiy",
   "CATEGORIES": [
     "Generator"
@@ -37,6 +37,15 @@
       "LABEL": "Branch Forks",
       "TYPE": "float",
       "DEFAULT": 0.4,
+      "MIN": 0,
+      "MAX": 1,
+      "GROUP": "Shape / Geometry"
+    },
+    {
+      "NAME": "gridMix",
+      "LABEL": "Grid Mix",
+      "TYPE": "float",
+      "DEFAULT": 0.7,
       "MIN": 0,
       "MAX": 1,
       "GROUP": "Shape / Geometry"
@@ -185,6 +194,62 @@ float fbmNoise(vec3 m) {
          + 0.0666667 * simplex3d(8.0 * m);
 }
 
+// One discharge line. ax = coordinate ALONG the arc (-1..1), ay = ACROSS,
+// pn = noise-domain coords, axisSeed decorrelates the vertical family.
+vec3 arcLayer(float ax, float ay, vec2 pn, float fai, float axisSeed,
+              float ampBoost, float aHit) {
+    float off    = (fract(sin((fai + axisSeed) * 7.13) * 43758.5453) - 0.5) * 0.7;
+    float phase  = fai * 1.7 + axisSeed * 3.1;
+    float ampJit = 0.6 + 0.6 * fract(sin((fai + axisSeed) * 11.7) * 43758.5453);
+
+    vec3 p3 = vec3(pn, TIME * 0.4 + phase);
+    float intensity = fbmNoise(p3 * 12.0 + 12.0);
+
+    float tw = clamp(ax * -ax * midSize1 + midSize2, 0.0, 1.0);
+    float yc = abs(intensity * -tw * ampBoost * ampJit + (ay - off));
+    float g  = pow(yc, burn * (1.0 - audioLevel * audioReact * 0.4));
+
+    // Hue shift per arc — purple/cyan/white gradient via cosine palette
+    float hue = fract(hueShift + fai * 0.18 + axisSeed * 0.07 + TIME * 0.05);
+    vec3 arcCol = mix(arcColor.rgb,
+                      0.5 + 0.5 * cos(6.28318 * hue + vec3(0.0, 2.094, 4.188)),
+                      hueShift);
+    vec3 acc = arcCol;
+    acc = acc * -g + acc;
+    acc = acc * acc;
+    acc = acc * acc;
+
+    // Crackling energy packets travel along the line: hot knots that slide,
+    // fattening the white core as they pass. Beats surge every packet.
+    float dirSign = mod(fai + axisSeed, 2.0) < 1.0 ? 1.0 : -1.0;
+    float trav = 0.5 + 0.5 * sin(ax * 5.5 * dirSign - TIME * (2.4 + fai * 0.55)
+                                 + phase * 2.0);
+    float packet = pow(trav, 9.0);
+    float core = exp(-yc * (34.0 + 22.0 * packet))
+               * (0.42 + 1.0 * packet) * (1.0 + 1.5 * aHit);
+    acc += (arcCol * 0.6 + vec3(0.4)) * core;
+
+    // Branch forks — sparse perpendicular bolts shooting off the arc
+    if (branching > 0.001) {
+        float branchPhase = fract(TIME * 1.5 + fai * 0.7 + axisSeed * 0.21);
+        float branchTrig = step(0.94, fract(sin(floor(TIME * 6.0 + fai + axisSeed) * 17.3) * 43758.5453));
+        float fork = smoothstep(0.05, 0.0, abs(ax - (branchPhase * 2.0 - 1.0)))
+                   * smoothstep(0.5, 0.0, abs(ay - off));
+        acc += arcCol * fork * branching * branchTrig * 1.5;
+
+        // Micro-tendrils — thinner, faster, twitchier filaments
+        float tPos = fract(sin(floor(TIME * 9.0 + fai * 3.0 + axisSeed) * 23.7) * 43758.5453);
+        float tTrig = step(0.55, fract(sin(floor(TIME * 7.0 + fai * 1.3 + axisSeed * 2.0) * 41.9) * 43758.5453));
+        float wobble = 0.05 * sin(ay * 34.0 + TIME * 11.0 + phase);
+        float tend = smoothstep(0.016, 0.0, abs(ax - (tPos * 1.8 - 0.9) - wobble))
+                   * smoothstep(0.26, 0.0, abs(ay - off))
+                   * smoothstep(0.02, 0.09, abs(ay - off));
+        acc += (arcCol * 0.7 + vec3(0.3)) * tend
+             * (0.35 + 0.65 * branching) * tTrig * (1.0 + 1.2 * aHit);
+    }
+    return acc;
+}
+
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     vec2 centered = uv * 2.0 - 1.0;
@@ -199,43 +264,21 @@ void main() {
 
     vec2 p = gl_FragCoord.xy / RENDERSIZE.x;
 
-    // ── Multiple stacked arcs at varying y-offsets ───────────────────
+    // hit envelope drives the crackle surges (computed once, shared)
+    float aHit = clamp(audioReact, 0.0, 2.0)
+               * max(smoothstep(0.02, 0.80, audioBeatPulse),
+                     smoothstep(0.03, 0.85, audioPunch));
+
+    // ── The electric grid: horizontal arcs + gridMix vertical arcs ───
     int AC = int(clamp(arcCount, 1.0, 8.0));
     vec3 col = vec3(0.0);
     for (int ai = 0; ai < 8; ai++) {
         if (ai >= AC) break;
         float fai = float(ai);
-        // Each arc has its own y-offset, time-phase, and amplitude
-        float yOff   = (fract(sin(fai * 7.13) * 43758.5453) - 0.5) * 0.7;
-        float phase  = fai * 1.7;
-        float ampJit = 0.6 + 0.6 * fract(sin(fai * 11.7) * 43758.5453);
-
-        vec3 p3 = vec3(p, TIME * 0.4 + phase);
-        float intensity = fbmNoise(p3 * 12.0 + 12.0);
-
-        float tw = clamp(centered.x * -centered.x * midSize1 + midSize2, 0.0, 1.0);
-        float yc = abs(intensity * -tw * ampBoost * ampJit + (centered.y - yOff));
-        float g  = pow(yc, burn * (1.0 - audioLevel * audioReact * 0.4));
-
-        // Hue shift per arc — purple/cyan/white gradient via cosine palette
-        float hue = fract(hueShift + fai * 0.18 + TIME * 0.05);
-        vec3 arcCol = mix(arcColor.rgb,
-                          0.5 + 0.5 * cos(6.28318 * hue + vec3(0.0, 2.094, 4.188)),
-                          hueShift);
-        vec3 acc = arcCol;
-        acc = acc * -g + acc;
-        acc = acc * acc;
-        acc = acc * acc;
-        col += acc;
-
-        // Branch forks — sparse perpendicular bolts shooting off the arc
-        if (branching > 0.001) {
-            float branchPhase = fract(TIME * 1.5 + fai * 0.7);
-            float branchTrig = step(0.94, fract(sin(floor(TIME * 6.0 + fai) * 17.3) * 43758.5453));
-            float fork = smoothstep(0.05, 0.0, abs(centered.x - (branchPhase * 2.0 - 1.0)))
-                       * smoothstep(0.5, 0.0, abs(centered.y - yOff));
-            col += arcCol * fork * branching * branchTrig * 1.5;
-        }
+        col += arcLayer(centered.x, centered.y, p, fai, 0.0, ampBoost, aHit);
+        if (gridMix > 0.001)
+            col += gridMix * arcLayer(centered.y, centered.x, p.yx, fai, 5.0,
+                                      ampBoost, aHit);
     }
 
     // Stochastic flicker

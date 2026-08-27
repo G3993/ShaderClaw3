@@ -110,7 +110,7 @@ float hash21(vec2 p) {
 
 float knee(float x, float lo, float hi) { return smoothstep(lo, hi, x); }
 
-float gA, gBassP, gMidP, gHighP, gCount, gEnv;
+float gA, gBassP, gMidP, gHighP, gCount, gEnv, gSmMid;
 
 // Curated saturated collage inks.
 vec3 pal8(float k) {
@@ -190,9 +190,12 @@ vec3 shadeTube(vec3 ink, float d, float R, float s) {
 vec4 renderArt() {
     vec2 res = RENDERSIZE.xy;
     vec2 q = (gl_FragCoord.xy - 0.5 * res) / min(res.x, res.y);
-    // mids wiggle the path locally
-    q += wiggleAmt * gA * gMidP * 0.011 * vec2(sin(q.y * 30.0 + TIME * 2.3),
-                                               sin(q.x * 27.0 - TIME * 1.9));
+    // mids wiggle the path locally — amplitude soft-kneed so the top of the
+    // slider never overshoots into scribble, and driven by the temporally
+    // smoothed mid follower (gSmMid) so squiggle glides instead of jumping
+    float wEff = 1.55 * (1.0 - exp(-wiggleAmt * 0.85));
+    q += wEff * gA * gSmMid * 0.011 * vec2(sin(q.y * 30.0 + TIME * 2.3),
+                                           sin(q.x * 27.0 - TIME * 1.9));
 
     float R = tubeWidth * (1.0 + 0.15 * gA * gBassP);
     vec2 shOff = vec2(0.016, -0.022);
@@ -268,12 +271,15 @@ void main() {
         float beatNow = max(audioBeat, step(0.6, audioBeatPulse));
         if (beatNow > 0.5 && pb < 0.5) { count = mod(count + 1.0, 192.0); env = 1.0; }
         env *= 0.76;
-        gl_FragColor = vec4(count / 255.0, env, step(0.5, beatNow), 1.0);
+        // temporally smoothed mid follower for the wiggle (chop-free glide)
+        float smMid = (FRAMEINDEX < 2) ? gMidP : mix(st.a, gMidP, 0.10);
+        gl_FragColor = vec4(count / 255.0, env, step(0.5, beatNow), smMid);
         return;
     }
 
     vec4 st = texture2D(stateBuf, vec2(0.5 / RENDERSIZE.x, 0.5 / RENDERSIZE.y));
     gCount = floor(st.r * 255.0 + 0.5);
     gEnv   = st.g * gA;
+    gSmMid = st.a;
     gl_FragColor = renderArt();
 }

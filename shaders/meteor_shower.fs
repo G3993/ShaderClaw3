@@ -28,7 +28,7 @@
       "TYPE": "float",
       "MIN": 1,
       "MAX": 15,
-      "DEFAULT": 9,
+      "DEFAULT": 12,
       "GROUP": "Shape / Geometry"
     },
     {
@@ -37,7 +37,7 @@
       "TYPE": "float",
       "MIN": 0.05,
       "MAX": 0.8,
-      "DEFAULT": 0.32,
+      "DEFAULT": 0.42,
       "GROUP": "Shape / Geometry"
     },
     {
@@ -190,43 +190,39 @@ void main() {
     float midK   = smoothstep(0.02, 0.95, audioMid)  * audioReact;
     float treble = smoothstep(0.02, 0.95, audioHigh) * audioReact;
 
-    // ---- Sky gradient with subtle nebula tint ----
-    float vGrad = smoothstep(0.0, 1.0, uv.y);
-    vec3 col = mix(skyHorizon.rgb, skyTop.rgb, vGrad);
-    // Sky glow breathes softly with the bass
-    col *= 1.0 + bass * 0.35;
-    float nebulaMask = smoothstep(0.3, 0.95, uv.y) *
-        (0.5 + 0.5 * sin(uv.x * 3.4 + TIME * 0.05));
-    col += nebulaTint.rgb * nebulaMask * (0.18 + bass * 0.12);
+    // ---- TRANSPARENT BACKGROUND: the sky plate (gradient, nebula, milky-way
+    // wash) is no longer rendered — alpha 0 there. Only the shower shows:
+    // meteors/trails opaque with soft alpha edges, stars as tiny alpha points.
+    // Output is premultiplied (rgb * alpha) so host blending is clean. ----
+    vec3 col = vec3(0.0);
+    float cover = 0.0;
 
-    // ---- Milky Way band: angled stripe with elevated star density tint ----
+    // Milky-way band survives only as a star-brightness stripe (no wash)
+    float band = 0.0;
     if (milkyWayBrightness > 0.0) {
-        // Angled coordinate: rotate uv around center.
         vec2 c = uv - 0.5;
         float ang = 0.55;
         float ca = cos(ang), sa = sin(ang);
         vec2 r = vec2(ca * c.x - sa * c.y, sa * c.x + ca * c.y);
-        float band = exp(-pow(r.y * 5.5, 2.0));
         float clumps = 0.5 + 0.5 * sin(r.x * 18.0) * sin(r.x * 7.3 + 1.4);
-        // Milky way breathes with bass/mid swells — a large visible area, so
-        // beatless (ambient) material still registers as luminance change.
-        col += vec3(0.55, 0.60, 0.85) * band * clumps * milkyWayBrightness * 0.18
-             * (1.0 + 0.45 * bass + 0.30 * midK);
+        band = exp(-pow(r.y * 5.5, 2.0)) * clumps * milkyWayBrightness;
     }
 
     // ---- Star fields (two layers) ----
     float twkSpeed = 4.0 + treble * 8.0;
     float s1 = starLayer(auv, 70.0,  0.985, twkSpeed, TIME);
     float s2 = starLayer(auv, 130.0, 0.992, twkSpeed * 1.4, TIME);
-    float starBoost = 1.0 + treble * 0.7 + midK * 0.4;
-    col += vec3(1.0, 0.96, 0.88) * s1 * starDensity * 1.1 * starBoost;
-    col += vec3(0.85, 0.90, 1.00) * s2 * starDensity * 0.7 * starBoost;
+    float starBoost = 1.0 + treble * 1.4 + midK * 0.7 + bass * 0.5 + band * 1.6;
+    col += vec3(1.0, 0.96, 0.88) * s1 * starDensity * 1.4 * starBoost;
+    col += vec3(0.85, 0.90, 1.00) * s2 * starDensity * 0.9 * starBoost;
+    cover += clamp((s1 * 1.1 + s2 * 0.7) * starDensity * (1.0 + band), 0.0, 1.0) * 0.85;
 
     // ---- Meteors radiating from radiant ----
     vec2 radiant = vec2(radiantX * aspect, radiantY);
 
     int N = int(clamp(meteorCount, 1.0, 15.0));
     vec3 meteorAccum = vec3(0.0);
+    float meteorA = 0.0;
 
     for (int i = 0; i < 15; i++) {
         if (i >= N) break;
@@ -272,10 +268,10 @@ void main() {
         // Tapered glow along trail (t=0 at tail, t=1 at head).
         float tProj = projT(auv, tail, head);
         float taper = pow(tProj, 1.6);          // brighter near head
-        float coreW = mix(0.0015, 0.0040, isBolide);
-        float glowW = mix(0.020, 0.045, isBolide);
-        float core = smoothstep(coreW, 0.0, d) * (0.4 + taper * 1.4);
-        float glow = smoothstep(glowW, 0.0, d) * (0.15 + taper * 0.6);
+        float coreW = mix(0.0020, 0.0050, isBolide);
+        float glowW = mix(0.028, 0.058, isBolide) * (1.0 + 0.35 * bass);
+        float core = smoothstep(coreW, 0.0, d) * (0.5 + taper * 1.6);
+        float glow = smoothstep(glowW, 0.0, d) * (0.20 + taper * 0.75);
 
         // Fade in/out across life.
         float fade = smoothstep(0.0, 0.08, localT) * smoothstep(life, life - 0.25, localT);
@@ -286,6 +282,8 @@ void main() {
         vec3 mc = mix(trailCol, hotCol, taper);
 
         meteorAccum += mc * (core * 1.6 + glow * 0.8) * intensity * fade;
+        // coverage: opaque core, soft alpha falling off through the glow
+        meteorA += (core * 1.3 + glow * 0.55) * fade * min(intensity, 1.5);
 
         // Rare sub-branch: a faint shorter capsule diverging from mid-trail.
         if (hash11(seed + 17.0) > 0.86) {
@@ -297,21 +295,17 @@ void main() {
             float bd = sdCapsule(auv, bStart, bEnd);
             float bglow = smoothstep(0.018, 0.0, bd);
             meteorAccum += trailCol * bglow * 0.35 * fade;
+            meteorA += bglow * 0.30 * fade;
         }
     }
 
     // Decaying beat flash on the streaks (audioBeatPulse decays 300ms+) —
     // restores per-kick variation on EDM where smoothed bass rides high.
-    col += meteorAccum * (1.0 + bass * 0.5 + 0.35 * audioBeatPulse * audioReact);
+    col += meteorAccum * (1.0 + bass * 0.9 + 0.6 * audioBeatPulse * audioReact);
+    cover += meteorA;
 
-    // r2 ambient fix: whole-frame linear follower — the per-region follows
-    // (sky/milky way/streaks) alone moved too few pixels. Silence = 1.0.
-    col *= 1.0 + 0.22 * bass + 0.14 * midK;
-
-    // Subtle vignette so the sky settles into the corners.
-    vec2 vc = uv - 0.5;
-    float vig = smoothstep(0.95, 0.35, length(vc));
-    col *= mix(0.85, 1.0, vig);
+    // whole-shower linear follower — every visible pixel breathes with music.
+    col *= 1.0 + 0.35 * bass + 0.22 * midK;
 
     // ---- universal color block (defaults = no-op) ----
     float ucL = dot(col, vec3(0.299, 0.587, 0.114));
@@ -324,5 +318,8 @@ void main() {
                 + hS * mat3(0.168,0.330,-0.497, -0.328,0.035,0.292, 1.250,-1.050,-0.203);
         col = clamp(hM * col, 0.0, 1.0);
     }
-    gl_FragColor = vec4(col, 1.0);
+
+    // Premultiplied output: background alpha 0, shower carries the coverage.
+    float alphaOut = clamp(cover, 0.0, 1.0);
+    gl_FragColor = vec4(col * alphaOut, alphaOut);
 }

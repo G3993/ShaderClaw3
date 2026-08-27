@@ -126,6 +126,29 @@
       "GROUP": "Motion / Animation"
     },
     {
+      "NAME": "tintSlow",
+      "LABEL": "Tint Slow Mass",
+      "TYPE": "color",
+      "DEFAULT": [0.12, 0.45, 1.0, 0.0],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "tintFast",
+      "LABEL": "Tint Fast Mass",
+      "TYPE": "color",
+      "DEFAULT": [1.0, 0.22, 0.72, 0.0],
+      "GROUP": "Color"
+    },
+    {
+      "NAME": "filigree",
+      "LABEL": "Filigree Layer",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.45,
+      "GROUP": "Color"
+    },
+    {
       "NAME": "hueShift",
       "LABEL": "Hue Shift",
       "TYPE": "float",
@@ -249,7 +272,13 @@ void applyCursor(inout vec4 bA, vec2 u, float t, float sgn) {
 
 vec3 color(vec4 bA) {
     float tt = abs(bA.z * 2.) + abs(bA.w * 4.) + 3.6 * length(bA.zw);
-    vec3 col = vec3(clamp(bA.x, 0., 1.)) * pal(tt * .2 + .3);
+    vec3 p = pal(tt * .2 + .3);
+    // user tints: slow (drifting) mass leans to tintSlow, fast streams to
+    // tintFast; each color's alpha is its strength (0 = original palette)
+    float spd = smoothstep(2.0, 40.0, length(bA.zw));
+    p = mix(p, tintSlow.rgb * (0.35 + 0.65 * p), tintSlow.a * (1.0 - spd));
+    p = mix(p, tintFast.rgb * (0.35 + 0.65 * p), tintFast.a * spd);
+    vec3 col = vec3(clamp(bA.x, 0., 1.)) * p;
     return col * 3.6;
 }
 float glow(vec2 u) {
@@ -360,6 +389,20 @@ void main() {
     vec4 bA = A(u);
     vec3 col = color(bA);
     col += glowAmt * glow(u) * pal(1.5 * length(bA.zw));
+
+    // Filigree overlay: a fine high-frequency striation layer riding the main
+    // motion — thin ridges perpendicular to the local velocity, phase pushed
+    // by speed, only visible where the streams carry mass.
+    if (filigree > 0.001) {
+        float vl = length(bA.zw);
+        vec2 vd = bA.zw / max(vl, 1e-3);
+        float ph = dot(u, vec2(-vd.y, vd.x)) * 0.55 + vl * 0.30;
+        float fil = pow(0.5 + 0.5 * sin(ph), 6.0);
+        vec3 filC = pal(vl * 0.7 + 1.9);
+        filC = mix(filC, tintFast.rgb, tintFast.a * 0.6);
+        col += filC * fil * clamp(bA.x, 0.0, 1.0) * filigree
+             * (0.45 + 0.35 * smoothstep(2.0, 30.0, vl));
+    }
 
     // Highs: sparse sparkle riding the brighter particle streaks only.
     float sparkleGate = step(0.88, hash12(u * 0.37 + 5.1));
