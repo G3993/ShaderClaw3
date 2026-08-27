@@ -7,6 +7,8 @@
     { "NAME": "sizeWave",     "LABEL": "Size Waves",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.7,  "GROUP": "Shape / Geometry" },
     { "NAME": "jitterAmt",    "LABEL": "Dot Jitter",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.35, "GROUP": "Shape / Geometry" },
     { "NAME": "sphereAmt",    "LABEL": "3D Obliteration", "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.6,  "GROUP": "Shape / Geometry" },
+    { "NAME": "rippleAmt",    "LABEL": "Ripples",         "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.6,  "GROUP": "Motion / Animation" },
+    { "NAME": "dotMotion",    "LABEL": "Dot Motion",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0,  "DEFAULT": 0.5,  "GROUP": "Motion / Animation" },
     { "NAME": "paletteMode",  "LABEL": "Palette R/W-B/Y-Y/B", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.0, "GROUP": "Color" },
     { "NAME": "brightness",   "LABEL": "Brightness",      "TYPE": "float", "MIN": 0.3, "MAX": 2.0,  "DEFAULT": 1.0,  "GROUP": "Color" },
     { "NAME": "motionSpeed",  "LABEL": "Motion Speed",    "TYPE": "float", "MIN": 0.0, "MAX": 3.0,  "DEFAULT": 1.0,  "GROUP": "Motion / Animation" },
@@ -77,6 +79,7 @@ vec3 renderScene() {
     float bassP  = pow(smoothstep(0.05, 0.85, audioBass), 1.5);
     float midP   = pow(smoothstep(0.06, 0.85, audioMid),  1.2);
     float highP  = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+    float levelP = clamp(audioLevel, 0.0, 1.0);
     float beatP  = clamp(audioBeatPulse, 0.0, 1.0);
 
     // ── Kusama palettes: red/white → black/yellow → yellow/black ────────
@@ -104,6 +107,15 @@ vec3 renderScene() {
     float rad = length(q);
     float ripple = exp(-pow((rad - fract(t * 0.35) * 1.3) * 5.0, 2.0)) * amt * beatP;
 
+    // ── continuous ripple field: three sources ringing through the net ──
+    // (center pool + two roaming drops). Height swells dot radius, the
+    // radial derivative physically DISPLACES dots, so rings visibly push
+    // through the lattice like water. Bass drives amplitude wide open,
+    // level feeds the roamers, so the audio range is much bigger.
+    vec2 rs1 = 0.48 * vec2(sin(t * 0.21), cos(t * 0.17) * 0.8);
+    vec2 rs2 = 0.42 * vec2(sin(t * 0.13 + 3.1), cos(t * 0.24 + 1.2) * 0.85);
+    float rippleGain = rippleAmt * (0.30 + amt * (1.1 * bassP + 0.35 * levelP));
+
     // ── the roaming 3D obliteration lens ────────────────────────────────
     vec2 lensC = 0.34 * vec2(sin(t * 0.13), cos(t * 0.09) * 0.8);
     float lensR = sphereAmt * (0.26 + 0.05 * sin(t * 0.5) + amt * 0.09 * beatP);
@@ -121,9 +133,35 @@ vec3 renderScene() {
     // hashed jitter off the grid (the hand-placed room dots)
     lp -= (vec2(h1, h2) - 0.5) * 0.42 * jitterAmt;
 
+    // cell center back in field space (for the ripple field)
+    vec2 cc = (id + 0.5 - vec2(0.5 * mod(row, 2.0), 0.0)) / (dotScale * 0.5);
+
+    float rippleH = 0.0;
+    vec2  rippleD = vec2(0.0);
+    for (int ri = 0; ri < 3; ri++) {
+        vec2 src = (ri == 0) ? vec2(0.0) : (ri == 1) ? rs1 : rs2;
+        float freq = (ri == 0) ? 18.0 : (ri == 1) ? 24.0 : 21.0;
+        float spd  = (ri == 0) ? 2.6  : (ri == 1) ? 3.4  : 3.0;
+        vec2 dv = cc - src;
+        float dd = length(dv) + 1e-4;
+        float phw = dd * freq - tw * spd + float(ri) * 2.1;
+        float env = exp(-dd * (1.6 + 0.5 * float(ri)));
+        rippleH += sin(phw) * env;
+        rippleD += (dv / dd) * cos(phw) * env;
+    }
+    rippleH *= rippleGain;
+    // rings push the dots radially as they pass (rigid per-dot shift = crisp)
+    lp -= rippleD * rippleGain * 0.13;
+
+    // per-dot orbital drift: every dot circles its home on its own clock;
+    // mids push the phase (chop-free), level + beat widen the orbit
+    float om = dotMotion * (0.10 + 0.09 * amt * (0.8 * levelP + 0.6 * beatP));
+    float oph = tw * (1.1 + 1.6 * h2) + h1 * TAU;
+    lp -= om * vec2(cos(oph), sin(oph));
+
     // radius: size variety × flowing wave × ripple × 3D inflation
     float rr = (0.16 + 0.26 * h1) * mix(1.0 - 0.45 * waveAmp, 1.0 + 0.30 * waveAmp, wave);
-    rr *= 1.0 + 0.35 * ripple + 0.30 * f3d;
+    rr *= 1.0 + 0.35 * ripple + 0.30 * f3d + 0.55 * rippleH;
     rr = min(rr, 0.46);
     float e = length(lp) / max(rr, 1e-4);
 
