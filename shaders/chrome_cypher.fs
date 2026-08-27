@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Chrome Cypher — liquid metal seen through shattered glass: molten chrome blobs pour through a cubist mosaic of angular panes, every shard refracting the same liquid from its own stolen angle, seams burning with cyan-magenta circuit light, data-rain glyphs ghosting past in the dark shards. Futurist, cold, precise. Bass swells the chrome, beats re-shatter the panes, mids pour the liquid faster, highs spark the circuit seams.",
+  "DESCRIPTION": "Chrome Cypher — liquid metal behind hierarchically shattered glass: a few huge voronoi panes break into fine shard clusters, each pane a sheet of glass at its own depth with parallax drift. The molten-chrome field reflects a real studio environment — horizon gradient, hot filament, rotating softboxes, neon bounce — with sharp fresnel edges. Seams are live circuitry: pulses run along them and flare white at junction nodes; dark panes run data rain. Bass swells the chrome, mids pour it faster, highs spark the traces, beats nudge the panes.",
   "CATEGORIES": ["Generator", "Audio Reactive"],
   "INPUTS": [
     { "NAME": "shardScale",   "LABEL": "Shard Scale",   "TYPE": "float", "MIN": 2.0, "MAX": 10.0, "DEFAULT": 5.0,  "GROUP": "Shape / Geometry" },

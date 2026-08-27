@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Octa Strings — a neon octagon tunnel strung with vibrating frequency lines: glowing octagonal rings recede into deep space, counter-rotating as they fall away, while eight harp strings stretched across the portal shiver with the music — bass shakes the low strings, mids the middle, highs the top. Beats kick a bright pulse ring down the tunnel; level breathes the whole portal.",
+  "DESCRIPTION": "Octa Strings — a neon octagon instrument in a living tunnel: volumetric tube rings (bright rim, dark core) recede past textured octagonal walls with crisp flying rulings, corner rails and glitter in the light cone, while the camera sways off-axis. Eight harp strings play the spectrum — bass low, mids center, highs top — with plucked-string harmonic overtones and specular hot-spots riding the traveling wave, mirrored in a smeared reflective floor. Dust motes drift through the light; beats send a pulse ring down the tunnel.",
   "CATEGORIES": ["Generator", "Audio Reactive"],
   "INPUTS": [
     { "NAME": "ringCount",    "LABEL": "Ring Count",     "TYPE": "float", "MIN": 3.0, "MAX": 10.0, "DEFAULT": 7.0,  "GROUP": "Shape / Geometry" },
