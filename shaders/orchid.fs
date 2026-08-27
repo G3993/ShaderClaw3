@@ -4,7 +4,8 @@
   "INPUTS": [
     { "NAME": "bloomSize",    "LABEL": "Bloom Size",    "TYPE": "float", "MIN": 0.5, "MAX": 1.6, "DEFAULT": 1.0,  "GROUP": "Shape / Geometry" },
     { "NAME": "bloomOpen",    "LABEL": "Bloom Open",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.65, "GROUP": "Shape / Geometry" },
-    { "NAME": "swayAmt",      "LABEL": "Sway",          "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5,  "GROUP": "Motion / Animation" },
+    { "NAME": "swayAmt",      "LABEL": "Sway",          "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.65, "GROUP": "Motion / Animation" },
+    { "NAME": "orbitSpeed",   "LABEL": "Camera Orbit",  "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0,  "GROUP": "Motion / Animation" },
     { "NAME": "petalColor",   "LABEL": "Petal Color",   "TYPE": "color", "DEFAULT": [0.98, 0.93, 0.97, 1.0], "GROUP": "Color" },
     { "NAME": "throatColor",  "LABEL": "Throat Color",  "TYPE": "color", "DEFAULT": [0.85, 0.10, 0.45, 1.0], "GROUP": "Color" },
     { "NAME": "cloudAmt",     "LABEL": "Clouds",        "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.65, "GROUP": "Color" },
@@ -74,6 +75,7 @@ vec3 rotY(vec3 p, float a) { float c = cos(a), s = sin(a); return vec3(c*p.x + s
 
 // petal-material globals written by the nearest part during map()
 float gU, gV, gPart;
+float gOpen, gSway1, gSway2, gRufPhase;   // animation params fed from renderScene
 
 // curved tapered petal sheet: grows along +y, faces +z; ruffle = edge wave
 float sdPetal(vec3 p, float len, float wid, float curl, float ruffle, float part) {
@@ -84,14 +86,12 @@ float sdPetal(vec3 p, float len, float wid, float curl, float ruffle, float part
     float vv = (w > 1e-4) ? xc / w : 0.0;
     // sheet height: backward curl along length, cup across, ruffled edge
     float z = curl * (yc * yc * 0.55 + xc * xc * 0.75)
-            + ruffle * 0.020 * sin(vv * 9.0 + tt * 5.0) * tt;
+            + ruffle * 0.022 * sin(vv * 9.0 + tt * 5.0 + gRufPhase * (1.0 + 0.6 * part)) * tt;
     vec3 s = vec3(xc, yc, z);
     float d = length(p - s) - 0.022 * (1.0 - 0.55 * tt);
     if (d < 0.06) { gU = tt; gV = vv; gPart = part; }   // material coords
     return d;
 }
-
-float gOpen, gSway1, gSway2;   // animation params fed from renderScene
 
 // one full bloom SDF (local space, facing +z)
 float sdBloom(vec3 p) {
@@ -100,7 +100,7 @@ float sdBloom(vec3 p) {
     for (int i = 0; i < 3; i++) {
         float ang = PI * 0.5 + float(i) * TAU / 3.0;
         vec3 q = rotZ(p - vec3(0.0, 0.0, -0.055), -ang + PI * 0.5);
-        q = rotX(q, -(0.55 - 0.45 * gOpen) + 0.06 * gSway1 * sin(float(i) * 2.1));
+        q = rotX(q, -(0.55 - 0.45 * gOpen) + 0.15 * gSway1 * sin(float(i) * 2.1 + gRufPhase * 0.4));
         d = min(d, sdPetal(q, 0.52, 0.15, 0.34, 0.3, 0.0));
     }
     // 2 broad petals, nearly horizontal
@@ -108,14 +108,14 @@ float sdBloom(vec3 p) {
         float m = (i == 0) ? 1.0 : -1.0;
         float ang = PI * 0.5 + m * (PI * 0.42);
         vec3 q = rotZ(p, -ang + PI * 0.5);
-        q = rotX(q, -(0.42 - 0.40 * gOpen) + 0.05 * gSway2 * m);
+        q = rotX(q, -(0.42 - 0.40 * gOpen) + 0.13 * gSway2 * m);
         d = min(d, sdPetal(q, 0.46, 0.33, 0.26, 0.5, 1.0));
     }
     // ruffled lip below center, cupped forward, twin lobes via |x| pinch
     {
         vec3 q = rotZ(p - vec3(0.0, 0.0, 0.05), PI);      // grows downward
         q.x = abs(q.x) - 0.035;                            // twin lobes
-        q = rotX(q, 0.55 - 0.25 * gOpen);
+        q = rotX(q, 0.55 - 0.25 * gOpen + 0.09 * gSway1);
         d = min(d, sdPetal(q, 0.30, 0.16, -0.55, 1.0, 2.0));
     }
     // column: small rounded nub at the heart
@@ -174,7 +174,7 @@ vec3 renderScene() {
     for (int i = 0; i < 2; i++) {
         float fi = float(i);
         vec2 p = uv * vec2(1.15 - 0.3 * fi, 1.9 - 0.4 * fi)
-               + vec2(tw * (0.018 + 0.014 * fi), fi * 11.0);
+               + vec2(tw * (0.030 + 0.022 * fi) + 0.06 * sin(t * 0.32 * orbitSpeed) * (1.0 + fi), fi * 11.0);
         float f = fbm(p);
         float fDet = f + 0.10 * (vnoise(p * 5.0 + fi * 3.0) - 0.5);
         float dens = cloudAmt * smoothstep(0.50 - 0.06 * fi, 0.68, fDet);
@@ -189,8 +189,9 @@ vec3 renderScene() {
     // ── sister blooms drifting in the haze ──────────────────────────────
     vec3 pc = petalColor.rgb, tc = throatColor.rgb;
     {
-        vec2 b1 = uv - vec2(-0.52 + 0.02 * sin(t * 0.19), 0.24 + 0.02 * sin(t * 0.13));
-        vec2 b2 = uv - vec2(0.55 + 0.02 * sin(t * 0.16), -0.20 + 0.02 * cos(t * 0.11));
+        float par = sin(t * 0.32 * orbitSpeed);          // orbit parallax cue
+        vec2 b1 = uv - vec2(-0.52 + 0.10 * par + 0.03 * sin(t * 0.19), 0.24 + 0.03 * sin(t * 0.13));
+        vec2 b2 = uv - vec2(0.55 - 0.13 * par + 0.03 * sin(t * 0.16), -0.20 + 0.03 * cos(t * 0.11));
         float m1 = bloom2D(b1, 0.14, t * 0.05);
         float m2 = bloom2D(b2, 0.10, -t * 0.04 + 1.3);
         vec3 haze1 = mix(mix(pc, col, 0.45), mix(tc, col, 0.55), smoothstep(0.10, 0.0, length(b1)));
@@ -200,22 +201,32 @@ vec3 renderScene() {
     }
 
     // ── the hero orchid: raymarched ─────────────────────────────────────
-    gOpen  = clamp(bloomOpen + amt * 0.30 * bassP + 0.04 * sin(t * 0.45), 0.0, 1.15);
+    gOpen  = clamp(bloomOpen + amt * 0.30 * bassP + 0.05 * sin(t * 0.45), 0.0, 1.15);
     gSway1 = swayAmt * sin(tw * 0.7);
     gSway2 = swayAmt * sin(tw * 0.55 + 1.4);
+    gRufPhase = tw * 1.6;                            // living ruffle edges
 
     float scale = 0.62 * bloomSize;
-    vec3 ro = vec3(0.0, 0.0, 2.3);
-    vec3 rd = normalize(vec3(uv, -1.55));
-    // bloom orientation: gentle turn + sway
-    float yaw = 0.28 * sin(t * 0.16) + amt * 0.05 * midP;
-    float pit = 0.10 * sin(t * 0.12 + 1.0);
+    // the bloom floats on a slow breeze
+    vec3 drift = vec3(0.05 * sin(t * 0.31), 0.06 * sin(t * 0.24 + 1.0), 0.03 * sin(t * 0.19));
+    // ── ORBITING camera: circles the flower, breathing in and out ──────
+    float oa = t * 0.32 * orbitSpeed + amt * 0.10 * midP;
+    float el = 0.16 + 0.15 * sin(t * 0.21);
+    float orad = 2.30 + 0.25 * sin(t * 0.14) - amt * 0.20 * bassP;   // bass pulls in close
+    vec3 ro = drift + orad * vec3(cos(oa) * cos(el), sin(el), sin(oa) * cos(el));
+    vec3 ww = normalize(drift - ro);
+    vec3 uu = normalize(cross(ww, vec3(0.0, 1.0, 0.0)));
+    vec3 vv2 = cross(uu, ww);
+    vec3 rd = normalize(uv.x * uu + uv.y * vv2 + 1.55 * ww);
+    // the flower itself also turns slowly against the orbit
+    float yaw = -t * 0.12 + 0.22 * sin(t * 0.16) + amt * 0.05 * midP;
+    float pit = 0.12 * sin(t * 0.12 + 1.0);
 
     float dist = 0.0; float hit = -1.0;
     float hU = 0.0, hV = 0.0, hPart = 0.0;
     for (int i = 0; i < 64; i++) {
         vec3 p = ro + rd * dist;
-        vec3 lp = rotX(rotY(p / scale, yaw), pit);
+        vec3 lp = rotX(rotY((p - drift) / scale, yaw), pit);
         float d = sdBloom(lp) * scale;
         if (d < 0.004) { hit = 1.0; hU = gU; hV = gV; hPart = gPart; break; }
         dist += d * 0.62;                       // conservative (approx SDF)
@@ -224,7 +235,7 @@ vec3 renderScene() {
 
     if (hit > 0.0) {
         vec3 p = ro + rd * dist;
-        vec3 lp = rotX(rotY(p / scale, yaw), pit);
+        vec3 lp = rotX(rotY((p - drift) / scale, yaw), pit);
         vec3 n = calcN(lp);
         n = rotY(rotX(n, -pit), -yaw);          // back to world
 
