@@ -2656,5 +2656,19 @@
   "id": 109,
   "title": "Veroni 3",
   "type": "scene"
+ },
+ {
+  "categories": [
+   "Generator",
+   "3D",
+   "Audio Reactive"
+  ],
+  "description": "Orchid \u2014 a raymarched 3D orchid bloom (profiled from orchid_flower.glb: broad twin petals, three back sepals, ruffled lip, tiny column) floating in a dreamy sky of drifting gradient clouds. The petals carry real interior color \u2014 throat gradients, magenta veining, a golden lip ridge, translucent backlight \u2014 and the bloom slowly sways, breathes open, and turns, with two soft sister blooms in the haze behind. Bass breathes the bloom open, mids sway the petals, beats sweep a gleam along them, level warms the sky.",
+  "file": "orchid.fs",
+  "hasVertex": false,
+  "hidden": false,
+  "id": 1318,
+  "title": "Orchid",
+  "type": "isf"
  }
 ]
