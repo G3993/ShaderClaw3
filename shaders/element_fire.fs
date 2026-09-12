@@ -9,6 +9,10 @@
     { "NAME": "hueShift",     "LABEL": "Hue Shift",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0,  "GROUP": "Color" },
     { "NAME": "brightness",   "LABEL": "Brightness",    "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0,  "GROUP": "Color" },
     { "NAME": "motionSpeed",  "LABEL": "Motion Speed",  "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0,  "GROUP": "Motion / Animation" },
+    { "NAME": "orbMorph",     "LABEL": "Orb Morph",     "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0,  "GROUP": "Motion / Animation" },
+    { "NAME": "flameFlow",    "LABEL": "Flame Outflow", "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0,  "GROUP": "Motion / Animation" },
+    { "NAME": "emberSpin",    "LABEL": "Ember Spin",    "TYPE": "float", "MIN": -2.0,"MAX": 2.0, "DEFAULT": 1.0,  "GROUP": "Motion / Animation" },
+    { "NAME": "orbSway",      "LABEL": "Orb Sway",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0,  "GROUP": "Motion / Animation" },
     { "NAME": "audioReact",   "LABEL": "Audio React",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5,  "GROUP": "Audio Reactivity" },
     { "NAME": "trailAmt",   "LABEL": "Motion Trails", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5, "GROUP": "Depth / Passes" },
     { "NAME": "bloomAmt",   "LABEL": "Bloom Depth",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55, "GROUP": "Depth / Passes" },
@@ -74,6 +78,7 @@ vec3 renderScene() {
     vec2 q = (fc - 0.5 * R) / R.y;
 
     float t   = TIME * motionSpeed;
+    float tm  = t * orbMorph;                                   // MOTION: sphere morph clock
     float amt = audioReact;
     float bassP  = pow(smoothstep(0.05, 0.85, audioBass), 1.5);
     float midP   = pow(smoothstep(0.06, 0.85, audioMid),  1.2);
@@ -82,6 +87,8 @@ vec3 renderScene() {
     float beatP  = clamp(audioBeatPulse, 0.0, 1.0);
 
     // ── heat shimmer: refract the darkness AROUND the orb ───────────────
+    // MOTION: the whole star sways on a slow figure-8 through the dark
+    q -= orbSway * 0.07 * vec2(sin(t * 0.43), sin(t * 0.86 + 1.2) * 0.6);
     float r0 = length(q);
     float shimZone = smoothstep(0.02, 0.30, r0 - 0.16 * flameHeight);
     q += heatShimmer * 0.010 * shimZone * vec2(
@@ -96,23 +103,23 @@ vec3 renderScene() {
     vec2  ca   = dirO;                                          // point on unit circle → seam-free angular noise
 
     // morphing radius: two slow seam-free angular fbm layers displace the sphere
-    float wob  = fbm(ca * 1.8 + vec2(t * 0.21, -t * 0.17));
-    float wob2 = fbm(ca * 3.6 + vec2(-t * 0.13, t * 0.19));
+    float wob  = fbm(ca * 1.8 + vec2(tm * 0.21, -tm * 0.17));
+    float wob2 = fbm(ca * 3.6 + vec2(-tm * 0.13, tm * 0.19));
     float orbR = 0.16 * flameHeight * roar * (1.0 + 0.30 * (wob - 0.5) + 0.16 * (wob2 - 0.5));
 
     // licking radial tendrils: slowly-morphing angular lobes set the reach
-    float lob   = fbm(ca * 2.6 + vec2(tt * 0.11, -tt * 0.09));
+    float lob   = fbm(ca * 2.6 + vec2(tt * 0.11, -tt * 0.09) * orbMorph);
     float reach = flameWidth * (0.09 + 0.34 * pow(lob, 1.7)) * (1.0 + amt * 0.25 * bassP);
 
     // fire turbulence streaming radially outward (domain advected along dirO)
-    float n1 = fbm(q * 4.6 - dirO * tt * 0.55 + vec2(3.1, 7.2));
-    float n2 = fbm(q * 8.8 - dirO * tt * 1.05 + vec2(9.4, 1.7));
+    float n1 = fbm(q * 4.6 - dirO * tt * 0.55 * flameFlow + vec2(3.1, 7.2)); // MOTION: outward advection rate
+    float n2 = fbm(q * 8.8 - dirO * tt * 1.05 * flameFlow + vec2(9.4, 1.7));
     float shell = r - orbR;
     float body  = smoothstep(reach, -0.02, shell);
     float fire  = body * (0.55 + 0.80 * n1) * (0.50 + 0.72 * n2);
     fire = pow(clamp(fire * 2.0, 0.0, 1.0), 1.7);
     // fine licking detail crawling outward across the surface
-    fire += 0.10 * body * (vnoise(q * 15.0 - dirO * tt * 2.2) - 0.5);
+    fire += 0.10 * body * (vnoise(q * 15.0 - dirO * tt * 2.2 * flameFlow) - 0.5);
     // hot white heart — saturates the ramp at the core, swells with bass
     fire += smoothstep(orbR * 0.95, orbR * 0.18, r) * (1.1 + amt * 0.5 * bassP);
 
@@ -154,7 +161,7 @@ vec3 renderScene() {
         float h3 = hash11(fi * 7.77 + 3.0);
         float life = fract(h1 + t * (0.10 + 0.08 * h2));
         float spin = mix(-1.0, 1.0, step(0.5, h2));              // both spiral directions
-        float th   = h1 * TAU + t * spin * (0.35 + 0.45 * h3) + life * 2.2 * spin;
+        float th   = h1 * TAU + (t * spin * (0.35 + 0.45 * h3) + life * 2.2 * spin) * emberSpin; // MOTION: spiral rate / direction
         float er_  = 0.16 * flameHeight + life * (0.24 + 0.24 * flameWidth);
         vec2  ep   = er_ * vec2(cos(th), sin(th));
         float es   = 0.0035 + 0.006 * h3 * (1.0 - life);

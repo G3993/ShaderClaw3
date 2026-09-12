@@ -54,6 +54,42 @@
       "GROUP": "Motion / Animation"
     },
     {
+      "NAME": "bandSweep",
+      "LABEL": "Band Sweep",
+      "TYPE": "float",
+      "MIN": -1,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "oscSpread",
+      "LABEL": "Osc Spread",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 1,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "shapeDrift",
+      "LABEL": "Shape Drift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 4,
+      "DEFAULT": 1,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "breathRate",
+      "LABEL": "Breath Rate",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 4,
+      "DEFAULT": 1,
+      "GROUP": "Motion"
+    },
+    {
       "NAME": "hueShift",
       "LABEL": "Hue Shift",
       "TYPE": "float",
@@ -112,9 +148,9 @@ vec2  h22(vec2 p)  { return fract(sin(vec2(dot(p, vec2(127.1,311.7)),
 float fftBand(int i, float t, float bass, float mid, float treble) {
     float fi = float(i);
     float s1 = h11(fi * 1.731), s2 = h11(fi * 4.219), s3 = h11(fi * 7.913);
-    float v  = sin(t * (0.6 + s1 * 1.4) + s1 * TAU) * 0.55
-             + sin(t * (0.3 + s2 * 0.9) + s2 * TAU + fi * 0.21) * 0.30
-             + sin(t * (1.4 + s3 * 2.1) + s3 * TAU) * 0.15;
+    float v  = sin(t * (0.6 + s1 * 1.4 * oscSpread) + s1 * TAU) * 0.55
+             + sin(t * (0.3 + s2 * 0.9 * oscSpread) + s2 * TAU + fi * 0.21) * 0.30
+             + sin(t * (1.4 + s3 * 2.1 * oscSpread) + s3 * TAU) * 0.15;
     v = v * 0.5 + 0.5;
     float u    = fi / float(BANDS - 1);
     float tilt = mix(1.0 - u * 0.6, 0.4 + u * 0.8, clamp(mid, 0.0, 1.0));
@@ -123,6 +159,8 @@ float fftBand(int i, float t, float bass, float mid, float treble) {
     return clamp(v * tilt * (0.35 + bass * 0.85) + spark, 0.0, 1.4);
 }
 float fftSample(float fIdx, float t, float bass, float mid, float treble) {
+    // Band Sweep: every element's band assignment rotates through the spectrum over time
+    fIdx     = mod(fIdx + bandSweep * TIME * 2.0, float(BANDS));
     fIdx     = clamp(fIdx, 0.0, float(BANDS - 1) - 0.001);
     float i0 = floor(fIdx), f = fIdx - i0;
     return mix(fftBand(int(i0),     t, bass, mid, treble),
@@ -134,9 +172,9 @@ void synthAudio(float t, float ar, out float bass, out float mid, out float treb
     // (live signal) are wired in on top, scaled by the Audio React knob, so
     // the sculpture actually breathes with the track instead of only a
     // fixed internal clock.
-    bass   = (0.20 + 0.18 * (sin(t * 0.71) * 0.5 + 0.5))           * (0.5 + 0.9 * k) + audioBass * k * 0.6;
-    mid    = (0.25 + 0.20 * (sin(t * 1.13 + 1.7) * 0.5 + 0.5))     * (0.5 + 0.9 * k) + audioMid  * k * 0.6;
-    treble = (0.15 + 0.15 * (sin(t * 2.31 + 3.1) * 0.5 + 0.5))     * (0.4 + 1.1 * k) + audioHigh * k * 0.6;
+    bass   = (0.20 + 0.18 * (sin(t * 0.71 * breathRate) * 0.5 + 0.5))           * (0.5 + 0.9 * k) + audioBass * k * 0.6;
+    mid    = (0.25 + 0.20 * (sin(t * 1.13 * breathRate + 1.7) * 0.5 + 0.5))     * (0.5 + 0.9 * k) + audioMid  * k * 0.6;
+    treble = (0.15 + 0.15 * (sin(t * 2.31 * breathRate + 3.1) * 0.5 + 0.5))     * (0.4 + 1.1 * k) + audioHigh * k * 0.6;
 }
 
 // ─── MOOD 0 — BAR FOREST ──────────────────────────────────────────────
@@ -248,8 +286,8 @@ vec3 moodFingerprint(vec2 uv, float t, float bass, float mid, float treble) {
     float warp = 0.0;
     for (int k = 0; k < 3; k++) {
         float fk = float(k);
-        vec2  c  = vec2(0.55 * sin(t * (0.13 + fk * 0.07) + fk * 2.1),
-                        0.45 * cos(t * (0.11 + fk * 0.09) + fk * 1.3));
+        vec2  c  = vec2(0.55 * sin(t * shapeDrift * (0.13 + fk * 0.07) + fk * 2.1),
+                        0.45 * cos(t * shapeDrift * (0.11 + fk * 0.09) + fk * 1.3));
         vec2  d  = p - c;
         float r  = length(d), a = atan(d.y, d.x);
         float bandF = fract((a + PI) / TAU + fk * 0.3) * float(BANDS - 1);
@@ -283,8 +321,8 @@ vec3 moodRibbonCloud(vec2 uv, float t, float bass, float mid, float treble) {
         float bandF = (fi + 0.5) / 6.0 * float(BANDS - 1);
         float w  = fftSample(bandF, t * (0.5 + flow * 0.6), bass, mid, treble);
         float yC = 0.18 + 0.13 * fi + seed * 0.05
-                 + 0.13 * sin(uv.x * 6.0  + t * (0.4 + seed * 0.3) + fi)
-                 + 0.07 * sin(uv.x * 14.0 + t * 0.7 + seed * 5.0)
+                 + 0.13 * sin(uv.x * 6.0  + t * shapeDrift * (0.4 + seed * 0.3) + fi)
+                 + 0.07 * sin(uv.x * 14.0 + t * 0.7 * shapeDrift + seed * 5.0)
                  + (w - 0.5) * 0.18 * intensity;
         float thick = max(0.018 + 0.025 * 0.5 * sin(uv.x * 5.0 + t * 0.3 + fi * 1.7)
                         + 0.025 + 0.040 * w * intensity, 0.012);
@@ -301,7 +339,7 @@ vec3 moodRibbonCloud(vec2 uv, float t, float bass, float mid, float treble) {
     for (int i = 0; i < 24; i++) {
         float fi = float(i), seed = h11(fi * 9.71);
         vec2 c = vec2(fract(seed + t * (0.04 + flow * 0.05) + fi * 0.013),
-                      0.5 + 0.45 * sin(t * (0.3 + seed) + fi));
+                      0.5 + 0.45 * sin(t * shapeDrift * (0.3 + seed) + fi));
         col += vec3(1.0, 0.85, 1.0) * exp(-length(uv - c) * 220.0) * (0.4 + treble * 1.2);
     }
     col += vec3(0.15, 0.08, 0.35) * bass * 0.18;

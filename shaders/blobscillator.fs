@@ -112,6 +112,33 @@
       "GROUP": "Motion / Animation"
     },
     {
+      "NAME": "orbitSwirl",
+      "LABEL": "Orbit Swirl",
+      "TYPE": "float",
+      "MIN": -2,
+      "MAX": 2,
+      "DEFAULT": 0,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "radiusPulse",
+      "LABEL": "Radius Pulse",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.6,
+      "DEFAULT": 0,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "pathDiversity",
+      "LABEL": "Path Diversity",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 1,
+      "GROUP": "Motion"
+    },
+    {
       "NAME": "colorShift",
       "LABEL": "Color Shift",
       "TYPE": "float",
@@ -268,16 +295,24 @@ void main() {
 
 			// Lissajous-style centre: sum of two slow sinusoids
 			// per axis → smooth, organic, non-jittery path
-			float fx1 = freq1 * (0.7 + hashF(i + 10.0) * 0.6);
-			float fx2 = freq1 * (0.3 + hashF(i + 20.0) * 0.4);
-			float fy1 = freq1 * (0.5 + hashF(i + 30.0) * 0.7);
-			float fy2 = freq1 * (0.4 + hashF(i + 40.0) * 0.5);
+			// Path Diversity: 1 = original per-blob frequency spread, 0 = all blobs share one tempo
+			float pd  = pathDiversity;
+			float fx1 = freq1 * (1.00 + (hashF(i + 10.0) - 0.5) * 0.6 * pd);
+			float fx2 = freq1 * (0.50 + (hashF(i + 20.0) - 0.5) * 0.4 * pd);
+			float fy1 = freq1 * (0.85 + (hashF(i + 30.0) - 0.5) * 0.7 * pd);
+			float fy2 = freq1 * (0.65 + (hashF(i + 40.0) - 0.5) * 0.5 * pd);
 
 			float spread = freq2 * (1.0 + audioReact * 0.15 * midP);
 			float cx = (sin(T * fx1 + ph1) * 0.6 + sin(T * fx2 + ph2) * 0.4) * spread;
 			float cy = (sin(T * fy1 + ph3) * 0.6 + sin(T * fy2 + ph4) * 0.4) * spread;
 
-			float d = length(uv - vec2(cx, cy)) - R;
+			// Orbit Swirl: the whole blob constellation revolves about the centre
+			float sw = orbitSwirl * TIME * 0.12;
+			float swc = cos(sw), sws = sin(sw);
+			vec2 cc = vec2(cx * swc - cy * sws, cx * sws + cy * swc);
+			// Radius Pulse: each blob throbs on its own phase
+			float Ri = R * (1.0 + radiusPulse * sin(TIME * 0.9 + i * 1.7));
+			float d = length(uv - cc) - Ri;
 			field   = smin(field, d, k);
 		}
 

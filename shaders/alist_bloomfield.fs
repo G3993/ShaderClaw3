@@ -51,6 +51,42 @@
       "GROUP": "Motion / Animation"
     },
     {
+      "NAME": "clusterOrbit",
+      "LABEL": "Cluster Orbit",
+      "TYPE": "float",
+      "GROUP": "Motion / Animation",
+      "DEFAULT": 1.0,
+      "MIN": 0.0,
+      "MAX": 4.0
+    },
+    {
+      "NAME": "rosetteDrift",
+      "LABEL": "Rosette Drift",
+      "TYPE": "float",
+      "GROUP": "Motion / Animation",
+      "DEFAULT": 1.0,
+      "MIN": 0.0,
+      "MAX": 4.0
+    },
+    {
+      "NAME": "petalWaver",
+      "LABEL": "Petal Waver",
+      "TYPE": "float",
+      "GROUP": "Motion / Animation",
+      "DEFAULT": 1.0,
+      "MIN": 0.0,
+      "MAX": 3.0
+    },
+    {
+      "NAME": "ringFlow",
+      "LABEL": "Ring Flow",
+      "TYPE": "float",
+      "GROUP": "Motion / Animation",
+      "DEFAULT": 1.0,
+      "MIN": -3.0,
+      "MAX": 3.0
+    },
+    {
       "NAME": "hueShift",
       "LABEL": "Hue Shift",
       "TYPE": "float",
@@ -102,7 +138,7 @@ void main(){
   float react = audioReactivity;
 
   // slow cluster orbit on the audio time-clock (integrated, never raw position)
-  float orbit = TIME * 0.03 + audioTime * 0.05 * react;
+  float orbit = TIME * 0.03 * clusterOrbit + audioTime * 0.05 * react; // MOTION: idle orbit rate
   float co = cos(orbit), so = sin(orbit);
   mat2 R = mat2(co, -so, so, co);
   vec2 pr = R * p;
@@ -147,7 +183,7 @@ void main(){
     else            { c = vec2( 0.01,  0.31); R0 = 0.165; band = stemVocal;        hit = audioHighHit; }
 
     // gentle independent drift so nothing moves in lockstep
-    c += 0.020 * vec2(sin(audioTime * 0.23 * react + TIME * 0.11 + fi * 2.1),
+    c += 0.020 * rosetteDrift * vec2(sin(audioTime * 0.23 * react + TIME * 0.11 + fi * 2.1), // MOTION: drift reach
                       cos(audioTime * 0.19 * react + TIME * 0.09 + fi * 1.7));
 
     vec2 q = pr - c;
@@ -159,13 +195,13 @@ void main(){
 
     // scalloped edge: two petal frequencies + slow waver
     float nPet = 6.0 + fi;
-    float wob = 1.0 + 0.075 * sin(a * nPet + bloomT * (0.7 + 0.13 * fi) + fi * 2.3)
-                    + 0.045 * sin(a * (nPet * 2.0 + 3.0) - bloomT * 1.3 + h * 6.28);
+    float wob = 1.0 + petalWaver * (0.075 * sin(a * nPet + bloomT * (0.7 + 0.13 * fi) + fi * 2.3)
+                                  + 0.045 * sin(a * (nPet * 2.0 + 3.0) - bloomT * 1.3 + h * 6.28)); // MOTION: scallop waver
     float s = r / (rad * wob);
 
     if (s < 1.0){
       // concentric rippled rings blooming outward
-      float ring = fract(s * ringN - bloomT * (0.9 + 0.2 * h) - fi * 0.37);
+      float ring = fract(s * ringN - bloomT * (0.9 + 0.2 * h) * ringFlow - fi * 0.37); // MOTION: ring bloom rate / direction
       float tri = abs(ring - 0.5) * 2.0;
       float bandMix = smoothstep(0.25, 0.75, tri);
       vec3 rc = mix(teal, mix(tealHi, pinkHi, smoothstep(0.25, 0.95, s + 0.3 * h)), bandMix);

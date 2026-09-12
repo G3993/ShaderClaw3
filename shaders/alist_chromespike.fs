@@ -43,6 +43,42 @@
       "GROUP": "Motion / Animation"
     },
     {
+      "NAME": "swayRate",
+      "LABEL": "Sway Rate",
+      "TYPE": "float",
+      "GROUP": "Motion / Animation",
+      "DEFAULT": 1.0,
+      "MIN": 0.0,
+      "MAX": 4.0
+    },
+    {
+      "NAME": "tumble",
+      "LABEL": "Cluster Tumble",
+      "TYPE": "float",
+      "GROUP": "Motion / Animation",
+      "DEFAULT": 0.0,
+      "MIN": -2.0,
+      "MAX": 2.0
+    },
+    {
+      "NAME": "bobAmount",
+      "LABEL": "Cluster Bob",
+      "TYPE": "float",
+      "GROUP": "Motion / Animation",
+      "DEFAULT": 0.0,
+      "MIN": 0.0,
+      "MAX": 1.0
+    },
+    {
+      "NAME": "depthDrift",
+      "LABEL": "Depth Drift",
+      "TYPE": "float",
+      "GROUP": "Motion / Animation",
+      "DEFAULT": 0.0,
+      "MIN": 0.0,
+      "MAX": 1.0
+    },
+    {
       "NAME": "hueShift",
       "LABEL": "Hue Shift",
       "TYPE": "float",
@@ -111,28 +147,30 @@ float cluster(vec3 q, float r, float spk){
 // scene state shared between map() and main via globals
 float gSway;
 float gSpk;
+float gBob;    // MOTION: vertical bob amplitude
+float gDepth;  // MOTION: z parallax drift amplitude
 
 float map(vec3 p){
   float d = 1e5;
   // four hand-placed clusters (depth spread for parallax)
   vec3 q;
-  q = p - vec3(-0.95, 0.60, 0.30);
+  q = p - vec3(-0.95, 0.60 + gBob * sin(TIME * 0.70 + 0.0), 0.30 + gDepth * sin(TIME * 0.31 + 1.0));
   q.xy *= rot2(gSway * 1.00 + 0.9); q.yz *= rot2(gSway * 0.70 + 2.1);
   d = min(d, cluster(q, 0.72, gSpk));
 
-  q = p - vec3(0.95, 0.75, 1.10);
+  q = p - vec3(0.95, 0.75 + gBob * sin(TIME * 0.62 + 1.9), 1.10 + gDepth * sin(TIME * 0.27 + 3.2));
   q.xy *= rot2(-gSway * 0.80 + 4.2); q.xz *= rot2(gSway * 0.60 + 1.3);
   d = min(d, cluster(q, 0.80, gSpk * 1.1));
 
-  q = p - vec3(0.85, -0.80, 0.10);
+  q = p - vec3(0.85, -0.80 + gBob * sin(TIME * 0.77 + 3.7), 0.10 + gDepth * sin(TIME * 0.35 + 5.1));
   q.xy *= rot2(gSway * 0.90 + 5.6); q.yz *= rot2(-gSway * 0.55 + 0.4);
   d = min(d, cluster(q, 0.68, gSpk));
 
-  q = p - vec3(-0.70, -0.85, 0.90);
+  q = p - vec3(-0.70, -0.85 + gBob * sin(TIME * 0.58 + 5.4), 0.90 + gDepth * sin(TIME * 0.29 + 0.4));
   q.xy *= rot2(-gSway * 0.65 + 2.8); q.xz *= rot2(gSway * 0.85 + 3.7);
   d = min(d, cluster(q, 0.74, gSpk * 0.9));
 
-  q = p - vec3(0.05, -0.05, 2.30); // far center cluster
+  q = p - vec3(0.05, -0.05 + gBob * sin(TIME * 0.50 + 2.6), 2.30 + gDepth * sin(TIME * 0.23 + 2.2)); // far center cluster
   q.xy *= rot2(gSway * 0.50 + 1.5); q.yz *= rot2(gSway * 0.40 + 4.9);
   d = min(d, cluster(q, 0.85, gSpk * 0.8));
   return d;
@@ -162,8 +200,11 @@ void main(){
   float react = audioReactivity;
 
   // ---- clocks & envelopes
-  float swayT = TIME * 0.05 + (audioTime * 0.14 + audioMidTime * 0.14) * react; // integrated sway clocks
-  gSway = swayAmount * (0.35 * sin(swayT) + 0.12 * sin(swayT * 2.7 + 1.0)) + swayT * 0.15;
+  float swayT = TIME * 0.05 * swayRate + (audioTime * 0.14 + audioMidTime * 0.14) * react; // integrated sway clocks (MOTION: swayRate)
+  gSway = swayAmount * (0.35 * sin(swayT) + 0.12 * sin(swayT * 2.7 + 1.0)) + swayT * 0.15
+        + TIME * tumble * 0.25;          // MOTION: continuous per-cluster tumble
+  gBob   = bobAmount  * 0.25;            // MOTION: clusters bob up / down
+  gDepth = depthDrift * 0.60;            // MOTION: clusters drift toward / away (parallax)
   // thorns swell LINEARLY on the bass stem (fast) + presence (slow hold)
   gSpk  = spikeLength * (1.0 + react * (0.10 * stemBass + 0.14 * audioBassPresence));
 

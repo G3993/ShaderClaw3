@@ -89,6 +89,42 @@
       "GROUP": "Motion / Animation"
     },
     {
+      "NAME": "sweepDir",
+      "LABEL": "Sweep Direction",
+      "TYPE": "float",
+      "MIN": -1,
+      "MAX": 1,
+      "DEFAULT": 1,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "gapBreathRate",
+      "LABEL": "Gap Breath Rate",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 5,
+      "DEFAULT": 1,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "bandStagger",
+      "LABEL": "Band Stagger",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 4,
+      "DEFAULT": 1,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "angleSway",
+      "LABEL": "Angle Sway",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Motion"
+    },
+    {
       "NAME": "colorA",
       "LABEL": "Stripe Color A",
       "TYPE": "color",
@@ -298,7 +334,8 @@ void main() {
     // Angle 0..1 maps to a shallow..steep diagonal; project position
     // onto the stripe normal to get a 1D coordinate that the bands
     // sweep along.
-    float ang = mix(0.15, 1.35, clamp(stripeAngle, 0.0, 1.0));
+    // Angle Sway: the stripe field slowly rocks its angle
+    float ang = mix(0.15, 1.35, clamp(stripeAngle, 0.0, 1.0)) + angleSway * 0.3 * sin(musicTime * 0.4);
     vec2 dir = vec2(cos(ang), sin(ang));
     float along = dot(p, dir);
 
@@ -315,7 +352,7 @@ void main() {
     // Phase shift sweeps the stripe field across the canvas over time;
     // mids add fine jitter to the phase so bands don't feel mechanical
     // (detail/turbulence routing — texture, not structure).
-    float phase = musicTime * mix(0.10, 0.8, clamp(sweepSpeed, 0.0, 2.0) * 0.5)
+    float phase = musicTime * sweepDir * mix(0.10, 0.8, clamp(sweepSpeed, 0.0, 2.0) * 0.5)
                 + midP * audio * 0.18 * sin(musicTime * 2.1);
 
     float band = along * n + phase;
@@ -326,7 +363,7 @@ void main() {
     // breathes slowly on its own, plus bass widens/narrows the gaps —
     // a continuous structural swell (~±24% of the duty range), not a
     // binary gate or strobe.
-    float duty = 0.5 + 0.20 * sin(musicTime * 0.53 + bandId * 0.7)
+    float duty = 0.5 + 0.20 * sin(musicTime * 0.53 * gapBreathRate + bandId * 0.7 * bandStagger)
                + 0.16 * widthPulse * bassP * audio;
     duty = clamp(duty, 0.15, 0.85);
 

@@ -70,6 +70,42 @@
       "GROUP": "Motion / Animation"
     },
     {
+      "NAME": "swirl",
+      "LABEL": "Cloud Swirl",
+      "TYPE": "float",
+      "GROUP": "Motion / Animation",
+      "DEFAULT": 0.0,
+      "MIN": -2.0,
+      "MAX": 2.0
+    },
+    {
+      "NAME": "drift",
+      "LABEL": "Particle Drift",
+      "TYPE": "float",
+      "GROUP": "Motion / Animation",
+      "DEFAULT": 0.0,
+      "MIN": 0.0,
+      "MAX": 1.0
+    },
+    {
+      "NAME": "pulseRate",
+      "LABEL": "Pulse Rate",
+      "TYPE": "float",
+      "GROUP": "Motion / Animation",
+      "DEFAULT": 1.0,
+      "MIN": 0.0,
+      "MAX": 3.0
+    },
+    {
+      "NAME": "cloudBreathe",
+      "LABEL": "Cloud Breathe",
+      "TYPE": "float",
+      "GROUP": "Motion / Animation",
+      "DEFAULT": 0.0,
+      "MIN": 0.0,
+      "MAX": 1.0
+    },
+    {
       "NAME": "hueShift",
       "TYPE": "float",
       "DEFAULT": 0,
@@ -176,10 +212,18 @@ void main() {
         float fi = float(i);
 
         // Deterministic 3D position in [-1, 1] cube
-        vec3 pos = (hash3(fi * 3.7) * 2.0 - 1.0) * spread;
+        vec3 h3 = hash3(fi * 3.7);
+        // MOTION: cloud breathes — spread expands / contracts on a slow cycle
+        vec3 pos = (h3 * 2.0 - 1.0) * spread * (1.0 + cloudBreathe * 0.35 * sin(t * 0.4));
+        // MOTION: per-particle lissajous drift (each on its own phase)
+        pos += drift * 0.30 * vec3(sin(t * 0.70 + h3.x * 6.2832),
+                                   cos(t * 0.50 + h3.y * 6.2832),
+                                   sin(t * 0.60 + h3.z * 6.2832));
+        // MOTION: internal swirl — particles orbit the cloud axis at radius-dependent rates
+        pos = rotateY(pos, t * swirl * (0.4 + 0.8 * h3.y));
 
         // Sine-based pulsing (matching Three.js example)
-        vec3 trTime = pos + t;
+        vec3 trTime = pos + t * pulseRate;   // MOTION: pulse rate
         float scale = sin(trTime.x * 2.1) + sin(trTime.y * 3.2) + sin(trTime.z * 4.3);
         // Mids deepen the per-particle pulse
         float sizeScale = mix(1.0, (scale * 0.5 + 1.0), pulseAmount * (1.0 + 0.30 * midP));

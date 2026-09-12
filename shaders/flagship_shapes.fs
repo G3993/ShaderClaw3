@@ -3,6 +3,10 @@
   "CATEGORIES": ["Generator", "Geometric", "Audio Reactive"],
   "INPUTS": [
     { "NAME": "outlineGlow", "LABEL": "Outlines", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0 },
+    { "NAME": "ringSpin",    "LABEL": "Ring Spin",    "TYPE": "float", "MIN": -6.0, "MAX": 6.0, "DEFAULT": 1.0, "GROUP": "Motion" },
+    { "NAME": "shapeTumble", "LABEL": "Shape Tumble", "TYPE": "float", "MIN": -6.0, "MAX": 6.0, "DEFAULT": 1.0, "GROUP": "Motion" },
+    { "NAME": "ringWobble",  "LABEL": "Ring Wobble",  "TYPE": "float", "MIN": 0.0,  "MAX": 6.0, "DEFAULT": 1.0, "GROUP": "Motion" },
+    { "NAME": "accentSpeed", "LABEL": "Accent Speed", "TYPE": "float", "MIN": 0.0,  "MAX": 5.0, "DEFAULT": 1.0, "GROUP": "Motion" },
     { "NAME": "backPlane",   "LABEL": "Back Plane",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Camera / Layout" },
     { "NAME": "midPlane",    "LABEL": "Mid Plane",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Camera / Layout" },
     { "NAME": "frontPlane",  "LABEL": "Front Plane", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Camera / Layout" },
@@ -228,7 +232,7 @@ vec4 passImage() {
         float fi = float(i);
         vec2 q = p - pan*0.35
                - vec2(cos(fi*2.09 + TIME*0.05), sin(fi*2.09 + TIME*0.04)) * 0.44;
-        q = rot2(q, TIME*0.03 + fi*1.3);
+        q = rot2(q, TIME*0.03*shapeTumble + fi*1.3);
         float sd;
         if (i == 0)      sd = sdCircle(q, 0.38);
         else if (i == 1) sd = sdBox(q, vec2(0.33, 0.27));
@@ -253,15 +257,15 @@ vec4 passImage() {
 
     // ══ MID PLANE — 8-shape ring sequencer ═══════════════════════════════
     float w8     = 0.5 - 0.5*cos(TAU * audioPhase8);
-    float ringRot = TIME*0.06 + 0.42*w8;
+    float ringRot = TIME*0.06*ringSpin + 0.42*w8;
     float seq    = audioPhase4 * 8.0;
 
     for (int k = 0; k < 8; k++) {
         float fk  = float(k);
         float ang  = fk * 0.7853982 + ringRot;
-        vec2 cPos = vec2(cos(ang), sin(ang)) * (0.335 + 0.025*sin(TIME*0.19 + fk));
+        vec2 cPos = vec2(cos(ang), sin(ang)) * (0.335 + 0.025*ringWobble*sin(TIME*0.19 + fk));
         vec2 q    = p - pan*0.7 - cPos;
-        q = rot2(q, -ang*0.5 + TIME*0.08);
+        q = rot2(q, -ang*0.5 + TIME*0.08*shapeTumble);
 
         float sz = 0.105 * (1.0 + 0.06*sin(TIME*0.31 + fk*1.9));
         float sd;
@@ -312,10 +316,10 @@ vec4 passImage() {
     for (int i = 0; i < 3; i++) {
         float fi = float(i);
         float h  = hash11(fi*5.7 + 3.1);
-        vec2 cPos = vec2(sin(TIME*(0.12 + 0.05*h) + fi*2.4),
-                         cos(TIME*(0.10 + 0.04*h) + fi*1.9)) * vec2(0.46, 0.36);
+        vec2 cPos = vec2(sin(TIME*accentSpeed*(0.12 + 0.05*h) + fi*2.4),
+                         cos(TIME*accentSpeed*(0.10 + 0.04*h) + fi*1.9)) * vec2(0.46, 0.36);
         vec2 q = p - pan*1.6 - cPos;
-        q = rot2(q, TIME*0.2 + fi*2.0);
+        q = rot2(q, TIME*0.2*shapeTumble + fi*2.0);
 
         float sd;
         if (i == 0)      sd = sdCircle(q, 0.035);

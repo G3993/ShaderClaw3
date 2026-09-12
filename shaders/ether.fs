@@ -42,6 +42,42 @@
       "GROUP": "Motion / Animation"
     },
     {
+      "NAME": "tendrilPulse",
+      "LABEL": "Tendril Pulse",
+      "TYPE": "float",
+      "GROUP": "Motion / Animation",
+      "DEFAULT": 1.0,
+      "MIN": 0.0,
+      "MAX": 3.0
+    },
+    {
+      "NAME": "tendrilFlow",
+      "LABEL": "Tendril Flow",
+      "TYPE": "float",
+      "GROUP": "Motion / Animation",
+      "DEFAULT": 1.0,
+      "MIN": 0.0,
+      "MAX": 3.0
+    },
+    {
+      "NAME": "axisTilt",
+      "LABEL": "Axis Tilt",
+      "TYPE": "float",
+      "GROUP": "Motion / Animation",
+      "DEFAULT": 0.0,
+      "MIN": -2.0,
+      "MAX": 2.0
+    },
+    {
+      "NAME": "detailSpin",
+      "LABEL": "Detail Spin",
+      "TYPE": "float",
+      "GROUP": "Motion / Animation",
+      "DEFAULT": 1.0,
+      "MIN": -2.0,
+      "MAX": 2.0
+    },
+    {
       "NAME": "colorTint",
       "LABEL": "Color",
       "TYPE": "color",
@@ -205,18 +241,20 @@ mat2 rot(float a) {
 float map(vec3 p, float t) {
     p.xz *= rot(t * 0.4 * twist);
     p.xy *= rot(t * 0.3 * twist);
-    vec3 q = p * 2.0 + t;
-    return length(p + vec3(sin(t * 0.7))) * log(length(p) + 1.0)
+    p.yz *= rot(t * 0.25 * axisTilt);              // MOTION: third-axis tilt
+    vec3 q = p * 2.0 + t * tendrilFlow;             // MOTION: wave flow along tendrils
+    return length(p + vec3(sin(t * 0.7 * tendrilPulse))) * log(length(p) + 1.0)  // MOTION: pulse
          + sin(q.x + sin(q.z + sin(q.y))) * 0.5 * tendrilSize - 1.0;
 }
 
 // ── Secondary (detail) tendril SDF — finer scale, counter-twisted ────────
 float mapDetail(vec3 p, float t) {
     // Slightly different rotation rhythm creates cross-hatch interference
-    p.xz *= rot(t * 0.27 * twist + 0.9);
-    p.yz *= rot(t * 0.35 * twist + 1.4);
-    vec3 q = p * 3.7 + t * 1.3;
-    return length(p + vec3(cos(t * 0.53 + 1.1))) * log(length(p) + 1.2)
+    p.xz *= rot(t * 0.27 * twist * detailSpin + 0.9);   // MOTION: detail layer spin
+    p.yz *= rot(t * 0.35 * twist * detailSpin + 1.4);
+    p.xy *= rot(t * 0.20 * axisTilt);
+    vec3 q = p * 3.7 + t * 1.3 * tendrilFlow;
+    return length(p + vec3(cos(t * 0.53 * tendrilPulse + 1.1))) * log(length(p) + 1.2)
          + sin(q.x + sin(q.z * 1.2 + sin(q.y * 0.9))) * 0.38 * tendrilSize - 1.0;
 }
 

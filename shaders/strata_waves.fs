@@ -15,6 +15,10 @@
     { "NAME": "ribDetail",    "LABEL": "Slice Ribs",      "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0,  "GROUP": "Shape / Geometry" },
     { "NAME": "reliefDepth",  "LABEL": "Relief Outlines", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0,  "GROUP": "Shape / Geometry" },
     { "NAME": "driftSpeed",   "LABEL": "Wave Roll",       "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0,  "GROUP": "Motion / Animation" },
+    { "NAME": "waveSway",     "LABEL": "Wave Sway",       "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0,  "GROUP": "Motion / Animation" },
+    { "NAME": "swellBreathe", "LABEL": "Swell Breathe",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0,  "GROUP": "Motion / Animation" },
+    { "NAME": "ribCrawl",     "LABEL": "Rib Crawl",       "TYPE": "float", "MIN": -2.0,"MAX": 2.0, "DEFAULT": 0.0,  "GROUP": "Motion / Animation" },
+    { "NAME": "rimFlow",      "LABEL": "Rim Flow",        "TYPE": "float", "MIN": -2.0,"MAX": 2.0, "DEFAULT": 0.0,  "GROUP": "Motion / Animation" },
     { "NAME": "audioReact",   "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.35, "GROUP": "Audio Reactivity" }
   ],
   "PASSES": [
@@ -129,6 +133,8 @@ void main() {
     // (memoryless, silence -> exactly zero offset)
     x  += amt * 0.010 * midP * sin(py * 5.0 + TIME * 0.4);
     py += amt * 0.016 * midP;
+    // MOTION: lateral sway — the whole stack shears side to side by depth (memoryless)
+    x  += waveSway * 0.035 * sin(py * 4.0 + TIME * 0.35);
 
     float strataN = floor(strata + 0.5);
     float spacing = 1.22 / strataN;
@@ -142,9 +148,11 @@ void main() {
     for (int k = 0; k < NMAX; k++) {
         float fk = float(k);
         if (fk >= strataN) break;
-        float e = stratEdge(fk, x, PH, spacing, ampMul);
+        // MOTION: per-stratum swell breathing — each layer heaves on its own phase
+        float ampK = ampMul * (1.0 + swellBreathe * 0.45 * sin(TIME * 0.45 + fk * 1.7));
+        float e = stratEdge(fk, x, PH, spacing, ampK);
         if (e >= py) {
-            float e2 = stratEdge(fk, x + 0.004, PH, spacing, ampMul);
+            float e2 = stratEdge(fk, x + 0.004, PH, spacing, ampK);
             kv = fk;
             edist = e - py;
             slope = (e2 - e) / 0.004;
@@ -165,14 +173,15 @@ void main() {
 
         // slice ribs: rounded lamination columns, phase sheared by the wave
         // slope so they comb around every surge; stronger where it curves.
-        float rib = sin(x * 6.2832 * 68.0 * ribDetail + slope * 16.0 + kh * 6.2832);
+        float rib = sin(x * 6.2832 * 68.0 * ribDetail + slope * 16.0 + kh * 6.2832
+                        + TIME * ribCrawl * 2.0 * (kh > 0.5 ? 1.0 : -1.0));   // MOTION: lamination lines crawl
         float rr  = pow(0.5 + 0.5 * rib, 1.5);
         float ribA = 0.15 + 0.85 * smoothstep(0.0, 1.2, abs(slope));
         col *= mix(1.0, mix(0.86, 1.10, rr), ribA * (0.85 + amt * 0.35 * levelS));
 
         // repeated lighter outline copies below the edge (onion-sliced relief)
         float o   = edist / (0.0135 * (0.6 + 0.4 * spacing / 0.075));
-        float cop = pow(0.5 + 0.5 * cos(o * 6.2832), 6.0);
+        float cop = pow(0.5 + 0.5 * cos((o + TIME * rimFlow * 0.35) * 6.2832), 6.0);   // MOTION: outline echoes flow
         float rim = cop * exp(-o * 0.28) * reliefDepth;
         // highs brighten the rims (sparkle lives on the fine detail)
         rim *= 0.55 * (1.0 + amt * 1.5 * highP);

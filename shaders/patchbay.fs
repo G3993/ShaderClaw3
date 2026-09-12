@@ -13,6 +13,10 @@
     { "NAME": "sag",         "LABEL": "Cable Sag",     "TYPE": "float", "MIN": 0.3, "MAX": 1.6, "DEFAULT": 1.0,  "GROUP": "Shape / Geometry" },
     { "NAME": "swayAmount",  "LABEL": "Sway",          "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5,  "GROUP": "Motion / Animation" },
     { "NAME": "repatchRate", "LABEL": "Repatch Rate",  "TYPE": "float", "MIN": 0.2, "MAX": 2.0, "DEFAULT": 1.0,  "GROUP": "Motion / Animation" },
+    { "NAME": "swayRate",    "LABEL": "Sway Rate",     "TYPE": "float", "MIN": 0.0, "MAX": 4.0, "DEFAULT": 1.0,  "GROUP": "Motion / Animation" },
+    { "NAME": "sagBreathe",  "LABEL": "Sag Breathe",   "TYPE": "float", "MIN": 0.0, "MAX": 4.0, "DEFAULT": 1.0,  "GROUP": "Motion / Animation" },
+    { "NAME": "pulseTravel", "LABEL": "Pulse Travel",  "TYPE": "float", "MIN": 0.0, "MAX": 4.0, "DEFAULT": 1.0,  "GROUP": "Motion / Animation" },
+    { "NAME": "swingLift",   "LABEL": "Swing Lift",    "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0,  "GROUP": "Motion / Animation" },
     { "NAME": "audioReact",  "LABEL": "Audio React",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.35, "GROUP": "Audio Reactivity" }
   ],
   "PASSES": [
@@ -254,7 +258,7 @@ void main() {
         float e = ss * ss * (3.0 - 2.0 * ss);
         float air = sin(PI * e);
         vec2 Bpos = mix(Bold, Bnew, e);
-        Bpos.y += air * 0.075;
+        Bpos.y += air * 0.075 * swingLift;   // MOTION: re-patch lift arc height
 
         float len = length(iso(Apos) - iso(Bpos));
 
@@ -263,8 +267,8 @@ void main() {
         float om = 0.5 * (2.0 + mod(fi, 4.0));
         float sagA = sag * (0.045 + 0.30 * len)
                    * (1.0 + 0.65 * amt * bassP + 0.30 * air
-                          + 0.055 * sin(TIME * 0.26 + fi * 1.3));
-        float swayX = sw * (0.017 * sin(TIME * (0.22 + 0.09 * mod(fi, 3.0)) + fi * 1.7)
+                          + 0.055 * sagBreathe * sin(TIME * 0.26 * sagBreathe + fi * 1.3));   // MOTION: sag breathing
+        float swayX = sw * (0.017 * sin(TIME * swayRate * (0.22 + 0.09 * mod(fi, 3.0)) + fi * 1.7)   // MOTION: idle sway rate
                     + amt * 0.065 * bassP * sin(phE * om + fi * 2.3));
         vec2 ctl = (Apos + Bpos) * 0.5 + vec2(swayX, -sagA);
 
@@ -303,7 +307,7 @@ void main() {
         // mids: traveling pulse of brightness along the cable path — its
         // travel speed also rides the envelope clock (velocity ∝ level)
         float phEN = phE / 12.566371;
-        float pp = fract(TIME * (0.030 + 0.022 * hash11(fi * 3.3))
+        float pp = fract(TIME * pulseTravel * (0.030 + 0.022 * hash11(fi * 3.3))   // MOTION: pulse travel rate
                          + phEN * 2.0 + hash11(fi * 7.7) * 5.0);
         float pulse = exp(-pow((tC - pp) * 5.5, 2.0));
         body += vec3(0.85, 0.85, 0.80) * pulse * (0.13 + amt * 1.30 * midP);

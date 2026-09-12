@@ -69,6 +69,33 @@
       "MAX": 2.0
     },
     {
+      "NAME": "orbWander",
+      "LABEL": "Orb Wander",
+      "TYPE": "float",
+      "GROUP": "Motion",
+      "DEFAULT": 0.0,
+      "MIN": 0.0,
+      "MAX": 3.0
+    },
+    {
+      "NAME": "orbitPrecess",
+      "LABEL": "Orbit Precess",
+      "TYPE": "float",
+      "GROUP": "Motion",
+      "DEFAULT": 0.0,
+      "MIN": -2.0,
+      "MAX": 2.0
+    },
+    {
+      "NAME": "warpSwirl",
+      "LABEL": "Warp Swirl",
+      "TYPE": "float",
+      "GROUP": "Motion",
+      "DEFAULT": 0.0,
+      "MIN": -2.0,
+      "MAX": 2.0
+    },
+    {
       "NAME": "audioReact",
       "LABEL": "Audio React",
       "TYPE": "float",
@@ -333,7 +360,13 @@ vec2 orbPos(int i, float T) {
     float a = T * orbOrbitSpeed * (0.3 + 0.13 * fi) + fi * 2.4;
     float baseRad = (0.22 + 0.13 * fi * 0.25) * orbOrbitRadius;
     float rad = baseRad + 0.18 * band * audioReact * bassInfluence * orbOrbitRadius;
-    vec2 c = vec2(0.5) + rad * vec2(cos(a), sin(a * (1.0 + 0.21 * fi)));
+    vec2 orb = rad * vec2(cos(a), sin(a * (1.0 + 0.21 * fi)));
+    // MOTION: the orbit path itself slowly precesses (per-orb alternating sense)
+    float pr = T * orbitPrecess * 0.3 * (mod(fi, 2.0) < 0.5 ? 1.0 : -1.0);
+    orb = vec2(cos(pr) * orb.x - sin(pr) * orb.y, sin(pr) * orb.x + cos(pr) * orb.y);
+    vec2 c = vec2(0.5) + orb;
+    // MOTION: independent lissajous wander layered on the orbit
+    c += orbWander * 0.08 * vec2(sin(T * 0.53 + fi * 1.9), cos(T * 0.41 + fi * 2.7));
     c.y += 0.06 * band * sin(T * 6.0 + fi) * orbBobAmount;
     return c * RENDERSIZE.xy;
 }
@@ -367,9 +400,10 @@ vec4 passSim() {
 
     // Warp lookup with twist and scale
     float warpW = warpStrength * warpFreq * terrainScale;
-    float wx = sin(getVal(vec2(val, 0.0)) - getVal(vec2(-val, 0.0)) + PI + chaosTwist) * val * warpW;
-    float wy = cos(getVal(vec2(0.0, -val)) - getVal(vec2(0.0, val)) - PI * 0.5 + chaosTwist) * val * warpW;
-    vec2 warpOffset = rot2(vec2(wx, wy), chaosTwist) * chaosAmp;
+    float twistT = chaosTwist + T * warpSwirl * 0.1;   // MOTION: warp direction slowly revolves
+    float wx = sin(getVal(vec2(val, 0.0)) - getVal(vec2(-val, 0.0)) + PI + twistT) * val * warpW;
+    float wy = cos(getVal(vec2(0.0, -val)) - getVal(vec2(0.0, val)) - PI * 0.5 + twistT) * val * warpW;
+    vec2 warpOffset = rot2(vec2(wx, wy), twistT) * chaosAmp;
     val = getVal(warpOffset);
 
     val *= feedbackDecay;

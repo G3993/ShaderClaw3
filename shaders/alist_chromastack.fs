@@ -33,6 +33,42 @@
       "GROUP": "Motion / Animation"
     },
     {
+      "NAME": "rollRate",
+      "LABEL": "Wave Roll",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 4,
+      "DEFAULT": 1,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "rippleRate",
+      "LABEL": "Ripple Rate",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 4,
+      "DEFAULT": 1,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "depthSweep",
+      "LABEL": "Depth Sweep",
+      "TYPE": "float",
+      "MIN": -3,
+      "MAX": 3,
+      "DEFAULT": 0,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "lobeDrift",
+      "LABEL": "Lobe Drift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.3,
+      "DEFAULT": 0,
+      "GROUP": "Motion"
+    },
+    {
       "NAME": "paletteSpread",
       "LABEL": "Palette Spread",
       "TYPE": "float",
@@ -153,13 +189,17 @@ vec3 rowColor(float fi, float spread){
 float rowCurve(float fi, float x, float ph, float amp, float rip){
   float z = fi / float(NROWS - 1);                 // 0 back .. 1 front
   // mid ripple: per-slice phase lag (law 3 — nothing snaps in lockstep)
-  float xr = x + rip * sin(x * 11.0 + fi * 0.93 + TIME * 1.6);
+  float xr = x + rip * sin(x * 11.0 + fi * 0.93 + TIME * 1.6 * rippleRate);
   // three terraced mountain lobes along depth
-  float env = exp(-pow((z - 0.16) * 4.4, 2.0))
-            + 1.15 * exp(-pow((z - 0.52) * 4.0, 2.0))
-            + 0.95 * exp(-pow((z - 0.86) * 4.6, 2.0));
+  // Lobe Drift: the three mountain lobes migrate through depth on the wave clock
+  float ld1 = lobeDrift * sin(ph * 0.50);
+  float ld2 = lobeDrift * sin(ph * 0.37 + 2.0);
+  float ld3 = lobeDrift * sin(ph * 0.43 + 4.0);
+  float env = exp(-pow((z - 0.16 - ld1) * 4.4, 2.0))
+            + 1.15 * exp(-pow((z - 0.52 - ld2) * 4.0, 2.0))
+            + 0.95 * exp(-pow((z - 0.86 - ld3) * 4.6, 2.0));
   float n  = noise1(xr * 1.5 + z * 3.1 - ph * 0.35) * 2.4;
-  float w1 = 0.5 + 0.5 * sin(xr * 4.3 + n + z * 5.2 + ph);
+  float w1 = 0.5 + 0.5 * sin(xr * 4.3 + n + z * 5.2 + ph * (1.0 + depthSweep * z));
   float w2 = 0.5 + 0.5 * sin(xr * 7.9 - z * 8.5 - ph * 1.31 + 2.7);
   float h  = pow(w1, 1.7) * (0.68 + 0.32 * w2);
   // pinch wave height at the frame edges (finger-end taper of the reference)
@@ -179,7 +219,7 @@ void main(){
 
   // wave clock: TIME keeps it rolling in silence; audioBassTime is the
   // integrated bass swell; audioPhase8 adds a smooth bar-scale sway
-  float ph  = TIME * 0.30 + audioBassTime * 0.55 + 0.5 * sin(TAU * audioPhase8) * react;
+  float ph  = TIME * 0.30 * rollRate + audioBassTime * 0.55 + 0.5 * sin(TAU * audioPhase8) * react;
   float amp = (0.15 + 0.06 * presL) * terrainWarp * (1.0 + 0.35 * bassL);
   float rip = 0.016 * sliceRipple * (0.25 + 0.75 * midL);
 

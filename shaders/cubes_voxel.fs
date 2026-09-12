@@ -21,6 +21,33 @@
 		"MAX" : 		0.25
 	},	
 	{
+		"NAME" : 		"tiltSway",
+		"LABEL" : 		"Tilt Sway",
+		"TYPE" : 		"float",
+		"DEFAULT" : 	0.0,
+		"MIN" : 		0.0,
+		"MAX" : 		1.0,
+		"GROUP" : 		"Motion"
+	},
+	{
+		"NAME" : 		"dollyCycle",
+		"LABEL" : 		"Dolly Cycle",
+		"TYPE" : 		"float",
+		"DEFAULT" : 	0.0,
+		"MIN" : 		0.0,
+		"MAX" : 		1.0,
+		"GROUP" : 		"Motion"
+	},
+	{
+		"NAME" : 		"growWave",
+		"LABEL" : 		"Grow Wave",
+		"TYPE" : 		"float",
+		"DEFAULT" : 	0.0,
+		"MIN" : 		0.0,
+		"MAX" : 		0.6,
+		"GROUP" : 		"Motion"
+	},
+	{
 		"NAME" : 		"light",
 		"TYPE" : 		"point2D",
 		"DEFAULT" :		[ -0.3, -0.2 ],
@@ -129,10 +156,12 @@ const vec3 backgroundColor = vec3(0.0, 0.0, 0.0);
 const float shadow = 4.5;
 
 float setCamera(out vec3 eye, out vec3 center) {
-    vec2 m = vec2(rot * TIME, 0.5);
+    // Tilt Sway: camera bobs up/down over the voxel field
+    vec2 m = vec2(rot * TIME, 0.5 + tiltSway * 0.05 * sin(TIME * 0.37));
     m *= twpi * vec2(3.0, tilt);    
     center = vec3(0.0);
-    float D = 50.0 - zoom;
+    // Dolly Cycle: camera pushes in and pulls back
+    float D = (50.0 - zoom) * (1.0 + dollyCycle * 0.35 * sin(TIME * 0.23));
     eye = center + vec3(D * sin(m.x) * sin(m.y), D * cos(m.x) * sin(m.y), D * cos(m.y));
     return dof;
 }
@@ -140,7 +169,7 @@ float setCamera(out vec3 eye, out vec3 center) {
 bool voxelHit(vec3 pos) {
     vec3 hash = fract(pos * vec3(28.657, 51.4229, 1.597));
     hash = mix(hash, dot(hash.zxy, hash.yzx)-hash, seed3);
-    return length(pos) + seed2 * fract((hash.x + hash.y) * hash.z) < seed1 + grow * sin(TIME * rate);
+    return length(pos) + seed2 * fract((hash.x + hash.y) * hash.z) < seed1 + grow * sin(TIME * rate + growWave * (pos.x + pos.y + pos.z));   // Grow Wave: growth sweeps through the volume
 }
 
 vec3 voxelColor(vec3 pos, vec3 norm) { return mix(c1.rgb, c2.rgb, (length(floor(pos*fract(seed2))) - color)/seed1); }

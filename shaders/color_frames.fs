@@ -83,6 +83,42 @@
       "GROUP": "Motion / Animation"
     },
     {
+      "NAME": "marbleRate",
+      "LABEL": "Marble Rate",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 4,
+      "DEFAULT": 1,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "dotOrbit",
+      "LABEL": "Dot Orbit",
+      "TYPE": "float",
+      "MIN": -4,
+      "MAX": 4,
+      "DEFAULT": 1,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "squiggleSpeed",
+      "LABEL": "Squiggle Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 6,
+      "DEFAULT": 1,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "haloDrift",
+      "LABEL": "Halo Drift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 8,
+      "DEFAULT": 1,
+      "GROUP": "Motion"
+    },
+    {
       "NAME": "paletteShift",
       "LABEL": "Palette Shift",
       "TYPE": "float",
@@ -267,7 +303,7 @@ void applyField(inout vec3 col, vec2 p, float aspect, float t, float au) {
     for (int i = 0; i < 5; i++) {
         float fi = float(i);
         vec2 c = vec2(hash21(vec2(fi, 1.0)) * aspect, hash21(vec2(fi, 2.0)));
-        c += 0.018 * vec2(sin(t * 0.4 + fi), cos(t * 0.5 + fi));
+        c += 0.018 * haloDrift * vec2(sin(t * 0.4 + fi), cos(t * 0.5 + fi));
         float d = length(p - c);
         float r = mix(0.06, 0.17, hash21(vec2(fi, 3.0)));
         col += PAL(hash21(vec2(fi, 4.0))) * exp(-d * d / (r * r)) * 0.32 * FA;
@@ -330,7 +366,7 @@ void applyField(inout vec3 col, vec2 p, float aspect, float t, float au) {
     for (int k = 0; k < 3; k++) {
         float fk = float(k);
         float cy = 0.22 + 0.27 * fk + 0.02 * sin(t * 0.3 + fk);
-        float yl = cy + 0.035 * sin(p.x * (7.0 + fk * 3.0) + t * 0.8 + fk * 2.0)
+        float yl = cy + 0.035 * sin(p.x * (7.0 + fk * 3.0) + t * 0.8 * squiggleSpeed + fk * 2.0)
                       + 0.018 * fbm(p * 4.0 + fk * 5.0);
         float win = smoothstep(0.0, 0.12, p.x) * smoothstep(aspect, aspect - 0.12, p.x);
         float m = smoothstep(0.004, 0.0015, abs(p.y - yl)) * win * 0.9 * FA;
@@ -386,6 +422,7 @@ void panelData(int idx, out vec2 c, out vec2 b, out float r,
 
 // Iridescent liquid marble inside one panel. luv ∈ [0,1]², y down.
 vec3 liquid(vec2 luv, float seed, float t, float warp, float pshift, float inkAmt) {
+    t *= marbleRate;   // Marble Rate: churn clock of the liquid panels only
     vec2 p = luv * vec2(2.4, 3.0) + seed * 7.13;
 
     // Iterative curl-style flow advection — each pass folds the field
@@ -511,7 +548,7 @@ void main() {
             pc = mix(pc, vec3(0.06, 0.16, 0.45), max(cx, cy) * smoothstep(0.42, 0.0, length(luv - 0.5)));
             pc = mix(pc, vec3(0.06, 0.16, 0.45), smoothstep(0.012, 0.0, ring) * 0.4);
             // orbiting accent dot + a tilted paddle
-            vec2 dotP = vec2(0.5 + 0.30 * cos(t * 0.6), 0.5 + 0.22 * sin(t * 0.6));
+            vec2 dotP = vec2(0.5 + 0.30 * cos(t * 0.6 * dotOrbit), 0.5 + 0.22 * sin(t * 0.6 * dotOrbit));
             pc = mix(pc, accentColor.rgb, smoothstep(0.045, 0.030, length((luv - dotP) * vec2(1.0, 1.0))));
             float pad = sdRB((luv - vec2(0.5)) * mat2(0.7, -0.7, 0.7, 0.7), vec2(0.035, 0.20), 0.035);
             pc = mix(pc, vec3(0.92, 0.94, 0.98), smoothstep(0.012, 0.0, pad) * 0.85);

@@ -132,6 +132,42 @@
       "GROUP": "Motion / Animation"
     },
     {
+      "NAME": "wanderAmt",
+      "LABEL": "Home Wander",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.4,
+      "DEFAULT": 0.08,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "depthSwing",
+      "LABEL": "Depth Swing",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1.5,
+      "DEFAULT": 0.6,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "tumbleRate",
+      "LABEL": "Shape Tumble",
+      "TYPE": "float",
+      "MIN": -1,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "lineSway",
+      "LABEL": "Line Sway",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0.5,
+      "GROUP": "Motion"
+    },
+    {
       "NAME": "hueShift",
       "TYPE": "float",
       "MIN": 0,
@@ -542,14 +578,14 @@ void main() {
         float oy   = (hash11(fi * 2.7) - 0.5) * 0.7;
         float oz   = (hash11(fi * 4.1) - 0.5) * 2.0 * zRange;
 
-        vec3 home = vec3(ox + 0.08*sin(t*0.05 + fi),
-                         oy + 0.08*cos(t*0.04 + fi*1.3),
+        vec3 home = vec3(ox + wanderAmt*sin(t*0.05 + fi),
+                         oy + wanderAmt*cos(t*0.04 + fi*1.3),
                          oz + zRange*0.4*sin(t*0.06 + fi*0.77));
 
         vec3 orbit3 = vec3(
             sin(t * spd + phA) * orbitRange * aspect,
             cos(t * spd * 0.7 + phB * 1.7) * orbitRange,
-            sin(t * spd * 0.43 + fi * 1.11) * zRange * 0.6
+            sin(t * spd * 0.43 + fi * 1.11) * zRange * depthSwing
         );
 
         vec3 pos3 = home + orbit3;
@@ -598,13 +634,13 @@ void main() {
         float oy  = (hash11(fi*2.7)-0.5)*0.7;
         float oz  = (hash11(fi*4.1)-0.5)*2.0*zRange;
 
-        vec3 home = vec3(ox + 0.08*sin(t*0.05+fi),
-                         oy + 0.08*cos(t*0.04+fi*1.3),
+        vec3 home = vec3(ox + wanderAmt*sin(t*0.05+fi),
+                         oy + wanderAmt*cos(t*0.04+fi*1.3),
                          oz + zRange*0.4*sin(t*0.06+fi*0.77));
         vec3 orbit3 = vec3(
             sin(t*spd+phA)*orbitRange*aspect,
             cos(t*spd*0.7+phB*1.7)*orbitRange,
-            sin(t*spd*0.43+fi*1.11)*zRange*0.6
+            sin(t*spd*0.43+fi*1.11)*zRange*depthSwing
         );
         vec3 pos3 = home + orbit3;
         vec2 fromCtr2 = pos3.xy;
@@ -617,8 +653,9 @@ void main() {
         float zFactor = clamp((cameraZ - pos3.z)/cameraZ, 0.3, 2.5);
         float sz = shapeSize*(0.7+hash11(fi*5.3)*0.6)*zFactor*(1.0+level*0.08);
 
-        // Fixed orientation per shape — no rotation over time
-        float rot = hash11(fi*7.7) * 6.2832;
+        // Fixed orientation per shape; tumbleRate (0 = off) spins each solid
+        // at its own hashed rate — triangles, boxes and checker fills read it
+        float rot = hash11(fi*7.7) * 6.2832 + t * tumbleRate * (0.4 + hash11(fi*9.1) * 1.2);
         float ca = cos(-rot), sa = sin(-rot);
         vec2 lp = Psc - ctr2D;
         lp = vec2(ca*lp.x - sa*lp.y, sa*lp.x + ca*lp.y);
@@ -660,7 +697,7 @@ void main() {
     for (int k = 0; k < 14; k++) {
         if (k >= NL) break;
         float fk  = float(k) + compositionSeed * 0.71;
-        float ang = hash11(fk*1.7)*6.2832 + sin(t*0.3+fk*1.3)*0.5;
+        float ang = hash11(fk*1.7)*6.2832 + sin(t*0.3+fk*1.3)*lineSway;
         vec2 dir  = vec2(cos(ang), sin(ang));
         vec2 pt   = vec2(hash11(fk*3.3), hash11(fk*5.1));
         pt += vec2(sin(t*0.4+fk), cos(t*0.32+fk*1.7))*0.05;

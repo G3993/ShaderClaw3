@@ -189,6 +189,42 @@
       "GROUP": "Motion / Animation"
     },
     {
+      "NAME": "chromaOrbit",
+      "LABEL": "Chroma Orbit",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 0.23,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "rollRate",
+      "LABEL": "Roll Rate",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 1,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "tearRate",
+      "LABEL": "Tear Rate",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 3,
+      "DEFAULT": 1,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "wobbleRate",
+      "LABEL": "Wobble Rate",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 4,
+      "DEFAULT": 1,
+      "GROUP": "Motion"
+    },
+    {
       "NAME": "rgbSplit",
       "LABEL": "RGB Split",
       "TYPE": "float",
@@ -872,6 +908,10 @@ void main() {
     gT = TIME * clamp(speed, 0.0, 4.0);
     float t = gT;
     float dt = gT * clamp(glitchRate, 0.1, 4.0);  // direct-control event time
+    // bespoke MOTION clocks (all default 1.0 = original timing):
+    float tRoll = gT * clamp(rollRate, 0.0, 3.0);   // analog rolls: V-hold, tracking band, sync roll, hum bars
+    float tTear = gT * clamp(tearRate, 0.0, 3.0);   // digital event clock: slab slice, block jitter, sync tear, frame jump
+    float tWob  = gT * clamp(wobbleRate, 0.0, 4.0); // continuous oscillators: sine warp, wobbulator, time-base
 
     vec2 uv0 = isf_FragNormCoord.xy;
     vec2 uv  = uv0;
@@ -901,40 +941,40 @@ void main() {
     if (onMod(3.0, 0.45) > 0.5) {
         float amp  = (0.006 + 0.05 * par(3.0)) * iScale * (1.0 + aM);
         float freq = 6.0 + 30.0 * par(3.0);
-        uv.x += amp * sin(uv.y * freq + t * 2.0);
-        uv.y += amp * 0.6 * cos(uv.x * freq * 1.3 + t * 1.7);
+        uv.x += amp * sin(uv.y * freq + tWob * 2.0);
+        uv.y += amp * 0.6 * cos(uv.x * freq * 1.3 + tWob * 1.7);
     }
     if (onMod(4.0, 0.4) > 0.5) {
         float slabs = 6.0 + floor(par(4.0) * 26.0);
         float slab  = floor(uv.y * slabs);
-        float sh = (h21(vec2(slab, floor(t * (1.0 + 8.0 * par(4.0))))) - 0.5) * (0.04 + 0.30 * par(4.0)) * iScale;
+        float sh = (h21(vec2(slab, floor(tTear * (1.0 + 8.0 * par(4.0))))) - 0.5) * (0.04 + 0.30 * par(4.0)) * iScale;
         uv.x = fract(uv.x + sh);
     }
     if (onMod(5.0, 0.5) > 0.5) {
         float grid = 8.0 + floor(par(5.0) * 40.0);
-        float tb   = floor(t * (2.0 + 14.0 * par(5.0)));
+        float tb   = floor(tTear * (2.0 + 14.0 * par(5.0)));
         vec2  bid  = floor(uv * grid);
         float jOn  = step(0.62 - aB * 0.25, h21(bid + tb));
         uv += (h22(bid + tb * 1.31) - 0.5) * (0.05 + 0.20 * par(5.0)) * iScale * jOn;
     }
     if (onMod(6.0, 0.3) > 0.5) {
         float row = floor(uv.y * RES.y * 0.5);
-        uv.x = fract(uv.x + (h21(vec2(row, floor(t * (8.0 + aH * 22.0)))) - 0.5) * (0.03 + 0.14 * par(6.0)) * iScale);
+        uv.x = fract(uv.x + (h21(vec2(row, floor(tTear * (8.0 + aH * 22.0)))) - 0.5) * (0.03 + 0.14 * par(6.0)) * iScale);
     }
     if (onMod(7.0, 0.6) > 0.5) { float N = mix(220.0, 14.0, par(7.0)); uv = (floor(uv * N) + 0.5) / N; }
     if (onMod(8.0, 0.55) > 0.5) {
-        uv += (h22(vec2(floor(t * (6.0 + 24.0 * par(8.0))), 7.0)) - 0.5) * (0.01 + 0.05 * par(8.0)) * iScale * (1.0 + aB);
+        uv += (h22(vec2(floor(tTear * (6.0 + 24.0 * par(8.0))), 7.0)) - 0.5) * (0.01 + 0.05 * par(8.0)) * iScale * (1.0 + aB);
     }
     gMosh = onMod(9.0, 0.45);
     gMoshAmt = (0.012 + 0.05 * par(9.0)) * iScale;
 
     // ===== UV-DOMAIN: ANALOG ========================================
     gVHold = 0.0; gVHoldP = 0.0;
-    if (onMod(24.0, 0.7) > 0.5)  uv = wobbulator(uv, t, RES, aB, aM, aH, par(24.0), (0.35 + 0.6 * par(24.0)) * iScale);
-    if (onMod(25.0, 0.55) > 0.5) uv = vhsTrackingRoll(uv, t, RES, aM, par(25.0), 0.5 + 0.4 * par(25.0));
-    if (onMod(26.0, 0.5) > 0.5)  uv = vhsTimeBase(uv, t, RES, aB, par(26.0), 0.3 + 0.4 * par(26.0));
-    if (onMod(27.0, 0.78) > 0.5) { gVHold = 1.0; gVHoldP = par(27.0); uv = crtVHoldRoll(uv, t, par(27.0), 0.5); }
-    if (onMod(28.0, 0.75) > 0.5) uv = rfSyncLoss(uv, t, RES, aB, par(28.0), 0.4 + 0.4 * par(28.0));
+    if (onMod(24.0, 0.7) > 0.5)  uv = wobbulator(uv, tWob, RES, aB, aM, aH, par(24.0), (0.35 + 0.6 * par(24.0)) * iScale);
+    if (onMod(25.0, 0.55) > 0.5) uv = vhsTrackingRoll(uv, tRoll, RES, aM, par(25.0), 0.5 + 0.4 * par(25.0));
+    if (onMod(26.0, 0.5) > 0.5)  uv = vhsTimeBase(uv, tWob, RES, aB, par(26.0), 0.3 + 0.4 * par(26.0));
+    if (onMod(27.0, 0.78) > 0.5) { gVHold = 1.0; gVHoldP = par(27.0); uv = crtVHoldRoll(uv, tRoll, par(27.0), 0.5); }
+    if (onMod(28.0, 0.75) > 0.5) uv = rfSyncLoss(uv, tRoll, RES, aB, par(28.0), 0.4 + 0.4 * par(28.0));
 
     // ===== DIRECT UV CONTROLS (manual knobs, 0 = off) ===============
     // Wave Warp — sine displacement, both axes
@@ -964,7 +1004,7 @@ void main() {
     // ===== SAMPLE with chromatic aberration =========================
     float chromaOn = onMod(10.0, 0.12);
     float chr = (3.0 + 22.0 * par(10.0)) * px.x * iScale * (0.7 + aH * 1.5) * (0.35 + chromaOn);
-    float ang = t * 0.23 + par(10.0) * 6.28;
+    float ang = t * chromaOrbit + par(10.0) * 6.28;   // chromaOrbit spins the RGB fringe direction
     vec2  dR  = vec2( cos(ang),  sin(ang)) * chr;
     vec2  dB  = vec2(-cos(ang * 1.13), -sin(ang * 1.13)) * chr;
     // DIRECT chromatic controls: linear RGB Split (with angle) + Radial Chroma
@@ -1075,7 +1115,7 @@ void main() {
     if (onMod(39.0, 0.7) > 0.5)  col = solarFold(col, t, RES, aB, aM, aH, par(39.0), 0.5 + 0.4 * par(39.0));
     if (onMod(40.0, 0.6) > 0.5)  col = chromaBloom(col, t, RES, aB, aM, aH, par(40.0), 0.35 + 0.4 * par(40.0));
     if (onMod(41.0, 0.6) > 0.5)  col = rfGhost(col, uv, t, par(41.0), 0.35 + 0.35 * par(41.0));
-    if (onMod(42.0, 0.5) > 0.5)  col = rfHumBar(col, uv0, t, par(42.0), 0.3 + 0.35 * par(42.0));
+    if (onMod(42.0, 0.5) > 0.5)  col = rfHumBar(col, uv0, tRoll, par(42.0), 0.3 + 0.35 * par(42.0));
     if (onMod(43.0, 0.7) > 0.5)  col = rfHerringbone(col, uv0, t, RES, aM, par(43.0), 0.25 + 0.35 * par(43.0));
 
     // ===== HDR bloom feeders (digital) ==============================
@@ -1094,7 +1134,7 @@ void main() {
     if (onMod(49.0, 0.7) > 0.5)  col = rfSparkle(col, uv0, t, RES, aH, par(49.0), 0.3 + 0.4 * par(49.0));
     if (onMod(50.0, 0.55) > 0.5) col = vhsDropout(col, uv0, t, RES, par(50.0), 0.3 + 0.4 * par(50.0));
     if (onMod(51.0, 0.5) > 0.5)  col = vhsHeadSwitch(col, uv0, t, RES, aH, par(51.0), 0.6 + 0.3 * par(51.0));
-    if (gVHold > 0.5)            col = crtVBIBar(col, uv0, t, gVHoldP, 0.4);
+    if (gVHold > 0.5)            col = crtVBIBar(col, uv0, tRoll, gVHoldP, 0.4);
 
     // Depth — relief shading + volume + bloom (before color finishing)
     col = addDepth(uv0, col, t, RES, aB, depth);

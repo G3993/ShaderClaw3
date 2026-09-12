@@ -71,6 +71,33 @@
       "GROUP": "Motion / Animation"
     },
     {
+      "NAME": "sourceWander",
+      "LABEL": "Source Wander",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 5,
+      "DEFAULT": 1,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "wanderRate",
+      "LABEL": "Wander Rate",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 5,
+      "DEFAULT": 1,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "depthSpeedSpread",
+      "LABEL": "Depth Speed Spread",
+      "TYPE": "float",
+      "MIN": -1.5,
+      "MAX": 1.5,
+      "DEFAULT": 0,
+      "GROUP": "Motion"
+    },
+    {
       "NAME": "hueShift",
       "LABEL": "Hue Shift",
       "TYPE": "float",
@@ -159,17 +186,19 @@ void main() {
         // Animated source position per layer
         vec2 src = hashPos(L)
             + vec2(
-                sin(TIME * 0.3 + float(L) * 1.7),
-                cos(TIME * 0.2 + float(L) * 2.3)
-              ) * (0.08 + audioBass * 0.12);
+                sin(TIME * 0.3 * wanderRate + float(L) * 1.7),
+                cos(TIME * 0.2 * wanderRate + float(L) * 2.3)
+              ) * (0.08 * sourceWander + audioBass * 0.12);
 
         float dist = length(pp - src);
         float fq   = freqScale * (0.6 + depth * 0.8);
-        float h    = sin(dist * fq - TIME * speed) * amp;
+        // Depth Speed Spread: front vs back layers ripple at diverging rates
+        float spdL = speed * (1.0 + depthSpeedSpread * (depth - 0.5));
+        float h    = sin(dist * fq - TIME * spdL) * amp;
 
         // Second harmonic adds interference complexity
         float dist2 = length(pp - src * vec2(-0.7, 0.9));
-        float h2    = sin(dist2 * fq * 1.618 - TIME * speed * 1.3) * amp * 0.4;
+        float h2    = sin(dist2 * fq * 1.618 - TIME * spdL * 1.3) * amp * 0.4;
         float hCombined = h + h2;
 
         float layerWeight = 1.0 - depth;

@@ -91,6 +91,42 @@
       "GROUP": "Motion / Animation"
     },
     {
+      "NAME": "fieldSpin",
+      "LABEL": "Field Spin",
+      "TYPE": "float",
+      "MIN": -2,
+      "MAX": 2,
+      "DEFAULT": 0,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "fieldScroll",
+      "LABEL": "Field Scroll",
+      "TYPE": "float",
+      "MIN": -1,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "headingWobble",
+      "LABEL": "Heading Wobble",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "speedSpread",
+      "LABEL": "Speed Spread",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2,
+      "DEFAULT": 0,
+      "GROUP": "Motion"
+    },
+    {
       "NAME": "hueSpeed",
       "LABEL": "Hue Cycle",
       "TYPE": "float",
@@ -232,14 +268,21 @@ void main() {
         vec2 p = s.rg;
 
         // sample the field, quantize the heading into `facets` crystalline directions
-        float n   = vnoise(vec3(p * noiseScale, TIME * simSpeed));
+        // Field Scroll: the noise field itself migrates, so the crystalline rivers relocate
+        float n   = vnoise(vec3((p + vec2(0.15, 0.06) * TIME * fieldScroll) * noiseScale, TIME * simSpeed));
         n         = floor(n * facets) / facets;
         float ang = n * PI * 2.0;
 
         // march along the quantized heading
         n         = floor(n * facetsA) / max(facetsA, 1.0);   // audio-modulated facets
         ang       = n * PI * 2.0;
-        vec2 vel = vec2(cos(ang), sin(ang)) * (0.008 * flowSpeed * flowMul);
+        // Field Spin: all facet headings rotate over time (trails curve);
+        // Heading Wobble: per-particle heading oscillation (wavy trails)
+        float pid = gl_FragCoord.y;
+        ang += fieldSpin * TIME * 0.35 + headingWobble * 0.8 * sin(TIME * 1.7 + pid * 0.61);
+        // Speed Spread: per-particle march-speed variation (0 = uniform)
+        float spdVar = 1.0 + speedSpread * (hash31(vec3(pid, 3.1, 7.7)) - 0.5);
+        vec2 vel = vec2(cos(ang), sin(ang)) * (0.008 * flowSpeed * flowMul) * spdVar;
         p += vel;
 
         vec4 outS = vec4(p, ang, 1.0);   // .a = 1.0 means "alive, draw me"

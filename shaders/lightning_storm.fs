@@ -121,6 +121,42 @@
       "GROUP": "Motion / Animation"
     },
     {
+      "NAME": "cloudChurn",
+      "LABEL": "Cloud Churn",
+      "TYPE": "float",
+      "GROUP": "Motion / Animation",
+      "DEFAULT": 0.0,
+      "MIN": 0.0,
+      "MAX": 2.0
+    },
+    {
+      "NAME": "cloudParallax",
+      "LABEL": "Cloud Parallax",
+      "TYPE": "float",
+      "GROUP": "Motion / Animation",
+      "DEFAULT": 1.0,
+      "MIN": 0.0,
+      "MAX": 3.0
+    },
+    {
+      "NAME": "boltWrithe",
+      "LABEL": "Bolt Writhe",
+      "TYPE": "float",
+      "GROUP": "Motion / Animation",
+      "DEFAULT": 0.0,
+      "MIN": 0.0,
+      "MAX": 1.0
+    },
+    {
+      "NAME": "rainGust",
+      "LABEL": "Rain Gust",
+      "TYPE": "float",
+      "GROUP": "Motion / Animation",
+      "DEFAULT": 0.0,
+      "MIN": 0.0,
+      "MAX": 1.0
+    },
+    {
       "NAME": "skyTopColor",
       "LABEL": "Sky Top",
       "TYPE": "color",
@@ -269,7 +305,9 @@ vec3 boltSDF(vec2 uv, float seed, float depth, float jitter, float life01) {
         walk += h * jitter * 0.42;
         walk *= 0.86;
         vec2 base = mix(a, b, t);
-        vec2 cur = base + perp * walk * taperJ;
+        // MOTION: the live bolt writhes sideways while it burns
+        float wr = boltWrithe * 0.045 * sin(t * 9.0 + TIME * 14.0 + seed) * taperJ;
+        vec2 cur = base + perp * (walk * taperJ + wr);
 
         float wA = mix(0.0030, 0.0014, (t - 1.0/float(SEGS)));
         float wB = mix(0.0030, 0.0014, t);
@@ -547,13 +585,16 @@ void main() {
     vec2 farUv = uv * vec2(1.6, 0.95);
     farUv.x *= aspect;
     float farDrift = TIME * cloudDrift * 0.35;
-    float farClouds = fbm(farUv + vec2(farDrift, farDrift * 0.18));
+    // MOTION: cloud churn — the deck boils in place instead of only sliding
+    vec2 churn = cloudChurn * 0.35 * vec2(fbm3(farUv * 0.45 + TIME * 0.07) - 0.5,
+                                          fbm3(farUv * 0.45 + 7.3 - TIME * 0.06) - 0.5);
+    float farClouds = fbm(farUv + vec2(farDrift, farDrift * 0.18) + churn * 0.6);
     farClouds = pow(farClouds, mix(1.7, 0.9, stormAmp));
 
     vec2 nearUv = uv * vec2(3.6, 1.8);
     nearUv.x *= aspect;
-    float nearDrift = TIME * cloudDrift * 1.25;
-    float nearClouds = fbm(nearUv + vec2(nearDrift, -nearDrift * 0.4));
+    float nearDrift = TIME * cloudDrift * 1.25 * cloudParallax;   // MOTION: near/far layer speed ratio
+    float nearClouds = fbm(nearUv + vec2(nearDrift, -nearDrift * 0.4) + churn);
     nearClouds = pow(nearClouds, mix(1.4, 0.7, stormAmp));
 
     float shimmer = vnoise(uv * 22.0 + TIME * (0.6 + high * 1.4));
@@ -670,6 +711,8 @@ void main() {
     col += flashTint * flashAmt * 0.55;
 
     // ===== RAIN =====
+    // MOTION: gusts swing the rain angle back and forth
+    float rainAng = rainAngle + rainGust * 0.35 * sin(TIME * 0.55) * (0.7 + 0.3 * sin(TIME * 1.7));
     if (rainDensity > 0.0) {
         // Layer 1: primary heavy rain
         for (int rl = 0; rl < 2; rl++) {
@@ -677,7 +720,7 @@ void main() {
             float scale = mix(1.0, 0.55, layer);
             float alpha = mix(0.22, 0.10, layer);
             vec2 ruv = uv;
-            ruv.x += ruv.y * rainAngle;
+            ruv.x += ruv.y * rainAng;
             ruv *= vec2(180.0 * scale, 22.0 * scale);
             ruv.y += TIME * rainSpeed * (16.0 + 8.0 * layer);
             ruv.x += hash11(floor(ruv.y) * 1.7 + layer * 13.0) * 0.7;
@@ -694,7 +737,7 @@ void main() {
         }
 
         // Layer 2: fine mist / micro-droplets (always subtle)
-        float mist = mistyRain(uv, rainSpeed, rainAngle * 0.6, rainDensity, TIME);
+        float mist = mistyRain(uv, rainSpeed, rainAng * 0.6, rainDensity, TIME);
         mist *= (1.0 - flashEnv * 0.7) * 0.06;
         col += vec3(0.62, 0.72, 0.88) * mist;
 

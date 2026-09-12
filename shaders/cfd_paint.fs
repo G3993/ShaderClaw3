@@ -163,6 +163,42 @@
       "GROUP": "Motion / Animation"
     },
     {
+      "NAME": "swirl",
+      "LABEL": "Global Swirl",
+      "TYPE": "float",
+      "MIN": -1,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "pathOrbit",
+      "LABEL": "Path Orbit",
+      "TYPE": "float",
+      "MIN": -1,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "currentStrength",
+      "LABEL": "Current",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "currentAngle",
+      "LABEL": "Current Angle",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Motion"
+    },
+    {
       "NAME": "colorSat",
       "LABEL": "Saturation",
       "TYPE": "float",
@@ -268,6 +304,18 @@ vec2 texUV(vec2 coord, float canvasAspect) {
 
 vec4 sampleTex(vec2 coord, float canvasAspect) {
     return texture2D(inputTex, texUV(coord, canvasAspect));
+}
+
+// Path Orbit: the splat choreography revolves about the canvas centre.
+// Returns the displacement to ADD to (uv - splatPos) so the splat sits at the
+// orbited position; exactly vec2(0) at the default, so the sim is unchanged.
+vec2 orbitShift(vec2 sp, float t, float aspect) {
+    if (abs(pathOrbit) < 0.0001) return vec2(0.0);
+    float oa = t * pathOrbit * 0.5;
+    vec2 od = sp - 0.5; od.x *= aspect;
+    vec2 rd = vec2(od.x * cos(oa) - od.y * sin(oa), od.x * sin(oa) + od.y * cos(oa));
+    vec2 diff = od - rd; diff.x /= aspect;
+    return diff;
 }
 
 void main() {
@@ -382,6 +430,7 @@ void main() {
                     0.5 + spread * cos(phase * 0.8) * sin(phase * 0.5 + fs * 1.5)
                 );
                 vec2 mDiff = uv - splatPos;
+                mDiff += orbitShift(splatPos, t, aspect);
                 mDiff.x *= aspect;
                 float dist2 = dot(mDiff, mDiff);
                 if (dist2 < cutoff2) {
@@ -400,6 +449,7 @@ void main() {
                 float a = phase * 0.7 + fs * 1.257;
                 vec2 splatPos = vec2(0.5 + cos(a) * r, 0.5 + sin(a) * r);
                 vec2 mDiff = uv - splatPos;
+                mDiff += orbitShift(splatPos, t, aspect);
                 mDiff.x *= aspect;
                 float dist2 = dot(mDiff, mDiff);
                 if (dist2 < cutoff2) {
@@ -421,6 +471,7 @@ void main() {
                     0.5 + spread * 0.7 * sin(wavePhase * 1.1 + fs * 1.7)
                 );
                 vec2 mDiff = uv - splatPos;
+                mDiff += orbitShift(splatPos, t, aspect);
                 mDiff.x *= aspect;
                 float dist2 = dot(mDiff, mDiff);
                 float sr2 = brushSize * 2.2;
@@ -447,6 +498,7 @@ void main() {
                 );
                 vec2 splatPos = center + vec2(cos(vortexPhase), sin(vortexPhase)) * r;
                 vec2 mDiff = uv - splatPos;
+                mDiff += orbitShift(splatPos, t, aspect);
                 mDiff.x *= aspect;
                 float dist2 = dot(mDiff, mDiff);
                 float sr2 = brushSize * 1.8;
@@ -475,6 +527,7 @@ void main() {
                     float angle = float(a) * 2.094 + fs * 0.5;
                     vec2 splatPos = center + vec2(cos(angle), sin(angle)) * pulseR;
                     vec2 mDiff = uv - splatPos;
+                    mDiff += orbitShift(splatPos, t, aspect);
                     mDiff.x *= aspect;
                     float dist2 = dot(mDiff, mDiff);
                     if (dist2 < sr2 * sr2 * 12.0) {
@@ -482,6 +535,17 @@ void main() {
                     }
                 }
             }
+        }
+
+        // Global Swirl: whole-canvas rotational force (force-only, no buffer changes)
+        if (abs(swirl) > 0.001) {
+            vec2 sD = uv - 0.5; sD.x *= aspect;
+            vel.xy += vec2(-sD.y, sD.x) * swirl * 0.004 * exp(-dot(sD, sD) * 1.5);
+        }
+        // Current: steady directional push across the whole field
+        if (currentStrength > 0.001) {
+            float ca2 = currentAngle * 6.2831853;
+            vel.xy += vec2(cos(ca2), sin(ca2)) * currentStrength * 0.0008;
         }
 
         vel.xy = clamp(vel.xy, 0.0, 1.0);
@@ -587,6 +651,7 @@ void main() {
             }
 
             vec2 mDiff = uv - splatPos;
+            mDiff += orbitShift(splatPos, t, aspect);
             mDiff.x *= aspect;
             float dist2 = dot(mDiff, mDiff);
             if (dist2 < cutoff2) {

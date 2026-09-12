@@ -78,6 +78,42 @@
       "GROUP": "Motion / Animation"
     },
     {
+      "NAME": "tendrilRate",
+      "LABEL": "Tendril Drift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0.18,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "patternDrift",
+      "LABEL": "Pattern Drift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.5,
+      "DEFAULT": 0.07,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "sinkRate",
+      "LABEL": "Sink Rate",
+      "TYPE": "float",
+      "MIN": -0.06,
+      "MAX": 0.06,
+      "DEFAULT": 0,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "dropOrbit",
+      "LABEL": "Drop Orbit",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Motion"
+    },
+    {
       "NAME": "waterTop",
       "LABEL": "Water Top",
       "TYPE": "color",
@@ -277,6 +313,12 @@ void main() {
         float birth = bucket * period - hash11(fi * 4.2) * period * 0.5;
         float life  = max(0.0, t - birth);
 
+        // bespoke MOTION: pigment slowly sinks (or rises) through the bath,
+        // and can orbit its launch point like a stirred drop. Both 0 = still.
+        dropPos.y -= sinkRate * life;
+        float orbA = life * 1.2 + seed;
+        dropPos += dropOrbit * 0.15 * vec2(cos(orbA), sin(orbA));
+
         // Diffusion radius grows with sqrt(life); pigment density decays.
         // Bass explosion: massive size jump for ~0.5s after impact.
         float baseR    = dropSize * mix(0.55, 1.25, hash11(seed + 5.5));
@@ -294,15 +336,17 @@ void main() {
         // Stronger trail effect: curl warp magnitude × 1.5 for branching tendrils.
         vec2 q = pr - dropPos;
         float cs = curlScale * mix(1.0, 1.6, treble * 0.5);
-        vec2 flow = curlNoise(q * cs + vec2(seed, t * 0.18));
+        // tendrilRate = how fast the curl field itself evolves (tendrils writhe)
+        vec2 flow = curlNoise(q * cs + vec2(seed, t * tendrilRate));
         // Add a second curl octave for branching tendril detail.
-        vec2 flow2 = curlNoise(q * cs * 2.3 + vec2(t * 0.27, seed * 0.5));
+        vec2 flow2 = curlNoise(q * cs * 2.3 + vec2(t * tendrilRate * 1.5, seed * 0.5));
         vec2 warp = q + (flow + flow2 * 0.45) * curlStrength * 1.5
                        * (1.0 + treble * 0.6) * (0.4 + radius);
 
         // Branching tendrils: layered fbm in warped space.
-        float pattern = fbm(warp * 4.2 + vec2(seed * 0.31, t * 0.07));
-        pattern += 0.5 * fbm(warp * 9.0 - vec2(t * 0.11, seed));
+        // patternDrift = how fast the interior pigment texture crawls
+        float pattern = fbm(warp * 4.2 + vec2(seed * 0.31, t * patternDrift));
+        pattern += 0.5 * fbm(warp * 9.0 - vec2(t * patternDrift * (0.11 / 0.07), seed));
         pattern  = smoothstep(0.35, 1.05, pattern);
 
         // Soft radial mask with curl-driven boundary wobble.

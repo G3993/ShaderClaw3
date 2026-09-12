@@ -40,6 +40,42 @@
       "GROUP": "Motion / Animation"
     },
     {
+      "NAME": "wanderRange",
+      "LABEL": "Wander Range",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 2.5,
+      "DEFAULT": 1,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "breathRate",
+      "LABEL": "Breath Rate",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 5,
+      "DEFAULT": 1,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "dipoleSpin",
+      "LABEL": "Dipole Spin",
+      "TYPE": "float",
+      "MIN": -10,
+      "MAX": 10,
+      "DEFAULT": 1,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "orbSwirl",
+      "LABEL": "Orb Swirl",
+      "TYPE": "float",
+      "MIN": -2,
+      "MAX": 2,
+      "DEFAULT": 0,
+      "GROUP": "Motion"
+    },
+    {
       "NAME": "hueShift",
       "LABEL": "Hue Shift",
       "TYPE": "float",
@@ -220,11 +256,17 @@ void main() {
         vec2 aB = (vec2(hash11(fi * 7.91 + 4.1), hash11(fi * 9.37 + 6.9)) * 2.0 - 1.0) * vec2(0.42, 0.32);
         vec2 anchor = mix(aA, aB, w8 * 0.65);
 
-        vec2 c = anchor + vec2(sin(tt + h * 6.28), cos(tt * 0.77 + h * 3.0)) * vec2(0.26, 0.20);
+        // Wander Range: how far each orb roams from its anchor
+        vec2 c = anchor + vec2(sin(tt + h * 6.28), cos(tt * 0.77 + h * 3.0)) * vec2(0.26, 0.20) * wanderRange;
+        // Orb Swirl: the whole constellation revolves about the centre
+        if (abs(orbSwirl) > 0.0001) {
+            float sa = t * orbSwirl * 0.12;
+            c = vec2(c.x * cos(sa) - c.y * sin(sa), c.x * sin(sa) + c.y * cos(sa));
+        }
 
         // Radius: idle breath + per-band breathing (silence = idle only)
         float r0 = 0.50 / (1.0 + fi * 0.34);
-        float r = r0 * (1.0 + 0.07 * sin(t * (0.35 + 0.2 * h) + fi * 1.7)
+        float r = r0 * (1.0 + 0.07 * sin(t * breathRate * (0.35 + 0.2 * h) + fi * 1.7)
                             + 0.34 * bnd * aR);
 
         float d = length(p - c) / max(r, 1e-3);
@@ -232,7 +274,7 @@ void main() {
         float halo = exp(-d * 1.9);
 
         // Dipole gradient across the orb (two-tone aura)
-        vec2 axis = vec2(cos(fi * 2.1 + t * 0.045), sin(fi * 2.1 + t * 0.045));
+        vec2 axis = vec2(cos(fi * 2.1 + t * 0.045 * dipoleSpin), sin(fi * 2.1 + t * 0.045 * dipoleSpin));
         float side = clamp(0.5 + 0.5 * dot((p - c) / max(r, 1e-3), axis), 0.0, 1.0);
         vec3 orbCol = mix(orbColA(i), orbColB(i), side) + tempShift;
 

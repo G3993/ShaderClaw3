@@ -166,6 +166,42 @@
       "GROUP": "Motion / Animation"
     },
     {
+      "NAME": "sweep_dir",
+      "LABEL": "Cascade Direction",
+      "TYPE": "float",
+      "MIN": -1,
+      "MAX": 1,
+      "DEFAULT": 1,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "wave_scroll",
+      "LABEL": "Wave Scroll",
+      "TYPE": "float",
+      "MIN": -0.5,
+      "MAX": 0.5,
+      "DEFAULT": 0,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "bar_wobble",
+      "LABEL": "Bar Wobble",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.5,
+      "DEFAULT": 0,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "burst_period",
+      "LABEL": "Burst Period",
+      "TYPE": "float",
+      "MIN": 4,
+      "MAX": 40,
+      "DEFAULT": 17,
+      "GROUP": "Motion"
+    },
+    {
       "NAME": "gradient_pow",
       "TYPE": "float",
       "DEFAULT": 0.2,
@@ -423,7 +459,7 @@ float adjust_balance(float value, float b) {
 }
 
 float stripe_mask_for(float stripe_index, float secondary_in, float secondary_orig) {
-    float phase_offset = stripe_index * (1.0 / (num_columns * max(offset, 0.001)));
+    float phase_offset = stripe_index * (1.0 / (num_columns * max(offset, 0.001))) * sweep_dir;
     // R3 chop fix: multiplying TIME by an audio value made the stripe phase
     // jump by TIME*speed*0.1*Δbass — grows unbounded with TIME, and on EDM
     // it was the single biggest frame-step source (p95 0.109). The bounded
@@ -445,6 +481,8 @@ float stripe_mask_for(float stripe_index, float secondary_in, float secondary_or
     // HDR bar brightness clips at white or sits at black. Bands are
     // pre-smoothed; silence = exact authored pattern.
     float animated_coord = fract(lfo + gradient
+        + TIME * wave_scroll
+        + bar_wobble * sin(TIME * 0.7 + stripe_index * 1.3)
         + 0.10 * clamp(audioBass, 0.0, 1.0)
         + 0.06 * clamp(audioMid,  0.0, 1.0));
     float col = 0.5 + 0.5 * sin(animated_coord * 6.28318530718);
@@ -471,10 +509,10 @@ void main() {
         mask = mix(mask, mask_neighbor, edge_t);
     }
 
-    float _ph = fract(TIME / 17.0);
+    float _ph = fract(TIME / max(burst_period, 1.0));
     float _f  = smoothstep(0.0, 0.04, _ph) * smoothstep(0.18, 0.10, _ph);
     {
-        float _which = floor(fract(TIME / 17.0 + 0.5) * 32.0);
+        float _which = floor(fract(TIME / max(burst_period, 1.0) + 0.5) * 32.0);
         float _bx = (_which + 0.5) / 32.0;
         float _bandX = exp(-pow((uv.x - _bx) * 80.0, 2.0));
         mask += _bandX * _f * 0.9;

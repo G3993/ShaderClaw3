@@ -15,6 +15,42 @@
       "MAX": 3.0
     },
     {
+      "NAME": "orbitReach",
+      "LABEL": "Orbit Reach",
+      "TYPE": "float",
+      "GROUP": "Motion",
+      "DEFAULT": 1.0,
+      "MIN": 0.2,
+      "MAX": 2.5
+    },
+    {
+      "NAME": "orbitSwirl",
+      "LABEL": "Orbit Swirl",
+      "TYPE": "float",
+      "GROUP": "Motion",
+      "DEFAULT": 0.0,
+      "MIN": -1.0,
+      "MAX": 1.0
+    },
+    {
+      "NAME": "centerWander",
+      "LABEL": "Centre Wander",
+      "TYPE": "float",
+      "GROUP": "Motion",
+      "DEFAULT": 0.0,
+      "MIN": 0.0,
+      "MAX": 3.0
+    },
+    {
+      "NAME": "chargePulse",
+      "LABEL": "Charge Pulse",
+      "TYPE": "float",
+      "GROUP": "Motion",
+      "DEFAULT": 0.0,
+      "MIN": 0.0,
+      "MAX": 1.0
+    },
+    {
       "NAME": "audioReact",
       "LABEL": "Audio React",
       "TYPE": "float",
@@ -88,10 +124,19 @@ void main() {
         vec2 c = vec2(float(i) + 0.5, 0.5);
         // procedural per-object params (was the keyboard-editable state buffer):
         // v = orbit amplitude + center, v2 = orbit freqs + charge
-        vec4 v  = vec4(rand(c + 0.2) * 5.0, rand(c + 0.3) * 5.0, 0.0, 0.0);
+        vec4 v  = vec4(rand(c + 0.2) * 5.0 * orbitReach, rand(c + 0.3) * 5.0 * orbitReach, 0.0, 0.0);
         vec3 v2 = vec3(rand(c) * 1.5, rand(c + 0.1) * 1.5, rand(c + 0.4) * 6.0 - 3.0);
+        // MOTION: orbit centres wander on their own slow lissajous paths
+        v.zw = centerWander * vec2(sin(T * 0.31 * (0.5 + rand(c + 0.6)) + rand(c + 0.7) * TAU),
+                                   cos(T * 0.27 * (0.5 + rand(c + 0.8)) + rand(c + 0.9) * TAU));
+        // MOTION: charges wax and wane so the rivers re-route
+        v2.z *= 1.0 + chargePulse * sin(T * (0.8 + 1.2 * rand(c + 0.5)) + rand(c + 0.45) * TAU);
 
-        vec2 pos = v.xy * vec2(sin(T * v2.x), cos(T * v2.y)) + v.zw;
+        vec2 pos = v.xy * vec2(sin(T * v2.x), cos(T * v2.y));
+        // MOTION: alternate charges swirl their orbit paths CW / CCW (never a rigid frame spin)
+        float sw = T * orbitSwirl * 0.5 * (mod(float(i), 2.0) < 0.5 ? 1.0 : -1.0);
+        float cs = cos(sw), sn = sin(sw);
+        pos = mat2(cs, -sn, sn, cs) * pos + v.zw;
         vec2 d = uv - pos;
         float w = dot(d, d);
 

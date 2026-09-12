@@ -253,6 +253,42 @@
       "GROUP": "Motion / Animation"
     },
     {
+      "NAME": "bandDrift",
+      "LABEL": "Band Drift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 0.12,
+      "DEFAULT": 0.025,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "waveSpeed",
+      "LABEL": "Wave Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 6,
+      "DEFAULT": 1,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "textureDrift",
+      "LABEL": "Texture Drift",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 8,
+      "DEFAULT": 1,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "lightSway",
+      "LABEL": "Light Sway",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Motion"
+    },
+    {
       "NAME": "rothkoWork",
       "LABEL": "Painting",
       "TYPE": "long",
@@ -472,8 +508,8 @@ float getRot(vec2 pos, vec2 b, vec2 Res) {
 // ── Rothko band mask ──────────────────────────────────────────────────────────
 
 float bandMask(vec2 uv, float yLo, float yHi, float xIn, float fth, float wave) {
-    float wx = wave * sin(uv.x * 11.0 + TIME * 0.07);
-    float wy = wave * cos(uv.x *  7.3 - TIME * 0.05);
+    float wx = wave * sin(uv.x * 11.0 + TIME * 0.07 * waveSpeed);
+    float wy = wave * cos(uv.x *  7.3 - TIME * 0.05 * waveSpeed);
     float ym = smoothstep(yLo - fth + wx, yLo + fth + wx, uv.y)
              * (1.0 - smoothstep(yHi - fth + wy, yHi + fth + wy, uv.y));
     float xm = smoothstep(xIn, xIn + fth * 0.5, uv.x)
@@ -526,7 +562,7 @@ vec4 rothkoPaint(vec2 uv) {
     float xI = clamp(innerInset, 0.0, 0.38);
     float fth = feather * (1.0 + meltDepth * 1.8);
     float wav = waveAmount;
-    float drift = sin(bt * 0.17) * 0.025 * meltDepth;
+    float drift = sin(bt * 0.17) * bandDrift * meltDepth;
     float cOff  = chrShimmer * (0.6 + 0.4 * sin(TIME * 0.41));
 
     if (N >= 3) {
@@ -565,7 +601,7 @@ vec4 rothkoPaint(vec2 uv) {
 
     if (paintTexture > 0.001) {
         float tScale = textureScale;
-        float tT     = TIME * breathSpeed * 0.12;
+        float tT     = TIME * breathSpeed * 0.12 * textureDrift;
         float tex1 = fbm(uv * tScale           + vec2(tT * 0.23,  tT * 0.17));
         float tex2 = fbm(uv * tScale * 1.8     + vec2(-tT * 0.19, tT * 0.31) + vec2(4.1, 2.3));
         float tex3 = fbm(uv * tScale * 0.45    + vec2(tT * 0.11, -tT * 0.14) + vec2(1.7, 6.1));
@@ -872,7 +908,10 @@ void main() {
         ));
 
         // Warm raking light — angle evokes museum spotlight
-        vec3 lightDir = normalize(vec3(0.4, 0.7, 1.0));
+        // Light Sway: raking spotlight swings slowly around the canvas (0 = fixed museum angle)
+        float lsw = lightSway * 0.9 * sin(TIME * 0.21);
+        float lsc = cos(lsw), lss = sin(lsw);
+        vec3 lightDir = normalize(vec3(0.4 * lsc - 0.7 * lss, 0.4 * lss + 0.7 * lsc, 1.0));
         float diff = clamp(dot(n, lightDir), 0.35, 1.0);
 
         vec2 sc = (gl_FragCoord.xy - Res * 0.5) / Res.x;

@@ -44,6 +44,42 @@
       "GROUP": "Motion / Animation"
     },
     {
+      "NAME": "marchSpeed",
+      "LABEL": "March Speed",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 4,
+      "DEFAULT": 1,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "marchSwing",
+      "LABEL": "March Swing",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "dirBias",
+      "LABEL": "Direction Bias",
+      "TYPE": "float",
+      "MIN": -1,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Motion"
+    },
+    {
+      "NAME": "lineWander",
+      "LABEL": "Line Wander",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 1,
+      "DEFAULT": 0,
+      "GROUP": "Motion"
+    },
+    {
       "NAME": "colorPulseIntensity",
       "LABEL": "Color Pulse Intensity",
       "TYPE": "float",
@@ -176,7 +212,9 @@ float linePos(float idx, float total, float salt, float t, float period) {
     float jitA   = (h11(epoch * 7.13 + salt) - 0.5) * 0.55 / total;
     float jitB   = (h11((epoch + 1.0) * 7.13 + salt) - 0.5) * 0.55 / total;
     float jit    = mix(jitA, jitB, trans);
-    return clamp(slot + jit, 0.04, 0.96);
+    // Line Wander: continuous slow sway of the grid lines between repartitions
+    float wander = lineWander * 0.03 * sin(t * 0.35 + salt * 2.7);
+    return clamp(slot + jit + wander, 0.04, 0.96);
 }
 
 // ─── marching square pulses along a single line ───────────────────────
@@ -199,9 +237,12 @@ vec3 lineSquares(float along, float coord, float lineSalt, float t,
     float tempo    = (tempoSel < 0.25) ? 1.0
                    : (tempoSel < 0.55) ? 1.5
                    : (tempoSel < 0.85) ? 2.0 : 2.5;
-    float dir      = (h11(lineSalt * 23.3) < 0.5) ? -1.0 : 1.0;
-    float baseSpd  = 0.075;
-    float march    = t * baseSpd * tempo * dir;
+    // Direction Bias: -1 = every line marches +, +1 = every line marches -, 0 = hashed mix
+    float dir      = (h11(lineSalt * 23.3) < 0.5 + 0.5 * dirBias) ? -1.0 : 1.0;
+    float baseSpd  = 0.075 * marchSpeed;
+    // March Swing: squares jog back and forth on top of the march (syncopation)
+    float march    = t * baseSpd * tempo * dir
+                   + marchSwing * 0.06 * sin(t * 1.4 * tempo + lineSalt);
 
     // Density: 4–7 squares riding the line at any time. pulseAmt scales
     // how many squares actually paint (when 0, the line is bare black).
