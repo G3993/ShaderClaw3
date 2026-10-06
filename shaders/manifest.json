@@ -2283,19 +2283,6 @@
       "Generator",
       "Audio Reactive"
     ],
-    "description": "Butaflies \u2014 a luminous swarm of butterflies drifting through a hazy pastel-blue sky. Two dozen glowing white butterflies at different depths \u2014 big soft ones up close, tiny bright sparks far away \u2014 orbit and wander around a slowly roaming swarm heart, each flapping at its own rhythm, melting into the haze with distance. Bass breathes the swarm wide, mids stir the wandering, beats kick the wingbeats and flash a hashed subset, highs sparkle the sky grain.",
-    "file": "butaflies.fs",
-    "hasVertex": false,
-    "hidden": false,
-    "id": 1297,
-    "title": "Butaflies",
-    "type": "isf"
-  },
-  {
-    "categories": [
-      "Generator",
-      "Audio Reactive"
-    ],
     "description": "Octa Strings \u2014 a neon octagon instrument in a living tunnel: volumetric tube rings (bright rim, dark core) recede past textured octagonal walls with crisp flying rulings, corner rails and glitter in the light cone, while the camera sways off-axis. Eight harp strings play the spectrum \u2014 bass low, mids center, highs top \u2014 with plucked-string harmonic overtones and specular hot-spots riding the traveling wave, mirrored in a smeared reflective floor. Dust motes drift through the light; beats send a pulse ring down the tunnel.",
     "file": "octa_strings.fs",
     "hasVertex": false,
@@ -3014,46 +3001,135 @@
     "type": "generator"
   },
   {
-    "file": "unveiled.fs",
-    "title": "Unveiled",
-    "type": "fs",
     "categories": [
       "Effect",
       "Feedback",
       "Audio Reactive"
     ],
-    "id": 1351,
     "description": "A keyed silhouette (camera, layer, or a procedural walking figure) dissolves into a fluid: the image advects along its own brightness gradient plus layered sine turbulence, smearing, veiling and re-emerging. Luminance maps to ember \u2192 blood \u2192 void with film texture. Bass drives the smear, beats kick the turbulence, mids shift the hue, highs add grain.",
+    "file": "unveiled.fs",
     "hasVertex": false,
-    "hidden": false
+    "hidden": false,
+    "id": 1351,
+    "title": "Unveiled",
+    "type": "fs"
   },
   {
-    "file": "waterfall.fs",
-    "title": "Waterfall",
-    "type": "generator",
     "categories": [
       "Generator",
       "Feedback",
       "Audio Reactive"
     ],
-    "id": 1352,
     "description": "A 2D wave-propagation fluid: velocity and pressure advect themselves while two opposed emitters pump ripples, eddies and fronts across the surface; the height field refracts a stone-and-caustic bed under directional light and a tight specular. Bass pumps the emitters, beats pulse them, mids shift the bed, highs sharpen the specular.",
+    "file": "waterfall.fs",
     "hasVertex": false,
-    "hidden": false
+    "hidden": false,
+    "id": 1352,
+    "title": "Waterfall",
+    "type": "generator"
   },
   {
-    "file": "mirror.fs",
-    "title": "Mirror",
-    "type": "generator",
     "categories": [
       "Generator",
       "3D",
       "Fractal",
       "Audio Reactive"
     ],
-    "id": 1353,
     "description": "A glass mandelbulb: rays refract in, bounce and refract out with Beer absorption, mirroring a glowing floor slab and sky column so every lobe reads as polished glass; FXAA keeps the edges clean. Bass swells the glow, beats push the tumble, mids drift the hue, highs brighten the reflections.",
+    "file": "mirror.fs",
     "hasVertex": false,
-    "hidden": false
+    "hidden": false,
+    "id": 1353,
+    "title": "Mirror",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "3D",
+      "Landscape",
+      "Audio Reactive"
+    ],
+    "description": "A flight through a sunlit rock-and-grass canyon under drifting clouds: layered plateau terrain, soft shadows and occlusion, volumetric god rays through valley mist and a depth-aware lens flare. Bass swells the rays and mist, beats flash the sun, mids warm the grass, highs sharpen the flare.",
+    "file": "nature.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1354,
+    "title": "Nature",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "3D",
+      "Organic",
+      "Audio Reactive"
+    ],
+    "description": "A raymarched medusa in deep water: translucent pulsing bell with a frilled rim and rippled skin, glowing gonad rings inside, four oral arms and a ring of long sinuous tentacles, bioluminescent plankton and light shafts from the surface, bloomed. Bass drives the pulse, beats flash the glow, mids sway the tentacles, highs add sparkle.",
+    "file": "jellyfish.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1355,
+    "title": "Jellyfish",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "3D",
+      "Organic",
+      "Audio Reactive"
+    ],
+    "description": "A school of medusae wandering through deep water in 3D: each drifts on its own path, tilts into its motion, pulses on its own beat and trails long wiggling tentacles; two hues spread across the school, with bioluminescent halos, plankton and light shafts, then bloom. Bass drives the pulses, beats flash the glow, mids add wiggle, highs sparkle the water.",
+    "file": "jelly_fish.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1356,
+    "title": "Jelly Fish",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "3D",
+      "Tunnel",
+      "Audio Reactive"
+    ],
+    "description": "Three tunnels fused on the same rays: a ribbed throat of stacked iris plates with a cold core and warm rim, a snaking field of thin neon line streaks (Jan Mr\u00f3z, CC BY 3.0), and a radial grid of comet capsules whose skins carry a live fluid ink re-inked each time one fires, with neon comet heads lighting the walls. Speed drives all three; separate colors, fade, lights and a distant tint. Bass breathes the iris, mids wobble ribs and churn ink, highs shimmer rim and lines, beats fire comets.",
+    "file": "ring_tunnel.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1357,
+    "title": "Ring Tunnel",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "3D",
+      "Tunnel",
+      "Audio Reactive"
+    ],
+    "description": "The hyperspace jump: radial slices each fire a star trail that stretches from blue to white as you accelerate, layered for density, until a lens flare blooms at the aim point and the trails whip into a whiteout. Loops on its own clock or holds mid-stretch for an endless warp. Bass lengthens the streaks, beats flash the flare, highs brighten the trails.",
+    "file": "speed_tunnel.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1358,
+    "title": "Speed Tunnel",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Retro",
+      "Audio Reactive"
+    ],
+    "description": "A 1960s vector display: warm-black CRT, barrel-warped phosphor-green grid, a beam-drawn coastline wandering across the chart with islands and jagged shores, two drifting crosshair cursors. Persistent phosphor that decays, beam glow, mains flicker, line jitter, grain, glass vignette; the coast slowly redraws itself. Bass hums the grid, beats re-strike the beam, highs add jitter.",
+    "file": "analog_green.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1359,
+    "title": "Analog Green",
+    "type": "generator"
   }
 ]

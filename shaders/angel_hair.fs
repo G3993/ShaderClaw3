@@ -6,7 +6,7 @@
     { "NAME": "speed",          "LABEL": "Speed",           "TYPE": "float",  "DEFAULT": 1.0,  "MIN": 0.1,  "MAX": 4.0 },
     { "NAME": "hairCount",      "LABEL": "Hair Count",      "TYPE": "float",  "DEFAULT": 0.5,  "MIN": 0.0,  "MAX": 1.0 },
     { "NAME": "hairThickness",  "LABEL": "Hair Thickness",  "TYPE": "float",  "DEFAULT": 1.0,  "MIN": 0.1,  "MAX": 6.0 },
-    { "NAME": "hairBrightness", "LABEL": "Hair Brightness", "TYPE": "float",  "DEFAULT": 1.0,  "MIN": 0.1,  "MAX": 5.0 },
+    { "NAME": "hairBrightness", "LABEL": "Hair Brightness", "TYPE": "float",  "DEFAULT": 0.55,  "MIN": 0.1,  "MAX": 5.0 },
     { "NAME": "hairSaturation", "LABEL": "Hair Saturation", "TYPE": "float",  "DEFAULT": 0.5,  "MIN": 0.0,  "MAX": 1.0 },
     { "NAME": "flowScale",      "LABEL": "Flow Scale",      "TYPE": "float",  "DEFAULT": 1.0,  "MIN": 0.1,  "MAX": 4.0 },
     { "NAME": "flowTwist",      "LABEL": "Flow Twist",      "TYPE": "float",  "DEFAULT": 1.0,  "MIN": 0.0,  "MAX": 4.0 },
@@ -21,10 +21,10 @@
     { "NAME": "paletteMode",    "LABEL": "Palette Mode",    "TYPE": "float",  "GROUP": "Color", "DEFAULT": 0.0, "MIN": 0.0, "MAX": 4.0 },
     { "NAME": "paletteSpeed",   "LABEL": "Palette Speed",   "TYPE": "float",  "GROUP": "Color", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 8.0 },
     { "NAME": "paperTone",      "LABEL": "Paper Tone",      "TYPE": "float",  "GROUP": "Color", "DEFAULT": 1.0, "MIN": 0.0, "MAX": 1.0 },
-    { "NAME": "glowAmount",     "LABEL": "Glow Amount",     "TYPE": "float",  "GROUP": "Color", "DEFAULT": 0.3, "MIN": 0.0, "MAX": 2.0 },
+    { "NAME": "glowAmount",     "LABEL": "Glow Amount",     "TYPE": "float",  "GROUP": "Color", "DEFAULT": 0.15, "MIN": 0.0, "MAX": 2.0 },
     { "NAME": "fieldInfluence", "LABEL": "Field Influence", "TYPE": "float",  "GROUP": "Color", "DEFAULT": 0.4, "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "tintColor",      "LABEL": "Tint",            "TYPE": "color",  "GROUP": "Color", "DEFAULT": [1.0, 1.0, 1.0, 1.0] },
-    { "NAME": "brightness",     "LABEL": "Brightness",      "TYPE": "float",  "GROUP": "Color", "DEFAULT": 1.0, "MIN": 0.2, "MAX": 3.0 },
+    { "NAME": "brightness",     "LABEL": "Brightness",      "TYPE": "float",  "GROUP": "Color", "DEFAULT": 0.65, "MIN": 0.2, "MAX": 3.0 },
     { "NAME": "warpAmount",     "LABEL": "Warp Amount",     "TYPE": "float",  "DEFAULT": 0.08, "MIN": 0.0, "MAX": 0.5 },
     { "NAME": "spotlightOn",    "LABEL": "Spotlight",       "TYPE": "float",  "DEFAULT": 0.5,  "MIN": 0.0, "MAX": 1.0 },
     { "NAME": "chromaticAb",    "LABEL": "Chromatic Aberr", "TYPE": "float",  "DEFAULT": 0.2,  "MIN": 0.0, "MAX": 1.0 },
@@ -105,10 +105,6 @@ vec4 encPosN(vec2 p) {
 }
 vec2 decPosN(vec4 t) { return vec2(t.r+t.g/255.0, t.b+t.a/255.0); }
 
-// agent buffer layout: hair particles in row 0, swarm in row 1
-// Hair:  texel 2i   = pos,   texel 2i+1 = state
-// Swarm: texel 2*N_HAIR_MAX + 2j = pos,  +1 = state
-
 int hairN() { return int(clamp(hairCount, 0.0, 1.0) * float(N_HAIR_MAX-1)) + 1; }
 
 vec4 fetchHairAgent(int texel) {
@@ -133,7 +129,8 @@ bool resetPulse() {
 vec3 pickPalette(float t, float pMode) {
     int pm = int(clamp(pMode, 0.0, 3.99));
     if (pm == 0) {
-        return 0.5 + 0.5*cos(vec3(0.0,0.8,1.6) + t);
+        // Blue-shifted palette: offset phases toward blue/cyan
+        return 0.5 + 0.5*cos(vec3(2.0, 1.4, 0.0) + t);
     } else if (pm == 1) {
         return 0.5 + 0.5*cos(vec3(2.0,3.0,4.5) + t);
     } else if (pm == 2) {
@@ -141,6 +138,17 @@ vec3 pickPalette(float t, float pMode) {
     } else {
         return 0.5 + 0.5*sin(vec3(0.0,2.094,4.188) + t*3.0);
     }
+}
+
+// ---- Blue-toned hair color --------------------------------------------------
+// Returns a blue/cyan/violet dominant color for hair strands
+vec3 hairColor(float t) {
+    // Phase offsets push the cosine toward blue and cyan wavelengths
+    // R stays low, G is mid, B is high
+    float r = 0.3 + 0.25*cos(t + 3.8);
+    float g = 0.35 + 0.30*cos(t + 2.0);
+    float b = 0.65 + 0.35*cos(t + 0.3);
+    return clamp(vec3(r, g, b), 0.0, 1.0);
 }
 
 // ---- PASS 0: particle/swarm update ------------------------------------------
@@ -174,7 +182,6 @@ vec4 passAgents() {
         float bassMod = mix(1.0, 1.0+0.5*aBass(), ar*bassThick);
         pos += vel * 0.006 * speed * spdMult * bassMod;
 
-        // wrap / reset at edge
         if (pos.x > 1.05 || abs(pos.y) > 1.05) {
             vec2 h = hash2(vec2(float(i)*0.713, 4.7));
             pos = vec2(-0.99, h.x*0.45);
@@ -304,14 +311,15 @@ vec4 passTrail() {
         if (d2 > 18.0) continue;
         float d = 0.035 / (d2 + 0.0008);
 
-        vec3 pCol = abs(sin(vec3(2.0, 3.4, 1.2)
-                    * (phaseBase + float(i)*0.0031)
-                    + vec3(0.8, 0.0, 1.2))
-                    * 0.7 + 0.3);
-
+        // Blue-dominant hair color
         float palT = phaseBase + float(i)*0.007 + ar*highP*2.0;
+        vec3 pCol = hairColor(palT);
+
+        // Blend with palette but keep blue bias
         vec3 palCol = pickPalette(palT, paletteMode);
-        pCol = mix(pCol, palCol, 0.6);
+        // Weight palette blend toward our blue hairColor
+        pCol = mix(pCol, palCol * vec3(0.5, 0.7, 1.2), 0.3);
+        pCol = clamp(pCol, 0.0, 1.0);
 
         float lum = dot(pCol, vec3(0.333));
         pCol = mix(vec3(lum), pCol, hairSaturation);
@@ -319,7 +327,8 @@ vec4 passTrail() {
         inkHair += d * pCol * hairBrightness;
     }
     float inkScale = mix(1.0, 0.3 + 1.9*bassP + 0.7*levelP, ar) * bassResponse;
-    inkHair *= inkScale * 0.12;
+    // Reduced multiplier from 0.12 to 0.07 for lower default brightness
+    inkHair *= inkScale * 0.07;
 
     // Swarm particle deposits
     vec3 inkSwarm = vec3(0.0);
@@ -331,7 +340,10 @@ vec4 passTrail() {
         float dm = distance(p, sc);
         float sw = smoothstep(0.04, 0.0, dm);
         float palT2 = phaseBase + float(j)*0.05 + midP;
-        inkSwarm += sw * pickPalette(palT2, paletteMode) * 0.6
+        // Tint swarm blue too
+        vec3 swarmCol = pickPalette(palT2, paletteMode) * vec3(0.6, 0.8, 1.3);
+        swarmCol = clamp(swarmCol, 0.0, 1.0);
+        inkSwarm += sw * swarmCol * 0.4
                   * mix(1.0, 0.5+1.5*midP, ar);
     }
 
@@ -410,9 +422,12 @@ vec4 passImage() {
     float trailLen = length(trail);
     float sugarLen = length(fieldC.rgb);
 
-    // animated palette
+    // animated palette — blue-tinted
     float palT  = T * paletteSpeed * 0.4 + sugarLen*7.2 + trailLen + ar*2.0*highP;
     vec3 palette = pickPalette(palT, paletteMode);
+    // Bias palette toward blue in composite too
+    palette *= vec3(0.7, 0.85, 1.3);
+    palette = clamp(palette, 0.0, 1.0);
 
     // paper background
     float vd = dot(q, q);
@@ -422,16 +437,16 @@ vec4 passImage() {
         paperTone
     ) * (1.0 - vd*0.25);
 
-    // inked strands — settle in over the first seconds instead of
-    // opening at full chaos (the sim needs a moment to organize)
+    // inked strands
     float settle = mix(0.35, 1.0, smoothstep(0.3, 4.5, TIME));
-    vec3 inkColor = trail * palette * (1.5 + glowAmount) * settle;
+    // Reduced multiplier from 1.5 to 0.9 for lower default brightness
+    vec3 inkColor = trail * palette * (0.9 + glowAmount) * settle;
 
     // paper composite: paper minus ink = print effect
     vec3 printed = clamp(paper - inkColor, 0.0, 1.0);
 
-    // field glow on top
-    vec3 glow = sugarLen * palette * glowAmount * 0.6 * settle;
+    // field glow on top — also dimmer by default
+    vec3 glow = sugarLen * palette * glowAmount * 0.35 * settle;
     vec3 col = printed + glow;
 
     // swarm core dots
@@ -441,12 +456,15 @@ vec4 passImage() {
         float dm = distance(uv, spos);
         swarmCore += smoothstep(0.012, 0.0, dm);
     }
-    col += swarmCore * palette * 0.3 * mix(1.0, 0.5+1.5*midP, ar);
+    // Blue-tinted swarm dots
+    vec3 swarmDotColor = palette * vec3(0.5, 0.75, 1.4);
+    swarmDotColor = clamp(swarmDotColor, 0.0, 1.0);
+    col += swarmCore * swarmDotColor * 0.2 * mix(1.0, 0.5+1.5*midP, ar);
 
-    // spotlight
+    // spotlight — blue tint
     vec2 sm = 0.5 + 0.35*vec2(cos(T*0.4), sin(T*0.53));
     float md = distance(uv, sm);
-    col += spotlightOn * vec3(0.2,0.4,1.0) * exp(-18.0*md) * 0.4
+    col += spotlightOn * vec3(0.1, 0.3, 1.0) * exp(-18.0*md) * 0.3
          * mix(1.0, 0.3+2.0*highP, ar);
 
     // vignette

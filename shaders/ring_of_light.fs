@@ -10,25 +10,26 @@
     { "NAME": "outerRadius", "LABEL": "Outer Radius",     "TYPE": "float", "MIN": 1.5,  "MAX": 6.0,  "DEFAULT": 3.5,  "GROUP": "Outer Tunnel" },
     { "NAME": "outerTurb",   "LABEL": "Outer Turbulence", "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0,  "GROUP": "Outer Tunnel" },
     { "NAME": "outerGlow",   "LABEL": "Outer Glow",       "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0,  "GROUP": "Outer Tunnel" },
-    { "NAME": "outerSteps",  "LABEL": "Outer Steps",      "TYPE": "float", "MIN": 40.0, "MAX": 160.0, "DEFAULT": 110.0, "GROUP": "Outer Tunnel" },
+    { "NAME": "outerSteps",  "LABEL": "Outer Steps",      "TYPE": "float", "MIN": 40.0, "MAX": 160.0, "DEFAULT": 90.0,  "GROUP": "Outer Tunnel" },
     { "NAME": "innerRadius", "LABEL": "Inner Radius",     "TYPE": "float", "MIN": 0.6,  "MAX": 4.0,  "DEFAULT": 1.8,  "GROUP": "Inner Ring" },
     { "NAME": "innerTurb",   "LABEL": "Inner Turbulence", "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 1.0,  "GROUP": "Inner Ring" },
     { "NAME": "innerMix",    "LABEL": "Inner Mix",        "TYPE": "float", "MIN": 0.0,  "MAX": 2.0,  "DEFAULT": 0.75, "GROUP": "Inner Ring" },
-    { "NAME": "innerSteps",  "LABEL": "Inner Steps",      "TYPE": "float", "MIN": 30.0, "MAX": 120.0, "DEFAULT": 80.0, "GROUP": "Inner Ring" },
+    { "NAME": "innerSteps",  "LABEL": "Inner Steps",      "TYPE": "float", "MIN": 30.0, "MAX": 120.0, "DEFAULT": 64.0, "GROUP": "Inner Ring" },
     { "NAME": "hueShift",    "LABEL": "Hue Shift",        "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.0,  "GROUP": "Color" },
     { "NAME": "colorCycle",  "LABEL": "Colour Cycle",     "TYPE": "float", "MIN": 0.0,  "MAX": 3.0,  "DEFAULT": 1.0,  "GROUP": "Color" },
     { "NAME": "saturation",  "LABEL": "Saturation",       "TYPE": "float", "MIN": 0.0,  "MAX": 1.6,  "DEFAULT": 1.0,  "GROUP": "Color" },
     { "NAME": "exposure",    "LABEL": "Exposure",         "TYPE": "float", "MIN": 0.3,  "MAX": 3.0,  "DEFAULT": 1.0,  "GROUP": "Color" },
     { "NAME": "brightness",  "LABEL": "Brightness",       "TYPE": "float", "MIN": 0.3,  "MAX": 2.0,  "DEFAULT": 1.0,  "GROUP": "Color" },
     { "NAME": "audioReact",  "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.6,  "GROUP": "Audio Reactivity" },
+    { "NAME": "marchRes",    "LABEL": "March Resolution", "TYPE": "float", "MIN": 0.3,  "MAX": 1.0,  "DEFAULT": 0.6,  "GROUP": "Depth / Passes" },
     { "NAME": "trailAmt",    "LABEL": "Motion Trails",    "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.1,  "GROUP": "Depth / Passes" },
     { "NAME": "bloomAmt",    "LABEL": "Bloom Depth",      "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.4,  "GROUP": "Depth / Passes" },
     { "NAME": "aberration",  "LABEL": "Lens Depth",       "TYPE": "float", "MIN": 0.0,  "MAX": 1.0,  "DEFAULT": 0.35, "GROUP": "Depth / Passes" },
     { "NAME": "transparentBg", "LABEL": "Transparent BG", "TYPE": "bool", "DEFAULT": false, "GROUP": "Depth / Passes" }
   ],
   "PASSES": [
-    { "TARGET": "rlOuter" },
-    { "TARGET": "rlScene" },
+    { "TARGET": "rlOuter", "WIDTH": "floor($WIDTH*$marchRes)", "HEIGHT": "floor($HEIGHT*$marchRes)" },
+    { "TARGET": "rlScene", "WIDTH": "floor($WIDTH*$marchRes)", "HEIGHT": "floor($HEIGHT*$marchRes)" },
     { "TARGET": "abTrail", "PERSISTENT": true },
     { }
   ]
@@ -36,8 +37,10 @@
 
 // ─────────────────────────────────────────────────────────────────────────
 // RING OF LIGHT
-//   pass 0  rlOuter — outer vortex tunnel, 4-tap supersample (buffer A).
-//   pass 1  rlScene — inner ring tunnel + composite over outer, tanh tone.
+//   pass 0  rlOuter — outer vortex tunnel (buffer A), rendered at marchRes
+//                     (the bilinear upsample replaces the old 4-tap supersample,
+//                     which cost 4× for a glow field — 13 fps at 1080p).
+//   pass 1  rlScene — inner ring tunnel + composite over outer, tanh tone, at marchRes.
 //   pass 2  abTrail — house motion trail.
 //   pass 3  final   — house bloom + aberration + HD finisher.
 // ─────────────────────────────────────────────────────────────────────────
@@ -140,12 +143,9 @@ void main() {
     vec2 uv = gl_FragCoord.xy / R;
     vec2 FD = gl_FragCoord.xy;
     if (PASSINDEX == 0) {
-        vec3 col = outerTunnel(FD + vec2(-0.25, -0.25))
-                 + outerTunnel(FD + vec2( 0.25, -0.25))
-                 + outerTunnel(FD + vec2(-0.25,  0.25))
-                 + outerTunnel(FD + vec2( 0.25,  0.25));
+        vec3 col = outerTunnel(FD);
         // store pre-tonemap HDR scaled down (half-float safe)
-        gl_FragColor = vec4(col * 0.25 * 0.01, 1.0);
+        gl_FragColor = vec4(col * 0.01, 1.0);
     } else if (PASSINDEX == 1) {
         vec3 bg = texture2D(rlOuter, uv).rgb * 100.0;
         vec3 fg = innerTunnel(FD);
@@ -154,7 +154,6 @@ void main() {
         col = hueRotate(col, hueShift);
         float l = dot(col, vec3(0.299, 0.587, 0.114));
         col = mix(vec3(l), col, saturation);
-        col += (hash21(FD + fract(TIME) * vec2(17.0, 29.0)) - 0.5) * 0.01;
         gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
     } else if (PASSINDEX == 2) {
         vec3 col  = texture2D(rlScene, uv).rgb;
