@@ -118,13 +118,8 @@ export function compileToLayer(renderer, layerId, source) {
     } else if (inp.TYPE === 'point2D') {
       layer.inputValues[name] = inp.DEFAULT ? [...inp.DEFAULT] : [0, 0];
     } else if (inp.TYPE === 'text') {
-      const maxLen = inp.MAX_LENGTH || 12;
-      const def = (inp.DEFAULT || '').toUpperCase();
-      for (let i = 0; i < maxLen; i++) {
-        const ch = def[i];
-        layer.inputValues[name + '_' + i] = (!ch || ch === ' ') ? 26 : (function(c) { var code = c.charCodeAt(0); if (code >= 65 && code <= 90) return code - 65; if (code >= 48 && code <= 57) return code - 48 + 27; return 26; })(ch.toUpperCase());
-      }
-      layer.inputValues[name + '_len'] = def.replace(/\s+$/, '').length;
+      // SCTEXT/1 (js/text-buffer.js): `<n>_len`, legacy shim `<n>_i`, `__textrun_<n>` glyph buffer
+      SCTextBuffer.applyToInputValues(layer.inputValues, inp, inp.DEFAULT || '');
     }
   }
 

@@ -9,7 +9,7 @@
       "NAME": "msg",
       "TYPE": "text",
       "DEFAULT": "ETHEREA",
-      "MAX_LENGTH": 12,
+      "MAX_LENGTH": 48,
       "LABEL": "Message",
       "GROUP": "Text"
     },
@@ -124,7 +124,43 @@ int getChar(int slot) {
     if (slot == 8) return int(msg_8);
     if (slot == 9) return int(msg_9);
     if (slot == 10) return int(msg_10);
-    return int(msg_11);
+    if (slot == 11) return int(msg_11);
+    if (slot == 12) return int(msg_12);
+    if (slot == 13) return int(msg_13);
+    if (slot == 14) return int(msg_14);
+    if (slot == 15) return int(msg_15);
+    if (slot == 16) return int(msg_16);
+    if (slot == 17) return int(msg_17);
+    if (slot == 18) return int(msg_18);
+    if (slot == 19) return int(msg_19);
+    if (slot == 20) return int(msg_20);
+    if (slot == 21) return int(msg_21);
+    if (slot == 22) return int(msg_22);
+    if (slot == 23) return int(msg_23);
+    if (slot == 24) return int(msg_24);
+    if (slot == 25) return int(msg_25);
+    if (slot == 26) return int(msg_26);
+    if (slot == 27) return int(msg_27);
+    if (slot == 28) return int(msg_28);
+    if (slot == 29) return int(msg_29);
+    if (slot == 30) return int(msg_30);
+    if (slot == 31) return int(msg_31);
+    if (slot == 32) return int(msg_32);
+    if (slot == 33) return int(msg_33);
+    if (slot == 34) return int(msg_34);
+    if (slot == 35) return int(msg_35);
+    if (slot == 36) return int(msg_36);
+    if (slot == 37) return int(msg_37);
+    if (slot == 38) return int(msg_38);
+    if (slot == 39) return int(msg_39);
+    if (slot == 40) return int(msg_40);
+    if (slot == 41) return int(msg_41);
+    if (slot == 42) return int(msg_42);
+    if (slot == 43) return int(msg_43);
+    if (slot == 44) return int(msg_44);
+    if (slot == 45) return int(msg_45);
+    if (slot == 46) return int(msg_46);
+    return int(msg_47);
 }
 
 int charCount() {
@@ -176,6 +212,13 @@ void main() {
 
     // Total width of the text block
     float totalW = float(numChars) * cellStep - gapW;
+    // Auto-fit: long messages shrink to stay inside the aspect-corrected frame
+    float maxW = aspect * 0.92;
+    if (totalW > maxW) {
+        float fitS = maxW / totalW;
+        charW *= fitS; charH *= fitS; gapW *= fitS; cellStep *= fitS;
+        totalW = maxW;
+    }
 
     // Starting x position (centered)
     float startX = 0.5 - totalW * 0.5;
@@ -187,7 +230,7 @@ void main() {
     // Shadow offset in UV space
     vec2 shadowOff = vec2(0.005, -0.005);
 
-    for (int i = 0; i < 12; i++) {
+    for (int i = 0; i < 48; i++) {
         if (i >= numChars) break;
 
         int ch = getChar(i);

@@ -257,16 +257,113 @@ function isfInputToUniform(input) {
   if (t === 'image') return `uniform sampler2D ${input.NAME};\nuniform vec2 IMG_SIZE_${input.NAME};`;
   if (t === 'long') return `uniform float ${input.NAME};`;
   if (t === 'text') {
+    // SCTEXT/1 (js/text-buffer.js): `<n>_len` always; legacy per-char shim
+    // `<n>_i` only while the body still references `<n>_0..`; glyph buffer
+    // sampler + `<n>_cap` only when the body samples `textBuf_<n>`.
+    // (_shim/_shimCap/_needsBuf are set by buildFragmentShader; unknown = shim.)
     // Cap at 48 chars for mobile GPU uniform limits
     const isMobile = typeof window !== 'undefined' && (window.innerWidth <= 900 || /Mobi|Android|iPhone/i.test(navigator.userAgent));
-    const maxLen = Math.min(input.MAX_LENGTH || 12, isMobile ? 48 : 64);
+    const maxLen = input._shimCap != null ? input._shimCap : Math.min(input.MAX_LENGTH || 12, isMobile ? 48 : 64);
     const lines = [];
-    for (let i = 0; i < maxLen; i++) lines.push(`uniform float ${input.NAME}_${i};`);
+    if (input._shim !== false) {
+      for (let i = 0; i < maxLen; i++) lines.push(`uniform float ${input.NAME}_${i};`);
+    }
     lines.push(`uniform float ${input.NAME}_len;`);
+    if (input._needsBuf) {
+      lines.push(`uniform sampler2D textBuf_${input.NAME};`);
+      lines.push(`uniform float ${input.NAME}_cap;`);
+    }
     return lines.join('\n');
   }
   return `// unknown type: ${t} ${input.NAME}`;
 }
+
+// ---- sc_text v2 : SCTEXT/1 glyph-buffer + SCFONT/1 MSDF helpers ----
+// Keep IDENTICAL across easel (ShaderSource.cpp, texture()) / claw3 / etherea
+// (isf-renderer-wrapper.js). Contracts: .claude/caption-pipeline/phase-C-design.md 1.6
+// (glyph buffer — the v1 function text below is byte-identical) and
+// phase-D-design.md 1.6 (SCFONT/1 MSDF atlas + metrics helpers).
+const SC_TEXT_GLSL_V2 = `// ---- sc_text v2 : SCTEXT/1 glyph buffer + SCFONT/1 MSDF glyph atlas + metrics helpers (keep identical across easel / claw3 / etherea) ----
+vec4 scTextTexel(sampler2D buf, float cap, int i, float sub) {
+    return texture2D(buf, vec2((float(i) * 2.0 + sub + 0.5) / (cap * 2.0), 0.5));
+}
+int scTextByte(float v) { return int(floor(v * 255.0 + 0.5)); }
+int scTextCode(sampler2D buf, float cap, int i) {         // Unicode code point; 0 = empty slot
+    vec4 t = scTextTexel(buf, cap, i, 0.0);
+    return scTextByte(t.r) + 256 * scTextByte(t.g);
+}
+int scTextWord(sampler2D buf, float cap, int i) {         // word index; -1 = none (whitespace)
+    int w = scTextByte(scTextTexel(buf, cap, i, 0.0).b);
+    return (w == 255) ? -1 : w;
+}
+float scTextRevealMs(sampler2D buf, float cap, int i) {   // ms since utterance start; -1.0 = unknown
+    vec4 t = scTextTexel(buf, cap, i, 1.0);
+    int ms = scTextByte(t.r) + 256 * scTextByte(t.g);
+    return (ms == 65535) ? -1.0 : float(ms);
+}
+int scTextSpeaker(sampler2D buf, float cap, int i) {      // speaker id; -1 = unknown
+    int s = scTextByte(scTextTexel(buf, cap, i, 1.0).b);
+    return (s == 255) ? -1 : s;
+}
+int scGlyphCell(int cp) { return (cp >= 32 && cp <= 126) ? cp - 32 : 95; }
+vec2 scGlyphUV(int cp, vec2 uv) {                         // uv glyph-local, y = 1 at glyph top
+    float idx = float(scGlyphCell(cp));
+    float col = mod(idx, 16.0);
+    float row = floor(idx / 16.0);
+    return vec2((col + uv.x) / 16.0, 1.0 - (row + 1.0 - uv.y) / 6.0);
+}
+float scGlyphSample(sampler2D atlas, int cp, vec2 uv) {   // coverage 0..1; 0 outside the cell / for space
+    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
+    if (cp <= 32) return 0.0;
+    return texture2D(atlas, scGlyphUV(cp, uv)).r;
+}
+float scU16(vec2 v) { return floor(v.x * 255.0 + 0.5) + 256.0 * floor(v.y * 255.0 + 0.5); }
+float scS16em(vec2 v) { return (scU16(v) - 32768.0) / 4096.0; }          // em, fixed-point 1/4096
+vec4 scGlyphMetricTexel(sampler2D mtx, int cp, int k) {                  // 8 texels per code point, page = cp/256
+    int page = cp / 256; int lo = cp - page * 256;
+    return texture2D(mtx, vec2((float(lo * 8 + k) + 0.5) / 2048.0, (float(page) + 0.5) / 256.0));
+}
+bool  scGlyphPresent(sampler2D mtx, int cp) { return scGlyphMetricTexel(mtx, cp, 4).b > 0.5; }
+int   scGlyphResolve(sampler2D mtx, int cp) { return scGlyphPresent(mtx, cp) ? cp : 65533; }   // U+FFFD fallback
+vec4  scGlyphAtlasRect(sampler2D mtx, int cp) {                           // atlas px (left, bottom, right, top), y up
+    vec4 a = scGlyphMetricTexel(mtx, cp, 0), b = scGlyphMetricTexel(mtx, cp, 1);
+    return vec4(scU16(a.rg), scU16(a.ba), scU16(b.rg), scU16(b.ba));
+}
+vec4  scGlyphPlane(sampler2D mtx, int cp) {                               // em box rel. to pen origin (left, bottom, right, top)
+    vec4 a = scGlyphMetricTexel(mtx, cp, 2), b = scGlyphMetricTexel(mtx, cp, 3);
+    return vec4(scS16em(a.rg), scS16em(a.ba), scS16em(b.rg), scS16em(b.ba));
+}
+float scGlyphAdvance(sampler2D mtx, int cp) { return scS16em(scGlyphMetricTexel(mtx, cp, 4).rg); }   // em
+float scMSDFMedian(vec3 c) { return max(min(c.r, c.g), min(max(c.r, c.g), c.b)); }
+// Analytic (no derivatives): screenPxRange = distanceRangePx * (glyph px on screen / glyph px in the atlas).
+float scMSDFCoverage(sampler2D atlas, vec2 atlasUV, float screenPxRange) {
+    float sd = scMSDFMedian(texture2D(atlas, atlasUV).rgb) - 0.5;
+    return clamp(sd * max(screenPxRange, 1.0) + 0.5, 0.0, 1.0);
+}
+float scMSDFScreenPxRange(vec4 atlasInfo, float glyphScreenPx, float glyphAtlasPx) {
+    return atlasInfo.z * glyphScreenPx / max(glyphAtlasPx, 1.0);
+}
+// Glyph-local uv over the plane box (x 0..1 left->right, y 0..1 bottom->top) -> coverage; 0 outside / absent / space.
+float scGlyphMSDF(sampler2D atlas, sampler2D mtx, vec4 atlasInfo, int cp, vec2 uv, float screenPxRange) {
+    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
+    vec4 r = scGlyphAtlasRect(mtx, cp);
+    if (r.z <= r.x || r.w <= r.y) return 0.0;
+    vec2 auv = (r.xy + uv * (r.zw - r.xy)) / atlasInfo.xy;
+    return scMSDFCoverage(atlas, auv, screenPxRange);
+}
+// ---- end sc_text v2 ----`;
+
+// Injected only when the body references sampleGlyphMSDF — it needs
+// derivatives (#extension GL_OES_standard_derivatives on WebGL1).
+const SC_TEXT_GLSL_V2D = `// ---- sc_text v2d : derivative-based variant ----
+float sampleGlyphMSDF(sampler2D atlas, vec2 atlasUV, float distanceRange, vec2 atlasSizePx) {
+    vec2 unitRange = vec2(distanceRange) / atlasSizePx;
+    vec2 screenTexSize = vec2(1.0) / fwidth(atlasUV);
+    float screenPxRange = max(0.5 * dot(unitRange, screenTexSize), 1.0);
+    float sd = scMSDFMedian(texture2D(atlas, atlasUV).rgb) - 0.5;
+    return clamp(sd * screenPxRange + 0.5, 0.0, 1.0);
+}
+// ---- end sc_text v2d ----`;
 
 function buildFragmentShader(source) {
   const parsed = parseISF(source);
@@ -281,6 +378,20 @@ function buildFragmentShader(source) {
       { NAME: 'scVideoInput', TYPE: 'image', LABEL: 'Video Input', _synthetic: true },
       { NAME: 'scVideoMix', TYPE: 'float', DEFAULT: 0.0, MIN: 0.0, MAX: 1.0, LABEL: 'Video Mix', _synthetic: true }
     );
+  }
+
+  // SCTEXT/1 text inputs: legacy shim (body references `<n>_0..`), glyph
+  // buffer (body references `textBuf_<n>`), cap/shimCap from MAX_LENGTH.
+  const _hasSCText = typeof SCTextBuffer !== 'undefined';
+  for (const inp of (parsed.inputs || [])) {
+    if (inp.TYPE !== 'text' || !inp.NAME) continue;
+    inp._shim = _hasSCText ? new RegExp('\\b' + inp.NAME + '_\\d+\\b').test(parsed.glsl) : true;
+    inp._needsBuf = parsed.glsl.includes('textBuf_' + inp.NAME);
+    if (_hasSCText) {
+      const _o = SCTextBuffer.optionsFromInput(inp);
+      inp._cap = _o.cap;
+      inp._shimCap = _o.shimCap;
+    }
   }
 
   const uniformLines = (parsed.inputs || []).map(isfInputToUniform);
@@ -306,7 +417,7 @@ function buildFragmentShader(source) {
   const cond = (decl, name) => (_refText.includes(name) && !_inputNames.has(name)) ? decl : '';
 
   // GLSL ES 1.0 needs an explicit extension for fwidth/dFdx/dFdy
-  const usesDerivatives = /\b(fwidth|dFdx|dFdy)\s*\(/.test(glslBody);
+  const usesDerivatives = /\b(fwidth|dFdx|dFdy|sampleGlyphMSDF)\s*\(/.test(glslBody);
   // Shaders written against desktop GLSL 330 (native Easel) call texture();
   // map the 2-arg form onto texture2D for WebGL1.
   const usesGL3Texture = /\btexture\s*\(/.test(glslBody);
@@ -384,6 +495,12 @@ function buildFragmentShader(source) {
     // Font textures
     cond('uniform sampler2D varFontTex;', 'varFontTex'),
     cond('uniform sampler2D fontAtlasTex;', 'fontAtlasTex'),
+    cond('uniform sampler2D glyphAtlasTex;', 'glyphAtlasTex'),
+    // SCFONT/1 MSDF face (Phase D) — assets/fonts, bound by renderer.js _bindMSDFGlyphs
+    cond('uniform sampler2D glyphMSDFTex;', 'glyphMSDFTex'),
+    cond('uniform sampler2D glyphMetricsTex;', 'glyphMetricsTex'),
+    cond('uniform vec4 glyphAtlasInfo;', 'glyphAtlasInfo'),
+    cond('uniform vec4 glyphFaceInfo;', 'glyphFaceInfo'),
     cond('uniform float useFontAtlas;', 'useFontAtlas'),
     // Voice decay
     cond('uniform float _voiceGlitch;', '_voiceGlitch'),
@@ -401,6 +518,10 @@ function buildFragmentShader(source) {
     ...uniformLines,
     // Audio helper functions (native parity) — after uniforms so deps resolve
     ...audioHelperFns,
+    // SCTEXT/1 glyph-buffer + SCFONT/1 MSDF helpers (sc_text v2) — only for converted text shaders
+    ...((glslBody.includes('scText') || glslBody.includes('scGlyph') || glslBody.includes('scMSDF') || glslBody.includes('sampleGlyphMSDF')) ? SC_TEXT_GLSL_V2.split('\n') : []),
+    // Derivative-based MSDF sampler (sc_text v2d) — needs GL_OES_standard_derivatives
+    ...(glslBody.includes('sampleGlyphMSDF') ? SC_TEXT_GLSL_V2D.split('\n') : []),
     ''
   ].filter(Boolean);
 

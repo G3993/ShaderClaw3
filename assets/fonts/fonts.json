@@ -1,0 +1,51 @@
+{
+ "version": 1,
+ "default": "inter-400",
+ "caption": "barlow-semicondensed-600",
+ "faces": [
+  "inter-400",
+  "inter-700",
+  "barlow-semicondensed-600"
+ ],
+ "families": [
+  {
+   "index": 0,
+   "label": "Inter",
+   "faces": [
+    "inter-400",
+    "inter-700"
+   ]
+  },
+  {
+   "index": 1,
+   "label": "Times New Roman",
+   "faces": [
+    "inter-400",
+    "inter-700"
+   ]
+  },
+  {
+   "index": 2,
+   "label": "Libre Caslon",
+   "faces": [
+    "inter-400",
+    "inter-700"
+   ]
+  },
+  {
+   "index": 3,
+   "label": "Outfit",
+   "faces": [
+    "inter-400",
+    "inter-700"
+   ]
+  },
+  {
+   "index": 4,
+   "label": "Caption",
+   "faces": [
+    "barlow-semicondensed-600"
+   ]
+  }
+ ]
+}

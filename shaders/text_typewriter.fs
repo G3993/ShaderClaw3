@@ -3,13 +3,15 @@
     "Generator",
     "Text"
   ],
-  "DESCRIPTION": "Typewriter — characters appear one by one with blinking cursor",
+  "DESCRIPTION": "Typewriter — characters appear one by one with blinking cursor. SCFONT/1 MSDF atlas (glyphMSDFTex + glyphMetricsTex) with proportional advance widths; SCTEXT/1 glyph buffer (textBuf_msg): mixed case, punctuation, digits; Voice Sync reveals by per-word timing when the host provides it.",
   "INPUTS": [
     {
       "NAME": "msg",
       "TYPE": "text",
-      "DEFAULT": "ETHEREA",
+      "DEFAULT": "Etherea",
       "MAX_LENGTH": 48,
+      "CASE": "preserve",
+      "OVERFLOW": "tail",
       "LABEL": "Message",
       "GROUP": "Text"
     },
@@ -21,15 +23,26 @@
         0,
         1,
         2,
-        3
+        3,
+        4
       ],
       "LABELS": [
         "Inter",
         "Times New Roman",
         "Libre Caslon",
-        "Outfit"
+        "Outfit",
+        "Caption"
       ],
       "DEFAULT": 0,
+      "GROUP": "Text"
+    },
+    {
+      "NAME": "fontWeight",
+      "LABEL": "Weight",
+      "TYPE": "float",
+      "MIN": 100,
+      "MAX": 900,
+      "DEFAULT": 400,
       "GROUP": "Text"
     },
     {
@@ -159,77 +172,21 @@
   ]
 }*/
 
+// SCFONT/1 proof conversion (Phase D): glyphs come from the textBuf_msg glyph
+// buffer (scTextCode / scTextWord / scTextRevealMs) and are rendered from the
+// MSDF atlas glyphMSDFTex with per-glyph plane boxes and proportional advance
+// widths read from glyphMetricsTex — helpers injected by the host (sc_text v2,
+// analytic path only; no derivatives). No msg_i uniforms, no 37-cell
+// fontAtlasTex, no 96-cell grid sampling.
+
 float h11(float x) { return fract(sin(x * 127.1) * 43758.5453); }
-
-float sampleChar(int ch, vec2 uv) {
-    if (ch < 0 || ch > 36) return 0.0;
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-    return texture2D(fontAtlasTex, vec2((float(ch) + uv.x) / 37.0, uv.y)).r;
-}
-
-int getChar(int slot) {
-    if (slot == 0) return int(msg_0);
-    if (slot == 1) return int(msg_1);
-    if (slot == 2) return int(msg_2);
-    if (slot == 3) return int(msg_3);
-    if (slot == 4) return int(msg_4);
-    if (slot == 5) return int(msg_5);
-    if (slot == 6) return int(msg_6);
-    if (slot == 7) return int(msg_7);
-    if (slot == 8) return int(msg_8);
-    if (slot == 9) return int(msg_9);
-    if (slot == 10) return int(msg_10);
-    if (slot == 11) return int(msg_11);
-    if (slot == 12) return int(msg_12);
-    if (slot == 13) return int(msg_13);
-    if (slot == 14) return int(msg_14);
-    if (slot == 15) return int(msg_15);
-    if (slot == 16) return int(msg_16);
-    if (slot == 17) return int(msg_17);
-    if (slot == 18) return int(msg_18);
-    if (slot == 19) return int(msg_19);
-    if (slot == 20) return int(msg_20);
-    if (slot == 21) return int(msg_21);
-    if (slot == 22) return int(msg_22);
-    if (slot == 23) return int(msg_23);
-    if (slot == 24) return int(msg_24);
-    if (slot == 25) return int(msg_25);
-    if (slot == 26) return int(msg_26);
-    if (slot == 27) return int(msg_27);
-    if (slot == 28) return int(msg_28);
-    if (slot == 29) return int(msg_29);
-    if (slot == 30) return int(msg_30);
-    if (slot == 31) return int(msg_31);
-    if (slot == 32) return int(msg_32);
-    if (slot == 33) return int(msg_33);
-    if (slot == 34) return int(msg_34);
-    if (slot == 35) return int(msg_35);
-    if (slot == 36) return int(msg_36);
-    if (slot == 37) return int(msg_37);
-    if (slot == 38) return int(msg_38);
-    if (slot == 39) return int(msg_39);
-    if (slot == 40) return int(msg_40);
-    if (slot == 41) return int(msg_41);
-    if (slot == 42) return int(msg_42);
-    if (slot == 43) return int(msg_43);
-    if (slot == 44) return int(msg_44);
-    if (slot == 45) return int(msg_45);
-    if (slot == 46) return int(msg_46);
-    if (slot == 47) return int(msg_47);
-    return 26;
-}
-
-int charCount() {
-    int n = int(msg_len);
-    if (n <= 0) return 7;
-    if (n > 64) return 64;
-    return n;
-}
 
 void main() {
     vec2 uv = gl_FragCoord.xy / RENDERSIZE.xy;
     float aspect = RENDERSIZE.x / RENDERSIZE.y;
-    int numChars = charCount();
+    int numChars = int(msg_len);
+    if (numChars <= 0) numChars = 7;
+    if (numChars > 64) numChars = 64;
     float sc = textScale > 0.01 ? textScale : 1.0;
     float kr = kerning > 0.01 ? kerning : 1.0;
 
@@ -253,9 +210,21 @@ void main() {
     // Typewriter reveal
     int revealed;
     if (voiceSync) {
-        // Voice sync mode: show exactly as many chars as speech has produced
-        // msg_len is updated in real-time by the speech recognition system
-        revealed = numChars;
+        // Voice sync mode: reveal by per-glyph word timing (SCTEXT/1 revealMs)
+        // against the utterance clock msgAge. Glyphs with unknown timing are
+        // shown immediately (= "show everything the recognizer produced");
+        // msgAge < 0 (static text) shows all.
+        if (msgAge >= 0.0) {
+            float nowMs = max(msgAge, 0.0) * 1000.0;
+            revealed = 0;
+            for (int i = 0; i < 64; i++) {
+                if (i >= numChars) break;
+                float rm = scTextRevealMs(textBuf_msg, msg_cap, i);
+                if (rm < 0.0 || rm <= nowMs) revealed++;
+            }
+        } else {
+            revealed = numChars;
+        }
     } else {
         float typeTime = float(numChars) / speed;
         float t = TIME;
@@ -268,75 +237,89 @@ void main() {
     }
     int showCount = revealed;
 
-    // Auto-scale: shrink text to fit all revealed characters on screen
+    // Sum of the shown glyphs' proportional advances (em, SCFONT/1 metrics) —
+    // drives auto-fit and centering; replaces the old monospace cell count.
+    float gapEm = 0.05 * kr;
+    float sumAdvEm = 0.0;
+    for (int i = 0; i < 64; i++) {
+        if (i >= showCount) break;
+        if (i >= numChars) break;
+        int rcp0 = scGlyphResolve(glyphMetricsTex, scTextCode(textBuf_msg, msg_cap, i));
+        sumAdvEm += scGlyphAdvance(glyphMetricsTex, rcp0) + gapEm;
+    }
+
+    // Auto-scale: shrink the em size to fit all revealed glyphs on screen
     float baseH = 0.18 * sc;
     if (aspect < 1.0) baseH *= aspect;
-    float baseW = baseH * (5.0 / 7.0);
-    float baseGap = baseW * 0.25 * kr;
-    float baseStep = baseW + baseGap;
-    float neededW = max(float(showCount), 1.0) * baseStep;
+    float neededW = max(sumAdvEm, 0.001) * baseH;
     float fitScale = neededW > maxW ? maxW / neededW : 1.0;
 
     // Size breathing — the whole word swells with bass and mids. This is
     // the main audible→visible path: glyphs are the only big thing on
     // screen, so scale is where the response has to live. Silence → 1.0.
     float sizePulse = 1.0 + 0.14 * bassP + 0.07 * midP;
-    float charH = baseH * fitScale * sizePulse;
-    float charW = charH * (5.0 / 7.0);
-    float gap = charW * 0.25 * kr;
-    float cellStep = charW + gap;
+    float em = baseH * fitScale * sizePulse;   // screen-relative em size
+
+    // Analytic MSDF sharpness: glyph px on screen vs glyph px in the atlas
+    float screenPxRange = scMSDFScreenPxRange(glyphAtlasInfo, em * RENDERSIZE.y, glyphAtlasInfo.w);
 
     // Slow global bob — always-on autonomous drift; bass deepens its swing.
-    float globalBob = charH * (0.05 + 0.10 * bassP) * sin(TIME * 0.5);
-    float originY = 0.5 - charH * 0.5 + globalBob;
+    float globalBob = em * (0.05 + 0.10 * bassP) * sin(TIME * 0.5);
+    float baseY = 0.5 - em * 0.35 + globalBob;   // baseline
 
     // Center visible text — all characters always visible
-    float visibleW = float(showCount) * cellStep - gap;
-    if (showCount <= 0) visibleW = 0.0;
+    float visibleW = (showCount > 0) ? (sumAdvEm - gapEm) * em : 0.0;
     float originX = 0.5 - visibleW * 0.5;
 
-    // Render characters
+    // Render characters — pen advances by each glyph's advance width
     float textMask = 0.0;
     vec3 textCol = vec3(0.0);
-    float lastX = originX;
+    float pen = originX;
 
     for (int i = 0; i < 64; i++) {
         if (i >= showCount) break;
         if (i >= numChars) break;
 
-        int ch = getChar(i);
+        int cp = scTextCode(textBuf_msg, msg_cap, i);
+        int rcp = scGlyphResolve(glyphMetricsTex, cp);
+        float adv = scGlyphAdvance(glyphMetricsTex, rcp) * em;
+
         // Autonomous per-character drift — small, incommensurate frequencies
         // (golden-angle phase spacing) so characters never lock into a shared
         // period; lives even with the user oscillator off / in silence.
-        float idxPhase = float(i) * 2.399963;
-        float driftX = charW * (0.04 + 0.09 * highP) * sin(TIME * (0.23 + 0.07 * h11(float(i) + 3.7)) + idxPhase * 1.3);
-        float driftY = charH * (0.06 + 0.15 * midP) * sin(TIME * (0.35 + 0.11 * h11(float(i))) + idxPhase);
-        float cx = originX + float(i) * cellStep + driftX;
+        // Phase is per WORD (SCTEXT/1 word index) so letters of a word drift together.
+        float idxPhase = max(float(scTextWord(textBuf_msg, msg_cap, i)), 0.0) * 2.399963;
+        float driftX = em * (0.03 + 0.06 * highP) * sin(TIME * (0.23 + 0.07 * h11(float(i) + 3.7)) + idxPhase * 1.3);
+        float driftY = em * (0.06 + 0.15 * midP) * sin(TIME * (0.35 + 0.11 * h11(float(i))) + idxPhase);
         // Oscillator: per-character Y offset (user-controlled + autonomous drift)
         float oscY = driftY + oscAmount * sin(TIME * oscSpeed * 6.2832 + float(i) * oscSpread * 3.14159);
 
-        if (ch >= 0 && ch <= 36 && ch != 26) {
-            vec2 cellUV = vec2((p.x - cx) / charW, (p.y - (originY + oscY)) / charH);
-            if (cellUV.x >= 0.0 && cellUV.x <= 1.0 && cellUV.y >= 0.0 && cellUV.y <= 1.0) {
-                float s = sampleChar(ch, cellUV);
-                if (s > 0.05) {
+        if (cp > 32) {
+            // Glyph box = pen + plane bounds (em, y up from the baseline)
+            vec4 plane = scGlyphPlane(glyphMetricsTex, rcp);
+            vec2 boxMin = vec2(pen + driftX + plane.x * em, baseY + oscY + plane.y * em);
+            vec2 boxMax = vec2(pen + driftX + plane.z * em, baseY + oscY + plane.w * em);
+            if (boxMax.x > boxMin.x && boxMax.y > boxMin.y) {
+                vec2 localUV = (p - boxMin) / (boxMax - boxMin);
+                float cov = scGlyphMSDF(glyphMSDFTex, glyphMetricsTex, glyphAtlasInfo, rcp, localUV, screenPxRange);
+                if (cov > 0.0) {
                     textCol = textColor.rgb;
-                    textMask = max(textMask, smoothstep(0.1, 0.5, s));
+                    textMask = max(textMask, cov);
                 }
             }
         }
 
-        lastX = cx + cellStep;
+        pen += adv + gapEm * em;
     }
 
-    // Blinking cursor after last char — phase-wobbled so it never freezes
+    // Blinking cursor after the pen — phase-wobbled so it never freezes
     // into a perfectly periodic (visually static) blink, and gets a soft
     // width pulse on beat.
     float blinkPhase = fract(TIME * cursorBlink + 0.15 * sin(TIME * 0.37));
     float cursorOn = step(0.5, blinkPhase);
-    float cursorW = charW * 0.15 * (1.0 + 0.4 * beatKick);
-    if (p.x >= lastX && p.x <= lastX + cursorW &&
-        p.y >= originY && p.y <= originY + charH) {
+    float cursorW = em * 0.09 * (1.0 + 0.4 * beatKick);
+    if (p.x >= pen && p.x <= pen + cursorW &&
+        p.y >= baseY && p.y <= baseY + em * 0.72) {
         textCol = textColor.rgb;
         textMask = max(textMask, cursorOn);
     }

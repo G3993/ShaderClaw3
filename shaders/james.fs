@@ -58,7 +58,7 @@
       "LABEL": "Message",
       "TYPE": "text",
       "DEFAULT": "ETHEREA",
-      "MAX_LENGTH": 12,
+      "MAX_LENGTH": 48,
       "GROUP": "Text"
     },
     {
@@ -152,7 +152,7 @@ int normChar(int c) {
     return c;                                    // already an atlas index
 }
 
-// Get character at slot index (0-11) from text uniforms
+// Get character at slot index (0-47) from text uniforms
 int getChar(int slot) {
     int c;
     if (slot == 0)       c = int(msg_0);
@@ -166,7 +166,43 @@ int getChar(int slot) {
     else if (slot == 8)  c = int(msg_8);
     else if (slot == 9)  c = int(msg_9);
     else if (slot == 10) c = int(msg_10);
-    else                 c = int(msg_11);
+    else if (slot == 11) c = int(msg_11);
+    else if (slot == 12) c = int(msg_12);
+    else if (slot == 13) c = int(msg_13);
+    else if (slot == 14) c = int(msg_14);
+    else if (slot == 15) c = int(msg_15);
+    else if (slot == 16) c = int(msg_16);
+    else if (slot == 17) c = int(msg_17);
+    else if (slot == 18) c = int(msg_18);
+    else if (slot == 19) c = int(msg_19);
+    else if (slot == 20) c = int(msg_20);
+    else if (slot == 21) c = int(msg_21);
+    else if (slot == 22) c = int(msg_22);
+    else if (slot == 23) c = int(msg_23);
+    else if (slot == 24) c = int(msg_24);
+    else if (slot == 25) c = int(msg_25);
+    else if (slot == 26) c = int(msg_26);
+    else if (slot == 27) c = int(msg_27);
+    else if (slot == 28) c = int(msg_28);
+    else if (slot == 29) c = int(msg_29);
+    else if (slot == 30) c = int(msg_30);
+    else if (slot == 31) c = int(msg_31);
+    else if (slot == 32) c = int(msg_32);
+    else if (slot == 33) c = int(msg_33);
+    else if (slot == 34) c = int(msg_34);
+    else if (slot == 35) c = int(msg_35);
+    else if (slot == 36) c = int(msg_36);
+    else if (slot == 37) c = int(msg_37);
+    else if (slot == 38) c = int(msg_38);
+    else if (slot == 39) c = int(msg_39);
+    else if (slot == 40) c = int(msg_40);
+    else if (slot == 41) c = int(msg_41);
+    else if (slot == 42) c = int(msg_42);
+    else if (slot == 43) c = int(msg_43);
+    else if (slot == 44) c = int(msg_44);
+    else if (slot == 45) c = int(msg_45);
+    else if (slot == 46) c = int(msg_46);
+    else                 c = int(msg_47);
     return normChar(c);
 }
 
@@ -257,6 +293,16 @@ void main() {
     float gap = charW * 0.25;
     float totalW = float(numChars) * charW + float(numChars - 1) * gap;
 
+    // Auto-fit: long messages shrink to stay inside the aspect-corrected frame
+    float maxW = aspect * 0.92;
+    if (totalW > maxW) {
+        float fit = maxW / totalW;
+        charW *= fit;
+        charH *= fit;
+        gap *= fit;
+        totalW = maxW;
+    }
+
     float startX = 0.5 - totalW * 0.5;
     float baseY = 0.5 - charH * 0.5;
 
@@ -266,7 +312,7 @@ void main() {
     vec3 textCol = vec3(0.0);
     float glowAccum = 0.0;
 
-    for (int i = 0; i < 12; i++) {
+    for (int i = 0; i < 48; i++) {
         if (i >= numChars) break;
 
         int ch = getChar(i);

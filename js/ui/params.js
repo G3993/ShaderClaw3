@@ -361,21 +361,11 @@ function generateControls(inputs, container, onChange) {
       row.appendChild(select);
 
     } else if (inp.TYPE === 'text') {
-      const maxLen = inp.MAX_LENGTH || 12;
-      const def = (inp.DEFAULT || '').toUpperCase();
+      const maxLen = inp._cap || inp.MAX_LENGTH || 12;
+      const def = inp.DEFAULT || '';
 
-      function charToCode(ch) {
-        if (!ch || ch === ' ') return 26;
-        const code = ch.toUpperCase().charCodeAt(0);
-        if (code >= 65 && code <= 90) return code - 65;
-        if (code >= 48 && code <= 57) return code - 48 + 27;
-        return 26;
-      }
-
-      for (let i = 0; i < maxLen; i++) {
-        values[inp.NAME + '_' + i] = charToCode(def[i]);
-      }
-      values[inp.NAME + '_len'] = def.replace(/\s+$/, '').length;
+      // SCTEXT/1 (js/text-buffer.js): glyph buffer + legacy shim codes; case preserved
+      SCTextBuffer.applyToInputValues(values, inp, def);
 
       const textInput = document.createElement('input');
       textInput.type = 'text';
@@ -384,11 +374,7 @@ function generateControls(inputs, container, onChange) {
       textInput.spellcheck = false;
 
       textInput.addEventListener('input', () => {
-        const str = textInput.value.toUpperCase();
-        for (let i = 0; i < maxLen; i++) {
-          values[inp.NAME + '_' + i] = charToCode(str[i]);
-        }
-        values[inp.NAME + '_len'] = str.replace(/\s+$/, '').length;
+        SCTextBuffer.applyToInputValues(values, inp, textInput.value);
         onChange(values);
       });
 

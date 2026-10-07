@@ -624,12 +624,11 @@
         if (layerId === 'text') {
           const msgInp = layer.inputs.find(inp => inp.TYPE === 'text' && inp.NAME === 'msg');
           if (msgInp) {
-            const maxLen = msgInp.MAX_LENGTH || 12;
+            const maxLen = msgInp._cap || msgInp.MAX_LENGTH || 12;
             const bar = document.getElementById('text-msg-input');
-            const def = (bar ? bar.value.trim() : (msgInp.DEFAULT || '').trim()).toUpperCase();
-            function _c2c(ch) { if (!ch || ch === ' ') return 26; const code = ch.toUpperCase().charCodeAt(0); if (code >= 65 && code <= 90) return code - 65; if (code >= 48 && code <= 57) return code - 48 + 27; return 26; }
-            for (let i = 0; i < maxLen; i++) layer.inputValues['msg_' + i] = _c2c(def[i]);
-            layer.inputValues['msg_len'] = def.replace(/\s+$/, '').length;
+            const def = (bar ? bar.value : (msgInp.DEFAULT || '')).trim();
+            // SCTEXT/1: glyph buffer + legacy shim codes (case/overflow per the input's CASE/OVERFLOW)
+            SCTextBuffer.applyToInputValues(layer.inputValues, msgInp, def);
             // Update bar maxLength to match shader
             if (bar) bar.maxLength = maxLen;
           }
@@ -5041,19 +5040,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     const textInputs = (textLayer.inputs || []).filter(inp => inp.TYPE === 'text');
     if (textInputs.length === 0) return;
     const inp = textInputs[0];
-    const maxLen = inp.MAX_LENGTH || 12;
-    const str = textMsgInput.value.toUpperCase();
-    function charToCode(ch) {
-      if (!ch || ch === ' ') return 26;
-      const code = ch.toUpperCase().charCodeAt(0);
-      if (code >= 65 && code <= 90) return code - 65;
-      if (code >= 48 && code <= 57) return code - 48 + 27;
-      return 26;
-    }
-    for (let i = 0; i < maxLen; i++) {
-      textLayer.inputValues[inp.NAME + '_' + i] = charToCode(str[i]);
-    }
-    textLayer.inputValues[inp.NAME + '_len'] = str.replace(/\s+$/, '').length;
+    const str = textMsgInput.value;
+    // SCTEXT/1: case is preserved (the shim folds to the legacy A-Z alphabet itself)
+    SCTextBuffer.applyToInputValues(textLayer.inputValues, inp, str);
     // Sync the params panel text field too
     const paramsField = document.querySelector('.layer-params[data-layer="text"] input[type="text"]');
     if (paramsField) paramsField.value = str;
@@ -6282,21 +6271,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     const textInputs = (textLayer.inputs || []).filter(inp => inp.TYPE === 'text');
     if (textInputs.length === 0) return;
 
-    function charToCode(ch) {
-      if (!ch || ch === ' ') return 26;
-      const code = ch.toUpperCase().charCodeAt(0);
-      if (code >= 65 && code <= 90) return code - 65;
-      if (code >= 48 && code <= 57) return code - 48 + 27;
-      return 26;
-    }
-
     for (const inp of textInputs) {
-      const maxLen = inp.MAX_LENGTH || 12;
-      const str = text.toUpperCase().slice(-maxLen);
-      for (let i = 0; i < maxLen; i++) {
-        textLayer.inputValues[inp.NAME + '_' + i] = charToCode(str[i]);
-      }
-      textLayer.inputValues[inp.NAME + '_len'] = str.replace(/\s+$/, '').length;
+      // SCTEXT/1: OVERFLOW (default tail) + CASE handled by the encoder
+      const run = SCTextBuffer.applyToInputValues(textLayer.inputValues, inp, text);
+      const str = run ? run.shown : text;
 
       // Update the text input field in the UI
       const container = document.querySelector('.layer-params[data-layer="text"]');

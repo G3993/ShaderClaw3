@@ -54,12 +54,16 @@ function _getFontStack(inputValues) {
 
 // Invalidate font texture cache when Google Fonts finish loading
 if (typeof document !== 'undefined' && document.fonts) {
-  document.fonts.ready.then(() => { _vfLastMsg = ''; _fontAtlasLastKey = ''; });
+  document.fonts.ready.then(() => { _vfLastMsg = ''; _fontAtlasLastKey = ''; _glyphAtlasLastKey = ''; _msdfFallbackKey = ''; });
 }
 
-function updateVarFontTexture(gl, inputValues) {
-  // Build msg from character uniforms
-  const maxLen = 24;
+// Message text for the varFont / breathing canvases: prefer the SCTEXT/1
+// record (mixed case, any character — works for shaders without the shim
+// uniforms), else rebuild from the legacy msg_i codes.
+function _msgTextFromInputs(inputValues, maxLen) {
+  const run = inputValues['__textrun_msg'];
+  if (run && typeof run.shown === 'string') return run.shown.slice(0, maxLen);
+  if (run && typeof run.text === 'string') return run.text.slice(0, maxLen);
   let msg = '';
   const msgLen = inputValues['msg_len'];
   const len = (msgLen != null && msgLen > 0) ? Math.min(msgLen, maxLen) : 0;
@@ -69,6 +73,13 @@ function updateVarFontTexture(gl, inputValues) {
     else if (code >= 0 && code <= 25) msg += String.fromCharCode(65 + code);
     else msg += ' ';
   }
+  return msg;
+}
+
+function updateVarFontTexture(gl, inputValues) {
+  // Build msg from the text run / character uniforms
+  const maxLen = 24;
+  let msg = _msgTextFromInputs(inputValues, maxLen);
   msg = msg.trim() || 'ETHEREA';
 
   // Sync weight from ISF param if available
@@ -123,15 +134,7 @@ let _breatheStartTime = performance.now();
 
 function updateBreathingTexture(gl, inputValues) {
   const maxLen = 24;
-  let msg = '';
-  const msgLen = inputValues['msg_len'];
-  const len = (msgLen != null && msgLen > 0) ? Math.min(msgLen, maxLen) : 0;
-  for (let i = 0; i < len; i++) {
-    const code = inputValues['msg_' + i];
-    if (code == null || code === 26) msg += ' ';
-    else if (code >= 0 && code <= 25) msg += String.fromCharCode(65 + code);
-    else msg += ' ';
-  }
+  let msg = _msgTextFromInputs(inputValues, maxLen);
   msg = msg.trim() || 'ETHEREA';
 
   const fontStack = _getFontStack(inputValues);
@@ -264,6 +267,242 @@ function updateFontAtlas(gl, inputValues) {
     gl.bindTexture(gl.TEXTURE_2D, _fontAtlasGLTexture);
   }
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c);
+}
+
+// SCTEXT/1 glyph atlas for converted text shaders (`glyphAtlasTex`):
+// 16 cols x 6 rows = 96 cells, cp 32..126 -> cell cp-32, cell 95 = '?'
+// (replacement glyph). 192x270 cells -> 3072x1620 canvas (under the 4096
+// mobile limit). Same font/weight cache key + fonts.ready invalidation and
+// the same canvas pre-flip (no UNPACK_FLIP_Y) as updateFontAtlas, so
+// row 0 (cp 32..47) is the TOP band in texture space and glyph-local
+// uv.y = 1 is the glyph top — see sc_text v1 scGlyphUV() in js/isf.js.
+let _glyphAtlasCanvas = null;
+let _glyphAtlasCtx = null;
+let _glyphAtlasGLTexture = null;
+let _glyphAtlasLastKey = '';
+
+function updateGlyphAtlas(gl, inputValues) {
+  const fontFamilyIdx = Math.round(inputValues['fontFamily'] || 0);
+  const fontStack = _fontFamilies[fontFamilyIdx] || _fontFamilies[0];
+  const weight = Math.round(inputValues['fontWeight'] || 400);
+  const key = fontStack + '|' + weight + '|glyph96';
+  if (key === _glyphAtlasLastKey && _glyphAtlasGLTexture) return;
+  _glyphAtlasLastKey = key;
+
+  const COLS = 16, ROWS = 6, CELLS = 96;
+  const cellW = 192, cellH = 270;
+  const totalW = COLS * cellW, totalH = ROWS * cellH; // 3072 x 1620
+
+  if (!_glyphAtlasCanvas || _glyphAtlasCanvas.width !== totalW || _glyphAtlasCanvas.height !== totalH) {
+    _glyphAtlasCanvas = document.createElement('canvas');
+    _glyphAtlasCanvas.width = totalW;
+    _glyphAtlasCanvas.height = totalH;
+    _glyphAtlasCtx = _glyphAtlasCanvas.getContext('2d');
+  }
+
+  const c = _glyphAtlasCanvas;
+  const ctx = _glyphAtlasCtx;
+  ctx.clearRect(0, 0, c.width, c.height);
+  ctx.save();
+  // Flip vertically for GL coord system (same convention as updateFontAtlas)
+  ctx.translate(0, c.height);
+  ctx.scale(1, -1);
+
+  // Glyph centred horizontally, baseline 0.25 cell from the cell bottom,
+  // font size 0.72 cellH so ascenders/descenders fit inside the cell.
+  const fontSize = Math.round(cellH * 0.72);
+  ctx.font = weight + ' ' + fontSize + 'px ' + fontStack;
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+
+  for (let idx = 0; idx < CELLS; idx++) {
+    const ch = idx < 95 ? String.fromCharCode(32 + idx) : '?';
+    if (idx === 0) continue; // space
+    const col = idx % COLS;
+    const row = Math.floor(idx / COLS);
+    // In the flipped ctx, smaller y = higher in texture space: row 0 at y in [0, cellH]
+    ctx.fillText(ch, (col + 0.5) * cellW, row * cellH + cellH * 0.75);
+  }
+
+  ctx.restore();
+
+  if (!_glyphAtlasGLTexture) {
+    _glyphAtlasGLTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, _glyphAtlasGLTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  } else {
+    gl.bindTexture(gl.TEXTURE_2D, _glyphAtlasGLTexture);
+  }
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c);
+}
+
+// ============================================================
+// SCFONT/1 MSDF faces (Phase D) — assets/fonts/<id>.{json,msdf.png,metrics.png}
+// generated by tools/fonts/gen_msdf_atlas.mjs; contract in
+// .claude/caption-pipeline/phase-D-design.md. Bound by renderer.js
+// _bindMSDFGlyphs when a shader references glyphMSDFTex/glyphMetricsTex.
+// When the assets are missing, getMSDFFallbackFace synthesizes an SCFONT/1
+// face from updateGlyphAtlas's 16x6 coverage grid (§1.7).
+// ============================================================
+let _msdfIndex = null;          // parsed assets/fonts/fonts.json
+let _msdfIndexState = 'idle';   // idle | loading | ready | failed
+const _msdfFaces = {};          // face id -> record (see ensureMSDFFace)
+let _msdfFallback = null;       // synthesized SCFONT/1 face from the 16x6 grid
+let _msdfFallbackKey = '';
+let _msdfLoggedFallback = false;
+
+function _msdfEnsureIndex() {
+  if (_msdfIndexState !== 'idle') return;
+  _msdfIndexState = 'loading';
+  fetch('assets/fonts/fonts.json')
+    .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then((j) => { _msdfIndex = j; _msdfIndexState = 'ready'; console.log('SCFONT/1 fonts.json loaded (' + ((j.faces || []).length) + ' faces)'); })
+    .catch((e) => {
+      _msdfIndexState = 'failed';
+      if (!_msdfLoggedFallback) {
+        _msdfLoggedFallback = true;
+        console.warn('SCFONT/1 assets not found at assets/fonts/fonts.json; using synthesized grid face (' + (e && e.message) + ')');
+      }
+    });
+}
+
+// fontFamily/fontWeight -> face id (null until fonts.json has loaded).
+function resolveMSDFFace(inputValues) {
+  _msdfEnsureIndex();
+  if (_msdfIndexState !== 'ready' || !_msdfIndex || typeof SCMSDFMetrics === 'undefined') return null;
+  const weightById = {};
+  for (const id in _msdfFaces) {
+    const f = _msdfFaces[id];
+    if (f && f.weight != null) weightById[id] = f.weight;
+  }
+  const iv = inputValues || {};
+  return SCMSDFMetrics.resolveFace(iv['fontFamily'] || 0,
+    iv['fontWeight'] != null ? iv['fontWeight'] : 400, _msdfIndex, weightById);
+}
+
+// Kick off (or return) the async load of one face. The record's `ready` flag
+// flips once <id>.json + both PNGs are fetched and uploaded; callers use the
+// fallback face until then.
+function ensureMSDFFace(gl, id) {
+  if (!id) return null;
+  let f = _msdfFaces[id];
+  if (f) {
+    if (f.ready && f._glCtx !== gl) _msdfUploadFace(gl, f); // GL context changed
+    return f;
+  }
+  f = _msdfFaces[id] = {
+    id, weight: null, json: null, atlasImg: null, metricsImg: null,
+    atlasTex: null, metricsTex: null, atlasInfo: null, faceInfo: null,
+    ready: false, failed: false, _glCtx: null,
+  };
+  fetch('assets/fonts/' + id + '.json')
+    .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then((json) => new Promise((resolve, reject) => {
+      f.json = json;
+      f.weight = (json.sctext && json.sctext.weight != null) ? json.sctext.weight : null;
+      const m = json.metrics || {};
+      f.atlasInfo = [json.atlas.width, json.atlas.height, json.atlas.distanceRange, json.atlas.size];
+      f.faceInfo = [
+        m.ascender != null ? m.ascender : 0.93,
+        m.descender != null ? m.descender : -0.24,
+        m.lineHeight != null ? m.lineHeight : 1.2,
+        m.underlineY != null ? m.underlineY : -0.1,
+      ];
+      let left = 2;
+      const done = () => { if (--left === 0) resolve(); };
+      const img = (src) => { const i = new Image(); i.onload = done; i.onerror = () => reject(new Error('image ' + src)); i.src = src; return i; };
+      f.atlasImg = img('assets/fonts/' + ((json.sctext && json.sctext.atlas) || (id + '.msdf.png')));
+      f.metricsImg = img('assets/fonts/' + ((json.sctext && json.sctext.metricsTexture) || (id + '.metrics.png')));
+    }))
+    .then(() => { _msdfUploadFace(gl, f); })
+    .catch((e) => {
+      f.failed = true;
+      if (!_msdfLoggedFallback) {
+        _msdfLoggedFallback = true;
+        console.warn('SCFONT/1 face "' + id + '" failed to load; using synthesized grid face (' + (e && e.message) + ')');
+      }
+    });
+  return f;
+}
+
+function _msdfUploadFace(gl, f) {
+  const tex = (img, filter) => {
+    const t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true); // upright upload: PNG bottom row at v = 0
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return t;
+  };
+  f.atlasTex = tex(f.atlasImg, gl.LINEAR);      // MSDF atlas: LINEAR, no mips
+  f.metricsTex = tex(f.metricsImg, gl.NEAREST); // metrics: exact texels
+  f._glCtx = gl;
+  f.ready = true;
+}
+
+// Synthesized SCFONT/1 face from the 16x6 coverage grid (design §1.7): the
+// MSDF median of a white coverage glyph IS the coverage, so the grid texture
+// doubles as glyphMSDFTex with pxrange 2. Metrics texels cover cp 32..126 +
+// U+FFFD (cell 95); advances measured with Canvas2D, plane box = the cell
+// geometry (em = 0.72*cellH, baseline 0.75*cellH from the cell top).
+function getMSDFFallbackFace(gl, inputValues) {
+  updateGlyphAtlas(gl, inputValues || {});
+  if (!_glyphAtlasGLTexture || !_glyphAtlasCtx || typeof SCMSDFMetrics === 'undefined') return null;
+  const key = _glyphAtlasLastKey + '|' + '2048x256';
+  if (_msdfFallback && _msdfFallbackKey === key && _msdfFallback._glCtx === gl) {
+    _msdfFallback.atlasTex = _glyphAtlasGLTexture; // grid texture may have been re-created
+    return _msdfFallback;
+  }
+  const COLS = 16, cellW = 192, cellH = 270;
+  const fontSize = Math.round(cellH * 0.72);
+  const iv = inputValues || {};
+  const fontStack = _fontFamilies[Math.round(iv['fontFamily'] || 0)] || _fontFamilies[0];
+  const weight = Math.round(iv['fontWeight'] || 400);
+  const ctx = _glyphAtlasCtx;
+  ctx.save();
+  ctx.font = weight + ' ' + fontSize + 'px ' + fontStack;
+  const glyphs = [];
+  for (let n = 0; n <= 95; n++) {
+    const cp = n < 95 ? 32 + n : 0xFFFD;
+    const idx = n < 95 ? n : 95;
+    const ch = n < 95 ? String.fromCharCode(cp) : '?';
+    const col = idx % COLS, row = Math.floor(idx / COLS);
+    let adv = 0.6;
+    try { const w = ctx.measureText(ch).width; if (w > 0) adv = w / fontSize; } catch (e) {}
+    const left = col * cellW, bottom = (5 - row) * cellH; // upright px, y up
+    glyphs.push({
+      unicode: cp, advance: adv,
+      planeBounds: { left: 0.0, bottom: -0.347, right: 0.987, top: 1.042 },
+      atlasBounds: { left, bottom, right: left + cellW, top: bottom + cellH },
+    });
+  }
+  ctx.restore();
+  // Upload rows bottom-up with FLIP_Y=false so page p lands at GL row p.
+  const bytes = SCMSDFMetrics.encodeGlyphTexels(glyphs, { rowOrder: 'bottom-up' });
+  const reuse = _msdfFallback && _msdfFallback._glCtx === gl ? _msdfFallback.metricsTex : null;
+  const mtex = reuse || gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, mtex);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, SCMSDFMetrics.TEX_W, SCMSDFMetrics.TEX_H, 0, gl.RGBA, gl.UNSIGNED_BYTE, bytes);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  _msdfFallback = {
+    id: '(grid-fallback)', atlasTex: _glyphAtlasGLTexture, metricsTex: mtex,
+    atlasInfo: [3072, 1620, 2.0, 0.72 * 270], faceInfo: [0.93, -0.24, 1.2, -0.1],
+    ready: true, _glCtx: gl,
+  };
+  _msdfFallbackKey = key;
+  return _msdfFallback;
 }
 
 // Audio-reactive per-frame update (global scope — called from Renderer.render)

@@ -506,6 +506,11 @@ class Renderer {
         texUnit++;
       }
     }
+    // SCTEXT/1: 96-cell glyph atlas + textBuf_<n> glyph buffers (converted text shaders)
+    texUnit = this._bindGlyphAtlas((n) => this._getLoc(n), this.inputValues, texUnit);
+    // SCFONT/1 MSDF face (Phase D)
+    texUnit = this._bindMSDFGlyphs((n) => this._getLoc(n), this.inputValues, texUnit);
+    texUnit = this._uploadTextBuffers(null, this.inputValues, (n) => this._getLoc(n), texUnit);
 
     // Global mask texture
     const _maskModeLoc = this._getLoc('_maskMode');
@@ -853,36 +858,38 @@ class Renderer {
       }
     }
 
-    // Direct msg uniform override for text layer — reads prominent bar value
-    // and sets msg_0..msg_N every frame, bypassing inputValues
+    // Direct msg override for text layer — reads prominent bar value, encodes
+    // it (SCTEXT/1 glyph buffer + legacy shim) into layer.inputValues when it
+    // changes, and uploads msg_len / shim msg_i every frame.
     if (layer.id === 'text') {
       if (!layer._msgBar) layer._msgBar = document.getElementById('text-msg-input');
       if (layer._msgBar) {
-        if (!layer._msgInpCached) layer._msgInpCached = (layer.inputs || []).find(inp => inp.TYPE === 'text' && inp.NAME === 'msg');
+        // (re-resolve when the layer's inputs were replaced by a shader switch — _shim/_cap live on the input)
+        if (!layer._msgInpCached || !(layer.inputs || []).includes(layer._msgInpCached)) {
+          layer._msgInpCached = (layer.inputs || []).find(inp => inp.TYPE === 'text' && inp.NAME === 'msg');
+        }
         const msgInp = layer._msgInpCached;
-        const maxLen = msgInp ? (msgInp.MAX_LENGTH || 24) : 24;
+        const maxLen = msgInp ? (msgInp._cap || msgInp.MAX_LENGTH || 24) : 24;
         const raw = layer._msgBar.value;
-        if (raw !== layer._msgCached || maxLen !== layer._msgMaxLen) {
+        if (msgInp && (raw !== layer._msgCached || maxLen !== layer._msgMaxLen || !(layer.inputValues && layer.inputValues['__textrun_msg']))) {
           layer._msgCached = raw;
           layer._msgMaxLen = maxLen;
-          const str = raw.trim().toUpperCase();
-          layer._msgCodes = new Float32Array(maxLen);
-          for (let j = 0; j < maxLen; j++) {
-            const ch = str[j];
-            if (!ch) { layer._msgCodes[j] = 26; continue; }
-            const code = ch.charCodeAt(0);
-            if (code >= 65 && code <= 90) layer._msgCodes[j] = code - 65;       // A-Z → 0-25
-            else if (code >= 48 && code <= 57) layer._msgCodes[j] = code - 48 + 27; // 0-9 → 27-36
-            else layer._msgCodes[j] = 26; // space/other
-          }
+          if (!layer.inputValues) layer.inputValues = {};
+          if (typeof SCTextBuffer !== 'undefined') SCTextBuffer.applyToInputValues(layer.inputValues, msgInp, raw.trim());
         }
-        if (layer._msgCodes) {
-          for (let j = 0; j < layer._msgCodes.length; j++) {
-            const loc = this._getLayerLoc(layer, 'msg_' + j);
-            if (loc) gl.uniform1f(loc, layer._msgCodes[j]);
-          }
+        const iv = layer.inputValues;
+        if (msgInp && iv && iv['__textrun_msg']) {
           const lenLoc = this._getLayerLoc(layer, 'msg_len');
-          if (lenLoc) gl.uniform1f(lenLoc, raw.trim().replace(/\s+$/, '').length);
+          if (lenLoc) gl.uniform1f(lenLoc, iv['msg_len'] || 0);
+          if (msgInp._shim !== false) {
+            const shimCap = msgInp._shimCap != null ? msgInp._shimCap : Math.min(maxLen, 64);
+            for (let j = 0; j < shimCap; j++) {
+              const v = iv['msg_' + j];
+              if (v == null) break;
+              const loc = this._getLayerLoc(layer, 'msg_' + j);
+              if (loc) gl.uniform1f(loc, v);
+            }
+          }
         }
       }
     }
@@ -998,6 +1005,104 @@ class Renderer {
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
   }
 
+  // SCTEXT/1: bind the 16x6 glyph atlas (media.js updateGlyphAtlas) when the
+  // program declares `glyphAtlasTex`. Returns next texUnit.
+  _bindGlyphAtlas(locFn, inputValues, texUnit) {
+    const gaLoc = locFn('glyphAtlasTex');
+    if (!gaLoc) return texUnit;
+    const gl = this.gl;
+    updateGlyphAtlas(gl, inputValues || {});
+    if (_glyphAtlasGLTexture) {
+      gl.activeTexture(gl.TEXTURE0 + texUnit);
+      gl.bindTexture(gl.TEXTURE_2D, _glyphAtlasGLTexture);
+      gl.uniform1i(gaLoc, texUnit);
+      texUnit++;
+    }
+    return texUnit;
+  }
+
+  // SCFONT/1 (Phase D): bind the MSDF atlas + per-codepoint metrics texture
+  // when the program declares glyphMSDFTex/glyphMetricsTex. Uses the real
+  // checked-in face (assets/fonts) once loaded, else the synthesized grid
+  // face (media.js getMSDFFallbackFace). Returns next texUnit.
+  _bindMSDFGlyphs(locFn, inputValues, texUnit) {
+    const atlasLoc = locFn('glyphMSDFTex');
+    const mtxLoc = locFn('glyphMetricsTex');
+    if (!atlasLoc && !mtxLoc) return texUnit;
+    const gl = this.gl;
+    let face = null;
+    const id = resolveMSDFFace(inputValues || {});
+    if (id) face = ensureMSDFFace(gl, id);
+    if (!face || !face.ready) face = getMSDFFallbackFace(gl, inputValues || {});
+    if (!face) return texUnit;
+    if (atlasLoc && face.atlasTex) {
+      gl.activeTexture(gl.TEXTURE0 + texUnit);
+      gl.bindTexture(gl.TEXTURE_2D, face.atlasTex);
+      gl.uniform1i(atlasLoc, texUnit);
+      texUnit++;
+    }
+    if (mtxLoc && face.metricsTex) {
+      gl.activeTexture(gl.TEXTURE0 + texUnit);
+      gl.bindTexture(gl.TEXTURE_2D, face.metricsTex);
+      gl.uniform1i(mtxLoc, texUnit);
+      texUnit++;
+    }
+    const aiLoc = locFn('glyphAtlasInfo');
+    if (aiLoc && face.atlasInfo) gl.uniform4fv(aiLoc, face.atlasInfo);
+    const fiLoc = locFn('glyphFaceInfo');
+    if (fiLoc && face.faceInfo) gl.uniform4fv(fiLoc, face.faceInfo);
+    return texUnit;
+  }
+
+  // SCTEXT/1: upload + bind `textBuf_<n>` glyph buffers (2*cap x 1 RGBA8,
+  // NEAREST/CLAMP) for every text input whose `__textrun_<n>` record exists
+  // in inputValues (written by SCTextBuffer.applyToInputValues) and whose
+  // sampler the program declares; also sets `<n>_cap`. The GL texture is
+  // cached on the record and re-uploaded only when `dirty`. `inputs` may be
+  // null (single path) — then records are discovered from inputValues keys.
+  // Returns next texUnit.
+  _uploadTextBuffers(inputs, inputValues, locFn, texUnit) {
+    if (!inputValues) return texUnit;
+    const gl = this.gl;
+    let names;
+    if (inputs) {
+      names = [];
+      for (let i = 0; i < inputs.length; i++) if (inputs[i].TYPE === 'text' && inputs[i].NAME) names.push(inputs[i].NAME);
+    } else {
+      names = Object.keys(inputValues).filter((k) => k.startsWith('__textrun_')).map((k) => k.slice(10));
+    }
+    for (let i = 0; i < names.length; i++) {
+      const n = names[i];
+      const run = inputValues['__textrun_' + n];
+      if (!run || !run.bytes || !run.cap) continue;
+      const loc = locFn('textBuf_' + n);
+      if (!loc) continue;
+      gl.activeTexture(gl.TEXTURE0 + texUnit);
+      if (!run._glTexture || run._glCtx !== gl) {
+        run._glTexture = gl.createTexture();
+        run._glCtx = gl;
+        run.dirty = true;
+        gl.bindTexture(gl.TEXTURE_2D, run._glTexture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      } else {
+        gl.bindTexture(gl.TEXTURE_2D, run._glTexture);
+      }
+      if (run.dirty) {
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 2 * run.cap, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, run.bytes);
+        run.dirty = false;
+      }
+      gl.uniform1i(loc, texUnit);
+      texUnit++;
+      const capLoc = locFn(n + '_cap');
+      if (capLoc) gl.uniform1f(capLoc, run.cap);
+    }
+    return texUnit;
+  }
+
   // Shared helper: bind audio, font, mediapipe textures/uniforms. Returns next texUnit.
   _bindLayerExtras(layer, mediaPipeMgr, texUnit) {
     const gl = this.gl;
@@ -1051,6 +1156,11 @@ class Renderer {
         texUnit++;
       }
     }
+    // SCTEXT/1: 96-cell glyph atlas + textBuf_<n> glyph buffers (converted text shaders)
+    texUnit = this._bindGlyphAtlas((n) => this._getLayerLoc(layer, n), layer.inputValues || {}, texUnit);
+    // SCFONT/1 MSDF face (Phase D)
+    texUnit = this._bindMSDFGlyphs((n) => this._getLayerLoc(layer, n), layer.inputValues || {}, texUnit);
+    texUnit = this._uploadTextBuffers(layer.inputs, layer.inputValues, (n) => this._getLayerLoc(layer, n), texUnit);
 
     // MediaPipe uniforms
     if (mediaPipeMgr && mediaPipeMgr.active) {
