@@ -44,6 +44,15 @@
       "GROUP": "Shape / Geometry"
     },
     {
+      "NAME": "zigzagBuild",
+      "LABEL": "Zigzag Build (s)",
+      "TYPE": "float",
+      "MIN": 0,
+      "MAX": 120,
+      "DEFAULT": 45,
+      "GROUP": "Shape / Geometry"
+    },
+    {
       "NAME": "textureAmt",
       "LABEL": "Surface Texture",
       "TYPE": "float",
@@ -170,6 +179,7 @@ float gBassP;   // structural weight
 float gMidP;    // detail breath
 float gHighP;   // sparkle / hue
 float gMclk;    // motion clock: drift time + music-accumulated time
+float gBuild;   // 0 = straight slats (bands run level) .. 1 = full zigzag; grows with time + music
 
 // Flat ink of one chevron region, both interleaved series resolved by parity
 vec3 regionInk(float cell, float colId, float parity, float rows, float amp) {
@@ -192,8 +202,11 @@ vec3 regionInk(float cell, float colId, float parity, float rows, float amp) {
 // the per-slat mid-band breathing.
 vec3 stripColor(float strip, float uvy) {
     float n  = max(floor(stripeCount), 8.0);
-    float zf = max(zigzagFreq, 1.0);
-    float amp = zigzagAmp * (1.0
+    // The sheet starts as level bands on straight slats and folds into
+    // chevrons as gBuild rises: amplitude from nothing, diamonds from wide
+    // to the set count.
+    float zf = max(zigzagFreq, 1.0) * mix(0.55, 1.0, gBuild);
+    float amp = zigzagAmp * gBuild * (1.0
                 + 0.06 * sin(gMclk * 0.31)         // slow breathing
                 + 0.22 * gA * gBassP);             // bass swells the diamonds
     float ph  = gMclk * 0.045;                     // sideways drift on the music clock
@@ -313,6 +326,18 @@ void main() {
     // itself speeds and slows with the track (no discontinuities — audioTime
     // integrates host-side)
     gMclk  = TIME * moveSpeed + audioTime * 0.45 * gA * moveSpeed;
+    // Straight → zigzag: fold in over zigzagBuild seconds, hold for half
+    // that, unfold over the same, rest, repeat. 0 = always fully folded.
+    if (zigzagBuild < 0.5) gBuild = 1.0;
+    else {
+        float bt  = zigzagBuild;
+        float cyc = bt * 3.0;                              // fold, hold, unfold, rest
+        float t   = mod(TIME, cyc);                        // structural: plain time, music does not push it
+        float up  = smoothstep(0.0, bt, t);
+        float dn  = 1.0 - smoothstep(bt * 1.5, bt * 2.5, t);
+        gBuild = min(up, dn);
+        gBuild = gBuild * gBuild * (3.0 - 2.0 * gBuild);  // ease both ends
+    }
 
     if (PASSINDEX == 0) gl_FragColor = passField();
     else                gl_FragColor = passPresent();

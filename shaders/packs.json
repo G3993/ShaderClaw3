@@ -23,6 +23,9 @@
     "group": "text",
     "surfaces": []
   },
+  "atoms": {
+    "group": "cidkid"
+  },
   "audio_particles_3d": {
     "group": "music",
     "surfaces": [
@@ -68,6 +71,9 @@
       "outside"
     ]
   },
+  "bismuth": {
+    "group": "cidkid"
+  },
   "blob": {
     "group": "fluid",
     "surfaces": [
@@ -85,6 +91,9 @@
   "bricks_text": {
     "group": "text",
     "surfaces": []
+  },
+  "bubbles": {
+    "group": "cidkid"
   },
   "candywarp": {
     "group": "fluid",
@@ -228,6 +237,9 @@
   "dispersion": {
     "group": "text",
     "surfaces": []
+  },
+  "dna": {
+    "group": "cidkid"
   },
   "dripping": {
     "group": "toybox"
@@ -476,6 +488,9 @@
       "outside"
     ]
   },
+  "molecules": {
+    "group": "cidkid"
+  },
   "mono_dust": {
     "group": "mono",
     "surfaces": [
@@ -566,6 +581,9 @@
       "outside"
     ]
   },
+  "orbitals": {
+    "group": "cidkid"
+  },
   "particle_grid": {
     "group": "lines",
     "surfaces": [
@@ -612,6 +630,12 @@
       "piano",
       "outside"
     ]
+  },
+  "plotter": {
+    "group": "cidkid"
+  },
+  "plotter_fx": {
+    "group": "cidkid"
   },
   "polka_dotz": {
     "group": "complex",
@@ -667,6 +691,9 @@
       "piano",
       "outside"
     ]
+  },
+  "reaction": {
+    "group": "cidkid"
   },
   "ripple_field_3d": {
     "group": "fluid",
@@ -924,5 +951,68 @@
   "wave_text": {
     "group": "text",
     "surfaces": []
+  },
+  "veins": {
+    "group": "cidkid"
+  },
+  "physarum": {
+    "group": "frontier"
+  },
+  "lenia": {
+    "group": "frontier"
+  },
+  "ferrofluid": {
+    "group": "frontier"
+  },
+  "oil_paint": {
+    "group": "frontier"
+  },
+  "vortex_street": {
+    "group": "frontier"
+  },
+  "watercolor": {
+    "group": "frontier"
+  },
+  "event_horizon": {
+    "group": "frontier"
+  },
+  "pixel_sort": {
+    "group": "frontier"
+  },
+  "erosion": {
+    "group": "frontier"
+  },
+  "ocean": {
+    "group": "frontier"
+  },
+  "komorebi": {
+    "group": "curveball"
+  },
+  "frost": {
+    "group": "curveball"
+  },
+  "fireflies": {
+    "group": "curveball"
+  },
+  "prism": {
+    "group": "curveball"
+  },
+  "rain_glass": {
+    "group": "curveball"
+  },
+  "dunes": {
+    "group": "curveball"
+  },
+  "colored_shadows": {
+    "group": "curveball"
+  },
+  "biolum_shore": {
+    "group": "curveball"
+  },
+  "kelp": {
+    "group": "curveball"
+  },
+  "light_painting": {
+    "group": "curveball"
   }
 }

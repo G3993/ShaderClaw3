@@ -1,52 +1,56 @@
 /*{
-  "DESCRIPTION": "Element Water — real living water: slow heavy swells of superposed wandering waves, fluid caustic light webs with fine detail octaves, streaky foam lacing along the crests with drifting foam speckle, lazy vortex swirls turning the whole sea around drifting centers, and god rays slanting down through deep teal into abyssal navy. Bass swells the deep current, mids ripple the caustics, beats fizz the foam, highs glint the crests — everything slow and fluid.",
-  "CATEGORIES": ["Generator", "Audio Reactive"],
+  "DESCRIPTION": "Element Water — a real fluid: a self-advecting velocity field (the CFD Paint solver) carries a water surface with height, foam and depth. Swells are pushed up by wandering currents and ride the flow, foam is born where the water shears and drifts off with it, caustics are the real focusing of the surface, and the body is lit like water: fresnel sky reflection over deep teal, sun glints on the facets, light shafts below. Bass drives the currents, mids widen them, beats fizz the foam, highs glint the crests.",
+  "CATEGORIES": ["Generator", "Simulation", "Audio Reactive"],
   "INPUTS": [
     { "NAME": "causticAmt",   "LABEL": "Caustics",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.7,  "GROUP": "Shape / Geometry" },
-    { "NAME": "rayAmt",       "LABEL": "Light Shafts",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55, "GROUP": "Shape / Geometry" },
+    { "NAME": "rayAmt",       "LABEL": "Light Shafts",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.45, "GROUP": "Shape / Geometry" },
     { "NAME": "foamAmt",      "LABEL": "Foam",          "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6,  "GROUP": "Shape / Geometry" },
-    { "NAME": "swirlAmt",     "LABEL": "Vortex Swirl",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55, "GROUP": "Shape / Geometry" },
+    { "NAME": "swirlAmt",     "LABEL": "Currents",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6,  "GROUP": "Shape / Geometry" },
+    { "NAME": "waveHeight",   "LABEL": "Wave Height",   "TYPE": "float", "MIN": 0.2, "MAX": 3.0, "DEFAULT": 1.2,  "GROUP": "Shape / Geometry" },
+    { "NAME": "viscosity",    "LABEL": "Viscosity",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.25, "GROUP": "Shape / Geometry" },
     { "NAME": "depthHue",     "LABEL": "Water Hue",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0,  "GROUP": "Color" },
     { "NAME": "brightness",   "LABEL": "Brightness",    "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0,  "GROUP": "Color" },
     { "NAME": "motionSpeed",  "LABEL": "Motion Speed",  "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0,  "GROUP": "Motion / Animation" },
     { "NAME": "audioReact",   "LABEL": "Audio React",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.45, "GROUP": "Audio Reactivity" },
-    { "NAME": "trailAmt",   "LABEL": "Motion Trails", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.45, "GROUP": "Depth / Passes" },
-    { "NAME": "bloomAmt",   "LABEL": "Bloom Depth",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55, "GROUP": "Depth / Passes" },
-    { "NAME": "aberration", "LABEL": "Lens Depth",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.35, "GROUP": "Depth / Passes" }
+    { "NAME": "trailAmt",     "LABEL": "Motion Trails", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.2,  "GROUP": "Depth / Passes" },
+    { "NAME": "bloomAmt",     "LABEL": "Bloom Depth",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.45, "GROUP": "Depth / Passes" },
+    { "NAME": "aberration",   "LABEL": "Lens Depth",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.25, "GROUP": "Depth / Passes" }
   ],
   "PASSES": [
+    { "TARGET": "velBuf",  "PERSISTENT": true },
+    { "TARGET": "wtrBuf",  "PERSISTENT": true },
     { "TARGET": "abTrail", "PERSISTENT": true },
     { }
   ]
 }*/
 
 // ─────────────────────────────────────────────────────────────────────────
-// ELEMENT WATER — complete redesign as REAL living water (Lu's notes:
-//   fluidity, foam, foam particles, vortex randomness, moving waves;
-//   much slower). Base clock HALVED (0.30 vs old 0.60). The domain first
-//   passes through 3 drifting VORTEX centers (gaussian-falloff rotational
-//   warp, strength slowly breathing) so the whole sea turns lazily and
-//   nothing repeats. On top of that, a domain-warped fbm pre-warp makes
-//   every wave crest wander. The height field = 3 superposed directional
-//   gerstner-style sine trains + broadband fbm swell; crests are lit,
-//   troughs fall to abyssal navy through a vertical depth gradient.
-//   Caustic webs: 3 octaves of min-of-warped-sines (coarse web + midweb
-//   + fine detail octave). FOAM: streaky advected anisotropic noise laced
-//   along crests, plus round advected foam-speckle particles (cell dots —
-//   no square pixels anywhere: every particle is a distance-field disc).
-//   God-ray light shafts slant from the surface. Audio: bass swells the
-//   current (additive phase), mids push caustic phase (additive — never
-//   time×envelope), beats fizz foam speckle, highs glint crests.
+// ELEMENT WATER — rebuilt on the CFD Paint solver (Lu 2026-10-14: "feels
+// cheap, not like real water; look at CFD Paint").
+//   Pass 0  velBuf : rotational self-advecting velocity (5-octave curl
+//                    stencil, 3 reads per octave — the CFD Paint method),
+//                    wandering current splats, viscosity, a slow drift.
+//   Pass 1  wtrBuf : the water itself, advected by the velocity —
+//                    r = surface height (0.5 = flat), g = foam, b = depth
+//                    tracer (shallow / churned water). Swells are pumped by
+//                    the currents and relax back; foam is born from shear
+//                    and dies off; the tracer lightens churned water.
+//   Pass 2  abTrail: shading — normal from the height gradient, caustics
+//                    from its curvature (real light focusing), fresnel sky
+//                    reflection over the deep body, sun glints, foam,
+//                    light shafts, then the luminous trail buffer.
+//   Pass 3  present: bloom + lens depth + finish.
+// Audio injects force into the sim (bass), widens the currents (mids),
+// fizzes foam (beats), glints the crests (highs) — the fluid does the rest.
 // ─────────────────────────────────────────────────────────────────────────
-
 #define R RENDERSIZE.xy
 #define TAU 6.2831853
+#define ANG 2.0943951
 
-float hash11(float n) { return fract(sin(n) * 43758.5453123); }
 float hash21(vec2 p) {
-    p = fract(p * vec2(123.34, 456.21));
-    p += dot(p, p + 45.32);
-    return fract(p.x * p.y);
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
 }
 float vnoise(vec2 p) {
     vec2 i = floor(p), f = fract(p);
@@ -56,11 +60,7 @@ float vnoise(vec2 p) {
 }
 float fbm(vec2 p) {
     float v = 0.0, a = 0.5;
-    for (int i = 0; i < 4; i++) {
-        v += a * vnoise(p);
-        p = p * 2.07 + vec2(7.3, 3.1);
-        a *= 0.52;
-    }
+    for (int i = 0; i < 4; i++) { v += a * vnoise(p); p = p * 2.07 + vec2(7.3, 3.1); a *= 0.52; }
     return v;
 }
 vec3 hueRotate(vec3 c, float a) {
@@ -72,166 +72,214 @@ vec3 hueRotate(vec3 c, float a) {
     return clamp(c * m, 0.0, 2.0);
 }
 
-// caustic web: layered warped sines, min-combined and sharpened
-float caustic(vec2 p, float t) {
-    vec2 w1 = p + 0.35 * vec2(vnoise(p * 1.5 + t * 0.3), vnoise(p * 1.5 + 4.0 - t * 0.25));
-    vec2 w2 = p * 1.3 + 0.30 * vec2(vnoise(p * 2.1 - t * 0.2 + 9.0), vnoise(p * 2.1 + t * 0.35 + 2.0));
-    float a = 0.5 + 0.5 * sin(w1.x * 6.0 + t) * sin(w1.y * 6.0 - t * 0.8);
-    float b = 0.5 + 0.5 * sin(w2.x * 7.0 - t * 1.1) * sin(w2.y * 7.0 + t * 0.9);
-    float c = min(a, b);
-    return pow(1.0 - c, 11.0) * 1.55;
+// Three wandering currents: where the water is pushed. Shared by the
+// velocity and water passes so force and swell land in the same place.
+vec2 currentPos(int i, float t) {
+    float fi = float(i);
+    float ph = t * (0.22 + fi * 0.11) + fi * 2.1;
+    return vec2(0.5 + 0.36 * sin(ph) * cos(ph * 0.63 + fi),
+                0.5 + 0.30 * cos(ph * 0.77) * sin(ph * 0.41 + fi * 1.7));
+}
+vec2 currentDir(int i, float t) {
+    float fi = float(i);
+    float ph = t * (0.22 + fi * 0.11) + fi * 2.1;
+    return vec2(cos(ph * 1.15 + fi * 0.9), sin(ph * 0.85 + fi * 2.3));
 }
 
-// round advected foam speckle — distance-field discs in a drifting grid
-float speckle(vec2 p, float t, float scale) {
-    vec2 g  = p * scale;
-    vec2 id = floor(g);
-    vec2 fr = fract(g) - 0.5;
-    vec2 off = (vec2(hash21(id), hash21(id + 19.7)) - 0.5) * 0.72;
-    float pd = length(fr - off);
-    float gate = step(0.88, hash21(id + 5.3));
-    float tw = 0.55 + 0.45 * sin(t * 2.4 + hash21(id + 2.1) * TAU);
-    return smoothstep(0.30, 0.06, pd) * gate * tw;
-}
-
-vec3 renderScene() {
-    vec2 fc = gl_FragCoord.xy;
-    vec2 q = (fc - 0.5 * R) / R.y;
-
-    float t   = TIME * motionSpeed * 0.30;                       // HALVED — slow, heavy water
+void main() {
+    vec2 pos = gl_FragCoord.xy;
+    vec2 uv  = pos / R;
+    float aspect = R.x / R.y;
+    vec2 invRes = 1.0 / R;
     float amt = audioReact;
-    float bassP  = pow(smoothstep(0.05, 0.85, audioBass), 1.5);
-    float midP   = pow(smoothstep(0.06, 0.85, audioMid),  1.2);
-    float highP  = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
+    float bassP = pow(smoothstep(0.05, 0.85, audioBass), 1.5);
+    float midP  = pow(smoothstep(0.06, 0.85, audioMid),  1.2);
+    float highP = pow(smoothstep(0.10, 0.90, audioHigh), 1.2);
     float levelP = clamp(audioLevel, 0.0, 1.0);
     float beatP  = clamp(audioBeatPulse, 0.0, 1.0);
+    float t = TIME * motionSpeed * 0.5;
+    float force = swirlAmt * (0.9 + amt * (0.9 * bassP + 0.4 * levelP));   // bass drives the currents
+    float splatR = 0.11 * (1.0 + 0.25 * amt * midP);                       // mids widen them
+    float splatR2 = splatR * splatR;
 
-    // ── vortex swirls: 3 drifting centers turn the whole sea lazily ─────
-    vec2 p = q + vec2(t * 0.02 + amt * 0.10 * bassP, 0.0);       // slow current, bass push (additive)
-    for (int i = 0; i < 3; i++) {
-        float fi = float(i);
-        vec2 c = vec2(sin(t * 0.11 + fi * 2.4) * 0.45,
-                      cos(t * 0.083 + fi * 1.7) * 0.30);
-        vec2 d = p - c;
-        float rr = dot(d, d);
-        float sw = swirlAmt * 1.7 * exp(-rr * 6.5)
-                 * (0.55 + 0.45 * sin(t * 0.19 + fi * 2.9));     // strength breathes slowly
-        float cs = cos(sw), sn = sin(sw);
-        p = c + vec2(cs * d.x - sn * d.y, sn * d.x + cs * d.y);
-    }
-
-    // ── domain-warped wave field: crests wander, never repeat ───────────
-    vec2 wrp = 0.24 * vec2(fbm(p * 1.7 + vec2(t * 0.16, 2.0)),
-                           fbm(p * 1.7 + vec2(4.9, -t * 0.13)));
-    vec2 wv = p + wrp;
-    float swell = amt * 0.6 * bassP;                             // additive swell phase
-    float h = 0.0;
-    h += 0.42 * sin(dot(wv, vec2(1.0,  0.35)) * 6.2  + t * 1.05 + swell);
-    h += 0.30 * sin(dot(wv, vec2(-0.62, 1.0)) * 8.6  - t * 0.80 + 2.1 + swell * 0.6);
-    h += 0.20 * sin(dot(wv, vec2(0.88, -0.80)) * 12.5 + t * 1.35 + 4.0);
-    h += 0.50 * (fbm(wv * 2.9 + vec2(t * 0.22, -t * 0.16)) - 0.5);
-    // smooth envelope-scaled swell amplitude (never time×audio — chop-safe)
-    h *= 1.0 + amt * (0.45 * bassP + 0.35 * levelP);
-    float hgt = clamp(h * 0.42 + 0.5, 0.0, 1.0);                 // 0 trough → 1 crest
-
-    // ── depth-shaded water body: crest light over abyssal navy ──────────
-    float depth = smoothstep(0.55, -0.55, q.y);                  // 0 top → 1 bottom
-    vec3 shallow = vec3(0.09, 0.52, 0.58);
-    vec3 midw    = vec3(0.025, 0.26, 0.44);
-    vec3 abyss   = vec3(0.004, 0.032, 0.115);
-    vec3 col = mix(midw, abyss, smoothstep(0.15, 1.0, depth));
-    col = mix(col, shallow, hgt * hgt * mix(0.95, 0.35, depth)); // wave height lights the water
-    col += vec3(0.03, 0.15, 0.19) * smoothstep(0.35, 0.9, hgt);  // crest sheen
-
-    // ── caustic webs — coarse + mid + fine detail octave ────────────────
-    float cph = t * 0.75 + amt * 2.2 * midP;                     // mids push phase (additive)
-    float ca_ = caustic(wv * 2.0, cph);
-    float cb_ = caustic(wv * 3.9 + 7.0, cph * 1.35 + 3.0) * 0.55;
-    float cc_ = caustic(wv * 7.4 + 3.0, cph * 1.7  + 6.0) * 0.28;
-    float cw = (ca_ + cb_ + cc_) * causticAmt * mix(1.15, 0.30, depth) * (0.55 + 0.55 * hgt);
-    col += vec3(0.50, 0.88, 0.92) * cw * (1.0 + amt * (0.6 * highP + 0.55 * levelP));
-
-    // ── god-ray light shafts from the surface ───────────────────────────
-    vec2 sun = vec2(0.35, 0.62);
-    vec2 sd = q - sun;
-    float ang = atan(sd.x, -sd.y);
-    float rays = 0.0;
-    rays += pow(0.5 + 0.5 * sin(ang * 14.0 + t * 0.30), 3.0);
-    rays += pow(0.5 + 0.5 * sin(ang * 23.0 - t * 0.19 + 2.0), 4.0) * 0.6;
-    rays *= smoothstep(1.5, 0.1, length(sd)) * smoothstep(-0.2, 0.6, q.y + 0.4);
-    float throb = 1.0 + amt * (0.4 * bassP + 0.25 * levelP);
-    col += vec3(0.42, 0.78, 0.84) * rays * rayAmt * 0.20 * throb;
-    col += vec3(0.80, 0.96, 0.94) * exp(-length(sd) * 3.2) * 0.45 * rayAmt;
-
-    // ── FOAM: streaky lace along crests + round speckle particles ───────
-    float crest = smoothstep(0.58, 0.92, hgt);
-    // anisotropic streak noise advected along the dominant wave direction
-    vec2 fdir = normalize(vec2(1.0, 0.35));
-    vec2 fuv  = vec2(dot(wv, fdir), dot(wv, vec2(-fdir.y, fdir.x)));
-    float streak = fbm(vec2(fuv.x * 3.2 - t * 0.85, fuv.y * 15.0));
-    float lace   = fbm(wv * 9.5 + vec2(t * 0.5, -t * 0.35));
-    float foam = crest * smoothstep(0.42, 0.85, streak * 0.62 + lace * 0.62);
-    foam = pow(clamp(foam, 0.0, 1.0), 1.15) * foamAmt * (1.0 + amt * 0.4 * levelP);
-    col = mix(col, vec3(0.82, 0.96, 0.97), clamp(foam * 1.25, 0.0, 0.85));
-    // foam speckle: fine round bubbles drifting with the water, fizzing on beats
-    float fizz = 1.0 + amt * 1.1 * beatP;
-    float spA = speckle(wv + vec2(t * 0.34, -t * 0.20), t, 48.0);
-    float spB = speckle(wv * 1.6 + vec2(-t * 0.22, t * 0.28) + 31.0, t + 9.0, 62.0) * 0.7;
-    col += vec3(0.78, 0.95, 0.97) * (spA + spB) * foamAmt
-         * (0.22 + 0.78 * crest) * fizz * 0.75;
-    // crisp white glints riding the crests — tight specular sparkle
-    float spC = speckle(wv * 2.2 + vec2(t * 0.5, t * 0.3) + 57.0, t + 3.0, 88.0);
-    col += vec3(0.95, 1.0, 1.0) * spC * crest * foamAmt * (0.5 + amt * 0.7 * highP);
-
-    // ── suspended round motes sinking through the shafts ────────────────
-    float mote = speckle(wv * 0.5 + vec2(t * 0.05, t * 0.10), t * 0.7, 26.0);
-    col += vec3(0.26, 0.50, 0.56) * mote * 0.35 * (1.0 - depth * 0.7) * rayAmt;
-
-    // ── finish ──────────────────────────────────────────────────────────
-    float gr = hash21(fc + fract(t) * vec2(17.0, 29.0)) - 0.5;
-    col += 0.02 * gr;
-    if (depthHue > 0.001) col = hueRotate(col, depthHue * TAU);
-    col *= brightness * mix(1.0, 0.80 + 0.32 * levelP + 0.26 * clamp(audioBass, 0.0, 1.0)
-                                 + 0.14 * clamp(audioMid, 0.0, 1.0) + 0.10 * beatP, amt);
-    return col;
-}
-
-// ─── multipass: trail accumulation → bloom + lens-depth composite ────────
-void main() {
-    vec2 uv = gl_FragCoord.xy / R;
+    // ═══════════ PASS 0 — velocity (CFD Paint rotational curl solver) ═══
     if (PASSINDEX == 0) {
-        vec3 col = renderScene();
-        // luminous motion trails persist in the buffer (8-bit-safe decay floor)
-        vec3 prev = texture2D(abTrail, uv).rgb;
-        float decay = 0.50 + 0.46 * trailAmt;
-        col = max(col, prev * decay - 0.0045);
-        // write-dither: keeps soft gradients band-free in 8-bit buffer hosts
-        col += (hash21(gl_FragCoord.xy + fract(TIME) * 61.0) - 0.5) * 0.006;
-        gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
-    } else {
-        // chromatic lens depth: R/B pulled apart along the radial axis
-        vec2 dir = uv - 0.5;
-        float ab = aberration * 0.0045;
-        vec3 base;
-        base.r = texture2D(abTrail, uv + dir * ab).r;
-        base.g = texture2D(abTrail, uv).g;
-        base.b = texture2D(abTrail, uv - dir * ab).b;
-        // wide two-ring bloom of the bright field — real glow depth
-        vec3 bl = vec3(0.0);
-        for (int i = 0; i < 8; i++) {
-            float a = float(i) * 0.7853982;
-            vec2 o = vec2(cos(a), sin(a)) * (3.5 / R.y);
-            bl += texture2D(abTrail, uv + o).rgb;
-            bl += texture2D(abTrail, uv + o * 2.6).rgb * 0.6;
+        float ca = cos(ANG), sa = sin(ANG);
+        float cah = cos(ANG * 0.5), sah = sin(ANG * 0.5);
+        float rnd = hash21(vec2(float(FRAMEINDEX), 0.37));
+        vec2 b = vec2(cos(ANG * rnd), sin(ANG * rnd));
+        vec2 v = vec2(0.0);
+        float maxR2 = min(R.y * R.y * 0.25, 4000.0);
+        for (int level = 0; level < 5; level++) {
+            float bb = dot(b, b);
+            if (bb > maxR2) break;
+            float invBB = 1.0 / bb;
+            vec2 d0 = b;
+            vec2 d1 = vec2(ca * b.x - sa * b.y, sa * b.x + ca * b.y);
+            vec2 d2 = vec2(ca * b.x + sa * b.y, -sa * b.x + ca * b.y);
+            vec2 h0 = vec2(cah * b.x - sah * b.y, sah * b.x + cah * b.y);
+            vec2 h1 = vec2(ca * h0.x - sa * h0.y, sa * h0.x + ca * h0.y);
+            vec2 h2 = vec2(ca * h0.x + sa * h0.y, -sa * h0.x + ca * h0.y);
+            vec2 s0 = texture2D(velBuf, fract((pos + d0 + d0) * invRes)).xy - 0.5;
+            vec2 s1 = texture2D(velBuf, fract((pos + d1 + d1) * invRes)).xy - 0.5;
+            vec2 s2 = texture2D(velBuf, fract((pos + d2 + d2) * invRes)).xy - 0.5;
+            v += d0.yx * dot(s0, h0) * invBB * 3.0;
+            v += d1.yx * dot(s1, h1) * invBB * 3.0;
+            v += d2.yx * dot(s2, h2) * invBB * 3.0;
+            b *= 2.0;
         }
-        bl /= 12.8;
-        bl = max(bl - 0.52, 0.0);
-        vec3 col = base + bl * bl * bloomAmt * 1.8;
-        // HD finish: S-curve contrast + saturation richness
-        col = clamp(col, 0.0, 1.0);
-        col = mix(col, col * col * (3.0 - 2.0 * col), 0.55);
-        float lumHD = dot(col, vec3(0.299, 0.587, 0.114));
-        col = clamp(mix(vec3(lumHD), col, 1.22), 0.0, 1.0);
-        gl_FragColor = vec4(col, 1.0);
+        float speed = 1.4;
+        vec2 advUV = fract((pos + v * vec2(-1.0, 1.0) * speed) * invRes);
+        vec4 vel = texture2D(velBuf, advUV);
+        // viscosity: water is thin — a little damping keeps it from boiling
+        vel.xy = mix(vel.xy, vec2(0.5), 0.004 + 0.02 * viscosity);
+        // the currents
+        for (int s = 0; s < 3; s++) {
+            vec2 sp = currentPos(s, t);
+            vec2 d = uv - sp; d.x *= aspect;
+            float dist2 = dot(d, d);
+            if (dist2 < splatR2 * 12.0) {
+                vec2 dir = currentDir(s, t);
+                // a swirl on top of the push so every current rolls
+                vec2 tang = vec2(-d.y, d.x) * 2.5;
+                vel.xy += (dir + tang * (0.6 + 0.4 * sin(t * 0.9 + float(s)))) * force * 0.045 * exp(-dist2 / splatR2);
+            }
+        }
+        // a slow lateral drift so the whole sea travels
+        vel.x += 0.0015 * swirlAmt * (0.6 + 0.4 * sin(t * 0.13));
+        vel.xy = clamp(vel.xy, 0.0, 1.0);
+        if (FRAMEINDEX < 2) vel = vec4(0.5, 0.5, 0.0, 1.0);
+        vel.a = 1.0;
+        gl_FragColor = vel;
+        return;
     }
+
+    // ═══════════ PASS 1 — the water: height, foam, depth tracer ═════════
+    if (PASSINDEX == 1) {
+        vec2 vel = (texture2D(velBuf, uv).xy - 0.5) * 2.0;
+        vec2 advUV = fract(uv - vel * 0.016 * (1.0 + 0.5 * amt * bassP));
+        vec4 w = texture2D(wtrBuf, advUV);
+        float h = w.r, foam = w.g, tr = w.b;
+        // the surface relaxes toward flat, swells keep their shape as they ride
+        h = mix(h, 0.5, 0.012);
+        // currents pump the surface: a rolling swell, up on the leading side,
+        // down behind, so each current drags a wave train with it
+        for (int s = 0; s < 3; s++) {
+            vec2 sp = currentPos(s, t);
+            vec2 d = uv - sp; d.x *= aspect;
+            float dist2 = dot(d, d);
+            if (dist2 < splatR2 * 14.0) {
+                vec2 dir = currentDir(s, t);
+                float lobe = dot(normalize(d + 1e-4), dir);
+                float g = exp(-dist2 / (splatR2 * 1.6));
+                h += lobe * g * 0.035 * waveHeight * force;
+            }
+        }
+        // shear of the flow births foam, which then drifts with the water
+        float dlt = 2.0 * invRes.y;
+        vec2 vL = texture2D(velBuf, uv + vec2(-dlt, 0.0)).xy, vR = texture2D(velBuf, uv + vec2(dlt, 0.0)).xy;
+        vec2 vU = texture2D(velBuf, uv + vec2(0.0, dlt)).xy,  vD = texture2D(velBuf, uv + vec2(0.0, -dlt)).xy;
+        float shear = (length(vR - vL) + length(vU - vD)) * 9.0;
+        float crest = smoothstep(0.56, 0.72, h);
+        foam = foam * (0.955 - 0.02 * viscosity)
+             + smoothstep(0.12, 0.6, shear) * (0.035 + 0.05 * crest) * foamAmt
+             + crest * 0.012 * foamAmt
+             + amt * 0.03 * beatP * smoothstep(0.08, 0.4, shear) * foamAmt;   // beats fizz the churn
+        // churned water is lighter (aerated) — the tracer follows the currents
+        tr = tr * 0.985 + smoothstep(0.1, 0.5, shear) * 0.02 + crest * 0.01;
+        h = clamp(h, 0.0, 1.0); foam = clamp(foam, 0.0, 1.0); tr = clamp(tr, 0.0, 1.0);
+        if (FRAMEINDEX < 2) { h = 0.5 + 0.02 * (fbm(uv * 6.0) - 0.5); foam = 0.0; tr = 0.0; }
+        gl_FragColor = vec4(h, foam, tr, 1.0);
+        return;
+    }
+
+    // ═══════════ PASS 2 — shading into the trail buffer ═════════════════
+    if (PASSINDEX == 2) {
+        vec2 q = (pos - 0.5 * R) / R.y;
+        float delta = 2.5 * invRes.y;
+        float hC = texture2D(wtrBuf, uv).r;
+        float hL = texture2D(wtrBuf, uv + vec2(-delta, 0.0)).r;
+        float hR = texture2D(wtrBuf, uv + vec2( delta, 0.0)).r;
+        float hU = texture2D(wtrBuf, uv + vec2(0.0,  delta)).r;
+        float hD = texture2D(wtrBuf, uv + vec2(0.0, -delta)).r;
+        vec4 w = texture2D(wtrBuf, uv);
+        float foam = w.g, tr = w.b;
+        float hs = 26.0 * waveHeight;
+        vec3 n = normalize(vec3((hL - hR) * hs, (hD - hU) * hs, 1.0));
+        // caustics = the surface focusing light: concave spots (negative
+        // laplacian) converge rays onto the floor; sharpened into webs
+        float lap = (hL + hR + hU + hD - 4.0 * hC) * hs * 1.6;
+        float caust = pow(clamp(-lap * 2.2 + 0.15, 0.0, 1.0), 2.2);
+        // fine ripple caustic web riding on the sim (keeps the floor alive between swells)
+        float web = pow(1.0 - min(0.5 + 0.5 * sin((uv.x * aspect + 0.3 * vnoise(uv * 5.0 + t * 0.2)) * 28.0 + t),
+                                  0.5 + 0.5 * sin((uv.y + 0.3 * vnoise(uv * 5.0 + 9.0 - t * 0.17)) * 31.0 - t * 0.8)), 9.0);
+        // ── the water body: deep navy, churn lightens it toward teal ─────
+        float depth = smoothstep(0.6, -0.6, q.y);                     // 0 top → 1 bottom
+        vec3 shallow = vec3(0.10, 0.56, 0.60);
+        vec3 midw    = vec3(0.03, 0.27, 0.44);
+        vec3 abyss   = vec3(0.005, 0.035, 0.12);
+        vec3 body = mix(midw, abyss, smoothstep(0.1, 1.0, depth));
+        body = mix(body, shallow, tr * 0.8 + smoothstep(0.5, 0.75, hC) * 0.35);
+        // refracted floor light: caustics brighter where the body is shallow
+        vec3 causCol = vec3(0.55, 0.92, 0.95);
+        body += causCol * (caust * 1.25 + web * 0.14) * causticAmt * mix(1.1, 0.35, depth) * (1.0 + amt * 0.5 * midP);
+        // ── surface: fresnel sky over the body, sun glints on the facets ─
+        vec3 view = normalize(vec3(-q * 0.35, 1.0));
+        float fres = pow(1.0 - clamp(dot(n, view), 0.0, 1.0), 3.0);
+        vec3 sky = mix(vec3(0.40, 0.70, 0.78), vec3(0.86, 0.95, 0.97), clamp(n.y * 0.5 + 0.5 + 0.3, 0.0, 1.0));
+        vec3 col = mix(body, sky, fres * 0.55 + 0.05);
+        vec3 sunDir = normalize(vec3(0.45, 0.75, 0.55));
+        float spec = pow(clamp(dot(reflect(-sunDir, n), view), 0.0, 1.0), 180.0);
+        float spec2 = pow(clamp(dot(reflect(-sunDir, n), view), 0.0, 1.0), 24.0);
+        col += vec3(1.0, 0.98, 0.92) * (spec * 1.6 + spec2 * 0.18) * (1.0 + amt * (0.8 * highP + 0.4 * levelP));
+        float diff = clamp(dot(n, sunDir), 0.0, 1.0);
+        col *= 0.78 + 0.32 * diff;
+        // ── light shafts from the surface ─────────────────────────────────
+        vec2 sun = vec2(0.35, 0.62);
+        vec2 sd = q - sun;
+        float ang = atan(sd.x, -sd.y);
+        float rays = pow(0.5 + 0.5 * sin(ang * 14.0 + t * 0.30), 3.0)
+                   + pow(0.5 + 0.5 * sin(ang * 23.0 - t * 0.19 + 2.0), 4.0) * 0.6;
+        rays *= smoothstep(1.5, 0.1, length(sd)) * smoothstep(-0.2, 0.6, q.y + 0.4);
+        col += vec3(0.42, 0.78, 0.84) * rays * rayAmt * 0.16 * (1.0 + amt * 0.4 * bassP);
+        col += vec3(0.80, 0.96, 0.94) * exp(-length(sd) * 3.2) * 0.35 * rayAmt;
+        // ── foam: the sim's foam field, broken up with a dry lace texture ─
+        float lace = fbm(uv * vec2(aspect, 1.0) * 22.0 + vec2(t * 0.3, -t * 0.2));
+        float fm = smoothstep(0.08, 0.55, foam * (0.6 + 0.8 * lace));
+        col = mix(col, vec3(0.86, 0.97, 0.98), clamp(fm * 1.1, 0.0, 0.9));
+        // bubbles in the foam catch the sun
+        float bub = smoothstep(0.75, 0.95, vnoise(uv * vec2(aspect, 1.0) * 140.0 + t * 0.5)) * fm;
+        col += vec3(0.9, 1.0, 1.0) * bub * 0.6;
+        // ── finish ────────────────────────────────────────────────────────
+        col += (hash21(pos + fract(t) * vec2(17.0, 29.0)) - 0.5) * 0.015;
+        if (depthHue > 0.001) col = hueRotate(col, depthHue * TAU);
+        col *= brightness * mix(1.0, 0.82 + 0.3 * levelP + 0.2 * bassP, amt);
+        // luminous trails (8-bit-safe decay floor)
+        vec3 prev = texture2D(abTrail, uv).rgb;
+        float decay = 0.40 + 0.50 * trailAmt;
+        col = max(col, prev * decay - 0.0045);
+        gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+        return;
+    }
+
+    // ═══════════ PASS 3 — present: bloom + lens depth ═══════════════════
+    vec2 dir = uv - 0.5;
+    float ab = aberration * 0.0045;
+    vec3 base;
+    base.r = texture2D(abTrail, uv + dir * ab).r;
+    base.g = texture2D(abTrail, uv).g;
+    base.b = texture2D(abTrail, uv - dir * ab).b;
+    vec3 bl = vec3(0.0);
+    for (int i = 0; i < 8; i++) {
+        float an = float(i) * 0.7853982;
+        vec2 o = vec2(cos(an), sin(an)) * (3.5 / R.y);
+        bl += texture2D(abTrail, uv + o).rgb;
+        bl += texture2D(abTrail, uv + o * 2.6).rgb * 0.6;
+    }
+    bl /= 12.8;
+    bl = max(bl - 0.55, 0.0);
+    vec3 col = base + bl * bl * bloomAmt * 1.6;
+    col = clamp(col, 0.0, 1.0);
+    col = mix(col, col * col * (3.0 - 2.0 * col), 0.35);
+    gl_FragColor = vec4(col, 1.0);
 }

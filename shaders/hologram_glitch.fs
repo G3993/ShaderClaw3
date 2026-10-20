@@ -304,20 +304,21 @@ vec4 sampleHologram(vec2 uv, float t, int which, float density,
     if (hitDist < 0.0) return vec4(0.0);
 
     vec3 n   = sdNormal(hitP, which);
-    // Carve the wireframe into the surface using triplanar lines
     float w  = wireGrid(hitP, density);
-    // Edge highlight via fresnel — accentuates silhouette
     float fres = pow(1.0 - max(dot(n, normalize(-rd)), 0.0), 2.2);
-
-    // Shading from primary→shadow along normal y (top lit, bottom shaded)
     float lit = 0.5 + 0.5 * dot(n, normalize(vec3(0.3, 0.8, 0.5)));
+    // Volumetric slice lines: the projector builds the subject from thin
+    // horizontal planes travelling upward — the classic hologram tell.
+    float slices = 0.5 + 0.5 * sin(hitP.y * 140.0 - t * 6.0);
+    slices = smoothstep(0.35, 0.9, slices);
+    // Inner energy: the shell reads as a translucent volume lit from the base.
+    float inner = smoothstep(-1.2, 0.8, hitP.y) * 0.35 + 0.2 * (0.5 + 0.5 * sin(hitP.y * 9.0 - t * 2.0));
     vec3  base = mix(PAL_SHADOW, PAL_PRIMARY, lit);
-    // Wires on the surface get the highlight color
-    vec3  col  = mix(base * 0.25, PAL_HIGH, clamp(w, 0.0, 1.0));
-    // Silhouette emission
-    col += PAL_PRIMARY * fres * 0.8;
-
-    return vec4(col, clamp(w * 0.85 + fres * 0.6, 0.0, 1.0));
+    vec3  col  = mix(base * (0.18 + 0.25 * slices), PAL_HIGH, clamp(w, 0.0, 1.0));
+    col += PAL_PRIMARY * fres * 1.3;                     // silhouette emission
+    col += base * inner * slices * 0.6;
+    float a = clamp(w * 0.85 + fres * 0.75 + slices * 0.22 + inner * 0.15, 0.0, 1.0);
+    return vec4(col, a);
 }
 
 // ─── main ───────────────────────────────────────────────────────────────
@@ -367,6 +368,14 @@ void main() {
         (h21(vec2(0.0, floor(t * 30.0))) - 0.5)) * dropEnv * 0.09;
 
     vec2 sUV = uv + vec2(rowShift, 0.0) + quake;
+    // Block corruption: a coarse grid of cells that tear sideways on bass
+    // hits / random bursts — the datamosh tell.
+    {
+        vec2 bcell = floor(uv * vec2(14.0, 9.0) + vec2(0.0, floor(t * 6.0)));
+        float br = h21(bcell + floor(t * 6.0) * 0.37);
+        float gate = step(1.0 - 0.14 * intAmt - 0.25 * dropEnv, br);
+        sUV.x += (h21(bcell + 3.1) - 0.5) * 0.12 * gate;
+    }
 
     // Chromatic aberration — sample three offset copies of the hologram
     vec2 caOff = vec2(chrAmt, 0.0);
@@ -416,8 +425,28 @@ void main() {
         dust    += smoothstep(r, 0.0, dm) * (0.3 + 0.5 * h11(fi * 7.7));
     }
 
+    // The emitter: a bright lens at the floor and a cone of light fanning up
+    // from it, flickering with the hologram's own instability; motes rise in it.
+    float flick = 0.85 + 0.15 * sin(t * 23.0) * sin(t * 7.3) + 0.3 * dropEnv;
+    vec2  lens  = vec2(0.0, -0.98);
+    float lensD = length((ndc - lens) * vec2(1.0, 2.2));
+    float lensG = exp(-lensD * 9.0) * 1.6 + exp(-lensD * 2.5) * 0.35;
+    float coneA = abs(atan(ndc.x, ndc.y - lens.y));
+    float cone  = smoothstep(0.75, 0.0, coneA) * smoothstep(-1.0, 0.2, ndc.y) * exp(-max(ndc.y + 1.0, 0.0) * 0.9);
+    cone *= 0.75 + 0.25 * sin(coneA * 40.0 + t * 3.0);   // the cone has rays
+    float rise = 0.0;
+    for (int i = 0; i < 7; i++) {
+        float fi = float(i);
+        float ph = fract(h11(fi * 1.7) + t * (0.06 + 0.03 * fi));
+        vec2 c = vec2((h11(fi * 2.9) - 0.5) * 0.9 * (0.3 + ph), ph * 2.0 - 1.0);
+        float dm = length(ndc - c);
+        rise += smoothstep(0.012, 0.0, dm) * 0.8 + smoothstep(0.05, 0.0, dm) * 0.15;
+    }
     vec3 hazeCol = PAL_PRIMARY * beam * beamHaze * 0.35
-                 + PAL_HIGH    * dust * 0.55;
+                 + PAL_PRIMARY * cone * beamHaze * 0.28 * flick
+                 + PAL_HIGH    * lensG * beamHaze * flick
+                 + PAL_HIGH    * dust * 0.55
+                 + PAL_PRIMARY * rise * beamHaze * 0.9;
 
     // Composite hologram over black bg + additive haze + floor gleam
     vec3 col = mix(vec3(0.0), holo, clamp(alpha, 0.0, 1.0)) + hazeCol;
