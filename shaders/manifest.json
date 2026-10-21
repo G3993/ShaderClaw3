@@ -3563,5 +3563,93 @@
     "id": 1389,
     "title": "Light Painting",
     "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "3D",
+      "Nature",
+      "Audio Reactive"
+    ],
+    "description": "Cells — a gallery of living specimens under a fluorescence microscope. Each tile is a raymarched block of tissue whose surface is grown from an animated 3D Voronoi foam: honeycomb pits, drooping scales, ring cells, plated domes, pebble clusters, budding blobs, fibrous mats, smooth caverns and a thermal-imaged well. Twelve species, each slowly morphing into the next on its own clock, so the grid never repeats in lockstep. Lighting is emissive and false-coloured like confocal imaging — deep navy cavities, royal blue and cyan walls, acid-green rims, red-orange glow pooled in the pits — and the whole image is resolved as a fine point-cloud stipple. Bass swells the cells, beats send a fluorescent wave through every specimen, mids drift the hue, highs make the stipple sparkle.",
+    "file": "cells.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1390,
+    "title": "Cells",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "3D",
+      "Audio Reactive"
+    ],
+    "description": "Marble — a cabinet of living glass orbs. Every sphere holds its own slowly churning 3D flow field (iterated domain warp sampled on the rotating sphere), read out through interference and thermal colour maps: black voids, deep blue, cyan, acid yellow, ember orange and red fringes. Six families of orb share the grid — vivid fringe orbs, soft defocused glass, kaleidoscopic mandalas, ghost orbs whose shell disappears so only the coloured blob floats, ochre marbled agate with contour lines, and dark void orbs threaded with cyan filaments — and each orb drifts from one family into the next on its own clock. A travelling light sweeps the grid, every orb bobs and breathes, beats ripple a light ring outward from the centre, bass churns the flow, mids slide the colour bands, highs light up the rims.",
+    "file": "marble.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1391,
+    "title": "Marble",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "3D",
+      "Nature",
+      "Audio Reactive"
+    ],
+    "description": "Shrooms — rows of soft, gradient-dyed mushroom stalks dancing in 3D. Each stalk is a bent, bulbous capsule smooth-blended into a rounded cap, swaying on its own spring with a phase lag along the row so waves of motion roll through the crowd; bass squashes and stretches them like a bounce, beats kick a wiggle that ripples down the line, mids widen the sway, highs shimmer the grain. Colour is a living gradient up each stalk (pale foot → glowing body → dark cap) that slowly flows and drifts. The scene morphs continuously between three looks: Aurora (a tall merged wall of drips in maroon, blue, cream, lavender and red), Ember Rows (three stacked tiers of slim dark-capped stalks fading red → pink → butter) and Cobalt Cluster (a few fat blue clubs fading to white on warm paper).",
+    "file": "shrooms.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1392,
+    "title": "Shrooms",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "3D",
+      "Simulation",
+      "Audio Reactive"
+    ],
+    "description": "Objectos — a wobbly totem of 3 to 6 soft 3D objects (spheres, fat rings, clover crosses, puffy flowers, twin blobs, rounded cubes, pills, pucks) balanced on top of each other and dancing. A real spring–damper simulation runs every frame in a tiny persistent buffer: each object has its own squash-and-stretch spring and two lean springs coupled to the one beneath it, so motion travels up the stack with lag and overshoot like jelly; the whole totem hops on beats, lands, and squashes on impact. Bass compresses the stack, beats make it jump, mids add a rubbery wobble and twist, highs make the glossy highlights flare. Each slot slowly morphs into another shape, and the materials keep trading — glossy black, glowing gradient, dark-rimmed matte, stripes, dots, checks, iridescent — in a palette pulled from the references (signal red, cyan, maroon, pink, lavender, ink).",
+    "file": "objectos.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1393,
+    "title": "Objectos",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Glitch",
+      "Audio Reactive"
+    ],
+    "description": "Hourglass — a living hourglass that keeps pinching thin and swelling thick. Its silhouette is a mirrored profile of two lobes meeting at a neck; the lobes breathe, change shape (round, teardrop, diamond, lamp-shade), wiggle and drift, while three looks flow into each other: Nested Rings (an infinite tunnel of tangent circles stacked into the neck, each a radial rainbow), Thin Film (glowing interference fringes around dark lobes holding a sun and a target), and Lathe (a turned 3D vessel whose rainbow sweeps around it as it spins). Over it all runs a film and glitch layer: travelling pixelation zones, block mosaics, RGB split, slice tears, gate weave, flicker and grain. Bass pinches and swells the neck, beats fire glitch bursts and pixel drops, mids feed the wiggle, highs push the chroma split.",
+    "file": "hourglass.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1394,
+    "title": "Hourglass",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "3D",
+      "Op Art",
+      "Audio Reactive"
+    ],
+    "description": "Zebra — stripes drawn on a liquid sheet. A heightfield made of flowing domain-warped waves, drifting bumps and beat-launched ripples is raymarched from a tilting camera, so the lines bend over real 3D folds, hide behind ridges, catch speculars and throw self-shadows. Six looks morph into each other: Satin (glossy black-and-white fabric), Op-Art (Riley-style gradient bands, orange to violet to cobalt to lime), Neon Spectrum (each line a full rainbow ribbon on black), Glitch Chroma (monochrome lines that split into RGB wherever the liquid is steep), Holo Chrome (thin silver lines over iridescent oil-slick colour) and Glow Lines (emissive line drawing floating on black). Stripes flow along the sheet, the camera breathes, and the RGB split follows the slope. Bass lifts the waves, beats fire ripples and a chroma kick, mids stir the flow, highs make the speculars and split flare.",
+    "file": "zebra.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1395,
+    "title": "Zebra",
+    "type": "generator"
   }
 ]

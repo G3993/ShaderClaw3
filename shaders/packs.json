@@ -1014,5 +1014,23 @@
   },
   "light_painting": {
     "group": "curveball"
+  },
+  "cells": {
+    "group": "studio"
+  },
+  "marble": {
+    "group": "studio"
+  },
+  "shrooms": {
+    "group": "studio"
+  },
+  "objectos": {
+    "group": "studio"
+  },
+  "hourglass": {
+    "group": "studio"
+  },
+  "zebra": {
+    "group": "studio"
   }
 }
