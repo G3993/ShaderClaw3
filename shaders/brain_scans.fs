@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Brain Scans — a living MRI built from a real brain scan (the MNI ICBM152 average human brain): folded cortex, white matter, ventricles, corpus callosum, cerebellum and brainstem, wrapped in a skull and scalp. A slice plane sweeps through it continuously while the view morphs between a sagittal profile, an axial top-down slice, a coronal slice, a contact-sheet series of slices and a rotating 3D cutaway of the whole brain, and the colour treatment morphs through thermal CRT rainbow, orange/green duotone, posterized contour, jet heatmap, clinical film and fluorescent fibre tracts. fMRI activation blooms with the music: bass lights the motor cortex, mids the auditory cortex, highs the visual cortex, and beats fire new hotspots and a scan flash. Show Dynamics: at Rest the scan pulls back and dims to a quiet, low-contrast resting state with only the default-mode network glowing faintly and breathing; during a Build hotspots multiply and spread across the cortex, the scan bar races and flickers faster, contrast and colour climb and the view pushes in with a slight tremor; at the Drop a white scan flash tears the image sideways and a shockwave of activation rips outward through the whole brain before it settles into full-brain peak activity.",
+  "DESCRIPTION": "Brain Scans — a living MRI built from a real brain scan (the MNI ICBM152 average human brain): folded cortex, white matter, ventricles, corpus callosum, cerebellum and brainstem, wrapped in a skull and scalp. A slice plane sweeps through it continuously and slowly rotates, so the view flows seamlessly from a sagittal profile through oblique cuts to an axial top-down slice and a coronal slice like a live scan, then dissolves into a sagittal profile, an axial top-down slice, a coronal slice, a contact-sheet series of slices and a rotating 3D cutaway of the whole brain, and the colour treatment morphs through thermal CRT rainbow, orange/green duotone, posterized contour, jet heatmap, clinical film and fluorescent fibre tracts. fMRI activation blooms with the music: bass lights the motor cortex, mids the auditory cortex, highs the visual cortex, and beats fire new hotspots and a scan flash. Show Dynamics: at Rest the scan pulls back and dims to a quiet, low-contrast resting state with only the default-mode network glowing faintly and breathing; during a Build hotspots multiply and spread across the cortex, the scan bar races and flickers faster, contrast and colour climb and the view pushes in with a slight tremor; at the Drop a white scan flash tears the image sideways and a shockwave of activation rips outward through the whole brain before it settles into full-brain peak activity.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-22 — original. Brain data: ICBM 152 Nonlinear 2009 template — Copyright (C) 1993-2004 Louis Collins, McConnell Brain Imaging Centre, Montreal Neurological Institute, McGill University (see brain_mri_LICENSE.txt).",
   "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
   "INPUTS": [
@@ -258,11 +258,25 @@ vec3 backdrop(vec2 uv) {
 }
 
 // point in the head for a slice view (mm); s in [-1, 1] is the slice position
+// The slice plane rotates continuously: view 0 = sagittal, 1 = axial, 2 = coronal,
+// and every value in between is an oblique cut — so views morph like a live scan.
 vec3 slicePoint(float view, vec2 q, float s) {
     float S = 235.0 / gZoom;
-    if (view < 0.5) return vec3(s * 62.0, -18.0 - q.x * S, 6.0 + q.y * S);          // sagittal, nose to the left
-    if (view < 1.5) return vec3(q.x * S, -18.0 + q.y * S, 12.0 + s * 58.0);          // axial, nose up
-    return vec3(q.x * S, -18.0 + s * 82.0, 4.0 + q.y * S);                           // coronal
+    float v = clamp(view, 0.0, 2.0);
+    float a = smoothstep(0.0, 1.0, clamp(v, 0.0, 1.0));
+    float b = smoothstep(0.0, 1.0, clamp(v - 1.0, 0.0, 1.0));
+    // basis per view: U (screen x), V (screen y), N (slice axis); origin; slice range
+    vec3 U = normalize(mix(mix(vec3(0.0, -1.0, 0.0), vec3(1.0, 0.0, 0.0), a), vec3(1.0, 0.0, 0.0), b));
+    vec3 V = mix(mix(vec3(0.0, 0.0, 1.0), vec3(0.0, 1.0, 0.0), a), vec3(0.0, 0.0, 1.0), b);
+    vec3 N = mix(mix(vec3(1.0, 0.0, 0.0), vec3(0.0, 0.0, 1.0), a), vec3(0.0, 1.0, 0.0), b);
+    // live-scan drift: the plane slowly tilts a little off-axis
+    float w1 = 0.12 * sin(gT * 0.23), w2 = 0.1 * sin(gT * 0.17 + 1.3);
+    N = normalize(N + U * w1 + V * w2);
+    V = normalize(V - N * dot(V, N));
+    U = normalize(cross(V, N)) * sign(dot(cross(V, N), U) + 1e-4);
+    vec3 O = mix(mix(vec3(0.0, -18.0, 6.0), vec3(0.0, -18.0, 12.0), a), vec3(0.0, -18.0, 4.0), b);
+    float rng = mix(mix(62.0, 58.0, a), 82.0, b);
+    return O + U * q.x * S + V * q.y * S + N * s * rng;
 }
 
 // renders one 2D view at screen point; returns rgb + coverage
@@ -399,13 +413,25 @@ void main() {
     gSeq = clamp(seqMix + 0.2 * sin(TIME * 0.11), 0.0, 1.0);
 
     float ph = TIME / morphPeriod;
-    float k = floor(ph), f = smoothstep(0.7, 1.0, fract(ph));
-    float va = float(viewSel) > 0.5 ? float(viewSel) - 1.0 : mod(k, 5.0);
-    float vb = float(viewSel) > 0.5 ? va : mod(k + 1.0, 5.0);
+    // continuous slice orientation: sagittal → axial → coronal → axial → … (eased, never cuts)
+    float orient = 1.0 - cos(TIME * PI / (2.0 * morphPeriod) + 0.4 * gBuild * gBuild);
+    // auto: two periods of live rotating slices, then the slice series, then the 3D cutaway,
+    // each melting into the next with a long dissolve
+    float seg = mod(floor(ph), 4.0);
+    float vsel = float(viewSel);
+    float kind = seg < 1.5 ? 0.0 : seg < 2.5 ? 3.0 : 4.0;
+    float nseg = mod(seg + 1.0, 4.0);
+    float kindB = nseg < 1.5 ? 0.0 : nseg < 2.5 ? 3.0 : 4.0;
+    float va = kind < 0.5 ? orient : kind;
+    float vb = kindB < 0.5 ? orient : kindB;
+    float f = kind == kindB ? 0.0 : smoothstep(0.45, 1.0, fract(ph));
+    if (vsel > 0.5) {
+        va = vsel < 3.5 ? vsel - 1.0 : vsel - 1.0;
+        vb = va; f = 0.0;
+    }
     float la = float(lookSel) > 0.5 ? float(lookSel) - 1.0 : mod(floor(ph * 0.75 + 0.3), 6.0);
     float lb = float(lookSel) > 0.5 ? la : mod(floor(ph * 0.75 + 0.3) + 1.0, 6.0);
-    float lf = float(lookSel) > 0.5 ? 0.0 : smoothstep(0.7, 1.0, fract(ph * 0.75 + 0.3));
-    if (float(viewSel) > 0.5) f = 0.0;
+    float lf = float(lookSel) > 0.5 ? 0.0 : smoothstep(0.45, 1.0, fract(ph * 0.75 + 0.3));
 
     float s = clamp(sliceManual + 0.75 * sin(TIME * 0.35 * sweep) * step(0.001, sweep), -1.0, 1.0);
 
@@ -414,8 +440,10 @@ void main() {
     vec4 C = A;
     if (f > 0.001) {
         vec4 B = renderView(vb, la, fc, R, s);
-        float wipe = smoothstep(f - 0.08, f + 0.08, 1.0 - uv.y + 0.08 * sin(uv.x * 9.0 + TIME));
-        C = mix(B, A, wipe);
+        // soft dissolve: a smooth crossfade with a gentle noise breakup, like one scan bleeding into the next
+        float n = vn3(vec3(fc / R.y * 6.0, TIME * 0.3));
+        float m = smoothstep(0.0, 1.0, clamp(f * 1.3 - 0.15 + (n - 0.5) * 0.3, 0.0, 1.0));
+        C = mix(A, B, m);
     }
 
     vec3 col = backdrop(uv) * (1.0 - C.a) + C.rgb;
