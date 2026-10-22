@@ -1044,5 +1044,14 @@
   },
   "body_garden": {
     "group": "studio"
+  },
+  "eyeball": {
+    "group": "studio"
+  },
+  "cubist_noise": {
+    "group": "studio"
+  },
+  "flowing": {
+    "group": "studio"
   }
 }

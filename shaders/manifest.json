@@ -3710,5 +3710,48 @@
     "id": 1399,
     "title": "Body Garden",
     "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "3D",
+      "Audio Reactive"
+    ],
+    "description": "Eyeball — a living 3D eye (or two). Each eyeball is a true sphere with a refracting cornea, a fibrous iris and a pupil that is a portal: look through it and you see a whole world inside — Fire (rising flames), Water (caustics and bubbles), Thunder (storm clouds split by lightning), Galaxy (a spiral nebula of stars), Acid (oil-slick swirls) or a Rainbow iris of streaming colour fibres — and that world also flows through the iris fibres. Worlds morph from one to the next. The white of the eye has its own styles: classic red veins, neon holographic, dark sculpted creases or liquid chrome, with wet highlights, window reflections and a fresnel rim. Choose One Eye, Two Eyes or Twin Iris (two irises on one ball). Switch on Eyelids & Skin for almond lids, curled lashes and blinks, and the 1-Bit Dither look turns it all into chunky black-and-white pixel art. The gaze drifts and snaps to new targets, the pupil dilates with the bass, beats make it jump and strike lightning, mids churn the worlds, highs sparkle the highlights.",
+    "file": "eyeball.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1400,
+    "title": "Eyeball",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "3D",
+      "Audio Reactive"
+    ],
+    "description": "Cubist Noise — a solid built from thousands of short glossy tubes, like steel quills or combed hair, each one aligned to a swirling 3D noise flow that wraps around the surface in vortices and eddies. The whole lattice morphs between a Cube, a Sphere and a Triangle (tetrahedron), spinning slowly while the flow rolls across it. Erosion opens holes that reveal deeper layers of tubes. Bass swells the tubes and the shape, beats make the quills bristle outward, mids churn the flow faster, highs glint off the tips.",
+    "file": "cubist_noise.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1401,
+    "title": "Cubist Noise",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "3D",
+      "Particles",
+      "Audio Reactive"
+    ],
+    "description": "Flowing — a spinning 3D string made of dozens of fine strands of glowing dots. The strands wind around each other like a twisted rope, swelling, pinching, looping out and back in, while the whole string sweeps across the frame in a slow S-curve that sways and re-shapes itself. Dots stream along the strands so the rope seems to pour. Strands in front are brighter and larger, strands behind fade into the dark for real depth. Bass swells the rope and spins it harder, beats flash the dots, mids speed the flow, highs make the dots twinkle.",
+    "file": "flowing.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1402,
+    "title": "Flowing",
+    "type": "generator"
   }
 ]
