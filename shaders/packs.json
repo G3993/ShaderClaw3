@@ -1038,5 +1038,8 @@
   },
   "light_spectrum": {
     "group": "studio"
+  },
+  "eggs": {
+    "group": "studio"
   }
 }

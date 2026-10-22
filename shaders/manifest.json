@@ -3681,5 +3681,19 @@
     "id": 1397,
     "title": "Light Spectrum",
     "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Particles",
+      "Audio Reactive"
+    ],
+    "description": "Eggs — a luminous particle egg. Three forms morph into each other: Hatch (hundreds of wiggling filaments burst from a bright nucleus out to a glittering shell of dust, each tipped with a glowing bead), Vortex (spiral lanes of streaking particles swirl around the centre like a galaxy, every particle a bright head with a fading tail) and Field Lines (a rotating 3D egg wrapped in dotted field lines with particles travelling pole to pole, its silhouette bulging into lobes). White light on black with a share of particles in the Studio Palette accent. Bass makes the egg breathe and the filaments reach, beats flash the particles and fire a burst outward, mids spin the vortex, highs make the shell dust sparkle.",
+    "file": "eggs.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1398,
+    "title": "Eggs",
+    "type": "generator"
   }
 ]
