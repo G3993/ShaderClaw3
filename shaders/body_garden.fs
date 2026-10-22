@@ -1,8 +1,14 @@
 /*{
-  "DESCRIPTION": "Body Garden — a still glass human figure with real anatomy (a sculpted human body baked into a 3D distance field), seen three-quarter from head to mid-thigh, with a living garden inside. The glass shell glows at its rim and catches highlights while the interior is raymarched as a volume: lungs breathe and sparkle with thousands of multicoloured points of light, a glowing pink nerve tree branches from the throat into the chest and pulses on the beat, vines spiral up through the torso and neck, flowers open and close in the head, shoulder and chest, a dense bed of blooms and leaves fills the belly, a cluster of sparks lives in the brain, and abstract 3D elements (rings, cubes and orbs) drift through the body. The figure never moves; everything inside it does. Bass makes the lungs breathe deeper, beats send a pulse up the nerves and flash the sparks, mids speed the drifting elements, highs twinkle the lights. Show Dynamics: at Rest the garden sleeps (buds closed, vines low, a few slow sparks and drifting shapes, soft glass); during a Build the vines climb, flowers unfurl, the sparks thicken and shimmer faster while the abstract shapes converge on the heart and tremble; at the Drop a shockwave of light bursts out from the chest through the whole body, the nerves and glass flash, and every bloom snaps fully open.",
+  "DESCRIPTION": "Body Garden — two looks. Pixel Mosaic (default): a flat 2D front-view human figure with real anatomy built from a mosaic of coloured pixel tiles — red, yellow, green, blue, white and black squares, split cells, diagonal hatching and little outlined squares that keep flipping and re-arranging digitally — while contour lines made of broken pixel dashes ripple outward from the body across the whole frame like an aura or a fingerprint. At rest the rings drift slowly and the tiles barely change; during a build the rings speed up and tighten and the tiles flicker faster; on the drop a bright shock ring bursts out of the body and the tiles scatter. Glass Garden: a still glass human figure with real anatomy (a sculpted human body baked into a 3D distance field), seen three-quarter from head to mid-thigh, with a living garden inside. The glass shell glows at its rim and catches highlights while the interior is raymarched as a volume: lungs breathe and sparkle with thousands of multicoloured points of light, a glowing pink nerve tree branches from the throat into the chest and pulses on the beat, vines spiral up through the torso and neck, flowers open and close in the head, shoulder and chest, a dense bed of blooms and leaves fills the belly, a cluster of sparks lives in the brain, and abstract 3D elements (rings, cubes and orbs) drift through the body. The figure never moves; everything inside it does. Bass makes the lungs breathe deeper, beats send a pulse up the nerves and flash the sparks, mids speed the drifting elements, highs twinkle the lights. Show Dynamics: at Rest the garden sleeps (buds closed, vines low, a few slow sparks and drifting shapes, soft glass); during a Build the vines climb, flowers unfurl, the sparks thicken and shimmer faster while the abstract shapes converge on the heart and tremble; at the Drop a shockwave of light bursts out from the chest through the whole body, the nerves and glass flash, and every bloom snaps fully open.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-21 — original. Figure: MakeHuman base mesh (CC0), baked to a signed distance field (body_sdf.png).",
   "CATEGORIES": ["Generator", "3D", "Nature", "Audio Reactive"],
   "INPUTS": [
+    { "NAME": "styleSel",    "LABEL": "Style", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1], "LABELS": ["Pixel Mosaic (flat 2D)", "Glass Garden (3D)"], "GROUP": "Figure" },
+    { "NAME": "tileCount",   "LABEL": "Mosaic Tiles (tall)", "TYPE": "float", "AUDIO": false, "MIN": 16.0, "MAX": 90.0, "DEFAULT": 36.0, "GROUP": "Pixel Mosaic" },
+    { "NAME": "ringSpacing", "LABEL": "Contour Spacing",  "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 0.75, "GROUP": "Pixel Mosaic" },
+    { "NAME": "ringSpeed",   "LABEL": "Outward Flow",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.6, "GROUP": "Pixel Mosaic" },
+    { "NAME": "ringDash",    "LABEL": "Contour Density",  "TYPE": "float", "MIN": 0.1, "MAX": 1.0, "DEFAULT": 0.8, "GROUP": "Pixel Mosaic" },
+    { "NAME": "tileFlip",    "LABEL": "Tile Flicker",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Pixel Mosaic" },
     { "NAME": "facing",      "LABEL": "Figure Turn",      "TYPE": "float", "AUDIO": false, "MIN": -1.0, "MAX": 1.0, "DEFAULT": 0.55, "GROUP": "Figure" },
     { "NAME": "figScale",    "LABEL": "Figure Size",      "TYPE": "float", "AUDIO": false, "MIN": 0.6, "MAX": 1.8, "DEFAULT": 1.0, "GROUP": "Figure" },
     { "NAME": "shellGlow",   "LABEL": "Glass Rim",        "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Figure" },
@@ -36,7 +42,8 @@
     { "NAME": "transparentBg","LABEL": "Transparent BG",  "TYPE": "bool",  "DEFAULT": false, "GROUP": "Background" }
   ],
   "IMPORTED": {
-    "bodyTex": { "PATH": "body_sdf.png" }
+    "bodyTex": { "PATH": "body_sdf.png" },
+    "frontTex": { "PATH": "body_front.png" }
   },
   "PASSES": [
     { "TARGET": "fScene", "WIDTH": "floor($WIDTH*$renderScale)", "HEIGHT": "floor($HEIGHT*$renderScale)" },
@@ -421,6 +428,127 @@ vec3 backdrop(vec2 uv) {
     return mix(bgColor.rgb, bgColor2.rgb, smoothstep(0.0, 0.85, length(dd)));
 }
 
+// ── Pixel Mosaic style: flat 2D front-view figure + outward contour rings ──
+// body_front.png: 2D signed distance to the front silhouette (dm), 0.04 dm grid
+const vec2  F_LO = vec2(-9.0, -10.5);
+const vec2  F_N  = vec2(450.0, 538.0);
+const float F_VOX = 0.04;
+float frontSD(vec2 p) {
+    float flip = texture2D(frontTex, vec2(0.5 / F_N.x, 0.5 / (F_N.y + 1.0))).b > 0.5 ? 1.0 : 0.0;
+    vec2 g = (p - F_LO) / F_VOX;
+    vec2 gc = clamp(g, vec2(0.0), F_N - 1.0);
+    float outside = length(g - gc) * F_VOX;
+    float py = 1.0 + (F_N.y - 1.0 - gc.y) + 0.5;
+    float v = flip > 0.5 ? py / (F_N.y + 1.0) : 1.0 - py / (F_N.y + 1.0);
+    vec4 t = texture2D(frontTex, vec2((gc.x + 0.5) / F_N.x, v));
+    return (t.r * 255.0 * 256.0 + t.g * 255.0) / 65535.0 * 15.0 - 1.5 + outside;
+}
+vec3 mosaicColour(float k) {
+    k = mod(floor(k), 6.0);
+    if (k < 0.5) return vec3(0.86, 0.05, 0.06);   // red
+    if (k < 1.5) return vec3(0.98, 0.74, 0.1);    // yellow
+    if (k < 2.5) return vec3(0.04, 0.5, 0.25);    // green
+    if (k < 3.5) return vec3(0.13, 0.3, 0.66);    // blue
+    if (k < 4.5) return vec3(0.97, 0.97, 0.95);   // white
+    return vec3(0.0);                             // black
+}
+vec4 mosaicPass() {
+    vec2 R = RENDERSIZE.xy;
+    vec2 fc = gl_FragCoord.xy;
+    vec2 uv = fc / R;
+    vec2 sp = (fc - 0.5 * R) / R.y;
+    float ar = audioReact;
+    float S = 19.4 / figScale;                         // body dm per screen unit
+    float punch = 1.0 + 0.05 * gDrop;
+    vec2 p = sp * S / punch + vec2(0.0, 0.16);
+    float pxDm = S / R.y;                              // dm per screen pixel
+    // clocks: continuous flow + digital steps
+    float flowT = TIME * 0.35 * ringSpeed + (audioBassTime * 0.35 + audioMidTime * 0.2) * ar * ringSpeed + 1.6 * gBuild * gBuild;
+    float stepT = floor((TIME * 0.8 + audioMidTime * 1.2 * ar) * (1.0 + 2.0 * gLift) * tileFlip + 10.0 * gBuild * gBuild);
+
+    vec3 col = backdrop(uv);
+    float alpha = 0.0;
+
+    // ── the figure as a tile mosaic ──
+    float cs = 16.7 / floor(tileCount);                // tile size in dm
+    vec2 cell = floor(p / cs);
+    vec2 l = p / cs - cell;                            // 0..1 inside the tile
+    float dC = frontSD((cell + 0.5) * cs);
+    // drop: tiles near the edge scatter outward for a moment
+    float scatter = gDrop * step(dC, 0.0) * step(-0.9, dC) * step(0.6, h12(cell + 3.0));
+    if (dC < 0.08 * cs && scatter < 0.5) {
+        float hc = h12(cell);
+        float epoch = floor(stepT * (0.15 + 0.35 * hc) + hc * 7.0);    // each tile flips on its own clock
+        float k1 = h12(cell + epoch * 1.37);
+        float k2 = h12(cell * 1.7 + epoch * 0.71 + 4.0);
+        float typ = floor(h12(cell * 0.73 + epoch) * 7.0);
+        vec3 a = mosaicColour(k1 * 5.0);                     // avoid black as the main colour
+        vec3 b = mosaicColour(k2 * 6.0 + 1.0);
+        vec3 c = a;
+        float ip = pxDm / cs;                                // one pixel in tile units
+        if (typ < 1.5) {
+            c = a;                                                         // solid
+        } else if (typ < 2.5) {                                            // 2x2 split
+            vec2 q = floor(l * 2.0);
+            c = mosaicColour(h12(cell + q * 3.1 + epoch) * 6.0);
+        } else if (typ < 3.5) {                                            // diagonal hatch
+            float hl = fract((l.x + l.y) * 3.0);
+            c = mix(a, b.r + b.g + b.b > 2.5 ? vec3(0.86, 0.05, 0.06) : vec3(0.0), step(hl, 0.16));
+        } else if (typ < 4.5) {                                            // black tile with an outlined square
+            vec2 q = abs(l - 0.5);
+            float sq = step(max(q.x, q.y), 0.28) * step(0.28 - 1.6 * ip, max(q.x, q.y));
+            c = mix(vec3(0.0), a, sq);
+        } else if (typ < 5.5) {                                            // colour tile with an inner square
+            vec2 q = abs(l - 0.5);
+            c = mix(a, b, step(max(q.x, q.y), 0.22));
+        } else {                                                           // diagonal split
+            c = l.x > l.y ? a : b;
+        }
+        // tile seams: thin black gutters
+        vec2 e = min(l, 1.0 - l);
+        c *= step(1.2 * ip, min(e.x, e.y));
+        // build: a shimmer sweeps up through the body
+        c *= 1.0 + 0.5 * gBuild * step(0.85, fract(p.y * 0.15 - TIME * (1.0 + 3.0 * gBuild)));
+        col = c;
+        alpha = 1.0;
+        // a few 'missing' tiles let the black show through
+        if (h12(cell + epoch * 0.37 + 9.0) > 0.93) { col = backdrop(uv); alpha = 0.0; }
+    } else {
+        // ── contour rings flowing outward ──
+        float d = frontSD(p);
+        // snap to a coarse pixel grid so lines step like pixel strokes
+        float gp = max(pxDm * 3.0, 0.06);
+        vec2 ps = (floor(p / gp) + 0.5) * gp;
+        float ds = frontSD(ps);
+        float sp2 = ringSpacing * (1.0 - 0.3 * gBuild);
+        float rp = ds / sp2 - flowT;
+        float ri = floor(rp);
+        float fr = fract(rp);
+        float lw = clamp(1.1 * gp / sp2, 0.02, 0.5);
+        float line = step(fr, lw);
+        // break each ring into dashes: segments of the pixel grid, varying per ring
+        vec2 seg = floor(ps / (gp * (4.0 + 6.0 * h11(ri * 1.3))));
+        float on = step(1.0 - ringDash * (0.7 + 0.4 * gLift), h12(seg + ri * 7.13));
+        // sparse dots and glyph ticks between rings
+        float tick = step(0.985 - 0.01 * gLift, h12(floor(p / gp) + floor(flowT * 2.0)));
+        float hseg = h12(seg * 1.7 + ri);
+        vec3 lc = hseg < 0.72 ? vec3(1.0) : hseg < 0.82 ? vec3(0.25, 0.45, 1.0) : hseg < 0.92 ? vec3(1.0, 0.8, 0.15) : vec3(0.1, 0.7, 0.35);
+        float fade = 1.0 - 0.3 * smoothstep(3.0, 12.0, ds);
+        float v = max(line * on, tick * 0.8) * fade * (0.75 + 0.35 * gLift + 0.25 * audioBeatPulse * ar);
+        // drop: a bright shock ring bursts out of the body
+        float shock = exp(-pow((ds - (1.0 - gDrop) * 9.0) / 0.25, 2.0)) * gDrop;
+        col = mix(col, lc, clamp(v, 0.0, 1.0));
+        col += vec3(1.0) * shock * 1.2;
+        alpha = clamp(v + shock, 0.0, 1.0);
+        // scattered tiles fly outward on the drop
+        if (scatter > 0.5) { col = mosaicColour(h12(cell) * 5.0); alpha = 1.0; }
+    }
+    col *= 1.0 + 0.12 * audioLevel * ar;
+    col += (h12(fc + fract(TIME * 13.7) * 91.0) - 0.5) * grain * 0.03;
+    col = studioPalette(clamp(col, 0.0, 1.0));
+    return vec4(clamp(col, 0.0, 1.0), transparentBg ? alpha : 1.0);
+}
+
 vec4 finalPass() {
     vec2 R = RENDERSIZE.xy;
     vec2 fc = gl_FragCoord.xy;
@@ -454,6 +582,10 @@ void main() {
     gT = TIME * speed + 0.3 * audioBassTime * audioReact * speed;
     gBeat = audioBeatPulse * audioReact;
     gBreath = 1.0 + 0.05 * sin(TIME * 1.2) + 0.08 * bassP() * audioReact + 0.05 * (gLift - 0.5) + 0.07 * gDrop;
+    if (float(styleSel) < 0.5) {                       // Pixel Mosaic: flat 2D, no raymarch
+        gl_FragColor = PASSINDEX == 2 ? mosaicPass() : vec4(0.0);
+        return;
+    }
     if (PASSINDEX == 0)      gl_FragColor = scenePass();
     else if (PASSINDEX == 1) gl_FragColor = bloomPass();
     else                     gl_FragColor = finalPass();
