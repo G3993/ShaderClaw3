@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Light Spectrum — a sheet of thunder and a crystal line of light, mirrored like a Rorschach of glass. Branching orange lightning webs crawl and strike across the frame through drifting bokeh orbs. A column of translucent crystal sheets stands in the centre, their edges burning white and their faces filled with fine vertical fibres; light bursts out of a glowing core in radial filaments, and everything is split into a real spectrum — the scene is sampled at seven wavelength scales and recombined, so every edge throws violet-to-red prism fringes. Thin-film iridescence slides over the sheets, a lavender-and-peach haze breathes behind, and a feedback buffer smears the light outward into trails. The light keeps morphing through six forms: Thunder Sheet (a branching electric web), Crystal Column (vertical sheets), Prism Lens (mirrored lobes on a burning horizon), Facet Star (kaleidoscopic shards), Starburst (pure radial filaments) and Obsidian Mirror (dark mirrored glass relief with chromatic edge glints). Bass swells the core and spreads the sheets, beats flash the light and tear the image, mids wobble the sheets, highs sparkle the fibres.",
+  "DESCRIPTION": "Light Spectrum — a sheet of thunder and a crystal line of light, mirrored like a Rorschach of glass. Branching orange lightning webs crawl and strike across the frame through drifting bokeh orbs. A column of translucent crystal sheets stands in the centre, their edges burning white and their faces filled with fine vertical fibres; light bursts out of a glowing core in radial filaments, and everything is split into a real spectrum — the scene is sampled at seven wavelength scales and recombined, so every edge throws violet-to-red prism fringes. Thin-film iridescence slides over the sheets, a lavender-and-peach haze breathes behind, and a feedback buffer smears the light outward into trails. The light keeps morphing through six forms: Thunder Sheet (a branching electric web), Crystal Column (vertical sheets), Prism Lens (mirrored lobes on a burning horizon), Facet Star (kaleidoscopic shards), Starburst (pure radial filaments) and Obsidian Mirror (dark mirrored glass relief with chromatic edge glints). Bass swells the core and spreads the sheets, beats flash the light and tear the image, mids wobble the sheets, highs sparkle the fibres. Rest: a few slim sheets glow softly in lavender haze with a dim, slow-crawling web and rare distant flickers; Build: the sheets draw together as the camera pushes in, strikes flicker faster and faster, dispersion and core glow climb and the image starts to tear and tremble; Drop: one massive white-hot strike — the whole web ignites, a spectral shockwave bursts from the core and the trails blast outward — settling into a wide, fully charged storm of sheets, filaments and lightning.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-21 — original.",
   "CATEGORIES": ["Generator", "Light", "Glitch", "Audio Reactive"],
   "INPUTS": [
@@ -35,6 +35,8 @@
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
     { "NAME": "audioReact",  "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.65, "GROUP": "Audio Reactivity" },
+    { "NAME": "showState",   "LABEL": "Show State", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Follow Music", "Rest", "Build", "Peak"], "GROUP": "Show Dynamics" },
+    { "NAME": "dynamics",    "LABEL": "Build & Drop Depth", "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.85, "GROUP": "Show Dynamics" },
     { "NAME": "bgMode",      "LABEL": "Background", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2], "LABELS": ["Solid", "Vertical Gradient", "Radial Gradient"], "GROUP": "Background" },
     { "NAME": "bgColor",     "LABEL": "BG Color / Top / Center", "TYPE": "color", "DEFAULT": [0.02, 0.01, 0.04, 1.0], "GROUP": "Background" },
     { "NAME": "bgColor2",    "LABEL": "BG Bottom / Edge", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0], "GROUP": "Background" },
@@ -89,6 +91,26 @@ vec3 hueRot(vec3 c, float h) {
     return c * ca + cross(k, c) * sin(a) + k * dot(k, c) * (1.0 - ca);
 }
 
+// ── Show dynamics: rest → build → peak / drop ───────────────────────────
+float gRest, gBuild, gPeak, gDrop, gLift;
+void showDynamics() {
+    float m = float(showState);
+    float e = clamp(audioEnergy, 0.0, 1.0);
+    float b = clamp(audioBuildup, 0.0, 1.0);
+    float d = clamp(audioDrop, 0.0, 1.0);
+    if (m > 0.5) {                                   // manual override for the VJ
+        if (m < 1.5)      { e = 0.04; b = 0.0; d = 0.0; }                                      // Rest
+        else if (m < 2.5) { float r = fract(TIME / 8.0); e = 0.3 + 0.35 * r; b = r * r; d = 0.0; } // Build: 8 s riser, loops
+        else              { e = 1.0; b = 0.0; d = exp(-fract(TIME / 4.0) * 5.0); } // Peak: hits every 4 s + beats
+    }
+    float k = dynamics;
+    gBuild = b * k;                                                  // tension 0..1
+    gDrop  = d * k;                                                  // impact impulse 0..1
+    gPeak  = smoothstep(0.5, 0.9, e) * k;                            // sustained high section
+    gRest  = (1.0 - smoothstep(0.08, 0.4, e)) * (1.0 - b) * k;       // quiet / breakdown
+    gLift  = mix(0.5, clamp(0.15 + e * 0.7 + gBuild * 0.25 + d * 0.3, 0.0, 1.0), k);  // 0 rest … 1 peak; 0.5 when dynamics = 0
+}
+
 float gT;
 float gW0, gW1, gW2, gW3, gW4, gW5;   // form weights: column, lens, facet, starburst, thunder, obsidian
 float gSym;
@@ -108,13 +130,15 @@ float lightField(vec2 p, out float phase) {
 
     // ── crystal column: translucent vertical sheets with burning edges ──
     if (gW0 + gW1 > 0.001) {
-        float n = floor(clamp(sheetCount, 1.0, 7.0) + 0.5);
-        float wob = sheetMorph * (1.0 + 0.7 * midP() * ar);
-        float spread = 1.0 + 0.25 * bassP() * ar;
+        // rest: fewer, slimmer sheets; build: they draw together; drop: they blast apart
+        float n = max(floor(clamp(sheetCount, 1.0, 7.0) + 0.5) * mix(0.45, 1.0, smoothstep(0.15, 0.85, gLift)), 1.0);
+        float wob = sheetMorph * (1.0 + 0.7 * midP() * ar) * mix(0.6, 1.2, gLift);
+        float spread = (1.0 + 0.25 * bassP() * ar) * mix(0.8, 1.25, gLift) * (1.0 - 0.4 * gBuild) + 0.6 * gDrop;
         float acc = 0.0;
         for (int i = 0; i < 7; i++) {
             float fi = float(i);
-            if (fi > n - 0.5) break;
+            if (fi > ceil(n) - 0.5) break;
+            float sw = clamp(n - fi, 0.0, 1.0);
             float hs = h11(fi * 3.7 + 1.0);
             float xc = (0.03 + fi * 0.055) * spread + 0.03 * wob * sin(y * (3.0 + 4.0 * hs) + gT * (0.8 + hs) + fi * 2.0);
             // lens form: sheets bow outward into mirrored lobes
@@ -124,7 +148,7 @@ float lightField(vec2 p, out float phase) {
             float edge = exp(-max(d - w, 0.0) * 260.0) * (0.45 + 0.55 * hs);
             float face = smoothstep(w + 0.025, w, d) * 0.12;
             float len = smoothstep(0.7 + 0.25 * hs + 0.1 * sin(gT * 0.4 + fi), 0.1, abs(y));
-            acc += (edge + face) * len;
+            acc += (edge + face) * len * sw;
             phase += (face + edge * 0.5) * (fi * 0.17 + y * 0.6);
         }
         // fine vertical fibres inside the crystal
@@ -181,11 +205,14 @@ float lightField(vec2 p, out float phase) {
     }
     // ── radial filaments from the core (all forms, strongest in starburst) ──
     float fil = pow(vn(vec2(a * 55.0 / PI, r * 1.8 - gT * 0.9)), 4.0) + 0.6 * pow(vn(vec2(a * 140.0 / PI, r * 3.0 - gT * 1.3)), 6.0);
-    float filEnv = smoothstep(0.02, 0.25, r) * exp(-r * 1.6);
-    I += fil * filEnv * streaks * (0.25 * (1.0 - gW5 - gW4 * 0.6) + 0.8 * gW3 + 0.4 * beat);
+    float filEnv = smoothstep(0.02, 0.25, r) * exp(-r * mix(2.6, 1.3, gLift));
+    I += fil * filEnv * streaks * ((0.25 * (1.0 - gW5 - gW4 * 0.6) + 0.8 * gW3) * mix(0.6, 1.3, gLift) + 0.4 * beat + 0.5 * gBuild + 1.6 * gDrop);
+    // drop: a spectral shockwave ring bursting out of the core (gets prism-split like everything else)
+    float shR = (1.0 - gDrop) * 1.3;
+    I += gDrop * 1.6 * exp(-pow((r - shR) / (0.015 + 0.05 * (1.0 - gDrop)), 2.0));
     // ── core ──
     float core = exp(-r * r * 90.0) * 0.9 + exp(-r * 12.0) * 0.18;
-    I += core * coreGlow * (1.0 - 0.7 * gW5) * (1.0 + 0.8 * bassP() * ar + 1.2 * beat);
+    I += core * coreGlow * (1.0 - 0.7 * gW5) * (1.0 + 0.8 * bassP() * ar + 1.2 * beat) * (mix(0.55, 1.0, gLift) + 0.7 * gBuild * gBuild + 1.0 * gDrop);
     phase += r * 2.0;
     return I;
 }
@@ -226,16 +253,19 @@ vec4 trailPass() {
     float beat = audioBeatPulse * ar;
 
     // glitch: horizontal tears + vertical slip, more on beats
-    float gl = glitch * (0.2 + 1.6 * beat);
+    float gl = glitch * (0.2 + 1.6 * beat) * mix(0.25, 1.2, gLift) + 0.6 * smoothstep(0.7, 1.0, gBuild) + 1.2 * gDrop;
     float row = floor(uv.y * 60.0);
     float tear = step(1.0 - 0.15 * gl, h12(vec2(row, floor(TIME * 10.0))));
     vec2 fcg = fc + vec2(tear * (h12(vec2(row * 1.7, floor(TIME * 10.0))) - 0.5) * R.x * 0.08 * gl, 0.0);
 
     vec2 p = (fcg - 0.5 * R) / R.y;
+    // build: camera pushes in with a tremor near the top; drop: a scale punch
+    p += (vec2(h11(floor(TIME * 24.0)), h11(floor(TIME * 24.0) + 7.3)) - 0.5) * 0.008 * smoothstep(0.65, 1.0, gBuild);
+    p *= (1.0 - 0.2 * gBuild) * (1.0 - 0.12 * gDrop);
     float r = length(p);
 
     // spectral sampling: the same light field at seven wavelength scales
-    float disp = dispersion * (0.03 + 0.09 * r) * (1.0 + 0.6 * beat);
+    float disp = dispersion * (0.03 + 0.09 * r) * (1.0 + 0.6 * beat) * mix(0.6, 1.2, gLift) * (1.0 + 0.7 * gBuild + 2.0 * gDrop);
     vec3 col = vec3(0.0);
     vec3 wsum = vec3(0.0);
     float phase = 0.0;
@@ -255,7 +285,7 @@ vec4 trailPass() {
     col = mix(col, col * film(phase * 0.8 + gT * 0.05) * 1.5, iridescence * 0.5);
 
     // ── thunder sheet: three samples for a chromatic fringe ──
-    float th = thunder * (0.5 + 1.1 * gW4);
+    float th = thunder * ((0.5 + 1.1 * gW4) * mix(0.15, 1.0, gLift) + 0.4 * gBuild);
     if (th > 0.001) {
         float tt = gT * 0.8;
         float cd = 0.006 * (dispersion + 0.3);
@@ -263,8 +293,11 @@ vec4 trailPass() {
         float tg = thunderWeb(p, tt);
         float tb = thunderWeb(p * (1.0 - cd), tt);
         // strikes: random flashes + every beat
-        float fl = h11(floor(TIME * (6.0 + 10.0 * strikeRate)));
-        float strike = 0.55 + 0.9 * step(1.0 - 0.35 * strikeRate, fl) * fl + 1.6 * audioBeatPulse * ar + 0.4 * bassP() * ar;
+        // strike clock: additive, and it races ahead (bounded) as the build climbs
+        float sclk = TIME * (6.0 + 10.0 * strikeRate) + 60.0 * gBuild * gBuild * gBuild;
+        float fl = h11(floor(sclk));
+        float sp = clamp(0.35 * strikeRate * mix(0.35, 1.4, gLift) + 0.35 * gBuild, 0.0, 0.9);
+        float strike = mix(0.35, 0.6, gLift) + 0.9 * step(1.0 - sp, fl) * fl + 1.6 * audioBeatPulse * ar * mix(0.4, 1.0, gLift) + 0.4 * bassP() * ar + 2.5 * gDrop;
         vec3 tc = vec3(tr, tg, tb) * strike;
         vec3 bolt = thunderColor.rgb * tc * 3.2 + vec3(1.0, 0.92, 0.8) * pow(max(tg * strike - 0.35, 0.0), 1.3) * 2.5;
         col = col * (1.0 - 0.35 * gW4) + bolt * th;
@@ -280,16 +313,16 @@ vec4 trailPass() {
             float d = length(p - c) / rad;
             float orb = smoothstep(1.0, 0.85, d) * (0.35 + 0.65 * smoothstep(0.6, 0.95, d));
             vec3 oc = mix(vec3(0.85, 0.85, 0.95), thunderColor.rgb * 1.2 + 0.2, step(0.7, h11(fi * 9.1)));
-            col += oc * orb * bokeh * (0.35 + 0.4 * h11(fi * 2.2)) * (1.0 + 0.6 * highP() * ar);
+            col += oc * orb * bokeh * (0.35 + 0.4 * h11(fi * 2.2)) * (1.0 + 0.6 * highP() * ar) * mix(0.5, 1.2, gLift);
         }
     }
 
     // feedback: previous light pushed outward (trails / bloom smear)
-    float z = 1.0 - 0.003 * trailZoom * (1.0 + 0.8 * beat);
+    float z = 1.0 - 0.003 * trailZoom * (1.0 + 0.8 * beat) - 0.02 * gDrop;   // drop blasts the trails outward
     vec2 puv = (uv - 0.5) * z + 0.5;
     vec3 prev = texture2D(trail, puv).rgb;
     if (FRAMEINDEX < 2) prev = vec3(0.0);
-    vec3 outc = max(col, prev * trails * 0.92);
+    vec3 outc = max(col, prev * min(trails * (1.0 + 0.08 * gRest), 0.97) * 0.92);
     return vec4(min(outc, vec3(8.0)), 1.0);
 }
 
@@ -322,13 +355,13 @@ vec4 finalPass() {
     vec2 hp = vec2(gSym > 0.5 ? abs(p.x) : p.x, p.y);
     float cl = vn(hp * 3.0 + vec2(0.0, TIME * 0.05)) * 0.6 + vn(hp * 7.0 - TIME * 0.08) * 0.4;
     vec3 hz = mix(hazeA.rgb, hazeB.rgb, smoothstep(0.35, 0.75, vn(hp * 2.0 + 5.0 + TIME * 0.03)));
-    float hazeAmt = haze * smoothstep(0.45, 0.9, cl) * smoothstep(1.2, 0.2, length(p)) * 0.4 * (1.0 - 0.7 * gW5);
+    float hazeAmt = haze * smoothstep(0.45, 0.9, cl) * smoothstep(1.2, 0.2, length(p)) * 0.4 * (1.0 - 0.7 * gW5) * mix(1.35, 0.85, gLift);
     light += hz * hazeAmt * (1.0 + 0.3 * bassP() * ar);
 
-    light *= exposure * (1.0 + 0.15 * audioLevel * ar);
+    light *= exposure * (1.0 + 0.15 * audioLevel * ar) * (mix(0.85, 1.0, gLift) + 0.1 * gBuild + 0.25 * gDrop);
     vec3 col = 1.0 - exp(-light * 0.95);
     col = hueRot(col, hueShift);
-    col = mix(vec3(lum(col)), col, saturation * 1.1);
+    col = mix(vec3(lum(col)), col, saturation * 1.1 * mix(0.8, 1.15, gLift));
     float cov = clamp(lum(col) * 1.6, 0.0, 1.0);
     vec3 bg = backdrop(uv);
     col = bg * (1.0 - cov) + col;
@@ -340,8 +373,10 @@ vec4 finalPass() {
 }
 
 void main() {
+    showDynamics();
     // shared state for both passes
-    gT = TIME * speed + 0.4 * audioBassTime * audioReact * speed;
+    gT = TIME * speed + 0.4 * audioBassTime * audioReact * speed + 0.25 * audioMidTime * audioReact * speed
+       + 2.0 * gBuild * gBuild * speed;
     gSym = float(symmetry);
     float sel = float(formSel);
     gW0 = 0.0; gW1 = 0.0; gW2 = 0.0; gW3 = 0.0; gW4 = 0.0; gW5 = 0.0;

@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Biology — a living psychedelic specimen plate. Seventeen kinds of abstract organism drift through oil-slick acid pools of soap-film iridescence and bubble foam, across a field of hand-drawn magenta contour lines: beaded chains, ringed targets on wavy stalks, tadpoles, ferns with dotted fruiting tips, worms, combs, dark lobes full of black-and-white tongues, ammonite spirals, spiny urchins, amoebas with nuclei, radiolarian lattices, jellyfish, dividing cells, branching coral, spore clusters, eyes and striped ribbons — each with its own accent colours, proportions and counts. The line field is the distance to every organism drawn as isolines, so each creature echoes outward in rings that crease into seams where they meet, while a web of hidden cells adds cross-stitched seams in the open space. Organisms swim, undulate, sway, pulse and are born and fade on their own clocks; the lines flow outward from them. Bass swells the bodies, beats pulse the rings and push a wave through the line field, mids stir the wiggle, highs flicker the bead centres.",
+  "DESCRIPTION": "Biology — a living psychedelic specimen plate. Seventeen kinds of abstract organism drift through oil-slick acid pools of soap-film iridescence and bubble foam, across a field of hand-drawn magenta contour lines: beaded chains, ringed targets on wavy stalks, tadpoles, ferns with dotted fruiting tips, worms, combs, dark lobes full of black-and-white tongues, ammonite spirals, spiny urchins, amoebas with nuclei, radiolarian lattices, jellyfish, dividing cells, branching coral, spore clusters, eyes and striped ribbons — each with its own accent colours, proportions and counts. The line field is the distance to every organism drawn as isolines, so each creature echoes outward in rings that crease into seams where they meet, while a web of hidden cells adds cross-stitched seams in the open space. Organisms swim, undulate, sway, pulse and are born and fade on their own clocks; the lines flow outward from them. Bass swells the bodies, beats pulse the rings and push a wave through the line field, mids stir the wiggle, highs flicker the bead centres. Rest: a few small organisms drift slowly in sparse, soft contour lines with shallow acid pools; Build: the organisms coil inward and shrink while the lines tighten and race outward, the oil-slick spreads and shimmers faster, with a tremor at the top; Drop: a rainbow shockwave rips out through the line field and film as every organism punches up and scatters into a dense, saturated, full-acid plate.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-21 — original.",
   "CATEGORIES": ["Generator", "Nature", "Lines", "Audio Reactive"],
   "INPUTS": [
@@ -38,6 +38,8 @@
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
     { "NAME": "audioReact",  "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6, "GROUP": "Audio Reactivity" },
+    { "NAME": "showState",   "LABEL": "Show State", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Follow Music", "Rest", "Build", "Peak"], "GROUP": "Show Dynamics" },
+    { "NAME": "dynamics",    "LABEL": "Build & Drop Depth", "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.85, "GROUP": "Show Dynamics" },
     { "NAME": "bgMode",      "LABEL": "Background", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2], "LABELS": ["Solid", "Vertical Gradient", "Radial Gradient"], "GROUP": "Background" },
     { "NAME": "bgColor",     "LABEL": "Paper / Top / Center", "TYPE": "color", "DEFAULT": [1.0, 0.88, 0.93, 1.0], "GROUP": "Background" },
     { "NAME": "bgColor2",    "LABEL": "Paper Bottom / Edge", "TYPE": "color", "DEFAULT": [0.98, 0.76, 0.86, 1.0], "GROUP": "Background" },
@@ -85,6 +87,26 @@ vec3 hueRot(vec3 c, float h) {
 }
 mat2 rot(float a) { float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 float smin(float a, float b, float k) { float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0); return mix(b, a, h) - k * h * (1.0 - h); }
+
+// ── Show dynamics: rest → build → peak / drop ───────────────────────────
+float gRest, gBuild, gPeak, gDrop, gLift;
+void showDynamics() {
+    float m = float(showState);
+    float e = clamp(audioEnergy, 0.0, 1.0);
+    float b = clamp(audioBuildup, 0.0, 1.0);
+    float d = clamp(audioDrop, 0.0, 1.0);
+    if (m > 0.5) {                                   // manual override for the VJ
+        if (m < 1.5)      { e = 0.04; b = 0.0; d = 0.0; }                                      // Rest
+        else if (m < 2.5) { float r = fract(TIME / 8.0); e = 0.3 + 0.35 * r; b = r * r; d = 0.0; } // Build: 8 s riser, loops
+        else              { e = 1.0; b = 0.0; d = exp(-fract(TIME / 4.0) * 5.0); } // Peak: hits every 4 s + beats
+    }
+    float k = dynamics;
+    gBuild = b * k;                                                  // tension 0..1
+    gDrop  = d * k;                                                  // impact impulse 0..1
+    gPeak  = smoothstep(0.5, 0.9, e) * k;                            // sustained high section
+    gRest  = (1.0 - smoothstep(0.08, 0.4, e)) * (1.0 - b) * k;       // quiet / breakdown
+    gLift  = mix(0.5, clamp(0.15 + e * 0.7 + gBuild * 0.25 + d * 0.3, 0.0, 1.0), k);  // 0 rest … 1 peak; 0.5 when dynamics = 0
+}
 
 float gPx;      // one screen pixel in glyph-local units (set per glyph)
 float gT;
@@ -548,18 +570,30 @@ vec3 paper(vec2 uv) {
 }
 
 void main() {
+    showDynamics();
     vec2 R = RENDERSIZE.xy;
     vec2 fc = gl_FragCoord.xy;
     vec2 uv = fc / R;
     float ar = audioReact;
     vec2 p = (fc - 0.5 * R) / R.y / zoom;
+    // build tremor near the top of the riser
+    float trem = smoothstep(0.65, 1.0, gBuild);
+    p += (h22(vec2(floor(TIME * 24.0), 3.7)) - 0.5) * 0.007 * trem;
     float aspect = R.x / R.y;
-    gT = TIME * (0.6 + 0.4 * swim) + 0.3 * audioBassTime * ar;
-    gWig = wiggle * (1.0 + 0.6 * midP() * ar);
+    float rD = length(p);
+    // drop shockwave: a ring racing out from the centre as the impulse decays
+    float shockR = (1.0 - gDrop) * 1.4;
+    float shock = gDrop * exp(-pow((rD - shockR) / (0.05 + 0.1 * (1.0 - gDrop)), 2.0));
+    // additive clocks only: music clocks + bounded build offsets (no phase jumps)
+    gT = TIME * (0.6 + 0.4 * swim) + 0.3 * audioBassTime * ar + 0.25 * audioMidTime * ar
+       + 2.5 * gBuild * gBuild;
+    gWig = wiggle * (1.0 + 0.6 * midP() * ar) * mix(0.55, 1.3, gLift);
 
     float D = 1e5;
     vec4 ink = vec4(0.0);
     float n = floor(clamp(glyphCount, 3.0, 12.0) + 0.5);
+    // population: rest keeps ~40 % of the organisms, peak all of them
+    float popF = mix(0.5, 1.08, smoothstep(0.15, 0.85, gLift));
 
     for (int i = 0; i < MAXG; i++) {
         float fi = float(i);
@@ -571,6 +605,12 @@ void main() {
         home += (h22(vec2(fi, 2.0)) - 0.5) * vec2(0.22 * aspect, 0.18);
         float st = TIME * swim * 0.08;
         vec2 c = home + 0.12 * vec2(sin(st * (1.0 + sd) + fi * 2.1), cos(st * (0.8 + sd) + fi * 1.3));
+        // build: the colony coils in toward the centre; drop: it scatters back out
+        c *= 1.0 - 0.22 * gBuild + 0.12 * gDrop;
+        c = rot(0.35 * gBuild * gBuild) * c;
+        float rank = h11(fi * 11.37 + 0.71);
+        float vis = clamp((popF - rank) * 7.0, 0.0, 1.0);
+        if (vis < 0.001) continue;
         // life: grow in, live, shrink out (each organism on its own clock)
         float lp = TIME / lifeCycle + sd;
         float lf = fract(lp);
@@ -580,7 +620,8 @@ void main() {
         gAcc = palPick(h11(fi * 2.9 + gen * 1.3) * 6.0);
         gAcc2 = palPick(h11(fi * 4.3 + gen * 2.1) * 6.0 + 1.0);
         float ang = h11(fi * 5.1 + floor(lp)) * TAU + 0.15 * sin(TIME * 0.2 * swim + fi);
-        float sc = (0.17 + 0.1 * h11(fi * 6.1 + gen)) * glyphSize * max(life, 0.001);
+        float sc = (0.17 + 0.1 * h11(fi * 6.1 + gen)) * glyphSize * max(life * vis, 0.001)
+                 * mix(0.78, 1.12, gLift) * (1.0 - 0.18 * gBuild) * (1.0 + 0.28 * gDrop);
         vec2 q = rot(-ang) * (p - c) / sc;
         q *= vec2(mix(0.85, 1.2, h11(fi * 8.7 + gen)), mix(0.85, 1.2, h11(fi * 3.3 + gen)));
         gPx = 1.0 / (R.y * zoom * sc);
@@ -629,12 +670,15 @@ void main() {
 
     // isolines flowing outward from every organism
     float beatW = audioBeatPulse * ar;
-    float ph = Dall * lineDensity - TIME * lineFlow * 2.0 - beatW * 1.5;
-    float fw = lineDensity / (R.y * zoom);                 // phase change per pixel
+    // rest: sparse lines; build: they tighten and race outward; drop: the shockwave kinks them
+    float dens = lineDensity * mix(0.7, 1.08, gLift) * (1.0 + 0.35 * gBuild);
+    float ph = Dall * dens - TIME * lineFlow * 2.0 - audioMidTime * lineFlow * 0.6 * ar - beatW * 1.5
+             - lineFlow * 8.0 * gBuild * gBuild * gBuild - shock * 2.5;
+    float fw = dens / (R.y * zoom);                        // phase change per pixel
     float lw = lineWidth * 0.5;
     float line = clamp((lw - abs(fract(ph) - 0.5)) / max(fw, 1e-4) + 0.5, 0.0, 1.0);
     // halo: lines and paper deepen toward the organisms
-    float hal = exp(-max(D, 0.0) * 14.0) * halo;
+    float hal = exp(-max(D, 0.0) * 14.0) * halo * mix(0.55, 1.15, gLift);
     vec3 pap = paper(uv);
     vec3 ground = mix(pap, mix(pap, cMagenta.rgb, 0.85), clamp(hal, 0.0, 1.0));
     // lines are magenta on the open paper and deepen to ink inside the halos
@@ -644,14 +688,16 @@ void main() {
     col = mix(col, cMagenta.rgb, 0.06 * (0.5 + 0.5 * sin(p.x * 2.0 + p.y * 1.3 + TIME * 0.1)));
 
     // ── acid pools: oil-slick film with bubble foam and black voids ──
-    float ft = TIME * filmSpeed * 0.5 + 0.3 * audioBassTime * ar * filmSpeed;
-    if (acid > 0.001) {
+    float ft = TIME * filmSpeed * 0.5 + 0.3 * audioBassTime * ar * filmSpeed + 0.2 * audioHighTime * ar * filmSpeed
+             + 3.0 * gBuild * gBuild * filmSpeed;
+    float acidK = acid * mix(0.7, 1.12, gLift);
+    if (acidK > 0.001) {
         vec2 ap = p * acidScale + vec2(0.07, -0.05) * ft;
         float pn = vn2(ap * 1.3 + 0.4 * vec2(sin(ap.y + ft * 0.3), cos(ap.x - ft * 0.2))) * 0.65 + vn2(ap * 3.1 - ft * 0.15) * 0.35;
-        float thr = 1.0 - acidPools * 0.75;
+        float thr = 1.0 - clamp(acidPools * mix(0.7, 1.2, gLift) + 0.3 * gDrop, 0.0, 1.2) * 0.75;
         float pw = fwPool(pn, thr, R.y * zoom / acidScale);
         float poolEdge = exp(-abs(pn - thr) * 90.0);
-        float th = filmThickness(p * acidScale, ft) + 0.15 * midP() * ar;
+        float th = filmThickness(p * acidScale, ft) + 0.15 * midP() * ar + 0.5 * gDrop * (1.0 - rD) + 0.08 * gBuild;
         vec3 film = thinFilm(th);
         // pale film between bands (like the cream soap areas of the reference)
         film = mix(film, vec3(0.98, 0.95, 0.88), smoothstep(0.6, 0.85, fract(th * 2.0)) * 0.55);
@@ -683,23 +729,32 @@ void main() {
         pool = mix(pool, cBlack.rgb, smoothstep(0.66, 0.68, vd) * (1.0 - foamMask * 0.5));
         // crisp dark seams where film bands meet (the sharp oil-slick edges)
         pool = mix(pool, cBlack.rgb, 0.7 * smoothstep(0.03, 0.0, abs(fract(th * 2.2) - 0.5)) * (1.0 - foamA * foamMask));
-        col = mix(col, pool, pw * acid);
+        col = mix(col, pool, pw * acidK);
         // pool shoreline: a black line with a rainbow rim
-        col = mix(col, cBlack.rgb, poolEdge * 0.9 * acid);
-        col = mix(col, thinFilm(th * 1.7 + 0.2), smoothstep(0.04, 0.0, abs(pn - thr - 0.03)) * 0.8 * acid);
+        col = mix(col, cBlack.rgb, poolEdge * 0.9 * acidK);
+        col = mix(col, thinFilm(th * 1.7 + 0.2), smoothstep(0.04, 0.0, abs(pn - thr - 0.03)) * 0.8 * acidK);
     }
+
 
     // organisms; their dark bodies carry an iridescent sheen when the acid is up
     vec3 inkC = ink.rgb;
-    if (acid > 0.001 && bodySheen > 0.001) {
+    if (acidK > 0.001 && bodySheen > 0.001) {
         float dark = smoothstep(0.12, 0.02, lum(inkC));
         float th2 = filmThickness(p * 2.3 + 3.0, ft * 1.3);
-        inkC = mix(inkC, thinFilm(th2) * 0.9, dark * bodySheen * acid * 0.75);
+        inkC = mix(inkC, thinFilm(th2) * 0.9, dark * bodySheen * min(acidK, 1.0) * 0.75);
     }
     col = mix(col, inkC, ink.a);
+    // drop: the shockwave front is a band of raw oil-slick rainbow over everything
+    col = mix(col, thinFilm(rD * 2.0 + TIME * 0.1), clamp(shock * 0.8, 0.0, 1.0));
+    float shockEdge = gDrop * exp(-pow((rD - shockR - 0.04 - 0.08 * (1.0 - gDrop)) / 0.014, 2.0));
+    col = mix(col, vec3(1.0, 0.97, 0.99), clamp(shockEdge, 0.0, 1.0));
+    col = mix(col, cBlack.rgb, 0.5 * gDrop * exp(-pow((rD - shockR - 0.07 - 0.08 * (1.0 - gDrop)) / 0.02, 2.0)));
     col *= 1.0 + 0.1 * audioLevel * ar;
+    // build shimmer: a sweep whose rate climbs with the riser (phase grows ~ b^3, no jumps)
+    float shim = 0.5 + 0.5 * sin(gBuild * gBuild * gBuild * 60.0 + p.x * 4.0 - p.y * 2.0);
+    col *= 1.0 + 0.14 * gBuild * shim + 0.18 * gDrop * exp(-rD * 2.0);
     col = hueRot(col, hueShift);
-    col = mix(vec3(lum(col)), col, saturation);
+    col = mix(vec3(lum(col)), col, saturation * mix(0.72, 1.18, gLift));
     col += (h12(fc + fract(TIME * 13.7) * 91.0) - 0.5) * grain * 0.08;
     col += (h12(fc * 1.03 + fract(TIME * 7.1) * 57.0) + h12(fc * 0.97 + 11.0) - 1.0) * (1.5 / 255.0);
     float alpha = transparentBg ? max(ink.a, line * 0.9) : 1.0;
