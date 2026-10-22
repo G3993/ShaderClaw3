@@ -3753,5 +3753,19 @@
     "id": 1402,
     "title": "Flowing",
     "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "3D",
+      "Audio Reactive"
+    ],
+    "description": "Brain Scans — a living MRI built from a real brain scan (the MNI ICBM152 average human brain): folded cortex, white matter, ventricles, corpus callosum, cerebellum and brainstem, wrapped in a skull and scalp. A slice plane sweeps through it continuously while the view morphs between a sagittal profile, an axial top-down slice, a coronal slice, a contact-sheet series of slices and a rotating 3D cutaway of the whole brain, and the colour treatment morphs through thermal CRT rainbow, orange/green duotone, posterized contour, jet heatmap, clinical film and fluorescent fibre tracts. fMRI activation blooms with the music: bass lights the motor cortex, mids the auditory cortex, highs the visual cortex, and beats fire new hotspots and a scan flash.",
+    "file": "brain_scans.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1403,
+    "title": "Brain Scans",
+    "type": "generator"
   }
 ]

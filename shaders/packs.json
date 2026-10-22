@@ -1053,5 +1053,8 @@
   },
   "flowing": {
     "group": "studio"
+  },
+  "brain_scans": {
+    "group": "studio"
   }
 }
