@@ -3797,5 +3797,19 @@
     "id": 1405,
     "title": "Feathers",
     "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Glitch",
+      "Audio Reactive"
+    ],
+    "description": "Chess — a living pixel grid in datamosh. Everything snaps to a crisp grid of big pixels: 1-bit moiré dither fields, checkerboard columns at several scales, blurry rainbow mosaic blocks, and Tetris-shaped patches filled with cross-stitch motifs (dots, crosses, X's, hex rings, stars, stripes) in red, pink, yellow, blue, green, orange and lavender. Pixel-art flowers and green-and-yellow pixel worms crawl through it like organisms under a microscope. The patterns slide through the grid band by band, reshuffle and morph, and the whole picture is datamoshed: macroblocks drag the previous frame along motion vectors so the image smears and bleeds like corrupted video, while only scattered blocks refresh with the new frame. At rest the pixels are big, the mosh is gentle and only a few flowers wander; during a build the grid gets finer, the smear runs longer and the slices tear faster; on the drop a clean keyframe snaps everything into place with an inverted flash, then the peak moshes at full speed with every pattern alive.",
+    "file": "chess.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1406,
+    "title": "Chess",
+    "type": "generator"
   }
 ]

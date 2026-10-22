@@ -1062,5 +1062,8 @@
   },
   "feathers": {
     "group": "studio"
+  },
+  "chess": {
+    "group": "studio"
   }
 }
