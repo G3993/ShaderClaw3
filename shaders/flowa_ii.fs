@@ -1,9 +1,12 @@
 /*{
-  "DESCRIPTION": "Flowa II — futuristic layered flowers of light, always on a stem. One flower sways on a long green stem with leaves while its head morphs through five geometric species: a Star Glow bloom with spiked petals and a pastel halo, a Fan of triangular blades in white, yellow and orange, Prism Shards of overlapping rectangles with an RGB split, Chrome Petals with flat pink, blue, orange and mint colour blocks, metallic rims and ball-tipped stamens, and a Bell Cluster of halfW-moon bells in magenta, lime and silver. Every head is shaded like a 3D object, with puffy depth, chrome rim light, a shimmer sweep and iridescent edges. Around it a data layer tracks the flower: boxes lock onto blobs and show an X-ray heatmap of the petals inside, joined by dashed lines and number readouts, while translucent squares in screen, multiply and difference blend modes hop over the stem. A datamosh pass smears blocky trails of the flower as it moves. At rest it is a single quiet bloom with few trackers; during a build the head spins and tightens, the trackers multiply and jitter, and the scan speeds up; on the drop the flower bursts open with an RGB split while the mosh freezes into a long smear, then the peak blooms with every layer alive.",
+  "DESCRIPTION": "Flowa II — futuristic layered flowers of light, always on a stem. A hero flower sways on a long green stem with leaves in a dense garden of others, while its head morphs through ten species: a Star Glow bloom with spiked petals and a pastel halo, a Fan of triangular blades in white, yellow and orange, Prism Shards of overlapping rectangles with an RGB split, Chrome Petals with flat pink, blue, orange and mint colour blocks, metallic rims and ball-tipped stamens, and a Bell Cluster of half-moon bells in magenta, lime and silver, grainy Tulips, layered Lotus petals, tilted Lily Pads with radial veins, a spotted Mushroom Bloom over a frilly ring, and dotted Seed Pods. Around it a garden of smaller flowers on thin stems with long tapering blade leaves fills the frame, each morphing between species on its own schedule, with riso-print grain over everything. Every head is shaded like a 3D object, with puffy depth, chrome rim light, a shimmer sweep and iridescent edges. Around it a data layer tracks the flower: boxes lock onto blobs and show an X-ray heatmap of the petals inside, joined by dashed lines and number readouts, while translucent squares in screen, multiply and difference blend modes hop over the stem. A datamosh pass smears blocky trails of the flower as it moves. At rest it is a single quiet bloom with few trackers; during a build the head spins and tightens, the trackers multiply and jitter, and the scan speeds up; on the drop the flower bursts open with an RGB split while the mosh freezes into a long smear, then the peak blooms with every layer alive.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-22 — original.",
   "CATEGORIES": ["Generator", "Nature", "Glitch", "Audio Reactive"],
   "INPUTS": [
-    { "NAME": "speciesSel",  "LABEL": "Flower", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4, 5], "LABELS": ["Auto Morph", "Star Glow", "Fan Blades", "Prism Shards", "Chrome Petals", "Bell Cluster"], "GROUP": "Flower" },
+    { "NAME": "speciesSel",  "LABEL": "Flower", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], "LABELS": ["Auto Morph", "Star Glow", "Fan Blades", "Prism Shards", "Chrome Petals", "Bell Cluster", "Tulip", "Lotus", "Lily Pad", "Mushroom Bloom", "Seed Pod"], "GROUP": "Flower" },
+    { "NAME": "gardenCount", "LABEL": "Garden Density",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 10.0, "DEFAULT": 7.0, "GROUP": "Garden" },
+    { "NAME": "bladeLeaves", "LABEL": "Blade Leaves",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.8, "GROUP": "Garden" },
+    { "NAME": "risoGrain",   "LABEL": "Riso Grain",       "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.45, "GROUP": "Garden" },
     { "NAME": "morphPeriod", "LABEL": "Morph Period (s)", "TYPE": "float", "AUDIO": false, "MIN": 3.0, "MAX": 40.0, "DEFAULT": 9.0, "GROUP": "Flower" },
     { "NAME": "flowerSize",  "LABEL": "Flower Size",      "TYPE": "float", "MIN": 0.5, "MAX": 1.6, "DEFAULT": 1.0, "GROUP": "Flower" },
     { "NAME": "sway",        "LABEL": "Sway",             "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Flower" },
@@ -95,12 +98,125 @@ void showDynamics() {
 }
 
 float gT, gStep;
+float gHue;      // per-flower colour seed
 vec2  gH;        // head centre (screen units)
 float gRH;       // head radius
 float gSpinA;    // head rotation
 
 // ── the five species: return signed distance (neg inside), colour, glow ──
+// ── garden species (refs: tulips, lotus, lily pads, psychedelic mushroom, seed pods) ──
+vec3 tulipHue(float h) {
+    h = fract(h) * 5.0;
+    if (h < 1.0) return vec3(0.92, 0.08, 0.06);
+    if (h < 2.0) return vec3(1.0, 0.85, 0.3);
+    if (h < 3.0) return vec3(0.85, 0.1, 0.45);
+    if (h < 4.0) return vec3(0.75, 0.55, 0.95);
+    return vec3(1.0, 0.45, 0.35);
+}
+float species2(float k, vec2 q, out vec3 col, out vec3 glow) {
+    float RH = gRH;
+    glow = vec3(0.0);
+    col = vec3(1.0);
+    float bloom = 0.85 + 0.15 * gLift + 0.25 * gDrop - 0.12 * gBuild;
+    if (k < 5.5) {
+        // Tulip: three overlapping cupped petals, darker at the base and on the side petals
+        vec3 hue = tulipHue(gHue);
+        float open = 0.12 * bloom;
+        vec2 c0 = q / RH; c0.y -= 0.05;
+        float dC = length(c0 / vec2(0.4, 0.68)) - 1.0;
+        vec2 l = rot(0.25 + open) * (c0 - vec2(-0.3 - open, -0.02));
+        float dL = length(l / vec2(0.36, 0.64)) - 1.0;
+        vec2 rr = rot(-0.25 - open) * (c0 - vec2(0.3 + open, -0.02));
+        float dR = length(rr / vec2(0.36, 0.64)) - 1.0;
+        float d = min(dC, min(dL, dR)) * 0.4 * RH;
+        vec3 c = mix(hue * 0.35, hue, smoothstep(-0.7, 0.2, c0.y));
+        c = mix(c, hue * 1.15 + 0.1, smoothstep(0.0, 0.6, c0.y) * 0.5);
+        c *= dC < 0.0 ? 1.0 : 0.72;
+        col = c;
+        return d;
+    }
+    if (k < 6.5) {
+        // Lotus: two layers of pointed petals fanning upward, cream → coral → mint
+        float d = 1e3;
+        vec2 base = vec2(0.0, -0.45) * RH;
+        for (int j = 0; j < 9; j++) {
+            float fj = float(j);
+            bool inner = fj > 4.5;
+            float n = inner ? 4.0 : 5.0;
+            float jj = inner ? fj - 5.0 : fj;
+            float th = (jj / (n - 1.0) - 0.5) * (inner ? 1.4 : 2.4) * bloom;
+            float L = RH * (inner ? 0.95 : 1.1) * (1.0 - 0.18 * abs(th));
+            float W = RH * (inner ? 0.24 : 0.3);
+            vec2 u = rot(th) * (q - base);
+            float t = u.y / L;
+            float w = W * pow(max(sin(PI * clamp(t, 0.0, 1.0)), 0.0), 0.75) * (1.0 - 0.35 * t);
+            float dj = max(abs(u.x) - w, max(-u.y, u.y - L));
+            if (dj < 0.0 && (d > 0.0 || inner)) {
+                vec3 c = mix(vec3(0.98, 0.95, 0.85), vec3(1.0, 0.45, 0.4), smoothstep(0.35, 1.0, t));
+                c = mix(c, vec3(0.3, 0.95, 0.75), smoothstep(0.35, 0.0, t) * 0.6);
+                c *= 0.8 + 0.25 * (1.0 - abs(u.x) / max(w, 1e-4));
+                col = c * (inner ? 1.05 : 0.85);
+            }
+            d = min(d, dj);
+        }
+        return d;
+    }
+    if (k < 7.5) {
+        // Lily Pad: a tilted round leaf with radial veins, a notch and an orange bud
+        vec2 u = q / RH; u.y = (u.y + 0.1) * 1.7;
+        float rr = length(u);
+        float ang = atan(u.y, u.x);
+        float d = (rr - 0.95 - 0.04 * sin(ang * 7.0)) * RH / 1.7;
+        if (abs(atan(u.x, -u.y)) < 0.18 && rr > 0.15) d = max(d, 0.01 * RH);
+        float veins = smoothstep(0.08, 0.0, abs(fract(ang / TAU * 18.0) - 0.5)) * smoothstep(0.1, 0.9, rr);
+        vec3 c = mix(vec3(0.85, 0.95, 0.3), vec3(0.05, 0.55, 0.3), smoothstep(0.0, 0.7, rr));
+        c = mix(c, vec3(0.0, 0.3, 0.2), smoothstep(0.7, 1.0, rr));
+        c = mix(c, vec3(0.75, 1.0, 0.5), veins * 0.45);
+        float bud = length((q - vec2(0.05, 0.08) * RH) / (vec2(0.09, 0.07) * RH)) - 1.0;
+        if (bud < 0.0) c = vec3(1.0, 0.55, 0.1);
+        col = c;
+        return min(d, bud * 0.07 * RH);
+    }
+    if (k < 8.5) {
+        // Mushroom Bloom: spotted dome over a frilly orange ring with a dark mouth
+        vec2 u = q / RH;
+        float dDome = max(length((u - vec2(0.0, 0.05)) / vec2(0.8, 0.7)) - 1.0, -(u.y - 0.05) * 3.0);
+        float frill = length(u / vec2(0.95, 0.24)) - 1.0 - 0.06 * sin(u.x * 22.0);
+        float d = min(dDome, frill) * 0.3 * RH;
+        vec3 c;
+        if (frill < 0.0 && u.y < 0.05) {
+            float rr = length(u / vec2(0.95, 0.24));
+            c = mix(vec3(0.3, 0.05, 0.08), vec3(1.0, 0.95, 0.4), smoothstep(0.2, 0.45, rr));
+            c = mix(c, vec3(1.0, 0.45, 0.05), smoothstep(0.55, 1.0, rr));
+        } else {
+            c = mix(vec3(1.0, 0.1, 0.15), vec3(1.0, 0.35, 0.6), smoothstep(0.7, 0.0, u.y));
+            vec2 sp = u * 4.0;
+            float spot = smoothstep(0.42, 0.2, length(fract(sp + vec2(0.5 * floor(sp.y), 0.0)) - 0.5));
+            c = mix(c, vec3(0.85, 1.0, 0.65), spot * 0.6);
+            c += vec3(1.0) * exp(-dot(u - vec2(-0.35, 0.5), u - vec2(-0.35, 0.5)) * 8.0) * 0.5;
+        }
+        col = c;
+        return d;
+    }
+    // Seed Pod / bud: a teardrop with a gradient and either a dotted skin or a red eye
+    vec2 u = q / RH;
+    u.x /= 1.0 - 0.35 * smoothstep(-0.2, 0.9, u.y);
+    float d = (length(u / vec2(0.55, 0.85)) - 1.0) * 0.5 * RH;
+    vec3 c = mix(vec3(0.45, 1.0, 0.35), vec3(1.0, 0.85, 0.3), smoothstep(-0.8, 0.0, u.y));
+    c = mix(c, vec3(1.0, 0.4, 0.55), smoothstep(0.0, 0.8, u.y));
+    if (fract(gHue * 3.7) > 0.5) {
+        vec2 g = u * 9.0;
+        float dt = smoothstep(0.3, 0.15, length(fract(g + vec2(0.5 * mod(floor(g.y), 2.0), 0.0)) - 0.5));
+        c = mix(c, c * 0.25, dt * 0.85);
+    } else {
+        c = mix(c, vec3(1.0, 0.2, 0.15), smoothstep(0.08, 0.04, length(u - vec2(0.0, -0.25))));
+    }
+    col = c;
+    return d;
+}
+
 float species(float k, vec2 q, out vec3 col, out vec3 glow) {
+    if (k > 4.5) return species2(k, q, col, glow);
     float RH = gRH;
     float r = length(q), a = atan(q.y, q.x);
     float t = r / RH;
@@ -221,7 +337,7 @@ float species(float k, vec2 q, out vec3 col, out vec3 glow) {
         }
         return d;
     }
-    // Bell Cluster: halfW-moon bells hanging from the arch, magenta → lime → silver
+    // Bell Cluster: half-moon bells hanging from the arch, magenta → lime → silver
     float d = 1e3;
     for (int j = 0; j < 7; j++) {
         float fj = float(j);
@@ -251,8 +367,8 @@ float species(float k, vec2 q, out vec3 col, out vec3 glow) {
 vec4 flower(vec2 p, out float dOut) {
     float ph = TIME / morphPeriod;
     float ss = float(speciesSel);
-    float ka = ss > 0.5 ? ss - 1.0 : mod(floor(ph), 5.0);
-    float kb = ss > 0.5 ? ka : mod(floor(ph) + 1.0, 5.0);
+    float ka = ss > 0.5 ? ss - 1.0 : mod(floor(ph) * 3.0, 10.0);
+    float kb = ss > 0.5 ? ka : mod(floor(ph) * 3.0 + 3.0, 10.0);
     float f = ss > 0.5 ? 0.0 : smoothstep(0.7, 1.0, fract(ph));
     vec2 q = rot(-gSpinA) * (p - gH);
     q.x /= 0.78 + 0.22 * cos(gT * 0.4);                    // 3D tilt
@@ -307,6 +423,78 @@ vec4 flower(vec2 p, out float dOut) {
     return res;
 }
 
+// ── the garden: more flowers on stems with tall blade leaves, behind the hero ──
+vec4 garden(vec2 p) {
+    float N = floor(gardenCount);
+    vec4 acc = vec4(0.0);
+    float aspect = RENDERSIZE.x / RENDERSIZE.y;
+    float aa = 1.5 / RENDERSIZE.y;
+    float vis = gardenCount * (0.35 + 0.65 * gLift + 0.2 * gDrop);
+    float saveRH = gRH;
+    float ph = TIME / morphPeriod;
+    for (int i = 0; i < 10; i++) {
+        float fi = float(i);
+        if (fi >= N) break;
+        float hi = h11(fi * 7.31 + 2.0);
+        float grow = smoothstep(fi, fi + 1.0, vis);
+        if (grow < 0.01) continue;
+        float depth = (fi + 0.5) / max(N, 1.0);
+        float x = (fract(fi * 0.618 + 0.31) - 0.5) * 0.92 * aspect + 0.02 * sin(gT * 0.5 + fi * 1.7) * sway;
+        float yH = -0.12 + 0.5 * h11(fi * 3.3 + 1.0);
+        vec2 H = vec2(x, yH);
+        float RH = (0.06 + 0.09 * depth) * flowerSize * grow * (1.0 + 0.04 * bassP() * audioReact);
+        // stem: near-vertical line from the head to the bottom of the frame
+        float sx = x + 0.04 * (hi - 0.5) * (H.y - p.y) + 0.01 * sin(p.y * 6.0 + gT * 0.4 + fi);
+        float dstem = abs(p.x - sx) - 0.0022 * (0.7 + depth);
+        float stem = smoothstep(aa, -aa, dstem) * step(p.y, H.y);
+        float stemType = floor(h11(fi * 5.1) * 3.0);
+        vec3 sc = stemType < 0.5 ? vec3(0.12, 0.13, 0.32) : stemType < 1.5 ? stemColor.rgb : vec3(1.0, 0.5, 0.3);
+        // blade leaves: long tapering curves (ref: tulip poster)
+        float blade = 0.0; vec3 bc = vec3(0.0);
+        for (int b = 0; b < 2; b++) {
+            float fb = float(b);
+            float side = fb < 0.5 ? -1.0 : 1.0;
+            float top = H.y - 0.05 - 0.3 * h11(fi + fb * 3.0);
+            float t = (p.y + 0.5) / max(top + 0.5, 0.05);
+            if (t < 0.0 || t > 1.0) continue;
+            float cx = sx + side * (0.015 + 0.07 * t * t * (0.5 + h11(fi * 2.0 + fb))) + 0.015 * sin(gT * 0.4 + fi + fb) * t;
+            float w = (0.012 + 0.028 * depth) * pow(sin(PI * t), 0.8) * (1.0 - 0.6 * t);
+            float m = smoothstep(aa, -aa, abs(p.x - cx) - w) * bladeLeaves;
+            if (m > blade) {
+                blade = m;
+                float shade = 0.5 + 0.5 * sin(t * 4.0 + fi + fb * 2.0);
+                bc = mix(vec3(0.02, 0.08, 0.05), mix(vec3(0.28, 0.45, 0.28), vec3(0.62, 0.65, 0.35), h11(fi + fb * 7.0)), shade);
+            }
+        }
+        // the head: its own species, morphing on its own schedule
+        float k0 = mod(floor(ph * 0.7 + hi * 10.0) + fi * 3.0, 10.0);
+        float k1 = mod(k0 + 3.0, 10.0);
+        float fm = smoothstep(0.7, 1.0, fract(ph * 0.7 + hi * 10.0));
+        gRH = RH;
+        gHue = hi + fi * 0.37;
+        vec2 q = rot(0.25 * sin(gT * 0.3 + fi)) * (p - H);
+        vec3 cA, gA, cB, gB;
+        float d = species(k0, q, cA, gA);
+        vec3 col = cA; vec3 glo = gA;
+        if (fm > 0.001) { float dB = species(k1, q, cB, gB); d = mix(d, dB, fm); col = mix(cA, cB, fm); glo = mix(gA, gB, fm); }
+        float head = smoothstep(aa, -aa, d);
+        float puff = smoothstep(0.0, 0.3 * RH, -d);
+        col *= 0.6 + 0.5 * puff;
+        vec2 hl = q / max(RH, 1e-4) - vec2(-0.3, 0.35);
+        col += vec3(1.0) * exp(-dot(hl, hl) * 6.0) * 0.25 * puff;
+        float haze = 0.45 + 0.55 * depth;
+        vec4 layer = vec4(bc, blade);
+        layer = mix(layer, vec4(sc, 1.0), stem);
+        layer = mix(layer, vec4(col, 1.0), head);
+        layer.rgb *= haze;
+        acc.rgb = mix(acc.rgb, layer.rgb, layer.a) + glo * haze * 0.6 * (1.0 - head);
+        acc.a = max(acc.a, max(layer.a, lum(glo) * 0.5));
+    }
+    gRH = saveRH;
+    gHue = 0.0;
+    return acc;
+}
+
 // plasma-like X-ray heat colour (indigo → magenta → red → orange → yellow → lime)
 vec3 heat(float v) {
     v = clamp(v, 0.0, 1.0);
@@ -357,6 +545,8 @@ void main() {
     if (PASSINDEX == 0) {
         // ── the flower, lit like a 3D object ──
         float d;
+        vec4 Gd = garden(p);
+        gHue = floor(TIME / morphPeriod) * 0.37;
         vec4 F = flower(p, d);
         if (d < 0.0) {
             float e = 1.0 / R.y;
@@ -380,6 +570,12 @@ void main() {
             c += vec3(1.0) * band * 0.35 * shimmer * (0.6 + 0.6 * gLift + highP() * ar);
             F.rgb = c;
         }
+        // garden behind the hero
+        F.rgb = mix(Gd.rgb, F.rgb, clamp(F.a, 0.0, 1.0));
+        F.a = max(F.a, Gd.a);
+        // riso grain: speckled print texture on everything painted
+        float gr = h12(gl_FragCoord.xy + floor(TIME * 12.0) * 7.0);
+        F.rgb *= 1.0 - risoGrain * 0.35 * (gr - 0.5) * 2.0 * step(0.01, F.a);
         gl_FragColor = F;
         return;
     }
