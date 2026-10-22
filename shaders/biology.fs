@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Biology — a living psychedelic specimen plate. Organisms drift across a field of hand-drawn magenta contour lines: beaded chains with lime rings, ringed targets on wavy stalks, black tadpoles with neon outlines, ferns with dotted fruiting tips, teal worms, black combs and dark lobes full of black-and-white tongues. The line field is the distance to every organism drawn as isolines, so each creature echoes outward in rings that crease into seams where they meet, while a web of hidden cells adds cross-stitched seams in the open space. Organisms swim, undulate, sway, pulse and are born and fade on their own clocks; the lines flow outward from them. Bass swells the bodies, beats pulse the rings and push a wave through the line field, mids stir the wiggle, highs flicker the bead centres.",
+  "DESCRIPTION": "Biology — a living psychedelic specimen plate. Seventeen kinds of abstract organism drift through oil-slick acid pools of soap-film iridescence and bubble foam, across a field of hand-drawn magenta contour lines: beaded chains, ringed targets on wavy stalks, tadpoles, ferns with dotted fruiting tips, worms, combs, dark lobes full of black-and-white tongues, ammonite spirals, spiny urchins, amoebas with nuclei, radiolarian lattices, jellyfish, dividing cells, branching coral, spore clusters, eyes and striped ribbons — each with its own accent colours, proportions and counts. The line field is the distance to every organism drawn as isolines, so each creature echoes outward in rings that crease into seams where they meet, while a web of hidden cells adds cross-stitched seams in the open space. Organisms swim, undulate, sway, pulse and are born and fade on their own clocks; the lines flow outward from them. Bass swells the bodies, beats pulse the rings and push a wave through the line field, mids stir the wiggle, highs flicker the bead centres.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-21 — original.",
   "CATEGORIES": ["Generator", "Nature", "Lines", "Audio Reactive"],
   "INPUTS": [
@@ -20,9 +20,17 @@
     { "NAME": "cCyan",       "LABEL": "Cyan",             "TYPE": "color", "DEFAULT": [0.45, 0.9, 0.95, 1.0],  "GROUP": "Palette" },
     { "NAME": "cRed",        "LABEL": "Red",              "TYPE": "color", "DEFAULT": [1.0, 0.22, 0.12, 1.0],  "GROUP": "Palette" },
     { "NAME": "cYellow",     "LABEL": "Yellow",           "TYPE": "color", "DEFAULT": [1.0, 0.86, 0.35, 1.0],  "GROUP": "Palette" },
+    { "NAME": "cViolet",     "LABEL": "Violet",           "TYPE": "color", "DEFAULT": [0.58, 0.42, 1.0, 1.0],  "GROUP": "Palette" },
     { "NAME": "cBlack",      "LABEL": "Body Black",       "TYPE": "color", "DEFAULT": [0.03, 0.01, 0.03, 1.0], "GROUP": "Palette" },
     { "NAME": "hueShift",    "LABEL": "Hue Shift",        "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "GROUP": "Palette" },
     { "NAME": "saturation",  "LABEL": "Saturation",       "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 1.0, "GROUP": "Palette" },
+    { "NAME": "acid",        "LABEL": "Acid (oil slick)", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6, "GROUP": "Acid" },
+    { "NAME": "acidPools",   "LABEL": "Pool Coverage",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6, "GROUP": "Acid" },
+    { "NAME": "acidScale",   "LABEL": "Pool Scale",       "TYPE": "float", "MIN": 0.5, "MAX": 3.0, "DEFAULT": 0.9, "GROUP": "Acid" },
+    { "NAME": "foam",        "LABEL": "Bubble Foam",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.8, "GROUP": "Acid" },
+    { "NAME": "foamSize",    "LABEL": "Bubble Size",      "TYPE": "float", "MIN": 10.0, "MAX": 80.0, "DEFAULT": 34.0, "GROUP": "Acid" },
+    { "NAME": "filmSpeed",   "LABEL": "Film Swirl",       "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.7, "GROUP": "Acid" },
+    { "NAME": "bodySheen",   "LABEL": "Iridescent Bodies","TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55, "GROUP": "Acid" },
     { "NAME": "zoom",        "LABEL": "Zoom",             "TYPE": "float", "AUDIO": false, "MIN": 0.5, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Finish" },
     { "NAME": "grain",       "LABEL": "Grain",            "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.25, "GROUP": "Finish" },
     { "NAME": "audioReact",  "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6, "GROUP": "Audio Reactivity" },
@@ -62,6 +70,7 @@ float smin(float a, float b, float k) { float h = clamp(0.5 + 0.5 * (b - a) / k,
 float gPx;      // one screen pixel in glyph-local units (set per glyph)
 float gT;
 float gWig;
+vec3 gAcc, gAcc2;   // per-organism accent colours
 
 // distance to a wavy line y = A sin(k x + ph) for x in [x0, x1]
 float wavy(vec2 q, float A, float k, float ph, float x0, float x1) {
@@ -245,6 +254,272 @@ vec4 lobe(vec2 q, float sd, out float dOut) {
     return c;
 }
 
+// ── more abstract organisms ─────────────────────────────────────────────
+float segD(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }
+
+vec4 spiralShell(vec2 q, float sd, out float dOut) {
+    q = rot(gT * 0.25 * (sd > 0.5 ? 1.0 : -1.0)) * q;
+    float r = length(q), a = atan(q.y, q.x) + PI;
+    float c = 0.045 + 0.02 * sd;
+    float n0 = floor((r / c - a) / TAU + 0.5);
+    float nMax = floor(1.05 / (c * TAU));
+    float dr = 1e5;
+    for (int j = -1; j <= 1; j++) {
+        float n = clamp(n0 + float(j), 0.0, nMax);
+        dr = min(dr, abs(r - c * (a + TAU * n)));
+    }
+    float d = max(dr - c * 1.1 * (0.6 + 0.4 * r), r - 1.1);
+    float chamber = smoothstep(0.3, 0.1, abs(fract(a * 3.0 / PI + r * 4.0) - 0.5));
+    dOut = d;
+    vec4 o = vec4(0.0);
+    o = over(o, gAcc, bandA(d - 0.025, 0.012));
+    vec3 fill = mix(cBlack.rgb, gAcc2, 0.25 + 0.5 * chamber * smoothstep(0.0, 0.03, -d));
+    o = over(o, fill, fillA(d));
+    return o;
+}
+
+vec4 urchin(vec2 q, float sd, out float dOut) {
+    float N = 7.0 + floor(sd * 9.0);
+    float a = atan(q.y, q.x) + gT * 0.15;
+    float seg = TAU / N;
+    float k = floor(a / seg + 0.5);
+    float aa = a - k * seg;
+    float r = length(q);
+    vec2 lq = vec2(r * cos(aa), r * sin(aa));
+    float L = 0.95 + 0.15 * sin(k * 2.3 + gT * 1.2 * gWig);
+    lq.y -= 0.06 * gWig * sin(lq.x * 6.0 - gT * 3.0 + k);
+    float dSp = segD(lq, vec2(0.0), vec2(L, 0.0)) - 0.03;
+    float dTip = length(lq - vec2(L, 0.0)) - 0.075;
+    float dC = r - 0.3 * (1.0 + 0.12 * bassP() * audioReact);
+    float d = min(min(dSp, dTip), dC);
+    dOut = d;
+    vec4 o = vec4(0.0);
+    o = over(o, gAcc, bandA(min(dSp, dC) - 0.02, 0.01));
+    o = over(o, cBlack.rgb, fillA(min(dSp, dC)));
+    vec3 cc = mix(gAcc2, cBlack.rgb, smoothstep(0.08, 0.14, r));
+    o = over(o, cc, fillA(dC + 0.05));
+    o = over(o, cBlack.rgb, bandA(dTip, 0.012));
+    o = over(o, gAcc2, fillA(dTip));
+    return o;
+}
+
+vec4 amoeba(vec2 q, float sd, out float dOut) {
+    float a = atan(q.y, q.x);
+    float R = 0.75 + 0.12 * sin(a * 3.0 + gT * 1.1 + sd * 6.0) * gWig + 0.08 * sin(a * 5.0 - gT * 1.7) * gWig + 0.06 * sin(a * 2.0 + gT * 0.6);
+    float d = (length(q) - R) * 0.8;
+    vec2 nc = 0.25 * vec2(sin(gT * 0.5 + sd * 4.0), cos(gT * 0.4 + sd * 2.0));
+    float dN = length(q - nc) - 0.2;
+    dOut = d;
+    vec4 o = vec4(0.0);
+    o = over(o, cBlack.rgb, bandA(d - 0.03, 0.03));
+    // cytoplasm: inner contour lines echoing the membrane
+    float inner = -d;
+    float lines = smoothstep(0.3, 0.15, abs(fract(inner * 18.0 + gT * 0.4) - 0.5));
+    vec3 cyto = mix(mix(vec3(0.98, 0.93, 0.96), gAcc, 0.35), gAcc * 0.75, lines);
+    o = over(o, cyto, fillA(d));
+    // vacuoles
+    for (int i = 0; i < 4; i++) {
+        float fi = float(i);
+        vec2 vc = 0.45 * vec2(cos(fi * 1.9 + sd * 7.0 + gT * 0.2), sin(fi * 2.7 + sd * 3.0 + gT * 0.25));
+        float dv = length(q - vc) - (0.06 + 0.04 * h11(fi + sd * 9.0));
+        o = over(o, cBlack.rgb, bandA(dv, 0.01));
+        o = over(o, gAcc2, fillA(dv));
+    }
+    o = over(o, gAcc2, bandA(dN - 0.03, 0.015));
+    o = over(o, cBlack.rgb, fillA(dN));
+    o = over(o, gAcc, fillA(length(q - nc) - 0.06));
+    return o;
+}
+
+vec4 radiolarian(vec2 q, float sd, out float dOut) {
+    q = rot(gT * 0.1) * q;
+    float r = length(q), a = atan(q.y, q.x);
+    float R = 0.8 * (1.0 + 0.06 * audioBeatPulse * audioReact);
+    float dOuter = r - R;
+    // spikes
+    float N = 10.0 + floor(sd * 10.0);
+    float seg = TAU / N;
+    float aa = a - floor(a / seg + 0.5) * seg;
+    vec2 lq = vec2(r * cos(aa), r * sin(aa));
+    float dSpk = segD(lq, vec2(R, 0.0), vec2(R + 0.32, 0.0)) - 0.02 * (1.0 - smoothstep(R, R + 0.32, lq.x));
+    float d = min(dOuter, dSpk);
+    dOut = d;
+    // lattice holes on rings
+    float ring = floor(r / 0.16);
+    float rn = max(ring, 1.0) * 6.0;
+    float sa = TAU / rn;
+    float ka = floor((a + ring) / sa + 0.5) * sa - ring;
+    vec2 hc = (ring + 0.5) * 0.16 * vec2(cos(ka), sin(ka));
+    float dHole = length(q - hc) - 0.05;
+    vec4 o = vec4(0.0);
+    o = over(o, cBlack.rgb, fillA(dSpk));
+    o = over(o, gAcc, bandA(dOuter - 0.02, 0.014));
+    vec3 body = mix(cBlack.rgb, gAcc2, 0.85 * fillA(dHole) * step(r, R - 0.05));
+    body = mix(body, gAcc, 0.9 * fillA(abs(dHole) - 0.008) * step(r, R - 0.05));
+    o = over(o, body, fillA(dOuter));
+    return o;
+}
+
+vec4 jelly(vec2 q, float sd, out float dOut) {
+    q.y -= 0.3;
+    float pulse = 1.0 + 0.1 * sin(gT * 2.0 + sd * 6.0) + 0.1 * audioBeatPulse * audioReact;
+    vec2 dq = q / vec2(0.75 * pulse, 0.55 / pulse);
+    float dDome = (length(dq) - 1.0) * 0.55;
+    float rim = -q.y + 0.04 * sin(q.x * 18.0);
+    dDome = max(dDome, rim);
+    float dT = 1e5;
+    for (int i = 0; i < 5; i++) {
+        float fi = float(i);
+        float x0 = -0.5 + fi * 0.25;
+        vec2 tq = vec2(q.x - x0 - 0.12 * gWig * sin(q.y * 5.0 - gT * 2.5 + fi), q.y);
+        dT = min(dT, length(vec2(tq.x, tq.y - clamp(tq.y, -1.35 + 0.15 * h11(fi + sd * 5.0), 0.0))) - 0.022);
+    }
+    float d = min(dDome, dT);
+    dOut = d;
+    vec4 o = vec4(0.0);
+    o = over(o, gAcc, bandA(dT - 0.02, 0.01));
+    o = over(o, cBlack.rgb, fillA(dT));
+    float bands = smoothstep(0.35, 0.2, abs(fract(length(dq) * 5.0 - gT * 0.5) - 0.5));
+    vec3 dome = mix(gAcc2, mix(gAcc, vec3(1.0), 0.4), bands);
+    o = over(o, cBlack.rgb, bandA(dDome - 0.02, 0.018));
+    o = over(o, dome, fillA(dDome));
+    return o;
+}
+
+vec4 dividing(vec2 q, float sd, out float dOut) {
+    float split = 0.18 + 0.2 * (0.5 + 0.5 * sin(gT * 0.6 + sd * 6.0));
+    float d1 = length(q - vec2(-split, 0.0)) - 0.5;
+    float d2 = length(q - vec2(split, 0.0)) - 0.5;
+    float d = smin(d1, d2, 0.3 - split * 0.5);
+    dOut = d;
+    vec4 o = vec4(0.0);
+    o = over(o, gAcc, bandA(d - 0.035, 0.018));
+    float inner = -d;
+    float lines = smoothstep(0.3, 0.12, abs(fract(inner * 14.0) - 0.5));
+    o = over(o, mix(cBlack.rgb, gAcc * 0.6, lines * 0.6), fillA(d));
+    // chromosomes: little X marks gathering at each pole
+    for (int i = 0; i < 6; i++) {
+        float fi = float(i);
+        float side = fi < 2.5 ? -1.0 : 1.0;
+        vec2 c = vec2(side * split * 1.2, 0.0) + 0.2 * vec2(cos(fi * 2.1 + sd * 5.0), sin(fi * 2.9 + gT * 0.3));
+        vec2 xq = rot(fi + gT * 0.4) * (q - c);
+        float dx = min(segD(xq, vec2(-0.07, -0.07), vec2(0.07, 0.07)), segD(xq, vec2(-0.07, 0.07), vec2(0.07, -0.07))) - 0.018;
+        o = over(o, gAcc2, fillA(dx));
+    }
+    return o;
+}
+
+vec4 coral(vec2 q, float sd, out float dOut) {
+    vec2 p = q - vec2(0.0, -1.15);
+    float L = 0.55, w = 0.07, dd = 1e5;
+    float spread = 0.42 + 0.15 * sd;
+    for (int i = 0; i < 5; i++) {
+        float fi = float(i);
+        dd = min(dd, segD(p, vec2(0.0), vec2(0.0, L)) - w);
+        p.y -= L;
+        p.x = abs(p.x);
+        p = rot(spread + 0.08 * gWig * sin(gT * 1.1 + fi * 1.7)) * p;
+        L *= 0.74; w *= 0.72;
+    }
+    float dTip = length(p) - 0.05;
+    float d = min(dd, dTip);
+    dOut = d;
+    vec4 o = vec4(0.0);
+    o = over(o, gAcc, bandA(dd - 0.02, 0.012));
+    o = over(o, cBlack.rgb, fillA(dd));
+    o = over(o, gAcc2, fillA(dTip));
+    return o;
+}
+
+vec4 spores(vec2 q, float sd, out float dOut) {
+    float d = 1e5;
+    vec4 o = vec4(0.0);
+    for (int i = 0; i < 9; i++) {
+        float fi = float(i);
+        vec2 c = (vec2(h11(fi * 3.1 + sd * 17.0), h11(fi * 5.7 + sd * 11.0)) - 0.5) * 1.7;
+        c += 0.05 * vec2(sin(gT + fi), cos(gT * 1.3 + fi));
+        float r = 0.08 + 0.17 * h11(fi * 9.3 + sd * 3.0);
+        float di = length(q - c) - r;
+        d = min(d, di);
+        float rr = length(q - c) / r;
+        vec3 sc = mix(cBlack.rgb, mix(vec3(0.97, 0.93, 0.95), gAcc, 0.3), step(0.45, rr) * step(rr, 0.7));
+        sc = mix(sc, gAcc2, step(rr, 0.25));
+        o = over(o, gAcc, bandA(di - 0.015, 0.01));
+        o = over(o, sc, fillA(di));
+    }
+    dOut = d;
+    return o;
+}
+
+vec4 eye(vec2 q, float sd, out float dOut) {
+    float blink = 1.0 - 0.92 * pow(max(0.0, sin(gT * 0.7 + sd * 9.0)), 30.0);
+    vec2 eq = vec2(q.x, q.y / max(blink, 0.08));
+    float d = max(length(eq - vec2(0.0, -0.7)) - 1.05, length(eq - vec2(0.0, 0.7)) - 1.05) * max(blink, 0.08);
+    dOut = d;
+    vec4 o = vec4(0.0);
+    o = over(o, cBlack.rgb, bandA(d - 0.03, 0.02));
+    vec2 look = 0.15 * vec2(sin(gT * 0.5 + sd * 4.0), 0.4 * cos(gT * 0.37));
+    float ri = length(q - look);
+    vec3 iris = mix(gAcc, gAcc2, smoothstep(0.1, 0.32, ri));
+    iris = mix(iris, cBlack.rgb, smoothstep(0.3, 0.33, ri));
+    iris = mix(cBlack.rgb, iris, smoothstep(0.08, 0.1, ri));
+    iris = mix(iris, vec3(1.0), smoothstep(0.035, 0.0, length(q - look - vec2(0.06, 0.06))));
+    vec3 white = mix(vec3(0.98, 0.94, 0.96), iris, step(ri, 0.36));
+    o = over(o, white, fillA(d));
+    return o;
+}
+
+vec4 ribbon(vec2 q, float sd, out float dOut) {
+    float A = 0.3 * gWig, k = 2.2, ph = gT * 1.2 + sd * 6.0;
+    float x = clamp(q.x, -1.2, 1.2);
+    float w = 0.16 * (1.0 - 0.6 * abs(x) / 1.2);
+    float y = A * sin(k * x + ph);
+    float dy = A * k * cos(k * x + ph);
+    float off = (q.y - y) / sqrt(1.0 + dy * dy);
+    float d = length(vec2(q.x - x, 0.0)) + abs(off) - w;
+    dOut = d;
+    // stripes running along the ribbon, like the black-and-white tongues
+    float st = smoothstep(0.3, 0.2, abs(fract(off / max(w, 0.01) * 2.5 + 0.5) - 0.5));
+    vec4 o = vec4(0.0);
+    o = over(o, gAcc, bandA(d - 0.02, 0.01));
+    o = over(o, mix(cBlack.rgb, vec3(0.97, 0.92, 0.94), st), fillA(d));
+    return o;
+}
+
+vec3 palPick(float k) {
+    k = mod(floor(k), 6.0);
+    if (k < 0.5) return cLime.rgb;
+    if (k < 1.5) return cCyan.rgb;
+    if (k < 2.5) return cRed.rgb;
+    if (k < 3.5) return cYellow.rgb;
+    if (k < 4.5) return cViolet.rgb;
+    return vec3(0.97, 0.93, 0.95);
+}
+
+// ── acid: soap-film / oil-slick interference ─────────────────────────────
+vec3 thinFilm(float th) {
+    // interference colours of a thin film: each channel cycles at its own wavelength
+    vec3 c = 0.5 + 0.5 * cos(TAU * (th * vec3(4.4, 5.3, 6.5) + vec3(0.0, 0.18, 0.42)));
+    c = pow(c, vec3(2.0)) * 1.25;
+    return c * 1.15;
+}
+float filmThickness(vec2 p, float t) {
+    vec2 q = p * 1.6;
+    q += 0.6 * vec2(sin(q.y * 1.7 + t), cos(q.x * 1.3 - t * 0.8));
+    q += 0.35 * vec2(sin(q.y * 3.1 - t * 1.3 + 1.0), cos(q.x * 2.7 + t * 1.1));
+    return 0.5 + 0.25 * sin(q.x * 1.4 + q.y * 0.7) + 0.18 * sin(q.y * 2.6 - q.x * 1.9 + t * 0.7) + 0.08 * sin(length(q) * 6.0 - t * 2.0);
+}
+float vn2(vec2 x) {
+    vec2 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(h12(i), h12(i + vec2(1, 0)), f.x), mix(h12(i + vec2(0, 1)), h12(i + vec2(1, 1)), f.x), f.y);
+}
+
+float fwPool(float n, float thr, float pxScale) {
+    // anti-aliased pool coverage
+    float w = 1.5 / pxScale * 2.0;
+    return smoothstep(thr - w, thr + w, n);
+}
+
 vec3 paper(vec2 uv) {
     float m = float(bgMode);
     if (m < 0.5) return bgColor.rgb;
@@ -281,10 +556,14 @@ void main() {
         float lp = TIME / lifeCycle + sd;
         float lf = fract(lp);
         float life = smoothstep(0.0, 0.15, lf) * smoothstep(1.0, 0.85, lf);
-        float typ = floor(h11(fi * 7.31 + floor(lp) * 3.7) * 7.0);
+        float gen = floor(lp);
+        float typ = floor(h11(fi * 7.31 + gen * 3.7) * 17.0);
+        gAcc = palPick(h11(fi * 2.9 + gen * 1.3) * 6.0);
+        gAcc2 = palPick(h11(fi * 4.3 + gen * 2.1) * 6.0 + 1.0);
         float ang = h11(fi * 5.1 + floor(lp)) * TAU + 0.15 * sin(TIME * 0.2 * swim + fi);
-        float sc = (0.21 + 0.08 * sd) * glyphSize * max(life, 0.001);
+        float sc = (0.17 + 0.1 * h11(fi * 6.1 + gen)) * glyphSize * max(life, 0.001);
         vec2 q = rot(-ang) * (p - c) / sc;
+        q *= vec2(mix(0.85, 1.2, h11(fi * 8.7 + gen)), mix(0.85, 1.2, h11(fi * 3.3 + gen)));
         gPx = 1.0 / (R.y * zoom * sc);
         float bound = length(q) - 1.45;
         float d;
@@ -293,11 +572,21 @@ void main() {
             d = bound;                                 // far away: the bound is enough for the line field
         } else if (typ < 0.5) g = beadChain(q, sd, d);
         else if (typ < 1.5) g = target(q, sd, d);
-        else if (typ < 2.5) g = tadpole(q, sd, d, cCyan.rgb);
+        else if (typ < 2.5) g = tadpole(q, sd, d, gAcc);
         else if (typ < 3.5) g = fern(q, sd, d);
         else if (typ < 4.5) g = worm(q, sd, d);
         else if (typ < 5.5) g = comb(q, sd, d);
-        else g = lobe(q, sd, d);
+        else if (typ < 6.5) g = lobe(q, sd, d);
+        else if (typ < 7.5) g = spiralShell(q, sd, d);
+        else if (typ < 8.5) g = urchin(q, sd, d);
+        else if (typ < 9.5) g = amoeba(q, sd, d);
+        else if (typ < 10.5) g = radiolarian(q, sd, d);
+        else if (typ < 11.5) g = jelly(q, sd, d);
+        else if (typ < 12.5) g = dividing(q, sd, d);
+        else if (typ < 13.5) g = coral(q, sd, d);
+        else if (typ < 14.5) g = spores(q, sd, d);
+        else if (typ < 15.5) g = eye(q, sd, d);
+        else g = ribbon(q, sd, d);
         g.a *= smoothstep(0.0, 0.25, life);
         // ease from the true shape distance to its round bound, so far contours stay seamless
         d = mix(d, bound, smoothstep(0.15, 0.9, bound));
@@ -335,7 +624,60 @@ void main() {
     // a faint magenta wash drifting through the open field
     col = mix(col, cMagenta.rgb, 0.06 * (0.5 + 0.5 * sin(p.x * 2.0 + p.y * 1.3 + TIME * 0.1)));
 
-    col = mix(col, ink.rgb, ink.a);
+    // ── acid pools: oil-slick film with bubble foam and black voids ──
+    float ft = TIME * filmSpeed * 0.5 + 0.3 * audioBassTime * ar * filmSpeed;
+    if (acid > 0.001) {
+        vec2 ap = p * acidScale + vec2(0.07, -0.05) * ft;
+        float pn = vn2(ap * 1.3 + 0.4 * vec2(sin(ap.y + ft * 0.3), cos(ap.x - ft * 0.2))) * 0.65 + vn2(ap * 3.1 - ft * 0.15) * 0.35;
+        float thr = 1.0 - acidPools * 0.75;
+        float pw = fwPool(pn, thr, R.y * zoom / acidScale);
+        float poolEdge = exp(-abs(pn - thr) * 90.0);
+        float th = filmThickness(p * acidScale, ft) + 0.15 * midP() * ar;
+        vec3 film = thinFilm(th);
+        // pale film between bands (like the cream soap areas of the reference)
+        film = mix(film, vec3(0.98, 0.95, 0.88), smoothstep(0.6, 0.85, fract(th * 2.0)) * 0.55);
+        // bubble foam: varied little bubbles, iridescent rings, some black voids
+        vec2 bp = p * foamSize + vec2(0.0, ft * 0.6);
+        vec2 bi = floor(bp), bf = fract(bp);
+        vec3 foamC = film; float foamA = 0.0;
+        for (int j = -1; j <= 1; j++)
+        for (int k = -1; k <= 1; k++) {
+            vec2 o = vec2(float(k), float(j));
+            vec2 hh = h22(bi + o);
+            vec2 bc = o + 0.5 + 0.3 * (hh - 0.5);
+            float br = 0.18 + 0.3 * h12(bi + o + 7.7) * (0.6 + 0.4 * sin(ft * 2.0 + hh.x * 20.0));
+            float bd = length(bf - bc) / br;
+            if (bd < 1.0) {
+                float kind = h12(bi + o + 3.3);
+                vec3 bcCol = kind < 0.3 ? cBlack.rgb
+                           : thinFilm(th + hh.y * 0.6 + bd * 0.35) * (kind < 0.6 ? 1.0 : 0.6);
+                bcCol = mix(bcCol, vec3(1.0), 0.6 * smoothstep(0.35, 0.0, length(bf - bc - br * vec2(-0.35, 0.35))) * step(0.3, kind));
+                float ringd = smoothstep(0.78, 0.86, bd) * smoothstep(1.0, 0.92, bd);
+                bcCol = mix(bcCol, mix(cBlack.rgb, thinFilm(th + 0.3), 0.4), ringd);
+                foamC = bcCol; foamA = smoothstep(1.0, 0.9, bd);
+            }
+        }
+        float foamMask = foam * smoothstep(0.0, 0.08, pn - thr) * (0.35 + 0.65 * smoothstep(0.35, 0.6, vn2(ap * 2.2 + 4.0)));
+        vec3 pool = mix(film, foamC, foamA * foamMask);
+        // big black voids drifting in the film
+        float vd = vn2(ap * 4.0 + 9.0 + ft * 0.2);
+        pool = mix(pool, cBlack.rgb, smoothstep(0.66, 0.68, vd) * (1.0 - foamMask * 0.5));
+        // crisp dark seams where film bands meet (the sharp oil-slick edges)
+        pool = mix(pool, cBlack.rgb, 0.7 * smoothstep(0.03, 0.0, abs(fract(th * 2.2) - 0.5)) * (1.0 - foamA * foamMask));
+        col = mix(col, pool, pw * acid);
+        // pool shoreline: a black line with a rainbow rim
+        col = mix(col, cBlack.rgb, poolEdge * 0.9 * acid);
+        col = mix(col, thinFilm(th * 1.7 + 0.2), smoothstep(0.04, 0.0, abs(pn - thr - 0.03)) * 0.8 * acid);
+    }
+
+    // organisms; their dark bodies carry an iridescent sheen when the acid is up
+    vec3 inkC = ink.rgb;
+    if (acid > 0.001 && bodySheen > 0.001) {
+        float dark = smoothstep(0.12, 0.02, lum(inkC));
+        float th2 = filmThickness(p * 2.3 + 3.0, ft * 1.3);
+        inkC = mix(inkC, thinFilm(th2) * 0.9, dark * bodySheen * acid * 0.75);
+    }
+    col = mix(col, inkC, ink.a);
     col *= 1.0 + 0.1 * audioLevel * ar;
     col = hueRot(col, hueShift);
     col = mix(vec3(lum(col)), col, saturation);
