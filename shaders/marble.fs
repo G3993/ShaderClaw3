@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Marble — a cabinet of living glass orbs. Every sphere holds its own slowly churning 3D flow field (iterated domain warp sampled on the rotating sphere), read out through interference and thermal colour maps: black voids, deep blue, cyan, acid yellow, ember orange and red fringes. Six families of orb share the grid — vivid fringe orbs, soft defocused glass, kaleidoscopic mandalas, ghost orbs whose shell disappears so only the coloured blob floats, ochre marbled agate with contour lines, and dark void orbs threaded with cyan filaments — and each orb drifts from one family into the next on its own clock. A travelling light sweeps the grid, every orb bobs and breathes, beats ripple a light ring outward from the centre, bass churns the flow, mids slide the colour bands, highs light up the rims.",
+  "DESCRIPTION": "Marble — a cabinet of living glass orbs. Every sphere holds its own slowly churning 3D flow field (iterated domain warp sampled on the rotating sphere), read out through interference and thermal colour maps: black voids, deep blue, cyan, acid yellow, ember orange and red fringes. Six families of orb share the grid — vivid fringe orbs, soft defocused glass, kaleidoscopic mandalas, ghost orbs whose shell disappears so only the coloured blob floats, ochre marbled agate with contour lines, and dark void orbs threaded with cyan filaments — and each orb drifts from one family into the next on its own clock. A travelling light sweeps the grid, every orb bobs and breathes, beats ripple a light ring outward from the centre, bass churns the flow, mids slide the colour bands, highs light up the rims. Show dynamics: at Rest the orb shrinks a little and floats slowly with broad, calm colour bands and a soft glow; the Build wraps the fringes tighter and tighter, spins the flow up, swells the halo and makes the rim flicker faster until the orb trembles; the Drop punches the orb outward with a shockwave ring, a colour-band burst and a white flash, then settles into a big, saturated, fast-swirling peak.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-21 — original.",
   "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
   "INPUTS": [
@@ -34,6 +34,8 @@
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
     { "NAME": "audioReact",  "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6, "GROUP": "Audio Reactivity" },
+    { "NAME": "showState",   "LABEL": "Show State", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Follow Music", "Rest", "Build", "Peak"], "GROUP": "Show Dynamics" },
+    { "NAME": "dynamics",    "LABEL": "Build & Drop Depth", "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.85, "GROUP": "Show Dynamics" },
     { "NAME": "bgMode",      "LABEL": "Background", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2], "LABELS": ["Solid", "Vertical Gradient", "Radial Gradient"], "GROUP": "Background" },
     { "NAME": "bgColor",     "LABEL": "BG Color / Top / Center", "TYPE": "color", "DEFAULT": [0.045, 0.045, 0.045, 1.0], "GROUP": "Background" },
     { "NAME": "bgColor2",    "LABEL": "BG Bottom / Edge", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0], "GROUP": "Background" },
@@ -89,10 +91,31 @@ mat3 rotXY(float a, float b) {
     return ry * rx;
 }
 
+// ── Show dynamics: rest → build → peak / drop ───────────────────────────
+float gRest, gBuild, gPeak, gDrop, gLift;
+void showDynamics() {
+    float m = float(showState);
+    float e = clamp(audioEnergy, 0.0, 1.0);
+    float b = clamp(audioBuildup, 0.0, 1.0);
+    float d = clamp(audioDrop, 0.0, 1.0);
+    if (m > 0.5) {                                   // manual override for the VJ
+        if (m < 1.5)      { e = 0.04; b = 0.0; d = 0.0; }                                      // Rest
+        else if (m < 2.5) { float r = fract(TIME / 8.0); e = 0.3 + 0.35 * r; b = r * r; d = 0.0; } // Build: 8 s riser, loops
+        else              { e = 1.0; b = 0.0; d = exp(-fract(TIME / 4.0) * 5.0); } // Peak: hits every 4 s + beats
+    }
+    float k = dynamics;
+    gBuild = b * k;                                                  // tension 0..1
+    gDrop  = d * k;                                                  // impact impulse 0..1
+    gPeak  = smoothstep(0.5, 0.9, e) * k;                            // sustained high section
+    gRest  = (1.0 - smoothstep(0.08, 0.4, e)) * (1.0 - b) * k;       // quiet / breakdown
+    gLift  = mix(0.5, clamp(0.15 + e * 0.7 + gBuild * 0.25 + d * 0.3, 0.0, 1.0), k);  // 0 rest … 1 peak; 0.5 when dynamics = 0
+}
+float gWarpK, gBandK;   // swirl / fringe-band multipliers from the show state
+
 // ── the flow: iterated sinusoidal domain warp in 3D ──────────────────────
 float field(vec3 p, float t, float seed, float w, float freq) {
     vec3 q = p * freq * patScale + seed * vec3(3.1, 1.7, 5.3);
-    float a = w * warp;
+    float a = w * warp * gWarpK;
     for (int i = 0; i < 4; i++) {
         float fi = float(i);
         q += a * sin(q.zxy * (1.1 + 0.35 * fi) + vec3(t * (0.31 + 0.11 * fi), t * 0.23 + fi * 1.3, -t * 0.27 + fi * 2.1));
@@ -134,12 +157,12 @@ vec4 orbStyle(float s, vec3 p, vec3 n, vec2 d, float r, float t, float seed, flo
     vec3 col; float a = 1.0;
     if (s < 0.5) {                                      // vivid fringe
         float v = field(p, t, seed, 1.15, 1.35);
-        float x = 0.5 + 0.5 * v * bands * 1.1 + bandOff;
+        float x = 0.5 + 0.5 * v * bands * gBandK * 1.1 + bandOff;
         col = spectral(x);
         col *= 0.82 + 0.25 * diff;
     } else if (s < 1.5) {                               // soft glass
         float v = field(p, t * 0.8, seed, 0.75, 0.9);
-        float x = 0.5 + 0.42 * v * bands + bandOff;
+        float x = 0.5 + 0.42 * v * bands * gBandK * gBandK + bandOff;
         col = spectral(x);
         col = mix(col, vec3(lum(col)) * vec3(0.85, 0.85, 0.6), 0.32);
         col = col * 0.72 + vec3(0.06, 0.07, 0.05);
@@ -155,11 +178,11 @@ vec4 orbStyle(float s, vec3 p, vec3 n, vec2 d, float r, float t, float seed, flo
         float rr = pow(r, 0.8);
         vec3 pk = vec3(cos(af) * rr, sin(af) * rr, n.z) * (1.0 + 0.6 / (r + 0.35));
         float v = field(pk, t, seed, 1.1, 1.7);
-        float x = 0.5 + 0.5 * v * bands * 1.4 + bandOff;
+        float x = 0.5 + 0.5 * v * bands * gBandK * 1.4 + bandOff;
         col = spectral(x) * (0.55 + 0.45 * smoothstep(0.0, 0.4, r)) * (0.75 + 0.35 * diff);
     } else if (s < 3.5) {                               // ghost: the shell vanishes, the blob floats
         float v = field(p, t, seed, 1.0, 1.1);
-        float x = 0.5 + 0.5 * v * bands + bandOff;
+        float x = 0.5 + 0.5 * v * bands * gBandK + bandOff;
         col = spectral(x);
         a = smoothstep(0.08, 0.35, lum(col)) * smoothstep(1.0, 0.6, r);
     } else if (s < 4.5) {                               // ochre agate
@@ -192,6 +215,10 @@ vec3 backdrop(vec2 uv) {
 }
 
 void main() {
+    showDynamics();
+    // rest: calm broad bands, gentle swirl → build: fringes wind tight → peak: full churn
+    gWarpK = 1.0 + 0.5 * (gLift - 0.5) + 0.25 * gBuild;
+    gBandK = 1.0 + 0.6 * (gLift - 0.5) + 1.1 * gBuild * gBuild + 0.3 * gDrop;
     vec2 R = RENDERSIZE.xy;
     vec2 fc = gl_FragCoord.xy;
     vec2 uv = fc / R;
@@ -219,11 +246,17 @@ void main() {
         vec2 ctr = ti + 0.5;
         // float / bob
         ctr += bob * 0.07 * vec2(sin(TIME * (0.4 + 0.3 * seed) + seed * 20.0), cos(TIME * (0.33 + 0.3 * seed2) + seed2 * 17.0));
+        // tremor near the top of the build
+        ctr += (vec2(h11(floor(TIME * 26.0) + idx * 3.1), h11(floor(TIME * 26.0) * 1.7 + idx)) - 0.5) * 0.03 * smoothstep(0.65, 1.0, gBuild);
         // beat ring travels outward from the grid centre
         vec2 gc = vec2(cols, rows) * 0.5;
         float distC = length(ctr - gc) / max(cols, rows);
         float ring = exp(-pow((distC - (1.0 - audioBeatPulse) * 0.8) * 9.0, 2.0)) * audioBeatPulse * ar;
         float rad = 0.5 * orbSize * (single ? 1.1 : 1.0) * (1.0 + 0.025 * sin(TIME * 0.9 + seed * 30.0) + 0.05 * ring + 0.03 * bassP() * ar);
+        // rest: smaller, breathing orb; build: slight contraction (coiling); peak: full; drop: scale punch
+        rad *= 1.0 - 0.26 * gRest - 0.07 * gBuild * gBuild + 0.1 * gDrop * gDrop + 0.03 * gRest * sin(TIME * 0.6 + seed * 9.0);
+        // drop shockwave ring racing outward from the orb
+        float shockR = 1.0 + (1.0 - gDrop) * 1.6;
 
         vec2 d = (g - ctr) / rad;
         float r = length(d);
@@ -231,8 +264,10 @@ void main() {
 
         // soft outer halo
         if (r > 1.0) {
-            float halo = exp(-(r - 1.0) * 18.0) * 0.12 * rimGlow * (1.0 + highP() * ar);
+            float halo = exp(-(r - 1.0) * mix(26.0, 10.0, clamp(gLift + 0.4 * gBuild, 0.0, 1.0))) * 0.12 * rimGlow * (1.0 + highP() * ar) * (1.0 + 0.8 * (gLift - 0.5) + 1.5 * gBuild);
             col += mix(cCyan.rgb, cEmber.rgb, seed) * halo;
+            float shock = exp(-pow((r - shockR) * 7.0, 2.0)) * gDrop;
+            col += mix(mix(cCyan.rgb, cYellow.rgb, seed), vec3(1.0), 0.4) * shock * 0.9;
             continue;
         }
 
@@ -253,10 +288,11 @@ void main() {
         } else { sa = sl; sb = sl; f = 0.0; }
 
         vec3 n = vec3(d, sqrt(max(1.0 - r * r, 0.0)));
-        float tFlow = TIME * flow + 0.35 * audioBassTime * ar * flow + seed * 40.0;
-        mat3 M = rotXY(TIME * spin * (0.25 + 0.3 * seed) + seed * 6.0, 0.4 * sin(TIME * spin * 0.2 + seed2 * 6.0));
+        // continuous clocks: music clocks speed things up; build adds a bounded wind-up
+        float tFlow = TIME * flow * 0.85 + 0.35 * audioBassTime * ar * flow + 0.25 * audioMidTime * flow + 3.0 * gBuild * gBuild + 1.2 * gDrop + seed * 40.0;
+        mat3 M = rotXY(TIME * spin * (0.25 + 0.3 * seed) + 0.3 * audioMidTime * spin + 2.4 * gBuild * gBuild + seed * 6.0, 0.4 * sin(TIME * spin * 0.2 + seed2 * 6.0));
         vec3 p = M * n;
-        float bandOff = 0.12 * sin(TIME * 0.05 + seed * 6.0) + 0.18 * midP() * ar;
+        float bandOff = 0.12 * sin(TIME * 0.05 + seed * 6.0) + 0.18 * midP() * ar + 0.35 * gDrop * gDrop;
 
         vec4 c = orbStyle(sa, p, n, d, r, tFlow, seed, bandOff);
         if (f > 0.001) c = mix(c, orbStyle(sb, p, n, d, r, tFlow, seed, bandOff), f);
@@ -265,7 +301,13 @@ void main() {
         float rimW = smoothstep(0.86, 0.985, r) * smoothstep(1.0, 0.97, r);
         vec3 rimC = mix(cCyan.rgb, cEmber.rgb, step(0.6, seed2));
         float ghostness = 1.0 - c.a;
-        c.rgb += rimC * rimW * 0.5 * rimGlow * (1.0 + 0.8 * highP() * ar) * (1.0 - ghostness);
+        // build: the rim flickers, its rate climbing with the riser
+        float flick = 0.5 + 0.5 * sin(110.0 * gBuild * gBuild * gBuild + seed * 6.0);
+        float rimAmt = 1.0 + 0.8 * highP() * ar + 0.6 * (gLift - 0.5) + 2.2 * gBuild * flick + 2.5 * gDrop;
+        c.rgb += rimC * rimW * 0.5 * rimGlow * rimAmt * (1.0 - ghostness);
+        // build: a shimmer sheet sweeping across the face, faster and faster
+        float shim = pow(0.5 + 0.5 * sin(110.0 * gBuild * gBuild * gBuild - n.y * 9.0 + n.x * 4.0), 8.0) * gBuild;
+        c.rgb += mix(cCyan.rgb, vec3(1.0), 0.5) * shim * 0.35;
         // specular glint
         vec3 H = normalize(vec3(-0.45, 0.55, 0.7) + vec3(0.0, 0.0, 1.0));
         c.rgb += vec3(1.0, 0.97, 0.9) * pow(max(dot(n, H), 0.0), 60.0) * specular * 0.6 * (1.0 - ghostness);
@@ -274,6 +316,11 @@ void main() {
         float sweep = 0.5 + 0.5 * sin(dot(ctr, vec2(0.55, 0.35)) * 1.2 - TIME * 0.6);
         c.rgb *= 1.0 + lightSweep * (0.45 * sweep - 0.2) + 0.5 * ring;
         c.rgb *= 1.0 + 0.2 * audioLevel * ar;
+        // rest: softer light; peak: brighter, punchier; drop: white flash that fades from the edge in
+        c.rgb *= 1.0 + 0.25 * max(gLift - 0.5, 0.0);
+        c.rgb = mix(c.rgb, vec3(1.0, 0.97, 0.9), gDrop * gDrop * 0.55 * smoothstep(0.2, 1.0, r + 0.3 * (1.0 - gDrop)));
+        // inner shock ring through the glass
+        c.rgb += mix(cCyan.rgb, vec3(1.0), 0.4) * exp(-pow((r - (1.0 - gDrop) * 1.2) * 9.0, 2.0)) * gDrop * 0.6;
 
         float edge = smoothstep(1.0, 1.0 - pxR, r);
         float a = c.a * edge;
@@ -283,7 +330,7 @@ void main() {
 
     col = hueRot(col, hueShift);
     float l = lum(col);
-    col = mix(vec3(l), col, saturation);
+    col = mix(vec3(l), col, saturation * (1.0 + 0.4 * (gLift - 0.5) + 0.15 * gBuild));
     col += (h12(fc + fract(TIME * 13.7) * 91.0) - 0.5) * grain * 0.07;
     col += (h12(fc * 1.03 + fract(TIME * 7.1) * 57.0) + h12(fc * 0.97 + 11.0) - 1.0) * (1.5 / 255.0);
     float outA = transparentBg ? alpha : 1.0;

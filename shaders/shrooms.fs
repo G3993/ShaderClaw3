@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Shrooms — rows of soft, gradient-dyed mushroom stalks dancing in 3D. Each stalk is a bent, bulbous capsule smooth-blended into a rounded cap, swaying on its own spring with a phase lag along the row so waves of motion roll through the crowd; bass squashes and stretches them like a bounce, beats kick a wiggle that ripples down the line, mids widen the sway, highs shimmer the grain. Colour is a living gradient up each stalk (pale foot → glowing body → dark cap) that slowly flows and drifts. The scene morphs continuously between three looks: Aurora (a tall merged wall of drips in maroon, blue, cream, lavender and red), Ember Rows (three stacked tiers of slim dark-capped stalks fading red → pink → butter) and Cobalt Cluster (a few fat blue clubs fading to white on warm paper).",
+  "DESCRIPTION": "Shrooms — rows of soft, gradient-dyed mushroom stalks dancing in 3D. Each stalk is a bent, bulbous capsule smooth-blended into a rounded cap, swaying on its own spring with a phase lag along the row so waves of motion roll through the crowd; bass squashes and stretches them like a bounce, beats kick a wiggle that ripples down the line, mids widen the sway, highs shimmer the grain. Colour is a living gradient up each stalk (pale foot → glowing body → dark cap) that slowly flows and drifts. The scene morphs continuously between three looks: Aurora (a tall merged wall of drips in maroon, blue, cream, lavender and red), Ember Rows (three stacked tiers of slim dark-capped stalks fading red → pink → butter) and Cobalt Cluster (a few fat blue clubs fading to white on warm paper). Show dynamics: at Rest only a few stalks remain, short and drowsy, swaying slowly in soft colour with lots of paper around them; the Build fills the rows, stretches every stalk tall and thin, leans the crowd inward, speeds up the bounce and sends a shimmer band racing up the stems while the camera pushes in and the rows tremble; the Drop squashes the whole crowd flat and springs it back up with caps puffing out, the rows bursting outward and a bright flash, settling into a packed, saturated, wildly dancing peak.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-21 — original.",
   "CATEGORIES": ["Generator", "3D", "Nature", "Audio Reactive"],
   "INPUTS": [
@@ -29,6 +29,8 @@
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
     { "NAME": "audioReact",  "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6, "GROUP": "Audio Reactivity" },
+    { "NAME": "showState",   "LABEL": "Show State", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Follow Music", "Rest", "Build", "Peak"], "GROUP": "Show Dynamics" },
+    { "NAME": "dynamics",    "LABEL": "Build & Drop Depth", "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.85, "GROUP": "Show Dynamics" },
     { "NAME": "bgMode",      "LABEL": "Background", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Follow Look", "Solid", "Vertical Gradient", "Radial Gradient"], "GROUP": "Background" },
     { "NAME": "bgColor",     "LABEL": "BG Color / Top / Center", "TYPE": "color", "DEFAULT": [0.86, 0.83, 0.8, 1.0], "GROUP": "Background" },
     { "NAME": "bgColor2",    "LABEL": "BG Bottom / Edge", "TYPE": "color", "DEFAULT": [0.78, 0.74, 0.71, 1.0], "GROUP": "Background" },
@@ -73,6 +75,26 @@ vec3 hueRot(vec3 c, float h) {
     return c * ca + cross(k, c) * sin(a) + k * dot(k, c) * (1.0 - ca);
 }
 
+// ── Show dynamics: rest → build → peak / drop ───────────────────────────
+float gRest, gBuild, gPeak, gDrop, gLift;
+void showDynamics() {
+    float m = float(showState);
+    float e = clamp(audioEnergy, 0.0, 1.0);
+    float b = clamp(audioBuildup, 0.0, 1.0);
+    float d = clamp(audioDrop, 0.0, 1.0);
+    if (m > 0.5) {                                   // manual override for the VJ
+        if (m < 1.5)      { e = 0.04; b = 0.0; d = 0.0; }                                      // Rest
+        else if (m < 2.5) { float r = fract(TIME / 8.0); e = 0.3 + 0.35 * r; b = r * r; d = 0.0; } // Build: 8 s riser, loops
+        else              { e = 1.0; b = 0.0; d = exp(-fract(TIME / 4.0) * 5.0); } // Peak: hits every 4 s + beats
+    }
+    float k = dynamics;
+    gBuild = b * k;                                                  // tension 0..1
+    gDrop  = d * k;                                                  // impact impulse 0..1
+    gPeak  = smoothstep(0.5, 0.9, e) * k;                            // sustained high section
+    gRest  = (1.0 - smoothstep(0.08, 0.4, e)) * (1.0 - b) * k;       // quiet / breakdown
+    gLift  = mix(0.5, clamp(0.15 + e * 0.7 + gBuild * 0.25 + d * 0.3, 0.0, 1.0), k);  // 0 rest … 1 peak; 0.5 when dynamics = 0
+}
+
 // look = layout + shape + palette
 //  L0 = (tiers, stalks per row, spacing, stalk radius)
 //  L1 = (stalk height, cap radius, cap flatness, blend k)
@@ -107,24 +129,34 @@ float gKick;       // beat impulse
 float gMatY;       // hit stalk height fraction
 float gMatS;       // hit stalk seed
 float gSp;         // stalk spacing (motion is measured in it)
+float gStretch;    // show-state stalk stretch (camera framing follows it)
 
 // one stalk in its local frame (base at origin)
 float stalk(vec3 p, float seed, float xIdx, float tier, float w, out float yN) {
     float H = L1.x * (0.82 + 0.3 * h11(seed * 3.1));
+    H *= smoothstep(0.12, 0.6, w);                 // edge stalks sprout from the ground instead of thinning into threads
     // squash & stretch bounce (volume preserving)
     float bounce = sin(gT * 2.1 + xIdx * 0.55 + tier * 1.3 + seed * 6.0);
     float st = 1.0 + squash * (0.06 * bounce + 0.16 * bassP() * audioReact * (0.6 + 0.4 * sin(xIdx * 1.7 + seed * 9.0)));
+    // build: stalks stretch tall; rest: shorter, drowsy; drop: squash flat then spring back up
+    float spring = gDrop * cos((1.0 - gDrop) * 9.0) ;            // damped spring as the impulse decays
+    st *= gStretch - 0.32 * spring;
+    st = max(st, 0.35);
     H *= st;
     float rs = L0.w * thickness * w / sqrt(st);
     float y = p.y;
     float yf = clamp(y / H, 0.0, 1.0);
     // dance: sway grows with height, waves travel along the row
     float ph = gT * 1.3 - xIdx * 0.45 + tier * 0.9 + seed * 6.0;
-    float sway = L2.z * gSp * dance * (1.0 + 0.5 * midP() * audioReact);
+    float sway = L2.z * gSp * dance * (1.0 + 0.5 * midP() * audioReact) * (1.0 + 1.1 * (gLift - 0.5));
     vec2 off = sway * yf * yf * vec2(sin(ph), 0.5 * cos(ph * 0.8 + 1.0));
     // wiggle: travelling S-bend up the stalk + beat kick
     off.x += wiggle * 0.22 * gSp * sin(yf * 2.2 * PI - gT * 2.2 + seed * 10.0) * yf;
     off.x += gKick * 0.35 * gSp * sin(yf * 5.0 - xIdx) * yf;
+    // build: the crowd leans in toward the centre; drop: bursts outward
+    off.x += (-0.22 * gBuild + 0.5 * gDrop * gDrop) * gSp * clamp(xIdx * 0.35, -1.5, 1.5) * yf * yf;
+    // build tremor near the top of the riser
+    off.x += 0.06 * gSp * smoothstep(0.65, 1.0, gBuild) * sin(TIME * 63.0 + seed * 40.0) * yf;
     vec3 q = p - vec3(off.x, 0.0, off.y);
     // stem: capsule with a soft belly
     float belly = 1.0 + 0.22 * sin(yf * PI * 1.1 + seed * 4.0) + 0.12 * sin(yf * 7.0 + gT + seed * 7.0);
@@ -132,7 +164,7 @@ float stalk(vec3 p, float seed, float xIdx, float tier, float w, out float yN) {
     vec3 qs = q; qs.y -= clamp(qs.y, 0.0, H);
     float dStem = length(qs) - r;
     // cap: flattened ellipsoid at the top, a little offset for character
-    float cr = L1.y * capSize * w * (0.85 + 0.3 * h11(seed * 7.7)) * (1.0 + 0.08 * gKick);
+    float cr = L1.y * capSize * w * (0.85 + 0.3 * h11(seed * 7.7)) * (1.0 + 0.08 * gKick) * (1.0 + 0.15 * (gLift - 0.5) + 0.35 * gDrop * gDrop);
     vec3 qc = q - vec3(0.06 * sin(seed * 20.0) * cr, H, 0.0);
     qc.y /= L1.z;
     float dCap = (length(qc) - cr) * L1.z;
@@ -151,14 +183,14 @@ float map(vec3 p) {
         if (tw < 0.01) continue;
         vec3 pt = p - vec3(0.0, tier * L2.y, -tier * L2.x);
         float sp = L0.z; gSp = sp;
-        float n = L0.y;
+        float n = L0.y * (1.0 + 0.7 * (gLift - 0.5)) + 1.5 * gBuild;   // rest: sparse … peak: packed
         float shift = mod(tier, 2.0) * 0.5 * sp;
         float xi = floor((pt.x - shift) / sp + 0.5);
         for (int j = -2; j <= 2; j++) {
             float idx = xi + float(j);
             // finite row, soft-edged count
             float w = tw * (1.0 - smoothstep(n * 0.5 - 0.5, n * 0.5 + 0.3, abs(idx + 0.25)));
-            if (w < 0.02) continue;
+            if (w < 0.12) continue;
             float seed = h11(idx * 1.37 + tier * 7.1 + 0.3);
             vec3 q = pt - vec3(idx * sp + shift + (seed - 0.5) * sp * 0.35, 0.0, (h11(seed * 9.1) - 0.5) * 0.25);
             float yN;
@@ -211,6 +243,7 @@ void main() {
     float ar = audioReact;
 
     // look selection + continuous morph
+    showDynamics();
     float sel = float(lookSel);
     float la, lb, f;
     if (sel < 0.5) {
@@ -225,19 +258,21 @@ void main() {
     P0 = mix(p0, q0, f); P1 = mix(p1, q1, f); P2 = mix(p2, q2, f); P3 = mix(p3, q3, f); P4 = mix(p4, q4, f);
     BG1 = mix(g1, k1, f); BG2 = mix(g2, k2, f);
 
-    gT = TIME * speed + 0.4 * audioBassTime * ar * speed;
+    // continuous clocks: music clocks speed the dance up; build adds a bounded wind-up
+    gT = TIME * speed * 0.8 + 0.4 * audioBassTime * ar * speed + 0.3 * audioMidTime * speed + 3.0 * gBuild * gBuild;
     gKick = audioBeatPulse * audioBeatPulse * ar * wiggle;
 
     // camera: long lens, nearly orthographic, looking at the crowd
     vec2 sp = (fc - 0.5 * R) / R.y;
-    float sceneH = L1.x + (L0.x - 1.0) * L2.y + L1.y * L1.z * 1.6;
+    gStretch = 1.0 + 0.12 * (gLift - 0.5) + 0.28 * gBuild;
+    float sceneH = L1.x * mix(1.0, gStretch, 0.85) + (L0.x - 1.0) * L2.y + L1.y * L1.z * 1.6;
     float camH = 0.5 * sceneH + (L2.w - 1.45) * 0.3;
     vec3 ro = vec3(0.0, camH, 14.0);
     vec3 ta = vec3(0.0, camH - 0.15, 0.0);
     vec3 ww = normalize(ta - ro);
     vec3 uu = normalize(cross(ww, vec3(0.0, 1.0, 0.0)));
     vec3 vv = cross(uu, ww);
-    float focal = 14.0 / (sceneH * 1.18) * zoom;
+    float focal = 14.0 / (sceneH * 1.18) * zoom * (1.0 + 0.1 * (gLift - 0.5) + 0.1 * gBuild + 0.05 * gDrop);
     vec3 rd = normalize(sp.x * uu + sp.y * vv + focal * ww);
 
     vec3 bg = backdrop(uv);
@@ -270,6 +305,13 @@ void main() {
         col = mix(col, col * 0.55, fres * smoothstep(0.55, 0.9, yN) * 0.8);
         col += mix(base, vec3(1.0), 0.4) * fres * (1.0 - smoothstep(0.4, 0.8, yN)) * 0.22 * (1.0 + highP() * ar);
         col *= 1.0 + 0.15 * audioLevel * ar;
+        // build: a shimmer band racing up the stems, its rate climbing
+        float shim = pow(0.5 + 0.5 * sin(100.0 * gBuild * gBuild * gBuild - yN * 10.0 + seed * 6.0), 6.0) * gBuild;
+        col += mix(base, vec3(1.0), 0.6) * shim * 0.4 * (1.0 - smoothstep(0.7, 0.95, yN));
+        // drop: bright flash on the bodies + glowing rims
+        col += mix(base, vec3(1.0), 0.5) * (gDrop * gDrop * 0.35 + fres * gDrop * 0.6);
+        // rest: soft and a touch pale; peak: saturated
+        col = mix(vec3(lum(col)), col, 1.0 + 0.5 * (gLift - 0.5));
         alpha = 1.0;
     }
 

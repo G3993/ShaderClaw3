@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Cells — a gallery of living specimens under a fluorescence microscope. Each tile is a raymarched block of tissue whose surface is grown from an animated 3D Voronoi foam: honeycomb pits, drooping scales, ring cells, plated domes, pebble clusters, budding blobs, fibrous mats, smooth caverns and a thermal-imaged well. Twelve species, each slowly morphing into the next on its own clock, so the grid never repeats in lockstep. Lighting is emissive and false-coloured like confocal imaging — deep navy cavities, royal blue and cyan walls, acid-green rims, red-orange glow pooled in the pits — and the whole image is resolved as a fine point-cloud stipple. Bass swells the cells, beats send a fluorescent wave through every specimen, mids drift the hue, highs make the stipple sparkle.",
+  "DESCRIPTION": "Cells — a gallery of living specimens under a fluorescence microscope. Each tile is a raymarched block of tissue whose surface is grown from an animated 3D Voronoi foam: honeycomb pits, drooping scales, ring cells, plated domes, pebble clusters, budding blobs, fibrous mats, smooth caverns and a thermal-imaged well. Twelve species, each slowly morphing into the next on its own clock, so the grid never repeats in lockstep. Lighting is emissive and false-coloured like confocal imaging — deep navy cavities, royal blue and cyan walls, acid-green rims, red-orange glow pooled in the pits — and the whole image is resolved as a fine point-cloud stipple. Bass swells the cells, beats send a fluorescent wave through every specimen, mids drift the hue, highs make the stipple sparkle. Show dynamics: at Rest the specimen sits small and calm with big soft cells and gentle breathing light; the Build tightens the foam into ever-smaller cells, deepens the relief, spins it up and pushes the camera in under a climbing fluorescent shimmer; the Drop ignites every pit red-hot, fires a shockwave shell through the tissue with a scale punch and chromatic burst, settling into a dense, saturated, fast-flowing peak.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-21 — original.",
   "CATEGORIES": ["Generator", "3D", "Nature", "Audio Reactive"],
   "INPUTS": [
@@ -36,6 +36,8 @@
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
     { "NAME": "audioReact",  "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6, "GROUP": "Audio Reactivity" },
+    { "NAME": "showState",   "LABEL": "Show State", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Follow Music", "Rest", "Build", "Peak"], "GROUP": "Show Dynamics" },
+    { "NAME": "dynamics",    "LABEL": "Build & Drop Depth", "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.85, "GROUP": "Show Dynamics" },
     { "NAME": "bgMode",      "LABEL": "Background", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2], "LABELS": ["Solid", "Vertical Gradient", "Radial Gradient"], "GROUP": "Background" },
     { "NAME": "bgColor",     "LABEL": "BG Color / Top / Center", "TYPE": "color", "DEFAULT": [0.015, 0.015, 0.02, 1.0], "GROUP": "Background" },
     { "NAME": "bgColor2",    "LABEL": "BG Bottom / Edge", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0], "GROUP": "Background" },
@@ -96,6 +98,28 @@ vec3 hueRot(vec3 c, float h) {
 }
 
 mat2 rot(float a) { float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
+
+// ── Show dynamics: rest → build → peak / drop ───────────────────────────
+float gRest, gBuild, gPeak, gDrop, gLift;
+void showDynamics() {
+    float m = float(showState);
+    float e = clamp(audioEnergy, 0.0, 1.0);
+    float b = clamp(audioBuildup, 0.0, 1.0);
+    float d = clamp(audioDrop, 0.0, 1.0);
+    if (m > 0.5) {                                   // manual override for the VJ
+        if (m < 1.5)      { e = 0.04; b = 0.0; d = 0.0; }                                      // Rest
+        else if (m < 2.5) { float r = fract(TIME / 8.0); e = 0.3 + 0.35 * r; b = r * r; d = 0.0; } // Build: 8 s riser, loops
+        else              { e = 1.0; b = 0.0; d = exp(-fract(TIME / 4.0) * 5.0); } // Peak: hits every 4 s + beats
+    }
+    float k = dynamics;
+    gBuild = b * k;                                                  // tension 0..1
+    gDrop  = d * k;                                                  // impact impulse 0..1
+    gPeak  = smoothstep(0.5, 0.9, e) * k;                            // sustained high section
+    gRest  = (1.0 - smoothstep(0.08, 0.4, e)) * (1.0 - b) * k;       // quiet / breakdown
+    gLift  = mix(0.5, clamp(0.15 + e * 0.7 + gBuild * 0.25 + d * 0.3, 0.0, 1.0), k);  // 0 rest … 1 peak; 0.5 when dynamics = 0
+}
+float gDens;     // cell density multiplier from the show state
+float gShock;    // drop shockwave shell radius
 
 // ── species table ────────────────────────────────────────────────────────
 //  A = (roundness 0 box→1 sphere, cell freq, vertical squash, relief depth)
@@ -172,7 +196,7 @@ float baseShape(vec3 p) {
 }
 
 float relief(vec3 p) {
-    vec3 q = p * gA.y * cellScale;
+    vec3 q = p * gA.y * cellScale * gDens;
     q.y *= gA.z;
     vec3 v = voronoi(q);
     float F1 = v.x, F2 = v.y, id = v.z;
@@ -211,7 +235,9 @@ float map(vec3 p) {
     float pulse = audioBeatPulse * audioReact;
     float wr = (1.0 - audioBeatPulse) * 1.6;
     float wave = exp(-pow((length(p) - wr) * 6.0, 2.0)) * pulse;
-    return b - gDepth * gA.w * h - 0.04 * wave;
+    // drop: one big shockwave shell bulges the tissue as it passes
+    float shock = exp(-pow((length(p) - gShock) * 6.0, 2.0)) * gDrop;
+    return b - gDepth * gA.w * h - 0.04 * wave - 0.09 * shock;
 }
 
 vec3 calcNormal(vec3 p) {
@@ -257,7 +283,10 @@ vec4 renderSpecimen(vec2 uv, float tileIdx) {
     vec3 ww = normalize(ta - ro);
     vec3 uu = normalize(cross(ww, vec3(0.0, 1.0, 0.0)));
     vec3 vv = cross(uu, ww);
-    vec3 rd = normalize(uv.x * uu + uv.y * vv + 3.3 * ww);
+    // rest sits back with room around it; build pushes in; drop punches in
+    float focal = 3.3 * (1.0 + 0.3 * (gLift - 0.5) + 0.12 * gBuild + 0.14 * gDrop * gDrop);
+    focal *= 1.0 + 0.025 * sin(TIME * 0.5) * gRest;                  // rest: gentle breathing
+    vec3 rd = normalize(uv.x * uu + uv.y * vv + focal * ww);
 
     // bounding sphere
     float bR = 1.6;
@@ -299,7 +328,7 @@ vec4 renderSpecimen(vec2 uv, float tileIdx) {
     // exposure: confocal look — proud tissue glows, cavities fall to navy
     float ex = ao * (0.3 + 0.7 * key) * (0.45 + 0.55 * ridge) + 0.12 * clamp(h, 0.0, 1.0);
     ex *= mix(1.0, 0.45 + 0.55 * smoothstep(-0.95, 0.35, p.y), 0.8);   // undersides fade to black
-    ex = clamp(pow(ex, 1.35) * (0.62 + 0.25 * glow), 0.0, 1.1);
+    ex = clamp(pow(ex, 1.35) * (0.62 + 0.25 * glow) * (1.0 + 0.22 * (gLift - 0.5)), 0.0, 1.1);
 
     vec3 cBlue  = ramp4(ex, colDeep.rgb, colBlue.rgb, colCyan.rgb, mix(colCyan.rgb, vec3(0.85, 0.97, 1.0), 0.3));
     vec3 cGreen = ramp4(ex, colDeep.rgb, mix(colBlue.rgb, colCyan.rgb, 0.4), mix(colCyan.rgb, colGreen.rgb, 0.8), mix(colGreen.rgb, vec3(0.95, 1.0, 0.6), 0.25));
@@ -325,6 +354,16 @@ vec4 renderSpecimen(vec2 uv, float tileIdx) {
     float wave = exp(-pow((length(p) - wr) * 5.0, 2.0)) * audioBeatPulse * ar;
     col += mix(colCyan.rgb, vec3(1.0), 0.3) * wave * 0.9;
 
+    // build: a fluorescent shimmer racing through the walls, its rate climbing with the riser
+    float shPh = 90.0 * gBuild * gBuild * gBuild + length(p) * 7.0 - h * 3.0;
+    float shim = pow(0.5 + 0.5 * sin(shPh), 6.0) * gBuild;
+    col += mix(colCyan.rgb, colGreen.rgb, 0.5) * shim * (0.25 + 0.6 * edge * ridge) * ao;
+    // drop: white-hot shell + flash on the whole specimen
+    float shockC = exp(-pow((length(p) - gShock) * 11.0, 2.0)) * gDrop;
+    col += mix(colCyan.rgb, vec3(1.0), 0.4) * shockC * (0.2 + 0.6 * edge * ridge);
+    // drop: every pit ignites red-orange at once, then cools back
+    col = mix(col, colHot.rgb * (1.1 + 0.4 * glow), clamp(gDrop * gDrop * smoothstep(0.15, 0.7, pit) * (0.5 + 0.5 * ao), 0.0, 0.85));
+
     col *= 1.0 + 0.25 * audioLevel * ar;
     return vec4(max(col, 0.0), 1.0);
 }
@@ -342,6 +381,8 @@ vec4 scenePass() {
     vec2 ti = floor(g);
     vec2 uv = (fract(g) * 2.0 - 1.0) / (1.0 - (single ? 0.0 : gap));
     if (single) uv *= 0.92;
+    // tremor near the top of the build
+    uv += (h22(vec2(floor(TIME * 24.0), ti.x + ti.y * 7.0)) - 0.5) * 0.035 * smoothstep(0.65, 1.0, gBuild);
     float tileIdx = ti.x + (rows - 1.0 - ti.y) * cols;
 
     // which species, and how far through the morph to the next one
@@ -365,9 +406,13 @@ vec4 scenePass() {
 
     float ar = audioReact;
     gSeed = h11(tileIdx * 1.31 + 0.7);
-    gT = TIME * flow * 0.7 + 0.45 * audioBassTime * ar * flow + gSeed * 20.0;
-    gDepth = depth * (1.0 + 0.3 * bassP() * ar);
-    gSpinA = TIME * spin * 0.35 + tileIdx * 1.7 + gSeed * 3.0;
+    // continuous clocks: music clocks speed the flow up; build adds a bounded wind-up
+    gT = TIME * flow * 0.6 + 0.45 * audioBassTime * ar * flow + 0.3 * audioMidTime * flow + 2.2 * gBuild * gBuild + gSeed * 20.0;
+    // rest: big soft cells → build/peak: tight dense foam
+    gDens = 1.0 + 0.45 * (gLift - 0.5) + 0.35 * gBuild + 0.15 * gDrop;
+    gDepth = depth * (1.0 + 0.3 * bassP() * ar) * (1.0 + 0.7 * (gLift - 0.5) + 0.35 * gBuild);
+    gSpinA = TIME * spin * 0.3 + 0.25 * audioMidTime * spin + 2.5 * gBuild * gBuild + tileIdx * 1.7 + gSeed * 3.0;
+    gShock = (1.0 - gDrop * gDrop) * 2.4;            // races out early in the impulse
 
     vec4 c = renderSpecimen(uv, tileIdx);
     c.rgb = hueRot(c.rgb, fract(hueShift + 0.04 * midP() * ar));
@@ -402,6 +447,12 @@ vec4 finalPass() {
     vec2 uv = fc / R;
     vec4 sc = texture2D(fScene, uv);
     vec3 col = sc.rgb;
+    // drop: chromatic burst radiating from the centre
+    if (gDrop > 0.01) {
+        vec2 co = (uv - 0.5) * 0.028 * gDrop;
+        col.r = texture2D(fScene, uv + co).r;
+        col.b = texture2D(fScene, uv - co).b;
+    }
 
     // point-cloud stipple: every surface resolves into fine jittered dots
     float ds = dotSize;
@@ -412,7 +463,7 @@ vec4 finalPass() {
     float L = lum(col);
     float rad = 0.62 * sqrt(clamp(L * 1.3, 0.0, 1.0)) * (0.8 + 0.4 * h12(gi + 3.1));
     float dm = smoothstep(rad + 0.14, rad - 0.14, length(gf - jit));
-    float tw = step(0.992 - 0.03 * highP() * audioReact, h12(gi + floor(TIME * 14.0) * 0.37));
+    float tw = step(0.992 - 0.03 * highP() * audioReact - 0.03 * gBuild - 0.02 * gPeak, h12(gi + floor(TIME * 14.0) * 0.37));
     vec3 dotted = col * (0.18 + dm * (1.05 + 1.4 * tw));
     col = mix(col, dotted, stipple);
 
@@ -435,9 +486,10 @@ vec4 finalPass() {
     col = (col + b) * (1.0 + 0.18 * bassP() * audioReact);
     col = 1.0 - exp(-col * 1.05);
     float l = lum(col);
-    col = mix(vec3(l), col, saturation * 1.08);
+    col = mix(vec3(l), col, saturation * 1.08 * (1.0 + 0.3 * (gLift - 0.5)));
     col = clamp(col, 0.0, 1.0);
     // composite over the user background (untouched by the tonemap)
+    col = clamp(col + gDrop * gDrop * 0.12, 0.0, 1.0);                // drop flash
     vec3 glowOut = 1.0 - exp(-b * 1.15);
     col = mix(backdrop(uv) + glowOut, col, sc.a);
     // vignette
@@ -452,6 +504,7 @@ vec4 finalPass() {
 }
 
 void main() {
+    showDynamics();
     if (PASSINDEX == 0)      gl_FragColor = scenePass();
     else if (PASSINDEX == 1) gl_FragColor = bloomPass();
     else                     gl_FragColor = finalPass();
