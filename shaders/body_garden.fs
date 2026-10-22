@@ -1,9 +1,11 @@
 /*{
-  "DESCRIPTION": "Body Garden — two looks. Pixel Mosaic (default): a flat 2D front-view human figure with real anatomy built from a mosaic of coloured pixel tiles — red, yellow, green, blue, white and black squares, split cells, diagonal hatching and little outlined squares that keep flipping and re-arranging digitally — while contour lines made of broken pixel dashes ripple outward from the body across the whole frame like an aura or a fingerprint. At rest the rings drift slowly and the tiles barely change; during a build the rings speed up and tighten and the tiles flicker faster; on the drop a bright shock ring bursts out of the body and the tiles scatter. Glass Garden: a still glass human figure with real anatomy (a sculpted human body baked into a 3D distance field), seen three-quarter from head to mid-thigh, with a living garden inside. The glass shell glows at its rim and catches highlights while the interior is raymarched as a volume: lungs breathe and sparkle with thousands of multicoloured points of light, a glowing pink nerve tree branches from the throat into the chest and pulses on the beat, vines spiral up through the torso and neck, flowers open and close in the head, shoulder and chest, a dense bed of blooms and leaves fills the belly, a cluster of sparks lives in the brain, and abstract 3D elements (rings, cubes and orbs) drift through the body. The figure never moves; everything inside it does. Bass makes the lungs breathe deeper, beats send a pulse up the nerves and flash the sparks, mids speed the drifting elements, highs twinkle the lights. Show Dynamics: at Rest the garden sleeps (buds closed, vines low, a few slow sparks and drifting shapes, soft glass); during a Build the vines climb, flowers unfurl, the sparks thicken and shimmer faster while the abstract shapes converge on the heart and tremble; at the Drop a shockwave of light bursts out from the chest through the whole body, the nerves and glass flash, and every bloom snaps fully open.",
+  "DESCRIPTION": "Body Garden — two looks. Pixel Mosaic (default): one flat 2D front-view human figure, or two standing side by side, with real anatomy built from a mosaic of coloured pixel tiles — red, yellow, green, blue, white and black squares, split cells, diagonal hatching and little outlined squares that keep flipping and re-arranging digitally — while contour lines made of broken pixel dashes ripple outward from the body across the whole frame like an aura or a fingerprint. At rest the rings drift slowly and the tiles barely change; during a build the rings speed up and tighten and the tiles flicker faster; on the drop a bright shock ring bursts out of the body and the tiles scatter. Glass Garden: a still glass human figure with real anatomy (a sculpted human body baked into a 3D distance field), seen three-quarter from head to mid-thigh, with a living garden inside. The glass shell glows at its rim and catches highlights while the interior is raymarched as a volume: lungs breathe and sparkle with thousands of multicoloured points of light, a glowing pink nerve tree branches from the throat into the chest and pulses on the beat, vines spiral up through the torso and neck, flowers open and close in the head, shoulder and chest, a dense bed of blooms and leaves fills the belly, a cluster of sparks lives in the brain, and abstract 3D elements (rings, cubes and orbs) drift through the body. The figure never moves; everything inside it does. Bass makes the lungs breathe deeper, beats send a pulse up the nerves and flash the sparks, mids speed the drifting elements, highs twinkle the lights. Show Dynamics: at Rest the garden sleeps (buds closed, vines low, a few slow sparks and drifting shapes, soft glass); during a Build the vines climb, flowers unfurl, the sparks thicken and shimmer faster while the abstract shapes converge on the heart and tremble; at the Drop a shockwave of light bursts out from the chest through the whole body, the nerves and glass flash, and every bloom snaps fully open.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-21 — original. Figure: MakeHuman base mesh (CC0), baked to a signed distance field (body_sdf.png).",
   "CATEGORIES": ["Generator", "3D", "Nature", "Audio Reactive"],
   "INPUTS": [
     { "NAME": "styleSel",    "LABEL": "Style", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1], "LABELS": ["Pixel Mosaic (flat 2D)", "Glass Garden (3D)"], "GROUP": "Figure" },
+    { "NAME": "peopleSel",   "LABEL": "People", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1], "LABELS": ["One Figure", "Two Figures Side by Side"], "GROUP": "Pixel Mosaic" },
+    { "NAME": "pairGap",     "LABEL": "Pair Spacing",     "TYPE": "float", "MIN": 0.6, "MAX": 1.6, "DEFAULT": 1.0, "GROUP": "Pixel Mosaic" },
     { "NAME": "tileCount",   "LABEL": "Mosaic Tiles (tall)", "TYPE": "float", "AUDIO": false, "MIN": 16.0, "MAX": 90.0, "DEFAULT": 36.0, "GROUP": "Pixel Mosaic" },
     { "NAME": "ringSpacing", "LABEL": "Contour Spacing",  "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 0.75, "GROUP": "Pixel Mosaic" },
     { "NAME": "ringSpeed",   "LABEL": "Outward Flow",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.6, "GROUP": "Pixel Mosaic" },
@@ -443,6 +445,15 @@ float frontSD(vec2 p) {
     vec4 t = texture2D(frontTex, vec2((gc.x + 0.5) / F_N.x, v));
     return (t.r * 255.0 * 256.0 + t.g * 255.0) / 65535.0 * 15.0 - 1.5 + outside;
 }
+// one or two figures standing side by side, centred; the second is mirrored
+float bodyD(vec2 p) {
+    if (float(peopleSel) < 0.5) return frontSD(p);
+    float k = 0.8;                                      // a touch smaller so both fit
+    float off = 2.55 * pairGap;
+    float a = frontSD((p - vec2(-off, 0.0)) / k) * k;
+    float b = frontSD(vec2(-(p.x - off), p.y) / k) * k;
+    return min(a, b);
+}
 vec3 mosaicColour(float k) {
     k = mod(floor(k), 6.0);
     if (k < 0.5) return vec3(0.86, 0.05, 0.06);   // red
@@ -473,7 +484,7 @@ vec4 mosaicPass() {
     float cs = 16.7 / floor(tileCount);                // tile size in dm
     vec2 cell = floor(p / cs);
     vec2 l = p / cs - cell;                            // 0..1 inside the tile
-    float dC = frontSD((cell + 0.5) * cs);
+    float dC = bodyD((cell + 0.5) * cs);
     // drop: tiles near the edge scatter outward for a moment
     float scatter = gDrop * step(dC, 0.0) * step(-0.9, dC) * step(0.6, h12(cell + 3.0));
     if (dC < 0.08 * cs && scatter < 0.5) {
@@ -515,11 +526,11 @@ vec4 mosaicPass() {
         if (h12(cell + epoch * 0.37 + 9.0) > 0.93) { col = backdrop(uv); alpha = 0.0; }
     } else {
         // ── contour rings flowing outward ──
-        float d = frontSD(p);
+        float d = bodyD(p);
         // snap to a coarse pixel grid so lines step like pixel strokes
         float gp = min(max(pxDm * 2.0, 0.05), ringSpacing * 0.16);
         vec2 ps = (floor(p / gp) + 0.5) * gp;
-        float ds = frontSD(ps);
+        float ds = bodyD(ps);
         float sp2 = ringSpacing * (1.0 - 0.3 * gBuild);
         float rp = ds / sp2 - flowT;
         float ri = floor(rp);
