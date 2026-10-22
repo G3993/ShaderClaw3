@@ -129,7 +129,8 @@ float map(vec3 p) {
     else if (df.y > df.z) rc.y = -rc.x - rc.z;
     // safe bound so rays far from the (finite, 3D) disc still step toward it
     float limB = mix(40.0, 1.75, gM3) + r * 1.3;
-    float d = max(max(length(p.xy) - limB, abs(p.z) - 3.0), 0.0) + 0.04;
+    float lb = length(p.xy) - limB;
+    float d = lb > 0.0 ? lb + 0.04 : 1e3;
     bool classic = float(extentSel) > 0.5;
     for (int j = -2; j <= 2; j++)
     for (int i = -2; i <= 2; i++) {
@@ -227,9 +228,10 @@ void main() {
     for (int i = 0; i < 130; i++) {
         vec3 p = ro + rd * t;
         float d = map(p);
-        glowAcc += exp(-max(d, 0.0) * (220.0 / max(lineWidth, 0.3))) * 0.06;
         if (d < 0.0004) { hitT = t; ang = gAng; cd = gCellD; break; }
-        t += max(d * 0.9, 0.0008 + 0.02 * step(0.3, d));
+        float stp = max(d * 0.9, 0.0008 + 0.02 * step(0.3, d));
+        glowAcc += exp(-max(d, 0.0) * (60.0 / max(lineWidth, 0.3))) * min(stp, 0.05) * 1.6;
+        t += stp;
         if (t > camD + 4.0) break;
     }
     vec3 bg = backdrop(uv);
