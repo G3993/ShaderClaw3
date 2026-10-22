@@ -3666,5 +3666,20 @@
     "id": 1396,
     "title": "Biology",
     "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Light",
+      "Glitch",
+      "Audio Reactive"
+    ],
+    "description": "Light Spectrum — a sheet of thunder and a crystal line of light, mirrored like a Rorschach of glass. Branching orange lightning webs crawl and strike across the frame through drifting bokeh orbs. A column of translucent crystal sheets stands in the centre, their edges burning white and their faces filled with fine vertical fibres; light bursts out of a glowing core in radial filaments, and everything is split into a real spectrum — the scene is sampled at seven wavelength scales and recombined, so every edge throws violet-to-red prism fringes. Thin-film iridescence slides over the sheets, a lavender-and-peach haze breathes behind, and a feedback buffer smears the light outward into trails. The light keeps morphing through six forms: Thunder Sheet (a branching electric web), Crystal Column (vertical sheets), Prism Lens (mirrored lobes on a burning horizon), Facet Star (kaleidoscopic shards), Starburst (pure radial filaments) and Obsidian Mirror (dark mirrored glass relief with chromatic edge glints). Bass swells the core and spreads the sheets, beats flash the light and tear the image, mids wobble the sheets, highs sparkle the fibres.",
+    "file": "light_spectrum.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1397,
+    "title": "Light Spectrum",
+    "type": "generator"
   }
 ]

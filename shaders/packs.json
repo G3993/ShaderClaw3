@@ -1035,5 +1035,8 @@
   },
   "biology": {
     "group": "studio"
+  },
+  "light_spectrum": {
+    "group": "studio"
   }
 }
