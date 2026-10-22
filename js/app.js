@@ -5640,6 +5640,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
       layer.textures = {};
       const imageInputs = (layer.inputs || []).filter(inp => inp.TYPE === 'image');
       imageInputs.forEach((inp, i) => {
+        if (inp._imported) {
+          layer.textures[inp.NAME] = importedTexture(isfRenderer.gl, inp._imported);
+          return;
+        }
         let selectedId = layer.inputValues[inp.NAME];
 
         // Layer-to-layer texture piping: use FBO/sceneTexture directly

@@ -268,8 +268,61 @@ function isfInputToUniform(input) {
   return `// unknown type: ${t} ${input.NAME}`;
 }
 
+// ISF "IMPORTED" images ship next to the shader file (e.g. a baked SDF atlas).
+// They become hidden image inputs, auto-bound by importedTexture() below.
+function addImportedInputs(parsed) {
+  const imp = parsed && parsed.meta && parsed.meta.IMPORTED;
+  if (!imp) return;
+  if (!parsed.inputs) parsed.inputs = [];
+  const entries = Array.isArray(imp)
+    ? imp.map(e => [e.NAME, e.PATH])
+    : Object.keys(imp).map(k => [k, imp[k] && imp[k].PATH]);
+  for (const [name, path] of entries) {
+    if (!name || !path) continue;
+    if (parsed.inputs.some(i => i.NAME === name)) continue;
+    parsed.inputs.push({ NAME: name, TYPE: 'image', LABEL: name, _imported: path, _synthetic: true });
+  }
+}
+
+// One GL texture per imported file. Uploaded raw (no flip, no premultiply,
+// no colour conversion) so data textures survive intact; shaders that care
+// about orientation detect it themselves.
+const _importedTexCache = {};
+function importedTexture(gl, path) {
+  const key = path;
+  if (_importedTexCache[key]) return _importedTexCache[key];
+  const tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
+  const entry = { glTexture: tex, isVideo: false, element: null, flipH: false, flipV: false, _imported: true };
+  const img = new Image();
+  img.onload = () => {
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    const prevFlip = gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL);
+    const prevPre = gl.getParameter(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL);
+    const prevConv = gl.getParameter(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, prevFlip);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, prevPre);
+    gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, prevConv);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    entry.element = img;
+  };
+  img.onerror = () => console.warn('[ShaderClaw] IMPORTED image failed to load:', path);
+  img.src = /^(https?:|data:|\/)/.test(path) ? path : 'shaders/' + path;
+  _importedTexCache[key] = entry;
+  return entry;
+}
+
 function buildFragmentShader(source) {
   const parsed = parseISF(source);
+  addImportedInputs(parsed);
 
   // Inject universal video input for shaders that don't already have image inputs
   // Skip for multi-pass shaders — video injection corrupts simulation buffers

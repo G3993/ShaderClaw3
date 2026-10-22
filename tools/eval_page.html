@@ -369,6 +369,21 @@ window.evalShader = async function(file, opts) {
     const parsed = built.parsed;
     out.headerLineCount = built.headerLineCount;
 
+    // ISF IMPORTED images (shipped beside the shader): load before rendering
+    const importedTex = {};
+    for (const inp of (parsed.inputs || [])) {
+      if (!inp._imported) continue;
+      const entry = importedTexture(gl, '/shaders/' + inp._imported);
+      if (!entry.element) {
+        await new Promise((res) => {
+          const t0 = performance.now();
+          const poll = () => (entry.element || performance.now() - t0 > 8000) ? res() : setTimeout(poll, 20);
+          poll();
+        });
+      }
+      importedTex[inp.NAME] = entry.glTexture;
+    }
+
     // Compile
     const vs = compileStage(gl.VERTEX_SHADER, VERT_SHADER);
     if (!vs.ok) { out.errors.push('VERT: ' + vs.log); return out; }
@@ -464,6 +479,7 @@ window.evalShader = async function(file, opts) {
             else if (name === 'audioFFT') gl.bindTexture(gl.TEXTURE_2D, fftTex);
             else if (name === 'fontAtlasTex') gl.bindTexture(gl.TEXTURE_2D, fontAtlasTexture);
             else if (name === 'varFontTex') gl.bindTexture(gl.TEXTURE_2D, varFontTexture);
+            else if (importedTex[name]) gl.bindTexture(gl.TEXTURE_2D, importedTex[name]);
             else gl.bindTexture(gl.TEXTURE_2D, testImageTex);
             gl.uniform1i(loc, unit);
             unit++;

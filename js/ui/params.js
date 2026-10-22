@@ -162,7 +162,7 @@ function generateControls(inputs, container, onChange) {
     if (isTextLayer && inp.NAME === 'textColor') hiddenDefaults.textColor = inp.DEFAULT || [1, 1, 1, 1];
   });
   // Now filter out the hidden params from UI rendering
-  inputs = inputs.filter(inp => inp.NAME !== 'bgColor' && inp.NAME !== 'transparentBg');
+  inputs = inputs.filter(inp => inp.NAME !== 'bgColor' && inp.NAME !== 'transparentBg' && !inp._imported);
   if (isTextLayer) {
     inputs = inputs.filter(inp => inp.NAME !== 'textColor');
   }

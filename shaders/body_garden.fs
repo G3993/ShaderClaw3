@@ -1,10 +1,10 @@
 /*{
-  "DESCRIPTION": "Body Garden — a still glass human figure, seen three-quarter from head to hips, with a living garden inside. The glass shell glows at its rim and catches highlights while the interior is raymarched as a volume: lungs breathe and sparkle with thousands of multicoloured points of light, a glowing pink nerve tree branches from the throat into the chest and pulses on the beat, vines spiral up through the torso and neck, flowers open and close in the head, shoulder and chest, a dense bed of blooms and leaves fills the belly, a cluster of sparks lives in the brain, and abstract 3D elements (rings, cubes and orbs) drift through the body. The figure never moves; everything inside it does. Bass makes the lungs breathe deeper, beats send a pulse up the nerves and flash the sparks, mids speed the drifting elements, highs twinkle the lights.",
-  "CREDIT": "Easel / ShaderClaw house shader, 2026-10-21 — original.",
+  "DESCRIPTION": "Body Garden — a still glass human figure with real anatomy (a sculpted human body baked into a 3D distance field), seen three-quarter from head to mid-thigh, with a living garden inside. The glass shell glows at its rim and catches highlights while the interior is raymarched as a volume: lungs breathe and sparkle with thousands of multicoloured points of light, a glowing pink nerve tree branches from the throat into the chest and pulses on the beat, vines spiral up through the torso and neck, flowers open and close in the head, shoulder and chest, a dense bed of blooms and leaves fills the belly, a cluster of sparks lives in the brain, and abstract 3D elements (rings, cubes and orbs) drift through the body. The figure never moves; everything inside it does. Bass makes the lungs breathe deeper, beats send a pulse up the nerves and flash the sparks, mids speed the drifting elements, highs twinkle the lights.",
+  "CREDIT": "Easel / ShaderClaw house shader, 2026-10-21 — original. Figure: MakeHuman base mesh (CC0), baked to a signed distance field (body_sdf.png).",
   "CATEGORIES": ["Generator", "3D", "Nature", "Audio Reactive"],
   "INPUTS": [
     { "NAME": "facing",      "LABEL": "Figure Turn",      "TYPE": "float", "AUDIO": false, "MIN": -1.0, "MAX": 1.0, "DEFAULT": 0.55, "GROUP": "Figure" },
-    { "NAME": "figScale",    "LABEL": "Figure Size",      "TYPE": "float", "AUDIO": false, "MIN": 0.6, "MAX": 1.6, "DEFAULT": 1.0, "GROUP": "Figure" },
+    { "NAME": "figScale",    "LABEL": "Figure Size",      "TYPE": "float", "AUDIO": false, "MIN": 0.6, "MAX": 1.8, "DEFAULT": 1.0, "GROUP": "Figure" },
     { "NAME": "shellGlow",   "LABEL": "Glass Rim",        "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Figure" },
     { "NAME": "shellTint",   "LABEL": "Glass Colour",     "TYPE": "color", "DEFAULT": [0.35, 0.55, 1.0, 1.0], "GROUP": "Figure" },
     { "NAME": "lungGlow",    "LABEL": "Lung Light",       "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Inside" },
@@ -33,6 +33,9 @@
     { "NAME": "bgColor2",    "LABEL": "BG Bottom / Edge", "TYPE": "color", "DEFAULT": [0.03, 0.02, 0.06, 1.0], "GROUP": "Background" },
     { "NAME": "transparentBg","LABEL": "Transparent BG",  "TYPE": "bool",  "DEFAULT": false, "GROUP": "Background" }
   ],
+  "IMPORTED": {
+    "bodyTex": { "PATH": "body_sdf.png" }
+  },
   "PASSES": [
     { "TARGET": "fScene", "WIDTH": "floor($WIDTH*$renderScale)", "HEIGHT": "floor($HEIGHT*$renderScale)" },
     { "TARGET": "fBloom", "WIDTH": "$WIDTH/4", "HEIGHT": "$HEIGHT/4" },
@@ -78,45 +81,54 @@ vec3 studioPalette(vec3 c) {
 
 float gT, gBreath, gBeat;
 
-// ── the figure (body space: y up, face toward +z) ────────────────────────
+// ── the figure: a real human body (MakeHuman CC0 base mesh) baked to a
+//    3D signed distance field, packed as 16-bit slices in body_sdf.png.
+//    Body space is in decimetres: y up, face toward +z, hips near y = 0.7.
+const vec3  SDF_LO = vec3(-3.005379, -3.000000, -1.221600);
+const vec3  SDF_N  = vec3(102.0, 198.0, 55.0);
+const float SDF_VOX = 0.06;
+const float SDF_D = 0.8;
+const float A_TW = 104.0, A_TH = 57.0, A_COLS = 19.0, A_W = 1976.0, A_H = 628.0;
+float gFlip;      // 1.0 when the PNG's top row sits at v = 0
+
+float sdfSlice(vec2 xz, float j) {
+    float tx = mod(j, A_COLS), ty = floor(j / A_COLS);
+    float px = tx * A_TW + 1.0 + xz.x + 0.5;
+    float py = 1.0 + ty * A_TH + 1.0 + xz.y + 0.5;
+    float v = gFlip > 0.5 ? py / A_H : 1.0 - py / A_H;
+    vec4 t = texture2D(bodyTex, vec2(px / A_W, v));
+    return (t.r * 255.0 * 256.0 + t.g * 255.0) / 65535.0;
+}
+
+float bodySDF(vec3 p) {
+    vec3 g = (p - SDF_LO) / SDF_VOX;
+    vec3 gc = clamp(g, vec3(0.0), SDF_N - 1.0);
+    float outside = length(g - gc) * SDF_VOX;
+    float j0 = floor(gc.y);
+    float j1 = min(j0 + 1.0, SDF_N.y - 1.0);
+    float a = sdfSlice(gc.xz, j0), b = sdfSlice(gc.xz, j1);
+    float d = (mix(a, b, gc.y - j0) * 2.0 - 1.0) * SDF_D;
+    d = max(d + outside, -(p.y + 2.7));            // crop at mid-thigh
+    return d;
+}
 float sdEll(vec3 p, vec3 r) { float k0 = length(p / r); float k1 = length(p / (r * r)); return k0 * (k0 - 1.0) / max(k1, 1e-5); }
 float sdCap(vec3 p, vec3 a, vec3 b, float r) { vec3 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h) - r; }
 
-float bodySDF(vec3 p) {
-    // head
-    float d = sdEll(p - vec3(0.0, 1.62, -0.04), vec3(0.3, 0.36, 0.36));
-    d = smin(d, sdEll(p - vec3(0.0, 1.47, 0.12), vec3(0.24, 0.27, 0.27)), 0.12);      // face
-    d = smin(d, sdEll(p - vec3(0.0, 1.47, 0.37), vec3(0.045, 0.085, 0.07)), 0.05);   // nose
-    d = smin(d, sdEll(p - vec3(0.0, 1.3, 0.24), vec3(0.14, 0.09, 0.12)), 0.08);      // chin
-    // neck
-    d = smin(d, sdCap(p, vec3(0.0, 0.98, -0.02), vec3(0.0, 1.3, 0.02), 0.14), 0.1);
-    // torso
-    float t = sdEll(p - vec3(0.0, 0.45, 0.0), vec3(0.52, 0.62, 0.3));
-    t = smin(t, sdEll(p - vec3(0.0, 0.62, 0.06), vec3(0.47, 0.36, 0.3)), 0.15);
-    t = smin(t, sdCap(p, vec3(-0.52, 0.86, -0.02), vec3(0.52, 0.86, -0.02), 0.15), 0.18);   // shoulders
-    t = smin(t, sdEll(p - vec3(0.0, -0.12, 0.01), vec3(0.42, 0.5, 0.27)), 0.2);          // abdomen
-    t = smin(t, sdEll(p - vec3(0.0, -0.62, 0.0), vec3(0.46, 0.32, 0.28)), 0.2);          // hips
-    d = smin(d, t, 0.14);
-    // arms
-    vec3 q = vec3(abs(p.x), p.yz);
-    d = smin(d, sdCap(q, vec3(0.62, 0.84, -0.02), vec3(0.7, 0.18, 0.02), 0.13), 0.08);
-    d = smin(d, sdCap(q, vec3(0.7, 0.18, 0.02), vec3(0.66, -0.62, 0.16), 0.105), 0.06);
-    d = smin(d, sdEll(q - vec3(0.66, -0.78, 0.18), vec3(0.07, 0.13, 0.05)), 0.05);       // hands
-    // cropped at the upper thigh
-    d = max(d, -(p.y + 0.95));
-    return d;
-}
-
 vec3 bodyNormal(vec3 p) {
-    vec2 e = vec2(0.003, -0.003);
+    vec2 e = vec2(0.045, -0.045);
     return normalize(e.xyy * bodySDF(p + e.xyy) + e.yyx * bodySDF(p + e.yyx) + e.yxy * bodySDF(p + e.yxy) + e.xxx * bodySDF(p + e.xxx));
 }
 
-// ── the garden inside: emission at a point ───────────────────────────────
+// ── the garden inside (positions from the mesh skeleton, decimetres) ─────
+//    larynx ~ (0, 6.2, 0.8)   carina ~ (0, 4.7, 0.3)   chest centre ~ (0, 4.2, 0.3)
+//    brain ~ (0, 7.7, 0.05)   navel ~ (0, 1.6, 0.9)    pelvis ~ (0, 0.7, 0.1)
 float lungSDF(vec3 p) {
     vec3 q = vec3(abs(p.x), p.yz);
     float s = gBreath;
-    float d = sdEll((q - vec3(0.235, 0.46, 0.03)) / s, vec3(0.135, 0.31, 0.16)) * s;
+    vec3 c = vec3(0.78, 4.1, 0.32);
+    float d = sdEll((q - c) / s, vec3(0.6, 1.1, 0.72)) * s;
+    // flatten the inner face against the heart
+    d = max(d, 0.18 - q.x);
     return d;
 }
 
@@ -133,55 +145,58 @@ vec3 sparkles(vec3 p, float scale, float density) {
     return col * exp(-d * 18.0) * (0.4 + 0.8 * tw) * (1.0 + 1.5 * highP() * audioReact + 1.5 * gBeat);
 }
 
-// nerve tree: a trunk down the throat that forks into each lung
+// airway + nerve tree: trachea down the throat, bronchi into each lung, and a
+// branching glow up into the head
 float nerveSDF(vec3 p, out float along) {
-    float w = 0.012;
-    vec3 a = vec3(0.0, 1.32, 0.12), b = vec3(0.0, 0.95, 0.06), c = vec3(0.0, 0.72, 0.05);
-    float wig = 0.02 * sin(p.y * 14.0 + gT);
+    float w = 0.045;
+    float wig = 0.05 * sin(p.y * 4.0 + gT);
     vec3 pw = p + vec3(wig, 0.0, 0.0);
-    float d = sdCap(pw, a, b, w);
-    d = min(d, sdCap(pw, b, c, w * 1.2));
-    along = clamp((1.32 - p.y) / 1.0, 0.0, 1.0);
+    vec3 lar = vec3(0.0, 6.3, 0.75), car = vec3(0.0, 4.75, 0.35);
+    float d = sdCap(pw, lar, car, w);
+    along = clamp((7.6 - p.y) / 4.5, 0.0, 1.0);
     vec3 q = vec3(abs(pw.x), pw.yz);
-    // bronchi and their branches
-    d = min(d, sdCap(q, c, vec3(0.18, 0.6, 0.05), w));
-    d = min(d, sdCap(q, vec3(0.18, 0.6, 0.05), vec3(0.24, 0.35, 0.06), w * 0.8));
-    d = min(d, sdCap(q, vec3(0.18, 0.6, 0.05), vec3(0.3, 0.68, 0.0), w * 0.7));
-    d = min(d, sdCap(q, vec3(0.24, 0.35, 0.06), vec3(0.2, 0.22, 0.1), w * 0.6));
-    d = min(d, sdCap(q, vec3(0.24, 0.35, 0.06), vec3(0.32, 0.28, -0.02), w * 0.6));
-    // up into the head: a branching glow behind the face
-    d = min(d, sdCap(pw, a, vec3(0.0, 1.55, 0.05), w * 0.8));
-    d = min(d, sdCap(q, vec3(0.0, 1.55, 0.05), vec3(0.15, 1.72, -0.05), w * 0.6));
-    d = min(d, sdCap(q, vec3(0.0, 1.55, 0.05), vec3(0.08, 1.8, 0.12), w * 0.6));
+    vec3 b1 = vec3(0.5, 4.45, 0.35);
+    d = min(d, sdCap(q, car, b1, w * 0.9));
+    d = min(d, sdCap(q, b1, vec3(0.75, 3.7, 0.4), w * 0.7));
+    d = min(d, sdCap(q, b1, vec3(0.95, 4.6, 0.25), w * 0.6));
+    d = min(d, sdCap(q, vec3(0.75, 3.7, 0.4), vec3(0.6, 3.2, 0.55), w * 0.5));
+    d = min(d, sdCap(q, vec3(0.75, 3.7, 0.4), vec3(1.05, 3.4, 0.2), w * 0.5));
+    // into the head: brain stem and branches
+    vec3 st = vec3(0.0, 7.2, 0.15);
+    d = min(d, sdCap(pw, lar, st, w * 0.8));
+    d = min(d, sdCap(q, st, vec3(0.45, 7.9, -0.1), w * 0.6));
+    d = min(d, sdCap(q, st, vec3(0.25, 8.1, 0.55), w * 0.55));
+    d = min(d, sdCap(q, vec3(0.45, 7.9, -0.1), vec3(0.55, 8.15, -0.5), w * 0.45));
+    // down the spine toward the belly
+    d = min(d, sdCap(pw, car, vec3(0.05, 1.3, 0.2), w * 0.6));
     return d;
 }
 
-// vines: helices climbing the body
+// vines: helices climbing through the torso, neck and head
 vec3 vineEmit(vec3 p) {
     vec3 e = vec3(0.0);
     for (int i = 0; i < 3; i++) {
         float fi = float(i);
-        float R = 0.18 + 0.06 * fi;
-        float th = p.y * (5.0 + fi) + fi * 2.1 + gT * 0.25 * (mod(fi, 2.0) * 2.0 - 1.0);
-        vec2 c = vec2(cos(th), sin(th)) * R * (p.y > 1.0 ? 0.55 : 1.0) + vec2(0.0, 0.02);
+        float R = (p.y > 5.6 ? 0.32 : 0.62 + 0.12 * fi) * (p.y > 6.6 ? 1.5 : 1.0);
+        float th = p.y * (1.6 + 0.3 * fi) + fi * 2.1 + gT * 0.25 * (mod(fi, 2.0) * 2.0 - 1.0);
+        vec2 c = vec2(cos(th), sin(th)) * R + vec2(0.0, p.y > 6.6 ? 0.1 : 0.25);
         float d = length(p.xz - c);
-        float grow = smoothstep(-0.4, 0.2, sin(gT * 0.15 + fi * 2.0) * 1.2 + 1.0 - (p.y + 0.4) * 0.6);
-        float stem = exp(-d * 90.0) * grow;
-        // leaves: little blobs along the vine
-        float lf = fract(p.y * 9.0 + fi * 0.37);
-        float leaf = exp(-length(vec2(d - 0.02, (lf - 0.5) * 0.11)) * 70.0) * step(0.5, h11(floor(p.y * 9.0 + fi * 0.37) + fi * 9.0)) * grow;
-        e += mix(cGold.rgb, cLeaf.rgb, 0.5 + 0.5 * sin(fi * 3.0 + p.y * 2.0)) * (stem * 0.8 + leaf * 0.6);
+        float grow = smoothstep(-0.4, 0.2, sin(gT * 0.15 + fi * 2.0) * 1.2 + 1.0 - (p.y + 2.5) * 0.12);
+        float stem = exp(-d * 30.0) * grow;
+        float lf = fract(p.y * 2.6 + fi * 0.37);
+        float leaf = exp(-length(vec2(d - 0.07, (lf - 0.5) * 0.38)) * 22.0) * step(0.45, h11(floor(p.y * 2.6 + fi * 0.37) + fi * 9.0)) * grow;
+        e += mix(cGold.rgb, cLeaf.rgb, 0.5 + 0.5 * sin(fi * 3.0 + p.y * 0.6)) * (stem * 0.8 + leaf * 0.6);
     }
     return e;
 }
 
-// flowers: glowing blooms with petals, opening and closing
+// flowers: glowing blooms opening and closing
 vec3 flowerEmit(vec3 p) {
     vec3 e = vec3(0.0);
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 7; i++) {
         float fi = float(i);
-        vec3 c = i == 0 ? vec3(0.05, 1.75, 0.08) : i == 1 ? vec3(-0.45, 0.8, 0.1) : i == 2 ? vec3(0.1, 0.2, 0.2)
-               : i == 3 ? vec3(-0.12, 1.52, -0.12) : i == 4 ? vec3(0.42, 0.62, 0.12) : vec3(-0.2, 1.05, 0.05);
+        vec3 c = i == 0 ? vec3(0.3, 7.75, 0.35) : i == 1 ? vec3(-0.35, 7.35, 0.55) : i == 2 ? vec3(1.45, 4.95, 0.15)
+               : i == 3 ? vec3(-0.65, 3.0, 0.65) : i == 4 ? vec3(0.45, 1.8, 0.7) : i == 5 ? vec3(-1.4, 4.8, 0.1) : vec3(0.0, 5.6, 0.45);
         vec3 q = p - c;
         q.xy = rot(fi * 1.3 + gT * 0.1) * q.xy;
         q.yz = rot(0.6 + fi) * q.yz;
@@ -189,12 +204,12 @@ vec3 flowerEmit(vec3 p) {
         float a = atan(q.y, q.x);
         float N = 5.0 + mod(fi, 3.0);
         float open = 0.7 + 0.3 * sin(gT * 0.5 + fi * 1.7);
-        float petal = 0.09 * open * (0.55 + 0.45 * abs(cos(a * N * 0.5)));
-        float thick = abs(q.z + 0.15 * r * r / max(open, 0.3)) - 0.004;
+        float petal = 0.32 * open * (0.55 + 0.45 * abs(cos(a * N * 0.5)));
+        float thick = abs(q.z + 0.5 * r * r / max(open, 0.3)) - 0.015;
         float dP = max(r - petal, thick);
-        float core = length(q) - 0.02;
-        vec3 col = i == 0 ? cMagenta.rgb : i == 1 ? cMagenta.rgb : i == 2 ? cViolet.rgb : i == 3 ? cGold.rgb : i == 4 ? cCyan.rgb : cViolet.rgb;
-        e += col * exp(-max(dP, 0.0) * 60.0) * 0.7 + mix(col, vec3(1.0), 0.6) * exp(-max(core, 0.0) * 80.0) * 1.2;
+        float core = length(q) - 0.06;
+        vec3 col = i == 0 ? cMagenta.rgb : i == 1 ? cViolet.rgb : i == 2 ? cMagenta.rgb : i == 3 ? cGold.rgb : i == 4 ? cCyan.rgb : i == 5 ? cViolet.rgb : cMagenta.rgb;
+        e += col * exp(-max(dP, 0.0) * 18.0) * 0.7 + mix(col, vec3(1.0), 0.6) * exp(-max(core, 0.0) * 25.0) * 1.2;
     }
     return e;
 }
@@ -203,30 +218,30 @@ vec3 flowerEmit(vec3 p) {
 vec3 elementEmit(vec3 p) {
     vec3 e = vec3(0.0);
     float sp = gT * (0.6 + 0.6 * midP() * audioReact);
-    for (int i = 0; i < 7; i++) {
+    for (int i = 0; i < 8; i++) {
         float fi = float(i);
-        float hy = mix(-0.2, 1.7, h11(fi * 3.3));
-        float rr = hy > 1.0 ? 0.13 : 0.28;
-        vec3 c = vec3(rr * cos(sp * (0.3 + 0.1 * fi) + fi * 2.0), hy + 0.08 * sin(sp * 0.5 + fi), rr * 0.6 * sin(sp * (0.3 + 0.1 * fi) + fi * 2.0));
+        float hy = mix(-1.5, 7.8, h11(fi * 3.3));
+        float rr = hy > 6.0 ? 0.35 : (hy > 5.4 ? 0.2 : 0.75);
+        vec3 c = vec3(rr * cos(sp * (0.3 + 0.1 * fi) + fi * 2.0), hy + 0.25 * sin(sp * 0.5 + fi), 0.2 + rr * 0.5 * sin(sp * (0.3 + 0.1 * fi) + fi * 2.0));
         vec3 q = p - c;
         q.xz = rot(sp * 0.7 + fi) * q.xz;
         q.xy = rot(sp * 0.5 + fi * 2.0) * q.xy;
         float k = mod(fi, 3.0);
         float d;
-        if (k < 0.5) { vec2 tq = vec2(length(q.xz) - 0.06, q.y); d = length(tq) - 0.008; }          // ring
-        else if (k < 1.5) { vec3 bq = abs(q) - vec3(0.035); d = abs(length(max(bq, 0.0)) + min(max(bq.x, max(bq.y, bq.z)), 0.0)) - 0.003; } // wire cube
-        else d = abs(length(q) - 0.04) - 0.004;                                                    // bubble shell
+        if (k < 0.5) { vec2 tq = vec2(length(q.xz) - 0.2, q.y); d = length(tq) - 0.025; }
+        else if (k < 1.5) { vec3 bq = abs(q) - vec3(0.12); d = abs(length(max(bq, 0.0)) + min(max(bq.x, max(bq.y, bq.z)), 0.0)) - 0.01; }
+        else d = abs(length(q) - 0.14) - 0.012;
         vec3 col = k < 0.5 ? cCyan.rgb : (k < 1.5 ? cGold.rgb : cViolet.rgb);
-        e += col * exp(-max(d, 0.0) * 120.0) * 0.9;
+        e += col * exp(-max(d, 0.0) * 40.0) * 0.9;
     }
     return e;
 }
 
 // a packed bed of blooms and leaves in the abdomen
 vec3 bellyEmit(vec3 p) {
-    float reg = smoothstep(0.25, -0.05, p.y) * smoothstep(-0.95, -0.7, p.y);
+    float reg = smoothstep(2.9, 2.3, p.y) * smoothstep(-1.6, -0.8, p.y);
     if (reg < 0.01) return vec3(0.0);
-    vec3 gp = p * 9.0 + vec3(0.0, gT * 0.05, 0.0);
+    vec3 gp = p * 3.0 + vec3(0.0, gT * 0.05, 0.0);
     vec3 gi = floor(gp), gf = fract(gp);
     vec3 h = h33(gi + 11.0);
     vec3 c = 0.25 + 0.5 * h33(gi + 2.0);
@@ -235,23 +250,21 @@ vec3 bellyEmit(vec3 p) {
     float k = h.x * 6.0;
     vec3 col = k < 1.5 ? cMagenta.rgb : (k < 2.5 ? cViolet.rgb : (k < 3.5 ? cGold.rgb : (k < 4.5 ? vec3(1.0, 0.55, 0.6) : cLeaf.rgb)));
     float open = 0.75 + 0.25 * sin(gT * 0.6 + h.y * 20.0);
-    // petals: a rosette modulated around the bloom centre
     float a = atan(d3.y, d3.x) + h.z * 6.0;
     float petals = 0.2 * open * (0.6 + 0.4 * abs(cos(a * (2.5 + floor(h.y * 3.0)))));
     float bloomD = r - petals;
     vec3 e = col * exp(-max(bloomD, 0.0) * 22.0) * 0.55 * step(0.25, h.y);
     e += mix(col, vec3(1.0), 0.5) * exp(-r * 30.0) * 0.6 * step(0.25, h.y);
-    // leaves fill the gaps
     e += cLeaf.rgb * 0.18 * exp(-abs(r - 0.32) * 25.0) * step(h.y, 0.45);
     return e * reg * 1.7 * (1.0 + 0.5 * gBeat);
 }
 
-// bronchial tree inside each lung: a folded branching fractal, lit peach-pink
+// bronchial tree inside each lung: a folded branching fractal
 float lungTree(vec3 p) {
-    vec2 q = vec2(abs(p.x) - 0.235, p.y - 0.74);
-    q.x *= sign(p.x) < 0.0 ? 1.0 : -1.0;
-    float d = 1e5, L = 0.13, w = 0.009;
-    q.y = -q.y;                                   // grow downward
+    vec2 q = vec2(abs(p.x) - 0.55, p.y - 4.55);
+    q.x = -q.x;
+    q.y = -q.y;
+    float d = 1e5, L = 0.42, w = 0.03;
     for (int i = 0; i < 6; i++) {
         float fi = float(i);
         d = min(d, length(vec2(q.x, q.y - clamp(q.y, 0.0, L))) - w);
@@ -260,33 +273,29 @@ float lungTree(vec3 p) {
         q = rot(0.42 + 0.08 * sin(gT * 0.6 + fi)) * q;
         L *= 0.78; w *= 0.8;
     }
-    return max(d, abs(p.z - 0.04) - 0.06);
+    return max(d, abs(p.z - 0.32) - 0.3);
 }
 
 vec3 interiorEmit(vec3 p) {
     vec3 e = vec3(0.0);
-    // lungs: soft magenta glow full of sparkles
     float dl = lungSDF(p);
-    float inL = smoothstep(0.02, -0.03, dl);
+    float inL = smoothstep(0.06, -0.1, dl);
     if (inL > 0.001) {
-        e += mix(cMagenta.rgb, cViolet.rgb, 0.5 + 0.5 * sin(p.y * 6.0 + gT)) * inL * 0.22 * lungGlow * (1.0 + 0.6 * bassP() * audioReact);
-        e += sparkles(p + vec3(0.0, gT * 0.02, 0.0), 26.0, 0.55) * inL * sparkle;
+        e += mix(cMagenta.rgb, cViolet.rgb, 0.5 + 0.5 * sin(p.y * 2.0 + gT)) * inL * 0.22 * lungGlow * (1.0 + 0.6 * bassP() * audioReact);
+        e += sparkles(p + vec3(0.0, gT * 0.06, 0.0), 8.0, 0.55) * inL * sparkle;
         float tr = lungTree(p);
-        float tp = 0.7 + 0.3 * sin(gT * 2.0 - p.y * 12.0) + gBeat;
-        e += mix(vec3(1.0, 0.62, 0.45), cMagenta.rgb, 0.35) * exp(-max(tr, 0.0) * 95.0) * inL * 2.2 * tp * nerves;
+        float tp = 0.7 + 0.3 * sin(gT * 2.0 - p.y * 3.5) + gBeat;
+        e += mix(vec3(1.0, 0.62, 0.45), cMagenta.rgb, 0.35) * exp(-max(tr, 0.0) * 32.0) * inL * 2.2 * tp * nerves;
     }
-    e += mix(cMagenta.rgb, vec3(1.0), 0.3) * exp(-abs(dl) * 70.0) * 0.25 * lungGlow;              // lung membrane
-    // brain sparks
-    float hb = length((p - vec3(0.0, 1.66, -0.05)) / vec3(0.25, 0.25, 0.28));
-    if (hb < 1.0) e += sparkles(p, 30.0, 0.18) * smoothstep(1.0, 0.6, hb) * sparkle;
-    // body-wide faint dust
-    e += sparkles(p + 3.1, 16.0, 0.06) * 0.6 * sparkle;
-    // nerves, pulsing up/down on beats
+    e += mix(cMagenta.rgb, vec3(1.0), 0.3) * exp(-abs(dl) * 22.0) * 0.25 * lungGlow;
+    float hb = length((p - vec3(0.0, 7.7, 0.05)) / vec3(0.72, 0.68, 0.85));
+    if (hb < 1.0) e += sparkles(p, 9.0, 0.2) * smoothstep(1.0, 0.6, hb) * sparkle;
+    e += sparkles(p + 3.1, 5.0, 0.06) * 0.6 * sparkle;
     float along;
     float dn = nerveSDF(p, along);
     float pulse = exp(-pow((along - fract(TIME * 0.4)) * 8.0, 2.0)) + gBeat * 1.5;
-    e += mix(cMagenta.rgb, vec3(1.0, 0.8, 0.95), 0.35) * exp(-max(dn, 0.0) * 160.0) * (0.8 + pulse) * nerves;
-    e += cMagenta.rgb * exp(-max(dn, 0.0) * 35.0) * 0.12 * nerves;
+    e += mix(cMagenta.rgb, vec3(1.0, 0.8, 0.95), 0.35) * exp(-max(dn, 0.0) * 50.0) * (0.8 + pulse) * nerves;
+    e += cMagenta.rgb * exp(-max(dn, 0.0) * 11.0) * 0.12 * nerves;
     if (vines > 0.001) e += vineEmit(p) * vines;
     if (flowers > 0.001) e += flowerEmit(p) * flowers;
     if (elements > 0.001) e += elementEmit(p) * elements;
@@ -297,50 +306,55 @@ vec3 interiorEmit(vec3 p) {
 vec4 scenePass() {
     vec2 R = RENDERSIZE.xy;
     vec2 sp = (gl_FragCoord.xy - 0.5 * R) / R.y;
-    // still camera, figure turned toward profile
-    vec3 ro = vec3(0.0, 0.55, 5.6 / figScale);
-    vec3 ta = vec3(0.0, 0.45, 0.0);
+    gFlip = texture2D(bodyTex, vec2(0.5 / A_W, 0.5 / A_H)).b > 0.5 ? 1.0 : 0.0;
+    // still camera on the figure, turned toward profile
+    vec3 ta = vec3(0.0, 3.2, 0.0);
+    vec3 ro = ta + vec3(0.0, 0.8, 22.5 / figScale);
     vec3 ww = normalize(ta - ro), uu = normalize(cross(ww, vec3(0.0, 1.0, 0.0))), vv = cross(uu, ww);
-    vec3 rd = normalize(sp.x * uu + sp.y * vv + 1.9 * ww);
-    float yaw = facing * 1.4;
-    mat2 Ry = rot(yaw);
+    vec3 rd = normalize(sp.x * uu + sp.y * vv + 2.0 * ww);
+    mat2 Ry = rot(facing * 1.4);
     vec3 roB = ro; roB.xz = Ry * roB.xz;
     vec3 rdB = rd; rdB.xz = Ry * rdB.xz;
 
-    // sphere-trace the glass skin
-    float t = 2.0;
+    // trace the glass skin (start at the body's bounding box)
+    vec3 bmin = SDF_LO, bmax = SDF_LO + (SDF_N - 1.0) * SDF_VOX;
+    vec3 inv = 1.0 / rdB;
+    vec3 t0 = (bmin - roB) * inv, t1 = (bmax - roB) * inv;
+    vec3 tsm = min(t0, t1), tbg = max(t0, t1);
+    float tn = max(max(tsm.x, tsm.y), tsm.z), tf = min(min(tbg.x, tbg.y), tbg.z);
+    if (tf < max(tn, 0.0)) return vec4(0.0);
+    float t = max(tn, 0.0);
     bool hit = false;
-    for (int i = 0; i < 90; i++) {
+    for (int i = 0; i < 110; i++) {
         float d = bodySDF(roB + rdB * t);
-        if (d < 0.001) { hit = true; break; }
-        t += d * 0.9;
-        if (t > 10.0) break;
+        if (d < 0.004) { hit = true; break; }
+        t += max(d * 0.9, 0.01);
+        if (t > tf) break;
     }
     if (!hit) return vec4(0.0);
     vec3 P = roB + rdB * t;
     vec3 n = bodyNormal(P);
     float fres = pow(1.0 - clamp(dot(n, -rdB), 0.0, 1.0), 2.5);
 
-    // march the interior volume (emission, light absorption)
+    // march the interior volume
     vec3 acc = vec3(0.0);
     float trans = 1.0;
-    float dt = 0.022;
-    float s = 0.004;
-    for (int i = 0; i < 80; i++) {
+    float dt = 0.06;
+    float s = 0.02;
+    for (int i = 0; i < 90; i++) {
         vec3 q = P + rdB * s;
-        float bd = bodySDF(q);
-        if (bd > 0.002) break;                               // left the body
-        vec3 em = interiorEmit(q);
-        acc += em * trans * dt * 9.0;
-        trans *= 0.985;
+        if (bodySDF(q) > 0.01) break;
+        acc += interiorEmit(q) * trans * dt * 3.2;
+        trans *= 0.988;
         s += dt;
     }
-    // glass skin
     vec3 L1 = normalize(vec3(0.6, 0.7, 0.5));
-    float spec = pow(clamp(dot(reflect(rdB, n), L1), 0.0, 1.0), 60.0);
+    vec3 rf = reflect(rdB, n);
+    float spec = pow(clamp(dot(rf, L1), 0.0, 1.0), 70.0) + 0.5 * pow(clamp(dot(rf, normalize(vec3(-0.7, 0.3, 0.6))), 0.0, 1.0), 40.0);
     vec3 rimC = mix(shellTint.rgb, cCyan.rgb, 0.5 + 0.5 * n.y);
-    vec3 col = acc + rimC * fres * 0.9 * shellGlow + vec3(1.0) * spec * 0.6 * shellGlow;
-    col += shellTint.rgb * 0.03;                            // faint glass body
+    vec3 col = acc + rimC * fres * 0.9 * shellGlow + vec3(0.9, 0.95, 1.0) * spec * 0.7 * shellGlow;
+    col += shellTint.rgb * (0.07 + 0.18 * pow(fres, 0.7));                 // luminous glass body
+    col += shellTint.rgb * 0.12 * smoothstep(0.0, 1.0, n.y * 0.5 + 0.5) * shellGlow;
     float a = clamp(0.35 + fres + lum(acc) * 2.0, 0.0, 1.0);
     return vec4(col, a);
 }
