@@ -30,6 +30,10 @@
     { "NAME": "hueShift",    "LABEL": "Hue Shift",        "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "GROUP": "Atmosphere" },
     { "NAME": "saturation",  "LABEL": "Saturation",       "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 1.0, "GROUP": "Atmosphere" },
     { "NAME": "grain",       "LABEL": "Grain",            "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.3, "GROUP": "Finish" },
+    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2], "LABELS": ["Original Colours", "Red · Black · White", "Blue · Black · White"], "GROUP": "Studio Palette" },
+    { "NAME": "palAmount",   "LABEL": "Palette Amount",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Studio Palette" },
+    { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
+    { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
     { "NAME": "audioReact",  "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.65, "GROUP": "Audio Reactivity" },
     { "NAME": "bgMode",      "LABEL": "Background", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2], "LABELS": ["Solid", "Vertical Gradient", "Radial Gradient"], "GROUP": "Background" },
     { "NAME": "bgColor",     "LABEL": "BG Color / Top / Center", "TYPE": "color", "DEFAULT": [0.02, 0.01, 0.04, 1.0], "GROUP": "Background" },
@@ -53,6 +57,21 @@
 
 #define PI  3.14159265359
 #define TAU 6.28318530718
+
+// ── Studio Palette: remap to black → accent → white (red or blue) ─────────
+vec3 studioPalette(vec3 c) {
+    float m = float(paletteMode);
+    if (m < 0.5 || palAmount <= 0.0) return c;
+    vec3 acc = m < 1.5 ? palRed.rgb : palBlue.rgb;
+    float L = clamp(dot(c, vec3(0.2126, 0.7152, 0.0722)), 0.0, 1.0);
+    float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b));
+    float sat = mx > 1e-4 ? (mx - mn) / mx : 0.0;
+    float t = pow(L, 0.8);
+    vec3 ramp = t < 0.5 ? mix(vec3(0.0), acc, t * 2.0) : mix(acc, vec3(1.0), (t - 0.5) * 2.0);
+    vec3 mono = vec3(smoothstep(0.0, 1.0, L));
+    vec3 o = mix(mono, ramp, smoothstep(0.06, 0.4, sat));
+    return mix(c, o, palAmount);
+}
 
 float h11(float p) { p = fract(p * 0.1031); p *= p + 33.33; p *= p + p; return fract(p); }
 float h12(vec2 p)  { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
@@ -316,6 +335,7 @@ vec4 finalPass() {
     col *= 1.0 - 0.12 * smoothstep(0.45, 1.0, length((uv - 0.5) * vec2(R.x / R.y, 1.0)));
     col += (h12(fc + fract(TIME * 13.7) * 91.0) - 0.5) * grain * 0.07;
     col += (h12(fc * 1.03 + fract(TIME * 7.1) * 57.0) + h12(fc * 0.97 + 11.0) - 1.0) * (1.5 / 255.0);
+    col = studioPalette(clamp(col, 0.0, 1.0));
     return vec4(clamp(col, 0.0, 1.0), transparentBg ? cov : 1.0);
 }
 
