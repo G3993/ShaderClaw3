@@ -506,7 +506,7 @@ vec4 mosaicPass() {
         }
         // tile seams: thin black gutters
         vec2 e = min(l, 1.0 - l);
-        c *= step(1.2 * ip, min(e.x, e.y));
+        c *= step(min(1.2 * ip, 0.08), min(e.x, e.y));
         // build: a shimmer sweeps up through the body
         c *= 1.0 + 0.5 * gBuild * step(0.85, fract(p.y * 0.15 - TIME * (1.0 + 3.0 * gBuild)));
         col = c;
@@ -517,14 +517,14 @@ vec4 mosaicPass() {
         // ── contour rings flowing outward ──
         float d = frontSD(p);
         // snap to a coarse pixel grid so lines step like pixel strokes
-        float gp = max(pxDm * 3.0, 0.06);
+        float gp = min(max(pxDm * 2.0, 0.05), ringSpacing * 0.16);
         vec2 ps = (floor(p / gp) + 0.5) * gp;
         float ds = frontSD(ps);
         float sp2 = ringSpacing * (1.0 - 0.3 * gBuild);
         float rp = ds / sp2 - flowT;
         float ri = floor(rp);
         float fr = fract(rp);
-        float lw = clamp(1.1 * gp / sp2, 0.02, 0.5);
+        float lw = clamp(1.1 * gp / sp2, 0.02, 0.22);
         float line = step(fr, lw);
         // break each ring into dashes: segments of the pixel grid, varying per ring
         vec2 seg = floor(ps / (gp * (4.0 + 6.0 * h11(ri * 1.3))));
