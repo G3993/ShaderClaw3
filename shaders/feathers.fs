@@ -279,8 +279,12 @@ void main() {
     vec3 bg = backdrop(uv);
     vec3 col = mix(bg, A.rgb, A.a);
     // soft vignette of light toward the centre
-    col *= 0.75 + 0.35 * exp(-dot(sp, sp) * 1.2) + 0.15 * gLift;
-    col *= 0.85 + 0.25 * gLift + 0.12 * audioBeatPulse * ar;
+    // rest: dim pearly hush with a heavy vignette; peak: a prismatic light blooms from the centre
+    float rr = dot(sp, sp);
+    col *= mix(0.45, 1.0, exp(-rr * (2.2 - 1.4 * gLift))) * (0.55 + 0.6 * gLift);
+    vec3 prism = 0.5 + 0.5 * cos(TAU * (atan(sp.y, sp.x) / TAU + gT * 0.05 + vec3(0.0, 0.33, 0.67)));
+    col += prism * exp(-rr * 3.0) * A.a * (0.35 * gPeak + 0.5 * gBuild * gBuild) * iridescence;
+    col *= 1.0 + 0.12 * audioBeatPulse * ar;
     col += vec3(1.0, 0.95, 0.9) * gDrop * gDrop * 0.25 * A.a;
     col += (h12(fc + fract(TIME * 13.7) * 91.0) - 0.5) * grain * 0.06;
     col += (h12(fc * 1.03 + fract(TIME * 7.1) * 57.0) + h12(fc * 0.97 + 11.0) - 1.0) * (1.5 / 255.0);
