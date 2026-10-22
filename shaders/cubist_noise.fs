@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Cubist Noise — a solid built from thousands of short glossy tubes, like steel quills or combed hair, each one aligned to a swirling 3D noise flow that wraps around the surface in vortices and eddies. The whole lattice morphs between a Cube, a Sphere and a Triangle (tetrahedron), spinning slowly while the flow rolls across it. Erosion opens holes that reveal deeper layers of tubes. Bass swells the tubes and the shape, beats make the quills bristle outward, mids churn the flow faster, highs glint off the tips.",
+  "DESCRIPTION": "Cubist Noise — a solid built from thousands of short glossy tubes, like steel quills or combed hair, each one aligned to a swirling 3D noise flow that wraps around the surface in vortices and eddies. The whole lattice morphs between a Cube, a Sphere and a Triangle (tetrahedron), spinning slowly while the flow rolls across it. Erosion opens holes that reveal deeper layers of tubes. Bass swells the tubes and the shape, beats make the quills bristle outward, mids churn the flow faster, highs glint off the tips. Show Dynamics: at Rest the solid shrinks back into a sparse, eroded, slowly combed lattice of thin pale tubes; during a Build it contracts and spins up while the flow coils tighter, the camera pushes in, glints shimmer faster and the colour streams saturate; at the Drop every quill bristles straight out in a white flash as the shape punches outward.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-22 — original.",
   "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
   "INPUTS": [
@@ -26,6 +26,8 @@
     { "NAME": "palRed",      "LABEL": "Red Accent",      "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",     "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
     { "NAME": "audioReact",  "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.65, "GROUP": "Audio Reactivity" },
+    { "NAME": "showState",   "LABEL": "Show State", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Follow Music", "Rest", "Build", "Peak"], "GROUP": "Show Dynamics" },
+    { "NAME": "dynamics",    "LABEL": "Build & Drop Depth", "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.85, "GROUP": "Show Dynamics" },
     { "NAME": "bgMode",      "LABEL": "Background", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2], "LABELS": ["Solid", "Vertical Gradient", "Radial Gradient"], "GROUP": "Background" },
     { "NAME": "bgColor",     "LABEL": "BG Color / Top / Center", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0], "GROUP": "Background" },
     { "NAME": "bgColor2",    "LABEL": "BG Bottom / Edge", "TYPE": "color", "DEFAULT": [0.06, 0.06, 0.07, 1.0], "GROUP": "Background" },
@@ -80,6 +82,26 @@ float gScale;       // shape scale
 float gCS;          // cell size
 float gBeat;
 
+// ── Show dynamics: rest → build → peak / drop ───────────────────────────
+float gRest, gBuild, gPeak, gDrop, gLift;
+void showDynamics() {
+    float m = float(showState);
+    float e = clamp(audioEnergy, 0.0, 1.0);
+    float b = clamp(audioBuildup, 0.0, 1.0);
+    float d = clamp(audioDrop, 0.0, 1.0);
+    if (m > 0.5) {                                   // manual override for the VJ
+        if (m < 1.5)      { e = 0.04; b = 0.0; d = 0.0; }                                      // Rest
+        else if (m < 2.5) { float r = fract(TIME / 8.0); e = 0.3 + 0.35 * r; b = r * r; d = 0.0; } // Build: 8 s riser, loops
+        else              { e = 1.0; b = 0.0; d = exp(-fract(TIME / 4.0) * 5.0); } // Peak: hits every 4 s + beats
+    }
+    float k = dynamics;
+    gBuild = b * k;                                                  // tension 0..1
+    gDrop  = d * k;                                                  // impact impulse 0..1
+    gPeak  = smoothstep(0.5, 0.9, e) * k;                            // sustained high section
+    gRest  = (1.0 - smoothstep(0.08, 0.4, e)) * (1.0 - b) * k;       // quiet / breakdown
+    gLift  = mix(0.5, clamp(0.15 + e * 0.7 + gBuild * 0.25 + d * 0.3, 0.0, 1.0), k);  // 0 rest … 1 peak; 0.5 when dynamics = 0
+}
+
 float sdBox(vec3 p, float b) { vec3 q = abs(p) - b; return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0); }
 float sdTetra(vec3 p, float s) {
     // regular tetrahedron with one vertex pointing up, base below
@@ -114,12 +136,13 @@ float pot(vec3 x) {
 bool cellTube(vec3 id, out vec3 A, out vec3 B, out float rad, out vec3 info) {
     vec3 c = (id + 0.5) * gCS;
     float sd = shapeSDF(c);
-    float shell = layers * gCS;
+    float shell = layers * mix(0.6, 1.0, smoothstep(0.15, 0.8, gLift)) * gCS;
     A = c; B = c; rad = 0.0; info = vec3(0.0);
     if (sd > 0.0 || sd < -shell) return false;
     // erosion: drifting holes that reveal deeper layers (never erode the deepest layer fully)
     float er = vn3(c * 2.2 + vec3(0.0, gT * 0.15, gT * 0.1));
-    if (er < erosion * smoothstep(-shell, -shell * 0.4, sd) * 1.2 && sd > -shell * 0.7) return false;
+    float ero = clamp(erosion + 0.22 * gRest - 0.12 * gPeak, 0.0, 0.85);
+    if (er < ero * smoothstep(-shell, -shell * 0.4, sd) * 1.2 && sd > -shell * 0.7) return false;
     vec3 n = shapeN(c);
     // swirling flow: noise vector crossed with the normal → tangential vortices
     // tubes follow the iso-lines of a drifting noise potential → eddies and vortices
@@ -128,12 +151,12 @@ bool cellTube(vec3 id, out vec3 A, out vec3 B, out float rad, out vec3 info) {
     vec3 gr = vec3(pot(c + vec3(e, 0.0, 0.0)), pot(c + vec3(0.0, e, 0.0)), pot(c + vec3(0.0, 0.0, e))) - p0;
     vec3 tng = cross(n, gr / e);
     vec3 drift = cross(n, normalize(vec3(0.3, 1.0, 0.2)));          // calm combed base direction
-    tng = drift * 0.35 + tng * swirl * 1.6;
-    float bo = clamp(bristle + 0.6 * gBeat, 0.0, 1.0);
+    tng = drift * mix(0.6, 0.3, gLift) + tng * swirl * (1.6 * mix(0.55, 1.0, gLift) + 1.4 * gBuild);
+    float bo = clamp(bristle * (1.0 - 0.8 * gBuild) + 0.6 * gBeat + 0.95 * gDrop, 0.0, 1.0);
     vec3 dir = normalize(mix(tng, n, bo) + 1e-4);
     vec3 j = (h33(id) - 0.5) * 0.08 * gCS;
-    float rr = tubeWidth * gCS * (0.8 + 0.4 * h13(id + 3.0)) * (1.0 + 0.35 * bassP() * audioReact);
-    float hl = 0.5 * gCS * tubeLen * (0.75 + 0.25 * h13(id + 9.0)) - rr;
+    float rr = tubeWidth * gCS * (0.8 + 0.4 * h13(id + 3.0)) * (1.0 + 0.35 * bassP() * audioReact) * mix(0.7, 1.12, gLift);
+    float hl = 0.5 * gCS * tubeLen * mix(0.7, 1.0, gLift) * (0.75 + 0.25 * h13(id + 9.0)) - rr;
     hl = max(hl, 0.0);
     // keep the capsule inside the cell
     vec3 lim = 0.5 * gCS - rr - abs(j);
@@ -155,10 +178,12 @@ void main() {
     vec2 fc = gl_FragCoord.xy;
     vec2 uv = fc / R;
     float ar = audioReact;
-    gT = TIME * flowSpeed * (1.0 + 0.6 * midP() * ar) + 0.5 * audioBassTime * ar * flowSpeed;
+    showDynamics();
+    // additive clocks only (no TIME * changing-speed → no phase jumps)
+    gT = TIME * flowSpeed + 0.6 * audioMidTime * ar * flowSpeed + 0.5 * audioBassTime * ar * flowSpeed + 1.5 * gBuild * gBuild * flowSpeed;
     gBeat = audioBeatPulse * ar;
     gCS = 2.4 / floor(density);
-    gScale = shapeSize * (1.0 + 0.06 * bassP() * ar);
+    gScale = shapeSize * (1.0 + 0.06 * bassP() * ar) * (mix(0.86, 1.04, gLift) - 0.1 * gBuild + 0.1 * gDrop);
 
     // shape morph: cube → sphere → triangle → …
     float ss = float(shapeSel);
@@ -175,9 +200,11 @@ void main() {
 
     // camera & object rotation
     vec2 sp = (fc - 0.5 * R) / R.y;
-    vec3 ro = vec3(0.0, 0.0, 4.6);
+    float trem = smoothstep(0.7, 1.0, gBuild) * 0.006;
+    sp += trem * vec2(sin(TIME * 47.0), sin(TIME * 53.0 + 1.0));
+    vec3 ro = vec3(0.0, 0.0, 4.6 + 0.35 * gRest - 0.75 * gBuild);     // camera pushes in on the build
     vec3 rd = normalize(vec3(sp, -1.55));
-    float ay = TIME * spin * 0.6 + 0.25 * sin(TIME * 0.21);
+    float ay = TIME * spin * 0.6 + 0.25 * sin(TIME * 0.21) + 0.3 * audioMidTime * spin * ar + 2.2 * gBuild * gBuild * sign(spin + 1e-4);
     float ax = tilt * 0.7 + 0.12 * sin(TIME * 0.17);
     mat2 RY = rot(ay), RX = rot(ax);
     ro.yz = RX * ro.yz; rd.yz = RX * rd.yz;
@@ -226,6 +253,7 @@ void main() {
             float dif2 = clamp(dot(nrm, L2), 0.0, 1.0);
             vec3 hv = normalize(L1 - rd);
             float spec = pow(clamp(dot(nrm, hv), 0.0, 1.0), 48.0) * gloss;
+            spec *= 1.0 + gBuild * 1.8 * step(0.5, fract(hInfo.y * 7.0 + 18.0 * gBuild * gBuild));   // shimmer, rate climbs
             float fres = pow(1.0 - clamp(dot(nrm, -rd), 0.0, 1.0), 4.0);
             float depth = hInfo.x;                                   // 0 surface … 1 deep
             float ao = mix(1.0, 0.25, smoothstep(0.0, 1.0, depth));
@@ -234,13 +262,14 @@ void main() {
             // colour streams: bands of hue running through the flow
             float band = smoothstep(0.55, 0.85, vn3((hA + hB) * 0.9 + vec3(gT * 0.25, 0.0, -gT * 0.2)));
             vec3 hue = 0.5 + 0.5 * cos(TAU * (hInfo.y * 0.15 + gT * 0.03 + vec3(0.0, 0.33, 0.67)));
-            base = mix(base, hue * 1.1, band * accentAmt);
-            vec3 c = base * (0.16 + 1.05 * dif + 0.3 * dif2) * ao;
+            base = mix(base, hue * 1.1, band * clamp(accentAmt * mix(0.4, 1.6, gLift) + 0.3 * gBuild, 0.0, 1.0));
+            vec3 c = base * (0.16 + 1.05 * dif + 0.3 * dif2) * ao * (0.7 + 0.4 * gLift);
             c += vec3(1.0) * spec * (1.0 + 1.5 * highP() * ar) * ao;
             c += base * fres * 0.25;
             // tip glints on highs
             float tip = smoothstep(0.85, 1.0, abs(hh * 2.0 - 1.0));
             c += vec3(1.0) * tip * highP() * ar * 0.4 * step(0.7, hInfo.y);
+            c += vec3(1.0, 0.97, 0.92) * gDrop * (0.35 + 0.9 * tip) * (1.0 - 0.6 * depth);   // drop flash on the bristling quills
             // depth fade toward the background
             float fz = smoothstep(3.0, 6.2, t);
             c = mix(c, backdrop(uv), fz * fogAmt);
@@ -250,6 +279,7 @@ void main() {
     }
 
     col *= 1.0 + 0.12 * audioLevel * ar;
+    col += vec3(0.9, 0.95, 1.0) * gDrop * gDrop * 0.12 * (1.0 - smoothstep(0.0, 0.9, length(sp)));
     col += (h12(fc + fract(TIME * 13.7) * 91.0) - 0.5) * grain * 0.06;
     col += (h12(fc * 1.03 + fract(TIME * 7.1) * 57.0) + h12(fc * 0.97 + 11.0) - 1.0) * (1.5 / 255.0);
     col = studioPalette(clamp(col, 0.0, 1.0));

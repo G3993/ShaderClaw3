@@ -3615,7 +3615,7 @@
       "Simulation",
       "Audio Reactive"
     ],
-    "description": "Objectos — a wobbly totem of 3 to 6 soft 3D objects (spheres, fat rings, clover crosses, puffy flowers, twin blobs, rounded cubes, pills, pucks) balanced on top of each other and dancing. A real spring–damper simulation runs every frame in a tiny persistent buffer: each object has its own squash-and-stretch spring and two lean springs coupled to the one beneath it, so motion travels up the stack with lag and overshoot like jelly; the whole totem hops on beats, lands, and squashes on impact. Bass compresses the stack, beats make it jump, mids add a rubbery wobble and twist, highs make the glossy highlights flare. Each slot slowly morphs into another shape, and the materials keep trading — glossy black, glowing gradient, dark-rimmed matte, stripes, dots, checks, iridescent — in a palette pulled from the references (signal red, cyan, maroon, pink, lavender, ink).",
+    "description": "Objectos — a wobbly totem of 3 to 6 soft 3D objects (spheres, fat rings, clover crosses, puffy flowers, twin blobs, rounded cubes, pills, pucks) balanced on top of each other and dancing. A real spring–damper simulation runs every frame in a tiny persistent buffer: each object has its own squash-and-stretch spring and two lean springs coupled to the one beneath it, so motion travels up the stack with lag and overshoot like jelly; the whole totem hops on beats, lands, and squashes on impact. Bass compresses the stack, beats make it jump, mids add a rubbery wobble and twist, highs make the glossy highlights flare. Each slot slowly morphs into another shape, and the materials keep trading — glossy black, glowing gradient, dark-rimmed matte, stripes, dots, checks, iridescent — in a palette pulled from the references (signal red, cyan, maroon, pink, lavender, ink). Rest: a small, sparse totem of three far away, swaying lazily in soft desaturated light; Build: the stack grows, coils down into a squash, spins faster and trembles while the camera pushes in and the highlights flicker; Drop: a white flash and shockwave ring as the whole totem is punched up into a big hop and scale burst, settling into a tall, saturated, double-time dancing peak.",
     "file": "objectos.fs",
     "hasVertex": false,
     "hidden": false,
@@ -3629,7 +3629,7 @@
       "Glitch",
       "Audio Reactive"
     ],
-    "description": "Hourglass — a living hourglass that keeps pinching thin and swelling thick. Its silhouette is a mirrored profile of two lobes meeting at a neck; the lobes breathe, change shape (round, teardrop, diamond, lamp-shade), wiggle and drift, while three looks flow into each other: Nested Rings (an infinite tunnel of tangent circles stacked into the neck, each a radial rainbow), Thin Film (glowing interference fringes around dark lobes holding a sun and a target), and Lathe (a turned 3D vessel whose rainbow sweeps around it as it spins). Over it all runs a film and glitch layer: travelling pixelation zones, block mosaics, RGB split, slice tears, gate weave, flicker and grain. Bass pinches and swells the neck, beats fire glitch bursts and pixel drops, mids feed the wiggle, highs push the chroma split.",
+    "description": "Hourglass — a living hourglass that keeps pinching thin and swelling thick. Its silhouette is a mirrored profile of two lobes meeting at a neck; the lobes breathe, change shape (round, teardrop, diamond, lamp-shade), wiggle and drift, while three looks flow into each other: Nested Rings (an infinite tunnel of tangent circles stacked into the neck, each a radial rainbow), Thin Film (glowing interference fringes around dark lobes holding a sun and a target), and Lathe (a turned 3D vessel whose rainbow sweeps around it as it spins). Over it all runs a film and glitch layer: travelling pixelation zones, block mosaics, RGB split, slice tears, gate weave, flicker and grain. Bass pinches and swells the neck, beats fire glitch bursts and pixel drops, mids feed the wiggle, highs push the chroma split. Rest: a small, slender hourglass breathing quietly in clean film with only grain and a hint of weave; Build: the neck pinches shut, the rings race and crowd, tears, pixel zones and RGB split multiply and the frame trembles as it zooms in; Drop: a brief full-frame pixel blast with a white flash and a huge chroma split as the neck bursts open, settling into a big, fat, saturated peak with sharp glitch accents (slice tears, one travelling pixel band, wide RGB split).",
     "file": "hourglass.fs",
     "hasVertex": false,
     "hidden": false,
@@ -3644,7 +3644,7 @@
       "Op Art",
       "Audio Reactive"
     ],
-    "description": "Zebra — stripes drawn on a liquid sheet, with molten chrome. Glossy liquid-metal worms slither across the sheet, reflecting the live stripes and throwing shadows, while a vortex funnel twists the lines down into a tunnel. A heightfield made of flowing domain-warped waves, drifting bumps and beat-launched ripples is raymarched from a tilting camera, so the lines bend over real 3D folds, hide behind ridges, catch speculars and throw self-shadows. Six looks morph into each other: Satin (glossy black-and-white fabric), Op-Art (Riley-style gradient bands, orange to violet to cobalt to lime), Neon Spectrum (each line a full rainbow ribbon on black), Glitch Chroma (monochrome lines that split into RGB wherever the liquid is steep), Holo Chrome (thin silver lines over iridescent oil-slick colour) and Glow Lines (emissive line drawing floating on black). Stripes flow along the sheet, the camera breathes, and the RGB split follows the slope. Bass lifts the waves, beats fire ripples and a chroma kick, mids stir the flow, highs make the speculars and split flare.",
+    "description": "Zebra — stripes drawn on a liquid sheet, with molten chrome. Glossy liquid-metal worms slither across the sheet, reflecting the live stripes and throwing shadows, while a vortex funnel twists the lines down into a tunnel. A heightfield made of flowing domain-warped waves, drifting bumps and beat-launched ripples is raymarched from a tilting camera, so the lines bend over real 3D folds, hide behind ridges, catch speculars and throw self-shadows. Six looks morph into each other: Satin (glossy black-and-white fabric), Op-Art (Riley-style gradient bands, orange to violet to cobalt to lime), Neon Spectrum (each line a full rainbow ribbon on black), Glitch Chroma (monochrome lines that split into RGB wherever the liquid is steep), Holo Chrome (thin silver lines over iridescent oil-slick colour) and Glow Lines (emissive line drawing floating on black). Stripes flow along the sheet, the camera breathes, and the RGB split follows the slope. Bass lifts the waves, beats fire ripples and a chroma kick, mids stir the flow, highs make the speculars and split flare. Rest: a calm, gently undulating sheet of fewer, wider lines seen from high above, with a couple of small chrome drops drifting; Build: the vortex deepens and winds the lines into a crowding tunnel while the flow accelerates, the chrome worms are drawn toward the throat, the split and speculars climb and the camera dives in; Drop: a huge ripple shockwave tears out from the centre with a chromatic burst, a flash and a swell of the metal, settling into a tall, turbulent, densely striped peak.",
     "file": "zebra.fs",
     "hasVertex": false,
     "hidden": false,
@@ -3703,7 +3703,7 @@
       "Nature",
       "Audio Reactive"
     ],
-    "description": "Body Garden — a still glass human figure with real anatomy (a sculpted human body baked into a 3D distance field), seen three-quarter from head to mid-thigh, with a living garden inside. The glass shell glows at its rim and catches highlights while the interior is raymarched as a volume: lungs breathe and sparkle with thousands of multicoloured points of light, a glowing pink nerve tree branches from the throat into the chest and pulses on the beat, vines spiral up through the torso and neck, flowers open and close in the head, shoulder and chest, a dense bed of blooms and leaves fills the belly, a cluster of sparks lives in the brain, and abstract 3D elements (rings, cubes and orbs) drift through the body. The figure never moves; everything inside it does. Bass makes the lungs breathe deeper, beats send a pulse up the nerves and flash the sparks, mids speed the drifting elements, highs twinkle the lights.",
+    "description": "Body Garden — a still glass human figure with real anatomy (a sculpted human body baked into a 3D distance field), seen three-quarter from head to mid-thigh, with a living garden inside. The glass shell glows at its rim and catches highlights while the interior is raymarched as a volume: lungs breathe and sparkle with thousands of multicoloured points of light, a glowing pink nerve tree branches from the throat into the chest and pulses on the beat, vines spiral up through the torso and neck, flowers open and close in the head, shoulder and chest, a dense bed of blooms and leaves fills the belly, a cluster of sparks lives in the brain, and abstract 3D elements (rings, cubes and orbs) drift through the body. The figure never moves; everything inside it does. Bass makes the lungs breathe deeper, beats send a pulse up the nerves and flash the sparks, mids speed the drifting elements, highs twinkle the lights. Show Dynamics: at Rest the garden sleeps (buds closed, vines low, a few slow sparks and drifting shapes, soft glass); during a Build the vines climb, flowers unfurl, the sparks thicken and shimmer faster while the abstract shapes converge on the heart and tremble; at the Drop a shockwave of light bursts out from the chest through the whole body, the nerves and glass flash, and every bloom snaps fully open.",
     "file": "body_garden.fs",
     "hasVertex": false,
     "hidden": false,
@@ -3717,7 +3717,7 @@
       "3D",
       "Audio Reactive"
     ],
-    "description": "Eyeball — a living 3D eye (or two). Each eyeball is a true sphere with a refracting cornea, a fibrous iris and a pupil that is a portal: look through it and you see a whole world inside — Fire (rising flames), Water (caustics and bubbles), Thunder (storm clouds split by lightning), Galaxy (a spiral nebula of stars), Acid (oil-slick swirls) or a Rainbow iris of streaming colour fibres — and that world also flows through the iris fibres. Worlds morph from one to the next. The white of the eye has its own styles: classic red veins, neon holographic, dark sculpted creases or liquid chrome, with wet highlights, window reflections and a fresnel rim. Choose One Eye, Two Eyes or Twin Iris (two irises on one ball). Switch on Eyelids & Skin for almond lids, curled lashes and blinks, and the 1-Bit Dither look turns it all into chunky black-and-white pixel art. The gaze drifts and snaps to new targets, the pupil dilates with the bass, beats make it jump and strike lightning, mids churn the worlds, highs sparkle the highlights.",
+    "description": "Eyeball — a living 3D eye (or two). Each eyeball is a true sphere with a refracting cornea, a fibrous iris and a pupil that is a portal: look through it and you see a whole world inside — Fire (rising flames), Water (caustics and bubbles), Thunder (storm clouds split by lightning), Galaxy (a spiral nebula of stars), Acid (oil-slick swirls) or a Rainbow iris of streaming colour fibres — and that world also flows through the iris fibres. Worlds morph from one to the next. The white of the eye has its own styles: classic red veins, neon holographic, dark sculpted creases or liquid chrome, with wet highlights, window reflections and a fresnel rim. Choose One Eye, Two Eyes or Twin Iris (two irises on one ball). Switch on Eyelids & Skin for almond lids, curled lashes and blinks, and the 1-Bit Dither look turns it all into chunky black-and-white pixel art. The gaze drifts and snaps to new targets, the pupil dilates with the bass, beats make it jump and strike lightning, mids churn the worlds, highs sparkle the highlights. The space around the eye comes alive too: a World Corona where the fire, water or lightning spills out around the ball, a giant Iris Tunnel behind it, or spinning Aura Rays with orbiting sparks. At rest the eye drifts calmly with a soft glow; during a build the pupil tightens to a pinpoint, the surroundings contract and spin faster and the eye starts to tremble; on the drop the pupil blows wide, a shockwave ring blasts outward and the world floods out around it.",
     "file": "eyeball.fs",
     "hasVertex": false,
     "hidden": false,
@@ -3731,7 +3731,7 @@
       "3D",
       "Audio Reactive"
     ],
-    "description": "Cubist Noise — a solid built from thousands of short glossy tubes, like steel quills or combed hair, each one aligned to a swirling 3D noise flow that wraps around the surface in vortices and eddies. The whole lattice morphs between a Cube, a Sphere and a Triangle (tetrahedron), spinning slowly while the flow rolls across it. Erosion opens holes that reveal deeper layers of tubes. Bass swells the tubes and the shape, beats make the quills bristle outward, mids churn the flow faster, highs glint off the tips.",
+    "description": "Cubist Noise — a solid built from thousands of short glossy tubes, like steel quills or combed hair, each one aligned to a swirling 3D noise flow that wraps around the surface in vortices and eddies. The whole lattice morphs between a Cube, a Sphere and a Triangle (tetrahedron), spinning slowly while the flow rolls across it. Erosion opens holes that reveal deeper layers of tubes. Bass swells the tubes and the shape, beats make the quills bristle outward, mids churn the flow faster, highs glint off the tips. Show Dynamics: at Rest the solid shrinks back into a sparse, eroded, slowly combed lattice of thin pale tubes; during a Build it contracts and spins up while the flow coils tighter, the camera pushes in, glints shimmer faster and the colour streams saturate; at the Drop every quill bristles straight out in a white flash as the shape punches outward.",
     "file": "cubist_noise.fs",
     "hasVertex": false,
     "hidden": false,
@@ -3746,7 +3746,7 @@
       "Particles",
       "Audio Reactive"
     ],
-    "description": "Flowing — a spinning 3D string made of dozens of fine strands of glowing dots. The strands wind around each other like a twisted rope, swelling, pinching, looping out and back in, while the whole string sweeps across the frame in a slow S-curve that sways and re-shapes itself. Dots stream along the strands so the rope seems to pour. Strands in front are brighter and larger, strands behind fade into the dark for real depth. Bass swells the rope and spins it harder, beats flash the dots, mids speed the flow, highs make the dots twinkle.",
+    "description": "Flowing — a spinning 3D string made of dozens of fine strands of glowing dots. The strands wind around each other like a twisted rope, swelling, pinching, looping out and back in, while the whole string sweeps across the frame in a slow S-curve that sways and re-shapes itself. Dots stream along the strands so the rope seems to pour. Strands in front are brighter and larger, strands behind fade into the dark for real depth. Bass swells the rope and spins it harder, beats flash the dots, mids speed the flow, highs make the dots twinkle. Show Dynamics: at Rest only a few fine strands of soft, sparse dots drift along a slim, gently swaying thread; during a Build the rope coils tighter and thinner, twists harder and spins up, the dots densify, brighten and shimmer faster and the thread trembles; at the Drop the rope bursts open, its strands flung wide in big flashing dots before they settle into a full, fat, colourful peak.",
     "file": "flowing.fs",
     "hasVertex": false,
     "hidden": false,
@@ -3760,12 +3760,42 @@
       "3D",
       "Audio Reactive"
     ],
-    "description": "Brain Scans — a living MRI built from a real brain scan (the MNI ICBM152 average human brain): folded cortex, white matter, ventricles, corpus callosum, cerebellum and brainstem, wrapped in a skull and scalp. A slice plane sweeps through it continuously while the view morphs between a sagittal profile, an axial top-down slice, a coronal slice, a contact-sheet series of slices and a rotating 3D cutaway of the whole brain, and the colour treatment morphs through thermal CRT rainbow, orange/green duotone, posterized contour, jet heatmap, clinical film and fluorescent fibre tracts. fMRI activation blooms with the music: bass lights the motor cortex, mids the auditory cortex, highs the visual cortex, and beats fire new hotspots and a scan flash.",
+    "description": "Brain Scans — a living MRI built from a real brain scan (the MNI ICBM152 average human brain): folded cortex, white matter, ventricles, corpus callosum, cerebellum and brainstem, wrapped in a skull and scalp. A slice plane sweeps through it continuously while the view morphs between a sagittal profile, an axial top-down slice, a coronal slice, a contact-sheet series of slices and a rotating 3D cutaway of the whole brain, and the colour treatment morphs through thermal CRT rainbow, orange/green duotone, posterized contour, jet heatmap, clinical film and fluorescent fibre tracts. fMRI activation blooms with the music: bass lights the motor cortex, mids the auditory cortex, highs the visual cortex, and beats fire new hotspots and a scan flash. Show Dynamics: at Rest the scan pulls back and dims to a quiet, low-contrast resting state with only the default-mode network glowing faintly and breathing; during a Build hotspots multiply and spread across the cortex, the scan bar races and flickers faster, contrast and colour climb and the view pushes in with a slight tremor; at the Drop a white scan flash tears the image sideways and a shockwave of activation rips outward through the whole brain before it settles into full-brain peak activity.",
     "file": "brain_scans.fs",
     "hasVertex": false,
     "hidden": false,
     "id": 1403,
     "title": "Brain Scans",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "3D",
+      "Particles",
+      "Audio Reactive"
+    ],
+    "description": "Liquid Particles — colourful 3D particles moving freely through liquid. Three forms morph into each other: a Bead Slab of thousands of tiny glossy 3D beads tilting in space while colour flows through them like poured paint (red, orange, pink, lavender and sky blue rivers); Particle Silk, a volumetric cloud of glowing points that gathers into flowing sheets of liquid fabric that fold and drift; and Liquid Ribbons, glossy twisting rainbow ribbons of liquid with clouds of glitter dust streaming beside them. Everything is driven by one liquid flow field, so particles swirl, pour and curl like ink in water. At rest it is sparse, slow and floating; during a build the particles contract, the flow accelerates and the colours saturate; on the drop everything bursts outward in a flash and then pours at full density through the peak.",
+    "file": "liquid_particles.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1404,
+    "title": "Liquid Particles",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "3D",
+      "Nature",
+      "Audio Reactive"
+    ],
+    "description": "Feathers — deep 3D plumage of iridescent feathers. Layer upon layer of feathers, each with a glowing white shaft, fine chevron barbs, ragged split edges and fluffy down at the base, in pearl grey, warm brown, slate blue and white, while holographic thin-film light throws rainbow patches across them like light through a prism. Three layouts morph into each other: a Fan Burst that blooms endlessly outward from the centre, a Spiral Wing that coils, and a Plumage Field of feathers flowing upward like the breast of a bird. The feathers ruffle in waves of wind and the rainbow light drifts over them. At rest the plumage breathes slowly with soft pearly light; during a build it spins and streams faster, ruffles harder and the shimmer races; on the drop every feather flares open in a burst of rainbow light, then the peak glows with full prismatic colour.",
+    "file": "feathers.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1405,
+    "title": "Feathers",
     "type": "generator"
   }
 ]

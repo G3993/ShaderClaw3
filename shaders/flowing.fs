@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Flowing — a spinning 3D string made of dozens of fine strands of glowing dots. The strands wind around each other like a twisted rope, swelling, pinching, looping out and back in, while the whole string sweeps across the frame in a slow S-curve that sways and re-shapes itself. Dots stream along the strands so the rope seems to pour. Strands in front are brighter and larger, strands behind fade into the dark for real depth. Bass swells the rope and spins it harder, beats flash the dots, mids speed the flow, highs make the dots twinkle.",
+  "DESCRIPTION": "Flowing — a spinning 3D string made of dozens of fine strands of glowing dots. The strands wind around each other like a twisted rope, swelling, pinching, looping out and back in, while the whole string sweeps across the frame in a slow S-curve that sways and re-shapes itself. Dots stream along the strands so the rope seems to pour. Strands in front are brighter and larger, strands behind fade into the dark for real depth. Bass swells the rope and spins it harder, beats flash the dots, mids speed the flow, highs make the dots twinkle. Show Dynamics: at Rest only a few fine strands of soft, sparse dots drift along a slim, gently swaying thread; during a Build the rope coils tighter and thinner, twists harder and spins up, the dots densify, brighten and shimmer faster and the thread trembles; at the Drop the rope bursts open, its strands flung wide in big flashing dots before they settle into a full, fat, colourful peak.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-22 — original.",
   "CATEGORIES": ["Generator", "3D", "Particles", "Audio Reactive"],
   "INPUTS": [
@@ -26,6 +26,8 @@
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
     { "NAME": "audioReact",  "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.65, "GROUP": "Audio Reactivity" },
+    { "NAME": "showState",   "LABEL": "Show State", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Follow Music", "Rest", "Build", "Peak"], "GROUP": "Show Dynamics" },
+    { "NAME": "dynamics",    "LABEL": "Build & Drop Depth", "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.85, "GROUP": "Show Dynamics" },
     { "NAME": "bgMode",      "LABEL": "Background", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2], "LABELS": ["Solid", "Vertical Gradient", "Radial Gradient"], "GROUP": "Background" },
     { "NAME": "bgColor",     "LABEL": "BG Color / Top / Center", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0], "GROUP": "Background" },
     { "NAME": "bgColor2",    "LABEL": "BG Bottom / Edge", "TYPE": "color", "DEFAULT": [0.05, 0.05, 0.06, 1.0], "GROUP": "Background" },
@@ -68,6 +70,26 @@ vec3 backdrop(vec2 uv) {
     return mix(bgColor.rgb, bgColor2.rgb, smoothstep(0.0, 0.85, length(dd)));
 }
 
+// ── Show dynamics: rest → build → peak / drop ───────────────────────────
+float gRest, gBuild, gPeak, gDrop, gLift;
+void showDynamics() {
+    float m = float(showState);
+    float e = clamp(audioEnergy, 0.0, 1.0);
+    float b = clamp(audioBuildup, 0.0, 1.0);
+    float d = clamp(audioDrop, 0.0, 1.0);
+    if (m > 0.5) {                                   // manual override for the VJ
+        if (m < 1.5)      { e = 0.04; b = 0.0; d = 0.0; }                                      // Rest
+        else if (m < 2.5) { float r = fract(TIME / 8.0); e = 0.3 + 0.35 * r; b = r * r; d = 0.0; } // Build: 8 s riser, loops
+        else              { e = 1.0; b = 0.0; d = exp(-fract(TIME / 4.0) * 5.0); } // Peak: hits every 4 s + beats
+    }
+    float k = dynamics;
+    gBuild = b * k;                                                  // tension 0..1
+    gDrop  = d * k;                                                  // impact impulse 0..1
+    gPeak  = smoothstep(0.5, 0.9, e) * k;                            // sustained high section
+    gRest  = (1.0 - smoothstep(0.08, 0.4, e)) * (1.0 - b) * k;       // quiet / breakdown
+    gLift  = mix(0.5, clamp(0.15 + e * 0.7 + gBuild * 0.25 + d * 0.3, 0.0, 1.0), k);  // 0 rest … 1 peak; 0.5 when dynamics = 0
+}
+
 // ── spine: a cubic Bézier whose control points morph between path shapes ──
 vec2 gP0, gP1, gP2, gP3;
 float gT;
@@ -84,7 +106,9 @@ vec2 spine(float s) {
     float u = 1.0 - s;
     vec2 p = u * u * u * gP0 + 3.0 * u * u * s * gP1 + 3.0 * u * s * s * gP2 + s * s * s * gP3;
     // slow organic sway on top of the path
-    p += sway * vec2(0.05 * sin(s * 5.0 + gT * 0.7), 0.06 * sin(s * 4.0 - gT * 0.55 + 1.0));
+    p += sway * vec2(0.05 * sin(s * 5.0 + gT * 0.7), 0.06 * sin(s * 4.0 - gT * 0.55 + 1.0)) * mix(0.6, 1.2, gLift);
+    // tremor near the top of a build
+    p += smoothstep(0.7, 1.0, gBuild) * 0.008 * vec2(sin(s * 31.0 + TIME * 43.0), sin(s * 27.0 - TIME * 51.0));
     return p;
 }
 vec2 spineD(float s) { return (spine(s + 0.002) - spine(s - 0.002)) / 0.004; }
@@ -96,7 +120,8 @@ void main() {
     vec2 p = (fc - 0.5 * R) / R.y;
     float px = 1.0 / R.y;
     float ar = audioReact;
-    gT = TIME;
+    showDynamics();
+    gT = TIME + 0.5 * audioMidTime * ar;
 
     // path morph
     float ps = float(pathSel);
@@ -142,42 +167,49 @@ void main() {
 
     // rope width along its length: swell & pinch, bass breathes it
     float w = ropeWidth * (1.0 + bulge * 0.6 * sin(s * 7.0 - TIME * 0.4) + bulge * 0.35 * sin(s * 13.0 + TIME * 0.3))
-            * (1.0 + 0.35 * bassP() * ar);
+            * (1.0 + 0.35 * bassP() * ar)
+            * (mix(0.55, 1.2, gLift) * (1.0 - 0.45 * gBuild) + 1.3 * gDrop);       // slim at rest, coils tight on the build, bursts on the drop
     w = max(w, 0.01);
     float n = dot(rel, N) / w;
 
-    float spinPh = TIME * spin * 1.2 + 0.6 * audioBassTime * ar * sign(spin + 1e-4);
-    float flow = TIME * flowSpeed * 0.12 * (1.0 + 0.8 * midP() * ar);
+    float spinPh = TIME * spin * 1.2 + 0.6 * audioBassTime * ar * sign(spin + 1e-4) + 5.0 * gBuild * gBuild * sign(spin + 1e-4);
+    // additive clocks only (no TIME * changing-speed → no phase jumps)
+    float flow = (TIME * flowSpeed + 0.8 * audioMidTime * ar * flowSpeed) * 0.12 + 0.05 * gBuild * gBuild * sign(flowSpeed + 1e-4);
+    float twistK = twist + 1.6 * gBuild;
+    float looseK = clamp(looseness * mix(0.4, 1.3, gLift) * (1.0 - 0.6 * gBuild) + 0.8 * gDrop, 0.0, 1.5);
+    float brightK = 0.6 + 0.55 * gLift + 0.3 * gBuild;
     float endFade = smoothstep(-0.12, 0.02, s) * smoothstep(1.12, 0.98, s);
 
     vec3 acc = vec3(0.0);
     float cov = 0.0;
-    if (abs(n) < 1.0 + 0.6 * looseness + 0.4 && endFade > 0.0) {
+    if (abs(n) < 1.0 + 0.6 * looseK + 0.4 && endFade > 0.0) {
+        float NSf = strands * mix(0.35, 1.0, smoothstep(0.1, 0.8, gLift));   // fewer strands at rest
         float NS = floor(strands);
         float arcPos = s * speed;                     // local arc-length coordinate
         for (int k = 0; k < 72; k++) {
             float fk = float(k);
-            if (fk >= NS) break;
+            if (fk >= NS || fk >= ceil(NSf)) break;
+            float onK = clamp(NSf - fk, 0.0, 1.0);
             float hk = h11(fk * 7.13 + 1.0);
             float th0 = fk / NS * TAU + hk * 0.5;
             // loose loops: some strands wander out from the rope and come back
-            float loose = looseness * (0.25 * sin(s * (5.0 + hk * 6.0) + TIME * (0.3 + hk * 0.4) + fk) + 0.5 * step(0.8, hk) * smoothstep(0.2, 0.9, sin(s * 3.0 + fk * 2.1 + TIME * 0.2)));
+            float loose = looseK * (0.25 * sin(s * (5.0 + hk * 6.0) + TIME * (0.3 + hk * 0.4) + fk) + 0.5 * step(0.8, hk) * smoothstep(0.2, 0.9, sin(s * 3.0 + fk * 2.1 + TIME * 0.2)));
             float rk = (0.75 + 0.3 * h11(fk * 3.7 + 2.0)) + loose;
-            float ang = th0 + twist * TAU * s + spinPh * (0.8 + 0.4 * hk);
+            float ang = th0 + twistK * TAU * s + spinPh * (0.8 + 0.4 * hk);
             float sn = sin(ang), cs = cos(ang);
             float nk = rk * cs;
             float depth = sn * 0.5 + 0.5;                       // 1 = front
             // perpendicular distance in screen units, slope-corrected
-            float slope = -rk * sn * twist * TAU * w / max(speed, 1e-3);
+            float slope = -rk * sn * twistK * TAU * w / max(speed, 1e-3);
             float dPerp = abs(n - nk) * w / sqrt(1.0 + slope * slope);
             if (dPerp > 0.02) continue;
             float bright = mix(1.0 - depthFade, 1.0, depth);
             float isLine = step(1.0 - lineMix, h11(fk * 5.31 + 9.0));
             // dots: spaced in arc length, streaming along each strand
-            float spc = dotSpacing * (0.85 + 0.3 * h11(fk * 9.1));
+            float spc = dotSpacing * (0.85 + 0.3 * h11(fk * 9.1)) * mix(1.5, 0.9, gLift);
             float ap = (arcPos + along) / spc - flow / spc * (0.7 + 0.6 * hk) + hk * 10.0;
             float da = (fract(ap) - 0.5) * spc;
-            float rad = max(spc * 0.16 * (0.6 + 0.8 * depth) * dotSize * (1.0 + 0.6 * audioBeatPulse * ar), px * 0.6);
+            float rad = max(spc * 0.16 * (0.6 + 0.8 * depth) * dotSize * (1.0 + 0.6 * audioBeatPulse * ar + 0.9 * gDrop) * mix(0.8, 1.15, gLift), px * 0.6);
             float dd = length(vec2(da, dPerp));
             float dotv = smoothstep(rad + px, rad - px * 0.5, dd);
             float halo = exp(-dd * dd / (rad * rad * 9.0)) * 0.25 * glow;
@@ -185,12 +217,14 @@ void main() {
             float line = smoothstep(lw + px, max(lw - px, 0.0), dPerp) * 0.55;
             float v = mix(dotv + halo, line + dotv * 0.4, isLine);
             // twinkle on highs
+            v *= 1.0 + gBuild * 1.4 * step(0.5, fract(hk * 13.0 + floor(ap) * 0.37 + 22.0 * gBuild * gBuild));   // shimmer, rate climbs
             v *= 1.0 + highP() * ar * 1.5 * step(0.85, h12(vec2(fk, floor(ap))) ) * (0.5 + 0.5 * sin(TIME * 20.0 + fk));
             vec3 c = dotColor.rgb;
-            float tint = step(1.0 - accentAmt, h11(fk * 2.71 + 4.0));
+            float tint = step(1.0 - clamp(accentAmt * mix(0.4, 1.8, gLift) + 0.25 * gDrop, 0.0, 1.0), h11(fk * 2.71 + 4.0));
             c = mix(c, 0.5 + 0.5 * cos(TAU * (hk + TIME * 0.02 + vec3(0.0, 0.33, 0.67))), tint * 0.85);
-            acc += c * v * bright;
-            cov = max(cov, v * bright);
+            c = mix(c, vec3(1.0), 0.5 * gDrop);
+            acc += c * v * bright * onK * brightK * (1.0 + 1.2 * gDrop);
+            cov = max(cov, v * bright * onK);
         }
     }
     acc *= endFade;

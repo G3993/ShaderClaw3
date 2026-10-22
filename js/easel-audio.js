@@ -449,7 +449,18 @@
     f.audioEnergyAcc = acc;
     f.audioBuildup = L.buildup;
     f.audioBuildupRate = Math.max(0, L.vel);
-    f.audioDrop = energy < 0.08 && L.energyPrevHigh > 0.4 ? 1 : 0;
+    // Drop — parity with native Easel (AudioAnalyzer::computeStructure): an
+    // impact impulse when a real build (prior buildup) is released by a
+    // broadband slam (onset + bass), decaying over ~0.8 s; the build releases.
+    const prevBuild = L.prevBuildup || 0;
+    if (prevBuild > 0.35 && (b.audioOnset || 0) > 0.4 && bass > 0.5 && !(L.dropEnv > 0.6)) {
+      L.dropEnv = 1;
+      L.buildup *= 0.2;
+    }
+    L.dropEnv = (L.dropEnv || 0) * Math.exp(-dt / 0.3);
+    L.prevBuildup = L.buildup;
+    f.audioBuildup = L.buildup;
+    f.audioDrop = L.dropEnv;
     f.audioTempo01 = clamp01((b.audioBPM - 60) / 120);
 
     // Spectral character (cheap approximations, dt-conditioned)

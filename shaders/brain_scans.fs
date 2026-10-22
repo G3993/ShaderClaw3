@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Brain Scans — a living MRI built from a real brain scan (the MNI ICBM152 average human brain): folded cortex, white matter, ventricles, corpus callosum, cerebellum and brainstem, wrapped in a skull and scalp. A slice plane sweeps through it continuously while the view morphs between a sagittal profile, an axial top-down slice, a coronal slice, a contact-sheet series of slices and a rotating 3D cutaway of the whole brain, and the colour treatment morphs through thermal CRT rainbow, orange/green duotone, posterized contour, jet heatmap, clinical film and fluorescent fibre tracts. fMRI activation blooms with the music: bass lights the motor cortex, mids the auditory cortex, highs the visual cortex, and beats fire new hotspots and a scan flash.",
+  "DESCRIPTION": "Brain Scans — a living MRI built from a real brain scan (the MNI ICBM152 average human brain): folded cortex, white matter, ventricles, corpus callosum, cerebellum and brainstem, wrapped in a skull and scalp. A slice plane sweeps through it continuously while the view morphs between a sagittal profile, an axial top-down slice, a coronal slice, a contact-sheet series of slices and a rotating 3D cutaway of the whole brain, and the colour treatment morphs through thermal CRT rainbow, orange/green duotone, posterized contour, jet heatmap, clinical film and fluorescent fibre tracts. fMRI activation blooms with the music: bass lights the motor cortex, mids the auditory cortex, highs the visual cortex, and beats fire new hotspots and a scan flash. Show Dynamics: at Rest the scan pulls back and dims to a quiet, low-contrast resting state with only the default-mode network glowing faintly and breathing; during a Build hotspots multiply and spread across the cortex, the scan bar races and flickers faster, contrast and colour climb and the view pushes in with a slight tremor; at the Drop a white scan flash tears the image sideways and a shockwave of activation rips outward through the whole brain before it settles into full-brain peak activity.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-22 — original. Brain data: ICBM 152 Nonlinear 2009 template — Copyright (C) 1993-2004 Louis Collins, McConnell Brain Imaging Centre, Montreal Neurological Institute, McGill University (see brain_mri_LICENSE.txt).",
   "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
   "INPUTS": [
@@ -25,6 +25,8 @@
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
     { "NAME": "audioReact",  "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.65, "GROUP": "Audio Reactivity" },
+    { "NAME": "showState",   "LABEL": "Show State", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Follow Music", "Rest", "Build", "Peak"], "GROUP": "Show Dynamics" },
+    { "NAME": "dynamics",    "LABEL": "Build & Drop Depth", "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.85, "GROUP": "Show Dynamics" },
     { "NAME": "bgMode",      "LABEL": "Background", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2], "LABELS": ["Solid", "Vertical Gradient", "Radial Gradient"], "GROUP": "Background" },
     { "NAME": "bgColor",     "LABEL": "BG Color / Top / Center", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0], "GROUP": "Background" },
     { "NAME": "bgColor2",    "LABEL": "BG Bottom / Edge", "TYPE": "color", "DEFAULT": [0.02, 0.03, 0.05, 1.0], "GROUP": "Background" },
@@ -98,7 +100,27 @@ vec2 mri(vec3 p) {
     return vec2(r.x * step(outside, 0.5), r.y * 30.0 + outside);
 }
 
-float gT, gSeq;
+float gT, gSeq, gZoom, gContrast;
+
+// ── Show dynamics: rest → build → peak / drop ───────────────────────────
+float gRest, gBuild, gPeak, gDrop, gLift;
+void showDynamics() {
+    float m = float(showState);
+    float e = clamp(audioEnergy, 0.0, 1.0);
+    float b = clamp(audioBuildup, 0.0, 1.0);
+    float d = clamp(audioDrop, 0.0, 1.0);
+    if (m > 0.5) {                                   // manual override for the VJ
+        if (m < 1.5)      { e = 0.04; b = 0.0; d = 0.0; }                                      // Rest
+        else if (m < 2.5) { float r = fract(TIME / 8.0); e = 0.3 + 0.35 * r; b = r * r; d = 0.0; } // Build: 8 s riser, loops
+        else              { e = 1.0; b = 0.0; d = exp(-fract(TIME / 4.0) * 5.0); } // Peak: hits every 4 s + beats
+    }
+    float k = dynamics;
+    gBuild = b * k;                                                  // tension 0..1
+    gDrop  = d * k;                                                  // impact impulse 0..1
+    gPeak  = smoothstep(0.5, 0.9, e) * k;                            // sustained high section
+    gRest  = (1.0 - smoothstep(0.08, 0.4, e)) * (1.0 - b) * k;       // quiet / breakdown
+    gLift  = mix(0.5, clamp(0.15 + e * 0.7 + gBuild * 0.25 + d * 0.3, 0.0, 1.0), k);  // 0 rest … 1 peak; 0.5 when dynamics = 0
+}
 
 // ── tissue: real brain + grown skull/scalp ───────────────────────────────
 // returns intensity (T1↔T2), -1 outside the head; brain membership, activation
@@ -139,7 +161,27 @@ float tissue(vec3 p, out float brainW, out float actW) {
         vec3 hp = vec3((h11(k) - 0.5) * 110.0, (h11(k + 1.0) - 0.5) * 140.0 - 15.0, (h11(k + 2.0) - 0.3) * 80.0);
         float a4 = exp(-dot(p - hp, p - hp) / 300.0) * (0.3 + audioBeatPulse);
         // only light up gray matter, like real activation maps
-        actW = (a1 + a2 + a3 + a4) * audioReact * activation * smoothstep(0.15, 0.35, I) * (1.0 - smoothstep(0.7, 0.85, I) * 0.6);
+        float gm = smoothstep(0.15, 0.35, I) * (1.0 - smoothstep(0.7, 0.85, I) * 0.6);
+        actW = (a1 + a2 + a3 + a4) * audioReact * mix(0.35, 1.0, gLift);
+        // show dynamics (independent of audioReact so the VJ states read in silence)
+        // rest: default-mode network (medial prefrontal + posterior cingulate/precuneus), slowly breathing
+        float dmn = exp(-dot(q - vec3(4.0, 52.0, 8.0), q - vec3(4.0, 52.0, 8.0)) / 380.0)
+                  + exp(-dot(q - vec3(4.0, -55.0, 30.0), q - vec3(4.0, -55.0, 30.0)) / 420.0);
+        float st = dmn * (0.35 + 0.2 * sin(TIME * 0.7)) * gRest;
+        // build: extra hotspots popping faster and spreading; peak: whole-cortex activity
+        float kb = floor(TIME * 2.0);
+        for (int j = 0; j < 3; j++) {
+            float fj = float(j);
+            vec3 hb = vec3((h11(kb + fj * 7.0) - 0.5) * 120.0, (h11(kb + fj * 7.0 + 1.0) - 0.5) * 150.0 - 15.0, (h11(kb + fj * 7.0 + 2.0) - 0.3) * 80.0);
+            st += exp(-dot(p - hb, p - hb) / mix(200.0, 600.0, gBuild)) * (gBuild * 1.6 + gPeak * 0.5);
+        }
+        float nz = vn3(p * 0.045 + vec3(0.0, 0.0, TIME * 0.4));
+        st += smoothstep(0.45, 0.8, nz) * gPeak * 0.8;
+        st += smoothstep(0.85 - 0.4 * gBuild, 0.95 - 0.3 * gBuild, nz) * gBuild * 1.1;   // activation spreads as the build rises
+        // drop: shockwave of activation from the brain centre
+        float rw = (1.0 - gDrop) * 110.0;
+        st += exp(-pow((length(p - vec3(0.0, -18.0, 15.0)) - rw) / 9.0, 2.0)) * gDrop * 1.6;
+        actW = (actW + st) * activation * gm;
     }
     return mix(t1, t2, gSeq);
 }
@@ -161,7 +203,7 @@ vec3 jet(float t) {
 
 vec3 look(float k, float I, float brainW, float actW, vec2 fibre, vec2 sp, float edge) {
     if (I < 0.0) return vec3(0.0);
-    float c = clamp((I - 0.5) * contrast + 0.5, 0.0, 1.0);
+    float c = clamp((I - 0.5) * gContrast + 0.5, 0.0, 1.0);
     vec3 col;
     if (k < 0.5) {                                   // Thermal CRT (ref: rainbow MRI on a monitor)
         float q = floor(c * 9.0) / 9.0;
@@ -217,7 +259,7 @@ vec3 backdrop(vec2 uv) {
 
 // point in the head for a slice view (mm); s in [-1, 1] is the slice position
 vec3 slicePoint(float view, vec2 q, float s) {
-    float S = 235.0 / zoom;
+    float S = 235.0 / gZoom;
     if (view < 0.5) return vec3(s * 62.0, -18.0 - q.x * S, 6.0 + q.y * S);          // sagittal, nose to the left
     if (view < 1.5) return vec3(q.x * S, -18.0 + q.y * S, 12.0 + s * 58.0);          // axial, nose up
     return vec3(q.x * S, -18.0 + s * 82.0, 4.0 + q.y * S);                           // coronal
@@ -268,7 +310,7 @@ vec4 render3D(float lk, vec2 fc, vec2 R, float s) {
     vec2 q = (fc - 0.5 * R) / R.y;
     float a = TIME * rotSpeed * 0.5 + 0.6;
     vec3 c = vec3(0.0, -18.0, 8.0);
-    float dist = 470.0 / zoom;
+    float dist = 470.0 / gZoom;
     vec3 ro = c + vec3(sin(a) * dist, cos(a) * dist, 70.0 + 50.0 * sin(TIME * 0.13));
     vec3 f = normalize(c - ro);
     vec3 r = normalize(cross(f, vec3(0.0, 0.0, 1.0)));
@@ -344,8 +386,16 @@ void main() {
     vec2 fc = gl_FragCoord.xy;
     vec2 uv = fc / R;
     float ar = audioReact;
+    showDynamics();
     gFlip = texture2D(mriTex, vec2(0.5 / M_W, 0.5 / M_H)).b > 0.5 ? 1.0 : 0.0;
-    gT = TIME;
+    gT = TIME + 0.4 * audioMidTime * ar;
+    gZoom = zoom * (mix(0.86, 1.06, gLift) + 0.18 * gBuild + 0.06 * gDrop);          // pulls back at rest, pushes in on the build
+    gContrast = contrast * (mix(0.72, 1.15, gLift) + 0.15 * gBuild);
+    // tremor near the top of the build, and a sideways scan tear on the drop
+    float trem = smoothstep(0.7, 1.0, gBuild);
+    fc += trem * 1.6 * vec2(sin(TIME * 47.0), sin(TIME * 59.0 + 1.3)) * R.y / 512.0;
+    float band = floor(fc.y / R.y * 18.0);
+    fc.x += (h11(band + floor(TIME * 20.0)) - 0.5) * 0.12 * R.x * gDrop * step(0.55, h11(band * 1.7 + floor(TIME * 20.0)));
     gSeq = clamp(seqMix + 0.2 * sin(TIME * 0.11), 0.0, 1.0);
 
     float ph = TIME / morphPeriod;
@@ -369,9 +419,13 @@ void main() {
     }
 
     vec3 col = backdrop(uv) * (1.0 - C.a) + C.rgb;
-    float bar = exp(-pow((uv.y - fract(TIME * 0.15)) * 60.0, 2.0)) * scanline;
-    col += vec3(0.5, 0.8, 1.0) * bar * 0.35 * C.a;
+    // scan bar races during the build (phase ~ gBuild^2 so the rate climbs without jumps)
+    float bar = exp(-pow((uv.y - fract(TIME * 0.15 + 2.5 * gBuild * gBuild)) * 60.0, 2.0)) * scanline;
+    col += vec3(0.5, 0.8, 1.0) * bar * (0.35 + 0.5 * gBuild) * C.a;
+    float flick = 1.0 + gBuild * 0.25 * step(0.5, fract(30.0 * gBuild * gBuild));
+    col *= flick * (0.7 + 0.4 * gLift);
     col *= 1.0 + 0.35 * audioBeatPulse * ar * C.a;
+    col = mix(col, vec3(0.9, 0.97, 1.0), gDrop * gDrop * 0.5 * (0.08 + 0.92 * C.a));   // white scan flash
     vec2 cp = fract(fc / 3.0);
     float mask = 0.75 + 0.25 * smoothstep(0.2, 0.5, min(cp.x, cp.y));
     col *= mix(1.0, mask, crt);

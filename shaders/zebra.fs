@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Zebra — stripes drawn on a liquid sheet, with molten chrome. Glossy liquid-metal worms slither across the sheet, reflecting the live stripes and throwing shadows, while a vortex funnel twists the lines down into a tunnel. A heightfield made of flowing domain-warped waves, drifting bumps and beat-launched ripples is raymarched from a tilting camera, so the lines bend over real 3D folds, hide behind ridges, catch speculars and throw self-shadows. Six looks morph into each other: Satin (glossy black-and-white fabric), Op-Art (Riley-style gradient bands, orange to violet to cobalt to lime), Neon Spectrum (each line a full rainbow ribbon on black), Glitch Chroma (monochrome lines that split into RGB wherever the liquid is steep), Holo Chrome (thin silver lines over iridescent oil-slick colour) and Glow Lines (emissive line drawing floating on black). Stripes flow along the sheet, the camera breathes, and the RGB split follows the slope. Bass lifts the waves, beats fire ripples and a chroma kick, mids stir the flow, highs make the speculars and split flare.",
+  "DESCRIPTION": "Zebra — stripes drawn on a liquid sheet, with molten chrome. Glossy liquid-metal worms slither across the sheet, reflecting the live stripes and throwing shadows, while a vortex funnel twists the lines down into a tunnel. A heightfield made of flowing domain-warped waves, drifting bumps and beat-launched ripples is raymarched from a tilting camera, so the lines bend over real 3D folds, hide behind ridges, catch speculars and throw self-shadows. Six looks morph into each other: Satin (glossy black-and-white fabric), Op-Art (Riley-style gradient bands, orange to violet to cobalt to lime), Neon Spectrum (each line a full rainbow ribbon on black), Glitch Chroma (monochrome lines that split into RGB wherever the liquid is steep), Holo Chrome (thin silver lines over iridescent oil-slick colour) and Glow Lines (emissive line drawing floating on black). Stripes flow along the sheet, the camera breathes, and the RGB split follows the slope. Bass lifts the waves, beats fire ripples and a chroma kick, mids stir the flow, highs make the speculars and split flare. Rest: a calm, gently undulating sheet of fewer, wider lines seen from high above, with a couple of small chrome drops drifting; Build: the vortex deepens and winds the lines into a crowding tunnel while the flow accelerates, the chrome worms are drawn toward the throat, the split and speculars climb and the camera dives in; Drop: a huge ripple shockwave tears out from the centre with a chromatic burst, a flash and a swell of the metal, settling into a tall, turbulent, densely striped peak.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-21 — original.",
   "CATEGORIES": ["Generator", "3D", "Op Art", "Audio Reactive"],
   "INPUTS": [
@@ -36,6 +36,8 @@
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
     { "NAME": "audioReact",  "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6, "GROUP": "Audio Reactivity" },
+    { "NAME": "showState",   "LABEL": "Show State", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Follow Music", "Rest", "Build", "Peak"], "GROUP": "Show Dynamics" },
+    { "NAME": "dynamics",    "LABEL": "Build & Drop Depth", "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.85, "GROUP": "Show Dynamics" },
     { "NAME": "bgMode",      "LABEL": "Background", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2], "LABELS": ["Solid", "Vertical Gradient", "Radial Gradient"], "GROUP": "Background" },
     { "NAME": "bgColor",     "LABEL": "BG Color / Top / Center", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0], "GROUP": "Background" },
     { "NAME": "bgColor2",    "LABEL": "BG Bottom / Edge", "TYPE": "color", "DEFAULT": [0.03, 0.02, 0.06, 1.0], "GROUP": "Background" },
@@ -82,7 +84,27 @@ vec3 hueRot(vec3 c, float h) {
 }
 vec3 rainbow(float t) { return 0.5 + 0.5 * cos(TAU * (t + vec3(0.0, 0.33, 0.67))); }
 
-float gT, gAmp;
+// ── Show dynamics: rest → build → peak / drop ───────────────────────────
+float gRest, gBuild, gPeak, gDrop, gLift;
+void showDynamics() {
+    float m = float(showState);
+    float e = clamp(audioEnergy, 0.0, 1.0);
+    float b = clamp(audioBuildup, 0.0, 1.0);
+    float d = clamp(audioDrop, 0.0, 1.0);
+    if (m > 0.5) {                                   // manual override for the VJ
+        if (m < 1.5)      { e = 0.04; b = 0.0; d = 0.0; }                                      // Rest
+        else if (m < 2.5) { float r = fract(TIME / 8.0); e = 0.3 + 0.35 * r; b = r * r; d = 0.0; } // Build: 8 s riser, loops
+        else              { e = 1.0; b = 0.0; d = exp(-fract(TIME / 4.0) * 5.0); } // Peak: hits every 4 s + beats
+    }
+    float k = dynamics;
+    gBuild = b * k;                                                  // tension 0..1
+    gDrop  = d * k;                                                  // impact impulse 0..1
+    gPeak  = smoothstep(0.5, 0.9, e) * k;                            // sustained high section
+    gRest  = (1.0 - smoothstep(0.08, 0.4, e)) * (1.0 - b) * k;       // quiet / breakdown
+    gLift  = mix(0.5, clamp(0.15 + e * 0.7 + gBuild * 0.25 + d * 0.3, 0.0, 1.0), k);  // 0 rest … 1 peak; 0.5 when dynamics = 0
+}
+
+float gT, gAmp, gVort, gTurb, gLines;
 vec2 gRipC;
 vec2 gVC;                 // vortex centre (world xz)
 vec4 gS[30];              // chrome spheres: xyz centre, radius
@@ -94,10 +116,14 @@ float sminZ(float a, float b, float k) { float h = clamp(0.5 + 0.5 * (b - a) / k
 // ── the liquid ───────────────────────────────────────────────────────────
 float height(vec2 p) {
     vec2 vd = p - gVC;
-    float funnel = -vortex * 2.6 * exp(-dot(vd, vd) * 0.55) - vortex * 0.9 * exp(-dot(vd, vd) * 0.15);
+    float funnel = -gVort * 2.6 * exp(-dot(vd, vd) * 0.55) - gVort * 0.9 * exp(-dot(vd, vd) * 0.15);
+    // drop: one big ring shockwave racing out from the vortex centre (world units, not scaled with gAmp's calm)
+    float dr = length(vd);
+    float drR = (1.0 - gDrop) * 6.0 + 0.3;
+    float shock = 1.1 * gDrop * sin((dr - drR) * 4.0) * exp(-pow((dr - drR) * 1.3, 2.0));
     p *= 0.75 / waveScale;
     float t = gT;
-    float tu = turbulence;
+    float tu = gTurb;
     vec2 q = p;
     q += 0.55 * tu * vec2(sin(p.y * 1.3 + t * 0.9), cos(p.x * 1.1 - t * 0.7));
     q += 0.3 * tu * vec2(sin(q.y * 2.3 - t * 1.2 + 1.7), cos(q.x * 2.1 + t * 1.05));
@@ -115,7 +141,7 @@ float height(vec2 p) {
     float rd = length(p - gRipC);
     float rr = (1.0 - audioBeatPulse) * 3.5;
     h += 0.35 * audioBeatPulse * audioReact * sin((rd - rr) * 9.0) * exp(-pow((rd - rr) * 2.2, 2.0));
-    return (h + funnel) * gAmp;
+    return (h + funnel) * gAmp + shock * 0.6 * waveHeight;
 }
 
 vec3 normalAt(vec2 p) {
@@ -191,14 +217,17 @@ vec3 look(float k, float s, vec3 P, vec3 n, vec3 rd, float diff, float spec, flo
 
 // ── liquid chrome: chains of melted spheres (precomputed per frame) ────────
 void buildChrome() {
-    gNS = floor(clamp(chromeCount, 1.0, 6.0) + 0.5) * 5.0;
+    gNS = floor(clamp(chromeCount + (gLift - 0.5) * 3.0, 1.0, 6.0) + 0.5) * 5.0;
+    float cScale = 1.0 - 0.3 * gRest + 0.1 * gPeak + 0.35 * gDrop * gDrop;
     float ct = TIME * chromeSpeed * 0.6 + 0.3 * audioBassTime * audioReact * chromeSpeed;
     for (int w = 0; w < 6; w++) {
         float fw = float(w);
         vec2 c0 = vec2(2.3 * sin(ct * (0.13 + 0.03 * fw) + fw * 1.9), 1.7 * cos(ct * (0.11 + 0.025 * fw) + fw * 2.7));
         // keep worms out of the funnel's throat, they slide around its rim
         vec2 dv = c0 - gVC;
-        c0 = gVC + normalize(dv + 1e-4) * max(length(dv), 1.8 * vortex + 0.4);
+        // build: the worms are drawn in toward the funnel rim
+        dv *= 1.0 - 0.45 * gBuild;
+        c0 = gVC + normalize(dv + 1e-4) * max(length(dv), 1.8 * gVort + 0.4);
         float base = height(c0);
         float ang = ct * 0.25 + fw * 1.3;
         for (int k = 0; k < 5; k++) {
@@ -208,7 +237,7 @@ void buildChrome() {
             vec2 off = vec2(cos(a), sin(a)) * sk * 0.25 * chromeSize;
             off += 0.12 * chromeSize * vec2(sin(ct * 1.7 + fk * 1.3 + fw), cos(ct * 1.3 + fk * 1.1 - fw)) * abs(sk);
             float r = chromeSize * (0.17 + 0.05 * sin(fk * 1.7 + fw * 3.1 + ct * 1.4)) * (1.0 - 0.22 * abs(sk) / 2.0)
-                    * (1.0 + 0.16 * bassP() * audioReact);
+                    * (1.0 + 0.16 * bassP() * audioReact) * cScale;
             if (w == 2 && k > 2) r *= 0.0;                        // a few short drops, not all long worms
             vec2 cxz = c0 + off;
             gS[w * 5 + k] = vec4(cxz.x, base + r * 0.45 + 0.04, cxz.y, r);
@@ -242,18 +271,18 @@ vec3 chromeNormal(vec3 p) {
 float stripeCoord(vec3 P) {
     vec2 q = P.xz;
     vec2 d = q - gVC;
-    q = gVC + rot2(vortex * (3.2 * exp(-length(d) * 0.6)) + vortex * 0.15 * sin(TIME * 0.3)) * d;
+    q = gVC + rot2(gVort * (3.2 * exp(-length(d) * 0.6)) * (1.0 + 0.8 * gBuild * gBuild) + gVort * 0.15 * sin(TIME * 0.3)) * d;
     float ang = lineAngle * PI;
     vec2 dir = vec2(cos(ang), sin(ang));
     vec2 pd = vec2(-dir.y, dir.x);
     float along = dot(q, pd);
     float bend = P.y * 0.45
-               + turbulence * 0.28 * (sin(along * 1.7 + gT * 0.8) + 0.6 * sin(along * 3.3 - dot(q, dir) * 1.3 - gT * 1.2));
-    float sLin = (dot(q, dir) + bend * lineWarp) * lineCount * 0.25 - TIME * lineFlow;
+               + gTurb * 0.28 * (sin(along * 1.7 + gT * 0.8) + 0.6 * sin(along * 3.3 - dot(q, dir) * 1.3 - gT * 1.2));
+    float sLin = (dot(q, dir) + bend * lineWarp) * gLines * 0.25 - (TIME * lineFlow + audioMidTime * 0.3 * lineFlow + 3.0 * gBuild * gBuild * sign(lineFlow + 1e-4));
     // inside the funnel the lines close into rings that crowd toward the throat (an endless tunnel)
     float r = length(d);
-    float sRing = -log(r + 0.04) * lineCount * 0.11 + TIME * (0.5 + lineFlow);
-    float w = vortex * smoothstep(2.4, 0.5, r);
+    float sRing = -log(r + 0.04) * gLines * 0.11 + TIME * (0.5 + lineFlow) + audioMidTime * 0.3 + 4.0 * gBuild * gBuild;
+    float w = min(gVort, 1.0) * smoothstep(2.4 + 0.8 * gBuild, 0.5, r);
     return mix(sLin, sRing, w);
 }
 
@@ -270,8 +299,13 @@ void main() {
     vec2 fc = gl_FragCoord.xy;
     vec2 uv = fc / R;
     float ar = audioReact;
-    gT = TIME * liquidSpeed + 0.5 * audioBassTime * ar * liquidSpeed + 0.4 * midP() * ar;
-    gAmp = 0.6 * waveHeight * (1.0 + 0.45 * bassP() * ar);
+    showDynamics();
+    gT = TIME * liquidSpeed + 0.5 * audioBassTime * ar * liquidSpeed + 0.4 * midP() * ar + 1.2 * gBuild * gBuild * liquidSpeed;
+    // rest: low, calm swell … peak: tall, turbulent liquid
+    gAmp = 0.6 * waveHeight * (1.0 + 0.45 * bassP() * ar) * mix(0.45, 1.25, smoothstep(0.1, 0.9, gLift));
+    gTurb = turbulence * mix(0.5, 1.4, gLift);
+    gVort = vortex * (1.0 - 0.45 * gRest - 0.15 * gPeak) + 0.55 * gBuild * gBuild;
+    gLines = lineCount * (1.0 - 0.3 * gRest + 0.2 * gPeak + 0.25 * gBuild);
     gRipC = vec2(1.5 * (h11(floor(TIME * 0.5)) - 0.5), 1.0 * (h11(floor(TIME * 0.5) + 7.0) - 0.5));
     gVC = vec2(0.5 * sin(TIME * 0.07), 0.35 * cos(TIME * 0.05));
     bool useChrome = chromeAmt > 0.01;
@@ -287,9 +321,9 @@ void main() {
     } else { la = sel - 1.0; lb = la; lf = 0.0; }
 
     // camera
-    float pitch = mix(1.45, 0.55, tilt) + camDrift * 0.06 * sin(TIME * 0.21);
+    float pitch = mix(1.45, 0.55, tilt) + camDrift * 0.06 * sin(TIME * 0.21) + 0.22 * gRest - 0.1 * gPeak;
     float yaw = camDrift * 0.25 * sin(TIME * 0.13);
-    float dist = 5.5;
+    float dist = 5.5 * (1.0 + 0.2 * gRest - 0.08 * gPeak - 0.25 * gBuild * gBuild + 0.1 * gDrop);
     vec3 ta = vec3(camDrift * 0.4 * sin(TIME * 0.09), 0.0, camDrift * 0.3 * cos(TIME * 0.11));
     vec3 ro = ta + dist * vec3(sin(yaw) * cos(pitch), sin(pitch), -cos(yaw) * cos(pitch));
     vec3 ww = normalize(ta - ro);
@@ -297,13 +331,14 @@ void main() {
     vec3 vv = cross(uu, ww);
     vec2 sp = (fc - 0.5 * R) / R.y;
     float focal = 1.6 * zoom;
+    sp += 0.004 * gBuild * gBuild * gBuild * vec2(sin(TIME * 53.0), cos(TIME * 47.0));   // tremor at the top of the build
     vec3 rd = normalize(sp.x * uu + sp.y * vv + focal * ww);
 
     vec3 col = userBg(uv);
     float alpha = 0.0;
 
     // heightfield march
-    float maxH = gAmp * (1.6 + 3.3 * vortex) + 0.05;
+    float maxH = gAmp * (1.6 + 3.3 * gVort) + 0.05 + 0.75 * waveHeight * gDrop;
     float t = 0.0;
     // start where the ray enters the slab |y| < maxH
     if (rd.y < 0.0) t = max(0.0, (ro.y - maxH) / -rd.y);
@@ -315,7 +350,7 @@ void main() {
         if (dh < 0.0) { hit = true; break; }
         if (p.y < -maxH && rd.y < 0.0) break;
         tPrev = t;
-        t += max(dh * mix(0.45, 0.3, vortex), 0.003 * t);
+        t += max(dh * mix(0.45, 0.3, min(gVort, 1.0)), 0.003 * t);
         if (t > 40.0) break;
     }
     if (hit) {
@@ -334,7 +369,7 @@ void main() {
         vec3 L = normalize(vec3(cos(la2) * 0.8, 0.75, sin(la2) * 0.8 + 0.3));
         float diff = clamp(dot(n, L), 0.0, 1.0);
         vec3 H = normalize(L - rd);
-        float spec = pow(clamp(dot(n, H), 0.0, 1.0), 48.0) * (1.0 + 1.5 * highP() * ar);
+        float spec = pow(clamp(dot(n, H), 0.0, 1.0), 48.0) * (1.0 + 1.5 * highP() * ar) * mix(0.6, 1.4, gLift) * (1.0 + 2.0 * gDrop);
         // soft self-shadow
         float sh = 1.0;
         if (shadows > 0.001) {
@@ -360,14 +395,14 @@ void main() {
         }
         // stripe coordinate on the sheet (+ op-art lateral bend by height)
         float s = stripeCoord(P);
-        float throat = vortex * smoothstep(-0.25, -1.8, P.y / max(gAmp, 0.05));
+        float throat = min(gVort, 1.0) * smoothstep(-0.25, -1.8, P.y / max(gAmp, 0.05));
         float slope = length(n.xz) / max(n.y, 0.2);
         // pixel footprint in stripe units (for AA)
-        float aa = clamp(lineCount * 0.25 * t / (R.y * focal * 0.5) / max(abs(dot(n, -rd)), 0.15), 0.002, 0.5);
+        float aa = clamp(gLines * 0.25 * t / (R.y * focal * 0.5) / max(abs(dot(n, -rd)), 0.15), 0.002, 0.5);
 
         // chromatic split: grows with slope (everywhere in Glitch Chroma)
         float gl = (abs(la - 3.0) < 0.5 ? 1.0 - lf : 0.0) + (abs(lb - 3.0) < 0.5 ? lf : 0.0);
-        float dlt = chroma * (0.04 + 0.22 * smoothstep(0.2, 1.6, slope) * (0.4 + gl) + 0.08 * audioBeatPulse * ar + 0.05 * highP() * ar);
+        float dlt = chroma * (0.04 + 0.22 * smoothstep(0.2, 1.6, slope) * (0.4 + gl) + 0.08 * audioBeatPulse * ar + 0.05 * highP() * ar + 0.12 * gBuild * gBuild + 0.35 * gDrop * gDrop) * mix(0.6, 1.2, gLift);
         vec3 cA0 = look(la, s + dlt, P, n, rd, diff, spec, sh, aa);
         vec3 cA1 = look(la, s,       P, n, rd, diff, spec, sh, aa);
         vec3 cA2 = look(la, s - dlt, P, n, rd, diff, spec, sh, aa);
@@ -444,8 +479,10 @@ void main() {
     }
 
     col *= 1.0 + 0.12 * audioLevel * ar;
+    col *= mix(0.88, 1.08, gLift) + 0.12 * gBuild * gBuild;
+    col = mix(col, vec3(1.0), 0.55 * smoothstep(0.55, 1.0, gDrop));      // drop flash
     col = hueRot(col, hueShift);
-    col = mix(vec3(lum(col)), col, saturation);
+    col = mix(vec3(lum(col)), col, saturation * (1.0 - 0.3 * gRest + 0.2 * gPeak + 0.15 * gBuild));
     vec2 dc = uv - 0.5;
     col *= 1.0 - 0.1 * smoothstep(0.4, 1.0, length(dc * vec2(R.x / R.y, 1.0)));
     col += (h12(fc + fract(TIME * 13.7) * 91.0) - 0.5) * grain * 0.08;

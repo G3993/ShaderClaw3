@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Body Garden — a still glass human figure with real anatomy (a sculpted human body baked into a 3D distance field), seen three-quarter from head to mid-thigh, with a living garden inside. The glass shell glows at its rim and catches highlights while the interior is raymarched as a volume: lungs breathe and sparkle with thousands of multicoloured points of light, a glowing pink nerve tree branches from the throat into the chest and pulses on the beat, vines spiral up through the torso and neck, flowers open and close in the head, shoulder and chest, a dense bed of blooms and leaves fills the belly, a cluster of sparks lives in the brain, and abstract 3D elements (rings, cubes and orbs) drift through the body. The figure never moves; everything inside it does. Bass makes the lungs breathe deeper, beats send a pulse up the nerves and flash the sparks, mids speed the drifting elements, highs twinkle the lights.",
+  "DESCRIPTION": "Body Garden — a still glass human figure with real anatomy (a sculpted human body baked into a 3D distance field), seen three-quarter from head to mid-thigh, with a living garden inside. The glass shell glows at its rim and catches highlights while the interior is raymarched as a volume: lungs breathe and sparkle with thousands of multicoloured points of light, a glowing pink nerve tree branches from the throat into the chest and pulses on the beat, vines spiral up through the torso and neck, flowers open and close in the head, shoulder and chest, a dense bed of blooms and leaves fills the belly, a cluster of sparks lives in the brain, and abstract 3D elements (rings, cubes and orbs) drift through the body. The figure never moves; everything inside it does. Bass makes the lungs breathe deeper, beats send a pulse up the nerves and flash the sparks, mids speed the drifting elements, highs twinkle the lights. Show Dynamics: at Rest the garden sleeps (buds closed, vines low, a few slow sparks and drifting shapes, soft glass); during a Build the vines climb, flowers unfurl, the sparks thicken and shimmer faster while the abstract shapes converge on the heart and tremble; at the Drop a shockwave of light bursts out from the chest through the whole body, the nerves and glass flash, and every bloom snaps fully open.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-21 — original. Figure: MakeHuman base mesh (CC0), baked to a signed distance field (body_sdf.png).",
   "CATEGORIES": ["Generator", "3D", "Nature", "Audio Reactive"],
   "INPUTS": [
@@ -28,6 +28,8 @@
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
     { "NAME": "audioReact",  "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6, "GROUP": "Audio Reactivity" },
+    { "NAME": "showState",   "LABEL": "Show State", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Follow Music", "Rest", "Build", "Peak"], "GROUP": "Show Dynamics" },
+    { "NAME": "dynamics",    "LABEL": "Build & Drop Depth", "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.85, "GROUP": "Show Dynamics" },
     { "NAME": "bgMode",      "LABEL": "Background", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2], "LABELS": ["Solid", "Vertical Gradient", "Radial Gradient"], "GROUP": "Background" },
     { "NAME": "bgColor",     "LABEL": "BG Color / Top / Center", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0], "GROUP": "Background" },
     { "NAME": "bgColor2",    "LABEL": "BG Bottom / Edge", "TYPE": "color", "DEFAULT": [0.03, 0.02, 0.06, 1.0], "GROUP": "Background" },
@@ -80,6 +82,26 @@ vec3 studioPalette(vec3 c) {
 }
 
 float gT, gBreath, gBeat;
+
+// ── Show dynamics: rest → build → peak / drop ───────────────────────────
+float gRest, gBuild, gPeak, gDrop, gLift;
+void showDynamics() {
+    float m = float(showState);
+    float e = clamp(audioEnergy, 0.0, 1.0);
+    float b = clamp(audioBuildup, 0.0, 1.0);
+    float d = clamp(audioDrop, 0.0, 1.0);
+    if (m > 0.5) {                                   // manual override for the VJ
+        if (m < 1.5)      { e = 0.04; b = 0.0; d = 0.0; }                                      // Rest
+        else if (m < 2.5) { float r = fract(TIME / 8.0); e = 0.3 + 0.35 * r; b = r * r; d = 0.0; } // Build: 8 s riser, loops
+        else              { e = 1.0; b = 0.0; d = exp(-fract(TIME / 4.0) * 5.0); } // Peak: hits every 4 s + beats
+    }
+    float k = dynamics;
+    gBuild = b * k;                                                  // tension 0..1
+    gDrop  = d * k;                                                  // impact impulse 0..1
+    gPeak  = smoothstep(0.5, 0.9, e) * k;                            // sustained high section
+    gRest  = (1.0 - smoothstep(0.08, 0.4, e)) * (1.0 - b) * k;       // quiet / breakdown
+    gLift  = mix(0.5, clamp(0.15 + e * 0.7 + gBuild * 0.25 + d * 0.3, 0.0, 1.0), k);  // 0 rest … 1 peak; 0.5 when dynamics = 0
+}
 
 // ── the figure: a real human body (MakeHuman CC0 base mesh) baked to a
 //    3D signed distance field, packed as 16-bit slices in body_sdf.png.
@@ -142,7 +164,8 @@ vec3 sparkles(vec3 p, float scale, float density) {
     float tw = 0.5 + 0.5 * sin(TIME * (2.0 + 5.0 * h.y) + h.z * 40.0);
     float k = h.y * 5.0;
     vec3 col = k < 1.0 ? cMagenta.rgb : (k < 2.0 ? cGold.rgb : (k < 3.0 ? cCyan.rgb : (k < 4.0 ? cLeaf.rgb : vec3(1.0, 0.9, 0.95))));
-    return col * exp(-d * 18.0) * (0.4 + 0.8 * tw) * (1.0 + 1.5 * highP() * audioReact + 1.5 * gBeat);
+    float shim = 1.0 + gBuild * 1.6 * (0.5 + 0.5 * sin(70.0 * gBuild * gBuild + h.z * 40.0 + TIME * 3.0));
+    return col * exp(-d * 18.0) * (0.4 + 0.8 * tw) * (1.0 + 1.5 * highP() * audioReact + 1.5 * gBeat + 2.0 * gDrop) * shim;
 }
 
 // airway + nerve tree: trachea down the throat, bronchi into each lung, and a
@@ -181,7 +204,7 @@ vec3 vineEmit(vec3 p) {
         float th = p.y * (1.6 + 0.3 * fi) + fi * 2.1 + gT * 0.25 * (mod(fi, 2.0) * 2.0 - 1.0);
         vec2 c = vec2(cos(th), sin(th)) * R + vec2(0.0, p.y > 6.6 ? 0.1 : 0.25);
         float d = length(p.xz - c);
-        float grow = smoothstep(-0.4, 0.2, sin(gT * 0.15 + fi * 2.0) * 1.2 + 1.0 - (p.y + 2.5) * 0.12);
+        float grow = smoothstep(-0.4, 0.2, sin(gT * 0.15 + fi * 2.0) * 1.2 + 1.0 - (p.y + 2.5) * 0.12 + (gLift - 0.5) * 2.2 + gBuild * 0.6);
         float stem = exp(-d * 30.0) * grow;
         float lf = fract(p.y * 2.6 + fi * 0.37);
         float leaf = exp(-length(vec2(d - 0.07, (lf - 0.5) * 0.38)) * 22.0) * step(0.45, h11(floor(p.y * 2.6 + fi * 0.37) + fi * 9.0)) * grow;
@@ -203,13 +226,13 @@ vec3 flowerEmit(vec3 p) {
         float r = length(q.xy);
         float a = atan(q.y, q.x);
         float N = 5.0 + mod(fi, 3.0);
-        float open = 0.7 + 0.3 * sin(gT * 0.5 + fi * 1.7);
+        float open = (0.7 + 0.3 * sin(gT * 0.5 + fi * 1.7)) * mix(0.45, 1.15, gLift) + 0.35 * gDrop;
         float petal = 0.32 * open * (0.55 + 0.45 * abs(cos(a * N * 0.5)));
         float thick = abs(q.z + 0.5 * r * r / max(open, 0.3)) - 0.015;
         float dP = max(r - petal, thick);
         float core = length(q) - 0.06;
         vec3 col = i == 0 ? cMagenta.rgb : i == 1 ? cViolet.rgb : i == 2 ? cMagenta.rgb : i == 3 ? cGold.rgb : i == 4 ? cCyan.rgb : i == 5 ? cViolet.rgb : cMagenta.rgb;
-        e += col * exp(-max(dP, 0.0) * 18.0) * 0.7 + mix(col, vec3(1.0), 0.6) * exp(-max(core, 0.0) * 25.0) * 1.2;
+        e += col * exp(-max(dP, 0.0) * 18.0) * 0.7 * (0.55 + 0.6 * gLift) + mix(col, vec3(1.0), 0.6) * exp(-max(core, 0.0) * 25.0) * 1.2;
     }
     return e;
 }
@@ -217,12 +240,19 @@ vec3 flowerEmit(vec3 p) {
 // abstract elements drifting through the body
 vec3 elementEmit(vec3 p) {
     vec3 e = vec3(0.0);
-    float sp = gT * (0.6 + 0.6 * midP() * audioReact);
+    float sp = gT * 0.6 + 0.6 * audioMidTime * audioReact * speed + 2.5 * gBuild * gBuild;
+    float nEl = mix(2.5, 8.0, smoothstep(0.1, 0.75, gLift));
+    float conv = 0.55 * gBuild;                                  // converge on the heart
+    float trem = smoothstep(0.65, 1.0, gBuild) * 0.06;
     for (int i = 0; i < 8; i++) {
         float fi = float(i);
+        float on = clamp(nEl - fi, 0.0, 1.0);
+        if (on <= 0.0) break;
         float hy = mix(-1.5, 7.8, h11(fi * 3.3));
         float rr = hy > 6.0 ? 0.35 : (hy > 5.4 ? 0.2 : 0.75);
         vec3 c = vec3(rr * cos(sp * (0.3 + 0.1 * fi) + fi * 2.0), hy + 0.25 * sin(sp * 0.5 + fi), 0.2 + rr * 0.5 * sin(sp * (0.3 + 0.1 * fi) + fi * 2.0));
+        c = mix(c, vec3(c.x * 0.4, mix(c.y, 4.3, 0.6), 0.3), conv);
+        c += trem * vec3(sin(TIME * 41.0 + fi * 3.0), sin(TIME * 37.0 + fi * 5.0), sin(TIME * 45.0 + fi));
         vec3 q = p - c;
         q.xz = rot(sp * 0.7 + fi) * q.xz;
         q.xy = rot(sp * 0.5 + fi * 2.0) * q.xy;
@@ -232,7 +262,7 @@ vec3 elementEmit(vec3 p) {
         else if (k < 1.5) { vec3 bq = abs(q) - vec3(0.12); d = abs(length(max(bq, 0.0)) + min(max(bq.x, max(bq.y, bq.z)), 0.0)) - 0.01; }
         else d = abs(length(q) - 0.14) - 0.012;
         vec3 col = k < 0.5 ? cCyan.rgb : (k < 1.5 ? cGold.rgb : cViolet.rgb);
-        e += col * exp(-max(d, 0.0) * 40.0) * 0.9;
+        e += col * exp(-max(d, 0.0) * 40.0) * 0.9 * on * (0.7 + 0.5 * gLift + 0.6 * gBuild);
     }
     return e;
 }
@@ -253,8 +283,9 @@ vec3 bellyEmit(vec3 p) {
     float a = atan(d3.y, d3.x) + h.z * 6.0;
     float petals = 0.2 * open * (0.6 + 0.4 * abs(cos(a * (2.5 + floor(h.y * 3.0)))));
     float bloomD = r - petals;
-    vec3 e = col * exp(-max(bloomD, 0.0) * 22.0) * 0.55 * step(0.25, h.y);
-    e += mix(col, vec3(1.0), 0.5) * exp(-r * 30.0) * 0.6 * step(0.25, h.y);
+    float thr = mix(0.72, 0.2, gLift);                           // fewer blooms at rest
+    vec3 e = col * exp(-max(bloomD, 0.0) * 22.0) * 0.55 * step(thr, h.y);
+    e += mix(col, vec3(1.0), 0.5) * exp(-r * 30.0) * 0.6 * step(thr, h.y);
     e += cLeaf.rgb * 0.18 * exp(-abs(r - 0.32) * 25.0) * step(h.y, 0.45);
     return e * reg * 1.7 * (1.0 + 0.5 * gBeat);
 }
@@ -281,25 +312,33 @@ vec3 interiorEmit(vec3 p) {
     float dl = lungSDF(p);
     float inL = smoothstep(0.06, -0.1, dl);
     if (inL > 0.001) {
-        e += mix(cMagenta.rgb, cViolet.rgb, 0.5 + 0.5 * sin(p.y * 2.0 + gT)) * inL * 0.22 * lungGlow * (1.0 + 0.6 * bassP() * audioReact);
-        e += sparkles(p + vec3(0.0, gT * 0.06, 0.0), 8.0, 0.55) * inL * sparkle;
+        e += mix(cMagenta.rgb, cViolet.rgb, 0.5 + 0.5 * sin(p.y * 2.0 + gT)) * inL * 0.22 * lungGlow * (1.0 + 0.6 * bassP() * audioReact) * (0.55 + 0.7 * gLift);
+        e += sparkles(p + vec3(0.0, gT * 0.06, 0.0), 8.0, mix(0.18, 0.8, gLift)) * inL * sparkle;
         float tr = lungTree(p);
         float tp = 0.7 + 0.3 * sin(gT * 2.0 - p.y * 3.5) + gBeat;
-        e += mix(vec3(1.0, 0.62, 0.45), cMagenta.rgb, 0.35) * exp(-max(tr, 0.0) * 32.0) * inL * 2.2 * tp * nerves;
+        e += mix(vec3(1.0, 0.62, 0.45), cMagenta.rgb, 0.35) * exp(-max(tr, 0.0) * 32.0) * inL * 2.2 * tp * nerves * (0.35 + 0.8 * gLift);
     }
     e += mix(cMagenta.rgb, vec3(1.0), 0.3) * exp(-abs(dl) * 22.0) * 0.25 * lungGlow;
     float hb = length((p - vec3(0.0, 7.7, 0.05)) / vec3(0.72, 0.68, 0.85));
     if (hb < 1.0) e += sparkles(p, 9.0, 0.2) * smoothstep(1.0, 0.6, hb) * sparkle;
-    e += sparkles(p + 3.1, 5.0, 0.06) * 0.6 * sparkle;
+    e += sparkles(p + 3.1, 5.0, mix(0.02, 0.16, gLift)) * 0.6 * sparkle;
     float along;
     float dn = nerveSDF(p, along);
-    float pulse = exp(-pow((along - fract(TIME * 0.4)) * 8.0, 2.0)) + gBeat * 1.5;
+    float pulse = exp(-pow((along - fract(TIME * 0.4)) * 8.0, 2.0)) + gBeat * 1.5
+                + gBuild * exp(-pow((along - fract(TIME * 0.4 + 3.0 * gBuild * gBuild)) * 8.0, 2.0)) * 1.5
+                + gDrop * 3.0;
     e += mix(cMagenta.rgb, vec3(1.0, 0.8, 0.95), 0.35) * exp(-max(dn, 0.0) * 50.0) * (0.8 + pulse) * nerves;
     e += cMagenta.rgb * exp(-max(dn, 0.0) * 11.0) * 0.12 * nerves;
     if (vines > 0.001) e += vineEmit(p) * vines;
     if (flowers > 0.001) e += flowerEmit(p) * flowers;
     if (elements > 0.001) e += elementEmit(p) * elements;
-    if (bellyGarden > 0.001) e += bellyEmit(p) * bellyGarden;
+    if (bellyGarden > 0.001) e += bellyEmit(p) * bellyGarden * (0.45 + 0.75 * gLift);
+    // drop: a shockwave of light expanding out from the heart
+    if (gDrop > 0.01) {
+        float rw = (1.0 - gDrop) * 7.0;
+        float sw = exp(-abs(length((p - vec3(0.0, 4.2, 0.3)) * vec3(1.0, 0.6, 1.0)) - rw) * 12.0);
+        e += mix(vec3(1.0, 0.85, 0.95), cCyan.rgb, 0.35) * sw * gDrop * 0.55;
+    }
     return e;
 }
 
@@ -352,6 +391,8 @@ vec4 scenePass() {
     vec3 rf = reflect(rdB, n);
     float spec = pow(clamp(dot(rf, L1), 0.0, 1.0), 70.0) + 0.5 * pow(clamp(dot(rf, normalize(vec3(-0.7, 0.3, 0.6))), 0.0, 1.0), 40.0);
     vec3 rimC = mix(shellTint.rgb, cCyan.rgb, 0.5 + 0.5 * n.y);
+    acc *= 0.6 + 0.5 * gLift;
+    rimC *= 0.75 + 0.35 * gLift + 1.2 * gDrop;
     vec3 col = acc + rimC * fres * 0.9 * shellGlow + vec3(0.9, 0.95, 1.0) * spec * 0.7 * shellGlow;
     col += shellTint.rgb * (0.07 + 0.18 * pow(fres, 0.7));                 // luminous glass body
     col += shellTint.rgb * 0.12 * smoothstep(0.0, 1.0, n.y * 0.5 + 0.5) * shellGlow;
@@ -396,7 +437,7 @@ vec4 finalPass() {
         b += texture2D(fBloom, uv + o).rgb * w;
         ws += w;
     }
-    b = b / ws * bloom;
+    b = b / ws * bloom * (0.65 + 0.6 * gLift + 0.8 * gDrop);
     vec3 light = sc.rgb + b;
     light *= 1.0 + 0.12 * audioLevel * audioReact;
     vec3 col = 1.0 - exp(-light * 1.4);
@@ -409,9 +450,10 @@ vec4 finalPass() {
 }
 
 void main() {
+    showDynamics();
     gT = TIME * speed + 0.3 * audioBassTime * audioReact * speed;
     gBeat = audioBeatPulse * audioReact;
-    gBreath = 1.0 + 0.05 * sin(TIME * 1.2) + 0.08 * bassP() * audioReact;
+    gBreath = 1.0 + 0.05 * sin(TIME * 1.2) + 0.08 * bassP() * audioReact + 0.05 * (gLift - 0.5) + 0.07 * gDrop;
     if (PASSINDEX == 0)      gl_FragColor = scenePass();
     else if (PASSINDEX == 1) gl_FragColor = bloomPass();
     else                     gl_FragColor = finalPass();

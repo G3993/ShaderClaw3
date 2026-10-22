@@ -1056,5 +1056,11 @@
   },
   "brain_scans": {
     "group": "studio"
+  },
+  "liquid_particles": {
+    "group": "studio"
+  },
+  "feathers": {
+    "group": "studio"
   }
 }

@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Objectos — a wobbly totem of 3 to 6 soft 3D objects (spheres, fat rings, clover crosses, puffy flowers, twin blobs, rounded cubes, pills, pucks) balanced on top of each other and dancing. A real spring–damper simulation runs every frame in a tiny persistent buffer: each object has its own squash-and-stretch spring and two lean springs coupled to the one beneath it, so motion travels up the stack with lag and overshoot like jelly; the whole totem hops on beats, lands, and squashes on impact. Bass compresses the stack, beats make it jump, mids add a rubbery wobble and twist, highs make the glossy highlights flare. Each slot slowly morphs into another shape, and the materials keep trading — glossy black, glowing gradient, dark-rimmed matte, stripes, dots, checks, iridescent — in a palette pulled from the references (signal red, cyan, maroon, pink, lavender, ink).",
+  "DESCRIPTION": "Objectos — a wobbly totem of 3 to 6 soft 3D objects (spheres, fat rings, clover crosses, puffy flowers, twin blobs, rounded cubes, pills, pucks) balanced on top of each other and dancing. A real spring–damper simulation runs every frame in a tiny persistent buffer: each object has its own squash-and-stretch spring and two lean springs coupled to the one beneath it, so motion travels up the stack with lag and overshoot like jelly; the whole totem hops on beats, lands, and squashes on impact. Bass compresses the stack, beats make it jump, mids add a rubbery wobble and twist, highs make the glossy highlights flare. Each slot slowly morphs into another shape, and the materials keep trading — glossy black, glowing gradient, dark-rimmed matte, stripes, dots, checks, iridescent — in a palette pulled from the references (signal red, cyan, maroon, pink, lavender, ink). Rest: a small, sparse totem of three far away, swaying lazily in soft desaturated light; Build: the stack grows, coils down into a squash, spins faster and trembles while the camera pushes in and the highlights flicker; Drop: a white flash and shockwave ring as the whole totem is punched up into a big hop and scale burst, settling into a tall, saturated, double-time dancing peak.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-21 — original.",
   "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
   "INPUTS": [
@@ -34,6 +34,8 @@
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
     { "NAME": "audioReact",  "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.7, "GROUP": "Audio Reactivity" },
+    { "NAME": "showState",   "LABEL": "Show State", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Follow Music", "Rest", "Build", "Peak"], "GROUP": "Show Dynamics" },
+    { "NAME": "dynamics",    "LABEL": "Build & Drop Depth", "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.85, "GROUP": "Show Dynamics" },
     { "NAME": "bgMode",      "LABEL": "Background", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2], "LABELS": ["Solid", "Vertical Gradient", "Radial Gradient"], "GROUP": "Background" },
     { "NAME": "bgColor",     "LABEL": "BG Color / Top / Center", "TYPE": "color", "DEFAULT": [0.93, 0.94, 0.99, 1.0], "GROUP": "Background" },
     { "NAME": "bgColor2",    "LABEL": "BG Bottom / Edge", "TYPE": "color", "DEFAULT": [0.03, 0.02, 0.1, 1.0], "GROUP": "Background" },
@@ -92,6 +94,26 @@ float smin(float a, float b, float k) {
     return mix(b, a, h) - k * h * (1.0 - h);
 }
 
+// ── Show dynamics: rest → build → peak / drop ───────────────────────────
+float gRest, gBuild, gPeak, gDrop, gLift;
+void showDynamics() {
+    float m = float(showState);
+    float e = clamp(audioEnergy, 0.0, 1.0);
+    float b = clamp(audioBuildup, 0.0, 1.0);
+    float d = clamp(audioDrop, 0.0, 1.0);
+    if (m > 0.5) {                                   // manual override for the VJ
+        if (m < 1.5)      { e = 0.04; b = 0.0; d = 0.0; }                                      // Rest
+        else if (m < 2.5) { float r = fract(TIME / 8.0); e = 0.3 + 0.35 * r; b = r * r; d = 0.0; } // Build: 8 s riser, loops
+        else              { e = 1.0; b = 0.0; d = exp(-fract(TIME / 4.0) * 5.0); } // Peak: hits every 4 s + beats
+    }
+    float k = dynamics;
+    gBuild = b * k;                                                  // tension 0..1
+    gDrop  = d * k;                                                  // impact impulse 0..1
+    gPeak  = smoothstep(0.5, 0.9, e) * k;                            // sustained high section
+    gRest  = (1.0 - smoothstep(0.08, 0.4, e)) * (1.0 - b) * k;       // quiet / breakdown
+    gLift  = mix(0.5, clamp(0.15 + e * 0.7 + gBuild * 0.25 + d * 0.3, 0.0, 1.0), k);  // 0 rest … 1 peak; 0.5 when dynamics = 0
+}
+
 // ═════════════════════════════════════════════════════════════════════════
 //  PHYSICS
 // ═════════════════════════════════════════════════════════════════════════
@@ -115,7 +137,11 @@ vec4 physPass() {
     float damp = mix(9.0, 2.2, jelly);
     float kS = 70.0, kT = 34.0;
     float beat = audioBeatPulse * audioBeatPulse * ar;
-    float tt = TIME * tempo;
+    float tt = TIME * tempo + audioMidTime * 0.3 * tempo;
+    // rest: lazy, small groove … peak: big groove that crossfades into double time
+    float dAmt = dance * mix(0.35, 1.45, gLift);
+    float dbl = smoothstep(0.55, 0.95, gLift);
+    float trem = gBuild * gBuild * gBuild;            // tremor near the top of the build
 
     float s = a0.x, sv = a0.y, tx = a0.z, txv = a0.w;
     float tz = a1.x, tzv = a1.y, hop = a1.z, hv = a1.w;
@@ -125,7 +151,9 @@ vec4 physPass() {
         // a groove keeps it alive in silence, neighbour below drags it along
         float fS = -1.6 * bassP() * ar * (1.0 - 0.1 * i)
                  + 3.0 * beat
-                 + 0.9 * dance * sin(tt * 4.2 - i * 0.7)
+                 + 0.9 * dAmt * mix(sin(tt * 4.2 - i * 0.7), sin(tt * 8.4 - i * 0.9), dbl)
+                 - 2.2 * gBuild * (1.0 - 0.12 * i)                  // build: the stack coils down
+                 + 6.0 * gDrop * gDrop                              // drop: everything springs tall
                  + 18.0 * (b0.x - s) * step(0.5, i);
         float acc = -kS * s - damp * sv + fS * 12.0 * squash;
         sv += acc * dt; s += sv * dt;
@@ -133,10 +161,11 @@ vec4 physPass() {
         if (i < 0.5 && g1.z + g1.w * dt * 2.0 <= 0.0 && g1.w < -0.6) sv -= 2.2 * min(-g1.w, 4.0) * squash;
 
         // lean springs: target follows the object below + a side-to-side dance
-        float swayX = dance * (0.11 * sin(tt * 2.1 - i * 0.8) + 0.05 * sin(tt * 3.3 + i)) * (1.0 + 0.6 * bassP() * ar);
-        float swayZ = dance * 0.07 * sin(tt * 1.7 - i * 0.6 + 1.3);
+        float swayX = dAmt * (0.11 * mix(sin(tt * 2.1 - i * 0.8), sin(tt * 4.2 - i * 0.8), dbl) + 0.05 * sin(tt * 3.3 + i)) * (1.0 + 0.6 * bassP() * ar) * (1.0 - 0.6 * gBuild)
+                    + 0.05 * trem * sin(TIME * 47.0 + i * 2.3);
+        float swayZ = dAmt * 0.07 * sin(tt * 1.7 - i * 0.6 + 1.3) * (1.0 - 0.6 * gBuild) + 0.035 * trem * sin(TIME * 39.0 + i * 1.7);
         float flip = mod(floor(TIME * 1.7), 2.0) * 2.0 - 1.0;
-        float accX = -kT * (tx - (0.55 * b0.z + swayX)) - damp * 0.8 * txv + beat * flip * 5.0 * dance + 25.0 * (b0.w - txv) * 0.05 * step(0.5, i);
+        float accX = -kT * (tx - (0.55 * b0.z + swayX)) - damp * 0.8 * txv + beat * flip * 5.0 * dance + gDrop * gDrop * flip * 9.0 * (0.5 + 0.2 * i) + 25.0 * (b0.w - txv) * 0.05 * step(0.5, i);
         float accZ = -kT * (tz - (0.55 * b1.x + swayZ)) - damp * 0.8 * tzv;
         txv += accX * dt; tx += txv * dt;
         tzv += accZ * dt; tz += tzv * dt;
@@ -146,7 +175,8 @@ vec4 physPass() {
             hv -= 14.0 * dt;
             hop += hv * dt;
             if (hop <= 0.0) { hop = 0.0; hv = hv < -0.6 ? -hv * 0.22 * jelly : 0.0; }
-            if (audioBeatPulse > 0.88 && hop < 0.02 && hv <= 0.1) hv = 3.6 * jump * ar;
+            if (audioBeatPulse > 0.88 && hop < 0.02 && hv <= 0.1) hv = 3.6 * jump * ar * mix(0.5, 1.2, gLift);
+            if (gDrop > 0.6 && hop < 0.02 && hv <= 0.1) hv = 5.5 * max(jump, 0.4);   // the drop launches the totem
         }
     }
     s = clamp(s, -0.45, 0.6); tx = clamp(tx, -0.35, 0.35); tz = clamp(tz, -0.3, 0.3);
@@ -208,11 +238,14 @@ float oA[MAXN], oB[MAXN], oF[MAXN];   // shape a → b, morph f
 float oSpin[MAXN];
 float gN;
 float gTop;
+float oK[MAXN];      // per-object scale (top object grows/shrinks in with the dynamics)
 int   gHitId;
 float gHitBlend;
 
 void buildStack() {
-    gN = floor(clamp(objCount, 3.0, 6.0) + 0.5);
+    float nEff = clamp(floor(clamp(objCount, 3.0, 6.0) + 0.5) + (gLift - 0.5) * 2.4, 2.6, 6.0);
+    gN = ceil(nEff - 0.02);
+    float punch = 1.0 + 0.22 * gDrop * gDrop + 0.08 * gPeak - 0.12 * gRest;
     float hop = st1(0.0).z;
     vec3 contact = vec3(0.0, hop, 0.0);
     vec2 lean = vec2(0.0);
@@ -228,28 +261,31 @@ void buildStack() {
         oA[i] = sa; oB[i] = sb; oF[i] = f;
         float sq = 1.0 + s0.x;
         oS[i] = sq;
-        float hh = mix(shapeHalfH(sa), shapeHalfH(sb), f) * sq * objScale;
+        // the last object fades in by size (count follows the show) — no popping
+        float grow = smoothstep(0.0, 1.0, clamp(nEff - fi, 0.0, 1.0));
+        oK[i] = max(grow, 0.03) * punch;
+        float hh = mix(shapeHalfH(sa), shapeHalfH(sb), f) * sq * objScale * oK[i];
         lean += vec2(s0.z, s1.x);
         oLean[i] = lean;
         vec3 ax = normalize(vec3(sin(lean.x), 1.0, sin(lean.y)));
         vec3 c = contact + ax * hh * 0.97;
         oC[i] = c;
         contact = c + ax * hh * 0.97;
-        oSpin[i] = TIME * spin * (0.25 + 0.4 * h11(fi * 5.1)) * (mod(fi, 2.0) * 2.0 - 1.0);
-        if (fi > gN - 0.5) oC[i] = vec3(0.0, -100.0, 0.0);
+        oSpin[i] = (TIME * spin + audioMidTime * 0.4 * spin + 5.0 * gBuild * gBuild * spin) * (0.25 + 0.4 * h11(fi * 5.1)) * (mod(fi, 2.0) * 2.0 - 1.0);
+        if (fi > gN - 0.5 || grow < 0.03) oC[i] = vec3(0.0, -100.0, 0.0);
     }
     gTop = contact.y;
 }
 
-float objSDF(vec3 c, vec2 lean, float sq, float sa, float sb, float f, float spn, float fi, vec3 p) {
+float objSDF(vec3 c, vec2 lean, float sq, float sa, float sb, float f, float spn, float fi, float ok, vec3 p) {
     vec3 q = p - c;
     // undo the lean (small-angle: rotate about z then x)
     q.xy = rot(lean.x) * q.xy;
     q.zy = rot(lean.y) * q.zy;
-    vec3 sc = vec3(1.0 / sqrt(sq), sq, 1.0 / sqrt(sq)) * objScale;
+    vec3 sc = vec3(1.0 / sqrt(sq), sq, 1.0 / sqrt(sq)) * objScale * ok;
     q /= sc;
     // rubbery deform: twist + wobble
-    float tw = deform * (0.6 * sin(TIME * 1.3 + fi * 2.0) + 0.8 * midP() * audioReact) * q.y;
+    float tw = deform * (0.6 * sin(TIME * 1.3 + fi * 2.0) * mix(0.5, 1.3, gLift) + 0.8 * midP() * audioReact + 0.9 * gBuild * gBuild) * q.y;
     q.xz = rot(tw + spn) * q.xz;
     q.xz *= 1.0 + deform * 0.06 * sin(q.y * 9.0 + TIME * 3.0 + fi);
     float d = mix(shapeSDF(sa, q), shapeSDF(sb, q), f);
@@ -261,7 +297,7 @@ float map(vec3 p) {
     gHitId = 0;
     for (int i = 0; i < MAXN; i++) {
         if (float(i) > gN - 0.5) break;
-        float di = objSDF(oC[i], oLean[i], oS[i], oA[i], oB[i], oF[i], oSpin[i], float(i), p);
+        float di = objSDF(oC[i], oLean[i], oS[i], oA[i], oB[i], oF[i], oSpin[i], float(i), oK[i], p);
         if (di < d) { gHitId = i; }
         d = smin(d, di, 0.025);
     }
@@ -360,10 +396,25 @@ vec4 renderPass() {
     vec3 uu = normalize(cross(ww, vec3(0.0, 1.0, 0.0)));
     vec3 vv = cross(uu, ww);
     vec2 sp = (fc - 0.5 * R) / R.y;
-    float focal = 9.0 / (H * 1.1 + 0.6) * zoom;
+    // rest: pulled back (lots of negative space) … build: push in … drop: punch
+    float focal = 9.0 / (H * 1.1 + 0.6) * zoom * (mix(0.72, 1.0, smoothstep(0.1, 0.7, gLift)) + 0.07 * gPeak + 0.22 * gBuild * gBuild - 0.12 * gDrop);
+    sp += 0.004 * gBuild * gBuild * gBuild * vec2(sin(TIME * 53.0), cos(TIME * 61.0));   // tremor
     vec3 rd = normalize(sp.x * uu + sp.y * vv + focal * ww);
 
     vec3 bg = backdrop(uv);
+    // drop: a shockwave ring travels out from the base; peak: a soft halo behind the totem
+    {
+        vec2 sc = (fc - 0.5 * R) / R.y;
+        vec2 bc = vec2(0.0, -0.32);
+        float rr = length((sc - bc) * vec2(1.0, 1.6));
+        float wave = (1.0 - gDrop) * 1.4;
+        float ring = exp(-pow((rr - wave) * 10.0, 2.0)) * gDrop * smoothstep(0.0, 0.5, gDrop) * 1.4;
+        vec3 acc = mix(c1.rgb, c4.rgb, 0.5 + 0.5 * sin(TIME * 0.3));
+        bg += acc * ring * 0.9;
+        float halo = exp(-dot(sc - vec2(0.0, 0.05), sc - vec2(0.0, 0.05)) * 3.0);
+        bg = mix(bg, bg + acc * 0.35 * halo, gPeak * 0.7 + gBuild * 0.3);
+        bg *= 1.0 - 0.18 * gRest * smoothstep(0.3, 0.9, length(sc));
+    }
     vec3 col = bg;
     float alpha = 0.0;
 
@@ -419,11 +470,18 @@ vec4 renderPass() {
         col *= 0.55 + 0.45 * ao;
         col += vec3(1.0) * highP() * ar * 0.25 * pow(clamp(dot(n, normalize(L - rd)), 0.0, 1.0), 40.0);
         col *= 1.0 + 0.15 * audioLevel * ar;
+        // rest: softer light … build: a highlight shimmer whose rate climbs … peak: hotter
+        float shim = 0.5 + 0.5 * sin(TIME * 9.0 + gBuild * gBuild * 70.0 + fi * 1.7);
+        col += vec3(1.0) * gBuild * gBuild * shim * 0.35 * pow(clamp(dot(n, normalize(L - rd)), 0.0, 1.0), 20.0);
+        col *= mix(0.85, 1.12, gLift) + 0.15 * gBuild;
         alpha = 1.0;
     }
 
     col = hueRot(col, hueShift);
-    col = mix(vec3(lum(col)), col, saturation);
+    col = mix(vec3(lum(col)), col, saturation * (1.0 - 0.3 * gRest + 0.25 * gPeak + 0.2 * gBuild));
+    // drop flash + chromatic fringe burst
+    col = mix(col, vec3(1.0), 0.55 * gDrop * gDrop * gDrop);
+    col += vec3(0.25, -0.05, 0.3) * gDrop * gDrop * (1.0 - alpha * 0.5);
     col += (h12(fc + fract(TIME * 13.7) * 91.0) - 0.5) * grain * 0.06;
     col += (h12(fc * 1.03 + fract(TIME * 7.1) * 57.0) + h12(fc * 0.97 + 11.0) - 1.0) * (1.5 / 255.0);
     col = studioPalette(clamp(col, 0.0, 1.0));
@@ -431,6 +489,7 @@ vec4 renderPass() {
 }
 
 void main() {
+    showDynamics();
     if (PASSINDEX == 0) gl_FragColor = physPass();
     else                gl_FragColor = renderPass();
 }

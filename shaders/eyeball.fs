@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Eyeball — a living 3D eye (or two). Each eyeball is a true sphere with a refracting cornea, a fibrous iris and a pupil that is a portal: look through it and you see a whole world inside — Fire (rising flames), Water (caustics and bubbles), Thunder (storm clouds split by lightning), Galaxy (a spiral nebula of stars), Acid (oil-slick swirls) or a Rainbow iris of streaming colour fibres — and that world also flows through the iris fibres. Worlds morph from one to the next. The white of the eye has its own styles: classic red veins, neon holographic, dark sculpted creases or liquid chrome, with wet highlights, window reflections and a fresnel rim. Choose One Eye, Two Eyes or Twin Iris (two irises on one ball). Switch on Eyelids & Skin for almond lids, curled lashes and blinks, and the 1-Bit Dither look turns it all into chunky black-and-white pixel art. The gaze drifts and snaps to new targets, the pupil dilates with the bass, beats make it jump and strike lightning, mids churn the worlds, highs sparkle the highlights.",
+  "DESCRIPTION": "Eyeball — a living 3D eye (or two). Each eyeball is a true sphere with a refracting cornea, a fibrous iris and a pupil that is a portal: look through it and you see a whole world inside — Fire (rising flames), Water (caustics and bubbles), Thunder (storm clouds split by lightning), Galaxy (a spiral nebula of stars), Acid (oil-slick swirls) or a Rainbow iris of streaming colour fibres — and that world also flows through the iris fibres. Worlds morph from one to the next. The white of the eye has its own styles: classic red veins, neon holographic, dark sculpted creases or liquid chrome, with wet highlights, window reflections and a fresnel rim. Choose One Eye, Two Eyes or Twin Iris (two irises on one ball). Switch on Eyelids & Skin for almond lids, curled lashes and blinks, and the 1-Bit Dither look turns it all into chunky black-and-white pixel art. The gaze drifts and snaps to new targets, the pupil dilates with the bass, beats make it jump and strike lightning, mids churn the worlds, highs sparkle the highlights. The space around the eye comes alive too: a World Corona where the fire, water or lightning spills out around the ball, a giant Iris Tunnel behind it, or spinning Aura Rays with orbiting sparks. At rest the eye drifts calmly with a soft glow; during a build the pupil tightens to a pinpoint, the surroundings contract and spin faster and the eye starts to tremble; on the drop the pupil blows wide, a shockwave ring blasts outward and the world floods out around it.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-22 — original.",
   "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
   "INPUTS": [
@@ -23,6 +23,8 @@
     { "NAME": "saccades",    "LABEL": "Saccade Jumps",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6, "GROUP": "Motion" },
     { "NAME": "worldSpeed",  "LABEL": "World Speed",      "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Motion" },
     { "NAME": "worldOnIris", "LABEL": "World Through Iris","TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6, "GROUP": "Look" },
+    { "NAME": "surroundSel", "LABEL": "Surroundings", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Auto Morph", "World Corona", "Iris Tunnel", "Aura Rays", "Plain"], "GROUP": "Look" },
+    { "NAME": "surroundAmt", "LABEL": "Surround Amount",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Look" },
     { "NAME": "worldOnBall", "LABEL": "World On Eyeball", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.35, "GROUP": "Look" },
     { "NAME": "veins",       "LABEL": "Veins",            "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Look" },
     { "NAME": "wetness",     "LABEL": "Wet Highlights",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Look" },
@@ -34,6 +36,8 @@
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
     { "NAME": "audioReact",  "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.65, "GROUP": "Audio Reactivity" },
+    { "NAME": "showState", "LABEL": "Show State", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Follow Music", "Rest", "Build", "Peak"], "GROUP": "Show Dynamics" },
+    { "NAME": "dynamics",  "LABEL": "Build & Drop Depth", "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.85, "GROUP": "Show Dynamics" },
     { "NAME": "bgMode",      "LABEL": "Background", "TYPE": "long", "DEFAULT": 2, "VALUES": [0, 1, 2], "LABELS": ["Solid", "Vertical Gradient", "Radial Gradient"], "GROUP": "Background" },
     { "NAME": "bgColor",     "LABEL": "BG Color / Top / Center", "TYPE": "color", "DEFAULT": [0.05, 0.04, 0.07, 1.0], "GROUP": "Background" },
     { "NAME": "bgColor2",    "LABEL": "BG Bottom / Edge", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0], "GROUP": "Background" },
@@ -83,6 +87,26 @@ vec3 studioPalette(vec3 c) {
 }
 
 float gT, gW;      // world time, world morph weight toward next world
+
+// ── Show dynamics: rest → build → peak / drop ───────────────────────────
+float gRest, gBuild, gPeak, gDrop, gLift;
+void showDynamics() {
+    float m = float(showState);
+    float e = clamp(audioEnergy, 0.0, 1.0);
+    float b = clamp(audioBuildup, 0.0, 1.0);
+    float d = clamp(audioDrop, 0.0, 1.0);
+    if (m > 0.5) {
+        if (m < 1.5)      { e = 0.04; b = 0.0; d = 0.0; }
+        else if (m < 2.5) { float r = fract(TIME / 8.0); e = 0.3 + 0.35 * r; b = r * r; d = 0.0; }
+        else              { e = 1.0; b = 0.0; d = exp(-fract(TIME / 4.0) * 5.0); }
+    }
+    float k = dynamics;
+    gBuild = b * k;
+    gDrop  = d * k;
+    gPeak  = smoothstep(0.5, 0.9, e) * k;
+    gRest  = (1.0 - smoothstep(0.08, 0.4, e)) * (1.0 - b) * k;
+    gLift  = mix(0.5, clamp(0.15 + e * 0.7 + gBuild * 0.25 + d * 0.3, 0.0, 1.0), k);
+}
 float gWa, gWb;    // current and next world index
 float gStrike;     // lightning strike envelope
 
@@ -333,6 +357,72 @@ vec4 lids(vec2 q, float open, float px) {
     return vec4(c, cover * fade);
 }
 
+// ── the space around the eye(s) ───────────────────────────────────────────
+vec3 surroundings(vec2 sp, bool two, float Rr, float zc, float ph) {
+    float ss = float(surroundSel);
+    if (ss > 3.5) return vec3(0.0);
+    float rs = Rr * 1.6 / zc;
+    vec2 cc = two ? vec2((sp.x > 0.0 ? 1.15 : -1.15) * eyeSize * 1.6 / zc, 0.0) : vec2(0.0);
+    vec2 d = (sp - cc) / rs;                       // in eye radii
+    float r = length(d), a = atan(d.y, d.x);
+    if (r < 0.98) return vec3(0.0);
+    float ar = audioReact;
+    float lift = gLift;
+    float t = TIME * 0.25 + (audioMidTime * 0.25 + audioBassTime * 0.15) * ar;
+    // which style (auto morphs along with the worlds, half the rate)
+    float sa = ss > 0.5 ? ss - 1.0 : mod(floor(ph * 0.5), 3.0);
+    float sb = ss > 0.5 ? sa : mod(floor(ph * 0.5) + 1.0, 3.0);
+    float sf = ss > 0.5 ? 0.0 : smoothstep(0.7, 1.0, fract(ph * 0.5));
+    vec3 res = vec3(0.0);
+    for (int i = 0; i < 2; i++) {
+        float st = i == 0 ? sa : sb;
+        float w = i == 0 ? 1.0 - sf : sf;
+        if (w < 0.001) continue;
+        vec3 c = vec3(0.0);
+        if (st < 0.5) {
+            // World Corona: the inner world spills out around the ball
+            float reach = 0.5 + 1.1 * lift + 0.9 * gDrop;
+            float m = exp(-(r - 1.0) / max(reach, 0.05)) * smoothstep(0.98, 1.06, r);
+            vec2 dr = mat2(0.799, -0.602, 0.602, 0.799) * d;       // rotate off the noise grid
+            vec3 q = vec3(dr * (0.3 - 0.08 * gBuild), 0.15 + 0.1 * sin(t * 0.3));
+            vec4 wv = worldMix(q);
+            float flick = 0.75 + 0.25 * vn3(vec3(a * 3.0, r * 2.0 - t * 2.0, t));
+            c = (1.0 - exp(-wv.rgb * 1.4)) * m * flick * (0.25 + 0.95 * lift) * glowAmt;
+        } else if (st < 1.5) {
+            // Iris Tunnel: a giant iris behind the eye, fibres streaming inward
+            float lr = log(r);
+            float fib = vn3(vec3(cos(a) * 14.0, sin(a) * 14.0, lr * 3.0 - t * (1.5 + 2.5 * gBuild)));
+            float fib2 = vn3(vec3(cos(a) * 40.0, sin(a) * 40.0, lr * 6.0 - t * 3.0));
+            float rings = 0.5 + 0.5 * sin(lr * 10.0 - t * 4.0 - gBuild * 6.0);
+            vec3 hue = rainbow(a / TAU + lr * 0.3 + t * 0.05);
+            c = mix(hue, vec3(1.0), 0.3) * (0.35 * fib + 0.25 * fib2) * (0.6 + 0.4 * rings);
+            c *= smoothstep(0.98, 1.3, r) * exp(-(r - 1.0) * (0.55 - 0.25 * lift)) * (0.45 + 0.9 * lift);
+            c += vec3(0.9, 0.3, 0.2) * smoothstep(0.98, 1.05, r) * exp(-(r - 1.0) * 12.0) * 0.5;   // dark ring glow
+        } else {
+            // Aura Rays: spinning god-rays and orbiting sparks
+            float spin = t * (0.6 + 1.6 * gBuild);
+            float rays = pow(0.5 + 0.5 * cos(a * 12.0 + spin + 2.0 * vn3(vec3(a * 2.0, t, 0.0))), 6.0 - 3.0 * lift);
+            rays += 0.6 * pow(0.5 + 0.5 * cos(a * 31.0 - spin * 1.7), 14.0);
+            float len = 0.7 + 1.6 * lift + 1.5 * gDrop;
+            c = mix(vec3(0.6, 0.4, 1.0), vec3(1.0, 0.5, 0.25), 0.5 + 0.5 * sin(a * 2.0 + t)) * rays * exp(-(r - 1.0) / len) * 0.8;
+            // sparks orbiting in rings
+            float ring = floor((r - 1.0) * 6.0);
+            float ang = a + t * (0.5 + h11(ring * 3.1)) * (mod(ring, 2.0) * 2.0 - 1.0);
+            vec2 cell = vec2(fract(ang / TAU * (14.0 + ring * 6.0)) - 0.5, fract((r - 1.0) * 6.0) - 0.5);
+            float on = step(0.6 - 0.35 * lift, h12(vec2(floor(ang / TAU * (14.0 + ring * 6.0)), ring)));
+            c += vec3(1.0, 0.95, 0.85) * on * smoothstep(0.18, 0.0, length(cell * vec2(1.0, 1.0))) * exp(-(r - 1.0) * 0.8) * (0.4 + highP() * ar);
+        }
+        res += c * w;
+    }
+    // shockwave rings: one big ring on the drop, small ones on beats
+    float ringR = 1.0 + (1.0 - gDrop) * 4.0;
+    res += vec3(1.0, 0.9, 0.85) * exp(-pow((r - ringR) * 7.0, 2.0)) * gDrop * 1.5;
+    res += vec3(0.8, 0.85, 1.0) * exp(-pow((r - 1.0 - (1.0 - audioBeatPulse) * 1.5) * 12.0, 2.0)) * audioBeatPulse * ar * 0.35 * (0.4 + lift);
+    // build: the field contracts toward the eye — a bright inner ring tightens
+    res += vec3(1.0, 0.6, 0.4) * exp(-pow((r - 1.0 - (1.0 - gBuild) * 1.2) * 10.0, 2.0)) * gBuild * 0.6;
+    return res;
+}
+
 vec3 backdrop(vec2 uv) {
     float m = float(bgMode);
     if (m < 0.5) return bgColor.rgb;
@@ -371,7 +461,7 @@ vec3 shadeEye(vec3 ro, vec3 rd, vec3 C, float R, vec3 g1, vec3 g2, bool twin, fl
         float ti = (zi - pl.z) / min(rr.z, -0.05);
         vec2 ip = pl.xy + rr.xy * ti;
         float irisR = sin(thI);
-        float pupR = irisR * clamp(pupilSize * (1.0 + 0.45 * bassP() * ar + 0.25 * sin(TIME * 0.5)), 0.08, 0.85);
+        float pupR = irisR * clamp(pupilSize * (1.0 + 0.45 * bassP() * ar + 0.25 * sin(TIME * 0.5)) * (1.0 - 0.45 * gBuild + 0.9 * gDrop + 0.15 * gPeak), 0.08, 0.9);
         float rI = length(ip);
         if (rI < pupR) {
             // through the pupil: march the world behind it
@@ -419,7 +509,8 @@ void main() {
     vec2 fc = dith ? (floor(gl_FragCoord.xy / ds) + 0.5) * ds : gl_FragCoord.xy;   // chunky pixels
     vec2 uv = fc / R;
     float ar = audioReact;
-    gT = TIME * worldSpeed + 0.4 * audioBassTime * ar * worldSpeed + 0.3 * midP() * ar;
+    showDynamics();
+    gT = TIME * worldSpeed * 0.7 + (0.4 * audioBassTime + 0.3 * audioMidTime) * ar * worldSpeed + 0.3 * midP() * ar + 0.6 * gBuild;
     gStrike = audioBeatPulse * audioBeatPulse * ar;
 
     // worlds + sclera style morphing
@@ -450,9 +541,14 @@ void main() {
     vec2 sp = (fc - 0.5 * R) / R.y;
     vec3 rd = normalize(vec3(sp, -1.6));
 
+    // build: a tremor that grows toward the top of the riser
+    sp += (vec2(h11(floor(TIME * 30.0)), h11(floor(TIME * 30.0) + 5.0)) - 0.5) * 0.012 * smoothstep(0.6, 1.0, gBuild);
+    rd = normalize(vec3(sp, -1.6));
+
     vec3 col = backdrop(uv);
     float alpha = 0.0;
-    float Rr = (two ? 0.95 : 1.0) * eyeSize * (1.0 + 0.03 * bassP() * ar);
+    float Rr = (two ? 0.95 : 1.0) * eyeSize * (1.0 + 0.03 * bassP() * ar + 0.06 * gDrop - 0.03 * gRest);
+    col += surroundings(sp, two, Rr, ro.z, ph) * surroundAmt;
     for (int e = 0; e < 2; e++) {
         if (!two && e > 0) break;
         vec3 C = two ? vec3(e == 0 ? -1.15 : 1.15, 0.0, 0.0) * eyeSize : vec3(0.0);
