@@ -1041,5 +1041,8 @@
   },
   "eggs": {
     "group": "studio"
+  },
+  "body_garden": {
+    "group": "studio"
   }
 }
