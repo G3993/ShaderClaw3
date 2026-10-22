@@ -3,21 +3,22 @@
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-21 — original.",
   "CATEGORIES": ["Generator", "3D", "Nature", "Audio Reactive"],
   "INPUTS": [
-    { "NAME": "layoutMode",  "LABEL": "Layout", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1], "LABELS": ["Specimen Grid", "Single Specimen"], "GROUP": "Layout" },
+    { "NAME": "layoutMode",  "LABEL": "Layout", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1], "LABELS": ["Specimen Grid", "Single Specimen (HD morph)"], "GROUP": "Layout" },
     { "NAME": "gridCols",    "LABEL": "Columns",          "TYPE": "float", "AUDIO": false, "MIN": 1.0, "MAX": 6.0, "DEFAULT": 4.0, "GROUP": "Layout" },
     { "NAME": "gridRows",    "LABEL": "Rows",             "TYPE": "float", "AUDIO": false, "MIN": 1.0, "MAX": 4.0, "DEFAULT": 3.0, "GROUP": "Layout" },
     { "NAME": "gap",         "LABEL": "Spacing",          "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 0.4, "DEFAULT": 0.1, "GROUP": "Layout" },
     { "NAME": "species",     "LABEL": "Species (single)", "TYPE": "long", "DEFAULT": 0, "VALUES": [0,1,2,3,4,5,6,7,8,9,10,11],
       "LABELS": ["Foam", "Scales", "Red Cells", "Rings", "Plated Dome", "Pebbles", "Ember Dome", "Buds", "Thermal Well", "Fibres", "Caverns", "Eye Cells"], "GROUP": "Layout" },
     { "NAME": "autoMorph",   "LABEL": "Auto Morph",       "TYPE": "bool",  "DEFAULT": true, "GROUP": "Motion" },
-    { "NAME": "morphPeriod", "LABEL": "Morph Period (s)", "TYPE": "float", "AUDIO": false, "MIN": 4.0, "MAX": 60.0, "DEFAULT": 14.0, "GROUP": "Motion" },
+    { "NAME": "morphPeriod", "LABEL": "Morph Period (s)", "TYPE": "float", "AUDIO": false, "MIN": 4.0, "MAX": 60.0, "DEFAULT": 9.0, "GROUP": "Motion" },
+    { "NAME": "morphSmooth", "LABEL": "Morph Share (single)", "TYPE": "float", "AUDIO": false, "MIN": 0.1, "MAX": 1.0, "DEFAULT": 0.65, "GROUP": "Motion" },
     { "NAME": "spin",        "LABEL": "Spin",             "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.25, "GROUP": "Motion" },
     { "NAME": "flow",        "LABEL": "Cell Flow",        "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.35, "GROUP": "Motion" },
     { "NAME": "elevation",   "LABEL": "Camera Elevation", "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.4, "GROUP": "Motion" },
     { "NAME": "cellScale",   "LABEL": "Cell Scale",       "TYPE": "float", "MIN": 0.5, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Tissue" },
     { "NAME": "depth",       "LABEL": "Relief Depth",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Tissue" },
-    { "NAME": "stipple",     "LABEL": "Stipple",          "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55, "GROUP": "Finish" },
-    { "NAME": "dotSize",     "LABEL": "Dot Size (px)",    "TYPE": "float", "AUDIO": false, "MIN": 1.5, "MAX": 6.0, "DEFAULT": 2.4, "GROUP": "Finish" },
+    { "NAME": "stipple",     "LABEL": "Stipple",          "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.4, "GROUP": "Finish" },
+    { "NAME": "dotSize",     "LABEL": "Dot Size (px)",    "TYPE": "float", "AUDIO": false, "MIN": 1.5, "MAX": 6.0, "DEFAULT": 2.0, "GROUP": "Finish" },
     { "NAME": "colDeep",     "LABEL": "Deep",             "TYPE": "color", "DEFAULT": [0.01, 0.015, 0.12, 1.0], "GROUP": "Color" },
     { "NAME": "colBlue",     "LABEL": "Blue",             "TYPE": "color", "DEFAULT": [0.04, 0.22, 0.95, 1.0], "GROUP": "Color" },
     { "NAME": "colCyan",     "LABEL": "Cyan",             "TYPE": "color", "DEFAULT": [0.18, 0.78, 1.0, 1.0],  "GROUP": "Color" },
@@ -29,7 +30,7 @@
     { "NAME": "rimLight",    "LABEL": "Rim Light",        "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.8, "GROUP": "Light" },
     { "NAME": "bloom",       "LABEL": "Bloom",            "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.7, "GROUP": "Finish" },
     { "NAME": "grain",       "LABEL": "Grain",            "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.15, "GROUP": "Finish" },
-    { "NAME": "renderScale", "LABEL": "Render Scale",     "TYPE": "float", "AUDIO": false, "MIN": 0.35, "MAX": 1.0, "DEFAULT": 0.75, "GROUP": "Finish" },
+    { "NAME": "renderScale", "LABEL": "Render Scale",     "TYPE": "float", "AUDIO": false, "MIN": 0.35, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Finish" },
     { "NAME": "audioReact",  "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6, "GROUP": "Audio Reactivity" },
     { "NAME": "bgMode",      "LABEL": "Background", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2], "LABELS": ["Solid", "Vertical Gradient", "Radial Gradient"], "GROUP": "Background" },
     { "NAME": "bgColor",     "LABEL": "BG Color / Top / Center", "TYPE": "color", "DEFAULT": [0.015, 0.015, 0.02, 1.0], "GROUP": "Background" },
@@ -195,7 +196,7 @@ float map(vec3 p) {
 }
 
 vec3 calcNormal(vec3 p) {
-    vec2 e = vec2(0.0025, -0.0025);
+    vec2 e = vec2(0.0014, -0.0014);
     return normalize(e.xyy * map(p + e.xyy) + e.yyx * map(p + e.yyx) + e.yxy * map(p + e.yxy) + e.xxx * map(p + e.xxx));
 }
 
@@ -231,7 +232,7 @@ vec3 thermal(float t) {
 
 vec4 renderSpecimen(vec2 uv, float tileIdx) {
     // camera
-    float el = mix(0.05, 0.85, elevation);
+    float el = mix(0.05, 0.85, elevation) + 0.14 * sin(TIME * 0.11 + tileIdx);
     vec3 ro = vec3(0.0, sin(el), cos(el)) * 4.6;
     vec3 ta = vec3(0.0, -0.05, 0.0);
     vec3 ww = normalize(ta - ro);
@@ -255,10 +256,10 @@ vec4 renderSpecimen(vec2 uv, float tileIdx) {
     vec3 rdO = rd; rdO.xz = R * rdO.xz;
 
     bool hit = false;
-    for (int i = 0; i < 96; i++) {
+    for (int i = 0; i < 128; i++) {
         vec3 p = roO + rdO * t;
         float d = map(p);
-        if (d < 0.0012 * t) { hit = true; break; }
+        if (d < 0.0006 * t) { hit = true; break; }
         t += d * 0.62;
         if (t > tFar) break;
     }
@@ -329,7 +330,9 @@ vec4 scenePass() {
     if (single) {
         float ph = autoMorph ? TIME / morphPeriod : 0.0;
         base = float(species) + floor(ph);
-        f = smoothstep(0.72, 1.0, fract(ph));
+        // one specimen keeps growing from form to form: most of each period is morph
+        f = smoothstep(1.0 - morphSmooth, 1.0, fract(ph));
+        f = f * f * (3.0 - 2.0 * f);
     } else {
         float ph = autoMorph ? TIME / morphPeriod + h11(tileIdx * 3.7 + 0.4) * 0.999 : 0.0;
         base = tileIdx + floor(ph);

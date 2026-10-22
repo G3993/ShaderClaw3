@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Zebra — stripes drawn on a liquid sheet. A heightfield made of flowing domain-warped waves, drifting bumps and beat-launched ripples is raymarched from a tilting camera, so the lines bend over real 3D folds, hide behind ridges, catch speculars and throw self-shadows. Six looks morph into each other: Satin (glossy black-and-white fabric), Op-Art (Riley-style gradient bands, orange to violet to cobalt to lime), Neon Spectrum (each line a full rainbow ribbon on black), Glitch Chroma (monochrome lines that split into RGB wherever the liquid is steep), Holo Chrome (thin silver lines over iridescent oil-slick colour) and Glow Lines (emissive line drawing floating on black). Stripes flow along the sheet, the camera breathes, and the RGB split follows the slope. Bass lifts the waves, beats fire ripples and a chroma kick, mids stir the flow, highs make the speculars and split flare.",
+  "DESCRIPTION": "Zebra — stripes drawn on a liquid sheet, with molten chrome. Glossy liquid-metal worms slither across the sheet, reflecting the live stripes and throwing shadows, while a vortex funnel twists the lines down into a tunnel. A heightfield made of flowing domain-warped waves, drifting bumps and beat-launched ripples is raymarched from a tilting camera, so the lines bend over real 3D folds, hide behind ridges, catch speculars and throw self-shadows. Six looks morph into each other: Satin (glossy black-and-white fabric), Op-Art (Riley-style gradient bands, orange to violet to cobalt to lime), Neon Spectrum (each line a full rainbow ribbon on black), Glitch Chroma (monochrome lines that split into RGB wherever the liquid is steep), Holo Chrome (thin silver lines over iridescent oil-slick colour) and Glow Lines (emissive line drawing floating on black). Stripes flow along the sheet, the camera breathes, and the RGB split follows the slope. Bass lifts the waves, beats fire ripples and a chroma kick, mids stir the flow, highs make the speculars and split flare.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-21 — original.",
   "CATEGORIES": ["Generator", "3D", "Op Art", "Audio Reactive"],
   "INPUTS": [
@@ -14,6 +14,12 @@
     { "NAME": "waveScale",   "LABEL": "Wave Scale",      "TYPE": "float", "MIN": 0.4, "MAX": 2.5, "DEFAULT": 1.0, "GROUP": "Liquid" },
     { "NAME": "liquidSpeed", "LABEL": "Liquid Speed",    "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.7, "GROUP": "Liquid" },
     { "NAME": "turbulence",  "LABEL": "Turbulence",      "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Liquid" },
+    { "NAME": "chromeAmt",   "LABEL": "Liquid Chrome",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.8, "GROUP": "Chrome" },
+    { "NAME": "chromeCount", "LABEL": "Chrome Pieces",   "TYPE": "float", "AUDIO": false, "MIN": 1.0, "MAX": 6.0, "DEFAULT": 4.0, "GROUP": "Chrome" },
+    { "NAME": "chromeSize",  "LABEL": "Chrome Size",     "TYPE": "float", "MIN": 0.4, "MAX": 2.5, "DEFAULT": 1.6, "GROUP": "Chrome" },
+    { "NAME": "chromeSpeed", "LABEL": "Chrome Slither",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.8, "GROUP": "Chrome" },
+    { "NAME": "chromeTint",  "LABEL": "Chrome Tint",     "TYPE": "color", "DEFAULT": [0.86, 0.89, 0.96, 1.0], "GROUP": "Chrome" },
+    { "NAME": "vortex",      "LABEL": "Vortex Funnel",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6, "GROUP": "Chrome" },
     { "NAME": "tilt",        "LABEL": "Camera Tilt",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.42, "GROUP": "Camera" },
     { "NAME": "camDrift",    "LABEL": "Camera Drift",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.4, "GROUP": "Camera" },
     { "NAME": "zoom",        "LABEL": "Zoom",            "TYPE": "float", "AUDIO": false, "MIN": 0.5, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Camera" },
@@ -59,9 +65,17 @@ vec3 rainbow(float t) { return 0.5 + 0.5 * cos(TAU * (t + vec3(0.0, 0.33, 0.67))
 
 float gT, gAmp;
 vec2 gRipC;
+vec2 gVC;                 // vortex centre (world xz)
+vec4 gS[30];              // chrome spheres: xyz centre, radius
+vec4 gWB[6];              // per-worm bounding sphere
+float gNS;                // active sphere count
+mat2 rot2(float a) { float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
+float sminZ(float a, float b, float k) { float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0); return mix(b, a, h) - k * h * (1.0 - h); }
 
 // ── the liquid ───────────────────────────────────────────────────────────
 float height(vec2 p) {
+    vec2 vd = p - gVC;
+    float funnel = -vortex * 2.6 * exp(-dot(vd, vd) * 0.55) - vortex * 0.9 * exp(-dot(vd, vd) * 0.15);
     p *= 0.75 / waveScale;
     float t = gT;
     float tu = turbulence;
@@ -82,7 +96,7 @@ float height(vec2 p) {
     float rd = length(p - gRipC);
     float rr = (1.0 - audioBeatPulse) * 3.5;
     h += 0.35 * audioBeatPulse * audioReact * sin((rd - rr) * 9.0) * exp(-pow((rd - rr) * 2.2, 2.0));
-    return h * gAmp;
+    return (h + funnel) * gAmp;
 }
 
 vec3 normalAt(vec2 p) {
@@ -156,6 +170,74 @@ vec3 look(float k, float s, vec3 P, vec3 n, vec3 rd, float diff, float spec, flo
     return c * m;
 }
 
+// ── liquid chrome: chains of melted spheres (precomputed per frame) ────────
+void buildChrome() {
+    gNS = floor(clamp(chromeCount, 1.0, 6.0) + 0.5) * 5.0;
+    float ct = TIME * chromeSpeed * 0.6 + 0.3 * audioBassTime * audioReact * chromeSpeed;
+    for (int w = 0; w < 6; w++) {
+        float fw = float(w);
+        vec2 c0 = vec2(2.3 * sin(ct * (0.13 + 0.03 * fw) + fw * 1.9), 1.7 * cos(ct * (0.11 + 0.025 * fw) + fw * 2.7));
+        // keep worms out of the funnel's throat, they slide around its rim
+        vec2 dv = c0 - gVC;
+        c0 = gVC + normalize(dv + 1e-4) * max(length(dv), 1.8 * vortex + 0.4);
+        float base = height(c0);
+        float ang = ct * 0.25 + fw * 1.3;
+        for (int k = 0; k < 5; k++) {
+            float fk = float(k);
+            float sk = fk - 2.0;
+            float a = ang + 0.7 * sin(ct * 1.1 + fk * 0.9 + fw * 2.0) * sk * 0.5;
+            vec2 off = vec2(cos(a), sin(a)) * sk * 0.25 * chromeSize;
+            off += 0.12 * chromeSize * vec2(sin(ct * 1.7 + fk * 1.3 + fw), cos(ct * 1.3 + fk * 1.1 - fw)) * abs(sk);
+            float r = chromeSize * (0.17 + 0.05 * sin(fk * 1.7 + fw * 3.1 + ct * 1.4)) * (1.0 - 0.22 * abs(sk) / 2.0)
+                    * (1.0 + 0.16 * bassP() * audioReact);
+            if (w == 2 && k > 2) r *= 0.0;                        // a few short drops, not all long worms
+            vec2 cxz = c0 + off;
+            gS[w * 5 + k] = vec4(cxz.x, base + r * 0.45 + 0.04, cxz.y, r);
+        }
+        gWB[w] = vec4(c0.x, base + 0.1, c0.y, chromeSize * 1.25 + 0.25);
+    }
+}
+
+float chromeSDF(vec3 p) {
+    float d = 1e5;
+    for (int w = 0; w < 6; w++) {
+        if (float(w) * 5.0 > gNS - 0.5) break;
+        vec4 b = gWB[w];
+        float db = length(p - b.xyz) - b.w;
+        if (db > 0.3) { d = min(d, db); continue; }      // far from this worm: cheap bound
+        for (int k = 0; k < 5; k++) {
+            vec4 s = gS[w * 5 + k];
+            if (s.w < 0.01) continue;
+            d = sminZ(d, length(p - s.xyz) - s.w, 0.2 * chromeSize);
+        }
+    }
+    return d;
+}
+
+vec3 chromeNormal(vec3 p) {
+    vec2 e = vec2(0.002, -0.002);
+    return normalize(e.xyy * chromeSDF(p + e.xyy) + e.yyx * chromeSDF(p + e.yyx) + e.yxy * chromeSDF(p + e.yxy) + e.xxx * chromeSDF(p + e.xxx));
+}
+
+// stripe coordinate on the sheet, with the vortex twisting the lines into its throat
+float stripeCoord(vec3 P) {
+    vec2 q = P.xz;
+    vec2 d = q - gVC;
+    q = gVC + rot2(vortex * (3.2 * exp(-length(d) * 0.6)) + vortex * 0.15 * sin(TIME * 0.3)) * d;
+    float ang = lineAngle * PI;
+    vec2 dir = vec2(cos(ang), sin(ang));
+    vec2 pd = vec2(-dir.y, dir.x);
+    float along = dot(q, pd);
+    float bend = P.y * 0.45
+               + turbulence * 0.28 * (sin(along * 1.7 + gT * 0.8) + 0.6 * sin(along * 3.3 - dot(q, dir) * 1.3 - gT * 1.2));
+    float sLin = (dot(q, dir) + bend * lineWarp) * lineCount * 0.25 - TIME * lineFlow;
+    // inside the funnel the lines close into rings that crowd toward the throat (an endless tunnel)
+    float r = length(d);
+    float sRing = -log(r + 0.04) * lineCount * 0.11 + TIME * (0.5 + lineFlow);
+    float w = vortex * smoothstep(2.4, 0.5, r);
+    return mix(sLin, sRing, w);
+}
+
 vec3 userBg(vec2 uv) {
     float m = float(bgMode);
     if (m < 0.5) return bgColor.rgb;
@@ -172,6 +254,9 @@ void main() {
     gT = TIME * liquidSpeed + 0.5 * audioBassTime * ar * liquidSpeed + 0.4 * midP() * ar;
     gAmp = 0.6 * waveHeight * (1.0 + 0.45 * bassP() * ar);
     gRipC = vec2(1.5 * (h11(floor(TIME * 0.5)) - 0.5), 1.0 * (h11(floor(TIME * 0.5) + 7.0) - 0.5));
+    gVC = vec2(0.5 * sin(TIME * 0.07), 0.35 * cos(TIME * 0.05));
+    bool useChrome = chromeAmt > 0.01;
+    if (useChrome) buildChrome();
 
     // look selection
     float sel = float(lookSel);
@@ -199,19 +284,19 @@ void main() {
     float alpha = 0.0;
 
     // heightfield march
-    float maxH = gAmp * 1.6 + 0.05;
+    float maxH = gAmp * (1.6 + 3.3 * vortex) + 0.05;
     float t = 0.0;
     // start where the ray enters the slab |y| < maxH
     if (rd.y < 0.0) t = max(0.0, (ro.y - maxH) / -rd.y);
     bool hit = false;
     float tPrev = t;
-    for (int i = 0; i < 90; i++) {
+    for (int i = 0; i < 120; i++) {
         vec3 p = ro + rd * t;
         float dh = p.y - height(p.xz);
         if (dh < 0.0) { hit = true; break; }
         if (p.y < -maxH && rd.y < 0.0) break;
         tPrev = t;
-        t += max(dh * 0.45, 0.004 * t);
+        t += max(dh * mix(0.45, 0.3, vortex), 0.003 * t);
         if (t > 40.0) break;
     }
     if (hit) {
@@ -241,16 +326,22 @@ void main() {
                 sh = min(sh, clamp(10.0 * dd / st, 0.0, 1.0));
                 st += 0.06 + st * 0.25;
             }
+            if (useChrome) {
+                float cs = 0.03;
+                for (int i = 0; i < 10; i++) {
+                    float dc = chromeSDF(P + L * cs);
+                    sh = min(sh, clamp(6.0 * dc / cs, 0.0, 1.0));
+                    cs += max(dc, 0.05);
+                    if (cs > 2.5) break;
+                }
+                // contact darkening right under the metal
+                sh *= mix(1.0, smoothstep(0.0, 0.35, chromeSDF(P)), 0.8 * chromeAmt);
+            }
             sh = mix(1.0, sh, shadows);
         }
         // stripe coordinate on the sheet (+ op-art lateral bend by height)
-        float ang = lineAngle * PI;
-        vec2 dir = vec2(cos(ang), sin(ang));
-        vec2 pd = vec2(-dir.y, dir.x);
-        float along = dot(P.xz, pd);
-        float bend = P.y * 0.45
-                   + turbulence * 0.28 * (sin(along * 1.7 + gT * 0.8) + 0.6 * sin(along * 3.3 - dot(P.xz, dir) * 1.3 - gT * 1.2));
-        float s = (dot(P.xz, dir) + bend * lineWarp) * lineCount * 0.25 - TIME * lineFlow;
+        float s = stripeCoord(P);
+        float throat = vortex * smoothstep(-0.25, -1.8, P.y / max(gAmp, 0.05));
         float slope = length(n.xz) / max(n.y, 0.2);
         // pixel footprint in stripe units (for AA)
         float aa = clamp(lineCount * 0.25 * t / (R.y * focal * 0.5) / max(abs(dot(n, -rd)), 0.15), 0.002, 0.5);
@@ -268,6 +359,7 @@ void main() {
             vec3 cB2 = look(lb, s - dlt, P, n, rd, diff, spec, sh, aa);
             c = mix(c, vec3(cB0.r, cB1.g, cB2.b), lf);
         }
+        c *= 1.0 - 0.8 * throat;
         // glow lines float on the background
         float gw = (abs(la - 5.0) < 0.5 ? 1.0 - lf : 0.0) + (abs(lb - 5.0) < 0.5 ? lf : 0.0);
         // distance fog into the background
@@ -275,6 +367,61 @@ void main() {
         vec3 surf = mix(c, col, fog);
         col = mix(surf, col + c, gw);
         alpha = mix(1.0 - fog, clamp(lum(c) * 2.0, 0.0, 1.0), gw);
+    }
+
+    // ── liquid chrome on top ──
+    if (useChrome) {
+        float tc = 0.0;
+        float top = maxH + 0.9 * chromeSize;
+        if (rd.y < 0.0) tc = max(0.0, (ro.y - top) / -rd.y);
+        bool ch = false;
+        for (int i = 0; i < 80; i++) {
+            vec3 p = ro + rd * tc;
+            float d = chromeSDF(p);
+            if (d < 0.0015 * tc) { ch = true; break; }
+            tc += d;
+            if (tc > 40.0 || (p.y < -maxH && rd.y < 0.0)) break;
+        }
+        if (ch && (!hit || tc < t + 0.02)) {
+            vec3 Pc = ro + rd * tc;
+            vec3 nc = chromeNormal(Pc);
+            vec3 rf = reflect(rd, nc);
+            float la2c = lightAngle * TAU;
+            vec3 Lc = normalize(vec3(cos(la2c) * 0.8, 0.75, sin(la2c) * 0.8 + 0.3));
+            // environment: the stripe sheet below, a soft studio sky above
+            vec3 env;
+            vec3 up0 = vec3(0.0, 1.0, 0.0);
+            if (rf.y >= -0.02) {
+                // a striped room above: the same lines wrap the sky, so the metal stays high-contrast
+                vec2 sky = rf.xz / (rf.y + 0.45) * 0.55;
+                float ss = stripeCoord(vec3(sky.x, 0.0, sky.y)) * 0.5;
+                env = look(la, ss, vec3(sky.x, 0.0, sky.y), up0, rf, 0.9, 0.0, 1.0, 0.16);
+                if (lf > 0.001) env = mix(env, look(lb, ss, vec3(sky.x, 0.0, sky.y), up0, rf, 0.9, 0.0, 1.0, 0.16), lf);
+                env = mix(env, vec3(1.0), 0.15 * smoothstep(0.2, 1.0, rf.y));
+                env += vec3(1.6) * smoothstep(0.88, 0.97, dot(rf, normalize(vec3(-0.3, 1.0, -0.2))));   // softbox
+                env += vec3(0.9) * smoothstep(0.93, 0.99, dot(rf, normalize(vec3(0.7, 0.6, 0.4))));    // kicker
+            } else {
+                vec3 Q = Pc + rf * ((Pc.y + 0.1) / -rf.y);
+                float raa = clamp(0.06 + 0.08 * length(Q - Pc), 0.06, 0.45);
+                float sq = stripeCoord(vec3(Q.x, 0.0, Q.z));
+                float dl = chroma * 0.08;
+                vec3 up = vec3(0.0, 1.0, 0.0);
+                vec3 e0 = look(la, sq + dl, Q, up, rf, 0.8, 0.0, 1.0, raa);
+                vec3 e1 = look(la, sq, Q, up, rf, 0.8, 0.0, 1.0, raa);
+                vec3 e2 = look(la, sq - dl, Q, up, rf, 0.8, 0.0, 1.0, raa);
+                env = vec3(e0.r, e1.g, e2.b);
+                if (lf > 0.001) env = mix(env, look(lb, sq, Q, up, rf, 0.8, 0.0, 1.0, raa), lf);
+            }
+            float fr = 0.8 + 0.2 * pow(1.0 - clamp(dot(nc, -rd), 0.0, 1.0), 4.0);
+            vec3 cc = env * chromeTint.rgb * fr;
+            // occlusion where the metal meets the sheet
+            float oc = clamp((Pc.y - height(Pc.xz)) / (0.25 * chromeSize), 0.0, 1.0);
+            cc *= 0.35 + 0.65 * mix(1.0, oc, 0.7);
+            cc += vec3(1.0) * pow(clamp(dot(rf, Lc), 0.0, 1.0), 90.0) * 2.2 * highlights * (1.0 + 1.5 * highP() * ar);
+            cc += vec3(0.9, 0.95, 1.0) * pow(clamp(dot(rf, Lc), 0.0, 1.0), 12.0) * 0.18 * highlights;
+            col = mix(col, cc, chromeAmt);
+            alpha = mix(alpha, 1.0, chromeAmt);
+        }
     }
 
     col *= 1.0 + 0.12 * audioLevel * ar;

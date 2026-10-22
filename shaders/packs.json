@@ -1032,5 +1032,8 @@
   },
   "zebra": {
     "group": "studio"
+  },
+  "biology": {
+    "group": "studio"
   }
 }

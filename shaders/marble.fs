@@ -3,13 +3,13 @@
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-21 — original.",
   "CATEGORIES": ["Generator", "3D", "Audio Reactive"],
   "INPUTS": [
-    { "NAME": "layoutMode",  "LABEL": "Layout", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1], "LABELS": ["Orb Grid", "Single Orb"], "GROUP": "Layout" },
+    { "NAME": "layoutMode",  "LABEL": "Layout", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1], "LABELS": ["Orb Grid", "Single Orb"], "GROUP": "Layout" },
     { "NAME": "gridCols",    "LABEL": "Columns",         "TYPE": "float", "AUDIO": false, "MIN": 1.0, "MAX": 12.0, "DEFAULT": 7.0, "GROUP": "Layout" },
     { "NAME": "gridRows",    "LABEL": "Rows",            "TYPE": "float", "AUDIO": false, "MIN": 1.0, "MAX": 8.0,  "DEFAULT": 4.0, "GROUP": "Layout" },
     { "NAME": "orbSize",     "LABEL": "Orb Size",        "TYPE": "float", "AUDIO": false, "MIN": 0.4, "MAX": 1.0,  "DEFAULT": 0.84, "GROUP": "Layout" },
     { "NAME": "styleSel",    "LABEL": "Style (single / locked)", "TYPE": "long", "DEFAULT": 6, "VALUES": [0, 1, 2, 3, 4, 5, 6],
       "LABELS": ["Vivid Fringe", "Soft Glass", "Kaleido", "Ghost", "Ochre Agate", "Void Filament", "Mixed (all)"], "GROUP": "Layout" },
-    { "NAME": "morphPeriod", "LABEL": "Morph Period (s)", "TYPE": "float", "AUDIO": false, "MIN": 4.0, "MAX": 60.0, "DEFAULT": 12.0, "GROUP": "Motion" },
+    { "NAME": "morphPeriod", "LABEL": "Morph Period (s)", "TYPE": "float", "AUDIO": false, "MIN": 4.0, "MAX": 60.0, "DEFAULT": 9.0, "GROUP": "Motion" },
     { "NAME": "flow",        "LABEL": "Flow Speed",      "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.45, "GROUP": "Motion" },
     { "NAME": "spin",        "LABEL": "Spin",            "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.3, "GROUP": "Motion" },
     { "NAME": "bob",         "LABEL": "Float / Bob",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.35, "GROUP": "Motion" },
@@ -223,7 +223,12 @@ void main() {
         float k = floor(ph);
         float f = smoothstep(0.65, 1.0, fract(ph));
         float sa, sb;
-        if (sl > 5.5) {
+        if (sl > 5.5 && single) {
+            // one orb walks through every family in turn, melting from one into the next
+            sa = mod(k, 6.0); sb = mod(k + 1.0, 6.0);
+            f = smoothstep(0.4, 1.0, fract(ph));
+            f = f * f * (3.0 - 2.0 * f);
+        } else if (sl > 5.5) {
             sa = floor(h11(idx * 0.73 + k * 1.91) * 6.0);
             sb = floor(h11(idx * 0.73 + (k + 1.0) * 1.91) * 6.0);
         } else { sa = sl; sb = sl; f = 0.0; }

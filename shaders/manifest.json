@@ -3644,12 +3644,27 @@
       "Op Art",
       "Audio Reactive"
     ],
-    "description": "Zebra — stripes drawn on a liquid sheet. A heightfield made of flowing domain-warped waves, drifting bumps and beat-launched ripples is raymarched from a tilting camera, so the lines bend over real 3D folds, hide behind ridges, catch speculars and throw self-shadows. Six looks morph into each other: Satin (glossy black-and-white fabric), Op-Art (Riley-style gradient bands, orange to violet to cobalt to lime), Neon Spectrum (each line a full rainbow ribbon on black), Glitch Chroma (monochrome lines that split into RGB wherever the liquid is steep), Holo Chrome (thin silver lines over iridescent oil-slick colour) and Glow Lines (emissive line drawing floating on black). Stripes flow along the sheet, the camera breathes, and the RGB split follows the slope. Bass lifts the waves, beats fire ripples and a chroma kick, mids stir the flow, highs make the speculars and split flare.",
+    "description": "Zebra — stripes drawn on a liquid sheet, with molten chrome. Glossy liquid-metal worms slither across the sheet, reflecting the live stripes and throwing shadows, while a vortex funnel twists the lines down into a tunnel. A heightfield made of flowing domain-warped waves, drifting bumps and beat-launched ripples is raymarched from a tilting camera, so the lines bend over real 3D folds, hide behind ridges, catch speculars and throw self-shadows. Six looks morph into each other: Satin (glossy black-and-white fabric), Op-Art (Riley-style gradient bands, orange to violet to cobalt to lime), Neon Spectrum (each line a full rainbow ribbon on black), Glitch Chroma (monochrome lines that split into RGB wherever the liquid is steep), Holo Chrome (thin silver lines over iridescent oil-slick colour) and Glow Lines (emissive line drawing floating on black). Stripes flow along the sheet, the camera breathes, and the RGB split follows the slope. Bass lifts the waves, beats fire ripples and a chroma kick, mids stir the flow, highs make the speculars and split flare.",
     "file": "zebra.fs",
     "hasVertex": false,
     "hidden": false,
     "id": 1395,
     "title": "Zebra",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Nature",
+      "Lines",
+      "Audio Reactive"
+    ],
+    "description": "Biology — a living psychedelic specimen plate. Organisms drift across a field of hand-drawn magenta contour lines: beaded chains with lime rings, ringed targets on wavy stalks, black tadpoles with neon outlines, ferns with dotted fruiting tips, teal worms, black combs and dark lobes full of black-and-white tongues. The line field is the distance to every organism drawn as isolines, so each creature echoes outward in rings that crease into seams where they meet, while a web of hidden cells adds cross-stitched seams in the open space. Organisms swim, undulate, sway, pulse and are born and fade on their own clocks; the lines flow outward from them. Bass swells the bodies, beats pulse the rings and push a wave through the line field, mids stir the wiggle, highs flicker the bead centres.",
+    "file": "biology.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1396,
+    "title": "Biology",
     "type": "generator"
   }
 ]
