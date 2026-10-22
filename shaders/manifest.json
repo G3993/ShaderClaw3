@@ -3826,5 +3826,19 @@
     "id": 1407,
     "title": "Flowa II",
     "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "3D",
+      "Audio Reactive"
+    ],
+    "description": "Chandelier — a living 3D glass chandelier hanging in the dark, morphing between four forms: Crystal Tiers, cascading rings of hanging prisms around a central column that breathe and counter-rotate; Swan Glass, sweeping arms of tinted glass that curl out and up with glowing bulbs at their tips; Prism Burst, crystal rods radiating from a glass sphere at every length and angle; and Glass Loops, interlinked iridescent rings that roll through each other. The glass is truly see-through: every pixel looks through several layers of crystal, with rainbow dispersion, fresnel reflections of a studio softbox, warm inner light and star glints that twinkle across it. The whole fixture sways gently on its chain. At rest it turns slowly with the bulbs dimmed; during a build the tiers compress and spin faster while the rods draw in; on the drop the crystals burst outward in a flash of light, then the peak blazes with every bulb lit.",
+    "file": "chandelier.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1408,
+    "title": "Chandelier",
+    "type": "generator"
   }
 ]
