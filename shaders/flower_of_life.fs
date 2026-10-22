@@ -230,7 +230,7 @@ void main() {
         float d = map(p);
         if (d < 0.0004) { hitT = t; ang = gAng; cd = gCellD; break; }
         float stp = max(d * 0.9, 0.0008 + 0.02 * step(0.3, d));
-        glowAcc += exp(-max(d, 0.0) * (60.0 / max(lineWidth, 0.3))) * min(stp, 0.05) * 1.6;
+        glowAcc += exp(-max(d, 0.0) / (gTube * 4.0)) * min(stp, gTube * 2.0) / (gTube * 2.0) * 0.08;
         t += stp;
         if (t > camD + 4.0) break;
     }
