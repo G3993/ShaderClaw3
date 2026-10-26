@@ -1083,5 +1083,8 @@
   },
   "neurons": {
     "group": "studio"
+  },
+  "polarized": {
+    "group": "studio"
   }
 }
