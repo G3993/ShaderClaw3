@@ -3960,5 +3960,20 @@
     "id": 1416,
     "title": "Bloodstream",
     "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "3D",
+      "Science",
+      "Audio Reactive"
+    ],
+    "description": "Bacteriophage — glossy 3D T4 viruses in the style of a scientific animation. Each phage is built like the real thing: a faceted, elongated icosahedral gold head with crisp facet edges, a collar and neck, a ribbed blue tail sheath, a hexagonal baseplate and six long jointed tail fibres that bend at the knee like spider legs. Landing Party: phages drop out of the dark onto the curved, translucent membrane of a rod-shaped bacterium, reach down with their legs, plant their feet, walk a few steps, then the sheath contracts, the hollow tail tube punches through the membrane and a glowing double strand of DNA pours into the cell while ripples spread across the surface; others tumble through space overhead. Hero Phage: one huge phage standing on the cell, close-up and slowly orbiting, flexing its legs and firing its tail. Electron Micrograph: a whole bacterium covered in attached phages, rendered as a grey scanning-electron image with edge glow, depth-of-field softness and heavy grain. Neon Swarm: a lattice of small tumbling phages floating in the dark with glowing neon outlines. Auto Morph dissolves between the forms through a glowing seam. Bass bobs the phages on their knees, beats make sheaths contract and inject, and the drop makes every phage contract at once with a burst of DNA and a shockwave across the membrane. At rest the phages drift calmly with soft dim glows; during a build the legs twitch faster, sheaths tense, the camera closes in and the image trembles; on the drop everything injects together in a bright DNA flash and the peak runs at full density, glow and motion.",
+    "file": "bacteriophage.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1417,
+    "title": "Bacteriophage",
+    "type": "generator"
   }
 ]
