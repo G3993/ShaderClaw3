@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Bacteriophage — glossy 3D T4 viruses in the style of a scientific animation. Each phage is built like the real thing: a faceted, elongated icosahedral gold head with crisp facet edges, a collar and neck, a ribbed blue tail sheath, a hexagonal baseplate and six long jointed tail fibres that bend at the knee like spider legs. Landing Party: phages drop out of the dark onto the curved, translucent membrane of a rod-shaped bacterium, reach down with their legs, plant their feet, walk a few steps, then the sheath contracts, the hollow tail tube punches through the membrane and a glowing double strand of DNA pours into the cell while ripples spread across the surface; others tumble through space overhead. Hero Phage: one huge phage standing on the cell, close-up and slowly orbiting, flexing its legs and firing its tail. Electron Micrograph: a whole bacterium covered in attached phages, rendered as a grey scanning-electron image with edge glow, depth-of-field softness and heavy grain. Neon Swarm: a lattice of small tumbling phages floating in the dark with glowing neon outlines. Auto Morph dissolves between the forms through a glowing seam. Bass bobs the phages on their knees, beats make sheaths contract and inject, and the drop makes every phage contract at once with a burst of DNA and a shockwave across the membrane. At rest the phages drift calmly with soft dim glows; during a build the legs twitch faster, sheaths tense, the camera closes in and the image trembles; on the drop everything injects together in a bright DNA flash and the peak runs at full density, glow and motion.",
+  "DESCRIPTION": "Bacteriophage — glossy 3D T4 viruses in the style of a scientific animation. Each phage is built like the real thing: a faceted, elongated icosahedral gold head with crisp facet edges, a collar and neck, a ribbed blue tail sheath, a hexagonal baseplate and six long jointed tail fibres that bend at the knee like spider legs. Landing Party: phages drop out of the dark onto the curved, translucent membrane of a rod-shaped bacterium, reach down with their legs, plant their feet, walk a few steps, then the sheath contracts, the hollow tail tube punches through the membrane and a glowing double strand of DNA pours into the cell while ripples spread across the surface; others tumble through space overhead. Hero Phage: one huge phage standing on the cell, close-up and slowly orbiting, flexing its legs and firing its tail. Electron Micrograph: a whole bacterium covered in attached phages, rendered as a grey scanning-electron image with edge glow, depth-of-field softness and heavy grain. Neon Swarm: a lattice of small tumbling phages floating in the dark with glowing neon outlines. Auto Morph dissolves between the forms through a glowing seam. Bass bobs the phages on their knees, beats make sheaths contract and inject, and the drop makes every phage contract at once with a burst of DNA and a shockwave across the membrane. At rest the phages drift calmly with soft dim glows; during a build the legs twitch faster, sheaths tense, the camera closes in and the image trembles; on the drop everything injects together in a bright DNA flash and the peak runs at full density, glow and motion. Physics: every phage is a simulated body with momentum, drag and Brownian jitter that sinks back toward the host under gravity and lands on spring-damped tail-fibre landing gear that squats and rebounds; beats slam them onto their knees, firing the sheath recoils them, and the drop's shockwave blasts them off the membrane into tumbling flight before they drift back down and re-dock.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-26 — original.",
   "CATEGORIES": ["Generator", "3D", "Science", "Audio Reactive"],
   "INPUTS": [
@@ -22,7 +22,16 @@
     { "NAME": "bgMode",      "LABEL": "Background", "TYPE": "long", "DEFAULT": 2, "VALUES": [0, 1, 2], "LABELS": ["Solid", "Vertical Gradient", "Radial Gradient"], "GROUP": "Background" },
     { "NAME": "bgColor",     "LABEL": "BG Color / Top / Center", "TYPE": "color", "DEFAULT": [0.03, 0.04, 0.09, 1.0], "GROUP": "Background" },
     { "NAME": "bgColor2",    "LABEL": "BG Bottom / Edge", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.01, 1.0], "GROUP": "Background" },
-    { "NAME": "transparentBg","LABEL": "Transparent BG",  "TYPE": "bool",  "DEFAULT": false, "GROUP": "Background" }
+    { "NAME": "transparentBg","LABEL": "Transparent BG",  "TYPE": "bool",  "DEFAULT": false, "GROUP": "Background" },
+    { "NAME": "physicsAmt",  "LABEL": "Physics Amount",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Physics" },
+    { "NAME": "gravity",     "LABEL": "Gravity / Host Pull", "TYPE": "float", "AUDIO": false, "MIN": 0.1, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Physics" },
+    { "NAME": "bounce",      "LABEL": "Leg Bounce",       "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55, "GROUP": "Physics" },
+    { "NAME": "kickForce",   "LABEL": "Kick Force",       "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Physics" },
+    { "NAME": "resetPhysics","LABEL": "Reset Physics",    "TYPE": "bool",  "DEFAULT": false, "GROUP": "Physics" }
+  ],
+  "PASSES": [
+    { "TARGET": "phState", "PERSISTENT": true, "FLOAT": true },
+    {}
   ]
 }*/
 
@@ -92,6 +101,8 @@ vec3  gMA, gMB; float gMR; // the bacterium: a capsule
 float gMat, gAux, gHue, gInjH, gGlow, gGlowI;
 // phage() local results
 float pMat, pAux, pGlow;
+// inst() side outputs: analytic hover height (world) and floater flag
+float gH, gFloat;
 
 float sdCap(vec3 p, vec3 a, vec3 b, float ra, float rb) {
     vec3 pa = p - a, ba = b - a;
@@ -192,6 +203,7 @@ void inst(float i, vec3 p, out vec3 C, out vec3 U, out vec3 X, out float s,
     vec3 P = vec3(0.0);
     s = 0.8; c = 0.0; inj = 0.0; L = 1.0; wa = 0.0;
     bool floater = false;
+    gH = 0.0;
     if (gF > 2.5) {
         // Neon Swarm: lattice cell around p
         float cs = 3.6;
@@ -273,11 +285,49 @@ void inst(float i, vec3 p, out vec3 C, out vec3 U, out vec3 X, out float s,
     c = max(c, gDrop);
     inj = max(inj, gDrop) * (1.0 - 0.45 * gRest);
     gy = -h / s - 0.7 * s / gMR;
+    gH = h; gFloat = floater ? 1.0 : 0.0;
     C = P + U * h;
     vec3 ref = abs(U.z) < 0.9 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
     vec3 X0 = normalize(cross(U, ref));
     vec3 Z0 = cross(X0, U);
     X = X0 * cos(spin) + Z0 * sin(spin);
+}
+
+// ── physics state: 8 bodies × 3 rows (pos+tilt, vel+spin, edge memory) ──
+#define NB 8.0
+#define H0 0.22
+vec3 rotAx(vec3 v, vec3 k, float a) {
+    float c = cos(a), s = sin(a);
+    return v * c + cross(k, v) * s + k * dot(k, v) * (1.0 - c);
+}
+// inst() + the simulated body: lateral drift, physical height on the legs, tumble
+void instP(float i, vec3 p, out vec3 C, out vec3 U, out vec3 X, out float s,
+           out float c, out float inj, out float gy, out float L, out float wa, out float hs) {
+    inst(i, p, C, U, X, s, c, inj, gy, L, wa, hs);
+    float pa = physicsAmt;
+    if (pa < 0.001 || s <= 0.0) return;
+    bool sw = gF > 2.5;
+    float bi = sw ? floor(hs * 7.99) : i;
+    vec4 st = texture2D(phState, vec2((bi + 0.5) / NB, 0.5 / 3.0));
+    float kF = sw ? 0.35 : (gF > 0.5 && gF < 1.5 && i < 0.5) ? 0.35 : 1.0;
+    vec3 Z = cross(X, U);
+    vec3 P = C - U * gH;
+    vec3 lat = (X * st.x + Z * st.z) * s * kF * pa;
+    if (sw) lat = clamp(lat, -0.35, 0.35);
+    float H;
+    if (gFloat > 0.5) H = gH / s + clamp(st.y * kF, -1.2, 1.2) * pa;
+    else H = mix(gH / s, H0 + (st.y - H0) * kF, pa);
+    float ang = st.w * pa * (kF < 0.5 && !sw ? 0.45 : 1.0);   // the close-up hero tilts less
+    vec3 ka = normalize(vec3(h11(bi * 3.17 + 0.3) - 0.5, 0.3 * (h11(bi * 5.3 + 0.1) - 0.5), h11(bi * 8.9 + 0.7) - 0.5));
+    ka = normalize(X * ka.x + U * ka.y + Z * ka.z);
+    vec3 U2 = rotAx(U, ka, ang), X2 = rotAx(X, ka, ang);
+    C = P + U * (H * s) + lat + (U - U2) * (0.9 * s);
+    if (gFloat < 0.5) {
+        float Lp = (1.0 - smoothstep(0.12, 1.0, H - H0)) * smoothstep(0.55, 0.95, cos(ang));
+        L = mix(L, Lp, pa);
+        gy = -H - 0.7 * s / gMR;
+    }
+    U = U2; X = X2;
 }
 
 float map(vec3 p) {
@@ -288,7 +338,7 @@ float map(vec3 p) {
         float i = float(k);
         if (i > gCount - 0.5) break;
         vec3 C, U, X; float s, c, inj, gy, L, wa, hs;
-        inst(i, p, C, U, X, s, c, inj, gy, L, wa, hs);
+        instP(i, p, C, U, X, s, c, inj, gy, L, wa, hs);
         if (s <= 0.0) continue;
         float db = length(p - C - U * (0.55 * s)) - 2.0 * s;
         if (db > d) continue;
@@ -339,14 +389,18 @@ vec3 phageCol(float m, float aux) {
     return vec3(1.0, 0.82, 0.5);                                 // fibres
 }
 
-vec4 renderScene(float form, vec2 sp, vec2 uv) {
-    float ar = audioReact;
+void setForm(float form) {
     gF = form;
     gCount = form < 0.5 ? 6.0 : form < 1.5 ? 3.0 : form < 2.5 ? 8.0 : 1.0;
     // the bacterium
     if (form < 0.5) { gMR = 7.0; gMA = vec3(-60.0, -7.0, 0.0); gMB = vec3(60.0, -7.0, 0.0); }
     else if (form < 1.5) { gMR = 7.0; gMA = vec3(0.0, -7.0, 0.0); gMB = vec3(0.0, -7.0, 0.001); }
     else            { gMR = 1.5; gMA = vec3(-2.5, 0.0, 0.0);   gMB = vec3(2.5, 0.0, 0.0); }
+}
+
+vec4 renderScene(float form, vec2 sp, vec2 uv) {
+    float ar = audioReact;
+    setForm(form);
 
     // ── camera ──
     float tr = smoothstep(0.7, 1.0, gBuild);
@@ -460,6 +514,15 @@ vec4 renderScene(float form, vec2 sp, vec2 uv) {
         float sp2  = pow(max(dot(reflect(rd, n), lRim), 0.0), 12.0);
         float occ = ao;
         if (hMat > 2.5 && hMat < 3.5) occ *= 0.65 + 0.35 * hAux;      // sheath grooves
+        if (form < 2.5) {
+            // analytic AO: crevice where legs/baseplate meet the membrane, head self-shade on the tail
+            vec3 ba0 = gMB - gMA;
+            vec3 ax0 = gMA + ba0 * clamp(dot(hp - gMA, ba0) / dot(ba0, ba0), 0.0, 1.0);
+            float dMem = length(hp - ax0) - gMR;
+            float aoR = sem ? 0.25 : 0.7;
+            occ *= 0.35 + 0.65 * smoothstep(-0.05 * aoR, aoR, dMem) + 0.2 * max(dot(n, normalize(hp - ax0)), 0.0) * (1.0 - smoothstep(0.0, aoR, dMem));
+            if (hMat > 1.5 && hMat < 4.5) dif *= 0.55 + 0.45 * max(n.y, 0.0);
+        }
         if (hMat < 1.5) {
             float edge = smoothstep(0.0, 0.012, hAux);
             base *= 0.75 + 0.25 * edge;
@@ -488,8 +551,10 @@ vec4 renderScene(float form, vec2 sp, vec2 uv) {
         }
         if (hMat > 3.5 && hMat < 4.5) phC += (sem ? vec3(0.6) : dnaC) * hInj * glowK * 0.9;   // tube lights up while injecting
         // fog
+        // aerial perspective: distant phages sink into a cool haze
         float fogK = form > 2.5 ? 0.12 : 0.025;
-        phC = mix(phC, bg, 1.0 - exp(-max(hitT - (form > 2.5 ? 2.5 : 4.0), 0.0) * fogK));
+        vec3 haze = sem ? bg : mix(bg, vec3(0.16, 0.2, 0.34), 0.35);
+        phC = mix(phC, haze, 1.0 - exp(-max(hitT - (form > 2.5 ? 2.5 : 4.0), 0.0) * fogK));
     }
     if (tM > 0.0 && (hitT < 0.0 || hitT > tM)) {
         // the bacterial cell envelope
@@ -512,11 +577,19 @@ vec4 renderScene(float form, vec2 sp, vec2 uv) {
             float i = float(k);
             if (i > gCount - 0.5) break;
             vec3 C, U, X; float s, c, inj, gy, L, wa, hs;
-            inst(i, mp, C, U, X, s, c, inj, gy, L, wa, hs);
+            instP(i, mp, C, U, X, s, c, inj, gy, L, wa, hs);
             if (L < 0.01 || s <= 0.0) continue;
             vec3 P = C + U * (gy * s);
             float dd = length(mp - P) / s;
             shad *= 1.0 - 0.55 * L * exp(-dd * dd * 1.6);
+            // soft key-light shadow of the capsid and sheath (analytic sphere occluders)
+            for (int j = 0; j < 2; j++) {
+                vec3 oc = mp - (C + U * ((j == 0 ? 1.6 : 0.6) * s));
+                float rS = (j == 0 ? 0.38 : 0.16) * s;
+                float al = -dot(oc, lKey);
+                float pr = length(oc + lKey * al);
+                if (al > 0.0) shad *= mix(1.0, smoothstep(rS * 0.5, rS + 0.12 * al, pr), 0.7);
+            }
             float rr = fract(TIME * 0.5 + hs);
             rip += inj * exp(-pow((dd - rr * 2.4) * 5.0, 2.0)) * (1.0 - rr);
             rip += gDrop * exp(-pow((dd - (1.0 - gDrop) * 6.0) * 2.5, 2.0)) * 1.5;
@@ -540,6 +613,8 @@ vec4 renderScene(float form, vec2 sp, vec2 uv) {
             mc = mix(memA, memB, 0.35 + 0.35 * sin(suv.x * 0.6 + wv * 3.0) + 0.3 * bh) * (0.08 + 0.6 * dif) * shad;
             mc += vec3(1.0, 0.85, 0.95) * spec * 0.9 * shad;
             mc += vec3(0.95, 0.6, 1.0) * fres * 0.55 * rimLight;
+            // subsurface glow: light bleeding through the soft envelope past the terminator
+            mc += memB * vec3(1.0, 0.55, 0.7) * 0.2 * smoothstep(-0.5, 0.25, dot(bn, lKey)) * (1.0 - dif) * (0.5 + 0.5 * shad);
             mc += dnaC * rip * glowK * 0.35;
             mc = mix(mc, bg, 1.0 - exp(-max(tM - 6.0, 0.0) * 0.03));
             mAlpha = mix(1.0, 0.45, membraneSee * (1.0 - fres));
@@ -555,10 +630,13 @@ vec4 renderScene(float form, vec2 sp, vec2 uv) {
         alpha = 1.0;
     }
     // near-miss halo: depth of field softness (SEM) / crisp silhouettes
-    if (hitT < 0.0 && tM < 0.0 && form < 2.5) {
-        float coc = sem ? 0.004 + 0.03 * smoothstep(0.0, 3.0, abs(tmin - 9.8 * zm)) : 0.01;
-        float cov = (1.0 - smoothstep(0.0, coc * tmin, dmin)) * (sem ? 0.6 : 0.25);
-        col = mix(col, sem ? vec3(0.4) : vec3(0.45, 0.6, 0.9) * 0.4, cov);
+    // + pixel-footprint coverage AA on every silhouette, and a shallow depth of field
+    if (hitT < 0.0 && form < 2.5 && tmin < tMm) {
+        float pix = 1.4 / (RENDERSIZE.y * fl);
+        float coc = sem ? 0.004 + 0.03 * smoothstep(0.0, 3.0, abs(tmin - 9.8 * zm))
+                        : pix + 0.006 * smoothstep(1.5, 9.0, abs(tmin - dist));
+        float cov = (1.0 - smoothstep(0.0, coc * tmin, dmin)) * (sem ? 0.6 : 0.7);
+        col = mix(col, sem ? vec3(0.4) : vec3(0.5, 0.62, 0.95) * 0.55 * rimLight, cov);
         alpha = max(alpha, cov);
     }
     // DNA glow in front of everything
@@ -585,6 +663,101 @@ void main() {
     gT = (TIME * 0.6 + audioMidTime * 0.25 * ar) * motion + 1.5 * gBuild * gBuild;
     gWalk = (TIME * 2.2 + audioBassTime * 1.0 * ar) * motion + 3.0 * gBuild * gBuild;
     gBeatC = smoothstep(0.1, 0.8, audioBeatPulse) * ar;
+
+    if (PASSINDEX == 0) {
+        // ── physics update: one body per cell, computed only near cell centres ──
+        vec2 cid = floor(uv * vec2(NB, 3.0));
+        vec2 cc = (cid + 0.5) / vec2(NB, 3.0) * R;
+        if (max(abs(fc.x - cc.x), abs(fc.y - cc.y)) > 3.0) { gl_FragColor = vec4(0.0); return; }
+        float bi = cid.x;
+        vec4 s0 = texture2D(phState, vec2((bi + 0.5) / NB, 0.5 / 3.0));
+        vec4 s1 = texture2D(phState, vec2((bi + 0.5) / NB, 1.5 / 3.0));
+        vec4 s2 = texture2D(phState, vec2((bi + 0.5) / NB, 2.5 / 3.0));
+        // dominant form (the morph seam is per pixel; physics follows the majority)
+        float fs = float(formSel), fm = fs - 1.0;
+        if (fs < 0.5) {
+            float ph = TIME / morphPeriod;
+            float fA = mod(floor(ph), 4.0);
+            float w = smoothstep(1.0 - 2.5 / morphPeriod, 1.0, fract(ph));
+            fm = w > 0.5 ? mod(fA + 1.0, 4.0) : fA;
+        }
+        setForm(fm);
+        vec3 C, U, X; float s, c, inj, gy, L, wa, hs;
+        inst(bi, vec3(0.0), C, U, X, s, c, inj, gy, L, wa, hs);
+        bool flo = gFloat > 0.5 || s <= 0.0;
+        float hA = s > 0.0 ? gH / s : 0.0;
+        vec3 o = s0.xyz, v = s1.xyz;
+        float a = s0.w, w = s1.w;
+        float beat = gBeatC, drop = gDrop;
+        float chk = abs(o.x) + abs(o.y) + abs(o.z) + abs(a) + abs(v.x) + abs(v.y) + abs(v.z) + abs(w);
+        bool bad = FRAMEINDEX < 2 || resetPhysics || s2.w < 0.5 || !(chk < 1e3);
+        if (bad) {
+            o = vec3(0.0, flo ? 0.0 : H0 + hA, 0.0); v = vec3(0.0); a = 0.0; w = 0.0;
+        } else {
+            float dt = clamp(TIMEDELTA, 0.0, 0.1);
+            float kf = kickForce;
+            float hb = h11(hs * 17.0 + floor(TIME * 0.5 + hs));
+            float sel = step(0.4, hb);
+            vec3 kr = vec3(h11(hb * 13.1 + bi), h11(hb * 29.7 + bi), h11(hb * 41.3 + bi)) - 0.5;
+            float hd = h11(bi * 4.7 + floor(TIME * 0.25) * 1.3);
+            vec3 kd = vec3(h11(hd * 7.1), h11(hd * 3.9), h11(hd * 5.3)) - 0.5;
+            float dB = max(beat - s2.y, 0.0) * sel;
+            float dD = max(drop - s2.z, 0.0);
+            float dC = max(c - s2.x, 0.0);
+            float fi = mod(float(FRAMEINDEX), 977.0);
+            vec3 nz = vec3(h11(fi * 1.31 + bi * 7.7), h11(fi * 2.17 + bi * 3.3), h11(fi * 0.73 + bi * 5.9)) - 0.5;
+            float brown = (0.5 + 1.1 * gBuild + 0.7 * gPeak) * (flo ? 2.0 : 1.0);
+            float drag = 1.15 - 0.35 * gPeak;
+            vec3 F = vec3(0.0);
+            float ground = 0.0;
+            if (flo) {
+                // floaters: soft tether to their analytic drift path
+                v += (kr * 3.5 * dB + kd * 6.0 * dD) * kf;
+                w += (kr.y * 3.0 * dB + kd.y * 10.0 * dD) * kf;
+            } else {
+                // docked: gravity/host pull, guided lift-off, spring-damped tail-fibre legs
+                ground = 1.0 - smoothstep(H0, H0 + 1.5, o.y);
+                v.y += (-2.6 * dB * ground + dC * 2.4) * kf + dC * 0.8;   // kick slams down, firing recoils up
+                v.xz += kr.xz * 1.2 * dB * kf;
+                w += kr.y * 4.0 * dB * kf;
+                // drop shockwave: blast off the host, with spin
+                v.y += dD * (4.0 + 2.5 * hd) * kf;
+                v.xz += kd.xz * 6.0 * dD * kf;
+                w += (kd.y > 0.0 ? 1.0 : -1.0) * (9.0 + 8.0 * abs(kd.y)) * dD * kf;
+            }
+            v += nz * brown * 1.6 * sqrt(dt);
+            // 4 semi-implicit substeps (forces re-evaluated) — stable up to 0.1 s frames
+            float h4 = dt * 0.25;
+            float gg = 2.5 * gravity * (1.0 - 0.4 * gRest + 0.35 * gBuild);
+            float kL = 55.0 + 45.0 * gBuild, cL = mix(14.0, 2.2, bounce);
+            for (int k = 0; k < 4; k++) {
+                if (flo) F = -2.6 * o - drag * v;
+                else {
+                    F.xz = -1.4 * o.xz - drag * v.xz;
+                    F.y = -gg - drag * v.y + 8.0 * max(hA + H0 - o.y, 0.0);
+                    if (o.y < H0) { F.y += kL * (H0 - o.y) - cL * v.y; F.xz -= 5.0 * v.xz; }
+                    ground = 1.0 - smoothstep(H0, H0 + 1.5, o.y);
+                }
+                w += (-(0.5 + 9.0 * ground) * sin(a) - (0.4 + 2.6 * ground) * w) * h4;
+                v += F * h4;
+                o += v * h4;
+                a += w * h4;
+                if (!flo && o.y < 0.03) { o.y = 0.03; v.y = max(v.y, 0.0); }
+            }
+            float vl = length(v);
+            if (vl > 14.0) v *= 14.0 / vl;
+            w = clamp(w, -25.0, 25.0);
+            if (flo) o = clamp(o, vec3(-3.0), vec3(3.0));
+            else {
+                if (o.y < 0.03) { o.y = 0.03; v.y = max(v.y, 0.0); }
+                o = clamp(o, vec3(-5.0, 0.03, -5.0), vec3(5.0, 9.0, 5.0));
+            }
+            a = mod(a + PI, TAU) - PI;
+        }
+        float row = cid.y;
+        gl_FragColor = row < 0.5 ? vec4(o, a) : row < 1.5 ? vec4(v, w) : vec4(c, beat, drop, 1.0);
+        return;
+    }
 
     // form morph: per-pixel dissolve through a glowing seam
     float fsel = float(formSel);
