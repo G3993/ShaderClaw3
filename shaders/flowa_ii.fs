@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Flowa II — futuristic layered flowers of light, always on a stem. A hero flower sways on a long green stem with leaves in a dense garden of others, while its head morphs through ten species: a Star Glow bloom with spiked petals and a pastel halo, a Fan of triangular blades in white, yellow and orange, Prism Shards of overlapping rectangles with an RGB split, Chrome Petals with flat pink, blue, orange and mint colour blocks, metallic rims and ball-tipped stamens, and a Bell Cluster of half-moon bells in magenta, lime and silver, grainy Tulips, layered Lotus petals, tilted Lily Pads with radial veins, a spotted Mushroom Bloom over a frilly ring, and dotted Seed Pods. Around it a garden of smaller flowers on thin stems with long tapering blade leaves fills the frame, each morphing between species on its own schedule, with riso-print grain over everything. Every head is shaded like a 3D object, with puffy depth, chrome rim light, a shimmer sweep and iridescent edges. Around it a data layer tracks the flower: boxes lock onto blobs and show an X-ray heatmap of the petals inside, joined by dashed lines and number readouts, while translucent squares in screen, multiply and difference blend modes hop over the stem. A datamosh pass smears blocky trails of the flower as it moves. At rest it is a single quiet bloom with few trackers; during a build the head spins and tightens, the trackers multiply and jitter, and the scan speeds up; on the drop the flower bursts open with an RGB split while the mosh freezes into a long smear, then the peak blooms with every layer alive.",
+  "DESCRIPTION": "Flowa II — futuristic layered flowers of light, always on a stem. A hero flower sways on a long green stem with leaves in a dense garden of others, while its head morphs through ten species: a Star Glow bloom with spiked petals and a pastel halo, a Fan of triangular blades in white, yellow and orange, Prism Shards of overlapping rectangles with an RGB split, Chrome Petals with flat pink, blue, orange and mint colour blocks, metallic rims and ball-tipped stamens, and a Bell Cluster of half-moon bells in magenta, lime and silver, grainy Tulips, layered Lotus petals, tilted Lily Pads with radial veins, a spotted Mushroom Bloom over a frilly ring, and dotted Seed Pods. Around it a garden of smaller flowers on thin stems with long tapering blade leaves fills the frame, each morphing between species on its own schedule, with riso-print grain over everything. Every head is shaded like a 3D object, with puffy depth, chrome rim light, a shimmer sweep and iridescent edges. Around it a data layer tracks the flower: boxes lock onto blobs and show an X-ray heatmap of the petals inside, joined by dashed lines and number readouts, while translucent squares in screen, multiply and difference blend modes hop over the stem. A datamosh pass smears blocky trails of the flower as it moves. At rest it is a single quiet bloom with few trackers that drift slowly from blob to blob; during a build the head spins and tightens, the trackers multiply and jitter, and the scan speeds up; on the drop the flower bursts open with an RGB split while the mosh freezes into a long smear, then the peak blooms with every layer alive. Tracker Speed and Overlay / Mosh Speed set how fast the boxes glide and the squares and trails move (both calm by default).",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-22 — original.",
   "CATEGORIES": ["Generator", "Nature", "Glitch", "Audio Reactive"],
   "INPUTS": [
@@ -16,11 +16,13 @@
     { "NAME": "trackers",    "LABEL": "Tracking Boxes",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55, "GROUP": "Data Layer" },
     { "NAME": "xray",        "LABEL": "X-Ray Heat",       "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Data Layer" },
     { "NAME": "squares",     "LABEL": "Blend Squares",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6, "GROUP": "Data Layer" },
+    { "NAME": "blobSpeed",   "LABEL": "Tracker Speed",    "TYPE": "float", "AUDIO": false, "MIN": 0.02, "MAX": 1.5, "DEFAULT": 0.22, "GROUP": "Data Layer" },
+    { "NAME": "overlaySpeed","LABEL": "Overlay / Mosh Speed", "TYPE": "float", "AUDIO": false, "MIN": 0.1, "MAX": 2.0, "DEFAULT": 0.5, "GROUP": "Data Layer" },
     { "NAME": "readouts",    "LABEL": "Numbers & Lines",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.8, "GROUP": "Data Layer" },
     { "NAME": "moshAmt",     "LABEL": "Datamosh Trails",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6, "GROUP": "Data Layer" },
     { "NAME": "rgbSplit",    "LABEL": "RGB Split",        "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.35, "GROUP": "Data Layer" },
     { "NAME": "grain",       "LABEL": "Grain",            "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.15, "GROUP": "Finish" },
-    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2], "LABELS": ["Original Colours", "Red · Black · White", "Blue · Black · White"], "GROUP": "Studio Palette" },
+    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
     { "NAME": "palAmount",   "LABEL": "Palette Amount",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Studio Palette" },
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
@@ -58,15 +60,32 @@ float sdSeg(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; float h = cla
 
 vec3 studioPalette(vec3 c) {
     float m = float(paletteMode);
-    if (m < 0.5 || palAmount <= 0.0) return c;
-    vec3 acc = m < 1.5 ? palRed.rgb : palBlue.rgb;
+    if (palAmount <= 0.0) return c;
     float L = clamp(dot(c, vec3(0.2126, 0.7152, 0.0722)), 0.0, 1.0);
     float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b));
     float sat = mx > 1e-4 ? (mx - mn) / mx : 0.0;
-    float t = pow(L, 0.8);
-    vec3 ramp = t < 0.5 ? mix(vec3(0.0), acc, t * 2.0) : mix(acc, vec3(1.0), (t - 0.5) * 2.0);
-    vec3 mono = vec3(smoothstep(0.0, 1.0, L));
-    vec3 o = mix(mono, ramp, smoothstep(0.06, 0.4, sat));
+    vec3 o;
+    if (m < 0.5) {
+        // Colorful: saturation pushed hard toward neon / primary / poppy colour.
+        vec3 hueC = pow((c - mn) / max(mx - mn, 1e-4), vec3(1.4));   // pure hue, nudged toward primaries
+        float s2 = 1.0 - pow(1.0 - sat, 4.0);                         // strong but curved saturation boost
+        float v = clamp(pow(mx, 0.85) * 1.12, 0.0, 1.0);
+        o = mix(vec3(1.0), hueC, s2) * v;
+        // flat mid-greys pick up a drifting neon spectrum keyed to brightness
+        float hx = L * 1.7 + 0.04 * TIME;
+        vec3 neon = pow(clamp(abs(fract(hx + vec3(0.0, 0.6667, 0.3333)) * 6.0 - 3.0) - 1.0, 0.0, 1.0), vec3(1.4));
+        float wn = (1.0 - smoothstep(0.02, 0.1, sat)) * smoothstep(0.06, 0.25, L) * (1.0 - smoothstep(0.55, 0.85, L));
+        o = mix(o, neon * v, wn);
+        o = mix(o, vec3(1.0), smoothstep(0.85, 1.0, L) * 0.5);       // white-hot cores
+    } else if (m > 2.5) {
+        o = vec3(smoothstep(0.02, 0.95, pow(L, 0.9)));             // Black & White
+    } else {
+        vec3 acc = m < 1.5 ? palRed.rgb : palBlue.rgb;
+        float t = pow(L, 0.8);
+        vec3 ramp = t < 0.5 ? mix(vec3(0.0), acc, t * 2.0) : mix(acc, vec3(1.0), (t - 0.5) * 2.0);
+        vec3 mono = vec3(smoothstep(0.0, 1.0, L));
+        o = mix(mono, ramp, smoothstep(0.06, 0.4, sat));
+    }
     return mix(c, o, palAmount);
 }
 vec3 backdrop(vec2 uv) {
@@ -97,7 +116,7 @@ void showDynamics() {
     gLift  = mix(0.5, clamp(0.15 + e * 0.7 + gBuild * 0.25 + d * 0.3, 0.0, 1.0), k);
 }
 
-float gT, gStep;
+float gT, gStep, gBT;
 float gHue;      // per-flower colour seed
 vec2  gH;        // head centre (screen units)
 float gRH;       // head radius
@@ -536,7 +555,11 @@ void main() {
     vec2 p = (fc - 0.5 * R) / R.y;
     float ar = audioReact;
     gT = TIME * 0.6 + (audioMidTime * 0.35 + audioBassTime * 0.25) * ar + 1.2 * gBuild * gBuild;
-    gStep = floor((TIME * 0.9 + audioMidTime * 0.8 * ar) * (1.0 + 1.5 * gLift + 3.0 * gBuild));
+    // overlay step clock (squares, mosh refresh): additive, scaled only by the user slider.
+    // overlaySpeed = 1 ≈ the original pace at medium energy.
+    gStep = floor(overlaySpeed * (TIME * 1.3 + audioMidTime * 1.0 * ar + audioBassTime * 0.4 * ar) + 4.0 * gBuild * gBuild + 2.0 * gLift);
+    // tracker clock: continuous, so the boxes can glide. blobSpeed = 1 ≈ the original hop rate.
+    gBT = blobSpeed * (TIME * 1.3 + audioMidTime * 1.0 * ar + audioBassTime * 0.4 * ar) + 1.5 * gBuild * gBuild + 0.8 * gLift;
     float swayX = (0.06 * sin(gT * 0.45) + 0.025 * sin(gT * 1.1)) * sway;
     gH = vec2(0.04 + swayX, 0.14 + 0.02 * sin(gT * 0.6));
     gRH = 0.3 * flowerSize * (0.82 + 0.25 * gLift + 0.2 * gDrop - 0.1 * gBuild) * (1.0 + 0.05 * bassP() * ar);
@@ -588,7 +611,7 @@ void main() {
         vec2 rel = (mb * MB - 0.5 * R) / R.y - gH;
         vec2 swirl = normalize(vec2(-rel.y, rel.x) + 1e-4) * 0.6 + normalize(rel + 1e-4) * 0.8;
         vec2 jit = vec2(vn2(mb * 0.2 + gT * 0.3), vn2(mb * 0.2 + 7.0 - gT * 0.25)) - 0.5;
-        vec2 mv = floor((swirl + jit * 2.0) * (1.5 + 3.0 * gLift + 4.0 * gBuild) + 0.5);
+        vec2 mv = floor((swirl + jit * 2.0) * (1.5 + 3.0 * gLift + 4.0 * gBuild) * min(overlaySpeed, 1.5) + 0.5);
         vec4 prev = texture2D(moshBuf, (fc - mv) / R);
         float m = moshAmt * (0.75 + 0.2 * gLift + 0.25 * gDrop);
         float refresh = step(m, h12(mb + vec2(gStep, 3.0)));
@@ -646,13 +669,22 @@ void main() {
     for (int i = 0; i < 9; i++) {
         float fi = float(i);
         if (fi >= nB) break;
-        float ep = floor(gStep * (0.12 + 0.08 * h11(fi * 2.0)) + h11(fi) * 3.0);
-        vec2 hh = h21(fi * 3.3 + ep * 0.77);
+        // each box holds on a blob, then glides (eased) to the next one
+        float bph = gBT * (0.12 + 0.08 * h11(fi * 2.0)) + h11(fi) * 3.0;
+        float ep = floor(bph);
+        float gl = smoothstep(0.35, 1.0, fract(bph));
+        gl = gl * gl * (3.0 - 2.0 * gl);                                        // extra-soft ease in/out
+        vec2 hA = h21(fi * 3.3 + ep * 0.77), hB = h21(fi * 3.3 + (ep + 1.0) * 0.77);
         // lock onto a blob of the flower: polar spot on the head, or a point on the stem
-        vec2 c0 = hh.x < 0.75 ? gH + rot(hh.y * TAU) * vec2(gRH * (0.25 + 0.5 * h11(fi + ep)), 0.0)
-                             : mix(vec2(0.0, -0.35), gH, hh.y * 0.6);
-        c0 += (h21(fi + gStep * 0.5) - 0.5) * 0.006 * (1.0 + 4.0 * gBuild);   // tracking jitter
-        vec2 hs = vec2(0.025 + 0.045 * h11(fi * 5.0 + ep), 0.025 + 0.045 * h11(fi * 7.0 + ep));
+        vec2 cA = hA.x < 0.75 ? gH + rot(hA.y * TAU) * vec2(gRH * (0.25 + 0.5 * h11(fi + ep)), 0.0)
+                             : mix(vec2(0.0, -0.35), gH, hA.y * 0.6);
+        vec2 cB = hB.x < 0.75 ? gH + rot(hB.y * TAU) * vec2(gRH * (0.25 + 0.5 * h11(fi + ep + 1.0)), 0.0)
+                             : mix(vec2(0.0, -0.35), gH, hB.y * 0.6);
+        vec2 c0 = mix(cA, cB, gl);
+        // tracking wobble: smooth noise instead of per-step jumps
+        c0 += (vec2(vn2(vec2(fi * 7.1, gBT * 1.5)), vn2(vec2(fi * 3.9 + 40.0, gBT * 1.5))) - 0.5) * 0.008 * (1.0 + 3.0 * gBuild);
+        vec2 hs = mix(vec2(0.025 + 0.045 * h11(fi * 5.0 + ep), 0.025 + 0.045 * h11(fi * 7.0 + ep)),
+                      vec2(0.025 + 0.045 * h11(fi * 5.0 + ep + 1.0), 0.025 + 0.045 * h11(fi * 7.0 + ep + 1.0)), gl);
         vec2 dd = abs(p - c0);
         float inside = step(max(dd.x / hs.x, dd.y / hs.y), 1.0);
         float px1 = 1.0 / R.y;
@@ -671,7 +703,7 @@ void main() {
         }
         col = mix(col, vec3(1.0), edge);
         // readout under the box
-        float val = h11(fi * 13.0 + ep) * 1.9;
+        float val = mix(h11(fi * 13.0 + ep), h11(fi * 13.0 + ep + 1.0), gl) * 1.9;
         float s = max(floor(R.y / 360.0), 1.0);
         vec2 o = (c0 + vec2(-hs.x * 0.6, -hs.y * 0.25)) * R.y + 0.5 * R;
         float txt = readout(fc, o, s, val) * readouts;
@@ -681,7 +713,7 @@ void main() {
             float dl = sdSeg(p, prevC, c0);
             vec2 ba = c0 - prevC;
             float tt = clamp(dot(p - prevC, ba) / dot(ba, ba), 0.0, 1.0) * length(ba);
-            float dash = step(0.5, fract(tt / 0.012 - gT * 0.5));
+            float dash = step(0.5, fract(tt / 0.012 - gBT * 0.6));
             lineMask = max(lineMask, smoothstep(1.2 * px1, 0.3 * px1, dl) * dash * readouts * 0.85);
         }
         prevC = c0;

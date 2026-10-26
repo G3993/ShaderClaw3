@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Chess — a living pixel grid in datamosh. Everything snaps to a crisp grid of big pixels: 1-bit moiré dither fields, checkerboard columns at several scales, blurry rainbow mosaic blocks, and Tetris-shaped patches filled with cross-stitch motifs (dots, crosses, X's, hex rings, stars, stripes) in red, pink, yellow, blue, green, orange and lavender. Pixel-art flowers and green-and-yellow pixel worms crawl through it like organisms under a microscope. The patterns slide through the grid band by band, reshuffle and morph, and the whole picture is datamoshed: macroblocks drag the previous frame along motion vectors so the image smears and bleeds like corrupted video, while only scattered blocks refresh with the new frame. At rest the pixels are big, the mosh is gentle and only a few flowers wander; during a build the grid gets finer, the smear runs longer and the slices tear faster; on the drop a clean keyframe snaps everything into place with an inverted flash, then the peak moshes at full speed with every pattern alive.",
+  "DESCRIPTION": "Chess — a living pixel grid in datamosh. Everything snaps to a crisp grid of big pixels: 1-bit moiré dither fields, checkerboard columns at several scales, blurry rainbow mosaic blocks, and Tetris-shaped patches filled with cross-stitch motifs (dots, crosses, X's, hex rings, stars, stripes) in red, pink, yellow, blue, green, orange and lavender. Pixel-art flowers and green-and-yellow pixel worms crawl through it like organisms under a microscope. The patterns slide through the grid band by band, reshuffle and morph, and the whole picture is datamoshed: macroblocks drag the previous frame along motion vectors so the image smears and bleeds like corrupted video, while only scattered blocks refresh with the new frame. At rest the pixels are big, the mosh is gentle and only a few flowers wander; during a build the grid gets finer, the smear runs longer and the slices tear faster; on the drop a clean keyframe snaps everything into place with an inverted flash, then the peak moshes at full speed with every pattern alive. The Speed group sets the pace: by default it is calm and slow, and Master Speed (1.0 = the original frantic pace), Glitch / Switch Rate, Scroll Speed and Smear Speed raise it as far as you like.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-22 — original.",
   "CATEGORIES": ["Generator", "Glitch", "Audio Reactive"],
   "INPUTS": [
@@ -14,10 +14,13 @@
     { "NAME": "moshBlock",   "LABEL": "Macroblock (px)",  "TYPE": "float", "AUDIO": false, "MIN": 2.0, "MAX": 12.0, "DEFAULT": 4.0, "GROUP": "Glitch" },
     { "NAME": "tearAmt",     "LABEL": "Slice Tears",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5, "GROUP": "Glitch" },
     { "NAME": "stepRate",    "LABEL": "Digital Frame Rate","TYPE": "float", "AUDIO": false, "MIN": 4.0, "MAX": 30.0, "DEFAULT": 12.0, "GROUP": "Glitch" },
-    { "NAME": "speed",       "LABEL": "Speed",            "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Glitch" },
+    { "NAME": "speed",       "LABEL": "Master Speed",     "TYPE": "float", "AUDIO": false, "MIN": 0.05, "MAX": 2.0, "DEFAULT": 0.4, "GROUP": "Speed" },
+    { "NAME": "glitchRate",  "LABEL": "Glitch / Switch Rate", "TYPE": "float", "AUDIO": false, "MIN": 0.1, "MAX": 2.5, "DEFAULT": 1.0, "GROUP": "Speed" },
+    { "NAME": "scrollSpeed", "LABEL": "Scroll Speed",     "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 2.5, "DEFAULT": 1.0, "GROUP": "Speed" },
+    { "NAME": "moshSpeed",   "LABEL": "Smear Speed",      "TYPE": "float", "AUDIO": false, "MIN": 0.1, "MAX": 2.5, "DEFAULT": 1.0, "GROUP": "Speed" },
     { "NAME": "inkColor",    "LABEL": "1-Bit Light",      "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0], "GROUP": "Look" },
     { "NAME": "fabric",      "LABEL": "Felt Texture",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.35, "GROUP": "Look" },
-    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2], "LABELS": ["Original Colours", "Red · Black · White", "Blue · Black · White"], "GROUP": "Studio Palette" },
+    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
     { "NAME": "palAmount",   "LABEL": "Palette Amount",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Studio Palette" },
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
@@ -52,15 +55,32 @@ float lum(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 
 vec3 studioPalette(vec3 c) {
     float m = float(paletteMode);
-    if (m < 0.5 || palAmount <= 0.0) return c;
-    vec3 acc = m < 1.5 ? palRed.rgb : palBlue.rgb;
+    if (palAmount <= 0.0) return c;
     float L = clamp(dot(c, vec3(0.2126, 0.7152, 0.0722)), 0.0, 1.0);
     float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b));
     float sat = mx > 1e-4 ? (mx - mn) / mx : 0.0;
-    float t = pow(L, 0.8);
-    vec3 ramp = t < 0.5 ? mix(vec3(0.0), acc, t * 2.0) : mix(acc, vec3(1.0), (t - 0.5) * 2.0);
-    vec3 mono = vec3(smoothstep(0.0, 1.0, L));
-    vec3 o = mix(mono, ramp, smoothstep(0.06, 0.4, sat));
+    vec3 o;
+    if (m < 0.5) {
+        // Colorful: saturation pushed hard toward neon / primary / poppy colour.
+        vec3 hueC = pow((c - mn) / max(mx - mn, 1e-4), vec3(1.4));   // pure hue, nudged toward primaries
+        float s2 = 1.0 - pow(1.0 - sat, 4.0);                         // strong but curved saturation boost
+        float v = clamp(pow(mx, 0.85) * 1.12, 0.0, 1.0);
+        o = mix(vec3(1.0), hueC, s2) * v;
+        // flat mid-greys pick up a drifting neon spectrum keyed to brightness
+        float hx = L * 1.7 + 0.04 * TIME;
+        vec3 neon = pow(clamp(abs(fract(hx + vec3(0.0, 0.6667, 0.3333)) * 6.0 - 3.0) - 1.0, 0.0, 1.0), vec3(1.4));
+        float wn = (1.0 - smoothstep(0.02, 0.1, sat)) * smoothstep(0.06, 0.25, L) * (1.0 - smoothstep(0.55, 0.85, L));
+        o = mix(o, neon * v, wn);
+        o = mix(o, vec3(1.0), smoothstep(0.85, 1.0, L) * 0.5);       // white-hot cores
+    } else if (m > 2.5) {
+        o = vec3(smoothstep(0.02, 0.95, pow(L, 0.9)));             // Black & White
+    } else {
+        vec3 acc = m < 1.5 ? palRed.rgb : palBlue.rgb;
+        float t = pow(L, 0.8);
+        vec3 ramp = t < 0.5 ? mix(vec3(0.0), acc, t * 2.0) : mix(acc, vec3(1.0), (t - 0.5) * 2.0);
+        vec3 mono = vec3(smoothstep(0.0, 1.0, L));
+        o = mix(mono, ramp, smoothstep(0.06, 0.4, sat));
+    }
     return mix(c, o, palAmount);
 }
 vec3 backdrop(vec2 uv) {
@@ -91,8 +111,10 @@ void showDynamics() {
     gLift  = mix(0.5, clamp(0.15 + e * 0.7 + gBuild * 0.25 + d * 0.3, 0.0, 1.0), k);
 }
 
-float gT;      // continuous clock
-float gStep;   // digital (quantized) clock
+float gT;      // continuous clock (fields, mosh flow)
+float gStep;   // digital clock for glitches: tears, refresh, reshuffle, speckle
+float gCStep;  // digital clock for the creatures (flowers, vines, worms)
+float gScroll; // band scroll clock
 float gPx;     // screen pixels per grid cell
 
 // the reference palette: red, magenta/pink, yellow, blue, green, orange, lavender, mint, cream
@@ -135,11 +157,11 @@ vec3 scene(vec2 c, vec2 screenCell) {
     float band = floor(c.y / (T * 2.0));
     float bandSpeed = (h11(band * 3.7) - 0.5) * 2.0;
     vec2 g = c;
-    g.x += floor(gStep * bandSpeed * (0.5 + 0.8 * lift) * speed);
+    g.x += floor(gScroll * bandSpeed);
     // pattern regions: polyomino blobs on the tile grid
     vec2 tile = floor(g / T);
     vec2 l = g - tile * T;
-    float shuffle = floor(gStep / (24.0 - 14.0 * lift));            // regions reshuffle in steps
+    float shuffle = floor(gStep / 18.0);            // regions reshuffle in steps
     float blob = vn2(tile * 0.33 + vec2(shuffle * 1.7, shuffle * 0.9));
     float group = floor(vn2(tile * 0.17 + 5.0 + shuffle * 0.4) * 9.0);
     // 1-bit moiré dither field underneath everything (ref: wavy hatch)
@@ -197,12 +219,12 @@ vec3 creatures(vec2 c, vec3 col) {
         vec2 hh = h22(vec2(fi, 3.1));
         vec2 gridN = RENDERSIZE / gPx;
         // wander: smooth path, snapped to the grid each digital step
-        vec2 pos = floor(gridN * (hh + 0.2 * vec2(sin(gStep * 0.05 * (0.5 + hh.y) + fi), cos(gStep * 0.043 * (0.5 + hh.x) + fi * 2.0))));
+        vec2 pos = floor(gridN * (hh + 0.2 * vec2(sin(gCStep * 0.05 * (0.5 + hh.y) + fi), cos(gCStep * 0.043 * (0.5 + hh.x) + fi * 2.0))));
         pos = mod(pos, gridN);
         vec2 d = c - pos;
         float ax = abs(d.x), ay = abs(d.y);
         if (max(ax, ay) > 3.0) continue;
-        float bloom = floor(1.0 + 1.5 * (0.5 + 0.5 * sin(gStep * 0.2 + fi)) + gDrop * 1.5);
+        float bloom = floor(1.0 + 1.5 * (0.5 + 0.5 * sin(gCStep * 0.2 + fi)) + gDrop * 1.5);
         // petals: plus-shaped rings of red/pink with a magenta + yellow heart
         float petal = step(ax + ay, bloom + 1.0) * step(1.0, ax + ay);
         float heart = step(ax + ay, 0.5);
@@ -219,8 +241,8 @@ vec3 creatures(vec2 c, vec3 col) {
     for (int v = 0; v < 5; v++) {
         float fv = float(v);
         if (fv >= nV) break;
-        float epoch = floor(gStep / 90.0 + h11(fv) );                    // each vine regrows every so often
-        float grow = fract(gStep / 90.0 + h11(fv)) * (1.0 + gBuild) + 0.15 * gDrop;
+        float epoch = floor(gCStep / 90.0 + h11(fv) );                    // each vine regrows every so often
+        float grow = fract(gCStep / 90.0 + h11(fv)) * (1.0 + gBuild) + 0.15 * gDrop;
         vec2 p0 = floor(gridV * h22(vec2(fv, epoch + 2.0)));
         vec2 dir = normalize(h22(vec2(epoch, fv + 7.0)) - 0.5 + 1e-3);
         for (int sgi = 0; sgi < 10; sgi++) {
@@ -237,7 +259,7 @@ vec3 creatures(vec2 c, vec3 col) {
             float thick = 1.2 + 0.8 * h11(fs + fv);
             if (dseg < thick) {
                 col = vec3(0.98, 0.04, 0.04);
-                if (h12(c + floor(gStep * 0.3)) > 0.92) col = vec3(0.95, 0.15, 0.85);   // pink buds
+                if (h12(c + floor(gCStep * 0.3)) > 0.92) col = vec3(0.95, 0.15, 0.85);   // pink buds
             } else if (dseg < thick + 1.2 && h12(c * 1.3 + epoch) > 0.86) {
                 col = h12(c + 5.0) > 0.5 ? vec3(0.1, 0.9, 0.15) : vec3(1.0, 0.9, 0.05); // green / yellow leaves
             }
@@ -259,7 +281,7 @@ vec3 creatures(vec2 c, vec3 col) {
         if (fi >= nW) break;
         vec2 hh = h22(vec2(fi, 11.7));
         vec2 gridN = RENDERSIZE / gPx;
-        float t = gStep * (0.15 + 0.1 * hh.x) * (0.5 + lift);
+        float t = gCStep * (0.15 + 0.1 * hh.x) * 0.7 + 2.0 * lift;
         // head position and the body as a run of segments behind it
         for (int s = 0; s < 9; s++) {
             float fs = float(s);
@@ -278,8 +300,16 @@ void main() {
     showDynamics();
     vec2 R = RENDERSIZE.xy;
     float ar = audioReact;
-    gT = TIME * 0.6 * speed + (audioMidTime * 0.4 + audioBassTime * 0.3) * ar * speed + 1.5 * gBuild;
-    gStep = floor((TIME * 0.4 + audioMidTime * 0.5 * ar + audioBassTime * 0.3 * ar) * stepRate * speed + 6.0 * gBuild * gBuild);
+    // ── clocks: all additive (TIME*base + audio clocks + bounded offsets), scaled by the
+    //    user speed sliders only. speed = 1 with every sub-speed at 1 ≈ the original pace; default 0.4 = calm. ──
+    float aT = audioMidTime * 0.5 * ar + audioBassTime * 0.3 * ar;     // audio pushes every clock on
+    gT      = speed * (TIME * 0.6 + (audioMidTime * 0.4 + audioBassTime * 0.3) * ar) + 1.5 * gBuild + 0.3 * gLift;
+    float dc = stepRate * speed * (TIME * 0.4 + aT);                     // base digital clock
+    gStep   = floor(dc * glitchRate + 6.0 * gBuild * gBuild + 2.0 * gLift);
+    gCStep  = floor(dc + 4.0 * gBuild * gBuild);
+    gScroll = dc * scrollSpeed * 0.66 + 4.0 * gBuild * gBuild + 3.0 * gLift;
+    // smear clock: the datamosh only travels when this ticks (was: every rendered frame)
+    float moshStep = floor(speed * moshSpeed * (TIME * 40.0 + audioBassTime * 24.0 * ar + audioMidTime * 12.0 * ar) + 10.0 * gBuild * gBuild);
     // pixel size: big at rest, finer as the build climbs (snaps to whole pixels)
     gPx = floor(max(pixelSize * (1.25 - 0.5 * gLift - 0.25 * gBuild + 0.3 * gRest), 2.0));
 
@@ -303,17 +333,22 @@ void main() {
         // vertical drip zones: blocks smear straight down like corrupted video
         float drip = step(0.6, vn2(vec2(mb.x * 0.25, gT * 0.08) + 9.0));
         if (drip > 0.5) mv = vec2(0.0, 1.0 + floor(2.0 * h12(mb + floor(gStep * 0.25))));
+        // advance the smear only when the smear clock ticks (last tick stored in alpha)
+        float tick = mod(moshStep, 64.0);
+        float lastTick = floor(texture2D(moshBuf, gl_FragCoord.xy / R).a * 64.0 + 0.5);
+        float moved = (abs(tick - lastTick) > 0.5 || FRAMEINDEX < 3) ? 1.0 : 0.0;
+        mv *= moved;
         vec2 prevUV = (cc - mv * gPx) / R;
         vec3 prev = texture2D(moshBuf, prevUV).rgb;
         // which blocks refresh this frame (P-frame residuals); keyframe on the drop
         float mosh = moshAmt * (0.55 + 0.35 * gLift + 0.35 * gBuild) * (1.0 - smoothstep(0.3, 0.8, gDrop));
-        float refresh = step(mosh, h12(mb + vec2(floor(gStep), 17.0)));
+        float refresh = step(mosh - 0.25 * audioBeatPulse * ar, h12(mb + vec2(floor(gStep), 17.0)));
         if (FRAMEINDEX < 3) refresh = 1.0;
         // smeared blocks bleed a little colour (chroma drift) as they travel
         vec3 smear = prev;
-        smear.r = mix(smear.r, texture2D(moshBuf, prevUV + vec2(gPx / R.x, 0.0)).r, 0.06 * mosh * step(0.8, h12(mb + floor(gStep * 0.5))));
+        smear.r = mix(smear.r, texture2D(moshBuf, prevUV + vec2(gPx / R.x, 0.0)).r, 0.06 * mosh * moved * step(0.8, h12(mb + floor(gStep * 0.5))));
         vec3 col = mix(smear, fresh, refresh);
-        gl_FragColor = vec4(col, 1.0);
+        gl_FragColor = vec4(col, tick / 64.0);
         return;
     }
 
