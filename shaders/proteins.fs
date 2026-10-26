@@ -13,6 +13,7 @@
     { "NAME": "spin",        "LABEL": "Rotation",         "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Motion" },
     { "NAME": "wriggle",     "LABEL": "String Wriggle",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Motion" },
     { "NAME": "zoom",        "LABEL": "Zoom",             "TYPE": "float", "AUDIO": false, "MIN": 0.6, "MAX": 1.6, "DEFAULT": 1.0, "GROUP": "Motion" },
+    { "NAME": "renderScale", "LABEL": "Render Scale",     "TYPE": "float", "AUDIO": false, "MIN": 0.35, "MAX": 1.0, "DEFAULT": 0.6, "GROUP": "Finish" },
     { "NAME": "grain",       "LABEL": "Grain",            "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.12, "GROUP": "Finish" },
     { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2], "LABELS": ["Original Colours", "Red · Black · White", "Blue · Black · White"], "GROUP": "Studio Palette" },
     { "NAME": "palAmount",   "LABEL": "Palette Amount",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Studio Palette" },
@@ -25,6 +26,10 @@
     { "NAME": "bgColor",     "LABEL": "BG Color / Top / Center", "TYPE": "color", "DEFAULT": [0.035, 0.04, 0.06, 1.0], "GROUP": "Background" },
     { "NAME": "bgColor2",    "LABEL": "BG Bottom / Edge", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0], "GROUP": "Background" },
     { "NAME": "transparentBg","LABEL": "Transparent BG",  "TYPE": "bool",  "DEFAULT": false, "GROUP": "Background" }
+  ],
+  "PASSES": [
+    { "TARGET": "sceneBuf", "WIDTH": "floor($WIDTH*$renderScale)", "HEIGHT": "floor($HEIGHT*$renderScale)" },
+    { }
   ]
 }*/
 
@@ -372,8 +377,8 @@ vec3 calcNormal(vec3 p) {
 }
 float calcAO(vec3 p, vec3 n) {
     float occ = 0.0, sca = 1.0;
-    for (int i = 1; i <= 5; i++) {
-        float h = 0.02 + 0.075 * float(i);
+    for (int i = 1; i <= 3; i++) {
+        float h = 0.02 + 0.12 * float(i);
         occ += (h - map(p + n * h)) * sca;
         sca *= 0.72;
     }
@@ -381,10 +386,10 @@ float calcAO(vec3 p, vec3 n) {
 }
 float softShadow(vec3 ro, vec3 rd) {
     float res = 1.0, t = 0.03;
-    for (int i = 0; i < 14; i++) {
+    for (int i = 0; i < 8; i++) {
         float h = map(ro + rd * t);
         res = min(res, 7.0 * h / t);
-        t += clamp(h, 0.04, 0.3);
+        t += clamp(h, 0.08, 0.45);
         if (res < 0.02 || t > 3.0) break;
     }
     return clamp(res, 0.0, 1.0);
@@ -450,7 +455,7 @@ vec3 schemeCol(float res, float mat, float unit) {
 }
 float shellOf(float f) { return f < 0.5 ? 0.0 : f < 1.5 ? 1.0 : 0.0; }
 
-void main() {
+void renderScene() {
     showDynamics();
     vec2 R = RENDERSIZE.xy;
     vec2 fc = gl_FragCoord.xy;
@@ -536,13 +541,13 @@ void main() {
         float tq = sqrt(hh);
         float t = max(-bb - tq, 0.0);
         float tEnd = -bb + tq;
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 80; i++) {
             vec3 p = ro + rd * t;
             float d = map(p);
             if (shellT < 0.0 && d < shellR) shellT = t;
-            if (d < 0.0005 * t) { hitT = t; break; }
+            if (d < 0.0012 * t) { hitT = t; break; }
             glowAcc += exp(-d * 9.0) * 0.012;
-            t += d * 0.85;
+            t += d * 0.92;
             if (t > tEnd) break;
         }
     }
@@ -606,8 +611,17 @@ void main() {
     col *= 1.0 + 0.1 * audioBeatPulse * ar;
     float vig = 1.0 - smoothstep(0.6, 1.3, length(sp * vec2(0.8, 1.0)));
     col *= mix(1.0, vig, 0.5);
+    gl_FragColor = vec4(clamp(col, 0.0, 1.0), clamp(alpha + lum(col), 0.0, 1.0));
+}
+
+void main() {
+    if (PASSINDEX == 0) { renderScene(); return; }
+    // final: upscale the scene buffer, then grain + palette at full resolution
+    vec2 fc = gl_FragCoord.xy;
+    vec4 sc = texture2D(sceneBuf, fc / RENDERSIZE.xy);
+    vec3 col = sc.rgb;
     col += (h12(fc + fract(TIME * 13.7) * 91.0) - 0.5) * grain * 0.05;
     col += (h12(fc * 1.03 + fract(TIME * 7.1) * 57.0) + h12(fc * 0.97 + 11.0) - 1.0) * (1.5 / 255.0);
     col = studioPalette(clamp(col, 0.0, 1.0));
-    gl_FragColor = vec4(col, transparentBg ? clamp(alpha + lum(col), 0.0, 1.0) : 1.0);
+    gl_FragColor = vec4(col, transparentBg ? sc.a : 1.0);
 }
