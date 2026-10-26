@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Bacteriophage — glossy 3D T4 viruses in the style of a scientific animation. Each phage is built like the real thing: a faceted, elongated icosahedral gold head with crisp facet edges, a collar and neck, a ribbed blue tail sheath, a hexagonal baseplate and six long jointed tail fibres that bend at the knee like spider legs. Landing Party: phages drop out of the dark onto the curved, translucent membrane of a rod-shaped bacterium, reach down with their legs, plant their feet, walk a few steps, then the sheath contracts, the hollow tail tube punches through the membrane and a glowing double strand of DNA pours into the cell while ripples spread across the surface; others tumble through space overhead. Hero Phage: one huge phage standing on the cell, close-up and slowly orbiting, flexing its legs and firing its tail. Electron Micrograph: a whole bacterium covered in attached phages, rendered as a grey scanning-electron image with edge glow, depth-of-field softness and heavy grain. Neon Swarm: a lattice of small tumbling phages floating in the dark with glowing neon outlines. Auto Morph dissolves between the forms through a glowing seam. Bass bobs the phages on their knees, beats make sheaths contract and inject, and the drop makes every phage contract at once with a burst of DNA and a shockwave across the membrane. At rest the phages drift calmly with soft dim glows; during a build the legs twitch faster, sheaths tense, the camera closes in and the image trembles; on the drop everything injects together in a bright DNA flash and the peak runs at full density, glow and motion. Physics: every phage is a simulated body with momentum, drag and Brownian jitter that sinks back toward the host under gravity and lands on spring-damped tail-fibre landing gear that squats and rebounds; beats slam them onto their knees, firing the sheath recoils them, and the drop's shockwave blasts them off the membrane into tumbling flight before they drift back down and re-dock.",
+  "DESCRIPTION": "Bacteriophage — glossy 3D T4 viruses in the style of a scientific animation. Each phage is built like the real thing: a faceted, elongated icosahedral gold head with crisp facet edges, a collar and neck, a ribbed blue tail sheath, a hexagonal baseplate and six long jointed tail fibres that bend at the knee like spider legs. Landing Party: phages drop out of the dark onto the curved, translucent membrane of a rod-shaped bacterium, reach down with their legs, plant their feet, walk a few steps, then the sheath contracts, the hollow tail tube punches through the membrane and a glowing double strand of DNA pours into the cell while ripples spread across the surface; others tumble through space overhead. The bacterium's skin is never one pattern for long: its envelope is tiled into wavy regions along the cell, each wearing a different Objectos material — sliding stripes, inset polka dots, drifting checks, iridescent thin film, glowing gradient bands, dark-rimmed matte tiles, deep gloss lacquer — in Objectos' signal red, cyan, maroon, pink, lavender and ink, mapped in surface coordinates so the motifs wrap the curved membrane and ride its undulation, still lit like a 3D surface with subsurface glow, specular sheen, phage contact shadows and occlusion. Every few seconds each region dissolves into its next pattern through a glowing noise-wipe; bass swells the dots, thickens the stripes and pulses the glow, and every drop flips every region to a new pattern at once under a white flash. Patterns stay crisp and anti-aliased, softening into their average tone with distance instead of shimmering. Hero Phage: one huge phage standing on the cell, close-up and slowly orbiting, flexing its legs and firing its tail. Electron Micrograph: a whole bacterium covered in attached phages, rendered as a grey scanning-electron image with edge glow, depth-of-field softness and heavy grain. Neon Swarm: a lattice of small tumbling phages floating in the dark with glowing neon outlines. Auto Morph dissolves between the forms through a glowing seam. Bass bobs the phages on their knees, beats make sheaths contract and inject, and the drop makes every phage contract at once with a burst of DNA and a shockwave across the membrane. At rest the phages drift calmly with soft dim glows; during a build the legs twitch faster, sheaths tense, the camera closes in and the image trembles; on the drop everything injects together in a bright DNA flash and the peak runs at full density, glow and motion. Physics: every phage is a simulated body with momentum, drag and Brownian jitter that sinks back toward the host under gravity and lands on spring-damped tail-fibre landing gear that squats and rebounds; beats slam them onto their knees, firing the sheath recoils them, and the drop's shockwave blasts them off the membrane into tumbling flight before they drift back down and re-dock.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-26 — original.",
   "CATEGORIES": ["Generator", "3D", "Science", "Audio Reactive"],
   "INPUTS": [
@@ -11,8 +11,12 @@
     { "NAME": "dnaGlow",     "LABEL": "DNA Glow",         "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Look" },
     { "NAME": "rimLight",    "LABEL": "Rim Light",        "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Look" },
     { "NAME": "membraneSee", "LABEL": "Membrane Translucency", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55, "GROUP": "Look" },
+    { "NAME": "surfacePatternSel", "LABEL": "Surface Pattern", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4, 5, 6, 7], "LABELS": ["Auto Cycle", "Sliding Stripes", "Polka Dots", "Checks", "Iridescent", "Glow Gradient", "Rim Matte Tiles", "Gloss Lacquer"], "GROUP": "Surface Patterns" },
+    { "NAME": "surfaceCycle", "LABEL": "Pattern Change (s)", "TYPE": "float", "AUDIO": false, "MIN": 2.0, "MAX": 30.0, "DEFAULT": 6.0, "GROUP": "Surface Patterns" },
+    { "NAME": "patternScale", "LABEL": "Pattern Scale",   "TYPE": "float", "AUDIO": false, "MIN": 0.4, "MAX": 3.0, "DEFAULT": 1.0, "GROUP": "Surface Patterns" },
+    { "NAME": "patternAmt",  "LABEL": "Pattern Amount",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.9, "GROUP": "Surface Patterns" },
     { "NAME": "grain",       "LABEL": "Grain",            "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.12, "GROUP": "Finish" },
-    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
+    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 3, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
     { "NAME": "palAmount",   "LABEL": "Palette Amount",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Studio Palette" },
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
@@ -406,6 +410,74 @@ vec3 phageCol(float m, float aux) {
     return vec3(1.0, 0.82, 0.5);                                 // fibres
 }
 
+// ── Objectos surface skins (ported material fills, mapped in membrane surface coords) ──
+// palette from Objectos: signal red, cyan, maroon, pink, lavender, ink
+vec3 oPal(float k) {
+    k = mod(k, 6.0);
+    if (k < 0.5) return vec3(1.0, 0.02, 0.02);
+    if (k < 1.5) return vec3(0.0, 0.9, 0.95);
+    if (k < 2.5) return vec3(0.42, 0.0, 0.12);
+    if (k < 3.5) return vec3(1.0, 0.55, 0.92);
+    if (k < 4.5) return vec3(0.55, 0.45, 1.0);
+    return vec3(0.03, 0.03, 0.04);
+}
+float gPE, gPG;   // pattern side outputs: emission, gloss
+// m = pattern, pc = colour seed, q = surface coords in pattern cells, fw = pixel footprint (cells),
+// vdn = facing, tt = slide clock, pu = audio pulse
+vec3 surfPat(float m, float pc, vec2 q, float fw, float vdn, float tt, float pu) {
+    vec3 A = oPal(pc), B = oPal(pc + 1.0 + floor(h11(pc * 7.7 + 1.3) * 4.0));
+    float w = max(fw, 1e-3);
+    float fd = 1.0 - smoothstep(0.12, 0.35, fw);                // detail fades out before it can alias
+    gPE = 0.0; gPG = 0.6;
+    // graphic fills share one signed edge field d (<0 = inside the motif), AA width ws, mean coverage mn
+    float d = 1.0, ws = w, mn = 0.5, rimK = 0.0;
+    vec3 c = vec3(0.0);
+    if (m < 0.5) {
+        // sliding stripes, diagonal across the envelope; bass thickens the bands
+        float x = (q.y + 0.4 * q.x) * 2.0 + tt * 0.7;
+        float duty = 0.25 + 0.08 * pu;
+        d = (abs(fract(x) - 0.5) - duty) * 0.5; mn = 2.0 * duty; rimK = 0.3; gPG = 0.8;
+    } else if (m < 1.5) {
+        // polka dots: inset discs with a dark rim, beats swell them
+        vec2 g = q * 2.0;
+        float r = 0.3 + 0.07 * pu;
+        d = (length(g - floor(g + 0.5)) - r) * 0.5; mn = PI * r * r; rimK = 0.45; gPG = 0.7;
+    } else if (m < 2.5) {
+        // drifting checks
+        vec2 g = fract(q * 1.6 + vec2(0.0, tt * 0.3)) - 0.5;
+        vec2 e = abs(g) - 0.25;
+        d = sign(e.x * e.y) * min(abs(e.x), abs(e.y)) / 1.6; gPG = 0.65;
+    } else if (m < 3.5) {
+        // iridescent thin film: colour follows view angle and the undulating surface
+        float t = vdn * 1.8 + q.x * 0.55 + q.y * 0.35 + 0.25 * sin(q.y * 1.7 + q.x * 0.6) + tt * 0.25 + 0.3 * pu;
+        c = mix(A, 0.5 + 0.5 * cos(TAU * (t + vec3(0.0, 0.33, 0.67))), 0.55);
+        gPG = 1.2;
+    } else if (m < 4.5) {
+        // glowing gradient bands that breathe with the bass
+        float g = 0.5 + 0.5 * sin(q.x * 2.4 + q.y * 1.1 + 0.6 * sin(q.y * 1.3) - tt * 1.2);
+        c = mix(A, B, smoothstep(0.1, 0.9, g)) * (0.85 + 0.3 * pu);
+        gPE = 0.55 + 0.6 * pu; gPG = 0.35;
+    } else if (m < 5.5) {
+        // dark-rimmed matte tiles: soft rounded squares inlaid in ink, faces shade with the view
+        vec2 cl = fract(q * 1.4) - 0.5;
+        d = (length(max(abs(cl) - 0.22, 0.0)) - 0.16) / 1.4;
+        A = mix(B, A, vdn * vdn); B = vec3(0.03, 0.03, 0.04);
+        mn = 0.62; rimK = 0.6; gPG = 0.25;
+    } else {
+        // gloss lacquer: deep glossy colour with slow pooled tones
+        float pool = 0.5 + 0.25 * (sin(q.x * 2.1 + tt * 0.3 + 1.5 * sin(q.y * 1.4)) + sin(q.y * 2.4 - tt * 0.2 + 1.5 * sin(q.x * 1.2)));
+        c = mix(A * 0.25, A, smoothstep(0.2, 0.8, pool)) * 0.8 + vec3(0.02);
+        gPG = 1.8;
+    }
+    if (d < 0.99) {
+        float sv = mix(mn, smoothstep(ws, -ws, d), fd);
+        float rr = d / (0.03 + ws);
+        c = mix(B, A, sv) * (1.0 - rimK * fd * exp(-rr * rr));
+        c += A * 0.25 * pu * sv * step(0.5, m) * step(m, 1.5);
+    }
+    return c;
+}
+
 void setForm(float form) {
     gF = form;
     gCount = form < 0.5 ? 6.0 : form < 1.5 ? 3.0 : form < 2.5 ? 8.0 : 1.0;
@@ -616,25 +688,87 @@ vec4 renderScene(float form, vec2 sp, vec2 uv) {
         float fres = pow(1.0 - vdn, 2.5);
         float dif = max(dot(bn, lKey), 0.0);
         float spec = pow(max(dot(bn, normalize(lKey - rd)), 0.0), 40.0);
+        // ── Objectos skin: patterns in surface coords (arc length × circumference), warped by the
+        //    undulation, cut into wavy regions along the cell, each cycling on its own clock with a
+        //    noise-wipe; every drop advances all of them at once (drop counter lives in phState).
+        float pa = patternAmt;
+        vec3 pAlb = vec3(0.0);
+        float pE = 0.0, pG = 1.0, pSeam = 0.0, pEdge = 0.0;
+        if (pa > 0.001) {
+            float freq = patternScale * (sem ? 2.4 : 0.8);
+            float vg = max(dot(mn, -rd), 0.12);
+            float pw = tM / (RENDERSIZE.y * fl) / sqrt(vg);                      // pixel footprint on the membrane (world)
+            float fw = pw * freq;
+            vec2 su = suv + vec2(wv - 0.5, 0.5 - wv) * 0.55 * (gMR / 7.0) + bead * 0.15 * (gMR / 7.0);
+            vec2 q = su * freq;
+            float rw = 0.95 * gMR;
+            float rx = su.x / rw + 0.12 * sin(su.y / rw * 2.1 + 1.3) + 0.06 * sin(su.y / rw * 5.3);
+            float rg = floor(rx);
+            pEdge = (0.5 - abs(fract(rx) - 0.5)) * rw;                     // distance to region seam (world)
+            float sel = float(surfacePatternSel);
+            float cnt = floor(texture2D(phState, vec2(0.5 / NB, 2.5 / 3.0)).w - 0.5);
+            cnt = cnt > 0.0 && cnt < 200.0 ? cnt : 0.0;
+            float ph = (TIME + 0.4 * audioBassTime * ar) / surfaceCycle + rg * 0.37 + 0.5;
+            float kk = floor(ph) + cnt;
+            float wph = smoothstep(0.5, 1.0, fract(ph));
+            float nzW = 0.7 * vnoise(su * 0.45 / (gMR / 7.0) + 7.3) + 0.3 * wv;
+            float thr = wph * 1.3 - 0.15;
+            float aw = max(pw * 1.2 / (gMR / 7.0), 0.003);
+            float wB = smoothstep(thr + aw, thr - aw, nzW);
+            pSeam = exp(-abs(nzW - thr) * 45.0) * step(0.001, wph) * step(wph, 0.999);
+            float tt = TIME * 0.35 + audioMidTime * 0.25 * ar;
+            float pu = bassP() * ar + 0.6 * gBeatC + gDrop;
+            vec3 pAcc = vec3(0.0);
+            float eAcc = 0.0, gAcc = 0.0;
+            for (int j = 0; j < 2; j++) {
+                float fj = float(j);
+                float wj = fj < 0.5 ? 1.0 - wB : wB;
+                if (wj < 0.001) continue;
+                float kj = kk + fj;
+                float m = sel > 0.5 ? sel - 1.0 : mod(rg * 2.0 + kj * 3.0, 7.0);
+                float pc = floor(h11(rg * 3.71 + kj * 1.37 + 0.21) * 6.0);
+                if (m > 3.5 && m < 4.5 && pc > 4.5) pc = 0.0;               // glow needs a bright base
+                vec3 cj = surfPat(m, pc, q, fw, max(dot(bn, -rd), 0.0), tt + rg * 1.7, pu);
+                pAcc += cj * wj; eAcc += gPE * wj; gAcc += gPG * wj;
+            }
+            pAlb = pAcc; pE = eAcc; pG = gAcc;
+            float sw0 = 0.045 * gMR / 7.0 + 0.4 * pw;
+            float seamL = 1.0 - smoothstep(sw0, sw0 + 1.2 * pw, pEdge);     // inlaid ink seam between regions
+            pAlb = mix(pAlb, vec3(0.02, 0.015, 0.03), 0.92 * seamL);
+            pAlb *= 1.0 + 0.18 * bassP() * ar;
+        }
         vec3 mc;
         float mAlpha;
         if (sem) {
             mc = vec3((0.1 + 0.6 * pow(1.0 - vdn, 1.4) + 0.35 * dif) * shad);
+            mc *= mix(1.0, 0.55 + 0.9 * lum(pAlb) + 0.3 * pE, pa * 0.75);
             mc += vec3(0.5) * rip * glowK * 0.3;
+            mc += vec3(0.6) * (pSeam * 0.5 + gDrop * gDrop * 0.35) * pa;
             float foc = smoothstep(0.0, 3.0, abs(tM - 9.8 * zm));
             mc = mix(mc, vec3(0.32), foc * 0.4);
             mAlpha = 1.0;
         } else {
             vec3 memA = vec3(0.6, 0.18, 0.55), memB = vec3(0.95, 0.5, 0.75);
             float bh = sin(suv.x * kb) * sin(suv.y * kb);
-            mc = mix(memA, memB, 0.35 + 0.35 * sin(suv.x * 0.6 + wv * 3.0) + 0.3 * bh) * (0.08 + 0.6 * dif) * shad;
-            mc += vec3(1.0, 0.85, 0.95) * spec * 0.9 * shad;
-            mc += vec3(0.95, 0.6, 1.0) * fres * 0.55 * rimLight;
+            vec3 alb = mix(memA, memB, 0.35 + 0.35 * sin(suv.x * 0.6 + wv * 3.0) + 0.3 * bh);
+            alb = mix(alb, pAlb * (0.92 + 0.16 * bh), pa);
+            float gl = mix(1.0, pG, pa);
+            mc = alb * (0.08 + 0.6 * dif) * shad;
+            mc += alb * vec3(0.55, 0.45, 0.6) * 0.18 * (0.5 + 0.5 * bn.y) * shad;     // soft fill so dark skins keep form
+            mc += vec3(1.0, 0.85, 0.95) * spec * 0.9 * gl * shad;
+            float sp4 = spec * spec; sp4 *= sp4;
+            mc += vec3(1.0, 0.92, 0.98) * spec * sp4 * 1.2 * max(gl - 0.9, 0.0) * shad;
+            mc += mix(vec3(0.95, 0.6, 1.0), alb + 0.2, 0.5 * pa) * fres * 0.55 * rimLight;
             // subsurface glow: light bleeding through the soft envelope past the terminator
-            mc += memB * vec3(1.0, 0.55, 0.7) * 0.2 * smoothstep(-0.5, 0.25, dot(bn, lKey)) * (1.0 - dif) * (0.5 + 0.5 * shad);
+            vec3 sss = mix(memB, alb * 1.3 + 0.08, pa);
+            mc += sss * vec3(1.0, 0.55, 0.7) * 0.2 * smoothstep(-0.5, 0.25, dot(bn, lKey)) * (1.0 - dif) * (0.5 + 0.5 * shad);
+            // glowing skins, audio pulse, wipe seam and the drop flash
+            mc += pAlb * pE * (0.45 + 0.35 * bassP() * ar) * (0.6 + 0.4 * shad) * pa;
+            mc += (dnaC * 0.8 + 0.2) * pSeam * 0.9 * pa;
+            mc += mix(vec3(1.0), pAlb + 0.3, 0.35) * gDrop * gDrop * 0.85 * pa;
             mc += dnaC * rip * glowK * 0.35;
             mc = mix(mc, bg, 1.0 - exp(-max(tM - 6.0, 0.0) * 0.03));
-            mAlpha = mix(1.0, 0.45, membraneSee * (1.0 - fres));
+            mAlpha = mix(1.0, 0.45 + 0.3 * pa, membraneSee * (1.0 - fres));
         }
         // seen through the envelope: cytoplasm, the tail tubes, the DNA
         vec3 inside = vec3(0.12, 0.03, 0.14) + vec3(0.25, 0.05, 0.2) * vnoise(suv * 3.0);
@@ -771,8 +905,11 @@ void main() {
             }
             a = mod(a + PI, TAU) - PI;
         }
+        // drop counter (row 2 .w = 1 + count): each drop's rising edge advances the surface patterns
+        float cnt = s2.w > 0.5 && s2.w < 200.0 ? floor(s2.w - 0.5) : 0.0;
+        if (drop > 0.5 && s2.z <= 0.5 && s2.w > 0.5) cnt = mod(cnt + 1.0, 64.0);
         float row = cid.y;
-        gl_FragColor = row < 0.5 ? vec4(o, a) : row < 1.5 ? vec4(v, w) : vec4(c, beat, drop, 1.0);
+        gl_FragColor = row < 0.5 ? vec4(o, a) : row < 1.5 ? vec4(v, w) : vec4(c, beat, drop, 1.0 + cnt);
         return;
     }
 
