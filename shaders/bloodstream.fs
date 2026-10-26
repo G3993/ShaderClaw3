@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Bloodstream — a flight through a living blood vessel. In Artery you glide down a winding crimson tunnel whose glossy, wet walls are tiled with the faint cobblestone of endothelial cells and wrinkle as they pass; thousands of red blood cells stream toward you and around you, true biconcave discs that tumble as they fly, each with its sunken pale centre, a glistening rim highlight and a translucent red glow where it is thin, while occasional white blood cells roll past as big lumpy pearl-white spheres and tiny amber platelets glint in the flow. In Capillary the vessel narrows to a tight tube and the cells come single file, squeezed into cupped parachute shapes that barely fit. Microscope Smear drops you onto a glass slide under a brightfield lens: a circular field of pink discs with pale centres overlapping like coins, lilac white cells with dark purple lobed nuclei and specks of platelets, drifting and breathing in and out of focus. Thermal shows the artery through a false-colour heat camera, cells glowing yellow-hot against cooler purple walls. Auto Morph travels Artery → Capillary → Thermal → Smear. The heartbeat is the music: bass and beats drive a lub-dub surge that pushes the flow forward, dilates the vessel and sends a pressure wave rolling down the walls (with a gentle resting heartbeat in silence); mids speed the stream; highs make the wet highlights sparkle. At rest the vessel is wide and calm with sparse cells drifting in a slow pulse; during a build it constricts, the stream rushes faster, the walls shimmer and the view trembles; on the drop one massive pulse floods the tunnel with light, blows the vessel open and scatters the cells, and the peak runs at full density with rolling camera and hot colour.",
+  "DESCRIPTION": "Bloodstream — a flight through a living blood vessel. In Artery you glide down a winding crimson tunnel whose glossy, wet walls are tiled with the faint cobblestone of endothelial cells and wrinkle as they pass; thousands of red blood cells stream toward you and around you, true biconcave discs that tumble as they fly, each with its sunken pale centre, a glistening rim highlight and a translucent red glow where it is thin, while occasional white blood cells roll past as big lumpy pearl-white spheres and tiny amber platelets glint in the flow. In Capillary the vessel narrows to a tight tube and the cells come single file, squeezed into cupped parachute shapes that barely fit. Microscope Smear drops you onto a glass slide under a brightfield lens: a circular field of pink discs with pale centres overlapping like coins, lilac white cells with dark purple lobed nuclei and specks of platelets, drifting and breathing in and out of focus. Thermal shows the artery through a false-colour heat camera, cells glowing yellow-hot against cooler purple walls. Auto Morph travels Artery → Capillary → Thermal → Smear. The heartbeat is the music: bass and beats drive a lub-dub surge that pushes the flow forward, dilates the vessel and sends a pressure wave rolling down the walls (with a gentle resting heartbeat in silence); mids speed the stream; highs make the wet highlights sparkle. At rest the vessel is wide and calm with sparse cells drifting in a slow pulse; during a build it constricts, the stream rushes faster, the walls shimmer and the view trembles; on the drop one massive pulse floods the tunnel with light, blows the vessel open and scatters the cells, and the peak runs at full density with rolling camera and hot colour. Real physics drives the stream: every cell is a simulated rigid body carried by pulsatile Poiseuille flow (fastest in the centre), so each heartbeat and kick is a pressure surge that accelerates the plasma and the cells lag, jostle, collide and bounce off the compliant, springy vessel wall, tumbling in Jeffery orbits spun by the shear and by collisions, while lift keeps a cell-free layer at the wall and heavy white cells marginate and roll along it; a drop is one huge pressure wave that rushes everything through and balloons the wall, which then rings and relaxes back.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-26 — original.",
   "CATEGORIES": ["Generator", "3D", "Science", "Audio Reactive"],
   "INPUTS": [
@@ -24,14 +24,24 @@
     { "NAME": "bgMode",      "LABEL": "Background", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2], "LABELS": ["Solid", "Vertical Gradient", "Radial Gradient"], "GROUP": "Background" },
     { "NAME": "bgColor",     "LABEL": "BG Color / Top / Center", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0], "GROUP": "Background" },
     { "NAME": "bgColor2",    "LABEL": "BG Bottom / Edge", "TYPE": "color", "DEFAULT": [0.03, 0.03, 0.04, 1.0], "GROUP": "Background" },
-    { "NAME": "transparentBg","LABEL": "Transparent BG",  "TYPE": "bool",  "DEFAULT": false, "GROUP": "Background" }
+    { "NAME": "transparentBg","LABEL": "Transparent BG",  "TYPE": "bool",  "DEFAULT": false, "GROUP": "Background" },
+    { "NAME": "physicsAmt",  "LABEL": "Physics Amount",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Physics" },
+    { "NAME": "gravity",     "LABEL": "Sedimentation (Gravity)", "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.25, "GROUP": "Physics" },
+    { "NAME": "bounce",      "LABEL": "Bounce",           "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55, "GROUP": "Physics" },
+    { "NAME": "kickForce",   "LABEL": "Kick Force",       "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Physics" },
+    { "NAME": "resetPhysics","LABEL": "Reset Physics",    "TYPE": "bool",  "DEFAULT": false, "GROUP": "Physics" }
+  ],
+  "PASSES": [
+    { "TARGET": "bodyBuf", "PERSISTENT": true, "FLOAT": true },
+    {}
   ]
 }*/
 
 #define PI  3.14159265359
 #define TAU 6.28318530718
-#define NSLOT 40
-#define SLOT 0.18
+#define NB 40          // simulated bodies (cells)
+#define NBF 40.0
+#define BL 7.2         // length of the simulated stream ahead of the camera
 
 float h11(float p) { p = fract(p * 0.1031); p *= p + 33.33; p *= p + p; return fract(p); }
 float h12(vec2 p)  { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
@@ -90,7 +100,26 @@ float gHB;       // heartbeat clock (beats)
 float gHAudio;   // audio part of the heart pulse
 float gH;        // total pulse now
 float gCap, gThermal, gSmear;
-float gCamZ, gFlow, gRbase, gDil;
+float gCamZ, gRbase, gDil, gDens, gU;
+vec4 gG1, gG2;
+
+// ── physics state buffer: NB columns × 4 rows of cells ──────────────────
+//   row 0: (q.x, q.y, zHi, zLo)   q = cross-section position / vessel radius, z = depth ahead of camera
+//   row 1: (vq.x, vq.y, vz, seed) vz = speed toward the camera (world units/s)
+//   row 2: (theta, phi, wTheta, wPhi)  disc-normal orientation + angular velocity
+//   row 3: col0 (U centreline flow, D dilation, Dv, marker) · col1 (camHi, camLo, blast, blastV) · col2 (smear shove xy, vel xy)
+vec4 stTex(float i, float row) { return texture2D(bodyBuf, vec2((i + 0.5) / NBF, (row + 0.5) * 0.25)); }
+
+// x = radius (world), y = isWhite, z = isPlatelet, w = visibility
+vec4 bodyType(float seed) {
+    float hE = h11(seed * 917.3 + 3.1);
+    float hT = h11(seed * 613.7 + 9.7);
+    float sz = clamp((gDens - hE) / 0.08, 0.0, 1.0);
+    float isW = step(hT, 0.03 * (0.4 + 1.2 * wbcAmt) * (1.0 + gPeak));
+    float isP = step(0.86, hT) * (1.0 - gCap);
+    float R = isW > 0.5 ? 0.2 * gDil : (isP > 0.5 ? 0.04 : mix(0.105, 0.16, gCap) * gDil);
+    return vec4(R, isW, isP, sz);
+}
 
 vec2 pathC(float z) {
     float A = mix(1.0, 0.3, gCap);
@@ -177,39 +206,34 @@ vec4 vesselImage(vec2 uv, vec2 sp, out float heat) {
     }
     if (tw > 29.0) tw = t;
 
-    // ── cells: domain repetition along the flow, analytic per-slot intersection ──
+    // ── cells: simulated rigid bodies read from the physics buffer, analytic per-body intersection ──
     float bestT = tw;
     vec3 cN = vec3(0.0);
     float cType = -1.0, cThick = 0.0, cRho = 0.0, cSeed = 0.0, cFade = 1.0;
-    float dens = clamp(cellDensity * (1.0 - 0.6 * gRest) * (0.85 + 0.25 * gPeak + 0.2 * gDrop), 0.0, 1.0) * mix(1.0, 0.5, gCap);
-    float k0 = floor((gCamZ + gFlow) / SLOT);
-    float Rrbc = mix(0.105, 0.16, gCap) * gDil;
     float cup = gCap;
-    float tumbleT = TIME * 0.55 * tumble + audioMidTime * 0.25 * ar;
-    for (int i = 0; i < NSLOT; i++) {
-        float k = k0 + float(i);
-        float zc = k * SLOT - gFlow;
-        float dzc = zc - gCamZ;
-        float hE = h11(k * 1.37 + 3.1);
-        float sz = clamp((dens - hE) / 0.08, 0.0, 1.0);
-        if (sz <= 0.0) continue;
-        float hT = h11(k * 2.71 + 9.7);
-        float hA = h11(k * 4.13 + 1.9);
-        float hR = h11(k * 5.77 + 6.3);
-        float isW = step(hT, 0.03 * (0.4 + 1.2 * wbcAmt) * (1.0 + gPeak));
-        float isP = step(0.86, hT) * (1.0 - gCap);
-        float R = isW > 0.5 ? mix(0.2, 0.2, gCap) * gDil : (isP > 0.5 ? 0.04 : Rrbc);
-        float fade = smoothstep(-0.05, 0.25, dzc) * (1.0 - smoothstep(float(NSLOT) * SLOT * 0.7, float(NSLOT) * SLOT - SLOT, dzc));
-        R *= sz * fade;
+    float vr = gRbase * gDil;
+    for (int i = 0; i < NB; i++) {
+        float fi = float(i);
+        vec4 sA = stTex(fi, 0.0);
+        vec4 sB = stTex(fi, 1.0);
+        vec4 sC = stTex(fi, 2.0);
+        float dzc = sA.z + sA.w / 128.0;
+        float zc = gCamZ + dzc;
+        float k = sB.w * 997.0;
+        vec4 T = bodyType(sB.w);
+        float hT = h11(sB.w * 613.7 + 9.7);
+        float hA = h11(sB.w * 271.3 + 1.9);
+        float isW = T.y, isP = T.z;
+        float fade = smoothstep(-0.05, 0.25, dzc) * (1.0 - smoothstep(BL * 0.7, BL - 0.18, dzc));
+        float R = T.x * T.w * fade;
         if (R < 0.004) continue;
-        // position in the cross-section
-        float vr = gRbase * gDil;
-        float rr = (vr * (0.12 + 0.62 * sqrt(hR)) - R * 0.6) * (1.0 + 0.45 * gDrop) * (1.0 - gCap);
-        rr = max(rr, 0.0);
+        // simulated position in the cross-section (+ a render-only nudge that clears the lens)
+        vec2 qw = sA.xy * vr;
+        float ql = length(sA.xy);
+        vec2 qd = ql > 1e-3 ? sA.xy / ql : vec2(cos(hA * TAU), sin(hA * TAU));
         float near = 1.0 - smoothstep(0.05, mix(0.7, 1.9, gCap), dzc);
-        rr += pow(near, mix(2.0, 1.2, gCap)) * vr * mix(0.55, 1.5, gCap);
-        float an = hA * TAU + 0.15 * sin(TIME * 0.2 + hA * 9.0) + dzc * 0.08 * (hA - 0.5);
-        vec3 C = vec3(pathC(zc) + rr * vec2(cos(an), sin(an)) + vec2(0.0, 0.01) * sin(TIME + k), zc);
+        qw += qd * pow(near, mix(2.0, 1.2, gCap)) * vr * mix(0.55, 1.5, gCap);
+        vec3 C = vec3(pathC(zc) + qw, zc);
         float Rb = R * (1.08 + 0.55 * cup);
         vec3 o = ro - C;
         float b = dot(o, rd);
@@ -221,12 +245,15 @@ vec4 vesselImage(vec2 uv, vec2 sp, out float heat) {
         if (tf < 0.0 || tn > bestT) continue;
         if (isW > 0.5) {
             // white cell: lumpy sphere, short march inside its bound
-            float s = k * 1.7 + tumbleT * 0.6;
+            float s = k * 1.7;
+            mat2 roll = rot(sC.x);          // the white cell rolls with its simulated spin
             float tt = max(tn, 0.0);
             bool hit = false;
             float d = 1.0;
             for (int j = 0; j < 22; j++) {
-                d = wbcLump((ro + rd * tt - C) / R, s) * R * 0.7;
+                vec3 lq = (ro + rd * tt - C) / R;
+                lq.yz = roll * lq.yz;
+                d = wbcLump(lq, s) * R * 0.7;
                 if (d < 0.004 * R) { hit = true; break; }
                 tt += d;
                 if (tt > tf) break;
@@ -234,18 +261,20 @@ vec4 vesselImage(vec2 uv, vec2 sp, out float heat) {
             if (!hit && d < 0.03 * R && tt < tf) hit = true;
             if (hit && tt < bestT) {
                 vec3 l = (ro + rd * tt - C) / R;
+                l.yz = roll * l.yz;
                 vec3 n = vec3(0.0);
                 for (int j = 0; j < 4; j++) {
                     vec3 e = 0.5773 * (2.0 * vec3(float(((j + 3) / 2) - 2 * ((j + 3) / 4)), float((j / 2) - 2 * (j / 4)), float(j - 2 * (j / 2))) - 1.0);
                     n += e * wbcLump(l + e * 0.01, s);
                 }
+                n.yz = n.yz * roll;          // back to world (transpose rotation)
                 bestT = tt; cN = normalize(n); cType = 1.0; cSeed = hA; cFade = fade; cRho = 0.0;
                 cThick = length(l);
             }
         } else {
             // red cell / platelet: biconcave disc, tumbling (aligned with the flow in capillaries)
-            float a1 = hA * 6.0 + tumbleT * (0.4 + 0.8 * hR) * (hT > 0.5 ? 1.0 : -1.0);
-            float a2 = hR * 6.0 + tumbleT * 0.5 * (0.3 + hE);
+            float a1 = sC.x;                 // simulated tumble (Jeffery orbit + collision spin)
+            float a2 = sC.y;
             vec3 Nn = normalize(vec3(sin(a1) * cos(a2), sin(a1) * sin(a2), cos(a1)));
             Nn = normalize(mix(Nn, vec3(0.0, 0.0, -1.0) + 0.25 * vec3(sin(a2), cos(a2), 0.0), cup));
             vec3 U = normalize(cross(Nn, abs(Nn.y) < 0.9 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
@@ -393,6 +422,7 @@ vec4 smearImage(vec2 uv, vec2 sp) {
     vec2 trem = (vec2(h11(floor(TIME * 30.0)), h11(floor(TIME * 30.0) + 7.0)) - 0.5) * 0.006 * smoothstep(0.7, 1.0, gBuild);
     vec2 p = rot(0.04 * sin(TIME * 0.07)) * (sp + trem) * zoom;
     p += vec2(TIME * 0.018 + audioMidTime * 0.012 * ar, 0.012 * sin(TIME * 0.05) + TIME * 0.004);
+    p += gG2.xy;                         // kicks shove the slide; a damped spring brings it home
     float g = 0.11;
     vec2 cell = p / g;
     vec2 id0 = floor(cell);
@@ -412,7 +442,7 @@ vec4 smearImage(vec2 uv, vec2 sp) {
         vec2 c = id + 0.5 + (jit - 0.5) * 0.6 + 0.04 * vec2(sin(TIME * 0.6 + h * 20.0), cos(TIME * 0.5 + h * 13.0));
         // drop: cells blown outward from the centre of view
         vec2 away = c * g - ctr;
-        c += normalize(away + 1e-4) * gDrop * 0.6 * exp(-dot(away, away) * 6.0);
+        c += normalize(away + 1e-4) * gG1.z * 0.45 * exp(-dot(away, away) * 6.0);
         vec2 q = cell - c;
         float hT = h12(id + 17.0);
         if (h < dens) {
@@ -464,6 +494,182 @@ vec4 smearImage(vec2 uv, vec2 sp) {
     return vec4(col, inside);
 }
 
+// ── Pass 0: the simulation ──────────────────────────────────────────────
+// Pulsatile Poiseuille flow u(r) = U·(1 − r²) whose centreline speed U is driven by
+// heart/kick/drop pressure surges (Windkessel relaxation); cells are rigid bodies
+// dragged toward the local plasma velocity, with soft-sphere DEM collisions
+// (spring–dashpot, restitution = Bounce), wall reflection, inertial lift toward the
+// core (cell-free layer), white-cell margination, sedimentation, and Jeffery-orbit
+// tumbling driven by the local shear rate plus collision torque.
+vec4 physicsPass(vec2 fc, bool bad) {
+    vec2 cs = RENDERSIZE / vec2(NBF, 4.0);
+    vec2 cell = floor(fc / cs);
+    vec2 ctr = (cell + 0.5) * cs;
+    if (abs(fc.x - ctr.x) > 2.0 || abs(fc.y - ctr.y) > 2.0) return vec4(0.0);
+    bool init = FRAMEINDEX < 2 || resetPhysics || bad;
+    float dt = clamp(TIMEDELTA, 0.0, 1.0 / 30.0);
+    float ph = physicsAmt;
+    float ar = audioReact;
+    float kick = kickForce * clamp(0.8 * audioBeatPulse + 0.5 * bassP(), 0.0, 1.5) * ar;
+    float heart = lubdub(gHB) * (0.55 + 0.45 * (1.0 - gRest)) * pulseAmt;
+    float U = gU;
+
+    if (cell.y > 2.5) {
+        if (cell.x < 0.5) {
+            // vessel: centreline flow with inertia + compliant wall (damped spring)
+            vec4 G0 = stTex(0.0, 3.0);
+            float D = G0.y, Dv = G0.z;
+            float Ub = flowSpeed * (0.4 + 0.35 * (1.0 - gRest) + 0.55 * midP() * ar + 1.3 * gBuild + 0.45 * gPeak);
+            float surge = (0.3 + 0.7 * ph) * flowSpeed * (4.0 * heart + 7.0 * kick + 30.0 * gDrop);
+            U = clamp(U + ((Ub - U) / 0.7 + surge) * dt, 0.0, 7.0);
+            float D0 = 1.0 + 0.14 * gRest - 0.24 * gBuild + 0.05 * gPeak;
+            float Pw = 0.05 * heart + 0.07 * kick + 0.6 * gDrop;
+            Dv += (70.0 * (D0 + Pw - D) - 4.5 * Dv) * dt;
+            D = clamp(D + Dv * dt, 0.6, 1.9);
+            Dv = clamp(Dv, -6.0, 6.0);
+            if (init) { U = Ub; D = D0; Dv = 0.0; }
+            return vec4(U, D, Dv, 1.0);
+        }
+        if (cell.x < 1.5) {
+            // camera tracker (split hi/lo for fp16) + smear blast spring
+            float cz = mod(gCamZ, 256.0);
+            float B = gG1.z, Bv = gG1.w;
+            Bv += (-40.0 * B - 5.0 * Bv + 60.0 * gDrop * (0.4 + 0.6 * ph)) * dt;
+            B = clamp(B + Bv * dt, -1.0, 2.0);
+            if (init) { B = 0.0; Bv = 0.0; }
+            return vec4(floor(cz * 8.0) / 8.0, fract(cz * 8.0), B, Bv);
+        }
+        if (cell.x < 2.5) {
+            // smear slide shove spring: kicks shove it, it rings and settles
+            vec2 s = gG2.xy, sv = gG2.zw;
+            float a = audioBassTime * 1.3 + TIME * 0.2;
+            vec2 F = vec2(cos(a), sin(a)) * (kick * 2.5 + gDrop * 4.0) * ph;
+            sv += (-45.0 * s - 4.0 * sv + F) * dt;
+            s += sv * dt;
+            s = clamp(s, -0.15, 0.15);
+            if (init) { s = vec2(0.0); sv = vec2(0.0); }
+            return vec4(s, sv);
+        }
+        return vec4(0.0);
+    }
+
+    float i = cell.x;
+    vec4 A = stTex(i, 0.0), Bs = stTex(i, 1.0), Cs = stTex(i, 2.0);
+    vec2 q = A.xy;
+    float z = A.z + A.w / 128.0;
+    vec2 vq = Bs.xy;
+    float vz = Bs.z, seed = Bs.w;
+    float th = Cs.x, phi = Cs.y, wth = Cs.z, wph = Cs.w;
+    bool spawn = init || !(abs(z) < 20.0) || !(length(q) < 2.0) || !(abs(vz) < 20.0);
+    if (spawn) {
+        seed = h11(i * 7.31 + 0.5);
+        z = (i + h11(i * 1.9 + 4.0)) / NBF * BL;
+    } else {
+        float vr = gRbase * gDil;
+        vec4 T = bodyType(seed);
+        float Ri = T.x * T.w;
+        float mi = T.y > 0.5 ? 4.0 : (T.z > 0.5 ? 0.3 : 1.0);
+        float r = length(q);
+        vec2 qn = r > 1e-3 ? q / r : vec2(cos(seed * 43.0), sin(seed * 43.0));
+        // Poiseuille plasma velocity at this radius (white cells roll slower near the wall, plug capillaries)
+        float uz = U * (1.0 - r * r);
+        if (T.y > 0.5) uz *= mix(1.0, 0.55, smoothstep(0.5, 0.9, r)) * mix(1.0, 0.6, gCap);
+        vec2 aq = -vq * 3.0;                         // transverse viscous drag
+        float az = (uz - vz) * 6.0;                  // axial drag toward the plasma (tau ≈ 0.17 s)
+        float lift = ph * (0.5 + 0.5 * U) * smoothstep(0.35, 1.0, r);
+        aq += T.y > 0.5 ? qn * lift * 0.6 : -qn * lift * 2.2;          // margination vs. cell-free layer
+        aq.y -= ph * gravity * 0.35 / max(vr, 0.2);                     // sedimentation
+        vec2 jit = h22(vec2(i * 3.1, floor(gHB * 2.0))) - 0.5;
+        aq += ph * kick * 9.0 * jit;                                     // kicks jostle the stream
+        aq += ph * gDrop * 9.0 * qn;                                    // drop pressure wave scatters outward
+
+        // soft-sphere collisions (DEM spring–dashpot) + short-range hydrodynamic repulsion
+        vec3 Pi = vec3(q * vr, z);
+        vec3 Vi = vec3(vq * vr, -vz);
+        vec3 F = vec3(0.0);
+        float torque = 0.0;
+        float zeta = (1.0 - bounce) * 0.7 + 0.03;
+        float kC = 500.0, cC = 2.0 * zeta * sqrt(kC);
+        if (Ri > 0.004) {
+            for (int j = 0; j < NB; j++) {
+                float fj = float(j);
+                if (abs(fj - i) < 0.5) continue;
+                vec4 Aj = stTex(fj, 0.0);
+                vec3 d = vec3(Aj.xy * vr, Aj.z + Aj.w / 128.0) - Pi;
+                if (abs(d.z) > 0.9) continue;
+                vec4 Bj = stTex(fj, 1.0);
+                vec4 Tj = bodyType(Bj.w);
+                float Rs = Ri + Tj.x * Tj.w;
+                float dist = length(d);
+                if (dist > 2.0 * Rs || dist < 1e-4 || Tj.w < 0.01) continue;
+                vec3 n = d / dist;
+                vec3 vrel = vec3(Bj.xy * vr, -Bj.z) - Vi;
+                float vn = dot(vrel, n);
+                float ov = Rs - dist;
+                float hyd = 1.0 - dist / (2.0 * Rs);
+                float f = -3.0 * hyd * hyd;
+                if (ov > 0.0) f += -kC * ov + cC * vn;
+                F += f * n;
+                vec3 vt = vrel - vn * n;
+                torque += (ov > 0.0 ? 10.0 : 2.0) * hyd * (vt.z * (n.x + n.y) - (vt.x + vt.y) * n.z);
+            }
+        }
+        aq += ph * F.xy / (mi * vr);
+        az += ph * (-F.z) / mi;
+
+        vq = clamp(vq + aq * dt, -4.0, 4.0);
+        vz = clamp(vz + az * dt, -1.0, 8.0);
+        q += vq * dt;
+        // vessel wall: reflect with restitution, wall contact makes the cell roll
+        float rmax = max(1.0 - T.x * 0.85 / vr, 0.0);
+        r = length(q);
+        if (r > rmax) {
+            vec2 wn = r > 1e-4 ? q / r : qn;
+            q = wn * rmax;
+            float vrad = dot(vq, wn);
+            if (vrad > 0.0) { vq -= (1.0 + bounce) * vrad * wn; wth += vrad * 4.0 * ph; }
+            wth += vz * 0.6 * ph * dt * 10.0;
+        }
+        // tumbling: Jeffery orbit of an oblate disc (aspect ≈ 0.35) in the local shear + collision torque
+        r = length(q);
+        float shear = 2.0 * U * r / max(vr, 0.2);
+        float ct = cos(th), st = sin(th);
+        float jeff = tumble * (0.35 + 0.9 * shear * (0.12 * ct * ct + st * st)) * (1.0 - 0.8 * gCap);
+        wth += ((jeff - wth) * 3.0 + torque * ph) * dt;
+        wth = clamp(wth, -25.0, 25.0);
+        th = mod(th + wth * dt, TAU);
+        float tgt = atan(q.y, q.x + 1e-5);
+        float dph = mod(tgt - phi + PI, TAU) - PI;
+        wph += (dph * 2.0 - wph * 2.0 + torque * 0.3 * ph) * dt;
+        wph = clamp(wph, -15.0, 15.0);
+        phi = mod(phi + wph * dt, TAU);
+
+        // advance toward (and past) the camera; recycle at the far end
+        z -= vz * dt;
+        float prevC = gG1.x + gG1.y / 8.0;
+        float dC = mod(gCamZ, 256.0) - prevC;
+        if (dC < -128.0) dC += 256.0;
+        if (dC > 128.0) dC -= 256.0;
+        z -= clamp(dC, -0.05, 0.3);
+        if (z < -0.35) { z += BL; seed = fract(seed + 0.618034 + 0.0137 * i); spawn = true; }
+        else if (z > BL - 0.2) z -= BL;
+    }
+    if (spawn) {
+        float r0 = 0.82 * sqrt(h11(seed * 311.7 + i));
+        float a0 = TAU * h11(seed * 173.1 + 2.0 * i);
+        q = r0 * vec2(cos(a0), sin(a0));
+        vq = vec2(0.0);
+        vz = U * (1.0 - r0 * r0);
+        th = TAU * h11(seed * 59.3 + 1.0);
+        phi = a0; wth = 0.0; wph = 0.0;
+    }
+    float zh = floor(z * 128.0) / 128.0;
+    float zl = fract(z * 128.0);
+    if (cell.y < 0.5) return vec4(q, zh, zl);
+    if (cell.y < 1.5) return vec4(vq, vz, seed);
+    return vec4(th, phi, wth, wph);
+}
+
 void main() {
     showDynamics();
     vec2 R = RENDERSIZE.xy;
@@ -496,14 +702,22 @@ void main() {
     gHAudio = clamp((0.7 * bassP() + 0.8 * audioBeatPulse) * ar, 0.0, 1.5);
     float autoH = lubdub(gHB) * (0.55 + 0.45 * (1.0 - gRest)) * (1.0 - 0.4 * clamp(gHAudio, 0.0, 1.0));
     gH = clamp(autoH + gHAudio, 0.0, 1.6) * pulseAmt;
-    // flow: the stream surges forward on every beat (monotonic), mids add speed
-    float fb = fract(gHB);
-    float beatSteps = floor(gHB) + 0.65 * smoothstep(0.0, 0.22, fb) + 0.35 * fb;
-    float sec = 60.0 / heartRate;
-    gFlow = flowSpeed * (0.95 * beatSteps * sec + (audioMidTime * 0.45 + audioBassTime * 0.25) * ar) + 1.2 * gBuild * gBuild;
+    // physics state (flow and dilation are integrated in pass 0)
+    vec4 G0 = stTex(0.0, 3.0);
+    gG1 = stTex(1.0, 3.0);
+    gG2 = stTex(2.0, 3.0);
+    bool okG = abs(G0.w - 1.0) < 0.01 && abs(G0.x) < 50.0 && abs(G0.y) < 5.0;
+    gU = okG ? G0.x : 1.0;
+    gDil = okG ? G0.y : 1.0;
+    if (!(abs(gG1.z) < 5.0) || !(length(gG2.xy) < 1.0)) { gG1 = vec4(0.0); gG2 = vec4(0.0); }
     gCamZ = TIME * 0.3 + audioBassTime * 0.08 * ar + 0.6 * gBuild * gBuild;
     gRbase = mix(1.0, 0.25, gCap);
-    gDil = 1.0 + 0.14 * gRest - 0.24 * gBuild + 0.4 * gDrop * gDrop + 0.05 * gPeak;
+    gDens = clamp(cellDensity * (1.0 - 0.6 * gRest) * (0.85 + 0.25 * gPeak + 0.2 * gDrop), 0.0, 1.0) * mix(1.0, 0.5, gCap);
+
+    if (PASSINDEX == 0) {
+        gl_FragColor = physicsPass(fc, !okG);
+        return;
+    }
 
     vec3 col = vec3(0.0);
     float alpha = 1.0;
