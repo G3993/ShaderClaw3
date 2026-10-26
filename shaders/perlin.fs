@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Perlin — a living study of noise, texture and grain. Animated Perlin gradient noise is layered into fractal fields and folded back into itself (domain warping), so it boils, flows and curls like smoke in slow motion, then rendered through six textures that morph into each other: Smoke (soft warped clouds with deep shadows), Marble (turbulent veins cutting through polished stone), Topographic (the noise drawn as glowing contour lines, like a map of shifting terrain), Risograph (halftone dots sized by the noise, printed in two misregistered inks on paper), Paper Fibre (felted fibres and pulp flecks drifting through the light), and Film Stock (heavy silver-halide grain, scratches, dust, gate weave and flicker). Everything is finished with a tunable photographic grain — fine or coarse, mono or colour, frozen or crawling. Bass swells and darkens the fields, mids speed up the boiling, highs sharpen and sparkle the grain, beats push a ripple through the warp. At rest it drifts slowly with soft, sparse grain; during a build the noise tightens to finer detail, swirls faster and the grain gets hotter; on the drop the warp snaps outward in a bright shockwave and the grain flashes, then the peak boils at full contrast. Underneath runs a real fluid simulation: twelve point vortices in counter-rotating pairs push each other around (Biot–Savart), carry inertia, ride a curl-noise breeze, rise or sink with buoyancy and bounce off the frame, and every texture is carried by the swirl they wind into it — kicks spin up a pair and send it lunging along its own jet, the drop fires a radial blast on a damped spring that shoots out, rebounds and settles, and between hits the twist relaxes home (the grain stays locked to the screen).",
+  "DESCRIPTION": "Perlin — a living study of noise, texture and grain. Animated Perlin gradient noise is layered into fractal fields and folded back into itself (domain warping), so it boils, flows and curls like smoke in slow motion, then rendered through six textures that morph into each other: Smoke (soft warped clouds with deep shadows), Marble (turbulent veins cutting through polished stone), Topographic (the noise drawn as glowing contour lines, like a map of shifting terrain), Risograph (halftone dots sized by the noise, printed in two misregistered inks on paper), Paper Fibre (felted fibres and pulp flecks drifting through the light), and Film Stock (heavy silver-halide grain, scratches, dust, gate weave and flicker). Everything is finished with a tunable photographic grain — fine or coarse, mono or colour, frozen or crawling. Bass swells and darkens the fields, mids speed up the boiling, highs sharpen and sparkle the grain, beats push a ripple through the warp. At rest it drifts slowly with soft, sparse grain; during a build the noise tightens to finer detail, swirls faster and the grain gets hotter; on the drop the warp snaps outward in a bright shockwave and the grain flashes, then the peak boils at full contrast. Every texture is lit as a 3D relief surface (3D Relief control; 0 = flat print): soft volumetric clouds for Smoke, clear-coated polished stone with a studio reflection for Marble, embossed terraces with crisp contour risers for Topographic, raised glossy ink domes casting tiny shadows for Risograph, proud fibres for Paper, and a halation/lens glow for Film — key and rim lights, fresnel specular, height AO and a soft focus falloff toward the frame edge. Underneath runs a real fluid simulation: twelve point vortices in counter-rotating pairs push each other around (Biot–Savart), carry inertia, ride a curl-noise breeze, rise or sink with buoyancy and bounce off the frame, and every texture is carried by the swirl they wind into it — kicks spin up a pair and send it lunging along its own jet, the drop fires a radial blast on a damped spring that shoots out, rebounds and settles, and between hits the twist relaxes home (the grain stays locked to the screen).",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-26 — original.",
   "CATEGORIES": ["Generator", "Texture", "Audio Reactive"],
   "INPUTS": [
@@ -10,6 +10,7 @@
     { "NAME": "warpAmt",     "LABEL": "Domain Warp",      "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.4, "GROUP": "Noise" },
     { "NAME": "flowSpeed",   "LABEL": "Boil Speed",       "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.6, "GROUP": "Noise" },
     { "NAME": "drift",       "LABEL": "Drift",            "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.5, "GROUP": "Noise" },
+    { "NAME": "relief",      "LABEL": "3D Relief",        "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.8, "GROUP": "Look" },
     { "NAME": "contrast",    "LABEL": "Contrast",         "TYPE": "float", "MIN": 0.5, "MAX": 2.5, "DEFAULT": 1.2, "GROUP": "Look" },
     { "NAME": "inkA",        "LABEL": "Ink / Shadow",     "TYPE": "color", "DEFAULT": [0.04, 0.03, 0.05, 1.0], "GROUP": "Look" },
     { "NAME": "inkB",        "LABEL": "Colour",           "TYPE": "color", "DEFAULT": [0.95, 0.22, 0.32, 1.0], "GROUP": "Look" },
@@ -150,10 +151,12 @@ vec3 ramp3(float t) {
 
 // one texture at point p (noise space) and pixel fc.
 // The warped field is evaluated from ONE call site (in a loop) to keep the shader small.
-// p0 = undisplaced noise coords; dsp / dspN = fluid displacement (noise units) at this pixel and at the topo neighbour
-float gDK;
-vec2 gDC0, gDC1;
-vec3 textureLook(float k, vec2 p0, vec2 fc, float px, vec2 dsp, vec2 dspN) {
+// p0 = undisplaced noise coords; dsp = fluid displacement (noise units) at this pixel.
+// Relief: the loop also evaluates the field at +x / +y screen neighbours (same call site) → a true
+// finite-difference gradient of the full warped field → normals for one shared lighting block.
+float gDK, gRel, gEs, gFocus;
+vec2 gDC0, gDC1, gDX, gDY, gSp;
+vec3 textureLook(float k, vec2 p0, vec2 fc, float px, vec2 dsp) {
     vec2 p = p0 - dsp;                                              // material coordinates, carried by the flow
     // per-texture sampling setup
     float scl = k < 0.5 ? 1.0 : k < 1.5 ? 0.45 : k < 2.5 ? 0.38 : k < 3.5 ? 1.0 : k < 4.5 ? 0.6 : 0.9;
@@ -162,10 +165,15 @@ vec3 textureLook(float k, vec2 p0, vec2 fc, float px, vec2 dsp, vec2 dspN) {
     gOctCap = k < 0.5 ? 7.0 : k < 1.5 ? 4.0 : k < 2.5 ? 3.0 : k < 3.5 ? 4.0 : 7.0;
     bool riso = k > 2.5 && k < 3.5;
     bool topo = k > 1.5 && k < 2.5;
+    bool fd = topo || (gRel > 0.001 && k < 1.5);                    // smoke / marble / topo get field normals
     float cell = max(dotSize, 2.0);
-    vec2 P0 = p * scl, P1 = P0;
+    vec2 P0 = p * scl, P1 = P0, P2 = P0;
     vec2 gA0 = vec2(0.0), gA1 = vec2(0.0);
-    if (topo) P1 = (p0 - dspN) * scl + vec2(1.0, 1.0) * px * scl * 1.5;   // neighbour sample (with its own displacement) for the field's slope
+    float eN = gEs * px * RENDERSIZE.y;                             // FD step in noise units (gEs is in screen-height units)
+    if (fd) {
+        P1 = (p0 + vec2(eN, 0.0) - gDX) * scl;
+        P2 = (p0 + vec2(0.0, eN) - gDY) * scl;
+    }
     if (riso) {
         for (int i = 0; i < 2; i++) {
             float fi = float(i);
@@ -179,88 +187,172 @@ vec3 textureLook(float k, vec2 p0, vec2 fc, float px, vec2 dsp, vec2 dspN) {
             if (i == 0) { P0 = cp; gA0 = g; } else { P1 = cp + 0.37; gA1 = g; }
         }
     }
-    float F0 = 0.0, F1 = 0.0;
+    // Smoke shades from a softer, lower-octave copy of the same field (volumetric billows, not crunch):
+    // j = 0 full-detail colour sample, j = 1..3 low-octave centre / +x / +y.  One field() call site.
+    bool soft = fd && k < 0.5;
+    float octFull = gOct;
+    float F0 = 0.0, F1 = 0.0, F2 = 0.0, F3 = 0.0;
     vec2 w = vec2(0.0), wtmp;
-    for (int j = 0; j < 2; j++) {
-        if (j == 1 && !riso && !topo) break;
-        float fv = field(j == 0 ? P0 : P1, ridged, wtmp);
-        if (j == 0) { F0 = fv; w = wtmp; } else F1 = fv;
+    for (int j = 0; j < 4; j++) {
+        if (j == 1 && !riso && !fd) break;
+        if (j == 2 && !fd) break;
+        if (j == 3 && !soft) break;
+        gOct = soft && j > 0 ? max(octFull - 3.0, 2.0) : octFull;
+        vec2 Pj = soft ? (j == 0 ? P0 : j == 1 ? P0 : j == 2 ? P1 : P2) : (j == 0 ? P0 : j == 1 ? P1 : P2);
+        float fv = field(Pj, ridged, wtmp);
+        if (j == 0) { F0 = fv; w = wtmp; } else if (j == 1) F1 = fv; else if (j == 2) F2 = fv; else F3 = fv;
     }
+    gOct = octFull;
     float f = F0;
-    if (k < 0.5) {                                                  // Smoke
+    vec2 G = !fd ? vec2(0.0) : soft ? vec2(F2 - F1, F3 - F1) / max(gEs, 1e-6) : vec2(F1 - F0, F2 - F0) / max(gEs, 1e-6);    // d field / d screen-height unit
+
+    // material outputs for the shared lighting block
+    vec3 c;
+    vec2 gh = vec2(0.0);                // height gradient (screen units → normal = (-gh, 1))
+    float ao = 1.0, shin = 16.0, specK = 0.1, F0r = 0.04, rimK = 0.25, wrap = 0.3, envK = 0.0, sss = 0.0;
+    if (k < 0.5) {                                                  // Smoke — volumetric soft-lit cloud
         float v = smoothstep(0.05, 0.95, 0.5 + 0.5 * f * contrast);
-        vec3 c = ramp3(v * 0.85 + 0.1 * length(w));
-        return c * (0.75 + 0.45 * smoothstep(0.2, 0.9, v));
-    }
-    if (k < 1.5) {                                                  // Marble
-        float veins = sin((p.x + p.y * 0.4) * 3.5 + f * 14.0 * contrast + w.x * 5.0);
-        float v = pow(1.0 - abs(veins), 7.0);
+        c = ramp3(v * 0.85 + 0.1 * length(w));
+        c *= 0.75 + 0.45 * smoothstep(0.2, 0.9, v);
+        gh = G * 0.5 * contrast * 0.09;
+        ao = mix(0.45, 1.08, smoothstep(-0.45, 0.45, F1 * contrast));   // valleys of the soft field sit in shadow              // thin gaps between billows sit in shadow
+        shin = 6.0; specK = 0.05; rimK = 0.55; wrap = 0.9; sss = (1.0 - v) * 0.6;
+    } else if (k < 1.5) {                                           // Marble — polished stone, clear coat
+        float ph1 = (p.x + p.y * 0.4) * 3.5 + f * 14.0 * contrast + w.x * 5.0;
+        float sv = sin(ph1);
+        float v = pow(1.0 - abs(sv), 7.0);
         float v2 = pow(1.0 - abs(sin((p.y - p.x * 0.3) * 2.5 + f * 18.0 + w.y * 4.0)), 26.0);
         vec3 stone = mix(inkC.rgb * 0.82, inkC.rgb, smoothstep(-0.5, 0.6, f));
         stone *= 0.94 + 0.06 * h12(floor(p * 300.0));                // fine crystal sparkle
-        vec3 c = mix(stone, inkB.rgb, v * 0.85);
-        return mix(c, inkA.rgb, v2 * 0.9);
-    }
-    if (k < 2.5) {                                                  // Topographic
+        c = mix(stone, inkB.rgb, v * 0.85);
+        c = mix(c, inkA.rgb, v2 * 0.9);
+        // veins are very slightly etched into the polish
+        float dv = -7.0 * pow(1.0 - abs(sv), 6.0) * sign(sv) * cos(ph1);
+        gh = G * 0.03 - dv * (G * 14.0 * contrast) * 0.0005;
+        ao = 1.0 - 0.18 * v2;
+        shin = 90.0; specK = 1.4; F0r = 0.06; rimK = 0.2; wrap = 0.15; envK = 1.0;
+    } else if (topo) {                                              // Topographic — embossed terraces
         float gainH = 1.8 * contrast * 0.8;
         float h = f * gainH + 0.5;                                  // stretch the field so many contours appear (unclamped: no flat plateaus)
         float n = floor(lineCount);
         float lv = h * n;
-        float slope = max(abs(F1 - F0) * gainH * n / 2.12, 1e-4);   // contour units per pixel
-        float dpx = (0.5 - abs(fract(lv) - 0.5)) / slope;           // distance to the nearest contour, in pixels
+        float slope = max(length(G) * gainH * n / RENDERSIZE.y, 1e-4);   // contour units per pixel
+        float fl = fract(lv);
+        float dpx = (0.5 - abs(fl - 0.5)) / slope;                  // distance to the nearest contour, in pixels
         float lw = 0.7 + 0.6 * gLift;
         float line = smoothstep(lw + 0.8, lw - 0.2, dpx);
         float major = mod(floor(lv + 0.5), 5.0) < 0.5 ? 1.0 : 0.0;
+        float tier = floor(lv + 0.5) / n;
         vec3 base = inkA.rgb + 0.06 * clamp(h, 0.0, 1.0);
-        return mix(base, mix(inkB.rgb, inkC.rgb, major), line * (0.55 + 0.45 * major));
-    }
-    if (riso) {                                                     // Risograph halftone, two inks multiplied
-        vec3 c = inkC.rgb;
+        base = mix(base, base + inkB.rgb * 0.16 * clamp(tier, 0.0, 1.2), gRel);  // higher terraces catch more light
+        c = mix(base, mix(inkB.rgb, inkC.rgb, major), line * (0.55 + 0.45 * major));
+        // step faces: the crisp line itself is the riser of each terrace
+        vec2 gd = G / max(length(G), 1e-5);
+        float riser = smoothstep(lw + 2.5 * max(1.0, RENDERSIZE.y / 540.0), 0.0, dpx);   // bevel scales with resolution
+        gh = gd * riser * (0.9 + 0.6 * major) + G * 0.004;
+        // ambient occlusion at the foot of the next terrace up
+        float dUp = (1.0 - fl) / slope * 1080.0 / RENDERSIZE.y;
+        ao = 1.0 - 0.7 * exp(-dUp / 9.0) * (1.0 - line);
+        shin = 48.0; specK = 0.45; rimK = 0.35; wrap = 0.2;
+    } else if (riso) {                                              // Risograph — raised ink dots, two inks multiplied
+        c = inkC.rgb;
+        vec2 Ls = normalize(vec2(-0.55, 0.6));
         for (int i = 0; i < 2; i++) {
             float fi = float(i);
             float fv = i == 0 ? F0 : F1;
             vec2 g = i == 0 ? gA0 : gA1;
+            float ang = fi < 0.5 ? 0.26 : 1.31;
             float tone = clamp(0.5 + 0.55 * fv * contrast + (fi - 0.5) * 0.15, 0.0, 1.0);
             float r = sqrt(tone) * 0.62;
-            float dd = length(fract(g) - 0.5);
-            float dotm = smoothstep(r + 0.06, r - 0.06, dd);
+            vec2 lc = fract(g) - 0.5;
+            float dd = length(lc);
+            float aa = 0.06 + 0.5 / cell;
+            float dotm = smoothstep(r + aa, r - aa, dd);
+            // drop shadow of the raised dot onto the paper (away from the light)
+            float ds = length(fract(g + rot(ang) * Ls * 0.17 * gRel) - 0.5);
+            float shd = smoothstep(r + 0.12, r - 0.08, ds) * (1.0 - dotm);
+            c *= 1.0 - 0.38 * shd * gRel;
             vec3 ink = fi < 0.5 ? inkB.rgb : inkA.rgb + vec3(0.05, 0.1, 0.25);
             c = mix(c, c * ink * 1.05, dotm * 0.92);
+            // dome normal (rotated back to screen space)
+            float z = sqrt(max(r * r - dd * dd, 0.0));
+            vec2 dg = rot(-ang) * (lc / max(z, 0.22 * r + 0.02)) * 0.9;
+            gh = mix(gh, dg, dotm);
         }
-        return c;
-    }
-    if (k < 4.5) {                                                  // Paper fibre
-        vec3 c = mix(inkC.rgb * 0.92, inkC.rgb, 0.5 + 0.5 * f);
+        shin = 28.0; specK = 0.3; rimK = 0.3; wrap = 0.25;
+    } else if (k < 4.5) {                                           // Paper fibre — felted relief
+        c = mix(inkC.rgb * 0.92, inkC.rgb, 0.5 + 0.5 * f);
         float fib = 0.0;
+        vec2 gf = vec2(0.0);
         for (int i = 0; i < 3; i++) {
             float fi = float(i);
-            vec2 q = p * (6.0 + fi * 5.0) + w * 3.0 + fi * 13.1;
+            float fs = 6.0 + fi * 5.0;
+            vec2 q = p * fs + w * 3.0 + fi * 13.1;
             vec2 id = floor(q), fq = fract(q) - 0.5;
             float a = h12(id) * TAU + w.x * 2.0;
             vec2 dir = vec2(cos(a), sin(a));
             float along = dot(fq, dir), across = dot(fq, vec2(-dir.y, dir.x));
-            float sres = smoothstep(0.05, 0.0, abs(across + 0.15 * along * along)) * smoothstep(0.5, 0.2, abs(along)) * step(0.55, h12(id + 7.0));
-            fib = max(fib, sres * (0.5 + 0.5 * h12(id + 3.0)));
+            float xa = across + 0.15 * along * along;
+            float sres = smoothstep(0.05, 0.0, abs(xa)) * smoothstep(0.5, 0.2, abs(along)) * step(0.55, h12(id + 7.0));
+            float st = sres * (0.5 + 0.5 * h12(id + 3.0));
+            if (st > fib) { fib = st; gf = vec2(-dir.y, dir.x) * clamp(xa / 0.05, -1.0, 1.0) * st; }
         }
         c = mix(c, mix(inkB.rgb, inkA.rgb, 0.3), fib * 0.55);
         vec2 fp = p * 40.0 + w * 6.0;
         vec2 fid = floor(fp);
-        float fl = step(0.97, h12(fid)) * smoothstep(0.3, 0.12, length(fract(fp) - 0.5 - (vec2(h12(fid + 1.0), h12(fid + 2.0)) - 0.5) * 0.4));
+        vec2 fo = fract(fp) - 0.5 - (vec2(h12(fid + 1.0), h12(fid + 2.0)) - 0.5) * 0.4;
+        float fl = step(0.97, h12(fid)) * smoothstep(0.3, 0.12, length(fo));
         c = mix(c, inkA.rgb * 1.2, fl * 0.55);
-        return c * (0.92 + 0.12 * smoothstep(-0.4, 0.6, f));
+        c *= 0.92 + 0.12 * smoothstep(-0.4, 0.6, f);
+        // fibres stand proud of the sheet (rounded cross-section), flecks are little pits
+        gh = gf * 2.4 - fo * fl * 3.0 + G * 0.0;
+        ao = 1.0 - 0.12 * fl;
+        shin = 10.0; specK = 0.06; rimK = 0.2; wrap = 0.5;
+    } else {                                                        // Film stock: silver-halide clumps, scratches, dust, flicker
+        float v = smoothstep(-0.6, 0.7, f * contrast);
+        c = mix(inkA.rgb, inkC.rgb, v);
+        float fr = floor(TIME * 24.0);
+        float clump = h12(floor(fc / (2.0 * grainSize)) + fr * 3.1);
+        c *= 0.86 + 0.28 * clump;
+        float sx = h11(fr * 1.7);
+        float scr = smoothstep(1.5, 0.0, abs(fc.x - sx * RENDERSIZE.x)) * step(0.55, h11(fr * 2.3));
+        c = mix(c, inkC.rgb, scr * 0.6);
+        float dust = step(0.9993, h12(floor(fc / 3.0) + fr));
+        c = mix(c, inkA.rgb, dust);
+        c *= 0.92 + 0.08 * h11(fr);
+        // lens / emulsion depth glow: halation bleeding red around highlights + a soft projector bloom
+        vec3 hal = vec3(1.0, 0.35, 0.18) * mix(vec3(1.0), inkB.rgb * 1.6, 0.5);
+        c += hal * smoothstep(0.45, 1.0, v) * 0.22 * gRel;
+        c = mix(c, c * 1.12 + 0.03 * inkC.rgb, gRel * exp(-dot(gSp, gSp) * 2.2));
+        return c;
     }
-    // Film stock: silver-halide clumps, scratches, dust, flicker
-    float v = smoothstep(-0.6, 0.7, f * contrast);
-    vec3 c = mix(inkA.rgb, inkC.rgb, v);
-    float fr = floor(TIME * 24.0);
-    float clump = h12(floor(fc / (2.0 * grainSize)) + fr * 3.1);
-    c *= 0.86 + 0.28 * clump;
-    float sx = h11(fr * 1.7);
-    float scr = smoothstep(1.5, 0.0, abs(fc.x - sx * RENDERSIZE.x)) * step(0.55, h11(fr * 2.3));
-    c = mix(c, inkC.rgb, scr * 0.6);
-    float dust = step(0.9993, h12(floor(fc / 3.0) + fr));
-    c = mix(c, inkA.rgb, dust);
-    return c * (0.92 + 0.08 * h11(fr));
+    if (gRel < 0.001) return c;
+
+    // ── shared 3D lighting: key + rim, glossy spec with fresnel, studio reflection, AO / translucency ──
+    vec3 nrm = normalize(vec3(-gh * gRel, 1.0));
+    vec3 V = normalize(vec3(-gSp * 0.45, 1.0));                      // gentle perspective → spec drifts across the frame
+    vec3 L = normalize(vec3(-0.55, 0.6, 0.62));
+    vec3 Lr = normalize(vec3(0.7, -0.45, 0.25));
+    float ndl = dot(nrm, L);
+    float dif = clamp((ndl + wrap) / (1.0 + wrap), 0.0, 1.0);
+    float ndv = max(dot(nrm, V), 0.0);
+    float fres = F0r + (1.0 - F0r) * pow(1.0 - ndv, 5.0);
+    vec3 Hh = normalize(L + V);
+    float spec = pow(max(dot(nrm, Hh), 0.0), shin) * specK * (0.35 + 2.5 * fres) * step(0.0, ndl);
+    float rim = pow(1.0 - nrm.z, 1.2) * max(dot(nrm.xy, Lr.xy), 0.0) / max(length(nrm.xy), 1e-4) * rimK;
+    rim += pow(1.0 - ndv, 3.0) * rimK * 0.4;
+    vec3 Rf = reflect(-V, nrm);
+    vec2 rp = Rf.xy / max(Rf.z, 0.2);                               // studio softbox seen in the reflection
+    vec2 wb = abs(rot(0.5) * (rp - vec2(-0.17, 0.13))) - vec2(0.17, 0.06);
+    float env = smoothstep(0.045, 0.0, length(max(wb, 0.0)) + min(max(wb.x, wb.y), 0.0)) * 0.85
+              + 0.25 * smoothstep(-0.35, 0.35, rp.y - rp.x);
+    vec3 keyC = vec3(1.0, 0.96, 0.9), rimC = mix(vec3(0.75, 0.85, 1.0), inkC.rgb, 0.5);
+    float amb = k > 0.5 && k < 1.5 ? 0.3 : 0.42;
+    vec3 lit = c * (amb * ao + 0.78 * dif * mix(1.0, ao, 0.6));
+    lit += c * sss * pow(max(dot(-nrm.xy, L.xy), 0.0), 1.5) * 0.6;   // light through thin smoke
+    lit += keyC * spec + rimC * rim * mix(vec3(1.0), c, 0.5) + vec3(env * envK * (0.18 + 1.6 * fres));
+    lit = mix(lit, lit * 0.82, gFocus * 0.5);                       // out-of-focus edges recede
+    return mix(c, lit, gRel);
 }
 
 // ── Physics: Lagrangian vortex-particle fluid ───────────────────────────
@@ -403,8 +495,13 @@ void main() {
     p += (normalize(sp + 1e-4) * shock * 0.25 + sp * 0.12 * audioBeatPulse * ar * exp(-rr * 2.0)) * (1.0 - K);   // analytic fallback
     float px = sc / R.y;
 
-    // ── material displacement from the simulated vortices (4 points at once: pixel, topo neighbour, 2 riso cells) ──
-    vec2 q0 = sp, q1 = sp + vec2(1.5) / R.y, q2 = sp, q3 = sp;
+    // relief / focus: FD step for normals widens toward the frame edge (soft depth-of-field on the lighting)
+    gRel = clamp(relief, 0.0, 1.0);
+    gSp = sp;
+    gFocus = smoothstep(0.35, 1.05, length(sp * vec2(0.75, 1.0))) * gRel;
+    gEs = max(1.75 / R.y, 0.0028) * (1.0 + 2.5 * gFocus);
+    // ── material displacement from the simulated vortices (5 points: pixel, +x, +y neighbours, 2 riso cells) ──
+    vec2 q0 = sp, q1 = sp + vec2(gEs, 0.0), q2 = sp + vec2(0.0, gEs), q3 = sp, q4 = sp;
     {
         float cell = max(dotSize, 2.0);
         for (int i = 0; i < 2; i++) {
@@ -413,15 +510,16 @@ void main() {
             float ang = fi < 0.5 ? 0.26 : 1.31;
             vec2 cpix = rot(-ang) * (floor(rot(ang) * (fc + off) / cell) + 0.5) * cell - off;
             vec2 cs = (cpix - 0.5 * R) / R.y;
-            if (i == 0) q2 = cs; else q3 = cs;
+            if (i == 0) q3 = cs; else q4 = cs;
         }
     }
-    vec2 s1 = q1, s2 = q2, s3 = q3;
+    vec2 s1 = q1, s2 = q2, s3 = q3, s4 = q4;
     float e = texture2D(simBuf, cellUV(0.0, 6.0)).z;
     if (K > 0.001) {
         // blast: radial expansion around the centre (e > 0 pushes material outward)
         q0 *= 1.0 - e * exp(-length(q0) * 1.3); q1 *= 1.0 - e * exp(-length(q1) * 1.3);
         q2 *= 1.0 - e * exp(-length(q2) * 1.3); q3 *= 1.0 - e * exp(-length(q3) * 1.3);
+        q4 *= 1.0 - e * exp(-length(q4) * 1.3);
         for (int j = 0; j < NV; j++) {
             float fj = float(j);
             vec2 c = vPos(fj).xy;
@@ -436,11 +534,15 @@ void main() {
             d = q1 - c; q1 = c + vec2(cs.y * d.x - sn.y * d.y, sn.y * d.x + cs.y * d.y);
             d = q2 - c; q2 = c + vec2(cs.z * d.x - sn.z * d.y, sn.z * d.x + cs.z * d.y);
             d = q3 - c; q3 = c + vec2(cs.w * d.x - sn.w * d.y, sn.w * d.x + cs.w * d.y);
+            d = q4 - c;
+            float x4 = dot(d, d) * irc2, a4 = -th * (1.0 - exp(-x4)) / max(x4, 1e-4);
+            q4 = c + vec2(cos(a4) * d.x - sin(a4) * d.y, sin(a4) * d.x + cos(a4) * d.y);
         }
     }
     gDK = sc * K;
-    vec2 dsp = (sp - q0) * gDK, dspN = (s1 - q1) * gDK;
-    gDC0 = (s2 - q2) * gDK; gDC1 = (s3 - q3) * gDK;
+    vec2 dsp = (sp - q0) * gDK;
+    gDX = (s1 - q1) * gDK; gDY = (s2 - q2) * gDK;
+    gDC0 = (s3 - q3) * gDK; gDC1 = (s4 - q4) * gDK;
 
     // texture morph
     float ph = TIME / morphPeriod;
@@ -455,7 +557,7 @@ void main() {
     for (int i = 0; i < 2; i++) {
         float wgt = i == 0 ? 1.0 - m : m;
         if (wgt < 0.001) continue;
-        col += textureLook(i == 0 ? ka : kb, p, fc, px, dsp, dspN) * wgt;
+        col += textureLook(i == 0 ? ka : kb, p, fc, px, dsp) * wgt;
     }
 
     // shape & energy
