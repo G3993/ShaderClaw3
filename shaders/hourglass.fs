@@ -27,7 +27,7 @@
     { "NAME": "audioReact",  "LABEL": "Audio React",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6, "GROUP": "Audio Reactivity" },
     { "NAME": "showState",   "LABEL": "Show State", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Follow Music", "Rest", "Build", "Peak"], "GROUP": "Show Dynamics" },
     { "NAME": "dynamics",    "LABEL": "Build & Drop Depth", "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.85, "GROUP": "Show Dynamics" },
-    { "NAME": "bgMode",      "LABEL": "Background", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Follow Look", "Solid", "Vertical Gradient", "Radial Gradient"], "GROUP": "Background" },
+    { "NAME": "bgMode",      "LABEL": "Background", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Follow Look (Gradient)", "Solid", "Vertical Gradient", "Radial Gradient"], "GROUP": "Background" },
     { "NAME": "bgColor",     "LABEL": "BG Color / Top / Center", "TYPE": "color", "DEFAULT": [0.89, 0.87, 0.84, 1.0], "GROUP": "Background" },
     { "NAME": "bgColor2",    "LABEL": "BG Bottom / Edge", "TYPE": "color", "DEFAULT": [0.84, 0.74, 0.66, 1.0], "GROUP": "Background" },
     { "NAME": "transparentBg","LABEL": "Transparent BG",  "TYPE": "bool",  "DEFAULT": false, "GROUP": "Background" }
@@ -303,9 +303,13 @@ void main() {
 
     // backgrounds per look (user override if not "Follow Look")
     bool follow = float(bgMode) < 0.5;
-    vec3 bgA = follow ? vec3(0.89, 0.87, 0.84) : userBg(uv);
-    vec3 bgB = follow ? vec3(0.0, 0.07, 0.03) : userBg(uv);
-    vec3 bgC = follow ? mix(vec3(0.89, 0.88, 0.85), vec3(0.86, 0.84, 0.8), uv.y) : userBg(uv);
+    // default: a soft gradient per look, its centre drifting slowly and breathing with the music
+    vec2 gc = vec2(0.5 + 0.08 * sin(TIME * 0.13), 0.55 + 0.06 * cos(TIME * 0.11));
+    float gr = length((uv - gc) * vec2(R.x / R.y, 1.0));
+    float gdr = smoothstep(0.0, 0.95 + 0.15 * gLift + 0.1 * bassP() * ar, gr);
+    vec3 bgA = follow ? mix(vec3(0.97, 0.94, 0.89), vec3(0.74, 0.62, 0.55), gdr) : userBg(uv);          // cream → warm clay
+    vec3 bgB = follow ? mix(vec3(0.03, 0.26, 0.14), vec3(0.0, 0.015, 0.008), gdr) : userBg(uv);         // glowing green → black
+    vec3 bgC = follow ? mix(mix(vec3(0.70, 0.73, 0.80), vec3(0.95, 0.92, 0.88), smoothstep(0.0, 1.0, uv.y)), vec3(0.62, 0.62, 0.66), 0.45 * gdr) : userBg(uv);   // cool-to-warm vertical
 
     // RGB split: three samples along a slowly turning axis
     float ch = chroma * (0.003 + 0.012 * highP() * ar + 0.01 * beat) * mix(0.4, 1.4, gLift) + chroma * (0.02 * gBuild * gBuild + 0.07 * gDrop * gDrop) + 0.004 * gDrop;
