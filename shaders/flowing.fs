@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Flowing — a spinning 3D string made of dozens of fine strands of glowing dots. The strands wind around each other like a twisted rope, swelling, pinching, looping out and back in, while the whole string sweeps across the frame in a slow S-curve that sways and re-shapes itself. Dots stream along the strands so the rope seems to pour. Strands in front are brighter and larger, strands behind fade into the dark for real depth. Bass swells the rope and spins it harder, beats flash the dots, mids speed the flow, highs make the dots twinkle. Show Dynamics: at Rest only a few fine strands of soft, sparse dots drift along a slim, gently swaying thread; during a Build the rope coils tighter and thinner, twists harder and spins up, the dots densify, brighten and shimmer faster and the thread trembles; at the Drop the rope bursts open, its strands flung wide in big flashing dots before they settle into a full, fat, colourful peak.",
+  "DESCRIPTION": "Flowing — a spinning 3D string made of dozens of fine strands of glowing dots, winding around each other like a twisted rope that swells, pinches, loops out and back in while the whole string sweeps across the frame in a slow, re-shaping S-curve. Strands in front are brighter and larger, strands behind fade into the dark for real depth. Through the lines run a few thin comets of light: sparse white-hot heads with long fading tails, each riding its own strand at its own speed, so the rope stays calm and minimal but alive. Every so often the rope is struck by lightning: a jagged, forked electric discharge with a white-violet core and a coloured bloom jumps along and across the strands, the whole scene flashes as if lit from inside a storm cloud, the strands blaze, then everything decays fast with a stuttering afterglow, and the biggest strikes shake the frame with a low rumble. Bass swells the rope and spins it harder, beats flash the dots and throw small sparks of lightning, mids speed the flow and the comets, highs make the dots twinkle. Show Dynamics: at Rest only a few fine strands drift along a slim thread with one or two lazy comets and rare, far-off silent flashes; during a Build the rope coils tighter, twists and spins up, the dots shimmer faster, more comets race along it and distant flickers come quicker and quicker; at the Drop a huge branching strike tears down the whole rope with a blinding flash and shake as the strands burst open, before settling into a full, fat, colourful, storm-lit peak.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-22 — original.",
   "CATEGORIES": ["Generator", "3D", "Particles", "Audio Reactive"],
   "INPUTS": [
@@ -20,8 +20,15 @@
     { "NAME": "accentAmt",   "LABEL": "Colour Strands",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.3, "GROUP": "Look" },
     { "NAME": "depthFade",   "LABEL": "Depth Fade",       "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.7, "GROUP": "Look" },
     { "NAME": "glow",        "LABEL": "Glow",             "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.6, "GROUP": "Look" },
+    { "NAME": "streakAmt",   "LABEL": "Light Streaks",    "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Light & Thunder" },
+    { "NAME": "streakSpeed", "LABEL": "Streak Speed",     "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0, "GROUP": "Light & Thunder" },
+    { "NAME": "streakCount", "LABEL": "Streak Count",     "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 16.0, "DEFAULT": 5.0, "GROUP": "Light & Thunder" },
+    { "NAME": "thunderAmt",  "LABEL": "Thunder",          "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Light & Thunder" },
+    { "NAME": "thunderRate", "LABEL": "Strike Rate",      "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.4, "GROUP": "Light & Thunder" },
+    { "NAME": "flashAmt",    "LABEL": "Sky Flash",        "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Light & Thunder" },
+    { "NAME": "boltColor",   "LABEL": "Bolt Colour",      "TYPE": "color", "DEFAULT": [0.55, 0.45, 1.0, 1.0], "GROUP": "Light & Thunder" },
     { "NAME": "grain",       "LABEL": "Grain",            "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.15, "GROUP": "Finish" },
-    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2], "LABELS": ["Original Colours", "Red · Black · White", "Blue · Black · White"], "GROUP": "Studio Palette" },
+    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
     { "NAME": "palAmount",   "LABEL": "Palette Amount",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Studio Palette" },
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
@@ -51,15 +58,32 @@ float highP() { return smoothstep(0.08, 0.9, audioHigh); }
 
 vec3 studioPalette(vec3 c) {
     float m = float(paletteMode);
-    if (m < 0.5 || palAmount <= 0.0) return c;
-    vec3 acc = m < 1.5 ? palRed.rgb : palBlue.rgb;
+    if (palAmount <= 0.0) return c;
     float L = clamp(dot(c, vec3(0.2126, 0.7152, 0.0722)), 0.0, 1.0);
     float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b));
     float sat = mx > 1e-4 ? (mx - mn) / mx : 0.0;
-    float t = pow(L, 0.8);
-    vec3 ramp = t < 0.5 ? mix(vec3(0.0), acc, t * 2.0) : mix(acc, vec3(1.0), (t - 0.5) * 2.0);
-    vec3 mono = vec3(smoothstep(0.0, 1.0, L));
-    vec3 o = mix(mono, ramp, smoothstep(0.06, 0.4, sat));
+    vec3 o;
+    if (m < 0.5) {
+        // Colorful: saturation pushed hard toward neon / primary / poppy colour.
+        vec3 hueC = pow((c - mn) / max(mx - mn, 1e-4), vec3(1.4));   // pure hue, nudged toward primaries
+        float s2 = 1.0 - pow(1.0 - sat, 4.0);                         // strong but curved saturation boost
+        float v = clamp(pow(mx, 0.85) * 1.12, 0.0, 1.0);
+        o = mix(vec3(1.0), hueC, s2) * v;
+        // flat mid-greys pick up a drifting neon spectrum keyed to brightness
+        float hx = L * 1.7 + 0.04 * TIME;
+        vec3 neon = pow(clamp(abs(fract(hx + vec3(0.0, 0.6667, 0.3333)) * 6.0 - 3.0) - 1.0, 0.0, 1.0), vec3(1.4));
+        float wn = (1.0 - smoothstep(0.02, 0.1, sat)) * smoothstep(0.06, 0.25, L) * (1.0 - smoothstep(0.55, 0.85, L));
+        o = mix(o, neon * v, wn);
+        o = mix(o, vec3(1.0), smoothstep(0.85, 1.0, L) * 0.5);       // white-hot cores
+    } else if (m > 2.5) {
+        o = vec3(smoothstep(0.02, 0.95, pow(L, 0.9)));             // Black & White
+    } else {
+        vec3 acc = m < 1.5 ? palRed.rgb : palBlue.rgb;
+        float t = pow(L, 0.8);
+        vec3 ramp = t < 0.5 ? mix(vec3(0.0), acc, t * 2.0) : mix(acc, vec3(1.0), (t - 0.5) * 2.0);
+        vec3 mono = vec3(smoothstep(0.0, 1.0, L));
+        o = mix(mono, ramp, smoothstep(0.06, 0.4, sat));
+    }
     return mix(c, o, palAmount);
 }
 vec3 backdrop(vec2 uv) {
@@ -113,6 +137,27 @@ vec2 spine(float s) {
 }
 vec2 spineD(float s) { return (spine(s + 0.002) - spine(s - 0.002)) / 0.004; }
 
+// ── lightning ────────────────────────────────────────────────────────────
+// piecewise-linear value noise → jagged polyline; 4 octaves = fractal zig-zag
+float vn1(float x) { float i = floor(x); return mix(h11(i), h11(i + 1.0), fract(x)) - 0.5; }
+float jag(float s, float sd) {
+    return 1.10 * vn1(s * 7.0 + sd * 13.1) + 0.55 * vn1(s * 17.0 + sd * 7.7)
+         + 0.26 * vn1(s * 41.0 + sd * 3.3) + 0.12 * vn1(s * 97.0 + sd * 5.9);
+}
+// across-rope offset (in rope widths) of a bolt path: weaves between the strands
+float boltN(float s, float sd, float j) {
+    return 0.7 * sin(s * (3.0 + 2.0 * h11(sd + j)) + sd * 4.0 + j * 2.0) + 1.6 * jag(s, sd + j * 3.17);
+}
+// envelope of a strike t seconds old: snap on, fast decay, stuttering re-strikes + afterglow
+float strikeEnv(float t, float sd) {
+    if (t < 0.0 || t > 1.6) return 0.0;
+    float e = smoothstep(0.0, 0.012, t) * exp(-t * 9.0);
+    e += 0.55 * exp(-abs(t - 0.09 - 0.05 * h11(sd)) * 60.0);                       // re-strike
+    e += 0.30 * step(0.35, h11(sd + 2.0)) * exp(-abs(t - 0.24 - 0.1 * h11(sd + 1.0)) * 45.0);
+    e *= 0.75 + 0.25 * step(0.4, h11(floor(t * 38.0) + sd * 3.1));                 // flicker
+    return e + 0.12 * exp(-t * 2.2);                                                 // afterglow
+}
+
 void main() {
     vec2 R = RENDERSIZE.xy;
     vec2 fc = gl_FragCoord.xy;
@@ -122,6 +167,35 @@ void main() {
     float ar = audioReact;
     showDynamics();
     gT = TIME + 0.5 * audioMidTime * ar;
+
+    // ── thunder events ──────────────────────────────────────────────────
+    // random timer (always on when silent, rarer and far-off at rest)
+    float silent = 1.0 - smoothstep(0.02, 0.12, audioLevel * ar);
+    float restK = float(showState) > 0.5 ? gRest : gRest * (1.0 - silent);   // silence alone isn't "rest"
+    float Pd = mix(14.0, 3.0, thunderRate) * (1.0 + 1.2 * restK);
+    float cId = floor(TIME / Pd);
+    float tmBolt = 0.0, tmSeed = 0.0;
+    for (int i = 0; i < 2; i++) {
+        float c = cId - float(i);
+        float t0 = (c + 0.1 + 0.6 * h11(c * 3.7 + 1.0)) * Pd;
+        float e = strikeEnv(TIME - t0, c) * step(h11(c * 1.9 + 7.0), 0.85) * (0.55 + 0.45 * h11(c * 5.3));
+        if (e > tmBolt) { tmBolt = e; tmSeed = c; }
+    }
+    tmBolt *= mix(0.45, 1.0, silent);
+    // beats / bass hits → small sparks; the drop → the huge one
+    float beatB = smoothstep(0.35, 1.0, audioBeatPulse) * bassP() * ar * (0.35 + 0.65 * thunderRate) * (1.0 - 0.8 * restK);
+    float dropT = -log(max(gDrop / max(dynamics, 1e-3), 1e-4)) / 5.0 * 4.0;   // seconds since the drop (approx)
+    float dropB = gDrop > 0.002 ? strikeEnv(dropT * 0.9, 77.0) * smoothstep(0.0, 0.4, gDrop) * 1.6 : 0.0;
+    // build → distant flickers that come faster and faster
+    float fl = gBuild * step(1.0 - (0.04 + 0.4 * gBuild * gBuild), h11(floor(TIME * 13.0) + 0.5)) * (0.4 + 0.6 * h11(floor(TIME * 13.0) * 1.3));
+    float restB = 1.0 - 0.85 * smoothstep(0.3, 0.9, restK);                      // rest: silent, far-off
+    float boltE = max(max(tmBolt * restB, beatB * 0.7), dropB) * thunderAmt;
+    float flashE = (max(max(tmBolt * mix(1.0, 0.45, restK), beatB * 0.35), dropB) + 0.45 * fl) * flashAmt * thunderAmt;
+    float boltSz = clamp(max(max(tmBolt * 0.7, beatB * 0.35), dropB * 0.75 + 0.35 * step(0.01, dropB)), 0.0, 1.0); // reach & forks
+    float bSeed = dropB > max(tmBolt, beatB) ? 77.0 + floor(TIME / 4.0) * 1.7 : (beatB > tmBolt ? floor(TIME * 2.0) * 0.37 + 300.0 : tmSeed + 11.0);
+    // rumble shake on the strongest strikes
+    float shk = smoothstep(0.7, 1.4, boltE) * 0.006;
+    p += shk * vec2(vn1(TIME * 47.0), vn1(TIME * 41.0 + 9.0));
 
     // path morph
     float ps = float(pathSel);
@@ -171,6 +245,50 @@ void main() {
             * (mix(0.55, 1.2, gLift) * (1.0 - 0.45 * gBuild) + 1.3 * gDrop);       // slim at rest, coils tight on the build, bursts on the drop
     w = max(w, 0.01);
     float n = dot(rel, N) / w;
+
+    // ── the bolt: jagged trunk along/between the lines + forks ─────────────
+    float sA = s + along / max(speed, 1e-3);
+    vec3 boltL = vec3(0.0), hot = vec3(1.0);
+    float boltA = 0.0;
+    float boltProx = 0.0;
+    if (boltE > 0.003) {
+        float L  = mix(0.28, 1.25, boltSz);
+        float s0 = mix(-0.1, 1.05 - L, h11(bSeed * 2.3));
+        float s1 = s0 + L;
+        float wB = clamp(w, 0.05, 0.14) * (1.0 + 1.2 * smoothstep(0.0, 0.5, dropB));                 // bolt lateral scale (screen units)
+        float wS = wB / max(speed, 1e-3);
+        float nS = n * w;
+        float gl = 0.0, core = 0.0, inner = 0.0;
+        for (int j = 0; j < 4; j++) {
+            float fj = float(j);
+            float on = j == 0 ? 1.0 : step(fj, 0.6 + 3.0 * boltSz);
+            float a = s0, b = s1, nOff = 0.0, ww = 1.0;
+            float u = 1.0;
+            float dirB = h11(bSeed + fj * 4.1) < 0.5 ? -1.0 : 1.0;
+            if (j > 0) {                                     // fork: leaves the trunk and veers off
+                a = s0 + L * (0.12 + 0.25 * fj * h11(bSeed + fj));
+                b = a + L * (0.18 + 0.2 * h11(bSeed + fj * 1.7));
+                u = clamp((sA - a) / max(b - a, 1e-3), 0.0, 1.0);
+                nOff = boltN(a, bSeed, 0.0) - boltN(a, bSeed, fj) + dirB * u * (0.8 + 0.8 * h11(bSeed + fj * 2.9));
+                ww = 0.55 * (1.0 - 0.6 * u);
+            }
+            if (on < 0.5 || sA < a - 0.03 || sA > b + 0.03) continue;
+            float nb  = boltN(sA, bSeed, fj) + nOff;
+            float nb2 = boltN(sA + 0.003, bSeed, fj) + nOff;
+            float sl = (nb2 - nb) / 0.003 * wS;              // screen slope of the bolt
+            float d = abs(nS - nb * wB) / sqrt(1.0 + sl * sl);
+            float tip = smoothstep(a - 0.004, a + 0.01, sA) * smoothstep(b + 0.004, b - (j == 0 ? 0.03 : 0.08), sA);
+            float cw = max(0.0018 * ww * (0.7 + 1.2 * boltSz), px * 0.7);
+            core = max(core, smoothstep(cw + px, max(cw - px, 0.0), d) * tip * ww);
+            inner = max(inner, exp(-d * d / (0.0028 * 0.0028)) * tip * ww);
+            gl += (exp(-d * d / (0.007 * 0.007)) * 0.7 + exp(-d / 0.045) * 0.35) * tip * ww;
+        }
+        hot = mix(vec3(1.0), mix(boltColor.rgb, vec3(1.0), 0.6), 0.35);   // white-violet core
+        float fe = boltE * (0.85 + 0.15 * h11(floor(TIME * 60.0)));
+        boltL = (hot * inner * 1.2 + boltColor.rgb * gl * 1.1) * fe;
+        boltA = clamp(core * fe * 2.0, 0.0, 1.0);        // the core sits in front of the strands
+        boltProx = clamp(gl * fe, 0.0, 2.0);
+    }
 
     float spinPh = TIME * spin * 1.2 + 0.6 * audioBassTime * ar * sign(spin + 1e-4) + 5.0 * gBuild * gBuild * sign(spin + 1e-4);
     // additive clocks only (no TIME * changing-speed → no phase jumps)
@@ -223,7 +341,34 @@ void main() {
             float tint = step(1.0 - clamp(accentAmt * mix(0.4, 1.8, gLift) + 0.25 * gDrop, 0.0, 1.0), h11(fk * 2.71 + 4.0));
             c = mix(c, 0.5 + 0.5 * cos(TAU * (hk + TIME * 0.02 + vec3(0.0, 0.33, 0.67))), tint * 0.85);
             c = mix(c, vec3(1.0), 0.5 * gDrop);
-            acc += c * v * bright * onK * brightK * (1.0 + 1.2 * gDrop);
+            // storm light: the flash and a nearby bolt make the strands blaze, tinted toward the bolt
+            float lit = (0.8 * flashE + 1.2 * boltProx) * (1.0 - 0.65 * smoothstep(0.0, 0.6, gDrop));
+            c = mix(c, mix(boltColor.rgb, vec3(1.0), 0.5), clamp(lit * 0.25, 0.0, 0.3));
+            vec3 strandL = c * v * bright * onK * brightK * (1.0 + 1.2 * gDrop) * (1.0 + lit);
+            // light streak: a sparse comet riding this strand at its own speed
+            float hs = h11(fk * 4.37 + 13.0);
+            float nStk = streakCount * mix(0.5, 1.4, gLift) + 3.0 * gBuild;
+            if (hs * NSf < nStk && streakAmt > 0.0) {
+                float vel = (0.10 + 0.16 * h11(fk * 8.11 + 3.0)) * streakSpeed * (1.0 + 0.8 * gBuild);
+                float ph = TIME * vel + 0.03 * audioMidTime * ar * streakSpeed + hs * 17.0 + h11(fk * 1.3) * 3.0;
+                float cyc = 1.4 + 0.9 * h11(fk * 6.2);                          // gap between passes
+                float dirS = flowSpeed < 0.0 ? -1.0 : 1.0;                      // comets travel with the flow
+                float sH = 0.5 + dirS * (-0.75 + mod(ph, cyc) * (1.5 / 1.3));
+                float dh = (sH - sA) * speed * dirS;                            // >0 behind the head
+                float tl = 0.10 + 0.14 * h11(fk * 2.2 + 5.0);
+                float tail = smoothstep(-0.004, 0.0015, dh) * exp(-max(dh, 0.0) / tl);
+                float sw = max(0.0008 * (0.6 + 0.6 * depth), px * 0.55);
+                float lineS = smoothstep(sw + px, max(sw - px, 0.0), dPerp);
+                float headR = 0.0035 * (0.7 + 0.5 * depth);
+                float hd = dh * dh + dPerp * dPerp;
+                float head = exp(-hd / (headR * headR)) * 2.0 + 0.6 * exp(-sqrt(hd) / 0.018);   // hot head + bloom
+                float stv = (lineS * tail * 1.6 + exp(-dPerp * dPerp / (0.004 * 0.004)) * tail * 0.4 + head)
+                          * streakAmt * bright * onK * (1.0 + 0.6 * audioBeatPulse * ar * highP() + 0.8 * gDrop);
+                vec3 sc = mix(mix(c, vec3(1.0), 0.6), vec3(1.0), clamp(head, 0.0, 1.0));   // white-hot head, tinted tail
+                strandL += sc * stv;
+                v = max(v, stv);
+            }
+            acc += strandL;
             cov = max(cov, v * bright * onK);
         }
     }
@@ -231,6 +376,17 @@ void main() {
     cov *= endFade;
     col += acc;
     alpha = clamp(cov, 0.0, 1.0);
+
+    // bolt + storm-cloud flash (soft, low-frequency so it reads as light, not a white frame)
+    col += boltL * endFade;
+    col = mix(col, hot * 1.3, boltA * endFade);
+    float cloud = 0.55 + 0.45 * (vn1(p.x * 2.1 + bSeed * 3.0) + vn1(p.y * 2.7 - bSeed * 1.3 + 4.0));
+    float near = exp(-abs(n) * w / 0.28) * endFade;
+    vec3 flashC = mix(boltColor.rgb, vec3(0.85, 0.88, 1.0), 0.45);
+    col += flashC * flashE * (0.06 * cloud + 0.26 * near);
+    alpha = max(alpha, clamp(flashE * 0.15 + length(boltL) * 0.5 + boltA, 0.0, 1.0));
+    // highlight shoulder: keeps white-hot cores from clipping into flat blobs
+    col = mix(col, 0.8 + 0.2 * (1.0 - exp(-(col - 0.8) / 0.2)), step(0.8, col));
 
     col *= 1.0 + 0.12 * audioLevel * ar;
     col += (h12(fc + fract(TIME * 13.7) * 91.0) - 0.5) * grain * 0.06;
