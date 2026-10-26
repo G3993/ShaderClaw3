@@ -3930,5 +3930,20 @@
     "id": 1414,
     "title": "Proteins",
     "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Organic",
+      "Science",
+      "Audio Reactive"
+    ],
+    "description": "Diatoms — a living microscope slide of glass skeletons. Centric diatoms are round silica discs: radiating rows of pores that double in number toward the rim, honeycomb fields of hexagonal areolae, sectored wheels that alternate raised and sunken panels, all ringed by a bright marginal rim and a central rosette. Pennate diatoms are long boat shapes with a sinuous central raphe line, central and end nodules and fine rib striations dotted with pores. Triangular and square Triceratium valves carry honeycomb cells and glowing ocelli at their corners, and radiolaria are spiky lattice spheres with front and back shells, an inner medullary shell and long tapering spines that swing through 3D as they turn. Four views: Darkfield, where the glass glows with iridescent thin-film edges on black; Brightfield, amber-brown silica on a pale cream field with a circular field stop; Mandala Slide, a Victorian arranged slide of a dozen concentric rings of species laid out in perfect symmetry around one great disc, the rings counter-rotating and clicking round a step at a time; and Radiolaria, a drifting field of glassy spined spheres. Auto Morph changes slides with an iris wipe. Specimens drift, rotate and slowly breathe, and their pores shimmer with travelling light. Bass pulses the specimens, beats step the mandala rings round, highs make the glass edges glint with sparkles, and a drop blows the mandala apart outward before it reassembles. At rest the slide is sparse, slow and softly lit; during a build it contracts, spins faster and the pores shimmer quicker with a tremor at the top; the drop is a flash, a shockwave and an explosion of the arrangement, and the peak is dense, saturated and in full motion.",
+    "file": "diatoms.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1415,
+    "title": "Diatoms",
+    "type": "generator"
   }
 ]

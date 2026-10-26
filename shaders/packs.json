@@ -1089,5 +1089,8 @@
   },
   "proteins": {
     "group": "studio"
+  },
+  "diatoms": {
+    "group": "studio"
   }
 }
