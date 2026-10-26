@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Perlin — a living study of noise, texture and grain. Animated Perlin gradient noise is layered into fractal fields and folded back into itself (domain warping), so it boils, flows and curls like smoke in slow motion, then rendered through six textures that morph into each other: Smoke (soft warped clouds with deep shadows), Marble (turbulent veins cutting through polished stone), Topographic (the noise drawn as glowing contour lines, like a map of shifting terrain), Risograph (halftone dots sized by the noise, printed in two misregistered inks on paper), Paper Fibre (felted fibres and pulp flecks drifting through the light), and Film Stock (heavy silver-halide grain, scratches, dust, gate weave and flicker). Everything is finished with a tunable photographic grain — fine or coarse, mono or colour, frozen or crawling. Bass swells and darkens the fields, mids speed up the boiling, highs sharpen and sparkle the grain, beats push a ripple through the warp. At rest it drifts slowly with soft, sparse grain; during a build the noise tightens to finer detail, swirls faster and the grain gets hotter; on the drop the warp snaps outward in a bright shockwave and the grain flashes, then the peak boils at full contrast.",
+  "DESCRIPTION": "Perlin — a living study of noise, texture and grain. Animated Perlin gradient noise is layered into fractal fields and folded back into itself (domain warping), so it boils, flows and curls like smoke in slow motion, then rendered through six textures that morph into each other: Smoke (soft warped clouds with deep shadows), Marble (turbulent veins cutting through polished stone), Topographic (the noise drawn as glowing contour lines, like a map of shifting terrain), Risograph (halftone dots sized by the noise, printed in two misregistered inks on paper), Paper Fibre (felted fibres and pulp flecks drifting through the light), and Film Stock (heavy silver-halide grain, scratches, dust, gate weave and flicker). Everything is finished with a tunable photographic grain — fine or coarse, mono or colour, frozen or crawling. Bass swells and darkens the fields, mids speed up the boiling, highs sharpen and sparkle the grain, beats push a ripple through the warp. At rest it drifts slowly with soft, sparse grain; during a build the noise tightens to finer detail, swirls faster and the grain gets hotter; on the drop the warp snaps outward in a bright shockwave and the grain flashes, then the peak boils at full contrast. Underneath runs a real fluid simulation: twelve point vortices in counter-rotating pairs push each other around (Biot–Savart), carry inertia, ride a curl-noise breeze, rise or sink with buoyancy and bounce off the frame, and every texture is carried by the swirl they wind into it — kicks spin up a pair and send it lunging along its own jet, the drop fires a radial blast on a damped spring that shoots out, rebounds and settles, and between hits the twist relaxes home (the grain stays locked to the screen).",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-26 — original.",
   "CATEGORIES": ["Generator", "Texture", "Audio Reactive"],
   "INPUTS": [
@@ -32,7 +32,19 @@
     { "NAME": "bgColor",     "LABEL": "BG Color / Top / Center", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0], "GROUP": "Background" },
     { "NAME": "bgColor2",    "LABEL": "BG Bottom / Edge", "TYPE": "color", "DEFAULT": [0.03, 0.03, 0.04, 1.0], "GROUP": "Background" },
     { "NAME": "bgMix",       "LABEL": "Background Show-Through", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "GROUP": "Background" },
-    { "NAME": "transparentBg","LABEL": "Transparent BG",  "TYPE": "bool",  "DEFAULT": false, "GROUP": "Background" }
+    { "NAME": "transparentBg","LABEL": "Transparent BG",  "TYPE": "bool",  "DEFAULT": false, "GROUP": "Background" },
+    { "NAME": "physicsAmt",  "LABEL": "Physics Amount",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.85, "GROUP": "Physics" },
+    { "NAME": "gravity",     "LABEL": "Buoyancy / Gravity","TYPE": "float", "AUDIO": false, "MIN": -1.0, "MAX": 1.0, "DEFAULT": 0.3, "GROUP": "Physics" },
+    { "NAME": "damping",     "LABEL": "Damping",          "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.4, "GROUP": "Physics" },
+    { "NAME": "bounceAmt",   "LABEL": "Bounce",           "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6, "GROUP": "Physics" },
+    { "NAME": "springBack",  "LABEL": "Spring Back",      "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.35, "GROUP": "Physics" },
+    { "NAME": "swirlAmt",    "LABEL": "Swirl (Vorticity)","TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5, "GROUP": "Physics" },
+    { "NAME": "kickForce",   "LABEL": "Kick Force",       "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Physics" },
+    { "NAME": "resetPhysics","LABEL": "Reset Physics",    "TYPE": "bool",  "DEFAULT": false, "GROUP": "Physics" }
+  ],
+  "PASSES": [
+    { "TARGET": "simBuf", "PERSISTENT": true, "FLOAT": true },
+    {}
   ]
 }*/
 
@@ -138,7 +150,11 @@ vec3 ramp3(float t) {
 
 // one texture at point p (noise space) and pixel fc.
 // The warped field is evaluated from ONE call site (in a loop) to keep the shader small.
-vec3 textureLook(float k, vec2 p, vec2 fc, float px) {
+// p0 = undisplaced noise coords; dsp / dspN = fluid displacement (noise units) at this pixel and at the topo neighbour
+float gDK;
+vec2 gDC0, gDC1;
+vec3 textureLook(float k, vec2 p0, vec2 fc, float px, vec2 dsp, vec2 dspN) {
+    vec2 p = p0 - dsp;                                              // material coordinates, carried by the flow
     // per-texture sampling setup
     float scl = k < 0.5 ? 1.0 : k < 1.5 ? 0.45 : k < 2.5 ? 0.38 : k < 3.5 ? 1.0 : k < 4.5 ? 0.6 : 0.9;
     float ridged = 0.0;
@@ -149,7 +165,7 @@ vec3 textureLook(float k, vec2 p, vec2 fc, float px) {
     float cell = max(dotSize, 2.0);
     vec2 P0 = p * scl, P1 = P0;
     vec2 gA0 = vec2(0.0), gA1 = vec2(0.0);
-    if (topo) P1 = P0 + vec2(1.0, 1.0) * px * scl * 1.5;          // a neighbour sample for the field's slope
+    if (topo) P1 = (p0 - dspN) * scl + vec2(1.0, 1.0) * px * scl * 1.5;   // neighbour sample (with its own displacement) for the field's slope
     if (riso) {
         for (int i = 0; i < 2; i++) {
             float fi = float(i);
@@ -158,7 +174,8 @@ vec3 textureLook(float k, vec2 p, vec2 fc, float px) {
             vec2 g = rot(ang) * (fc + off) / cell;
             vec2 id = floor(g) + 0.5;
             vec2 cpix = rot(-ang) * id * cell - off;
-            vec2 cp = (cpix - 0.5 * RENDERSIZE.xy) / RENDERSIZE.y * noiseScale + (p - (fc - 0.5 * RENDERSIZE.xy) / RENDERSIZE.y * noiseScale);
+            vec2 cp = (cpix - 0.5 * RENDERSIZE.xy) / RENDERSIZE.y * noiseScale + (p0 - (fc - 0.5 * RENDERSIZE.xy) / RENDERSIZE.y * noiseScale);
+            cp -= i == 0 ? gDC0 : gDC1;                                     // each dot cell rides the flow at its centre (dots stay round)
             if (i == 0) { P0 = cp; gA0 = g; } else { P1 = cp + 0.37; gA1 = g; }
         }
     }
@@ -246,12 +263,130 @@ vec3 textureLook(float k, vec2 p, vec2 fc, float px) {
     return c * (0.92 + 0.08 * h11(fr));
 }
 
+// ── Physics: Lagrangian vortex-particle fluid ───────────────────────────
+// 12 point vortices (6 counter-rotating pairs) live in a persistent state buffer laid out
+// as a 4×8 grid of cells (resolution independent; read at cell centres):
+//   rows 0-2 : vortex i = row*4+col → (pos.xy, vel.xy)   [screen-height units]
+//   rows 3-5 : vortex aux           → (circulation Γ [rad/s at the core], material twist θ, -, 1)
+//   row 6    : col 0 globals A      → (prev beat pulse, kick counter, blast e, blast ė)
+//              col 1 globals B      → (valid marker = 1, -, -, -)
+// Vortices induce velocity on each other (Biot–Savart, Lamb–Oseen cores), carry inertia, drift
+// on a curl-noise breeze, feel buoyancy, collide softly and bounce off the frame. The image pass
+// rebuilds the displacement analytically from the 12 vortices, so it stays perfectly smooth.
+#define NV 12
+vec2 cellUV(float col, float row) { return (vec2(col, row) + 0.5) / vec2(4.0, 8.0); }
+vec4 vPos(float i) { return texture2D(simBuf, cellUV(mod(i, 4.0), floor(i / 4.0))); }
+vec4 vAux(float i) { return texture2D(simBuf, cellUV(mod(i, 4.0), 3.0 + floor(i / 4.0))); }
+float vSign(float i) { return mod(i, 2.0) < 0.5 ? 1.0 : -1.0; }
+float vCore(float i) { return 0.09 + 0.08 * h11(i * 3.71 + 1.3); }
+float gBlastE;
+
+vec4 simStep(vec2 fc, vec2 R, float dt, float ar) {
+    vec2 cc = fc / R * vec2(4.0, 8.0);
+    vec2 cid = floor(cc);
+    vec2 lp = (fract(cc) - 0.5) * R / vec2(4.0, 8.0);                // px from the cell centre
+    vec4 self = texture2D(simBuf, fc / R);
+    if (max(abs(lp.x), abs(lp.y)) > 3.0 || cid.y > 6.5) return self;  // only cell centres compute
+    float asp = R.x / R.y;
+    vec4 GA = texture2D(simBuf, cellUV(0.0, 6.0));
+    vec4 GB = texture2D(simBuf, cellUV(1.0, 6.0));
+    bool init = FRAMEINDEX < 2 || resetPhysics || abs(GB.x - 1.0) > 0.01 || !(abs(GA.x) + abs(GA.y) + abs(GA.z) + abs(GA.w) < 1e3);
+    // beat onset (rising edge of the beat pulse) → kick one vortex pair
+    float pulse = clamp(audioBeatPulse, 0.0, 1.0);
+    bool onset = pulse > 0.3 && GA.x <= 0.3;
+    float slot = mod(GA.y, 6.0);
+    float kickAmt = kickForce * ar * (0.5 + 0.8 * bassP()) * (0.6 + 0.3 * gLift + 0.6 * gPeak + 0.3 * gBuild - 0.35 * gRest);
+    float blast = smoothstep(0.55, 1.0, gDrop) * kickForce * (0.4 + 0.6 * ar);
+    float spin0 = (0.25 + 0.25 * gLift + 0.9 * gBuild + 0.35 * gPeak - 0.15 * gRest) * (0.3 + 1.4 * swirlAmt);
+    if (cid.y > 5.5) {
+        if (cid.x > 0.5) return vec4(1.0, 0.0, 0.0, 1.0);
+        if (init) return vec4(pulse, 0.0, 0.0, 0.0);
+        // blast: damped spring (shock out, rebound, settle); a build pulls it in (tension)
+        float w = TAU * 0.55, z = 0.32;
+        float acc = -w * w * GA.z - 2.0 * z * w * GA.w + blast * 22.0 - 0.6 * gBuild * gBuild;
+        float ed = GA.w + acc * dt;
+        float e = clamp(GA.z + ed * dt, -0.25, 0.45);
+        return vec4(pulse, mod(GA.y + (onset ? 1.0 : 0.0), 60.0), e, clamp(ed, -4.0, 4.0));
+    }
+    bool aux = cid.y > 2.5;
+    float i = cid.x + 4.0 * (aux ? cid.y - 3.0 : cid.y);
+    float sg = vSign(i);
+    float pr = floor(i / 2.0);
+    if (init) {
+        vec2 pc = (vec2(h11(pr * 7.13 + 0.7), h11(pr * 3.37 + 9.1)) - 0.5) * vec2(asp * 0.75, 0.7);
+        float a = h11(pr * 5.9 + 2.2) * TAU;
+        vec2 pos = pc + sg * vec2(-sin(a), cos(a)) * 0.1;
+        return aux ? vec4(sg * spin0, 0.0, 0.0, 1.0) : vec4(pos, 0.0, 0.0);
+    }
+    vec4 P = vPos(i), A = vAux(i);
+    bool kicked = onset && abs(pr - slot) < 0.5;
+    if (aux) {
+        // circulation relaxes to a gentle baseline spin (viscous decay); kicks and the blast spin it up
+        float G = A.x;
+        G += (sg * spin0 - G) * (0.45 + 1.3 * damping) * (1.0 + gRest) * dt;
+        if (kicked) G += sg * kickAmt * (0.8 + 1.6 * swirlAmt);
+        G += sg * blast * (2.0 + 4.0 * swirlAmt) * dt * 4.0;
+        G = clamp(G, -8.0, 8.0);
+        // material twist: winds up with the spin, springs back home
+        float kth = 0.3 + 1.6 * springBack * springBack;
+        float th = clamp(A.y + (G - kth * A.y) * dt, -7.0, 7.0);
+        return vec4(G, th, 0.0, 1.0);
+    }
+    // ── vortex body dynamics ──
+    vec2 c = P.xy, u = P.zw;
+    vec2 uind = vec2(0.0), rep = vec2(0.0), upair = vec2(0.0);
+    for (int j = 0; j < NV; j++) {
+        float fj = float(j);
+        if (abs(fj - i) < 0.5) continue;
+        vec2 cj = vPos(fj).xy;
+        float Gj = vAux(fj).x;
+        float rc2 = vCore(fj) * vCore(fj);
+        vec2 d = c - cj;
+        float r2 = dot(d, d);
+        vec2 ui = Gj * rc2 * vec2(-d.y, d.x) / (r2 + rc2);          // Lamb–Oseen-softened Biot–Savart
+        uind += ui;
+        if (abs(fj - (i + sg)) < 0.5) upair = ui;
+        rep += d / (r2 + 0.002) * exp(-r2 / 0.012);                  // soft body collision
+    }
+    // curl-noise breeze (divergence-free stream function)
+    float tb = TIME * 0.07 + audioMidTime * 0.04 * ar;
+    // psi = sin(1.7x + tb) sin(1.3y - 1.7tb) + 0.38 sin(2.9y + 1.1x + 1.3tb);  u = (dpsi/dy, -dpsi/dx)
+    float w2 = 0.38 * cos(2.9 * c.y + 1.1 * c.x + 1.3 * tb);
+    vec2 ub = vec2(1.3 * sin(1.7 * c.x + tb) * cos(1.3 * c.y - 1.7 * tb) + 2.9 * w2,
+                  -1.7 * cos(1.7 * c.x + tb) * sin(1.3 * c.y - 1.7 * tb) - 1.1 * w2);
+    ub *= 0.025 + 0.03 * gLift + 0.08 * gBuild + 0.04 * gPeak;
+    float drag = 1.2 + 2.5 * damping + 1.5 * gRest;
+    vec2 acc = (uind + ub - u) * drag;                                // inertia: the body lags the local flow
+    acc.y += gravity * (h11(i * 5.17 + 0.3) * 2.0 - 0.6) * 0.18;      // buoyancy: warm cores rise, cold sink
+    acc += rep * 0.004;
+    acc -= c * 0.35 * gBuild * gBuild;                                // tension: drawn inward on the build
+    float rr = length(c);
+    acc += c / (rr + 0.05) * blast * 9.0;                             // drop: blasted outward
+    u += acc * dt;
+    if (kicked) u += normalize(upair + vec2(1e-4, 0.0)) * kickAmt * 0.35;   // the pair lunges along its own jet
+    float su = length(u);
+    if (su > 1.2) u *= 1.2 / su;
+    c += u * dt;
+    // bounce off the frame
+    vec2 B = vec2(asp * 0.5 - 0.05, 0.45);
+    float rest = 0.3 + 0.65 * bounceAmt;
+    if (c.x >  B.x) { c.x =  B.x; u.x = -abs(u.x) * rest; }
+    if (c.x < -B.x) { c.x = -B.x; u.x =  abs(u.x) * rest; }
+    if (c.y >  B.y) { c.y =  B.y; u.y = -abs(u.y) * rest; }
+    if (c.y < -B.y) { c.y = -B.y; u.y =  abs(u.y) * rest; }
+    return vec4(c, u);
+}
+
 void main() {
     showDynamics();
     vec2 R = RENDERSIZE.xy;
     vec2 fc = gl_FragCoord.xy;
     vec2 uv = fc / R;
     float ar = audioReact;
+    if (PASSINDEX == 0) {
+        gl_FragColor = simStep(fc, R, clamp(TIMEDELTA, 0.0, 1.0 / 30.0), ar);
+        return;
+    }
     gT = TIME * 0.12 * flowSpeed + (audioMidTime * 0.12 + audioBassTime * 0.06) * ar * flowSpeed + 0.6 * gBuild * gBuild;
     gOct = clamp(floor(octaves + 0.6 * gBuild + 0.8 * gPeak - 1.2 * gRest + 0.5), 1.0, 7.0);
 
@@ -264,8 +399,48 @@ void main() {
     float rr = length(sp);
     float shock = exp(-pow((rr - (1.0 - gDrop) * 1.2) * 9.0, 2.0)) * gDrop;
     vec2 p = sp * sc + vec2(TIME * 0.03, -TIME * 0.02) * drift * 4.0;
-    p += normalize(sp + 1e-4) * shock * 0.25 + sp * 0.12 * audioBeatPulse * ar * exp(-rr * 2.0);
+    float K = clamp(physicsAmt, 0.0, 1.0);
+    p += (normalize(sp + 1e-4) * shock * 0.25 + sp * 0.12 * audioBeatPulse * ar * exp(-rr * 2.0)) * (1.0 - K);   // analytic fallback
     float px = sc / R.y;
+
+    // ── material displacement from the simulated vortices (4 points at once: pixel, topo neighbour, 2 riso cells) ──
+    vec2 q0 = sp, q1 = sp + vec2(1.5) / R.y, q2 = sp, q3 = sp;
+    {
+        float cell = max(dotSize, 2.0);
+        for (int i = 0; i < 2; i++) {
+            float fi = float(i);
+            vec2 off = fi < 0.5 ? vec2(0.0) : vec2(2.5, -1.5) + 1.5 * vec2(sin(gT * 7.0), cos(gT * 5.0));
+            float ang = fi < 0.5 ? 0.26 : 1.31;
+            vec2 cpix = rot(-ang) * (floor(rot(ang) * (fc + off) / cell) + 0.5) * cell - off;
+            vec2 cs = (cpix - 0.5 * R) / R.y;
+            if (i == 0) q2 = cs; else q3 = cs;
+        }
+    }
+    vec2 s1 = q1, s2 = q2, s3 = q3;
+    float e = texture2D(simBuf, cellUV(0.0, 6.0)).z;
+    if (K > 0.001) {
+        // blast: radial expansion around the centre (e > 0 pushes material outward)
+        q0 *= 1.0 - e * exp(-length(q0) * 1.3); q1 *= 1.0 - e * exp(-length(q1) * 1.3);
+        q2 *= 1.0 - e * exp(-length(q2) * 1.3); q3 *= 1.0 - e * exp(-length(q3) * 1.3);
+        for (int j = 0; j < NV; j++) {
+            float fj = float(j);
+            vec2 c = vPos(fj).xy;
+            float th = vAux(fj).y;
+            float irc2 = 1.0 / (vCore(fj) * vCore(fj));
+            // Lamb–Oseen angular profile: rigid core, 1/r² skirt → spiral arms
+            vec4 x = vec4(dot(q0 - c, q0 - c), dot(q1 - c, q1 - c), dot(q2 - c, q2 - c), dot(q3 - c, q3 - c)) * irc2;
+            vec4 a = -th * (1.0 - exp(-x)) / max(x, vec4(1e-4));
+            vec4 cs = cos(a), sn = sin(a);
+            vec2 d;
+            d = q0 - c; q0 = c + vec2(cs.x * d.x - sn.x * d.y, sn.x * d.x + cs.x * d.y);
+            d = q1 - c; q1 = c + vec2(cs.y * d.x - sn.y * d.y, sn.y * d.x + cs.y * d.y);
+            d = q2 - c; q2 = c + vec2(cs.z * d.x - sn.z * d.y, sn.z * d.x + cs.z * d.y);
+            d = q3 - c; q3 = c + vec2(cs.w * d.x - sn.w * d.y, sn.w * d.x + cs.w * d.y);
+        }
+    }
+    gDK = sc * K;
+    vec2 dsp = (sp - q0) * gDK, dspN = (s1 - q1) * gDK;
+    gDC0 = (s2 - q2) * gDK; gDC1 = (s3 - q3) * gDK;
 
     // texture morph
     float ph = TIME / morphPeriod;
@@ -280,7 +455,7 @@ void main() {
     for (int i = 0; i < 2; i++) {
         float wgt = i == 0 ? 1.0 - m : m;
         if (wgt < 0.001) continue;
-        col += textureLook(i == 0 ? ka : kb, p, fc, px) * wgt;
+        col += textureLook(i == 0 ? ka : kb, p, fc, px, dsp, dspN) * wgt;
     }
 
     // shape & energy
