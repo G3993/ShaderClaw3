@@ -282,22 +282,40 @@ void loopSeg(vec3 p, vec3 A, vec3 B, vec3 Cc, float idx) {
     }
 }
 
+// element / loop lookups by index (keeps one compiled copy of elem / loopSeg)
+void elemAt(float i, out vec3 C, out vec3 D, out vec3 U, out vec3 V, out float L, out float u) {
+    if (i < 0.5)      { C = C0; D = D0; U = U0; V = V0; L = L0; u = u0; }
+    else if (i < 1.5) { C = C1; D = D1; U = U1; V = V1; L = L1; u = u1; }
+    else if (i < 2.5) { C = C2; D = D2; U = U2; V = V2; L = L2; u = u2; }
+    else if (i < 3.5) { C = C3; D = D3; U = U3; V = V3; L = L3; u = u3; }
+    else if (i < 4.5) { C = C4; D = D4; U = U4; V = V4; L = L4; u = u4; }
+    else if (i < 5.5) { C = C5; D = D5; U = U5; V = V5; L = L5; u = u5; }
+    else              { C = C6; D = D6; U = U6; V = V6; L = L6; u = u6; }
+}
+void loopAt(float k, out vec3 A, out vec3 B, out vec3 Cc) {
+    if (k < 0.5)      { A = tNa; B = tNb; Cc = S0; }
+    else if (k < 1.5) { A = E0; B = B0; Cc = S1; }
+    else if (k < 2.5) { A = E1; B = B1; Cc = S2; }
+    else if (k < 3.5) { A = E2; B = B2; Cc = S3; }
+    else if (k < 4.5) { A = E3; B = B3; Cc = S4; }
+    else if (k < 5.5) { A = E4; B = B4; Cc = S5; }
+    else if (k < 6.5) { A = E5; B = B5; Cc = S6; }
+    else              { A = E6; B = tCa; Cc = tCb; }
+}
 void protein(vec3 p) {
-    elem(p, C0, D0, U0, V0, L0, u0, 1.0, 0.0);
-    elem(p, C1, D1, U1, V1, L1, u1, 0.0, 1.0);
-    elem(p, C2, D2, U2, V2, L2, u2, 0.0, 2.0);
-    elem(p, C3, D3, U3, V3, L3, u3, 1.0, 3.0);
-    elem(p, C4, D4, U4, V4, L4, u4, 0.0, 4.0);
-    elem(p, C5, D5, U5, V5, L5, u5, 0.0, 5.0);
-    elem(p, C6, D6, U6, V6, L6, u6, 1.0, 6.0);
-    loopSeg(p, tNa, tNb, S0, -1.0);
-    loopSeg(p, E0, B0, S1, 0.0);
-    loopSeg(p, E1, B1, S2, 1.0);
-    loopSeg(p, E2, B2, S3, 2.0);
-    loopSeg(p, E3, B3, S4, 3.0);
-    loopSeg(p, E4, B4, S5, 4.0);
-    loopSeg(p, E5, B5, S6, 5.0);
-    loopSeg(p, E6, tCa, tCb, 6.0);
+    vec3 C, D, U, V; float L, u;
+    for (int i = 0; i < 7; i++) {
+        float fi = float(i);
+        elemAt(fi, C, D, U, V, L, u);
+        float isH = (i == 0 || i == 3 || i == 6) ? 1.0 : 0.0;
+        elem(p, C, D, U, V, L, u, isH, fi);
+    }
+    vec3 A, B, Cc;
+    for (int k = 0; k < 8; k++) {
+        float fk = float(k);
+        loopAt(fk, A, B, Cc);
+        loopSeg(p, A, B, Cc, fk - 1.0);
+    }
 }
 
 // binding pockets (folded frame) for the molecular surface
@@ -305,9 +323,8 @@ vec3 pocketPos(float i) {
     return i < 0.5 ? vec3(0.0, 0.15, 1.2) : i < 1.5 ? vec3(1.0, -0.25, -0.35) : vec3(-0.95, 0.45, -0.55);
 }
 
-float mapForm(vec3 p, float f) {
-    gD = 1e3; gRaw = 1e3; gUnit = -1.0; gRes = 0.0; gMat = 2.0; gAtom = 0.0;
-    if (f > 2.5) {
+float capsidForm(vec3 p) {
+    {
         // ── Virus capsid: fold space into the icosahedral fundamental domain ──
         gMode = 3.0; gK = 0.1; gBR = 0.5;
         vec3 nc = vec3(-0.5, -0.809017, 0.309017);
@@ -336,6 +353,11 @@ float mapForm(vec3 p, float f) {
         protein(uq);
         return gD * sc * 0.75;
     }
+    return 0.0;
+}
+float mapForm(vec3 p, float f) {
+    gD = 1e3; gRaw = 1e3; gUnit = -1.0; gRes = 0.0; gMat = 2.0; gAtom = 0.0;
+    if (f > 2.5) return capsidForm(p);
     gMode = f;
     gK = f > 1.5 ? 0.26 : 0.0;
     gBR = f < 0.5 ? 0.42 : 0.8;
@@ -359,42 +381,26 @@ float mapForm(vec3 p, float f) {
 
 float gFA, gFB, gBl, gHitForm;
 float map(vec3 p) {
-    float dA = mapForm(p, gFA);
-    gHitForm = gFA;
-    if (gBl < 0.001) return dA;
-    float r = gRes, m = gMat, a = gAtom, un = gUnit;
-    float dB = mapForm(p, gFB);
-    dA += smoothstep(0.35, 1.0, gBl) * 0.3;
-    dB += (1.0 - smoothstep(0.0, 0.65, gBl)) * 0.3;
-    if (dA < dB) { gRes = r; gMat = m; gAtom = a; gUnit = un; return dA; }
-    gHitForm = gFB;
-    return dB;
+    float best = 1e3, r = 0.0, m = 2.0, a = 0.0, un = -1.0, hf = gFA;
+    for (int k = 0; k < 2; k++) {
+        if (k == 1 && gBl < 0.001) break;
+        float f = k == 0 ? gFA : gFB;
+        float d = mapForm(p, f);
+        d += k == 0 ? smoothstep(0.35, 1.0, gBl) * 0.3 : (1.0 - smoothstep(0.0, 0.65, gBl)) * 0.3;
+        if (d < best) { best = d; r = gRes; m = gMat; a = gAtom; un = gUnit; hf = f; }
+    }
+    gRes = r; gMat = m; gAtom = a; gUnit = un; gHitForm = hf;
+    return best;
 }
 
 vec3 calcNormal(vec3 p) {
-    vec2 e = vec2(0.0015, -0.0015);
-    return normalize(e.xyy * map(p + e.xyy) + e.yyx * map(p + e.yyx) + e.yxy * map(p + e.yxy) + e.xxx * map(p + e.xxx));
-}
-float calcAO(vec3 p, vec3 n) {
-    float occ = 0.0, sca = 1.0;
-    for (int i = 1; i <= 3; i++) {
-        float h = 0.02 + 0.12 * float(i);
-        occ += (h - map(p + n * h)) * sca;
-        sca *= 0.72;
+    vec3 n = vec3(0.0);
+    for (int i = 0; i < 4; i++) {
+        vec3 e = 0.5773 * (2.0 * vec3(float(((i + 3) / 2) - 2 * ((i + 3) / 4)), float((i / 2) - 2 * (i / 4)), float(i - 2 * (i / 2))) - 1.0);
+        n += e * map(p + e * 0.0015);
     }
-    return clamp(1.0 - 2.2 * occ, 0.0, 1.0);
+    return normalize(n);
 }
-float softShadow(vec3 ro, vec3 rd) {
-    float res = 1.0, t = 0.03;
-    for (int i = 0; i < 8; i++) {
-        float h = map(ro + rd * t);
-        res = min(res, 7.0 * h / t);
-        t += clamp(h, 0.08, 0.45);
-        if (res < 0.02 || t > 3.0) break;
-    }
-    return clamp(res, 0.0, 1.0);
-}
-
 vec3 chainPath(float s) {
     float t = gT * 0.35;
     float wg = wriggle * mix(1.0, 0.45, gRest);
@@ -537,6 +543,7 @@ void renderScene() {
     float shellR = gFA < 0.5 ? 0.24 : 0.13;
     float glowAcc = 0.0;
     float hitT = -1.0, shellT = -1.0;
+    float hRes = 0.0, hMat = 2.0, hAtom = 0.0, hUnit = -1.0, hForm = 0.0;
     if (hh > 0.0) {
         float tq = sqrt(hh);
         float t = max(-bb - tq, 0.0);
@@ -545,20 +552,30 @@ void renderScene() {
             vec3 p = ro + rd * t;
             float d = map(p);
             if (shellT < 0.0 && d < shellR) shellT = t;
-            if (d < 0.0012 * t) { hitT = t; break; }
+            if (d < 0.0012 * t) { hitT = t; hRes = gRes; hMat = gMat; hAtom = gAtom; hUnit = gUnit; hForm = gHitForm; break; }
             glowAcc += exp(-d * 9.0) * 0.012;
             t += d * 0.92;
             if (t > tEnd) break;
         }
     }
     float frs = 0.0;
+    // both normals (surface hit + glass shell) through ONE calcNormal copy
+    vec3 nHit = vec3(0.0, 0.0, 1.0), nShell = vec3(0.0, 0.0, 1.0);
+    for (int k = 0; k < 2; k++) {
+        bool want = k == 0 ? hitT > 0.0 : (shellK > 0.01 && shellT > 0.0);
+        if (!want) continue;
+        vec3 nn = calcNormal(ro + rd * (k == 0 ? hitT : shellT));
+        if (k == 0) nHit = nn; else nShell = nn;
+    }
     if (hitT > 0.0) {
         vec3 p = ro + rd * hitT;
-        vec3 n = calcNormal(p);
-        map(p);
-        float res = gRes, mat = gMat, atm = gAtom, unit = gUnit, form = gHitForm;
-        float ao = mix(1.0, calcAO(p, n), aoAmt);
-        float sh = softShadow(p + n * 0.02, lKey);
+        vec3 n = nHit;
+        float res = hRes, mat = hMat, atm = hAtom, unit = hUnit, form = hForm;
+        // cheap occlusion & shadow (no extra scene evaluations → a much smaller shader):
+        // crevices facing the molecule's centre are darker, light from the key falls off on the far side
+        float cdist = length(p) / max(gScale, 0.5);
+        float ao = mix(1.0, clamp(0.35 + 0.65 * (0.5 + 0.5 * dot(n, normalize(p + 1e-4))) * smoothstep(0.2, 1.8, cdist), 0.0, 1.0), aoAmt);
+        float sh = clamp(0.45 + 0.55 * smoothstep(-0.4, 0.6, dot(normalize(p + 1e-4), lKey)) + 0.3 * smoothstep(1.2, 2.2, cdist), 0.0, 1.0);
         vec3 base = schemeCol(res, mat, unit);
         float spE = 55.0, spK = 0.75;
         if (form > 0.5 && form < 1.5) {               // space-fill: CPK heteroatoms, carbons tinted by scheme
@@ -597,9 +614,9 @@ void renderScene() {
     // translucent glass shell around atoms / ribbons
     if (shellK > 0.01 && shellT > 0.0) {
         vec3 ps = ro + rd * shellT;
-        vec3 ns = calcNormal(ps);
+        vec3 ns = nShell;
         float fs = pow(1.0 - clamp(dot(ns, -rd), 0.0, 1.0), 2.5);
-        vec3 tint = mix(vec3(0.55, 0.75, 1.0), schemeCol(gRes, gMat, gUnit), 0.35);
+        vec3 tint = mix(vec3(0.55, 0.75, 1.0), schemeCol(hRes, hMat, hUnit), 0.35);
         float sspec = pow(clamp(dot(ns, normalize(lKey - rd)), 0.0, 1.0), 70.0);
         float sa = clamp(shellK * (0.1 + 0.75 * fs), 0.0, 0.85);
         col = col * (1.0 - 0.3 * sa) + tint * (0.15 + 0.85 * fs) * sa + vec3(1.0) * sspec * 0.5 * shellK;
