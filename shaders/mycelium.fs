@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Mycelium — a fungal network growing through dark soil. From a few glowing spores, fine hyphae thread outward, forking again and again into a fractal tree of ever-finer side branches that meander through the grain of the earth; neighbouring threads fuse with little cross-bridges (anastomosis) and whole colonies grow into one another until the soil is laced with a living web. Bright growing tips lead the front, nutrient pulses ride along the threads, and tiny mushroom pins pop up at the junctions while spores drift through the air. It morphs between four forms: Soil Web — crisp white threads on dark brown soil full of grit; Bioluminescent — foxfire-green hyphae and glowing Mycena caps on pure black; Root Network — the wood-wide web, thick bark-brown tree roots reaching down from above while golden fungal links weave between them and trade glowing nutrients in both directions; Spore Print — big radial gill-pattern prints in cream, rust and lilac forming around each spore point with faint mycelium creeping out. Each cycle the old network dims away as new spores germinate. Bass makes it grow faster, beats send bright nutrient pulses down every thread, mids drive the flow, highs make the drifting spores sparkle. At rest only a few sparse colonies grow slowly with soft pulses; during a build the network contracts, the pulses race and the tips shimmer and tremble; on the drop the whole web lights up in a wave from the centre outward, then the peak grows dense with many colonies, fruiting bodies and bright pulses.",
+  "DESCRIPTION": "Mycelium — a fungal network growing through dark soil. From a few glowing spores, fine hyphae thread outward, forking again and again into a fractal tree of ever-finer side branches that meander through the grain of the earth; neighbouring threads fuse with little cross-bridges (anastomosis) and whole colonies grow into one another until the soil is laced with a living web. Bright growing tips lead the front, nutrient pulses ride along the threads, and tiny mushroom pins pop up at the junctions while spores drift through the air. It morphs between four forms: Soil Web — crisp white threads on dark brown soil full of grit; Bioluminescent — foxfire-green hyphae and glowing Mycena caps on pure black; Root Network — the wood-wide web, thick bark-brown tree roots reaching down from above while golden fungal links weave between them and trade glowing nutrients in both directions; Spore Print — big radial gill-pattern prints in cream, rust and lilac forming around each spore point with faint mycelium creeping out. Each cycle the old network dims away as new spores germinate. Bass makes it grow faster, beats send bright nutrient pulses down every thread, mids drive the flow, highs make the drifting spores sparkle. At rest only a few sparse colonies grow slowly with soft pulses; during a build the network contracts, the pulses race and the tips shimmer and tremble; on the drop the whole web lights up in a wave from the centre outward, then the peak grows dense with many colonies, fruiting bodies and bright pulses. Rendered as real 3D: hyphae are lit translucent tubes with specular highlights, far strands fall back into a soft, foggy depth of field, the soil is occluded where strands meet, and spores are shaded spheres. Physics: a real damped-wave signal field runs through the soil, so every kick fires electrical waves out of the spore points that physically travel, interfere and fade across the web, lighting and rocking the threads as they pass; and puffballs eject real spores ballistically under gravity and drag, which arc up toward the camera, cast shadows, bounce, settle and hop again on each kick, each landing sending its own little ripple. The drop is one giant spore burst plus a signal flood from the centre that the network visibly rings down from.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-26 — original.",
   "CATEGORIES": ["Generator", "Organic", "Nature", "Audio Reactive"],
   "INPUTS": [
@@ -18,6 +18,13 @@
     { "NAME": "glow",        "LABEL": "Glow",             "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Look" },
     { "NAME": "soilTex",     "LABEL": "Soil Texture",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Look" },
     { "NAME": "grain",       "LABEL": "Grain",            "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.12, "GROUP": "Finish" },
+    { "NAME": "physicsAmt",  "LABEL": "Physics Amount",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Physics" },
+    { "NAME": "gravity",     "LABEL": "Spore Gravity",    "TYPE": "float", "AUDIO": false, "MIN": 0.1, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Physics" },
+    { "NAME": "bounce",      "LABEL": "Spore Bounce",     "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 0.9, "DEFAULT": 0.5, "GROUP": "Physics" },
+    { "NAME": "kickForce",   "LABEL": "Kick Force",       "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Physics" },
+    { "NAME": "waveSpeed",   "LABEL": "Signal Speed",     "TYPE": "float", "AUDIO": false, "MIN": 0.3, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Physics" },
+    { "NAME": "waveDamp",    "LABEL": "Signal Damping",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5, "GROUP": "Physics" },
+    { "NAME": "resetPhysics","LABEL": "Reset Physics",    "TYPE": "bool",  "DEFAULT": false, "GROUP": "Physics" },
     { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2], "LABELS": ["Original Colours", "Red · Black · White", "Blue · Black · White"], "GROUP": "Studio Palette" },
     { "NAME": "palAmount",   "LABEL": "Palette Amount",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Studio Palette" },
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
@@ -29,6 +36,11 @@
     { "NAME": "bgColor",     "LABEL": "BG Color / Top / Center", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0], "GROUP": "Background" },
     { "NAME": "bgColor2",    "LABEL": "BG Bottom / Edge", "TYPE": "color", "DEFAULT": [0.02, 0.015, 0.01, 1.0], "GROUP": "Background" },
     { "NAME": "transparentBg","LABEL": "Transparent BG",  "TYPE": "bool",  "DEFAULT": false, "GROUP": "Background" }
+  ],
+  "PASSES": [
+    { "TARGET": "sporeBuf", "PERSISTENT": true, "FLOAT": true },
+    { "TARGET": "waveBuf",  "PERSISTENT": true, "FLOAT": true },
+    { }
   ]
 }*/
 
@@ -91,8 +103,11 @@ void showDynamics() {
 // ── network state ───────────────────────────────────────────────────────
 float gPx, gT, gFlow, gPd, gMaxLf, gFuse, gFruit, gNfrac;
 float gS0, gMode, gSd, gRf;
+float gDt, gSig;
 vec2 gOrg;
 // per-render accumulators
+float aKey, aSx, aWp, aDz, aAO, gDz, gHs;
+vec2 aNr;
 float aLine, aGlow, aTip, aPulse, aRoot, aRootS, aRootP, aCap, aCapS, aCapR, aHalo, aPrint, aCore;
 vec3 aPrintCol;
 
@@ -146,7 +161,9 @@ float hypha(vec2 p, vec2 a, vec2 b, float bow, float ph, out float u) {
     u = clamp(dot(p - a, ba) / l2, 0.0, 1.0);
     vec2 nrm = vec2(-ba.y, ba.x) / len;
     float off = len * bow * 4.0 * u * (1.0 - u) + min(0.0025, len * 0.06) * sin(u * len * 110.0 + ph) * sin(PI * u);
-    return length(p - a - ba * u - nrm * off);
+    vec2 dv = p - a - ba * u - nrm * off;
+    gHs = dot(dv, nrm);
+    return length(dv);
 }
 
 // a mushroom pin / glowing cap at a node
@@ -201,8 +218,10 @@ void segment(vec2 pw, vec2 a, vec2 c, float ta, float tc, float L, float hh, flo
     float shown = smoothstep(f + gPx / max(len, 1e-3), f - gPx / max(len, 1e-3), u);
     float age = gRf - mix(ta, tc, u);
     float wd = root ? gPx * lineWidth * max(13.0 - 3.2 * (L + u), 1.8) * (0.7 + 0.3 * smoothstep(0.0, 0.25, age))
-                    : gPx * lineWidth * max(1.7 - 0.22 * (L - 1.0 + u), 0.55);
-    float cov = clamp((wd - d) / gPx + 0.5, 0.0, 1.0) * shown * wgt;
+                    : max(gPx * 0.75, lineWidth * 0.0031 * max(1.7 - 0.22 * (L - 1.0 + u), 0.55) * (1.0 - 0.35 * gDz));
+    // depth of field: far strands get soft edges
+    float aa = gPx * (1.0 + (root ? 0.0 : 3.5 * gDz));
+    float cov = clamp((wd - d) / aa + 0.5, 0.0, 1.0) * shown * wgt;
     float gl = exp(-d / min(wd * 1.5 + 0.004, 0.06 * gS0 * exp2(-L))) * shown * wgt;
     float T = mix(ta, tc, u);
     float pulse = pow(0.5 + 0.5 * sin(TAU * (T * (root ? 2.5 : 5.0) - gFlow * (root ? -0.7 : 1.0) + hh * 3.0)), 24.0) * step(0.35, fract(hh * 7.31));
@@ -212,8 +231,18 @@ void segment(vec2 pw, vec2 a, vec2 c, float ta, float tc, float L, float hh, flo
         aRootP = max(aRootP, cov * rs * pulse);
     } else {
         aLine = max(aLine, cov * (1.05 - 0.1 * L));
-        aGlow = max(aGlow, gl * (1.1 - 0.1 * L));
-        aPulse = max(aPulse, max(cov, gl * 0.8) * pulse);
+        // lit tube: cross-section normal from the signed offset across the strand
+        aAO += exp(-d / (wd * 2.2 + gPx)) * shown * wgt;
+        float key = cov * (1.0 - 0.6 * gDz);
+        if (key > aKey) {
+            aKey = key;
+            aSx = gHs / max(wd, 1e-5);
+            aNr = vec2(a.y - c.y, c.x - a.x);
+            aWp = wd / gPx;
+            aDz = gDz;
+        }
+        aGlow = max(aGlow, gl * (1.1 - 0.1 * L) * (1.0 - 0.5 * gDz));
+        aPulse = max(aPulse, max(cov, gl * 0.8) * pulse * (1.0 - 0.45 * gDz));
         // growing tip
         if (f < 0.999) {
             vec2 ab = c - a;
@@ -247,6 +276,7 @@ void network(vec2 p, float form) {
             float rH = length(pw - H);
             aCore = max(aCore, hw * smoothstep(0.012, 0.004, rH) * smoothstep(dl, dl + 0.03, gRf));
             if (form > 2.5) printAt(pw - H, (0.1 + 0.09 * h11(hc.x * 3.1 + hc.y * 7.7 + gSd)) * smoothstep(dl, dl + 0.45, gRf), hc.x * 1.3 + hc.y * 2.9 + gSd, hw);
+            gDz = h12(hc * 4.1 + gSd + 0.3);
             // anastomosis between colonies: thick cords that meet in the middle
             for (int n = 0; n < 2; n++) {
                 vec2 nc = hc + (n == 0 ? vec2(1.0, 0.0) : vec2(0.0, 1.0));
@@ -258,8 +288,10 @@ void network(vec2 p, float form) {
                 vec2 M = mix(H, H2, 0.5) + (h22(hc + nc + gSd) - 0.5) * gS0 * 0.3;
                 float dl2 = hubDelay(nc);
                 float tm1 = arrive(M, H, dl), tm2 = arrive(M, H2, dl2);
-                segment(pw, H, M, dl, tm1 + 0.05, 1.0, hh, min(hw, hw2));
-                segment(pw, H2, M, dl2, tm2 + 0.05, 1.0, fract(hh * 7.0), min(hw, hw2));
+                for (int sg = 0; sg < 2; sg++) {
+                    bool s0 = sg == 0;
+                    segment(pw, s0 ? H : H2, M, s0 ? dl : dl2, (s0 ? tm1 : tm2) + 0.05, 1.0, s0 ? hh : fract(hh * 7.0), min(hw, hw2));
+                }
             }
         }
     }
@@ -283,6 +315,7 @@ void network(vec2 p, float form) {
             vec2 H = nodePos(0.0, hc);
             float dl = hubDelay(hc);
             gReach = hubReach(hc);
+            gDz = clamp(h12(hc * 4.1 + gSd + 0.3) * 0.85 + 0.03 * L, 0.0, 1.0);
             vec2 P = nodePos(L - 1.0, pc);
             vec2 A = P;
             if (L > 1.5) A = mix(P, nodePos(L - 2.0, floor(pc * 0.5)), 0.05 + 0.15 * h12(pc + L * 9.1 + gSd));
@@ -302,19 +335,24 @@ void network(vec2 p, float form) {
                 float tC = max(arrive(C, H, dl), tA + 0.5 * length(C - A) + 0.005);
                 float hh = h12(cc * 1.91 + L * 4.4 + gSd);
                 float wgt = hw * ap * al * lw;
-                segment(pw, A, C, tA, tC, L, hh, wgt);
-                if (root) continue;
-                // fruiting bodies at the nodes
-                if (L > 1.5 && L < 4.5 && fract(hh * 13.7) < gFruit) {
+                if (!root && L > 1.5 && L < 4.5 && fract(hh * 13.7) < gFruit) {
+                    // fruiting bodies at the nodes
                     capAt(pw, C, hh, smoothstep(tC + 0.03, tC + 0.15, gRf), wgt);
                 }
-                // anastomosis: a later bridge fusing this hypha to its neighbour
-                if (mod(fk, 2.0) < 0.5 && fract(hh * 5.3) < gFuse) {
-                    vec2 cc2 = cc + vec2(1.0, 0.0);
-                    vec2 C2 = nodePos(L, cc2);
-                    float tB = max(tC, arrive(C2, H, dl)) + 0.04;
-                if (tB > gRf) continue;
-                    segment(pw, C, C2, tB, tB + 0.6 * length(C2 - C), L + 0.5, fract(hh * 3.1), wgt * 0.85);
+                // the hypha itself, then (maybe) an anastomosis bridge fusing it to its neighbour
+                vec2 sa = A, sc2 = C;
+                float sta = tA, stc = tC, sL = L, shh = hh, sw = wgt;
+                for (int sb = 0; sb < 2; sb++) {
+                    if (sb == 1) {
+                        if (root || mod(fk, 2.0) > 0.5 || fract(hh * 5.3) >= gFuse) break;
+                        sa = C;
+                        sc2 = nodePos(L, cc + vec2(1.0, 0.0));
+                        sta = max(tC, arrive(sc2, H, dl)) + 0.04;
+                        if (sta > gRf) break;
+                        stc = sta + 0.6 * length(sc2 - C);
+                        sL = L + 0.5; shh = fract(hh * 3.1); sw = wgt * 0.85;
+                    }
+                    segment(pw, sa, sc2, sta, stc, sL, shh, sw);
                 }
             }
         }
@@ -351,6 +389,7 @@ vec3 ground(vec2 p, float form) {
 }
 
 vec4 render(vec2 p, vec2 uv, float form, float sd, float grow) {
+    aKey = 0.0; aSx = 0.0; aWp = 0.0; aNr = vec2(1.0, 0.0); aDz = 0.0; aAO = 0.0; gDz = 0.0;
     aLine = 0.0; aGlow = 0.0; aTip = 0.0; aPulse = 0.0; aRoot = 0.0; aRootS = 0.0; aRootP = 0.0;
     aCap = 0.0; aCapS = 0.0; aCapR = 0.0; aHalo = 0.0; aPrint = 0.0; aCore = 0.0; aPrintCol = vec3(1.0);
     bool roots = form > 1.5 && form < 2.5;
@@ -375,7 +414,8 @@ vec4 render(vec2 p, vec2 uv, float form, float sd, float grow) {
     // drop: the network lights up in a wave from the centre outward
     float dc = length(p);
     float front = (1.0 - gDrop) * 1.6;
-    float lit = 1.0 + gDrop * (2.2 * smoothstep(front + 0.05, front - 0.25, dc) + 2.5 * exp(-pow((dc - front) * 7.0, 2.0)));
+    float lit = 1.0 + (1.0 - physicsAmt) * gDrop * (2.2 * smoothstep(front + 0.05, front - 0.25, dc) + 2.5 * exp(-pow((dc - front) * 7.0, 2.0)));
+    lit += 1.9 * gSig * gSig / (0.35 + gSig * gSig);
     vec3 col = backdrop(uv) + ground(p, form);
     // glow halo under the threads
     float glowK = glow * (0.22 + 0.35 * gLift + 0.5 * bio) * lit;
@@ -391,9 +431,23 @@ vec4 render(vec2 p, vec2 uv, float form, float sd, float grow) {
     // hyphae
     float shimmer = 0.5 + 0.5 * sin(gT * (6.0 + 14.0 * gBuild) + dc * 30.0);
     float thrB = (0.62 + 0.45 * gLift) * (form > 2.5 ? 0.5 : 1.0) * mix(1.0, 0.85, bio);
-    col = mix(col, thr * thrB * min(lit, 2.0), aLine);
+    // ambient occlusion: soil darkens around strands, deepest where they meet
+    vec3 soil = col;
+    col *= 1.0 - 0.55 * clamp(aAO * 0.6, 0.0, 1.0) * (1.0 - bio * 0.4);
+    float jAO = 1.0 - 0.45 * clamp(aAO - 1.1, 0.0, 1.0);
+    float sx = clamp(aSx, -1.0, 1.0);
+    vec3 N = vec3(normalize(aNr + 1e-6) * sx, sqrt(max(1.0 - sx * sx, 0.0)));
+    vec3 Lt = normalize(vec3(-0.45, 0.6, 0.66));
+    float aTD = clamp(dot(N, Lt), 0.0, 1.0);
+    float aTS = pow(clamp(dot(N, normalize(Lt + vec3(0.0, 0.0, 1.0))), 0.0, 1.0), 28.0) * smoothstep(1.2, 3.0, aWp);
+    float aTR = (1.0 - N.z) * (1.0 - N.z);
+    // shaded translucent tubes; far strands dim and fog toward the soil
+    vec3 tube = thr * thrB * (0.32 + 0.95 * aTD) * jAO + vec3(1.0) * aTS * (0.55 + 0.3 * gLift) * (1.0 - aDz)
+              + glc * aTR * (0.35 + 0.5 * bio) * glow;
+    tube = mix(tube, soil + glc * 0.06, 0.45 * aDz) * (1.0 - 0.35 * aDz);
+    col = mix(col, tube * min(lit, 2.0), aLine);
     col += thr * aLine * max(lit - 2.0, 0.0) * 0.4;
-    col += plc * aPulse * pulseAmt * (form > 2.5 ? 0.4 : 1.0) * (0.55 + 1.6 * audioBeatPulse * ar + 0.6 * gPeak + 0.5 * gBuild) * lit;
+    col += plc * aPulse * pulseAmt * (form > 2.5 ? 0.4 : 1.0) * (0.55 + 1.6 * audioBeatPulse * ar * (1.0 - 0.4 * physicsAmt) + 0.6 * gPeak + 0.5 * gBuild + 1.2 * min(gSig, 1.5)) * lit;
     col += tipc * aTip * (0.5 + 0.6 * gLift + 0.6 * gBuild * shimmer);
     // spore prints, dusted over the threads
     col = mix(col, aPrintCol * (0.75 + 0.25 * gLift), aPrint * 0.92);
@@ -417,6 +471,171 @@ vec3 sporeTint(float form) {
     return vec3(1.0, 0.95, 0.88);
 }
 
+// ── physics: spore bodies (sporeBuf) + damped-wave signal field (waveBuf) ──
+// sporeBuf: 32 columns × 3 rows of cells. row0 = (x, y, height z, landing splash),
+// row1 = (vx, vy, vz, life), row2 = global (beat arm, drop arm, kick event, drop event + 2)
+#define NSP 32.0
+#define WH max(1.0 / 96.0, 3.0 / RENDERSIZE.y)   // signal-field cell size (fraction of screen height, >= 3 px)
+vec4 spA(float i) { return texture2D(sporeBuf, vec2((i + 0.5) / NSP, 0.5 / 3.0)); }
+vec4 spB(float i) { return texture2D(sporeBuf, vec2((i + 0.5) / NSP, 1.5 / 3.0)); }
+vec4 spG()        { return texture2D(sporeBuf, vec2(0.5 / NSP, 2.5 / 3.0)); }
+bool bad(float x) { return !(x > -50.0 && x < 50.0); }
+// current growth-cycle hub layout (same as render(), level-0 fungal network)
+void cycleHubs(float sd) {
+    gMode = 0.0;
+    gSd = sd * 7.31;
+    gS0 = 0.5;
+    gOrg = (h22(vec2(sd, 4.2)) - 0.5) * gS0;
+}
+
+void sporePass(vec2 uv, float sd, float asp) {
+    vec2 cid = floor(uv * vec2(NSP, 3.0));
+    float si = cid.x;
+    float row = cid.y;
+    vec4 G = spG();
+    vec4 A = spA(si);
+    vec4 B = spB(si);
+    bool init = FRAMEINDEX < 2 || resetPhysics || !(G.w > 1.5 && G.w < 4.5);
+    // ── global: kick / drop event detection with hysteresis ──
+    float m = float(showState);
+    float bt = audioBeatPulse * (0.35 + 0.65 * audioReact);
+    if (m > 1.5) {   // pinned Build / Peak: preview the kick pattern
+        float rate = m < 2.5 ? 1.0 + 2.0 * fract(TIME / 8.0) : 2.0;
+        bt = max(bt, exp(-fract(TIME * rate) * 7.0) * (m < 2.5 ? 0.6 + 0.4 * gBuild : 1.0));
+    }
+    float armB = init ? 1.0 : G.x, armD = init ? 1.0 : G.y;
+    float kickE = 0.0, dropE = 0.0;
+    if (armB > 0.5 && bt > 0.5) { kickE = bt * kickForce; armB = 0.0; }
+    if (bt < 0.25) armB = 1.0;
+    if (armD > 0.5 && gDrop > 0.45) { dropE = gDrop * kickForce; armD = 0.0; }
+    if (gDrop < 0.15) armD = 1.0;
+    if (row > 1.5) { gl_FragColor = vec4(armB, armD, kickE, dropE + 2.0); return; }
+
+    float fi = float(FRAMEINDEX);
+    vec2 r2 = h22(vec2(si * 1.37 + 0.5, fi * 0.173 + 3.1));
+    vec2 r3 = h22(vec2(fi * 0.311 + 7.7, si * 2.91 + 1.3));
+    vec2 pos = A.xy, vel = B.xy;
+    float z = A.z, vz = B.z, life = B.w, splash = 0.0;
+    if (init || bad(pos.x) || bad(pos.y) || bad(z) || bad(vel.x) || bad(vel.y) || bad(vz) || bad(life)) {
+        vec2 rr = h22(vec2(si * 3.1 + 0.7, 9.3));
+        pos = (rr - 0.5) * vec2(asp * 0.9, 0.9);
+        vel = vec2(0.0); z = 0.0; vz = 0.0;
+        life = h11(si * 5.7 + 1.1);
+    } else {
+        float dt = gDt;
+        bool grounded = z < 0.004;
+        // beat: spores lying in the soil hop, airborne ones get a push
+        if (kickE > 0.0) {
+            float a = r2.x * TAU;
+            if (grounded) { vz += kickE * (0.25 + 0.45 * r2.y); vel += vec2(cos(a), sin(a)) * 0.07 * kickE; }
+            else vz += 0.12 * kickE;
+        }
+        // respawn (old age) or drop burst: ejected from a puffball at a colony centre
+        if (life <= 0.0 || dropE > 0.0) {
+            cycleHubs(sd);
+            vec2 q = (r3 - 0.5) * vec2(asp * 0.95, 0.95);
+            vec2 hc = floor((q - gOrg) / gS0);
+            pos = nodePos(0.0, hc) + (r2 - 0.5) * 0.012;
+            float E = dropE > 0.0 ? (0.75 + 0.55 * r2.y) * (0.6 + 0.7 * dropE)
+                                  : (0.25 + 0.35 * r2.y) * (0.45 + 0.6 * gLift);
+            float a = r3.x * TAU + r2.x;
+            vel = vec2(cos(a), sin(a)) * E * ((dropE > 0.0 ? 0.18 : 0.08) + 0.35 * h11(si + fi * 0.71));
+            vz = E * (0.55 + 0.45 * r3.y);
+            z = 0.002;
+            life = 1.0;
+            grounded = false;
+        }
+        // drift with a slow soil-air current (stronger when airborne)
+        vec2 wq = pos * 2.3 + vec2(TIME * 0.05, -TIME * 0.04);
+        vec2 wind = vec2(vn2(wq), vn2(wq + 19.7)) - 0.5;
+        vel += wind * dt * (grounded ? 0.0 : 0.5 * (0.4 + gLift));
+        vel *= exp(-dt * (grounded ? 5.0 : 0.85));
+        float g = 1.5 * gravity * mix(1.0, 0.6, gRest);
+        vz = vz * exp(-dt * 0.35) - g * dt;
+        pos += vel * dt;
+        z += vz * dt;
+        if (z < 0.0) {
+            z = 0.0;
+            if (vz < -0.07) { splash = min(-vz, 1.5); vz = -vz * bounce; vel *= 0.65; }
+            else vz = 0.0;
+        }
+        if (z < 0.004) life -= dt / mix(3.5, 11.0, gRest) * (0.6 + 0.8 * h11(si * 2.3));
+        // walls: reflect inside the frame
+        vec2 lim = vec2(asp * 0.5 + 0.02, 0.52);
+        if (abs(pos.x) > lim.x) { pos.x = sign(pos.x) * lim.x; vel.x = -vel.x * 0.6; }
+        if (abs(pos.y) > lim.y) { pos.y = sign(pos.y) * lim.y; vel.y = -vel.y * 0.6; }
+        float vl = length(vel);
+        if (vl > 1.5) vel *= 1.5 / vl;
+        vz = clamp(vz, -3.0, 3.0);
+        z = min(z, 2.0);
+    }
+    gl_FragColor = row < 0.5 ? vec4(pos, z, splash) : vec4(vel, vz, life);
+}
+
+// damped 2D wave equation (symplectic Euler) in screen space; kicks inject impulses
+void wavePass(vec2 uv, vec2 pN, float sd, vec2 R) {
+    vec4 S = texture2D(waveBuf, uv);
+    if (FRAMEINDEX < 2 || resetPhysics || !(S.w > 0.5 && S.w < 1.5) || bad(S.x) || bad(S.y) || bad(S.z)) {
+        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+        return;
+    }
+    vec4 G = spG();
+    float kickE = G.z, dropE = clamp(G.w - 2.0, 0.0, 3.0);
+    // the field lives on a fixed coarse grid (resolution independent): every pixel of a
+    // cell computes the same update from the neighbouring cell centres
+    float h = WH;
+    vec2 d = vec2(h * R.y / R.x, h);
+    uv = (floor(uv / d) + 0.5) * d;
+    S = texture2D(waveBuf, uv);
+    vec2 nL = texture2D(waveBuf, uv - vec2(d.x, 0.0)).xy;
+    vec2 nR = texture2D(waveBuf, uv + vec2(d.x, 0.0)).xy;
+    vec2 nD = texture2D(waveBuf, uv - vec2(0.0, d.y)).xy;
+    vec2 nU = texture2D(waveBuf, uv + vec2(0.0, d.y)).xy;
+    float u = S.x, v = S.y;
+    float c = 0.28 * waveSpeed * (1.0 + 0.25 * gBuild);
+    float dtW = min(gDt, 0.4 * h / c);
+    vec2 lp = nL + nR + nD + nU - 4.0 * vec2(u, v);
+    float lap = lp.x / (h * h);
+    vec2 e2 = min(uv, 1.0 - uv);
+    float sponge = 8.0 * (1.0 - smoothstep(0.0, 0.06, min(e2.x, e2.y)));
+    float damp = mix(0.25, 2.2, waveDamp) * (1.0 + 1.2 * gRest) + sponge;
+    v += dtW * (c * c * lap - 10.0 * u - damp * v);   // + restoring spring: displaced soil rings back to rest
+    u += dtW * v;
+    // a little grid-scale diffusion on u kills checkerboard modes (stable at Courant 0.4)
+    u += 0.05 * lp.x;
+    u *= exp(-1.2 * dtW);
+
+    // impulses
+    float src = 0.0;
+    cycleHubs(sd);
+    vec2 hb = floor((pN - gOrg) / gS0);
+    for (int hj = -1; hj <= 1; hj++)
+    for (int hi = -1; hi <= 1; hi++) {
+        vec2 hc = hb + vec2(float(hi), float(hj));
+        vec2 H = nodePos(0.0, hc);
+        float hh = h12(hc * 3.1 + gSd);
+        // spontaneous heartbeat of each colony (keeps it alive in silence)
+        float rate = 0.08 + 0.12 * hh + 0.25 * gLift;
+        float fire = floor(TIME * rate + hh * 9.0) != floor((TIME - gDt) * rate + hh * 9.0) ? 1.0 : 0.0;
+        float amp = fire * (0.5 + 0.4 * gLift) + kickE * (0.5 + 0.5 * hh) + dropE * 1.6;
+        vec2 dv = pN - H;
+        src += amp * exp(-dot(dv, dv) / (0.036 * 0.036));
+    }
+    src += dropE * 2.5 * exp(-dot(pN, pN) / (0.08 * 0.08));
+    // landing spores splash small ripples
+    for (int i = 0; i < 32; i++) {
+        vec4 A = spA(float(i));
+        if (A.w <= 0.0) continue;
+        vec2 dv = pN - A.xy;
+        src += A.w * 0.5 * exp(-dot(dv, dv) / (0.022 * 0.022));
+    }
+    v += src * 20.0;
+    u = clamp(u, -3.0, 3.0);
+    v = clamp(v, -60.0, 60.0);
+    float env = max(S.z * exp(-gDt * mix(0.7, 2.5, waveDamp)), min(abs(u), 2.0));
+    gl_FragColor = vec4(u, v, env, 1.0);
+}
+
 void main() {
     showDynamics();
     vec2 R = RENDERSIZE.xy;
@@ -432,7 +651,9 @@ void main() {
     gFuse = fusion * (0.4 + 0.45 * gLift);
     gFruit = fruiting * (0.03 + 0.05 * gLift + 0.04 * gPeak);
 
-    vec2 p = (fc - 0.5 * R) / R.y;
+    vec2 fcp = fc;
+    if (PASSINDEX == 1) { vec2 dW = vec2(WH * R.y / R.x, WH); fcp = (floor(uv / dW) + 0.5) * dW * R; }
+    vec2 p = (fcp - 0.5 * R) / R.y;
     // build: the web contracts and trembles near the top
     p *= 1.0 + 0.16 * gBuild;
     p += (vec2(h11(floor(TIME * 30.0)), h11(floor(TIME * 30.0) + 7.0)) - 0.5) * 0.006 * smoothstep(0.7, 1.0, gBuild);
@@ -441,6 +662,28 @@ void main() {
     // growth cycle: bass makes it grow faster; old network dims as new spores germinate
     float ph = (TIME + 0.8 * audioBassTime * ar) / morphPeriod;
     float cyc = floor(ph), fp = fract(ph);
+
+    gDt = clamp(TIMEDELTA, 0.0, 1.0 / 30.0);
+    float asp = R.x / R.y;
+    if (PASSINDEX == 0) { sporePass(uv, cyc + 3.0, asp); return; }
+    if (PASSINDEX == 1) { wavePass(uv, p, cyc + 3.0, R); return; }
+
+    // signal field: lights the threads and rocks them as the wavefront passes
+    float PA = physicsAmt;
+    // smooth bilinear read of the coarse field + its gradient
+    vec2 dW = vec2(WH * R.y / R.x, WH);
+    vec2 gq = uv / dW - 0.5;
+    vec2 gi = floor(gq), gf = fract(gq);
+    gf = gf * gf * (3.0 - 2.0 * gf) * 0.5 + gf * 0.5;
+    vec4 W00 = texture2D(waveBuf, (gi + vec2(0.5, 0.5)) * dW);
+    vec4 W10 = texture2D(waveBuf, (gi + vec2(1.5, 0.5)) * dW);
+    vec4 W01 = texture2D(waveBuf, (gi + vec2(0.5, 1.5)) * dW);
+    vec4 W11 = texture2D(waveBuf, (gi + vec2(1.5, 1.5)) * dW);
+    vec4 W = mix(mix(W00, W10, gf.x), mix(W01, W11, gf.x), gf.y);
+    float wx = mix(W10.x - W00.x, W11.x - W01.x, gf.y);
+    float wy = mix(W01.x - W00.x, W11.x - W10.x, gf.x);
+    gSig = PA * (0.9 * abs(W.x) + 0.8 * W.z);
+    vec2 pS = p - vec2(wx, wy) * PA * 0.01;
     float fsel = float(formSel);
     float wPrev = 1.0 - smoothstep(0.04, 0.32, fp);
     float rMax = 0.74 + 0.2 * gPeak - 0.08 * gRest;
@@ -454,7 +697,7 @@ void main() {
         float form = fsel > 0.5 ? fsel - 1.0 : mod(cc, 4.0);
         float grow = k == 0 ? rMax * pow(smoothstep(0.0, 0.8, fp), 0.9) : rMax;
         grow *= 1.0 + 0.04 * bassP() * ar;
-        vec4 rc = render(p, uv, form, cc + 3.0, grow);
+        vec4 rc = render(pS, uv, form, cc + 3.0, grow);
         col += rc.rgb * wk;
         alpha += rc.a * wk;
         sc += sporeTint(form) * wk;
@@ -480,7 +723,46 @@ void main() {
         alpha = max(alpha, dot1 * spark);
     }
 
-    col += vec3(1.0) * gDrop * gDrop * 0.08;
+    // ejected spores: rise toward the camera (bigger, softer), cast shadows, land and glow
+    if (PA > 0.0) {
+        for (int i = 0; i < 32; i++) {
+            float fi = float(i);
+            vec4 A = spA(fi);
+            vec4 B = spB(fi);
+            float br = smoothstep(0.0, 0.3, B.w) * PA;
+            if (br <= 0.0) continue;
+            float z = A.z;
+            vec2 sh = A.xy + vec2(0.14, -0.2) * z;
+            float shR = gPx * (2.0 + 22.0 * z) + 0.004 * z;
+            float sd2 = length(p - sh);
+            col *= 1.0 - 0.28 * br * smoothstep(0.003, 0.03, z) * exp(-sd2 * sd2 / (shR * shR)) / (1.0 + 6.0 * z);
+            // shaded spheres: radius grows as they rise toward the camera, defocused when high
+            float sz = max(gPx * 1.1, 0.0024 + 0.0065 * min(z, 1.0));
+            float spread = 0.004 + 0.03 * min(z, 1.0);
+            vec2 dvm = vec2(9.0);
+            for (int k = 0; k < 3; k++) {
+                vec2 o = (h22(vec2(fi * 3.7 + float(k) * 11.3, 5.1)) - 0.5) * spread * (k == 0 ? 0.0 : 1.0);
+                vec2 dv = p - A.xy - o;
+                if (dot(dv, dv) < dot(dvm, dvm)) dvm = dv;
+            }
+            float dmin = length(dvm);
+            float soft = gPx * (1.0 + 5.0 * smoothstep(0.25, 1.0, z));
+            float cv = clamp((sz - dmin) / soft + 0.5, 0.0, 1.0);
+            vec2 nq = dvm / sz;
+            vec3 N = vec3(nq, sqrt(max(1.0 - dot(nq, nq), 0.0)));
+            vec3 Lt = normalize(vec3(-0.45, 0.6, 0.66));
+            float dif = clamp(dot(N, Lt), 0.0, 1.0);
+            float spc = pow(clamp(dot(N, normalize(Lt + vec3(0.0, 0.0, 1.0))), 0.0, 1.0), 40.0);
+            float e = (0.8 + 0.25 * min(z * 2.0, 1.0) + 0.8 * A.w) * (1.0 + 0.3 * audioBeatPulse * ar);
+            vec3 sph = sc * (0.18 + 0.8 * dif) * e + vec3(1.0) * spc * 0.9 + sc * pow(1.0 - N.z, 3.0) * 0.5;
+            col = mix(col, sph, cv * br);
+            float halo = 0.12 * exp(-max(dmin - sz, 0.0) / (sz * 1.5 + 0.002)) * (1.0 - cv);
+            col += sc * halo * br * e;
+            alpha = max(alpha, cv * br);
+        }
+    }
+
+    col += vec3(1.0) * gDrop * gDrop * 0.08 * (1.0 - 0.6 * PA);
     col *= 1.0 + 0.1 * audioBeatPulse * ar;
     // vignette
     col *= 1.0 - 0.35 * smoothstep(0.6, 1.2, length((uv - 0.5) * vec2(R.x / R.y, 1.0)));
