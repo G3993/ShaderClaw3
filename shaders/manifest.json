@@ -4034,5 +4034,20 @@
     "id": 1421,
     "title": "Colorfall",
     "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "3D",
+      "Geometric",
+      "Audio Reactive"
+    ],
+    "description": "Geometric Flowers — an endless wall of thick glossy tiles, each carrying a sculpted geometric flower, flipping and turning in 3D like a giant split-flap board. Every flower is built from the overlapping-circle vocabulary of the Flower of Life: even-odd circle rosettes, a seven-circle Seed of Life bloom, a two-ring star lotus, a four-circle mandala with a halo of dots, a trefoil tulip with lens leaves, and a fourteen-petal daisy wheel. They are not decals: the petals are raised in stepped rings with rounded bevels, sitting inside a gilded frame on an engraved ground, with real parallax, soft shadows and contact occlusion between layers and faceted or domed glass gems at their hearts, lit by a warm key, a cool rim light and a studio softbox sweeping across the enamel, metal or glass. The grid morphs between Card Flip (tiles turning over in waves), Cube Roll (each cell a cube rolling to its next face), Prism Turn (triangular prisms like a trivision billboard), Ripple Lift (tiles rising and tilting on a travelling swell) and Scatter (tiles flying up, tumbling and settling back), and every flip reveals a new flower on the back face, sometimes a whole new pattern sweeping across the wall, sometimes a mix where neighbours always differ. The grid tilts and rolls in perspective and always fills the frame edge to edge. Bass pushes tiles toward you, every beat sends a ring of tilting tiles out from the centre, mids hurry the flips along and highs throw glints along the bevels. At rest the wall lies calm and flat with a single tile turning now and then; during a build the flip waves accelerate and the tiles tremble and lift; on the drop the whole wall explodes into a burst of tumbling tiles that falls back into place, and the peak is a constant cascade of flips in full colour.",
+    "file": "geometric_flowers.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1422,
+    "title": "Geometric Flowers",
+    "type": "generator"
   }
 ]
