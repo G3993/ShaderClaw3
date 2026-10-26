@@ -4018,5 +4018,21 @@
     "id": 1420,
     "title": "Orbs",
     "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Liquid",
+      "Abstract",
+      "Simulation",
+      "Audio Reactive"
+    ],
+    "description": "Colorfall — a waterfall of liquid colour. At the top a churning, glossy pool of paint ripples and swirls, its surface catching wavy white specular glints; from its lip the colour spills over and pours straight down the frame in long, soft, luminous streaks that stretch, waver and taper into pointed, flame-like drips as they accelerate, every column flowing at its own pace, like long-exposure paint with fine film grain. The liquid is lit as a thick, glossy 3D surface — its thickness becomes a height field whose normals catch a key light, wet specular highlights, a fresnel rim and refracted caustic shimmer, while softer, darker curtains fall more slowly far behind for depth. Underneath runs a real liquid simulation: a velocity field with gravity, air drag and viscosity carries the colour, so every streak starts slow at the lip and accelerates as it falls, stretching thinner; columns of the pool open and close so drips detach and fall free, neighbouring streaks merge and spread, and the falling liquid throws up a soft mist where it hits the bottom edge. Four looks morph into one another: Prism Fall (hot pink, violet, electric and sky blue, orange-red and lemon yellow on white highlights), Molten (falling lava, crimson to white-hot gold), Ink Cascade (dense indigo, plum and teal ink sinking through water) and Aurora Veil (thin luminous curtains of green, cyan and violet hanging in the dark). Bass surges the flow and swells the brightness, every kick is an impulse that splashes fresh colour out of the pool and flings it down faster before drag settles it back, mids churn the turbulence wider and highs sparkle as glints running down the glossy rivulets. At rest it is a slow, gentle trickle of a few long streaks over the backdrop; during a build the flow accelerates, the streaks thin and tighten, the pool churns harder and the top trembles; on the drop a flood surge bursts the pool open and crashes down the whole frame behind a white flash, then drains back to a trickle, settling into a full, dense, saturated torrent at the peak.",
+    "file": "colorfall.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1421,
+    "title": "Colorfall",
+    "type": "generator"
   }
 ]

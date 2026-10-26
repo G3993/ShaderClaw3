@@ -1107,5 +1107,8 @@
   },
   "orbs": {
     "group": "studio"
+  },
+  "colorfall": {
+    "group": "studio"
   }
 }
