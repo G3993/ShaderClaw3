@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Proteins — a living protein drawn like a molecular-graphics render (PyMOL / ChimeraX), raymarched in 3D with glossy studio lighting and soft ambient occlusion on a dark stage. A single chain wriggles across the screen as a loose string of beads, then collapses and folds: alpha helices coil up into springy ribbons, beta strands snap flat into a twisted sheet of arrows, loops curl into tubes, and the whole compact fold turns slowly before it unravels and the next form appears. Four forms morph in turn: Ribbon Fold (the classic cartoon, rainbow-coloured blue at the N-terminus to red at the C-terminus), Space-Fill (every atom a CPK sphere: carbons tinted by chain, oxygen red, nitrogen blue, sulphur yellow, wrapped in a translucent glass surface), Molecular Surface (one blobby iridescent skin with breathing binding pockets and glowing ligands nestled inside) and Virus Capsid (120 copies of the protein assembling into an icosahedral shell). Colour by rainbow N→C, by secondary structure or by chain. The bass makes the structure breathe, beats snap the folding forward in steps, and a light pulse runs down the chain at the peak; the drop bursts the protein apart into a cloud of half-unravelled pieces that then fold back together. At rest it is a calm, pale fold breathing slowly; during a build it contracts, spins up and trembles; at the peak it glows in full colour inside a translucent shell.",
+  "DESCRIPTION": "Proteins — a living protein drawn like a molecular-graphics render (PyMOL / ChimeraX), raymarched in 3D with glossy studio lighting and soft ambient occlusion on a dark stage. A single chain wriggles across the screen as a loose string of beads, then collapses and folds: alpha helices coil up into springy ribbons, beta strands snap flat into a twisted sheet of arrows, loops curl into tubes, and the whole compact fold turns slowly before it unravels and the next form appears. Four forms morph in turn: Ribbon Fold (the classic cartoon, rainbow-coloured blue at the N-terminus to red at the C-terminus), Space-Fill (every atom a CPK sphere: carbons tinted by chain, oxygen red, nitrogen blue, sulphur yellow, wrapped in a translucent glass surface), Molecular Surface (one blobby iridescent skin with breathing binding pockets and glowing ligands nestled inside) and Virus Capsid (120 copies of the protein assembling into an icosahedral shell). Colour by rainbow N→C, by secondary structure or by chain. Inside every form lives the hourglass: its three patterns are carved into the protein as a solid texture that sticks to the molecule (Nested Rings — an infinite tunnel of tangent poster-colour spheres crowding into the neck; Thin Film — glowing interference fringes around a living vessel with a sun in its top lobe and a target below; Lathe — a turned vessel whose rainbow spins around it), and the same hourglass shows through the translucent body as a deeper, glowing inner layer that slides with parallax as the camera orbits. The pattern's neck pinches and swells with the bass, mids make it wiggle, its rings flow and crowd through the build, and beats flare the inner glow. The bass makes the structure breathe, beats snap the folding forward in steps, and a light pulse runs down the chain at the peak; the drop bursts the protein apart into a cloud of half-unravelled pieces that then fold back together. At rest it is a calm, pale fold breathing slowly; during a build it contracts, spins up and trembles; at the peak it glows in full colour inside a translucent shell.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-26 — original.",
   "CATEGORIES": ["Generator", "3D", "Science", "Audio Reactive"],
   "INPUTS": [
@@ -10,12 +10,18 @@
     { "NAME": "gloss",       "LABEL": "Gloss",            "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Look" },
     { "NAME": "aoAmt",       "LABEL": "Ambient Occlusion","TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 1.0, "GROUP": "Look" },
     { "NAME": "pulseAmt",    "LABEL": "Chain Pulse",      "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Look" },
-    { "NAME": "spin",        "LABEL": "Rotation",         "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Motion" },
+    { "NAME": "patternSel",  "LABEL": "Hourglass Pattern", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Auto Cycle", "Nested Rings", "Thin Film", "Lathe"], "GROUP": "Hourglass Pattern" },
+    { "NAME": "patternAmt",  "LABEL": "Pattern Amount",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.85, "GROUP": "Hourglass Pattern" },
+    { "NAME": "patternScale","LABEL": "Pattern Scale",    "TYPE": "float", "AUDIO": false, "MIN": 0.4, "MAX": 2.5, "DEFAULT": 1.0, "GROUP": "Hourglass Pattern" },
+    { "NAME": "patternGlow", "LABEL": "Inner Glow",       "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.9, "GROUP": "Hourglass Pattern" },
+    { "NAME": "patternRings","LABEL": "Rings",            "TYPE": "float", "MIN": 1.0, "MAX": 8.0, "DEFAULT": 3.2, "GROUP": "Hourglass Pattern" },
+    { "NAME": "patternFlow", "LABEL": "Pattern Flow",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.6, "GROUP": "Hourglass Pattern" },
+    { "NAME": "spin",      "LABEL": "Rotation",         "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Motion" },
     { "NAME": "wriggle",     "LABEL": "String Wriggle",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Motion" },
     { "NAME": "zoom",        "LABEL": "Zoom",             "TYPE": "float", "AUDIO": false, "MIN": 0.6, "MAX": 1.6, "DEFAULT": 1.0, "GROUP": "Motion" },
     { "NAME": "renderScale", "LABEL": "Render Scale",     "TYPE": "float", "AUDIO": false, "MIN": 0.35, "MAX": 1.0, "DEFAULT": 0.6, "GROUP": "Finish" },
     { "NAME": "grain",       "LABEL": "Grain",            "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.12, "GROUP": "Finish" },
-    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
+    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 3, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
     { "NAME": "palAmount",   "LABEL": "Palette Amount",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Studio Palette" },
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
@@ -478,6 +484,115 @@ vec3 schemeCol(float res, float mat, float unit) {
 }
 float shellOf(float f) { return f < 0.5 ? 0.0 : f < 1.5 ? 1.0 : 0.0; }
 
+// ── Hourglass patterns (ported from hourglass.fs) ──────────────────────
+// A SOLID texture of revolution around the molecule's vertical axis, used in
+// SHADING ONLY (no extra map() calls): Nested Rings = an infinite stack of
+// tangent spheres crowding into the neck, Thin Film = interference fringes
+// around a living hourglass vessel (sun above, target below), Lathe = a turned
+// vessel with a rainbow spinning around it. q is in hourglass shape space,
+// pw = pixel footprint in that space (fades fine detail → no moiré).
+float gP0, gP1, gP2;
+float hgT, hgNeck, hgRt, hgRb, hgPt, hgPb, hgTear;
+vec3 hgRainbow(float t) { return 0.5 + 0.5 * cos(TAU * (t + vec3(0.0, 0.33, 0.67))); }
+vec3 poster(float k) {
+    k = mod(floor(k), 6.0);
+    if (k < 0.5) return vec3(1.0, 0.18, 0.5);
+    if (k < 1.5) return vec3(1.0, 0.86, 0.15);
+    if (k < 2.5) return vec3(0.15, 0.3, 0.85);
+    if (k < 3.5) return vec3(0.2, 0.6, 0.3);
+    if (k < 4.5) return vec3(1.0, 0.3, 0.12);
+    return vec3(0.7, 0.55, 1.0);
+}
+vec3 film3(float x) {
+    x = fract(x);
+    vec3 c = vec3(0.02, 0.06, 0.03);
+    c = mix(c, vec3(0.1, 0.75, 0.25), smoothstep(0.0, 0.18, x));
+    c = mix(c, vec3(1.0, 0.42, 0.08), smoothstep(0.18, 0.4, x));
+    c = mix(c, vec3(1.0, 0.85, 0.25), smoothstep(0.4, 0.55, x));
+    c = mix(c, vec3(1.0, 0.35, 0.45), smoothstep(0.55, 0.72, x));
+    c = mix(c, vec3(0.15, 0.4, 1.0), smoothstep(0.72, 0.88, x));
+    c = mix(c, vec3(0.02, 0.06, 0.03), smoothstep(0.88, 1.0, x));
+    return c;
+}
+float hgProfile(float y) {
+    float R = y > 0.0 ? hgRt : hgRb;
+    float P = y > 0.0 ? hgPt : hgPb;
+    float u = abs(y) / R - 1.0;
+    float base = pow(max(1.0 - pow(abs(u), P), 0.0), 1.0 / P);
+    base *= mix(1.0, 1.0 - 0.45 * smoothstep(-0.2, 1.0, u), hgTear);
+    return R * base + hgNeck * 0.5 * exp(-y * y * 120.0);
+}
+vec4 hgPattern(vec3 q, float pw, float card) {
+    float ar = audioReact;
+    float wg = (1.0 + 0.8 * midP() * ar) * mix(0.45, 1.4, gLift);
+    q.x += wg * 0.028 * sin(q.y * 8.0 + hgT * 1.3) * smoothstep(0.0, 0.4, abs(q.y));
+    q.y += wg * 0.015 * sin(q.x * 10.0 - hgT * 1.1);
+    float y = q.y;
+    float rho = length(q.xz);
+    float d = rho - hgProfile(y);
+    float aa = max(pw, 1e-4);
+    float inside = smoothstep(aa, -aa, d);
+    vec4 c = vec4(0.0);
+    // Nested Rings: tangent spheres stacked into the neck (two lobes = the hourglass), poster colours, dark rims
+    if (gP0 > 0.001) {
+        float yy = abs(y) + 1e-4;
+        float K = patternRings * (0.5 + 0.12 * gPeak + 0.25 * gBuild - 0.1 * gRest);
+        float uu = (rho * rho + yy * yy) / (2.0 * yy);
+        float lu = log2(uu / 0.02) * K - (hgT * patternFlow * 0.6 + 2.5 * gBuild * gBuild);
+        float fw = K * pw / (0.693 * yy);                 // |grad lu| = K / (ln2 |y|)
+        float fb = fract(lu), band = lu - fb;
+        float top = step(0.0, y);
+        vec3 cc = mix(poster(band + 1.0 + top * 2.0), poster(band + top * 2.0), smoothstep(0.0, 1.0, fb));
+        float lw = clamp(fw, 0.025, 0.5);
+        cc *= 1.0 - 0.6 * smoothstep(0.7 - lw, 1.0, fb) - 0.85 * (1.0 - smoothstep(0.0, 1.5 * lw, fb));
+        cc = mix(cc, vec3(1.0), 0.18 * (1.0 - top));
+        cc = mix(vec3(0.42, 0.34, 0.4), cc, 1.0 - smoothstep(0.2, 0.6, fw));
+        float Rm = max(hgRt, hgRb) * 1.05;
+        float aR = max(pw * uu / yy, 1e-4);              // |grad u| = u / |y|
+        float outer = smoothstep(aR, -aR, uu - Rm);
+        // a dark rim outlines each lobe
+        cc *= 1.0 - 0.75 * smoothstep(-4.0 * aR - 0.012, 0.0, uu - Rm);
+        c += vec4(cc, outer) * gP0;
+    }
+    // Thin Film: interference fringes hugging the vessel, sun in the top lobe, target below
+    if (gP1 > 0.001) {
+        float fade = 1.0 - smoothstep(0.25, 0.7, 7.0 * pw);
+        float fr = exp(-max(d, 0.0) * 14.0) * smoothstep(-0.06, 0.0, d);
+        vec3 edge = mix(vec3(0.5, 0.45, 0.25), film3(d * 7.0 - hgT * patternFlow * 0.25 + 0.3), fade);
+        float dt = length(vec3(q.x, y - hgRt * 1.15, q.z)) / hgRt;
+        float db = length(vec3(q.x, y + hgRb, q.z)) / hgRb;
+        vec3 inner = y > 0.0
+            ? mix(vec3(1.0, 0.82, 0.2), vec3(0.3, 0.12, 0.1), smoothstep(0.25, 0.75, dt))
+            : mix(vec3(0.45, 0.4, 0.3), film3(db * 1.6 - hgT * patternFlow * 0.3), 1.0 - smoothstep(0.25, 0.7, 1.6 * pw / hgRb));
+        inner *= 0.35 + 0.65 * smoothstep(1.0, 0.3, y > 0.0 ? dt : db);
+        float rip = exp(-max(d, 0.0) * 5.0) * (1.0 - inside);
+        vec3 cc = mix(vec3(0.0, 0.07, 0.03), inner, inside) + edge * fr * 1.3;
+        cc += film3(d * 16.0 - hgT * 0.2) * 0.35 * rip * (1.0 - smoothstep(0.25, 0.7, 16.0 * pw));
+        c += vec4(cc, clamp(max(inside, fr) + 0.6 * rip, 0.0, 1.0)) * gP1;
+    }
+    // Lathe: a turned vessel, its rainbow sweeping round as it spins; fine turning grooves around it
+    if (gP2 > 0.001) {
+        // on the inner card the vessel is seen face-on: rebuild its front surface (as hourglass.fs does)
+        float rr = max(hgProfile(y), 1e-3);
+        float nx = clamp(q.x / rr, -1.0, 1.0);
+        float nz = sqrt(max(1.0 - nx * nx, 0.0));
+        float phi = (card > 0.5 ? atan(nx, nz) : atan(q.x, q.z)) + hgT * 0.6;
+        vec3 cc = hgRainbow(phi / TAU + y * 0.25 + hgT * patternFlow * 0.05);
+        cc = mix(cc, cc * cc, 0.3);
+        cc = mix(vec3(0.5), cc, 1.0 - smoothstep(0.15, 0.5, pw / (TAU * max(rho, 1e-3))));
+        // soft airbrushed rim of the turned body
+        // turned glossy body: lambert + a vertical highlight streak + darker rim
+        float lam = clamp(dot(vec3(nx, 0.0, nz), vec3(-0.5, 0.0, 0.866)), 0.0, 1.0);
+        cc *= mix(1.0, 0.45 + 0.7 * lam, card);
+        cc += card * pow(lam, 24.0) * 0.55;
+        cc = mix(cc, cc * 0.55, smoothstep(0.75, 1.0, rho / rr));
+        float gr = (0.5 + 0.5 * cos(TAU * y * 38.0)) * (1.0 - smoothstep(0.2, 0.6, 38.0 * pw));
+        vec3 outC = mix(vec3(0.5, 0.48, 0.46), cc, 0.45) * (0.55 + 0.45 * gr);
+        c += vec4(mix(outC, cc, inside), inside + 0.3 * (1.0 - inside)) * gP2;
+    }
+    return c;
+}
+
 void renderScene() {
     showDynamics();
     vec2 R = RENDERSIZE.xy;
@@ -502,6 +617,29 @@ void renderScene() {
     gF = fold;
     gFoldW = smoothstep(0.75, 1.0, gF) * (1.0 - gDrop);
     gScale = (1.0 + 0.055 * bassP() * ar * (0.5 + gLift)) * (1.0 - 0.13 * gBuild);
+
+    // ── hourglass pattern: look weights + living vessel shape (as in hourglass.fs) ──
+    float psel = float(patternSel);
+    if (psel < 0.5) {
+        float pk = mod(floor(ph), 3.0), pk2 = mod(pk + 1.0, 3.0);
+        float pf = smoothstep(0.9, 1.0, fp);
+        gP0 = (pk < 0.5 ? 1.0 - pf : 0.0) + (pk2 < 0.5 ? pf : 0.0);
+        gP1 = (abs(pk - 1.0) < 0.5 ? 1.0 - pf : 0.0) + (abs(pk2 - 1.0) < 0.5 ? pf : 0.0);
+        gP2 = (pk > 1.5 ? 1.0 - pf : 0.0) + (pk2 > 1.5 ? pf : 0.0);
+    } else {
+        gP0 = abs(psel - 1.0) < 0.5 ? 1.0 : 0.0;
+        gP1 = abs(psel - 2.0) < 0.5 ? 1.0 : 0.0;
+        gP2 = abs(psel - 3.0) < 0.5 ? 1.0 : 0.0;
+    }
+    hgT = TIME * 0.7 + 0.28 * audioBassTime * ar + 0.18 * audioMidTime + 0.8 * gBuild * gBuild;
+    float hsw = 0.5 + 0.5 * sin(hgT * 0.7);
+    hgNeck = 0.06 * (0.3 + 0.84 * hsw * mix(0.5, 1.3, gLift) + 0.8 * bassP() * ar) * (1.0 - 0.85 * gBuild) + 0.12 * gDrop * gDrop;
+    float hlobe = 1.0 + 0.1 * gPeak - 0.08 * gRest - 0.06 * gBuild + 0.14 * gDrop * gDrop;
+    hgRt = 0.215 * hlobe * (1.0 + 0.11 * sin(hgT * 0.9) * mix(0.6, 1.3, gLift) + 0.06 * bassP() * ar);
+    hgRb = 0.225 * hlobe * (1.0 + 0.11 * sin(hgT * 0.9 + 2.0) * mix(0.6, 1.3, gLift) + 0.06 * bassP() * ar);
+    hgPt = mix(1.15, 3.0, 0.5 + 0.5 * sin(hgT * 0.37));
+    hgPb = mix(1.4, 2.6, 0.5 + 0.5 * sin(hgT * 0.29 + 1.7));
+    hgTear = 0.5 + 0.5 * sin(hgT * 0.23 + 0.6);
 
     // ── chain: H1 S1 S2 H2 S3 S4 H3 (a small α/β fold around a twisted 4-strand sheet) ──
     vec3 hz = vec3(0.0, 0.0, 1.0);
@@ -569,7 +707,7 @@ void renderScene() {
             vec3 p = ro + rd * t;
             float d = map(p);
             if (shellT < 0.0 && d < shellR) shellT = t;
-            if (d < 0.0012 * t) { hitT = t; hRes = gRes; hMat = gMat; hAtom = gAtom; hUnit = gUnit; hForm = gHitForm; break; }
+            if (d < 0.0012 * t || (i == 79 && d < 0.05)) { hitT = t; hRes = gRes; hMat = gMat; hAtom = gAtom; hUnit = gUnit; hForm = gHitForm; break; }
             glowAcc += exp(-d * 9.0) * 0.012;
             t += d * 0.92;
             if (t > tEnd) break;
@@ -606,6 +744,28 @@ void renderScene() {
             spE = 90.0; spK = 1.0;
         }
         if (form > 2.5) { spE = 40.0; spK = 0.6; }
+        // ── hourglass pattern: printed on the surface + a glowing inner layer seen
+        // through it with parallax (one hgPattern call site; shading only) ──
+        vec4 patIn = vec4(0.0);
+        float patT = 0.0;
+        if (patternAmt > 0.001) {
+            float ndv = clamp(-dot(n, rd), 0.0, 1.0);
+            float sF = 0.32 / (patternScale * gScale * (form > 2.5 ? 2.1 : 1.0));
+            float pwS = hitT / (1.9 * R.y) / max(ndv, 0.3) * sF;
+            // layer 0: the solid pattern carved into the surface (object space → sticks to
+            // the molecule); layer 1: the same hourglass on a card through the molecule's
+            // centre, reached by the refracted ray → an inner image with parallax depth
+            vec3 rdIn = refract(rd, n, 0.9);
+            float tIn = clamp(-dot(p, ww) / max(dot(rdIn, ww), 0.2), 0.05, 2.5);
+            vec4 pat0 = vec4(0.0);
+            for (int L = 0; L < 2; L++) {
+                vec3 pI = p + rdIn * tIn;
+                vec4 pc = hgPattern((L == 0 ? p : vec3(dot(pI, uu), pI.y, 0.0)) * sF, L == 0 ? pwS : pwS * 1.4 + 0.003, float(L));
+                if (L == 0) pat0 = pc; else patIn = pc;
+            }
+            base = mix(base, pat0.rgb * 0.92 + 0.03, patternAmt * 0.45 * pat0.a);
+            patT = patternAmt * 0.8 * (1.0 - frs) * smoothstep(0.0, 0.25, ndv) * patIn.a;
+        }
         // saturation & brightness follow the show state
         base = mix(vec3(lum(base)), base, mix(0.5, 1.05, gLift));
         base = mix(base, vec3(0.9), 0.15 * gRest);
@@ -619,6 +779,11 @@ void renderScene() {
         spec += pow(clamp(dot(reflect(rd, n), lSw), 0.0, 1.0), 40.0) * 0.35 * gloss * (0.3 + gLift);
         col = base * (0.16 * ao + 0.95 * dif + 0.32 * fil * ao) + vec3(1.0) * spec + vec3(0.7, 0.8, 1.0) * rimL * (0.4 + 0.6 * gLift) * ao;
         col *= mix(0.85, 1.05, gLift);
+        // translucent body: the inner hourglass card shows through (softly lit, its
+        // bright bands glowing on the beat), with the glossy coat kept on top
+        vec3 inner = patIn.rgb * (0.5 + 0.3 * fil + 0.25 * gLift) * (0.7 + 0.3 * ao);
+        inner += patIn.rgb * patIn.rgb * patternGlow * (0.3 + 0.6 * gPeak + 0.5 * gDrop + 0.5 * audioBeatPulse * ar - 0.15 * gRest);
+        col = mix(col, inner, patT) + vec3(spec) * patT;
         if (mat > 3.5) col = mix(col, vec3(0.4, 1.0, 0.75) * (0.75 + 0.6 * audioBeatPulse * ar) + spec, 0.7);   // glowing ligand
         // light pulse running N→C along the chain
         float pz = fract(gT * 0.16);
