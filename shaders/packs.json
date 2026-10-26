@@ -1086,5 +1086,8 @@
   },
   "polarized": {
     "group": "studio"
+  },
+  "proteins": {
+    "group": "studio"
   }
 }
