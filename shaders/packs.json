@@ -1104,5 +1104,8 @@
   },
   "perlin": {
     "group": "studio"
+  },
+  "orbs": {
+    "group": "studio"
   }
 }
