@@ -20,6 +20,13 @@
     { "NAME": "accentAmt",   "LABEL": "Colour Streams",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.35, "GROUP": "Look" },
     { "NAME": "gloss",       "LABEL": "Gloss",           "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.8, "GROUP": "Look" },
     { "NAME": "fogAmt",      "LABEL": "Depth Fade",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5, "GROUP": "Look" },
+    { "NAME": "inputImage",  "LABEL": "Image Texture",   "TYPE": "image", "GROUP": "Image" },
+    { "NAME": "imageAmt",    "LABEL": "Image Amount",    "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Image" },
+    { "NAME": "imageMap",    "LABEL": "Image Mapping", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2], "LABELS": ["Wrap Around Shape", "Front Projection", "Fixed to Screen"], "GROUP": "Image" },
+    { "NAME": "imageScale",  "LABEL": "Image Scale",     "TYPE": "float", "AUDIO": false, "MIN": 0.25, "MAX": 4.0, "DEFAULT": 1.0, "GROUP": "Image" },
+    { "NAME": "imageScroll", "LABEL": "Image Drift",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.15, "GROUP": "Image" },
+    { "NAME": "imagePerTube","LABEL": "Per-Tube Mosaic", "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5, "GROUP": "Image" },
+    { "NAME": "imageBg",     "LABEL": "Image Behind Shape", "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "GROUP": "Image" },
     { "NAME": "grain",       "LABEL": "Grain",           "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.2, "GROUP": "Finish" },
     { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 3, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
     { "NAME": "palAmount",   "LABEL": "Palette Amount",  "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Studio Palette" },
@@ -190,6 +197,20 @@ float sdCap(vec3 p, vec3 a, vec3 b, float r, out float hh) {
     return length(pa - ba * hh) - r;
 }
 
+// ── user image texture ────────────────────────────────────────────────────
+// IMG_SIZE_inputImage is (0,0) until an image is loaded, so the shader looks unchanged without one.
+float hasImage() { return step(1.5, IMG_SIZE_inputImage.x) * step(1.5, IMG_SIZE_inputImage.y); }
+vec3 imgRaw(vec2 uv) {
+    uv += vec2(imageScroll * 0.03 * TIME, 0.0);
+    uv = abs(mod(uv + 1.0, 2.0) - 1.0);                       // mirror-repeat: no seams
+    return texture2D(inputImage, uv).rgb;
+}
+vec3 imgSample(vec2 uv) {
+    // keep the image's aspect on the shape; mirror-tile beyond its edges
+    float ia = IMG_SIZE_inputImage.x / max(IMG_SIZE_inputImage.y, 1.0);
+    return imgRaw((uv - 0.5) * vec2(1.0 / ia, 1.0) / imageScale + 0.5);
+}
+
 void main() {
     vec2 R = RENDERSIZE.xy;
     vec2 fc = gl_FragCoord.xy;
@@ -227,7 +248,15 @@ void main() {
     ro.yz = RX * ro.yz; rd.yz = RX * rd.yz;
     ro.xz = RY * ro.xz; rd.xz = RY * rd.xz;
 
+    float hImg = hasImage();
     vec3 col = backdrop(uv);
+    if (hImg * imageBg > 0.0) {
+        // cover-fit: the image fills the frame without repeating
+        float ia = IMG_SIZE_inputImage.x / max(IMG_SIZE_inputImage.y, 1.0);
+        float sa = RENDERSIZE.x / RENDERSIZE.y;
+        vec2 cv = vec2(sa / ia, 1.0) / max(sa / ia, 1.0);
+        col = mix(col, imgRaw((uv - 0.5) * cv / imageScale + 0.5) * (0.55 + 0.25 * gLift), imageBg);
+    }
     float alpha = 0.0;
 
     // bounding box
@@ -279,7 +308,24 @@ void main() {
             // colour streams: bands of hue running through the flow
             float band = smoothstep(0.55, 0.85, vn3((hA + hB) * 0.9 + vec3(gT * 0.25, 0.0, -gT * 0.2)));
             vec3 hue = 0.5 + 0.5 * cos(TAU * (hInfo.y * 0.15 + gT * 0.03 + vec3(0.0, 0.33, 0.67)));
-            base = mix(base, hue * 1.1, band * clamp(accentAmt * mix(0.4, 1.6, gLift) + 0.3 * gBuild, 0.0, 1.0));
+            if (hImg * imageAmt > 0.0) {
+                // where on the image this pixel reads from: per-tube centre (mosaic) or the exact hit point
+                vec3 q = mix(p, (hA + hB) * 0.5, imagePerTube);
+                float m = float(imageMap);
+                vec2 iuv;
+                if (m < 0.5) {
+                    vec3 qn = normalize(q + 1e-5);
+                    iuv = vec2(atan(qn.z, qn.x) / TAU + 0.5, asin(clamp(qn.y, -1.0, 1.0)) / PI + 0.5);
+                    iuv.x *= 2.0;                                            // keep the wrap from stretching
+                } else if (m < 1.5) {
+                    iuv = q.xy / (2.2 * gScale) + 0.5;
+                } else {
+                    iuv = (uv - 0.5) * vec2(RENDERSIZE.x / RENDERSIZE.y, 1.0) + 0.5;
+                }
+                vec3 ic = imgSample(iuv);
+                base = mix(base, ic * 1.15, imageAmt);
+            }
+            base = mix(base, hue * 1.1, band * clamp(accentAmt * mix(0.4, 1.6, gLift) + 0.3 * gBuild, 0.0, 1.0) * (1.0 - 0.7 * hImg * imageAmt));
             vec3 c = base * (0.16 + 1.05 * dif + 0.3 * dif2) * ao * (0.7 + 0.4 * gLift);
             c += vec3(1.0) * spec * (1.0 + 1.5 * highP() * ar) * ao;
             c += base * fres * 0.25;
