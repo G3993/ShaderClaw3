@@ -3855,5 +3855,50 @@
     "id": 1409,
     "title": "Flower of Life",
     "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Organic",
+      "Science",
+      "Audio Reactive"
+    ],
+    "description": "Mitosis — a living colony of cells dividing under the microscope. Each glowing cell has a translucent wobbling membrane, drifting cytoplasm granules and a textured nucleus; one by one, at their own pace, they go through the whole cell cycle: the chromatin condenses into X-shaped chromosomes stained magenta with cyan kinetochores, two centrosome stars split and migrate to opposite poles, a green spindle of fibres grows between them and the chromosomes line up on the metaphase plate, then the sister chromatids are torn apart into V-shapes racing toward the poles, the membrane pinches in a cleavage furrow, a bright midbody bridge snaps and two round daughter cells drift apart — and divide again. Three microscope looks: Fluorescence (neon stains glowing on black), Phase Contrast (grey field, cells ringed with bright optical halos, dark chromosomes) and Stained Slide (H&E-style pink cytoplasm and purple nuclei on a pale glass slide); Auto Morph cross-dissolves between them. Bass pulses the membranes, mids make them wobble, highs make the granules sparkle and the beat drives the cycle forward. At rest the colony is sparse, large and slow; during a build the cells contract, the cycle races and the membranes start to tremble; on the drop every cell splits at once in a bright shockwave, and the peak is a dense, saturated, fast-dividing culture.",
+    "file": "mitosis.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1410,
+    "title": "Mitosis",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Organic",
+      "Science",
+      "Audio Reactive"
+    ],
+    "description": "Petri Dish — a top-down, time-lapse view into a glass petri dish of agar where living colonies grow, collide and bloom. Glossy domed bacterial colonies swell out with concentric growth rings and wet specular glints in cream, golden yellow, Serratia red, violet, orange and pink; branching fractal colonies push feathery DLA-like fronts out across the gel; a swarming film spreads in pale terraced rings; colonies that meet stop at fine demarcation grooves instead of overlapping. The forms morph each growth cycle: Bacteria Colonies; Mould Bloom, where fuzzy white hyphae radiate from powdery blue-green, olive, black and pink sporulating centres studded with glossy droplets; Antibiotic Assay, a cream bacterial lawn streaked over the agar with white paper disks punching clear inhibition halos that widen as it grows, a few resistant colonies creeping inside; and Bioluminescent, where blue-green colonies glow on black agar with quorum-sensing waves pulsing through them. The glass rim catches a sharp specular highlight and the lid throws a soft window reflection; when the dish is full, a sterilising wipe dissolves across it to fresh agar and growth begins again. Bass swells every colony and speeds the time-lapse, beats seed new colonies at random spots with a bright pop, and the drop fires a shockwave that bursts colonies everywhere at once. At rest the dish is sparse and calm; during a build it tightens, grows faster and starts to tremble; on the drop a burst of new colonies erupts across the agar, and the peak runs dense, bright and fully alive.",
+    "file": "petri_dish.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1411,
+    "title": "Petri Dish",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Science",
+      "Organic",
+      "Audio Reactive"
+    ],
+    "description": "Neurons — a deep-space forest of nerve cells receding in layers. Each neuron is a glowing soma with a fractal crown of tapering, gently curving dendrites and one long wandering axon that ends in a spray of synaptic boutons. Action potentials run as bright beads of light inward along the dendrites, flash the cell body, race out along the axon and burst at the synapses in a puff of tiny neurotransmitter sparks, so firing cascades from cell to cell across the network. The camera drifts slowly forward through the layers: the middle depth is pin-sharp, the far forest softens into haze and huge out-of-focus cells drift past in the foreground. It morphs between four looks — Golgi Stain, black ink neurons on warm amber paper like a Ramón y Cajal drawing; Brainbow, every cell a different fluorescent colour; Electric, blue-white neon on black; and Glia Web, a dense mesh of fine processes studded with glowing star-shaped astrocytes. Beats fire new cascades, bass swells the cell bodies, highs make the synapses sparkle and a drop fires the whole network at once. At rest only a sparse few cells fire slowly in the dark; during a build the forest thickens, the drift and firing accelerate and the light shimmers and trembles; on the drop every neuron flashes together in one outward wave before the peak runs at full density and colour.",
+    "file": "neurons.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1412,
+    "title": "Neurons",
+    "type": "generator"
   }
 ]

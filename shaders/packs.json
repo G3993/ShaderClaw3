@@ -1074,5 +1074,14 @@
   },
   "flower_of_life": {
     "group": "studio"
+  },
+  "mitosis": {
+    "group": "studio"
+  },
+  "petri_dish": {
+    "group": "studio"
+  },
+  "neurons": {
+    "group": "studio"
   }
 }
