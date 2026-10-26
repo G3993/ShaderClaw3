@@ -1,7 +1,7 @@
 /*{
-  "DESCRIPTION": "Diatoms — a living microscope slide of glass skeletons. Centric diatoms are round silica discs: radiating rows of pores that double in number toward the rim, honeycomb fields of hexagonal areolae, sectored wheels that alternate raised and sunken panels, all ringed by a bright marginal rim and a central rosette. Pennate diatoms are long boat shapes with a sinuous central raphe line, central and end nodules and fine rib striations dotted with pores. Triangular and square Triceratium valves carry honeycomb cells and glowing ocelli at their corners, and radiolaria are spiky lattice spheres with front and back shells, an inner medullary shell and long tapering spines that swing through 3D as they turn. Four views: Darkfield, where the glass glows with iridescent thin-film edges on black; Brightfield, amber-brown silica on a pale cream field with a circular field stop; Mandala Slide, a Victorian arranged slide of a dozen concentric rings of species laid out in perfect symmetry around one great disc, the rings counter-rotating and clicking round a step at a time; and Radiolaria, a drifting field of glassy spined spheres. Auto Morph changes slides with an iris wipe. Specimens drift, rotate and slowly breathe, and their pores shimmer with travelling light. Bass pulses the specimens, beats step the mandala rings round, highs make the glass edges glint with sparkles, and a drop blows the mandala apart outward before it reassembles. At rest the slide is sparse, slow and softly lit; during a build it contracts, spins faster and the pores shimmer quicker with a tremor at the top; the drop is a flash, a shockwave and an explosion of the arrangement, and the peak is dense, saturated and in full motion.",
+  "DESCRIPTION": "Diatoms — a living microscope slide of glass skeletons, each one a little lens filled with the bold graphic patterns of Objectos. Centric diatoms are round silica discs whose interiors hold concentric patterns in perfect radial symmetry: rings of polka dots that double in number toward the rim, polar checkerboards whose rings counter-rotate, stripes that ripple outward from the centre, glowing centre-to-rim gradients, glossy ink domes, dark-rimmed matte lenses and oily iridescent film. Pennate diatoms are long boat shapes with a sinuous raphe line and nodules, their fill mirrored along the long axis so bands, chevrons, dots and checks flow outward toward both tips. Triangular and square Triceratium valves carry the same fills around glowing ocelli, and radiolaria are spiky lattice spheres whose patterns are painted on a true 3D sphere that turns behind the lattice. Every fill sits under a domed glass valve: it is lit as a 3D lens with a sharp specular highlight and a refractive bulge toward the rim, while the glowing glass edges, raphe, ridges and spines stay crisp on top. Patterns use the Objectos palette (signal red, cyan, maroon, pink, lavender, ink) and each specimen slowly trades pattern and colours on its own clock (or lock one with Pattern). Four views: Darkfield, iridescent glass on black; Brightfield, coloured glass on a pale cream field with a circular field stop; Mandala Slide, a Victorian arranged slide of concentric rings of species around one great disc, clicking round a step at a time; and Radiolaria, a drifting field of spined spheres. Auto Morph changes slides with an iris wipe. Bass pulses the specimens and squeezes their patterns, mids twist the fills into swirls and push the stripes, beats step the mandala rings, highs flare the lens highlights and make the glass edges glint; a drop blows the mandala apart before it reassembles. At rest the slide is sparse, slow and softly lit with muted fills; during a build it contracts, spins faster and the highlights shimmer quicker with a tremor at the top; the drop is a flash, a shockwave and an explosion of the arrangement, and the peak is dense, saturated and in full motion.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-26 — original.",
-  "CATEGORIES": ["Generator", "Organic", "Science", "Audio Reactive"],
+  "CATEGORIES": ["Generator", "Organic", "Science", "3D", "Audio Reactive"],
   "INPUTS": [
     { "NAME": "formSel",     "LABEL": "Slide", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Auto Morph", "Darkfield", "Brightfield", "Mandala Slide", "Radiolaria"], "GROUP": "Form" },
     { "NAME": "morphPeriod", "LABEL": "Morph Period (s)", "TYPE": "float", "AUDIO": false, "MIN": 6.0, "MAX": 90.0, "DEFAULT": 20.0, "GROUP": "Form" },
@@ -10,10 +10,13 @@
     { "NAME": "spinSpeed",   "LABEL": "Rotation",         "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Motion" },
     { "NAME": "pulseAmt",    "LABEL": "Breathing",        "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Motion" },
     { "NAME": "poreShimmer", "LABEL": "Pore Shimmer",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Motion" },
+    { "NAME": "patternSel",  "LABEL": "Pattern", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4, 5, 6, 7], "LABELS": ["Auto · Mixed", "Glossy", "Glowing Gradient", "Dark-Rim Matte", "Sliding Stripes", "Polka Dots", "Checks", "Iridescent"], "GROUP": "Patterns" },
+    { "NAME": "patternAmt",  "LABEL": "Pattern Amount",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.85, "GROUP": "Patterns" },
+    { "NAME": "patternScale","LABEL": "Pattern Scale",    "TYPE": "float", "MIN": 0.5, "MAX": 3.0, "DEFAULT": 1.0, "GROUP": "Patterns" },
     { "NAME": "iridescence", "LABEL": "Iridescence",      "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.9, "GROUP": "Look" },
     { "NAME": "glow",        "LABEL": "Glass Glow",       "TYPE": "float", "MIN": 0.2, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Look" },
     { "NAME": "grain",       "LABEL": "Grain",            "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.12, "GROUP": "Finish" },
-    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
+    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 3, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
     { "NAME": "palAmount",   "LABEL": "Palette Amount",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Studio Palette" },
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
@@ -98,6 +101,12 @@ void showDynamics() {
 }
 
 float gT, gSpin, gShim, gBr;
+// interior (valve face) of the current specimen, set by the specimen functions:
+// signed distance to the inner outline (<0 inside), lens radius (elliptical, 0 centre … 1 rim) + its direction,
+// radial symmetry order, base pattern frequency, sphere direction (radiolaria)
+float gInD, gInW, gDome, gSym, gK0, gPoreK, gSlide, gSpecG;
+vec2 gInG;
+vec3 gSphN;
 
 float cov(float d, float aa) { return smoothstep(aa, -aa, d); }
 float ridge(float d, float w) { float x = d / w; return exp(-x * x); }
@@ -143,6 +152,8 @@ vec4 centric(vec2 q, float sd, float aa) {
     float edge = ridge(r - 1.0, aa + 0.022) * 1.3 + ridge(r - 0.915, aa + 0.012) * 0.6 * foot;
     float hole = 0.0, pe = 0.0;
     float style = floor(fract(sd * 7.31) * 3.0);
+    gInD = r - 0.9; gInW = 0.9; gDome = r / 0.9; gInG = q / max(r, 1e-3); gK0 = 5.5;
+    gSym = 6.0 + 2.0 * step(0.5, fract(sd * 2.9));
     if (style < 0.5) {
         // radiating rows of pores, doubling toward the rim (Coscinodiscus / Arachnoidiscus feel)
         float N = 18.0 + 6.0 * floor(fract(sd * 13.7) * 3.0);
@@ -159,7 +170,7 @@ vec4 centric(vec2 q, float sd, float aa) {
         float inside = smoothstep(0.21, 0.26, r) * (1.0 - smoothstep(0.84, 0.88, r));
         hole = cov(d, aa) * inside * lod;
         pe = ridge(d, aa + 0.09 * cell) * inside * lod;
-        edge += ridge((0.5 - abs(c.x)) * cw, aa + 0.004) * 0.3 * inside * lod;     // radial costae
+        edge += ridge((0.5 - abs(c.x)) * cw, aa + 0.004) * 0.3 * inside * lod * gPoreK;     // radial costae
         edge += ridge(r - 0.205, aa + 0.01) * 0.7;
         // central rosette of big pores
         float ra = mod(a + PI / 6.0, TAU / 6.0) - PI / 6.0;
@@ -194,7 +205,7 @@ vec4 centric(vec2 q, float sd, float aa) {
         pe = ridge(hd, aa + 0.07 * cell) * inside * lod * lift;
         edge += ridge(r - 0.06, aa + 0.008) * 0.5;
     }
-    pe *= 0.7 + 0.3 * sin(a * 3.0 + r * 9.0 - gShim);
+    pe *= (0.7 + 0.3 * sin(a * 3.0 + r * 9.0 - gShim)) * gPoreK;
     return vec4(foot * (1.0 - hole) * (0.6 + 0.4 * r), edge + pe * 0.85, hole, foot);
 }
 
@@ -213,6 +224,9 @@ vec4 pennate(vec2 q, float sd, float aa) {
     if (d > 0.08) return vec4(0.0);
     float foot = cov(d, aa);
     float edge = ridge(d, aa + 0.012) * 1.3 + ridge(d + 0.03, aa + 0.008) * 0.45 * foot;
+    gInD = d + 0.035; gInW = W; gK0 = 2.4 / W; gSym = 2.0;
+    vec2 de = vec2(x / 0.95, q.y / (W * 0.85));
+    gDome = length(de); gInG = de / max(gDome, 1e-3);
     // raphe: sinuous central slit with central + terminal nodules
     float rl = smoothstep(0.05, 0.08, ax) * (1.0 - smoothstep(0.86, 0.9, ax));
     edge += ridge(q.y + 0.005 * sin(x * 9.0), aa + 0.004) * rl * 0.95;
@@ -230,8 +244,8 @@ vec4 pennate(vec2 q, float sd, float aa) {
     float lod = smoothstep(0.5, 0.22, aa * G);
     float hole = cov(dp, aa) * inStr * lod;
     float pe = ridge(dp, aa + 0.06 / F) * inStr * lod;
-    edge += ridge((0.5 - abs(fract(s) - 0.5)) / F, aa + 0.1 / F) * inStr * 0.4 * smoothstep(0.5, 0.22, aa * F);
-    pe *= 0.5 + 0.5 * sin(x * 7.0 + ay * 20.0 - gShim);
+    edge += ridge((0.5 - abs(fract(s) - 0.5)) / F, aa + 0.1 / F) * inStr * 0.4 * smoothstep(0.5, 0.22, aa * F) * gPoreK;
+    pe *= (0.5 + 0.5 * sin(x * 7.0 + ay * 20.0 - gShim)) * gPoreK;
     return vec4(foot * (1.0 - hole) * 0.8, edge + pe * 0.85, hole, foot);
 }
 
@@ -253,6 +267,7 @@ vec4 polyD(vec2 q, float sd, float aa) {
     vec2 oc = 0.66 * vec2(cos(va), sin(va));
     float od = length(q - oc) - 0.1;
     float ocIn = cov(od, aa);
+    gInD = max(d + 0.085, 0.012 - od); gInW = 0.72; gDome = r / 0.8; gInG = q / max(r, 1e-3); gK0 = 6.0; gSym = n;
     edge += ridge(od, aa + 0.01) * 0.9;
     float K = 6.0 + 3.0 * fract(sd * 6.1);
     vec2 h = hexLocal(q * K);
@@ -263,7 +278,7 @@ vec4 polyD(vec2 q, float sd, float aa) {
     float hole = cov(hd, aa) * inside * lod;
     float pe = ridge(hd, aa + 0.07 * cell) * inside * lod;
     edge += ocIn * 0.4 * (0.5 + 0.5 * sin(length(q - oc) * 110.0 - gShim)) * smoothstep(0.5, 0.2, aa * 18.0);
-    pe *= 0.5 + 0.5 * sin(a * n + r * 10.0 - gShim);
+    pe *= (0.5 + 0.5 * sin(a * n + r * 10.0 - gShim)) * gPoreK;
     edge += ridge(r - 0.1, aa + 0.008) * 0.5;
     return vec4(foot * (1.0 - hole) * 0.85, edge + pe * 0.85, hole, foot);
 }
@@ -281,9 +296,11 @@ vec4 radiolarian(vec2 q, float sd, float aa) {
         float z = sqrt(max(1.0 - dot(u, u), 0.0));
         float K = 3.0 + 1.8 * fract(sd * 9.3);
         float aaK = aa / R * K / (z + 0.2);
+        gInD = r - R * 0.985; gInW = R; gDome = r / R; gInG = q / max(r, 1e-3); gK0 = 3.2; gSym = 5.0;
         for (int hh = 0; hh < 2; hh++) {
             float sg = hh == 0 ? 1.0 : -1.0;
             vec3 nn = M * vec3(u, z * sg);
+            if (hh == 0) gSphN = nn;
             vec2 F = vor3(nn * K + sd * 31.0);
             float wd = F.y - F.x;
             float ww = 0.09 * (2.0 - gBr);
@@ -315,6 +332,67 @@ vec4 radiolarian(vec2 q, float sd, float aa) {
         body += spn * 0.5 * bk;
     }
     return vec4(body, edge, hole, max(foot, min(body, 1.0)));
+}
+
+// ── Objectos patterns, ported onto the valve face ───────────────────────
+// Objectos palette, ordered dark / light alternately (red, cyan, maroon, pink, ink, lavender)
+// so an odd index offset always pairs a dark with a light colour (reads in every Studio Palette)
+vec3 objC(float k) {
+    k = mod(k, 6.0);
+    if (k < 0.5) return vec3(1.0, 0.02, 0.02);
+    if (k < 1.5) return vec3(0.0, 0.9, 0.95);
+    if (k < 2.5) return vec3(0.42, 0.0, 0.12);
+    if (k < 3.5) return vec3(1.0, 0.55, 0.92);
+    if (k < 4.5) return vec3(0.03, 0.03, 0.04);
+    return vec3(0.6, 0.5, 1.0);
+}
+// anti-aliased square wave (edges at .25/.75), w = filter width in cell units
+float sqw(float x, float w) { return clamp((0.25 - abs(fract(x) - 0.5)) / w, -1.0, 1.0); }
+// m: 0 glossy, 1 glowing gradient, 2 dark-rim matte, 3 sliding stripes, 4 polka dots,
+// 5 checks, 6 iridescent.  g = (radial/along cell coord, angular/across cell coord),
+// cap = centre disc of a radial layout, aaC = pixel footprint in cells, n = lens normal,
+// rl = 0 centre … 1 rim
+vec3 patMat(float m, float ia, float ib, vec2 g, float cap, float aaC, vec3 n, float rl, float sd) {
+    vec3 A = objC(ia), B = objC(ib);
+    vec3 L = normalize(vec3(-0.42, 0.55, 0.72));
+    float ndl = dot(n, L);
+    float diff = clamp(ndl, 0.0, 1.0), wrap = clamp(ndl * 0.5 + 0.5, 0.0, 1.0);
+    float nv = clamp(n.z, 0.0, 1.0);
+    float fres = pow(1.0 - nv, 2.0);
+    float nh = clamp(dot(n, normalize(L + vec3(0.0, 0.0, 1.0))), 0.0, 1.0);
+    float spec = pow(nh, 90.0) * gSpecG;
+    float lod = 1.0 - smoothstep(0.25, 0.6, aaC);
+    if (m < 0.5) {
+        vec3 env = mix(vec3(0.03, 0.03, 0.05), vec3(0.45, 0.5, 0.6), n.y * 0.5 + 0.5);
+        return A * (0.15 + 0.75 * diff) + env * 0.3 * fres + vec3(spec * 0.9 + 0.08 * pow(nh, 12.0));
+    }
+    if (m < 1.5) {
+        vec3 c = mix(A, B, smoothstep(0.0, 1.0, rl)) * 1.05 * (0.75 + 0.25 * wrap);
+        return c + mix(B, vec3(1.0), 0.3) * fres * 0.35;
+    }
+    if (m < 2.5) {
+        vec3 c = mix(B, A, pow(nv, 1.5));
+        c = mix(c, vec3(0.015) + B * 0.1, smoothstep(0.55, 1.0, fres) * 0.8);
+        return c * (0.65 + 0.45 * wrap) + vec3(spec * 0.25);
+    }
+    float s;
+    if (m < 3.5) {
+        float w = max(TAU * aaC * 0.9, 0.04);
+        s = mix(0.5, smoothstep(-w, w, sin(TAU * g.x - gSlide)), lod);
+    } else if (m < 4.5) {
+        vec2 cc = cap > 0.5 ? vec2(g.x, 0.0) : fract(g) - 0.5;
+        s = cov(length(cc) - 0.31 * gBr, max(aaC, 0.01));
+        lod = mix(lod, 1.0, cap * step(g.x, 0.45));
+        s = mix(0.3, s, lod);
+    } else if (m < 5.5) {
+        float w = max(aaC * 0.75, 0.015);
+        s = mix(0.5, 0.5 + 0.5 * sqw(g.x, w) * mix(sqw(g.y, w), 1.0, cap), lod);
+    } else {
+        float t = nv * 1.8 + rl * 0.8 + TIME * 0.15 + sd * 3.0;
+        vec3 ir = 0.5 + 0.5 * cos(TAU * (t + vec3(0.0, 0.33, 0.67)));
+        return mix(A, ir, 0.65) * (0.35 + 0.75 * wrap) + vec3(spec * 0.8);
+    }
+    return mix(A, B, s) * (0.3 + 0.8 * wrap) + vec3(spec * 0.5);
 }
 
 vec4 specimen(vec2 q, float type, float sd, float aa) {
@@ -418,8 +496,72 @@ vec4 renderForm(float form, vec2 sp, vec2 uv) {
         sd = fract(h3 * 7.13 + h4 * 3.1);
     }
     vec4 S = vec4(0.0);
+    gInD = 1.0; gInW = 1.0; gDome = 1.0; gInG = vec2(0.0); gSym = 6.0; gK0 = 5.0; gSphN = vec3(0.0, 0.0, 1.0);
     if (present > 0.5) S = specimen(q, type, sd, aa);
     S.xy *= dim;
+
+    // ── Objectos pattern inside the valve, under a domed glass lens ──
+    float pm = 0.0;
+    vec3 pc = vec3(0.0), pn = vec3(0.0, 0.0, 1.0);
+    if (S.w > 0.0 && patternAmt > 0.001 && gInD < aa) {
+        float rho = min(gDome, 1.0);
+        float zz = sqrt(1.0 - rho * rho);
+        pn = normalize(vec3(gInG * rho * 0.85, zz + 0.12));   // softened spherical lens
+        pm = cov(gInD, aa) * patternAmt;
+        float K = gK0 * patternScale * (1.0 + 0.1 * bp);          // bass squeezes the fill
+        vec2 qp = q * (0.94 + 0.06 * zz) - pn.xy * 0.05 * gInW;  // lens magnification + refraction
+        float twA = 0.6 * sin(TIME * 1.3 + sd * 6.0) * mix(0.5, 1.3, gLift) + 0.8 * midP() * ar + 0.9 * gBuild * gBuild;
+        vec2 g;
+        float cap = 0.0, rl, aaC;
+        if (type > 0.5 && type < 1.5) {
+            // pennate: mirrored across the raphe and about the centre, flowing to both tips
+            float ax = abs(qp.x), ay = abs(qp.y);
+            g = vec2((ax + 0.25 * twA * ay) * K - 0.35 * gT, ay * K);
+            rl = ax;
+            aaC = aa * K;
+        } else {
+            float r, ang, sc = 1.0;
+            if (type > 2.5) {                                     // radiolaria: on the rotating sphere
+                r = acos(clamp(gSphN.z, -1.0, 1.0)) / (PI * 0.5);
+                ang = atan(gSphN.y, gSphN.x);
+                sc = 1.0 / (gInW * max(zz, 0.2) * PI * 0.5);
+            } else {
+                r = length(qp);
+                ang = atan(qp.y, qp.x);
+            }
+            float rk = r * K;
+            float ri = floor(rk);
+            float rc = (ri + 0.5) / K;
+            float circ = type > 2.5 ? sin(min(rc, 2.0) * PI * 0.5) / (PI * 0.5) : rc;
+            float N = gSym * max(1.0, floor(TAU * circ * K / gSym + 0.5));
+            ang += twA * r * 0.8 + (mod(ri, 2.0) * 2.0 - 1.0) * 0.2 * gSpin;   // swirl + counter-rotating rings
+            g = vec2(rk, ang / TAU * N);
+            cap = 1.0 - step(0.5, ri);
+            rl = clamp(r, 0.0, 1.0);
+            float circR = type > 2.5 ? sin(clamp(r, 0.02, 1.98) * PI * 0.5) / (PI * 0.5) : max(r, 1e-3);
+            aaC = aa * sc * max(K, N / (TAU * circR) * (1.0 - cap));
+        }
+        float ph = TIME / 9.0 + h11(sd * 73.1) * 0.999;
+        float kq = floor(ph);
+        float fq = smoothstep(0.75, 1.0, fract(ph));
+        float psel = float(patternSel);
+        for (int k = 0; k < 2; k++) {
+            float w = k == 0 ? 1.0 - fq : fq;
+            if (w < 0.001) continue;
+            float kk = kq + float(k);
+            float mm = psel > 0.5 ? psel - 1.0 : floor(h11(sd * 23.3 + kk * 0.913) * 7.0);
+            float p1 = floor(h11(sd * 41.1 + kk * 1.37) * 6.0);
+            float p2 = p1 + 1.0 + 2.0 * floor(h11(sd * 83.7 + kk) * 3.0);
+            pc += w * patMat(mm, p1, p2, g, cap, aaC, pn, rl, sd);
+        }
+        // glass lens on top: sharp highlight + cool fresnel rim
+        float gnh = clamp(dot(pn, normalize(vec3(-0.42, 0.55, 0.72) + vec3(0.0, 0.0, 1.0))), 0.0, 1.0);
+        pc += vec3(pow(gnh, 220.0) * 0.45 * gSpecG) + vec3(0.55, 0.72, 0.9) * pow(1.0 - pn.z, 3.0) * 0.3;
+        if (type > 2.5) pc *= mix(0.6, 1.0, S.z);                 // lattice walls shade the fill
+        pc *= (1.0 + 0.15 * audioLevel * ar) * mix(0.85, 1.12, gLift) * dim;
+        pc = mix(vec3(lum(pc)), pc, 1.0 - 0.3 * gRest + 0.25 * gPeak + 0.2 * gBuild);
+        pc = max(pc, 0.0);
+    }
 
     // shading
     float irA = iridescence * mix(0.5, 1.0, gLift) * (1.0 - 0.45 * gRest) * (1.0 + 0.25 * gPeak);
@@ -440,25 +582,26 @@ vec4 renderForm(float form, vec2 sp, vec2 uv) {
         float stop = 1.0 - smoothstep(0.62, 1.0, rr) * 0.55;
         vec3 base = vec3(0.96, 0.91, 0.79) * stop * (0.94 + 0.06 * gLift);
         vec3 absorb = vec3(0.22, 0.52, 1.05);
-        float T = S.x * 0.45 + S.y * 0.85 + S.w * 0.18;
-        col = base * exp(-absorb * T * 1.7);
-        col *= mix(vec3(1.0), 0.8 + 0.4 * ir, 0.3 * irA * S.w);
-        col = mix(col, vec3(1.0, 0.98, 0.92) * stop, S.z * 0.35);   // pores let light through
+        float T = S.x * 0.45 * (1.0 - 0.7 * pm) + S.y * 0.85 + S.w * 0.18 * (1.0 - pm);
+        vec3 under = mix(base, pc * mix(1.0, stop, 0.5) + base * 0.06, pm);
+        col = under * exp(-absorb * T * 1.7);
+        col *= mix(vec3(1.0), 0.8 + 0.4 * ir, 0.3 * irA * S.w * (1.0 - pm));
+        col = mix(col, vec3(1.0, 0.98, 0.92) * stop, S.z * 0.35 * (1.0 - pm));   // pores let light through
         col -= vec3(0.35, 0.42, 0.5) * gl * 0.4;
         col *= 1.0 - speck * 0.5;
-        alpha = clamp(T, 0.0, 1.0);
+        alpha = clamp(max(T, pm), 0.0, 1.0);
     } else {
         vec3 edgeC = mix(vec3(0.85, 0.94, 1.0), ir * 1.15, irA * 0.6);
         if (form > 2.5) edgeC = mix(edgeC, vec3(0.6, 0.86, 1.0), 0.25);
         vec3 bodyC = mix(vec3(0.3, 0.42, 0.52), ir, irA * 0.45);
-        vec3 add = edgeC * S.y * glow * hiG * 0.85 + bodyC * S.x * 0.14 * glow;
+        vec3 add = edgeC * S.y * glow * hiG * 0.85 + bodyC * S.x * 0.14 * glow * (1.0 - pm);
         add = add / (1.0 + 0.35 * add);
         add += vec3(1.0, 0.97, 0.9) * gl;
         add += vec3(0.5, 0.6, 0.7) * speck * 0.35;
         vec3 bg = backdrop(uv) + vec3(0.008, 0.016, 0.03) * (1.0 - smoothstep(0.0, 1.0, rr)) * (1.0 + gLift);
         if (form > 1.5 && form < 2.5) add += vec3(0.25, 0.32, 0.4) * exp(-dot(sp, sp) * 12.0) * 0.08 * (1.0 + gPeak);
-        col = bg + add;
-        alpha = clamp(lum(add) * 2.0 + S.w * 0.3, 0.0, 1.0);
+        col = mix(bg, pc, pm) + add;
+        alpha = clamp(max(lum(add) * 2.0 + S.w * 0.3, pm), 0.0, 1.0);
     }
     return vec4(col, alpha);
 }
@@ -473,6 +616,9 @@ void main() {
     gT = TIME * 0.5 + (audioMidTime * 0.25 + audioBassTime * 0.15) * ar + 1.5 * gBuild * gBuild;
     gSpin = gT * spinSpeed + 2.0 * gBuild * gBuild;
     gShim = TIME * 1.6 * poreShimmer + audioHighTime * 1.2 * ar + 4.0 * gBuild * gBuild;
+    gPoreK = 1.0 - 0.75 * patternAmt;
+    gSlide = TIME * 2.0 + audioMidTime * 0.8 * ar + 3.0 * gBuild * gBuild;
+    gSpecG = (1.0 + 1.3 * highP() * ar + 0.3 * gPeak - 0.3 * gRest) * (1.0 + gBuild * gBuild * (0.5 + 0.5 * sin(TIME * 9.0 + gBuild * gBuild * 70.0)));
     gBr = 1.0 + pulseAmt * (0.05 * sin(TIME * 0.6) + 0.07 * bassP() * ar) + 0.08 * gDrop;
     // build tremor near the top
     float trem = smoothstep(0.7, 1.0, gBuild);
