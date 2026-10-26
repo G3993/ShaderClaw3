@@ -1101,5 +1101,8 @@
   },
   "mycelium": {
     "group": "studio"
+  },
+  "perlin": {
+    "group": "studio"
   }
 }
