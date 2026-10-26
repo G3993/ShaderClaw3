@@ -3945,5 +3945,20 @@
     "id": 1415,
     "title": "Diatoms",
     "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "3D",
+      "Science",
+      "Audio Reactive"
+    ],
+    "description": "Bloodstream — a flight through a living blood vessel. In Artery you glide down a winding crimson tunnel whose glossy, wet walls are tiled with the faint cobblestone of endothelial cells and wrinkle as they pass; thousands of red blood cells stream toward you and around you, true biconcave discs that tumble as they fly, each with its sunken pale centre, a glistening rim highlight and a translucent red glow where it is thin, while occasional white blood cells roll past as big lumpy pearl-white spheres and tiny amber platelets glint in the flow. In Capillary the vessel narrows to a tight tube and the cells come single file, squeezed into cupped parachute shapes that barely fit. Microscope Smear drops you onto a glass slide under a brightfield lens: a circular field of pink discs with pale centres overlapping like coins, lilac white cells with dark purple lobed nuclei and specks of platelets, drifting and breathing in and out of focus. Thermal shows the artery through a false-colour heat camera, cells glowing yellow-hot against cooler purple walls. Auto Morph travels Artery → Capillary → Thermal → Smear. The heartbeat is the music: bass and beats drive a lub-dub surge that pushes the flow forward, dilates the vessel and sends a pressure wave rolling down the walls (with a gentle resting heartbeat in silence); mids speed the stream; highs make the wet highlights sparkle. At rest the vessel is wide and calm with sparse cells drifting in a slow pulse; during a build it constricts, the stream rushes faster, the walls shimmer and the view trembles; on the drop one massive pulse floods the tunnel with light, blows the vessel open and scatters the cells, and the peak runs at full density with rolling camera and hot colour.",
+    "file": "bloodstream.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1416,
+    "title": "Bloodstream",
+    "type": "generator"
   }
 ]
