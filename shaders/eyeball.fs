@@ -23,7 +23,11 @@
     { "NAME": "saccades",    "LABEL": "Saccade Jumps",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6, "GROUP": "Motion" },
     { "NAME": "worldSpeed",  "LABEL": "World Speed",      "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Motion" },
     { "NAME": "worldOnIris", "LABEL": "World Through Iris","TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6, "GROUP": "Look" },
-    { "NAME": "surroundSel", "LABEL": "Surroundings", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Auto Morph", "World Corona", "Iris Tunnel", "Aura Rays", "Plain"], "GROUP": "Look" },
+    { "NAME": "surroundSel", "LABEL": "Surroundings", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4, 5, 6], "LABELS": ["Auto Morph", "World Corona", "Iris Tunnel", "Aura Rays", "Plain", "Radial Gradient", "Minimal Black"], "GROUP": "Look" },
+    { "NAME": "gradColA",    "LABEL": "Radial Centre", "TYPE": "color", "DEFAULT": [0.95, 0.12, 0.45, 1.0], "GROUP": "Look" },
+    { "NAME": "gradColB",    "LABEL": "Radial Mid",    "TYPE": "color", "DEFAULT": [0.35, 0.12, 0.95, 1.0], "GROUP": "Look" },
+    { "NAME": "gradColC",    "LABEL": "Radial Edge",   "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.08, 1.0], "GROUP": "Look" },
+    { "NAME": "gradDrift",   "LABEL": "Radial Colour Drift", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5, "GROUP": "Look" },
     { "NAME": "surroundAmt", "LABEL": "Surround Amount",  "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Look" },
     { "NAME": "worldOnBall", "LABEL": "World On Eyeball", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.35, "GROUP": "Look" },
     { "NAME": "veins",       "LABEL": "Veins",            "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Look" },
@@ -31,7 +35,7 @@
     { "NAME": "glowAmt",     "LABEL": "Inner Glow",       "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Look" },
     { "NAME": "hueShift",    "LABEL": "Hue Shift",        "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "GROUP": "Look" },
     { "NAME": "grain",       "LABEL": "Grain",            "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.2, "GROUP": "Finish" },
-    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2], "LABELS": ["Original Colours", "Red · Black · White", "Blue · Black · White"], "GROUP": "Studio Palette" },
+    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
     { "NAME": "palAmount",   "LABEL": "Palette Amount",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Studio Palette" },
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
@@ -74,15 +78,32 @@ vec3 hueRot(vec3 c, float h) {
 }
 vec3 studioPalette(vec3 c) {
     float m = float(paletteMode);
-    if (m < 0.5 || palAmount <= 0.0) return c;
-    vec3 acc = m < 1.5 ? palRed.rgb : palBlue.rgb;
+    if (palAmount <= 0.0) return c;
     float L = clamp(dot(c, vec3(0.2126, 0.7152, 0.0722)), 0.0, 1.0);
     float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b));
     float sat = mx > 1e-4 ? (mx - mn) / mx : 0.0;
-    float t = pow(L, 0.8);
-    vec3 ramp = t < 0.5 ? mix(vec3(0.0), acc, t * 2.0) : mix(acc, vec3(1.0), (t - 0.5) * 2.0);
-    vec3 mono = vec3(smoothstep(0.0, 1.0, L));
-    vec3 o = mix(mono, ramp, smoothstep(0.06, 0.4, sat));
+    vec3 o;
+    if (m < 0.5) {
+        // Colorful: saturation pushed hard toward neon / primary / poppy colour.
+        vec3 hueC = pow((c - mn) / max(mx - mn, 1e-4), vec3(1.4));   // pure hue, nudged toward primaries
+        float s2 = 1.0 - pow(1.0 - sat, 4.0);                         // strong but curved saturation boost
+        float v = clamp(pow(mx, 0.85) * 1.12, 0.0, 1.0);
+        o = mix(vec3(1.0), hueC, s2) * v;
+        // flat mid-greys pick up a drifting neon spectrum keyed to brightness
+        float hx = L * 1.7 + 0.04 * TIME;
+        vec3 neon = pow(clamp(abs(fract(hx + vec3(0.0, 0.6667, 0.3333)) * 6.0 - 3.0) - 1.0, 0.0, 1.0), vec3(1.4));
+        float wn = (1.0 - smoothstep(0.02, 0.1, sat)) * smoothstep(0.06, 0.25, L) * (1.0 - smoothstep(0.55, 0.85, L));
+        o = mix(o, neon * v, wn);
+        o = mix(o, vec3(1.0), smoothstep(0.85, 1.0, L) * 0.5);       // white-hot cores
+    } else if (m > 2.5) {
+        o = vec3(smoothstep(0.02, 0.95, pow(L, 0.9)));             // Black & White
+    } else {
+        vec3 acc = m < 1.5 ? palRed.rgb : palBlue.rgb;
+        float t = pow(L, 0.8);
+        vec3 ramp = t < 0.5 ? mix(vec3(0.0), acc, t * 2.0) : mix(acc, vec3(1.0), (t - 0.5) * 2.0);
+        vec3 mono = vec3(smoothstep(0.0, 1.0, L));
+        o = mix(mono, ramp, smoothstep(0.06, 0.4, sat));
+    }
     return mix(c, o, palAmount);
 }
 
@@ -423,6 +444,33 @@ vec3 surroundings(vec2 sp, bool two, float Rr, float zc, float ph) {
     return res;
 }
 
+// big radial gradient centred behind the eye(s); breathes with bass, flares on build/drop
+vec3 radialGrad(vec2 sp, float Rr, float zc) {
+    float r = length(sp * vec2(0.85, 1.0)) / (Rr * 1.6 / zc);       // in eye radii
+    float ar = audioReact;
+    float t = TIME * 0.12 + audioMidTime * 0.08 * ar;
+    float sc = 1.0 + 0.35 * gLift + 0.25 * bassP() * ar + 0.6 * gDrop - 0.2 * gBuild;
+    float x = max(r - 0.9, 0.0) / (2.1 * sc);                       // starts at the eye's rim
+    // slow hue drift of the three stops (rotate in a cheap hue space)
+    float hd = gradDrift * 0.5 * sin(t);
+    mat3 hr = mat3(1.0);
+    float ca = cos(hd * 3.0), sa = sin(hd * 3.0);
+    vec3 k = vec3(0.57735);
+    hr = mat3(ca) + (1.0 - ca) * mat3(k.x*k, k.y*k, k.z*k) + sa * mat3(0.0, k.z, -k.y, -k.z, 0.0, k.x, k.y, -k.x, 0.0);
+    vec3 A = clamp(hr * gradColA.rgb, 0.0, 1.0), B = clamp(hr * gradColB.rgb, 0.0, 1.0);
+    vec3 c = mix(A, B, smoothstep(0.0, 0.55, x));
+    c = mix(c, gradColC.rgb, smoothstep(0.3, 1.0, x));
+    // hot glow hugging the eyeball + soft bloom
+    c += A * exp(-x * 9.0) * (0.55 + 0.4 * gLift + 0.6 * gDrop);
+    c += mix(A, vec3(1.0), 0.4) * exp(-x * 26.0) * 0.35;
+    // gentle swirl of light so the field isn't static
+    float sw = 0.5 + 0.5 * sin(atan(sp.y, sp.x) * 3.0 + t * 2.0 + x * 6.0);
+    c *= 0.9 + 0.18 * sw * (1.0 - smoothstep(0.2, 0.9, x));
+    // soft concentric ripple that travels out on beats
+    c *= 1.0 + 0.12 * audioBeatPulse * ar * exp(-pow((x - (1.0 - audioBeatPulse) * 0.8) * 6.0, 2.0));
+    return c * (0.75 + 0.35 * gLift + 0.5 * gDrop);
+}
+
 vec3 backdrop(vec2 uv) {
     float m = float(bgMode);
     if (m < 0.5) return bgColor.rgb;
@@ -545,9 +593,12 @@ void main() {
     sp += (vec2(h11(floor(TIME * 30.0)), h11(floor(TIME * 30.0) + 5.0)) - 0.5) * 0.012 * smoothstep(0.6, 1.0, gBuild);
     rd = normalize(vec3(sp, -1.6));
 
-    vec3 col = backdrop(uv);
+    float sSel = float(surroundSel);
+    bool minimal = sSel > 5.5;
+    vec3 col = minimal ? vec3(0.0) : backdrop(uv);
     float alpha = 0.0;
     float Rr = (two ? 0.95 : 1.0) * eyeSize * (1.0 + 0.03 * bassP() * ar + 0.06 * gDrop - 0.03 * gRest);
+    if (sSel > 4.5 && !minimal) col = radialGrad(sp, Rr, ro.z);
     col += surroundings(sp, two, Rr, ro.z, ph) * surroundAmt;
     for (int e = 0; e < 2; e++) {
         if (!two && e > 0) break;
@@ -557,7 +608,7 @@ void main() {
         float h = b * b - c;
         // soft halo around the ball
         float dc = length(cross(C - ro, rd)) - Rr;
-        col += vec3(0.45, 0.3, 0.8) * exp(-max(dc, 0.0) * 6.0) * 0.12 * glowAmt;
+        if (!minimal) col += vec3(0.45, 0.3, 0.8) * exp(-max(dc, 0.0) * 6.0) * 0.12 * glowAmt;
         if (h < 0.0) continue;
         vec3 g1 = normalize(target - C);
         vec3 g2 = g1;

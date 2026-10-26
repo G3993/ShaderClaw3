@@ -13,7 +13,7 @@
     { "NAME": "iridescence", "LABEL": "Iridescence",      "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.9, "GROUP": "Look" },
     { "NAME": "glow",        "LABEL": "Glass Glow",       "TYPE": "float", "MIN": 0.2, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Look" },
     { "NAME": "grain",       "LABEL": "Grain",            "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.12, "GROUP": "Finish" },
-    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2], "LABELS": ["Original Colours", "Red · Black · White", "Blue · Black · White"], "GROUP": "Studio Palette" },
+    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
     { "NAME": "palAmount",   "LABEL": "Palette Amount",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Studio Palette" },
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
@@ -41,15 +41,32 @@ float lum(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 
 vec3 studioPalette(vec3 c) {
     float m = float(paletteMode);
-    if (m < 0.5 || palAmount <= 0.0) return c;
-    vec3 acc = m < 1.5 ? palRed.rgb : palBlue.rgb;
+    if (palAmount <= 0.0) return c;
     float L = clamp(dot(c, vec3(0.2126, 0.7152, 0.0722)), 0.0, 1.0);
     float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b));
     float sat = mx > 1e-4 ? (mx - mn) / mx : 0.0;
-    float t = pow(L, 0.8);
-    vec3 ramp = t < 0.5 ? mix(vec3(0.0), acc, t * 2.0) : mix(acc, vec3(1.0), (t - 0.5) * 2.0);
-    vec3 mono = vec3(smoothstep(0.0, 1.0, L));
-    vec3 o = mix(mono, ramp, smoothstep(0.06, 0.4, sat));
+    vec3 o;
+    if (m < 0.5) {
+        // Colorful: saturation pushed hard toward neon / primary / poppy colour.
+        vec3 hueC = pow((c - mn) / max(mx - mn, 1e-4), vec3(1.4));   // pure hue, nudged toward primaries
+        float s2 = 1.0 - pow(1.0 - sat, 4.0);                         // strong but curved saturation boost
+        float v = clamp(pow(mx, 0.85) * 1.12, 0.0, 1.0);
+        o = mix(vec3(1.0), hueC, s2) * v;
+        // flat mid-greys pick up a drifting neon spectrum keyed to brightness
+        float hx = L * 1.7 + 0.04 * TIME;
+        vec3 neon = pow(clamp(abs(fract(hx + vec3(0.0, 0.6667, 0.3333)) * 6.0 - 3.0) - 1.0, 0.0, 1.0), vec3(1.4));
+        float wn = (1.0 - smoothstep(0.02, 0.1, sat)) * smoothstep(0.06, 0.25, L) * (1.0 - smoothstep(0.55, 0.85, L));
+        o = mix(o, neon * v, wn);
+        o = mix(o, vec3(1.0), smoothstep(0.85, 1.0, L) * 0.5);       // white-hot cores
+    } else if (m > 2.5) {
+        o = vec3(smoothstep(0.02, 0.95, pow(L, 0.9)));             // Black & White
+    } else {
+        vec3 acc = m < 1.5 ? palRed.rgb : palBlue.rgb;
+        float t = pow(L, 0.8);
+        vec3 ramp = t < 0.5 ? mix(vec3(0.0), acc, t * 2.0) : mix(acc, vec3(1.0), (t - 0.5) * 2.0);
+        vec3 mono = vec3(smoothstep(0.0, 1.0, L));
+        o = mix(mono, ramp, smoothstep(0.06, 0.4, sat));
+    }
     return mix(c, o, palAmount);
 }
 vec3 backdrop(vec2 uv) {

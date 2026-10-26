@@ -1,9 +1,9 @@
 /*{
-  "DESCRIPTION": "Neurons — a deep-space forest of nerve cells receding in layers. Each neuron is a glowing soma with a fractal crown of tapering, gently curving dendrites and one long wandering axon that ends in a spray of synaptic boutons. Action potentials run as bright beads of light inward along the dendrites, flash the cell body, race out along the axon and burst at the synapses in a puff of tiny neurotransmitter sparks, so firing cascades from cell to cell across the network. The camera drifts slowly forward through the layers: the middle depth is pin-sharp, the far forest softens into haze and huge out-of-focus cells drift past in the foreground. It morphs between four looks — Golgi Stain, black ink neurons on warm amber paper like a Ramón y Cajal drawing; Brainbow, every cell a different fluorescent colour; Electric, blue-white neon on black; and Glia Web, a dense mesh of fine processes studded with glowing star-shaped astrocytes. Beats fire new cascades, bass swells the cell bodies, highs make the synapses sparkle and a drop fires the whole network at once. At rest only a sparse few cells fire slowly in the dark; during a build the forest thickens, the drift and firing accelerate and the light shimmers and trembles; on the drop every neuron flashes together in one outward wave before the peak runs at full density and colour.",
+  "DESCRIPTION": "Neurons — a deep-space forest of nerve cells receding in layers through true black. Each neuron is a luminous glassy soma with a fractal crown of tapering, gently curving dendrites and one long wandering axon ending in a spray of synaptic boutons, all rendered as lit 3D tubes and spheres with a specular glint, a translucent glow and an iridescent sheen that slides from cyan through electric blue and violet to magenta and hot pink. Action potentials run as white-hot beads of light with a neon bloom inward along the dendrites, flash the cell body, race out along the axon and burst at the synapses in a puff of tiny neurotransmitter sparks, so firing cascades from cell to cell across the network. The camera drifts slowly forward: the near and middle layers are crisp, the far forest falls away soft and dim into a faint blue depth haze and huge out-of-focus cells drift past in the foreground. It morphs between four looks — Iridescent, dark glass neurons edged in an oil-slick violet-cyan-pink sheen; Neon Brainbow, every cell its own neon hue; Electric, blue-white neon; and Glia Web, a dense mesh of fine processes studded with glowing star-shaped astrocytes. Beats fire new cascades, bass swells the cell bodies, highs make the synapses sparkle and a drop fires the whole network at once. At rest only a sparse few cells fire slowly in the dark; during a build the forest thickens, the drift and firing accelerate and the light shimmers and trembles; on the drop every neuron flashes together in one outward wave before the peak runs at full density and colour.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-26 — original.",
   "CATEGORIES": ["Generator", "Science", "Organic", "Audio Reactive"],
   "INPUTS": [
-    { "NAME": "formSel",     "LABEL": "Form", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Auto Morph", "Golgi Stain", "Brainbow", "Electric", "Glia Web"], "GROUP": "Form" },
+    { "NAME": "formSel",     "LABEL": "Form", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Auto Morph", "Iridescent", "Neon Brainbow", "Electric", "Glia Web"], "GROUP": "Form" },
     { "NAME": "morphPeriod", "LABEL": "Morph Period (s)", "TYPE": "float", "AUDIO": false, "MIN": 4.0, "MAX": 60.0, "DEFAULT": 16.0, "GROUP": "Form" },
     { "NAME": "density",     "LABEL": "Neuron Density",   "TYPE": "float", "MIN": 0.2, "MAX": 1.0, "DEFAULT": 0.8, "GROUP": "Network" },
     { "NAME": "branching",   "LABEL": "Dendrite Spread",  "TYPE": "float", "MIN": 0.5, "MAX": 1.5, "DEFAULT": 1.0, "GROUP": "Network" },
@@ -13,7 +13,7 @@
     { "NAME": "dof",         "LABEL": "Depth of Field",   "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Look" },
     { "NAME": "glow",        "LABEL": "Glow",             "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Look" },
     { "NAME": "grain",       "LABEL": "Grain",            "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.12, "GROUP": "Finish" },
-    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2], "LABELS": ["Original Colours", "Red · Black · White", "Blue · Black · White"], "GROUP": "Studio Palette" },
+    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
     { "NAME": "palAmount",   "LABEL": "Palette Amount",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Studio Palette" },
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
@@ -22,7 +22,7 @@
     { "NAME": "dynamics",    "LABEL": "Build & Drop Depth", "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.85, "GROUP": "Show Dynamics" },
     { "NAME": "bgMode",      "LABEL": "Background", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2], "LABELS": ["Solid", "Vertical Gradient", "Radial Gradient"], "GROUP": "Background" },
     { "NAME": "bgColor",     "LABEL": "BG Color / Top / Center", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0], "GROUP": "Background" },
-    { "NAME": "bgColor2",    "LABEL": "BG Bottom / Edge", "TYPE": "color", "DEFAULT": [0.02, 0.02, 0.05, 1.0], "GROUP": "Background" },
+    { "NAME": "bgColor2",    "LABEL": "BG Bottom / Edge", "TYPE": "color", "DEFAULT": [0.0, 0.004, 0.02, 1.0], "GROUP": "Background" },
     { "NAME": "transparentBg","LABEL": "Transparent BG",  "TYPE": "bool",  "DEFAULT": false, "GROUP": "Background" }
   ]
 }*/
@@ -47,15 +47,32 @@ float vnoise(vec2 p) {
 
 vec3 studioPalette(vec3 c) {
     float m = float(paletteMode);
-    if (m < 0.5 || palAmount <= 0.0) return c;
-    vec3 acc = m < 1.5 ? palRed.rgb : palBlue.rgb;
+    if (palAmount <= 0.0) return c;
     float L = clamp(dot(c, vec3(0.2126, 0.7152, 0.0722)), 0.0, 1.0);
     float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b));
     float sat = mx > 1e-4 ? (mx - mn) / mx : 0.0;
-    float t = pow(L, 0.8);
-    vec3 ramp = t < 0.5 ? mix(vec3(0.0), acc, t * 2.0) : mix(acc, vec3(1.0), (t - 0.5) * 2.0);
-    vec3 mono = vec3(smoothstep(0.0, 1.0, L));
-    vec3 o = mix(mono, ramp, smoothstep(0.06, 0.4, sat));
+    vec3 o;
+    if (m < 0.5) {
+        // Colorful: saturation pushed hard toward neon / primary / poppy colour.
+        vec3 hueC = pow((c - mn) / max(mx - mn, 1e-4), vec3(1.4));   // pure hue, nudged toward primaries
+        float s2 = 1.0 - pow(1.0 - sat, 4.0);                         // strong but curved saturation boost
+        float v = clamp(pow(mx, 0.85) * 1.12, 0.0, 1.0);
+        o = mix(vec3(1.0), hueC, s2) * v;
+        // flat mid-greys pick up a drifting neon spectrum keyed to brightness
+        float hx = L * 1.7 + 0.04 * TIME;
+        vec3 neon = pow(clamp(abs(fract(hx + vec3(0.0, 0.6667, 0.3333)) * 6.0 - 3.0) - 1.0, 0.0, 1.0), vec3(1.4));
+        float wn = (1.0 - smoothstep(0.02, 0.1, sat)) * smoothstep(0.06, 0.25, L) * (1.0 - smoothstep(0.55, 0.85, L));
+        o = mix(o, neon * v, wn);
+        o = mix(o, vec3(1.0), smoothstep(0.85, 1.0, L) * 0.5);       // white-hot cores
+    } else if (m > 2.5) {
+        o = vec3(smoothstep(0.02, 0.95, pow(L, 0.9)));             // Black & White
+    } else {
+        vec3 acc = m < 1.5 ? palRed.rgb : palBlue.rgb;
+        float t = pow(L, 0.8);
+        vec3 ramp = t < 0.5 ? mix(vec3(0.0), acc, t * 2.0) : mix(acc, vec3(1.0), (t - 0.5) * 2.0);
+        vec3 mono = vec3(smoothstep(0.0, 1.0, L));
+        o = mix(mono, ramp, smoothstep(0.06, 0.4, sat));
+    }
     return mix(c, o, palAmount);
 }
 vec3 backdrop(vec2 uv) {
@@ -86,7 +103,7 @@ void showDynamics() {
     gLift  = mix(0.5, clamp(0.15 + e * 0.7 + gBuild * 0.25 + d * 0.3, 0.0, 1.0), k);
 }
 
-// form weights: Golgi, Brainbow, Electric, Glia
+// form weights: Iridescent, Brainbow, Electric, Glia
 float wG, wB, wE, wL;
 
 // ── one neuron: nearest element of soma / dendrite tree / axon ─────────
@@ -192,10 +209,13 @@ float gliaMesh(vec2 p, out float starD, out vec2 starQ, out vec2 starId) {
     return sqrt(f2) - sqrt(f1);
 }
 
-vec3 brainbowHue(float h) {
-    vec3 c = 0.5 + 0.5 * cos(TAU * (h + vec3(0.0, 0.33, 0.67)));
-    c = pow(c, vec3(1.6));
-    return c / max(max(c.r, c.g), max(c.b, 0.05));
+// cool neon ramp: cyan -> electric blue -> violet -> magenta -> hot pink (ping-pong, never warm)
+vec3 coolHue(float h) {
+    float t = abs(fract(h) * 2.0 - 1.0);
+    vec3 c = mix(vec3(0.0, 0.85, 1.0), vec3(0.08, 0.32, 1.0), smoothstep(0.0, 0.25, t));
+    c = mix(c, vec3(0.52, 0.14, 1.0), smoothstep(0.25, 0.5, t));
+    c = mix(c, vec3(0.95, 0.08, 0.92), smoothstep(0.5, 0.75, t));
+    return mix(c, vec3(1.0, 0.12, 0.55), smoothstep(0.75, 1.0, t));
 }
 
 void main() {
@@ -231,32 +251,28 @@ void main() {
 
     float dens = density * mix(1.0, 0.4, gRest) * (1.0 + 0.25 * gPeak + 0.2 * gBuild);
     float fireProb = clamp(0.35 + 0.45 * gLift + 0.3 * gPeak - 0.25 * gRest + 0.35 * beat, 0.1, 1.0);
-    float pulseGain = (0.8 + 0.9 * gLift + 0.6 * gPeak - 0.3 * gRest) * (1.0 + 1.2 * beat);
+    float pulseGain = (0.8 + 0.7 * gLift + 0.4 * gPeak - 0.3 * gRest) * (1.0 + 1.2 * beat);
     float hiSpark = highP() * ar;
     float somaBoost = bassP() * ar;
 
-    // backgrounds: deep space + amber paper
+    // background: true black + a whisper of deep-blue depth haze
     vec2 bp = sp + camDrift * 0.05;
     float neb = vnoise(bp * 2.2 + 3.0) * 0.6 + vnoise(bp * 5.1 - TIME * 0.01) * 0.4;
     vec3 space = backdrop(uv);
-    vec3 nebC = wE * vec3(0.02, 0.05, 0.14) + wB * vec3(0.06, 0.02, 0.08) + wL * vec3(0.02, 0.06, 0.07) + wG * vec3(0.04, 0.03, 0.06);
+    vec3 nebC = wE * vec3(0.004, 0.012, 0.04) + wB * vec3(0.016, 0.004, 0.03) + wL * vec3(0.002, 0.014, 0.03) + wG * vec3(0.01, 0.006, 0.03);
     space += nebC * smoothstep(0.3, 0.9, neb) * (0.6 + 0.5 * gLift);
     float star = step(0.9965, h12(floor(fc * 0.5))) * (0.5 + 0.5 * sin(TIME * 2.0 + h12(floor(fc * 0.5) + 3.0) * 30.0));
-    space += star * 0.35 * (1.0 - wG);
-    float fib = vnoise(sp * vec2(40.0, 9.0)) * 0.5 + vnoise(sp * 140.0) * 0.5;
-    vec3 paper = vec3(0.86, 0.6, 0.3) * (0.92 + 0.1 * fib);
-    paper = mix(paper, vec3(0.55, 0.32, 0.13), smoothstep(0.35, 1.05, length(sp * vec2(0.8, 1.0))));
-    paper *= 0.9 + 0.1 * vnoise(sp * 3.0 + 9.0);
+    space += star * 0.22 * vec3(0.75, 0.85, 1.0);
 
-    vec3 colE = space;      // emissive looks (Brainbow / Electric / Glia)
-    vec3 colG = paper;      // Golgi stain
+    vec3 colE = space;
     float alpha = 0.0;
     float uZ = fract(zoomT);
     float lyBase = floor(zoomT);
     vec2 dirC = vec2(cos(TIME * 0.05), sin(TIME * 0.05));
+    vec3 Ldir = normalize(vec3(-0.45, 0.55, 0.7));
 
     for (int j = 0; j < NLAY; j++) {                  // back to front
-        float z = (float(NLAY - j) - uZ) / float(NLAY);  // 1 far → 0 near
+        float z = (float(NLAY - j) - uZ) / float(NLAY);  // 1 far -> 0 near
         float lid = lyBase - float(j);
         float fade = smoothstep(0.0, 0.16, z) * (1.0 - smoothstep(0.8, 1.0, z));
         if (fade < 0.01) continue;
@@ -264,14 +280,14 @@ void main() {
         float px = sc / RS.y;
         float bS = dof * 0.010 * pow(abs(z - 0.42) / 0.5, 1.4) * (z < 0.42 ? 2.2 : 1.0);
         float bW = bS * sc;
-        float fog = mix(1.0, 0.18, smoothstep(0.25, 0.95, z));
+        float fog = mix(1.0, 0.1, smoothstep(0.2, 0.95, z));
+        vec3 haze = vec3(0.0, 0.01, 0.035) * smoothstep(0.45, 1.0, z);
         vec2 lp = r2(sp + camDrift * (1.25 - z) * 0.6, camRot * (1.0 - z)) * sc + vec2(lid * 17.31, lid * 9.17);
         vec2 ip = floor(lp);
 
         float cov = 0.0;
         vec3 covC = vec3(0.0);
         vec3 emi = vec3(0.0);
-        float emiG = 0.0;
         vec3 halo = vec3(0.0);
         for (int oy = -1; oy <= 1; oy++)
         for (int ox = -1; ox <= 1; ox++) {
@@ -294,7 +310,7 @@ void main() {
             float soft = px + bW;
             float cv = 1.0 - smoothstep(-soft * 0.5, soft, edge);
             cv *= clamp((2.0 * nW + 0.4 * px) / (px + bW * 0.8), 0.0, 1.0);
-            float hl = exp(-max(edge, 0.0) / (0.035 + bW * 1.5));
+            float hl = exp(-max(edge, 0.0) / (0.03 + bW * 1.5));
             float hl2 = exp(-max(edge, 0.0) / (0.007 + bW * 0.5));
 
             // action potentials
@@ -313,7 +329,7 @@ void main() {
             }
             float somaF = exp(-pow((fph - 0.47) / 0.06, 2.0)) * fires;
             if (nType > 1.5 && nType < 2.5) em = 0.0;
-            float somaE = (0.1 + 0.9 * somaF + 0.4 * somaBoost + gDrop) * ((1.0 - smoothstep(-soft, soft, nSoma)) * 0.7 + 0.5 * exp(-max(nSoma, 0.0) / (0.025 + bW * 1.5)));
+            float somaE = (0.1 + 0.9 * somaF + 0.4 * somaBoost + gDrop) * ((1.0 - smoothstep(-soft, soft, nSoma)) * 0.38 + 0.26 * exp(-max(nSoma, 0.0) / (0.016 + bW * 1.2)));
             // synaptic flash + neurotransmitter sparks
             float syn = exp(-pow((fph - 0.9) / 0.04, 2.0)) * fires;
             float bflash = (syn * 1.1 + hiSpark * 0.8 * step(0.6, h12(cid + floor(TIME * 12.0)))) * exp(-max(nBout, 0.0) / (0.005 + bW * 0.3)) / (1.0 + bW * 30.0);
@@ -332,16 +348,35 @@ void main() {
             em += gDrop * 1.5 * exp(-pow((nS - (1.0 - gDrop) * 0.9) / 0.12, 2.0));
             em = (em + somaE) * pulseGain / (1.0 + bW * 45.0);
 
-            vec3 hue = wE * vec3(0.35, 0.62, 1.0) + wB * brainbowHue(h.x * 1.7 + lid * 0.13) + wL * mix(vec3(0.25, 0.85, 0.8), vec3(0.45, 0.6, 1.0), h.y);
-            hue += wG * vec3(1.0, 0.8, 0.5);
-            vec3 pcol = mix(hue, vec3(1.0), 0.45 + 0.25 * wE);
-            float lineB = wE * 0.55 + wB * 0.9 + wL * 0.28 + wG * 0.5;
-            lineB *= 0.75 + 0.5 * gLift;
-            if (cv > cov) { cov = cv; covC = hue * lineB; }
-            halo += hue * hl * 0.022 * glow * (0.5 + gLift);
-            vec3 ee = pcol * (em * (cv + 0.55 * hl2) * (1.0 + 0.6 * glow) + (bflash + sparks) * (1.0 + 0.6 * hiSpark));
+            // ── colour: cool neon only
+            vec3 hue = wE * vec3(0.3, 0.6, 1.0) + wB * coolHue(h.x * 1.7 + lid * 0.13) + wL * mix(vec3(0.1, 0.85, 0.95), vec3(0.45, 0.4, 1.0), h.y);
+            hue += wG * coolHue(h.x + nS * 0.9 + 0.02 * gT);
+            // ── 3D lit tube / sphere shading (fades to flat when sub-pixel or defocused)
+            float tw = clamp(nDist / max(nW, 1e-5), 0.0, 1.0);
+            float nzz = sqrt(max(1.0 - tw * tw, 0.0));
+            float isSoma = step(1.5, nType) * step(nType, 2.5);
+            vec3 nrm = isSoma > 0.5 ? normalize(vec3(q / max(nW, 1e-4) * 0.95, nzz + 0.05)) : vec3(0.0, 0.0, 1.0);
+            float dif = isSoma > 0.5 ? max(dot(nrm, Ldir), 0.0) : nzz;
+            float spec = isSoma > 0.5 ? pow(max(dot(reflect(-Ldir, nrm), vec3(0.0, 0.0, 1.0)), 0.0), 28.0) : pow(nzz, 26.0);
+            float rim = pow(tw, 2.2) * (isSoma > 0.5 ? 1.0 : 0.85);
+            float shK = clamp(nW * 2.0 / (px + bW * 1.2) - 0.6, 0.0, 1.0) * (1.0 - smoothstep(0.3, 0.8, z) * 0.6);
+            vec3 iri = coolHue(h.y * 3.0 + tw * 0.7 + nS * 1.3 + 0.03 * gT + 0.35 * wG);
+            float bodyA = mix(1.0, 0.16, wG);                   // Iridescent: dark glass body
+            float lineB = wE * 0.6 + wB * 0.85 + wL * 0.32 + wG * 0.95;
+            lineB *= 0.75 + 0.3 * gLift;
+            vec3 flatC = hue * lineB * mix(1.0, 0.45, wG);
+            vec3 lit = hue * lineB * bodyA * (0.22 + 0.78 * dif)
+                     + iri * rim * lineB * (0.55 + 0.9 * wG)
+                     + vec3(0.85, 0.92, 1.0) * spec * (0.55 + 0.35 * gLift);
+            vec3 shaded = mix(flatC, lit, shK);
+            if (cv > cov) { cov = cv; covC = shaded; }
+            halo += mix(hue, iri, 0.5) * hl * 0.012 * glow * (0.5 + gLift);
+            // firing light: white-hot core, neon bloom around it
+            float hlW = exp(-max(edge, 0.0) / (0.06 + bW * 2.0));
+            vec3 bloomC = mix(hue, iri, 0.4 + 0.4 * wG);
+            vec3 ee = em * (vec3(1.0) * cv * (1.0 + 0.6 * glow) + bloomC * (0.55 * hl2 + 0.12 * hlW) * (0.6 + 0.7 * glow))
+                    + mix(bloomC, vec3(1.0), 0.55) * (bflash + sparks) * (1.0 + 0.6 * hiSpark);
             emi += ee;
-            emiG += em * (cv + 0.6 * hl2) + bflash + sparks;
         }
 
         // glia: astrocyte stars + fine mesh woven between the neurons
@@ -349,38 +384,41 @@ void main() {
             float sD; vec2 sQ, sId;
             float me = gliaMesh(lp * 2.3 + 11.0 + 0.15 * sin(lp.yx * 5.0 + gT * 0.3), sD, sQ, sId);
             vec3 sh = h32(sId + lid * 5.1);
-            float mw = 0.035 + bW * 2.3 * 2.0;
+            float mw = 0.03 + bW * 2.3 * 2.0;
             float mcov = (1.0 - smoothstep(0.0, mw + px * 2.3, me)) * clamp((0.03 + px) / (mw), 0.0, 1.0);
-            vec3 mc = mix(vec3(0.2, 0.55, 0.6), vec3(0.4, 0.35, 0.9), vnoise(lp * 0.7));
+            vec3 mc = mix(vec3(0.05, 0.5, 0.65), vec3(0.4, 0.25, 0.95), vnoise(lp * 0.7));
             float mpulse = pow(0.5 + 0.5 * sin(dot(lp, vec2(3.0, 2.0)) - gT * 2.0), 6.0);
-            colE += mc * mcov * wL * 1.1 * fade * fog * (0.6 + 0.6 * gLift + 0.8 * mpulse * gLift);
+            colE += mc * mcov * wL * 0.38 * fade * fog * (0.5 + 0.4 * gLift + 0.8 * mpulse * gLift);
             float sa = atan(sQ.y, sQ.x);
             float sr = sD / 2.3;
             float nr = 3.0 + floor(sh.y * 3.0);
             float rays = pow(abs(cos(sa * nr + sh.z * 6.0 + sin(sr * 25.0 + sh.x * 9.0) * 0.35)), 14.0 / (1.0 + bW * 40.0));
             float starI = (rays * exp(-sr / 0.15) * 0.9 + exp(-sr / (0.018 + bW))) * (0.6 + 0.5 * gLift + 0.5 * somaBoost + 0.4 * sin(gT + sh.x * 30.0)) * step(sh.x, 0.3 + 0.15 * gPeak);
-            colE += vec3(0.55, 0.85, 1.0) * mix(vec3(1.0), vec3(1.0, 0.6, 1.0), 0.5) * starI * wL * 0.8 * fade * fog;
+            colE += mix(vec3(0.4, 0.85, 1.0), vec3(0.8, 0.5, 1.0), sh.z) * starI * wL * 0.62 * fade * fog;
         }
 
-        // composite emissive looks
-        colE = colE * (1.0 - cov * fade * 0.8) + (covC * cov + halo) * fade * fog;
+        // composite back to front: occlude what's behind, then add this layer's light
+        colE = colE * (1.0 - cov * fade * 0.85) + (covC * cov + halo + haze * cov) * fade * fog;
         colE += emi * fade * fog;
-        // Golgi: ink on paper; far layers thin out into the paper (aerial), pulses glow golden
-        vec3 ink = mix(vec3(0.04, 0.02, 0.01), paper * 0.78, smoothstep(0.35, 1.0, z) * 0.75);
-        colG = mix(colG, ink, cov * fade * 0.95);
-        colG += vec3(1.0, 0.78, 0.38) * emiG * 0.45 * fade * fog;
         alpha = max(alpha, cov * fade);
     }
 
-    vec3 col = mix(colE, colG, wG);
+    vec3 col = colE;
     float vig = 1.0 - smoothstep(0.6, 1.3, length(sp * vec2(0.8, 1.0)));
     col *= mix(1.0, vig, 0.55);
-    col += vec3(1.0) * gDrop * gDrop * 0.12;
+    col += vec3(0.85, 0.9, 1.0) * gDrop * gDrop * 0.1;
     col *= 1.0 + 0.1 * beat;
     col = col / (1.0 + 0.25 * max(col - 0.8, 0.0));
-    col += (h12(fc + fract(TIME * 13.7) * 91.0) - 0.5) * grain * 0.05;
+    col += (h12(fc + fract(TIME * 13.7) * 91.0) - 0.5) * grain * 0.03 * (0.3 + lum(col));
     col += (h12(fc * 1.03 + fract(TIME * 7.1) * 57.0) + h12(fc * 0.97 + 11.0) - 1.0) * (1.5 / 255.0);
+    col = clamp(col, 0.0, 1.0);
+    if (float(paletteMode) < 0.5) {
+        // Colorful re-hues near-grey light by brightness: keep hot whites ice-blue so they stay cool neon
+        float mxc = max(col.r, max(col.g, col.b)), mnc = min(col.r, min(col.g, col.b));
+        float stc = mxc > 1e-3 ? (mxc - mnc) / mxc : 1.0;
+        col *= mix(vec3(0.76, 0.9, 1.0), vec3(1.0), smoothstep(0.08, 0.26, stc));
+    }
     col = studioPalette(clamp(col, 0.0, 1.0));
-    alpha = clamp(alpha + lum(col) + wG, 0.0, 1.0);
+    alpha = clamp(alpha + lum(col), 0.0, 1.0);
     gl_FragColor = vec4(col, transparentBg ? alpha : 1.0);
 }
