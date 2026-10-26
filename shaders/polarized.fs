@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Polarized — chemistry crystals seen through a polarizing light microscope. Between crossed polarizers the slide is black, and every birefringent crystal glows in Michel-Lévy interference colours: first-order greys and straw gold, then magenta, indigo, teal, lime and rose bands as the crystal thickens. Crystals nucleate and grow on the slide, impinging on each other along curved grain boundaries, then slowly dissolve and regrow somewhere new. Four species: Spherulites, round fibrous radial crystals with concentric colour bands and the dark Maltese-cross extinction that stays locked to the polarizer; Crystal Grains, faceted hexagonal plates and laths with sharp edges, rainbow wedge fringes on their rims and striped twins; Needle Sprays, bow-tie sheaves of acicular needles fanning out from a point, each needle its own colour; and Fern Dendrites, four- and six-armed fern crystals with combs of side branches, each arm glowing its own interference colour. Auto Morph lets each new generation of crystals nucleate as the next species, so the slide mixes and changes over. The analyser rotates over time so colours shift and grains blink in and out of extinction, while the stage turns slowly. Bass rotates the polarizer, every beat nucleates a new crystal with a white seed flash, highs throw glints along grain edges and growth fronts, and the drop snaps the polarizer round and floods the field with a full high-order rainbow. At rest the slide is sparse, slow and soft first-order gold and grey; during a build crystals grow faster, the polarizer spins up and the stage tremors; at peak the slide is packed with vivid high-order colour.",
+  "DESCRIPTION": "Polarized — chemistry crystals seen through a polarizing light microscope. Between crossed polarizers the slide is black, and every birefringent crystal glows in Michel-Lévy interference colours: first-order greys and straw gold, then magenta, indigo, teal, lime and rose bands as the crystal thickens. Crystals nucleate and grow on the slide, impinging on each other along curved grain boundaries, then slowly dissolve and regrow somewhere new. Four species: Spherulites, round fibrous radial crystals with concentric colour bands and the dark Maltese-cross extinction that stays locked to the polarizer; Crystal Grains, faceted hexagonal plates and laths with sharp edges, rainbow wedge fringes on their rims and striped twins; Needle Sprays, bow-tie sheaves of acicular needles fanning out from a point, each needle its own colour; and Fern Dendrites, four- and six-armed fern crystals with combs of side branches, each arm glowing its own interference colour. Inside every crystal sits its own micrograph texture at its own orientation (Crystal Pattern, Mixed by default): banded spherulites whose twisted lamellae ring the Maltese cross with extinction bands, feathery fern dendrites with barbs and fine barbules, polysynthetic twin lamellae and spindle tartan, oscillatory zoning in nested polygons with dark growth lines, hourglass sector zoning, undulose extinction sweeping through deformation bands, radiating sheaves and bow-ties of needles, cleavage crack sets, fluid-inclusion trails of dark high-relief bubbles, and thin-film contour fringes like Newton's rings. Every pattern is drawn as retardation and slow-axis changes, so it glows through the true interference-colour ramp and its extinction bands swing as the polarizer and stage turn; all fine detail is filtered to the pixel for crisp, moiré-free lines, and a glassy relief catches a soft sheen and specular glints on domed rims, ridges and facets. Auto Morph lets each new generation of crystals nucleate as the next species, so the slide mixes and changes over. The analyser rotates over time so colours shift and grains blink in and out of extinction, while the stage turns slowly. Bass rotates the polarizer, every beat nucleates a new crystal with a white seed flash, highs throw glints along grain edges and growth fronts, and the drop snaps the polarizer round and floods the field with a full high-order rainbow. At rest the slide is sparse, slow and soft first-order gold and grey; during a build crystals grow faster, the polarizer spins up and the stage tremors; at peak the slide is packed with vivid high-order colour.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-26 — original.",
   "CATEGORIES": ["Generator", "Science", "Organic", "Audio Reactive"],
   "INPUTS": [
@@ -8,7 +8,10 @@
     { "NAME": "crystalSize", "LABEL": "Crystal Size",     "TYPE": "float", "AUDIO": false, "MIN": 0.5, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Crystals" },
     { "NAME": "density",     "LABEL": "Density",          "TYPE": "float", "MIN": 0.1, "MAX": 1.0, "DEFAULT": 0.8, "GROUP": "Crystals" },
     { "NAME": "growSpeed",   "LABEL": "Growth Speed",     "TYPE": "float", "AUDIO": false, "MIN": 0.2, "MAX": 3.0, "DEFAULT": 1.0, "GROUP": "Crystals" },
-    { "NAME": "biref",       "LABEL": "Birefringence",    "TYPE": "float", "MIN": 0.3, "MAX": 2.5, "DEFAULT": 1.0, "GROUP": "Optics" },
+    { "NAME": "patternSel",  "LABEL": "Crystal Pattern", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], "LABELS": ["Mixed", "Banded Spherulite", "Feathery Dendrite", "Twin Lamellae", "Oscillatory Zoning", "Sector Zoning", "Undulose Extinction", "Radiating Sheaf", "Cleavage Sets", "Fluid Inclusions", "Thin-Film Fringes"], "GROUP": "Crystals" },
+    { "NAME": "patternAmt",  "LABEL": "Pattern Amount",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.85, "GROUP": "Crystals" },
+    { "NAME": "patternDetail","LABEL": "Pattern Detail",  "TYPE": "float", "AUDIO": false, "MIN": 0.5, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Crystals" },
+    { "NAME": "biref",       "LABEL": "Birefringence",   "TYPE": "float", "MIN": 0.3, "MAX": 2.5, "DEFAULT": 1.0, "GROUP": "Optics" },
     { "NAME": "polSpin",     "LABEL": "Analyser Rotation","TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0, "GROUP": "Optics" },
     { "NAME": "stageSpin",   "LABEL": "Stage Rotation",   "TYPE": "float", "MIN": 0.0, "MAX": 3.0, "DEFAULT": 1.0, "GROUP": "Optics" },
     { "NAME": "saturation",  "LABEL": "Colour Intensity", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Optics" },
@@ -16,7 +19,7 @@
     { "NAME": "beatSeeds",   "LABEL": "Beat Nucleation",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Audio Reactivity" },
     { "NAME": "sparkle",     "LABEL": "Edge Sparkle",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Audio Reactivity" },
     { "NAME": "grain",       "LABEL": "Grain",            "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.1, "GROUP": "Finish" },
-    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
+    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 3, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
     { "NAME": "palAmount",   "LABEL": "Palette Amount",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Studio Palette" },
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
@@ -208,6 +211,222 @@ void crystalLook(float form, vec2 l, float h, float Rc, float pxc, float T, out 
     }
 }
 
+// ── internal crystal patterns (micrograph textures) ─────────────────────
+// All periodic detail is filtered against the pixel footprint px (cell units):
+// stripes/lines fade to their mean before they can alias.
+float aaF(float f, float px) { return 1.0 - smoothstep(0.16, 0.42, f * px); }
+// box-filtered square wave (±1), u in periods, f = periods per cell unit
+float sqF(float u, float f, float px) {
+    float w = max(f * px, 1e-4);
+    float i1 = 0.5 - abs(fract(u + 0.5 * w) - 0.5), i0 = 0.5 - abs(fract(u - 0.5 * w) - 0.5);
+    return clamp((i1 - i0) / w, -1.0, 1.0);
+}
+// filtered line coverage: dist = distance to the nearest line, hw = half width, f = lines per unit
+float lineF(float dist, float hw, float f, float px) {
+    float hw2 = max(hw, 0.5 * px);
+    float cov = clamp((hw2 - dist) / px + 0.5, 0.0, 1.0) * (hw / hw2);
+    return mix(min(2.0 * hw * f, 1.0), cov, aaF(f, px));
+}
+// blend two optic axes (axes are mod PI → mix in doubled-angle space)
+float mixAx(float a, float b, float t) {
+    vec2 v = mix(vec2(cos(2.0 * a), sin(2.0 * a)), vec2(cos(2.0 * b), sin(2.0 * b)), t);
+    return 0.5 * atan(v.y, v.x + 1e-6);
+}
+// polygon (N-gon) metric and signed angle inside its sector
+float polyM(vec2 q, float N, out float sa, out float k) {
+    float sec = TAU / N;
+    float a = atan(q.y, q.x) + PI;
+    k = floor(a / sec);
+    sa = a - (k + 0.5) * sec;
+    return length(q) * cos(sa) / cos(0.5 * sec);
+}
+
+// pt: 0 banded spherulite, 1 feathery dendrite, 2 twin lamellae, 3 oscillatory zoning,
+//     4 sector zoning, 5 undulose extinction, 6 radiating sheaf, 7 cleavage sets,
+//     8 fluid-inclusion trails, 9 thin-film (Newton) fringes
+void crystalPattern(float pt, vec2 l, float h, float Rc, float px, float T,
+                    inout float G, inout float psi, inout float mask, out float rel) {
+    float D  = patternDetail;
+    float h2 = h12(vec2(h * 53.1, 2.7)), h3 = h12(vec2(h * 17.9, 8.1));
+    vec2 s = rot(TAU * h2) * l;
+    float d = length(l);
+    vec2 dir = d > 1e-4 ? l / d : vec2(1.0, 0.0);
+    float a = atan(l.y, l.x);
+    float dG = 0.0, dpsi = 0.0, wR = 0.0, psiR = 0.0, mm = 1.0;
+    rel = 0.0;
+    if (pt < 0.5) {                                       // banded spherulite: twisted radial lamellae
+        float f = (4.0 + 5.0 * h3) * D;
+        float fa = aaF(f, px);
+        float ph = TAU * d * f + 1.2 * vn2(dir * 3.0 + h * 20.0);
+        float tw = sin(ph);
+        psiR = a + 0.6 * tw * fa; wR = 1.0;               // radial axes → Maltese cross, twist → extinction rings
+        dG = (190.0 * tw + 70.0 * sin(2.0 * ph)) * fa;
+        float K = 140.0 * D;
+        dG += 110.0 * (vn2(dir * K + h * 37.0) - 0.5) * aaF(0.6 * K / max(d, 1e-3), px) * smoothstep(0.0, 0.08, d);
+        rel = 0.05 / f * tw * fa;
+    } else if (pt < 1.5) {                                // feathery fern dendrite
+        float S = 3.0 + floor(h3 * 4.0);
+        float sec = TAU / S;
+        float a2 = a + TAU * h2;
+        float sa = mod(a2 + 0.5 * sec, sec) - 0.5 * sec;
+        float armA = a - sa;
+        float x = d * cos(sa), y = d * sin(sa), yy = abs(y);
+        float be = 0.62 + 0.25 * h3;
+        float sb = sin(be), cbe = cos(be);
+        float sp = 0.055 / D;
+        float x0 = x - yy * cbe / sb;
+        float kk = floor(x0 / sp + 0.5);
+        float dist = abs(x0 - kk * sp) * sb;
+        float bl = yy / sb;
+        float Lb = max(0.95 - kk * sp, 0.0) * (0.42 + 0.25 * h12(vec2(kk, h * 17.0 + floor((a2 + 0.5 * sec) / sec))));
+        float tb = clamp(bl / max(Lb, 1e-3), 0.0, 1.0);
+        float barb = lineF(dist, 0.011 / D * (1.0 - 0.75 * tb), 1.0 / (sp * sb), px) * step(bl, Lb) * step(0.5, kk);
+        float spine = lineF(yy, 0.018 / D * (1.0 - 0.6 * clamp(x, 0.0, 1.0)), 0.5, px) * step(0.0, x);
+        // barbules: fine hairs along each barb
+        float f2 = 3.2 / sp;
+        float hair = (0.5 + 0.5 * sin(TAU * (bl + 0.4 * dist) * f2)) * exp(-dist / (0.22 * sp)) * step(bl, Lb * 1.15) * step(0.5, kk);
+        hair = mix(0.25 * exp(-dist / (0.22 * sp)), hair, aaF(f2, px)) * step(bl, Lb * 1.15) * step(0.5, kk);
+        float cov = max(max(spine, barb), 0.55 * hair);
+        dG = 420.0 * cov - 150.0 + 140.0 * h12(vec2(kk, h));
+        psiR = armA + (spine > barb ? 0.0 : sign(y) * be); wR = clamp(cov * 1.4, 0.0, 1.0);
+        mm = mix(0.3, 1.0, cov);
+        rel = 0.012 / D * (spine + 0.7 * barb + 0.3 * hair);
+    } else if (pt < 2.5) {                                // polysynthetic twin lamellae (+ tartan cross-hatch)
+        float f = (5.0 + 7.0 * h2) * D;
+        float u = s.y * f + 0.45 * vn2(vec2(s.x * 1.5, s.y * 2.0) + h * 30.0) + 0.9 * vn2(vec2(s.y * f * 0.21, h * 9.0));
+        float q = sqF(u, f * 1.2, px);
+        float q2 = 0.0;
+        if (h3 > 0.55) {                                  // pericline set → microcline tartan, spindle shaped
+            float f2 = f * 0.9;
+            float u2 = s.x * f2 + 0.4 * vn2(s * 2.3 - h * 11.0);
+            float lens = 0.5 + 0.5 * cos(TAU * (s.y * f * 0.5 + 0.3 * vn2(s * 4.0 + h)));   // spindle-shaped pericline lenses
+            q2 = sin(TAU * u2) * lens * smoothstep(0.3, 0.75, vn2(s * 1.7 + h * 5.0)) * aaF(2.0 * f2, px);
+        }
+        dpsi = (0.3 + 0.25 * h2) * (q + 0.45 * q2);
+        dG = 95.0 * q + 45.0 * q2 + 30.0;
+        mm = 1.0 - 0.28 * (1.0 - abs(q)) * aaF(f, px);
+        rel = 0.004 / D * (q + 0.5 * q2);
+    } else if (pt < 3.5) {                                // oscillatory zoning: nested polygons
+        float sa, kx;
+        float N = 4.0 + floor(h3 * 4.0);
+        float zm = polyM(s, N, sa, kx);
+        float f = (6.0 + 6.0 * h2) * D;
+        float u = zm * f + 0.5 * vn2(vec2(zm * 3.0, h * 40.0));
+        float w = sin(TAU * u) * aaF(f, px) + 0.5 * sin(TAU * u * 2.31 + 1.3) * aaF(2.31 * f, px)
+                + 0.35 * sin(TAU * u * 5.7 + h * 7.0) * aaF(5.7 * f, px);
+        float gl = lineF(abs(fract(u + 0.5) - 0.5) / f, 0.0035, f, px);   // growth lines
+        dG = 140.0 * w - 60.0 * gl;
+        dpsi = 0.06 * w;
+        mm = 1.0 - 0.45 * gl;
+        rel = 0.05 / f * w - 0.004 * gl;
+    } else if (pt < 4.5) {                                // sector (hourglass) zoning
+        float sa, kx;
+        float N = h3 > 0.5 ? 4.0 : 6.0;
+        float zm = polyM(s, N, sa, kx);
+        float sec = TAU / N;
+        float distb = d * sin(0.5 * sec - abs(sa));
+        float v = (mod(kx, 2.0) * 2.0 - 1.0) * clamp(distb / px * 1.5, 0.0, 1.0);
+        float f = (10.0 + 8.0 * h2) * D;
+        float rings = sin(TAU * zm * f + v * 1.6) * aaF(f, px);
+        dpsi = 0.24 * v + 0.04 * rings;
+        dG = 210.0 * v + 70.0 * rings + 40.0 * (h12(vec2(kx, h)) - 0.5);
+        mm = 1.0 - 0.3 * lineF(distb, 0.003, 0.5, px);
+        rel = -0.11 * zm + 0.025 / f * rings;              // low pyramid: each sector catches light differently
+    } else if (pt < 5.5) {                                // undulose extinction + deformation bands
+        float sw = 0.75 * sin(s.x * (1.2 + h3) + 1.6 * vn2(s * 1.3 + h * 11.0) + 0.12 * T);
+        float f = (5.0 + 5.0 * h2) * D;
+        float u = s.x * f + 0.9 * vn2(s * vec2(1.0, 3.0) * 2.0 + h * 3.0);
+        float bid = floor(u), t = fract(u);
+        float wb = clamp(f * px * 1.5, 0.04, 0.5);
+        float o0 = h12(vec2(bid, h * 7.0)) - 0.5, o1 = h12(vec2(bid + 1.0, h * 7.0)) - 0.5;
+        float off = mix(o0, o1, smoothstep(1.0 - wb, 1.0, t));
+        dpsi = sw + 0.4 * off;
+        dG = 120.0 * off + 40.0 * sw;
+        rel = 0.012 * off;
+    } else if (pt < 6.5) {                                // radiating sheaf / bow-tie of needles
+        bool bow = h3 > 0.5;
+        vec2 v = bow ? s : s - vec2(-0.8, 0.0);
+        float ang = atan(v.y, bow ? abs(v.x) : v.x);
+        float r = length(v);
+        float Nr = (45.0 + 45.0 * h2) * D;                // needles per radian
+        float u = ang * Nr;
+        float f = Nr / max(r, 1e-3);
+        float fa = aaF(f, px);
+        float hn = h12(vec2(floor(u), h * 13.0));
+        float gd = (0.5 - abs(fract(u) - 0.5)) / f;
+        float gap = lineF(gd, 0.14 / f, f, px);
+        float lenN = 0.35 + 0.9 * h12(vec2(floor(u), h * 3.0));
+        float gen = step(lenN, r);                        // younger needles continue the sheaf
+        psiR = (bow && v.x < 0.0) ? -ang : ang; wR = 1.0;
+        dG = (300.0 * (hn - 0.5) + 160.0 * gen * (h12(vec2(floor(u), h * 5.0 + 2.0)) - 0.5)) * fa + 160.0 * r - 80.0;
+        mm = 1.0 - 0.6 * gap;
+        float cyl = 1.0 - pow(2.0 * fract(u) - 1.0, 2.0);
+        rel = 0.35 / f * sqrt(max(cyl, 0.0)) * fa;
+    } else if (pt < 7.5) {                                // cleavage line sets
+        float ang2 = h3 < 0.33 ? 0.977 : (h3 < 0.66 ? 1.5708 : 1.309);
+        float nset = h3 > 0.85 ? 3.0 : 2.0;
+        if (h3 > 0.85) ang2 = 1.0472;
+        float lines = 0.0, groove = 0.0;
+        for (int i = 0; i < 3; i++) {
+            float fi = float(i);
+            if (fi >= nset) break;
+            float th = fi * ang2;
+            vec2 n = vec2(cos(th), sin(th));
+            float f = (6.0 + 5.0 * h2) * D * (0.8 + 0.4 * h12(vec2(fi, h)));
+            float u = dot(s, n) * f + 0.25 * vn2(s * 2.0 + fi * 7.0 + h * 9.0);
+            float ln = floor(u + 0.5);
+            float dist = abs(u - ln) / f;
+            float along = dot(s, vec2(-n.y, n.x));
+            float seg = smoothstep(0.35, 0.55, vn2(vec2(along * 2.5, ln * 3.7 + fi * 11.0 + h * 30.0)));
+            lines = max(lines, lineF(dist, 0.0045, f, px) * seg);
+            groove += exp(-pow(dist / 0.018, 2.0)) * seg * aaF(f, px);
+            dG += 45.0 * (h12(vec2(ln, fi + h * 3.0)) - 0.5);   // tiny thickness steps between cracks
+        }
+        dG -= 160.0 * lines;
+        mm = 1.0 - 0.8 * lines;
+        rel = -0.012 * groove;
+    } else if (pt < 8.5) {                                // fluid-inclusion trails (isotropic → dark, high relief)
+        float inc = 0.0, dome = 0.0, trail = 0.0;
+        for (int i = 0; i < 3; i++) {
+            float fi = float(i);
+            float th = TAU * h12(vec2(fi, h * 21.0));
+            vec2 n = vec2(cos(th), sin(th)), pn = vec2(-n.y, n.x);
+            float x = dot(s, n);
+            float y = dot(s, pn) - (h12(vec2(fi, h * 9.0)) - 0.5) * 1.0 - 0.12 * sin(x * 3.0 + fi * 2.0 + h * 6.0);
+            float spc = 0.065 / D;
+            float k = floor(x / spc);
+            float hk = h12(vec2(k, fi + h * 77.0));
+            float xc = (k + 0.5 + 0.35 * (hk - 0.5)) * spc;
+            float yc = (h12(vec2(k + 3.1, fi + h)) - 0.5) * 0.02;
+            float r = spc * (0.1 + 0.32 * h12(vec2(k, fi * 3.0 + h))) * step(0.3, hk);
+            vec2 q = vec2(x - xc, y - yc) * vec2(0.7, 1.0);
+            float qd = length(q);
+            float cov = clamp((r - qd) / px + 0.5, 0.0, 1.0);
+            float vis = smoothstep(0.4 * px, 1.4 * px, r);
+            cov = mix(min(r / px, 1.0) * exp(-qd * qd / (px * px)), cov, vis);   // sub-pixel dots → soft splat
+            inc = max(inc, cov);
+            dome += cov * sqrt(max(1.0 - qd * qd / max(r * r, 1e-6), 0.0)) * r * vis;
+            trail = max(trail, lineF(abs(y), 0.0015, 0.5, px));
+        }
+        mm = 1.0 - 0.9 * clamp(inc, 0.0, 1.0) - 0.15 * trail;
+        dG = -40.0 * trail;
+        rel = -1.2 * dome;
+    } else {                                              // thin-film / Newton contour fringes
+        float tf = 0.7 * (1.0 - min(d * d / max(Rc * Rc, 0.01), 1.0)) + 0.55 * vn2(s * 1.6 + h * 20.0)
+                 + 0.3 * vn2(s * 3.7 - h * 9.0) + 0.08 * sin(T * 0.4 + h * 6.0);
+        float amp = 1150.0 * D;
+        amp *= 1.0 - 0.8 * smoothstep(120.0, 320.0, 3.5 * amp * px);   // keep fringes ≥ ~3 px apart
+        dG = amp * tf - 300.0;
+        rel = 0.06 * tf;
+    }
+    float amt = patternAmt;
+    float psiT = mixAx(psi + dpsi, psiR, wR);
+    psi = mixAx(psi, psiT, amt);
+    G = max(G + amt * dG, 0.0);
+    mask *= mix(1.0, mm, amt);
+    rel *= amt;
+}
+
 void main() {
     showDynamics();
     vec2 R = RENDERSIZE.xy;
@@ -324,6 +543,20 @@ void main() {
         float front = min(oFront, bdist);
         float G, psi, mask;
         crystalLook(oForm, oL, oH, oRc, pxc, Tg, G, psi, mask);
+        // micrograph pattern: one call site, 3 taps (centre + 2 offsets give the relief gradient)
+        float psel = float(patternSel);
+        float ptype = psel > 0.5 ? psel - 1.0 : floor(h12(vec2(oH * 61.7, 3.9)) * 10.0);
+        float eR = max(pxc, 0.004);
+        float G0 = G, psi0 = psi, mask0 = mask, relC = 0.0;
+        vec2 rg = vec2(0.0);
+        for (int k = 0; k < 3; k++) {
+            vec2 off = k == 1 ? vec2(eR, 0.0) : (k == 2 ? vec2(0.0, eR) : vec2(0.0));
+            float g1 = G0, s1 = psi0, m1 = mask0, r1;
+            crystalPattern(ptype, oL + off, oH, oRc, pxc, Tg, g1, s1, m1, r1);
+            if (k == 0) { G = g1; psi = s1; mask = m1; relC = r1; }
+            else if (k == 1) rg.x = (r1 - relC) / eR;
+            else rg.y = (r1 - relC) / eR;
+        }
         // thin edges: thickness tapers to zero at rims → rainbow wedge fringes
         float tap = smoothstep(0.0, oForm > 1.5 ? 0.12 : 0.22, front);
         G *= biref * mix(1.0, 0.5, gRest) * (1.0 + 0.15 * gPeak) * (1.0 + 0.8 * gDrop);
@@ -344,6 +577,18 @@ void main() {
         col = c * m * (0.85 + 0.35 * gLift) * 1.15;
         // dark grain boundaries
         col *= smoothstep(0.0, 2.2 * pxc, bdist) * 0.7 + 0.3;
+        // glassy relief: domed rims + pattern relief, lit from upper-left (screen frame)
+        float ld = length(oL);
+        vec2 dome = -(ld > 1e-4 ? oL / ld : vec2(0.0)) * 0.55 * (1.0 - smoothstep(0.0, 0.1, front));
+        vec2 gs = rot(-(oPhi + stageAng)) * (rg + dome);
+        vec3 nrm = normalize(vec3(-gs, 1.0));
+        vec3 Ld = normalize(vec3(-0.5, 0.6, 0.65));
+        vec3 Hv = normalize(Ld + vec3(0.0, 0.0, 1.0));
+        float shade = clamp(1.0 + 0.7 * (dot(nrm, Ld) - Ld.z), 0.45, 1.6);
+        col *= shade;
+        float spec = pow(max(dot(nrm, Hv), 0.0), 48.0);
+        float fres = pow(1.0 - nrm.z, 2.0);
+        col += (vec3(1.0, 0.98, 0.95) * spec * 0.55 + (0.25 + c) * fres * 0.35) * aa * oFade * (0.7 + 0.3 * gLift);
         edge = (1.0 - smoothstep(0.0, 0.05, front)) * m;
         alpha = clamp(m * 1.5, 0.0, 1.0);
     }
