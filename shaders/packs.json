@@ -1098,5 +1098,8 @@
   },
   "bacteriophage": {
     "group": "studio"
+  },
+  "mycelium": {
+    "group": "studio"
   }
 }

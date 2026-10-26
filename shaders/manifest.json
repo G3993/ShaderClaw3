@@ -3975,5 +3975,20 @@
     "id": 1417,
     "title": "Bacteriophage",
     "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Organic",
+      "Nature",
+      "Audio Reactive"
+    ],
+    "description": "Mycelium — a fungal network growing through dark soil. From a few glowing spores, fine hyphae thread outward, forking again and again into a fractal tree of ever-finer side branches that meander through the grain of the earth; neighbouring threads fuse with little cross-bridges (anastomosis) and whole colonies grow into one another until the soil is laced with a living web. Bright growing tips lead the front, nutrient pulses ride along the threads, and tiny mushroom pins pop up at the junctions while spores drift through the air. It morphs between four forms: Soil Web — crisp white threads on dark brown soil full of grit; Bioluminescent — foxfire-green hyphae and glowing Mycena caps on pure black; Root Network — the wood-wide web, thick bark-brown tree roots reaching down from above while golden fungal links weave between them and trade glowing nutrients in both directions; Spore Print — big radial gill-pattern prints in cream, rust and lilac forming around each spore point with faint mycelium creeping out. Each cycle the old network dims away as new spores germinate. Bass makes it grow faster, beats send bright nutrient pulses down every thread, mids drive the flow, highs make the drifting spores sparkle. At rest only a few sparse colonies grow slowly with soft pulses; during a build the network contracts, the pulses race and the tips shimmer and tremble; on the drop the whole web lights up in a wave from the centre outward, then the peak grows dense with many colonies, fruiting bodies and bright pulses.",
+    "file": "mycelium.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1418,
+    "title": "Mycelium",
+    "type": "generator"
   }
 ]
