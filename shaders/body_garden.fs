@@ -1,18 +1,24 @@
 /*{
-  "DESCRIPTION": "Body Garden — two looks. Pixel Mosaic (default): one flat 2D front-view human figure, or two standing side by side, with real anatomy built from a mosaic of coloured pixel tiles — red, yellow, green, blue, white and black squares, split cells, diagonal hatching and little outlined squares that keep flipping and re-arranging digitally — while contour lines made of broken pixel dashes ripple outward from the body across the whole frame like an aura or a fingerprint. At rest the rings drift slowly and the tiles barely change; during a build the rings speed up and tighten and the tiles flicker faster; on the drop a bright shock ring bursts out of the body and the tiles scatter. Glass Garden: a still glass human figure with real anatomy (a sculpted human body baked into a 3D distance field), seen three-quarter from head to mid-thigh, with a living garden inside. The glass shell glows at its rim and catches highlights while the interior is raymarched as a volume: lungs breathe and sparkle with thousands of multicoloured points of light, a glowing pink nerve tree branches from the throat into the chest and pulses on the beat, vines spiral up through the torso and neck, flowers open and close in the head, shoulder and chest, a dense bed of blooms and leaves fills the belly, a cluster of sparks lives in the brain, and abstract 3D elements (rings, cubes and orbs) drift through the body. The figure never moves; everything inside it does. Bass makes the lungs breathe deeper, beats send a pulse up the nerves and flash the sparks, mids speed the drifting elements, highs twinkle the lights. Show Dynamics: at Rest the garden sleeps (buds closed, vines low, a few slow sparks and drifting shapes, soft glass); during a Build the vines climb, flowers unfurl, the sparks thicken and shimmer faster while the abstract shapes converge on the heart and tremble; at the Drop a shockwave of light bursts out from the chest through the whole body, the nerves and glass flash, and every bloom snaps fully open.",
+  "DESCRIPTION": "Body Garden — two looks, with presets. Presets: Live (Size Automation, default) — the Pixel Mosaic figure breathes in size from nothing to full (0 → 1.10) over a slow eased ~24 s cycle, nudged by bass and the build, with the contour rings flowing outward at full speed; Static — no automation, the figure held at full size and every input used as set; Mosaic Automation — tile count, contour spacing, tile flicker and contour density each drift slowly on their own eased clocks so the mosaic re-quantises and the aura tightens and loosens by itself; Two Figures — the side-by-side pair, both breathing with the size automation; Custom — every input exactly as set (Figure Size Automation, its min/max/cycle, and People = Auto, where a second figure grows out of the first and slides aside, then merges back). Pixel Mosaic (default): one flat 2D front-view human figure, or two standing side by side, with real anatomy built from a mosaic of coloured pixel tiles — red, yellow, green, blue, white and black squares, split cells, diagonal hatching and little outlined squares that keep flipping and re-arranging digitally — while contour lines made of broken pixel dashes ripple outward from the body across the whole frame like an aura or a fingerprint. At rest the rings drift slowly and the tiles barely change; during a build the rings speed up and tighten and the tiles flicker faster; on the drop a bright shock ring bursts out of the body and the tiles scatter. Glass Garden: a still glass human figure with real anatomy (a sculpted human body baked into a 3D distance field), seen three-quarter from head to mid-thigh, with a living garden inside. The glass shell glows at its rim and catches highlights while the interior is raymarched as a volume: lungs breathe and sparkle with thousands of multicoloured points of light, a glowing pink nerve tree branches from the throat into the chest and pulses on the beat, vines spiral up through the torso and neck, flowers open and close in the head, shoulder and chest, a dense bed of blooms and leaves fills the belly, a cluster of sparks lives in the brain, and abstract 3D elements (rings, cubes and orbs) drift through the body. The figure never moves; everything inside it does. Bass makes the lungs breathe deeper, beats send a pulse up the nerves and flash the sparks, mids speed the drifting elements, highs twinkle the lights. Show Dynamics: at Rest the garden sleeps (buds closed, vines low, a few slow sparks and drifting shapes, soft glass); during a Build the vines climb, flowers unfurl, the sparks thicken and shimmer faster while the abstract shapes converge on the heart and tremble; at the Drop a shockwave of light bursts out from the chest through the whole body, the nerves and glass flash, and every bloom snaps fully open.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-21 — original. Figure: MakeHuman base mesh (CC0), baked to a signed distance field (body_sdf.png).",
   "CATEGORIES": ["Generator", "3D", "Nature", "Audio Reactive"],
   "INPUTS": [
-    { "NAME": "styleSel",    "LABEL": "Style", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1], "LABELS": ["Pixel Mosaic (flat 2D)", "Glass Garden (3D)"], "GROUP": "Figure" },
-    { "NAME": "peopleSel",   "LABEL": "People", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1], "LABELS": ["One Figure", "Two Figures Side by Side"], "GROUP": "Pixel Mosaic" },
+    { "NAME": "presetSel",   "LABEL": "Preset", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Live (Size Automation)", "Static", "Mosaic Automation", "Two Figures", "Custom (use inputs as set)"], "GROUP": "Preset" },
+    { "NAME": "styleSel",    "LABEL": "Style (Static / Custom presets)", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1], "LABELS": ["Pixel Mosaic (flat 2D)", "Glass Garden (3D)"], "GROUP": "Figure" },
+    { "NAME": "peopleSel",   "LABEL": "People", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2], "LABELS": ["One Figure", "Two Figures Side by Side", "Auto (one ↔ two)"], "GROUP": "Pixel Mosaic" },
+    { "NAME": "pairPeriod",  "LABEL": "One ↔ Two Cycle (s)", "TYPE": "float", "AUDIO": false, "MIN": 10.0, "MAX": 120.0, "DEFAULT": 36.0, "GROUP": "Pixel Mosaic" },
     { "NAME": "pairGap",     "LABEL": "Pair Spacing",     "TYPE": "float", "MIN": 0.6, "MAX": 1.6, "DEFAULT": 1.0, "GROUP": "Pixel Mosaic" },
     { "NAME": "tileCount",   "LABEL": "Mosaic Tiles (tall)", "TYPE": "float", "AUDIO": false, "MIN": 16.0, "MAX": 90.0, "DEFAULT": 36.0, "GROUP": "Pixel Mosaic" },
     { "NAME": "ringSpacing", "LABEL": "Contour Spacing",  "TYPE": "float", "MIN": 0.3, "MAX": 2.0, "DEFAULT": 0.75, "GROUP": "Pixel Mosaic" },
-    { "NAME": "ringSpeed",   "LABEL": "Outward Flow",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.6, "GROUP": "Pixel Mosaic" },
+    { "NAME": "ringSpeed",   "LABEL": "Outward Flow",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 2.0, "GROUP": "Pixel Mosaic" },
     { "NAME": "ringDash",    "LABEL": "Contour Density",  "TYPE": "float", "MIN": 0.1, "MAX": 1.0, "DEFAULT": 0.8, "GROUP": "Pixel Mosaic" },
     { "NAME": "tileFlip",    "LABEL": "Tile Flicker",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Pixel Mosaic" },
     { "NAME": "facing",      "LABEL": "Figure Turn",      "TYPE": "float", "AUDIO": false, "MIN": -1.0, "MAX": 1.0, "DEFAULT": 0.55, "GROUP": "Figure" },
     { "NAME": "figScale",    "LABEL": "Figure Size",      "TYPE": "float", "AUDIO": false, "MIN": 0.6, "MAX": 1.8, "DEFAULT": 1.0, "GROUP": "Figure" },
+    { "NAME": "figAuto",     "LABEL": "Figure Size Automation", "TYPE": "bool", "DEFAULT": true, "GROUP": "Figure Automation" },
+    { "NAME": "figAutoMin",  "LABEL": "Auto Size Min",    "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.8, "DEFAULT": 0.0, "GROUP": "Figure Automation" },
+    { "NAME": "figAutoMax",  "LABEL": "Auto Size Max",    "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.8, "DEFAULT": 1.1, "GROUP": "Figure Automation" },
+    { "NAME": "figAutoPeriod","LABEL": "Auto Size Cycle (s)", "TYPE": "float", "AUDIO": false, "MIN": 6.0, "MAX": 90.0, "DEFAULT": 24.0, "GROUP": "Figure Automation" },
     { "NAME": "shellGlow",   "LABEL": "Glass Rim",        "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Figure" },
     { "NAME": "shellTint",   "LABEL": "Glass Colour",     "TYPE": "color", "DEFAULT": [0.35, 0.55, 1.0, 1.0], "GROUP": "Figure" },
     { "NAME": "lungGlow",    "LABEL": "Lung Light",       "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Inside" },
@@ -31,7 +37,7 @@
     { "NAME": "bloom",       "LABEL": "Bloom",            "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.9, "GROUP": "Finish" },
     { "NAME": "renderScale", "LABEL": "Render Scale",     "TYPE": "float", "AUDIO": false, "MIN": 0.35, "MAX": 1.0, "DEFAULT": 0.7, "GROUP": "Finish" },
     { "NAME": "grain",       "LABEL": "Grain",            "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.2, "GROUP": "Finish" },
-    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 3, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
+    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
     { "NAME": "palAmount",   "LABEL": "Palette Amount",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Studio Palette" },
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
@@ -127,6 +133,43 @@ void showDynamics() {
     gPeak  = smoothstep(0.5, 0.9, e) * k;                            // sustained high section
     gRest  = (1.0 - smoothstep(0.08, 0.4, e)) * (1.0 - b) * k;       // quiet / breakdown
     gLift  = mix(0.5, clamp(0.15 + e * 0.7 + gBuild * 0.25 + d * 0.3, 0.0, 1.0), k);  // 0 rest … 1 peak; 0.5 when dynamics = 0
+}
+
+// ── Presets + automation (all clocks are TIME/constant or integrated, no jumps) ──
+float gStyle, gFigA, gPair, gRSpeed, gTiles, gRSpace, gRDash, gFlipClk;
+float ease01(float x) { return x * x * (3.0 - 2.0 * x); }
+float autoWave(float per, float ph) { return ease01(0.5 - 0.5 * cos(TAU * (TIME / per + ph))); }   // eased 0..1..0
+void presetSetup() {
+    float pr = float(presetSel);
+    float ppl = float(peopleSel);
+    float ar = audioReact;
+    gStyle = float(styleSel);
+    gRSpeed = ringSpeed; gTiles = tileCount; gRSpace = ringSpacing; gRDash = ringDash;
+    gFlipClk = (TIME * 0.8 + audioMidTime * 1.2 * ar) * tileFlip;
+    bool autoSize = figAuto;
+    if (pr < 0.5)      { gStyle = 0.0; ppl = 0.0; gRSpeed = 2.0; autoSize = true; }          // Live
+    else if (pr < 1.5) { autoSize = false; if (ppl > 1.5) ppl = 0.0; }                      // Static
+    else if (pr < 2.5) {                                                                     // Mosaic Automation
+        gStyle = 0.0; autoSize = false;
+        gTiles  = mix(22.0, 64.0, autoWave(47.0, 0.0));
+        gRSpace = mix(0.45, 1.05, autoWave(31.0, 0.37));
+        gRDash  = mix(0.65, 1.0, autoWave(23.0, 0.71));
+        // flicker rate r(t) = 1.1 + 0.7 sin(w t + 1.9), integrated analytically -> smooth clock
+        float w = TAU / 37.0;
+        gFlipClk = 0.8 * (1.1 * TIME - 0.7 / w * cos(w * TIME + 1.9)) + audioMidTime * 1.2 * ar * 1.1;
+    }
+    else if (pr < 3.5) { gStyle = 0.0; ppl = 1.0; gRSpeed = 2.0; autoSize = true; }          // Two Figures
+    // figure size: slow eased breathing between min and max (0 = gone)
+    float a = 1.0;
+    if (autoSize) {
+        a = mix(figAutoMin, figAutoMax, autoWave(max(figAutoPeriod, 1.0), 0.0));
+        a *= 1.0 + 0.06 * bassP() * ar + 0.06 * gBuild;
+    }
+    gFigA = max(a, 0.0);
+    // one / two / auto: the second figure grows out of the first and slides aside
+    float ph = fract(TIME / max(pairPeriod, 1.0));
+    float wAuto = smoothstep(0.38, 0.5, ph) * (1.0 - smoothstep(0.88, 1.0, ph));
+    gPair = ppl < 0.5 ? 0.0 : (ppl < 1.5 ? 1.0 : wAuto);
 }
 
 // ── the figure: a real human body (MakeHuman CC0 base mesh) baked to a
@@ -374,7 +417,9 @@ vec4 scenePass() {
     gFlip = texture2D(bodyTex, vec2(0.5 / A_W, 0.5 / A_H)).b > 0.5 ? 1.0 : 0.0;
     // still camera on the figure, turned toward profile
     vec3 ta = vec3(0.0, 3.2, 0.0);
-    vec3 ro = ta + vec3(0.0, 0.8, 22.5 / figScale);
+    float figVis = smoothstep(0.0, 0.08, gFigA);
+    if (figVis <= 0.0) return vec4(0.0);
+    vec3 ro = ta + vec3(0.0, 0.8, 22.5 / (figScale * max(gFigA, 0.02)));
     vec3 ww = normalize(ta - ro), uu = normalize(cross(ww, vec3(0.0, 1.0, 0.0))), vv = cross(uu, ww);
     vec3 rd = normalize(sp.x * uu + sp.y * vv + 2.0 * ww);
     mat2 Ry = rot(facing * 1.4);
@@ -423,7 +468,7 @@ vec4 scenePass() {
     col += shellTint.rgb * (0.07 + 0.18 * pow(fres, 0.7));                 // luminous glass body
     col += shellTint.rgb * 0.12 * smoothstep(0.0, 1.0, n.y * 0.5 + 0.5) * shellGlow;
     float a = clamp(0.35 + fres + lum(acc) * 2.0, 0.0, 1.0);
-    return vec4(col, a);
+    return vec4(col, a) * figVis;
 }
 
 vec4 bloomPass() {
@@ -462,14 +507,23 @@ float frontSD(vec2 p) {
     vec4 t = texture2D(frontTex, vec2((gc.x + 0.5) / F_N.x, v));
     return (t.r * 255.0 * 256.0 + t.g * 255.0) / 65535.0 * 15.0 - 1.5 + outside;
 }
-// one or two figures standing side by side, centred; the second is mirrored
+// one or two figures standing side by side, centred; the second is mirrored.
+// gFigA scales the figure(s) about the centre (0 = vanished), gPair 0..1 blends
+// one -> two: the second figure grows out of the first and both slide apart.
 float bodyD(vec2 p) {
-    if (float(peopleSel) < 0.5) return frontSD(p);
-    float k = 0.8;                                      // a touch smaller so both fit
-    float off = 2.55 * pairGap;
-    float a = frontSD((p - vec2(-off, 0.0)) / k) * k;
-    float b = frontSD(vec2(-(p.x - off), p.y) / k) * k;
-    return min(a, b);
+    float fa = max(gFigA, 1e-3);
+    vec2 q = p / fa;
+    float w = gPair;
+    float d;
+    if (w < 0.001) d = frontSD(q);
+    else {
+        float k = mix(1.0, 0.8, w);                     // a touch smaller so both fit
+        float off = 2.55 * pairGap * w;
+        d = frontSD((q - vec2(-off, 0.0)) / k) * k;
+        float kb = k * smoothstep(0.0, 0.7, w);
+        if (kb > 0.01) d = min(d, frontSD(vec2(-(q.x - off), q.y) / kb) * kb);
+    }
+    return d * fa;
 }
 vec3 mosaicColour(float k) {
     k = mod(floor(k), 6.0);
@@ -491,20 +545,20 @@ vec4 mosaicPass() {
     vec2 p = sp * S / punch + vec2(0.0, 0.16);
     float pxDm = S / R.y;                              // dm per screen pixel
     // clocks: continuous flow + digital steps
-    float flowT = TIME * 0.35 * ringSpeed + (audioBassTime * 0.35 + audioMidTime * 0.2) * ar * ringSpeed + 1.6 * gBuild * gBuild;
-    float stepT = floor((TIME * 0.8 + audioMidTime * 1.2 * ar) * (1.0 + 2.0 * gLift) * tileFlip + 10.0 * gBuild * gBuild);
+    float flowT = TIME * 0.35 * gRSpeed + (audioBassTime * 0.35 + audioMidTime * 0.2) * ar * gRSpeed + 1.6 * gBuild * gBuild;
+    float stepT = floor(gFlipClk * (1.0 + 2.0 * gLift) + 10.0 * gBuild * gBuild);
 
     vec3 col = backdrop(uv);
     float alpha = 0.0;
 
     // ── the figure as a tile mosaic ──
-    float cs = 16.7 / floor(tileCount);                // tile size in dm
+    float cs = 16.7 / floor(gTiles);                // tile size in dm
     vec2 cell = floor(p / cs);
     vec2 l = p / cs - cell;                            // 0..1 inside the tile
     float dC = bodyD((cell + 0.5) * cs);
     // drop: tiles near the edge scatter outward for a moment
     float scatter = gDrop * step(dC, 0.0) * step(-0.9, dC) * step(0.6, h12(cell + 3.0));
-    if (dC < 0.08 * cs && scatter < 0.5) {
+    if (dC < 0.08 * cs && scatter < 0.5 && gFigA > 0.02) {
         float hc = h12(cell);
         float epoch = floor(stepT * (0.15 + 0.35 * hc) + hc * 7.0);    // each tile flips on its own clock
         float k1 = h12(cell + epoch * 1.37);
@@ -545,10 +599,10 @@ vec4 mosaicPass() {
         // ── contour rings flowing outward ──
         float d = bodyD(p);
         // snap to a coarse pixel grid so lines step like pixel strokes
-        float gp = min(max(pxDm * 2.0, 0.05), ringSpacing * 0.16);
+        float gp = min(max(pxDm * 2.0, 0.05), gRSpace * 0.16);
         vec2 ps = (floor(p / gp) + 0.5) * gp;
         float ds = bodyD(ps);
-        float sp2 = ringSpacing * (1.0 - 0.3 * gBuild);
+        float sp2 = gRSpace * (1.0 - 0.3 * gBuild);
         float rp = ds / sp2 - flowT;
         float ri = floor(rp);
         float fr = fract(rp);
@@ -556,7 +610,7 @@ vec4 mosaicPass() {
         float line = step(fr, lw);
         // break each ring into dashes: segments of the pixel grid, varying per ring
         vec2 seg = floor(ps / (gp * (4.0 + 6.0 * h11(ri * 1.3))));
-        float on = step(1.0 - ringDash * (0.7 + 0.4 * gLift), h12(seg + ri * 7.13));
+        float on = step(1.0 - gRDash * (0.7 + 0.4 * gLift), h12(seg + ri * 7.13));
         // sparse dots and glyph ticks between rings
         float tick = step(0.985 - 0.01 * gLift, h12(floor(p / gp) + floor(flowT * 2.0)));
         float hseg = h12(seg * 1.7 + ri);
@@ -607,10 +661,11 @@ vec4 finalPass() {
 
 void main() {
     showDynamics();
+    presetSetup();
     gT = TIME * speed + 0.3 * audioBassTime * audioReact * speed;
     gBeat = audioBeatPulse * audioReact;
     gBreath = 1.0 + 0.05 * sin(TIME * 1.2) + 0.08 * bassP() * audioReact + 0.05 * (gLift - 0.5) + 0.07 * gDrop;
-    if (float(styleSel) < 0.5) {                       // Pixel Mosaic: flat 2D, no raymarch
+    if (gStyle < 0.5) {                       // Pixel Mosaic: flat 2D, no raymarch
         gl_FragColor = PASSINDEX == 2 ? mosaicPass() : vec4(0.0);
         return;
     }
