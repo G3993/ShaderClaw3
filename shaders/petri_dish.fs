@@ -5,7 +5,7 @@
   "INPUTS": [
     { "NAME": "formSel",     "LABEL": "Culture", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Auto Morph", "Bacteria Colonies", "Mould Bloom", "Antibiotic Assay", "Bioluminescent"], "GROUP": "Culture" },
     { "NAME": "morphPeriod", "LABEL": "Growth Cycle (s)", "TYPE": "float", "AUDIO": false, "MIN": 10.0, "MAX": 90.0, "DEFAULT": 28.0, "GROUP": "Culture" },
-    { "NAME": "growthRate",  "LABEL": "Growth Speed",     "TYPE": "float", "MIN": 0.4, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Culture" },
+    { "NAME": "growthRate",  "LABEL": "Growth Speed",     "TYPE": "float", "MIN": 0.4, "MAX": 2.0, "DEFAULT": 2.0, "GROUP": "Culture" },
     { "NAME": "colonyCount", "LABEL": "Colony Count",     "TYPE": "float", "MIN": 0.2, "MAX": 1.0, "DEFAULT": 0.85, "GROUP": "Culture" },
     { "NAME": "beatSpawn",   "LABEL": "Beat Spawning",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.8, "GROUP": "Culture" },
     { "NAME": "finishSel",   "LABEL": "Finish", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Chrome Neon", "Chrome Ice", "Black Chrome", "Holographic"], "GROUP": "Dish" },
@@ -18,7 +18,7 @@
     { "NAME": "bloomAmt",    "LABEL": "Bloom",            "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.7, "GROUP": "Finish" },
     { "NAME": "dofAmt",      "LABEL": "Depth of Field",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5, "GROUP": "Finish" },
     { "NAME": "grain",       "LABEL": "Grain",            "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.12, "GROUP": "Finish" },
-    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 3, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
+    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
     { "NAME": "palAmount",   "LABEL": "Palette Amount",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Studio Palette" },
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },

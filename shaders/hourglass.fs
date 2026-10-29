@@ -4,7 +4,7 @@
   "CATEGORIES": ["Generator", "Glitch", "Audio Reactive"],
   "INPUTS": [
     { "NAME": "lookSel",     "LABEL": "Look", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Auto Cycle", "Nested Rings", "Thin Film", "Lathe"], "GROUP": "Look" },
-    { "NAME": "lookPeriod",  "LABEL": "Look Period (s)", "TYPE": "float", "AUDIO": false, "MIN": 5.0, "MAX": 90.0, "DEFAULT": 16.0, "GROUP": "Look" },
+    { "NAME": "lookPeriod",  "LABEL": "Look Period (s)", "TYPE": "float", "AUDIO": false, "MIN": 5.0, "MAX": 90.0, "DEFAULT": 5.0, "GROUP": "Look" },
     { "NAME": "morphSpeed",  "LABEL": "Morph Speed",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.7, "GROUP": "Shape" },
     { "NAME": "neck",        "LABEL": "Neck Width",      "TYPE": "float", "MIN": 0.0, "MAX": 0.5, "DEFAULT": 0.06, "GROUP": "Shape" },
     { "NAME": "thickness",   "LABEL": "Thick ↔ Thin Swing","TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6, "GROUP": "Shape" },
@@ -20,7 +20,7 @@
     { "NAME": "chroma",      "LABEL": "RGB Split",       "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.35, "GROUP": "Film & Glitch" },
     { "NAME": "film",        "LABEL": "Film (weave/flicker)", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5, "GROUP": "Film & Glitch" },
     { "NAME": "grain",       "LABEL": "Grain",           "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.4, "GROUP": "Film & Glitch" },
-    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 3, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
+    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
     { "NAME": "palAmount",   "LABEL": "Palette Amount",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Studio Palette" },
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
