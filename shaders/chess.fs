@@ -1,11 +1,13 @@
 /*{
-  "DESCRIPTION": "Chess — a living pixel grid in datamosh. Everything snaps to a crisp grid of big pixels: 1-bit moiré dither fields, checkerboard columns at several scales, blurry rainbow mosaic blocks, and Tetris-shaped patches filled with cross-stitch motifs (dots, crosses, X's, hex rings, stars, stripes) in red, pink, yellow, blue, green, orange and lavender. Pixel-art flowers and green-and-yellow pixel worms crawl through it like organisms under a microscope. The patterns slide through the grid band by band, reshuffle and morph, and the whole picture is datamoshed: macroblocks drag the previous frame along motion vectors so the image smears and bleeds like corrupted video, while only scattered blocks refresh with the new frame. At rest the pixels are big, the mosh is gentle and only a few flowers wander; during a build the grid gets finer, the smear runs longer and the slices tear faster; on the drop a clean keyframe snaps everything into place with an inverted flash, then the peak moshes at full speed with every pattern alive. The Speed group sets the pace: by default it is calm and slow, and Master Speed (1.0 = the original frantic pace), Glitch / Switch Rate, Scroll Speed and Smear Speed raise it as far as you like.",
+  "DESCRIPTION": "Chess — a living pixel grid in datamosh. Everything snaps to a crisp grid of big pixels: 1-bit moiré dither fields, checkerboard columns at several scales, blurry rainbow mosaic blocks, and Tetris-shaped patches filled with cross-stitch motifs (dots, crosses, X's, hex rings, stars, stripes) in red, pink, yellow, blue, green, orange and lavender. Pixel-art flowers and green-and-yellow pixel worms crawl through it like organisms under a microscope. By default the colourful cross-stitch patches slowly take over: Auto Patch Rise grows them from a few scattered islands to the full Colour Patches amount over about 90 seconds, holds, then gently recedes and rises again. The patterns slide through the grid band by band, reshuffle and morph, and the whole picture is datamoshed: macroblocks drag the previous frame along motion vectors so the image smears and bleeds like corrupted video, while only scattered blocks refresh with the new frame. At rest the pixels are big, the mosh is gentle and only a few flowers wander; during a build the grid gets finer, the smear runs longer and the slices tear faster; on the drop a clean keyframe snaps everything into place with an inverted flash, then the peak moshes at full speed with every pattern alive. The Speed group sets the pace: by default it is calm and slow, and Master Speed (1.0 = the original frantic pace), Glitch / Switch Rate, Scroll Speed and Smear Speed raise it as far as you like.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-22 — original.",
   "CATEGORIES": ["Generator", "Glitch", "Audio Reactive"],
   "INPUTS": [
     { "NAME": "pixelSize",   "LABEL": "Pixel Size",       "TYPE": "float", "AUDIO": false, "MIN": 3.0, "MAX": 24.0, "DEFAULT": 7.0, "GROUP": "Grid" },
     { "NAME": "tileSize",    "LABEL": "Pattern Tile (px)","TYPE": "float", "AUDIO": false, "MIN": 4.0, "MAX": 12.0, "DEFAULT": 6.0, "GROUP": "Grid" },
-    { "NAME": "patternMix",  "LABEL": "Colour Patches",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.3, "GROUP": "Grid" },
+    { "NAME": "patternMix",  "LABEL": "Colour Patches",   "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Grid" },
+    { "NAME": "patchAuto",   "LABEL": "Auto Patch Rise",  "TYPE": "bool",  "DEFAULT": true, "GROUP": "Grid" },
+    { "NAME": "patchRampTime","LABEL": "Patch Rise (s)",  "TYPE": "float", "AUDIO": false, "MIN": 20.0, "MAX": 300.0, "DEFAULT": 90.0, "GROUP": "Grid" },
     { "NAME": "checkerAmt",  "LABEL": "Checkerboards",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.35, "GROUP": "Grid" },
     { "NAME": "flowers",     "LABEL": "Pixel Flowers",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.7, "GROUP": "Creatures" },
     { "NAME": "vines",       "LABEL": "Red Vines",        "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.7, "GROUP": "Creatures" },
@@ -20,7 +22,7 @@
     { "NAME": "moshSpeed",   "LABEL": "Smear Speed",      "TYPE": "float", "AUDIO": false, "MIN": 0.1, "MAX": 2.5, "DEFAULT": 1.0, "GROUP": "Speed" },
     { "NAME": "inkColor",    "LABEL": "1-Bit Light",      "TYPE": "color", "DEFAULT": [1.0, 1.0, 1.0, 1.0], "GROUP": "Look" },
     { "NAME": "fabric",      "LABEL": "Felt Texture",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.35, "GROUP": "Look" },
-    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 3, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
+    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
     { "NAME": "palAmount",   "LABEL": "Palette Amount",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Studio Palette" },
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
@@ -116,6 +118,7 @@ float gStep;   // digital clock for glitches: tears, refresh, reshuffle, speckle
 float gCStep;  // digital clock for the creatures (flowers, vines, worms)
 float gScroll; // band scroll clock
 float gPx;     // screen pixels per grid cell
+float gPMix;   // effective colour-patch amount (auto rise or the slider)
 
 // the reference palette: red, magenta/pink, yellow, blue, green, orange, lavender, mint, cream
 vec3 swatch(float k) {
@@ -192,7 +195,7 @@ vec3 scene(vec2 c, vec2 screenCell) {
     col = mix(col, rainbow, mm * 0.95);
 
     // cross-stitch patches: flat colour + motif in a contrasting colour
-    float pOn = step(1.0 - patternMix * (0.45 + 0.6 * lift), blob) * step(0.45, vn2(tile * 0.12 + 20.0 + shuffle * 0.3));
+    float pOn = step(1.0 - gPMix * (0.45 + 0.6 * lift), blob) * step(0.45, vn2(tile * 0.12 + 20.0 + shuffle * 0.3));
     if (pOn > 0.5) {
         vec3 base = swatch(group);
         float mk = floor(h12(tile * 1.3 + group + shuffle) * 7.0);
@@ -311,6 +314,17 @@ void main() {
     // smear clock: the datamosh only travels when this ticks (was: every rendered frame)
     float moshStep = floor(speed * moshSpeed * (TIME * 40.0 + audioBassTime * 24.0 * ar + audioMidTime * 12.0 * ar) + 10.0 * gBuild * gBuild);
     // pixel size: big at rest, finer as the build climbs (snaps to whole pixels)
+    // colour patches: slow eased rise from ~5% up to the Colour Patches ceiling over patchRampTime,
+    // a short hold, then a gentle ease back down before the next rise (no jumps; analytic in TIME)
+    gPMix = patternMix;
+    if (patchAuto) {
+        float u = fract(TIME / max(patchRampTime, 1.0));
+        float rise = smoothstep(0.0, 0.78, u);
+        rise = rise * rise * (3.0 - 2.0 * rise) * 0.35 + rise * 0.65;          // slow start, steady climb, soft arrival
+        float fall = smoothstep(0.85, 1.0, u);
+        float sh = rise * (1.0 - fall);
+        gPMix = mix(min(0.05, patternMix), patternMix, sh);
+    }
     gPx = floor(max(pixelSize * (1.25 - 0.5 * gLift - 0.25 * gBuild + 0.3 * gRest), 2.0));
 
     vec2 cell = floor(gl_FragCoord.xy / gPx);
