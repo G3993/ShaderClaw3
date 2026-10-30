@@ -1,22 +1,24 @@
 /*{
-  "DESCRIPTION": "Liquid Particles — HD 3D liquid in two forms that slowly morph into each other. Particle Silk (the main form): a deep volume of tiny glossy micro-spheres that gather into flowing sheets of liquid fabric — the sheets fold, drift and pour like ink in water, each slice of particles riding its own current, with soft silken sheen between them, iridescent rims and real depth of field so near and far particles melt into bokeh. Liquid Ribbons: endless glossy 3D strips of rainbow liquid that twist, turn edge-on and roll over to show their other face, reflecting studio light with a soap-film shimmer; every strip is a continuous curve that runs off the frame in every direction with no seams, joins or ends, layered over a softer, deeper second layer and trailed by streams of glitter dust. Bass swells the particles and widens the strips, mids push the flow, highs make the glitter and sparks twinkle, beats flash the highlights. At rest it is sparse, slow and floating; during a build the particles contract, the flow accelerates and the colours shimmer faster with a tremor near the top; on the drop a flash and shockwave ring burst outward and everything pours at full density through the peak.",
+  "DESCRIPTION": "Liquid Particles — HD 3D liquid in two forms that slowly morph into each other. Particle Silk (the main form): a deep volume of tiny glossy micro-spheres that gather into flowing sheets of liquid fabric — the sheets fold, drift and pour like ink in water, each slice of particles riding its own current, with soft silken sheen between them, iridescent rims and real depth of field so near and far particles melt into bokeh. Liquid Ribbons: endless glossy 3D strips of rainbow liquid that twist, turn edge-on and roll over to show their other face, reflecting studio light with a soap-film shimmer; every strip is a continuous curve that runs off the frame in every direction with no seams, joins or ends, layered over a softer, deeper second layer and trailed by streams of glitter dust. Bass swells the particles and widens the strips, mids push the flow, highs make the glitter and sparks twinkle, beats flash the highlights. At rest it is sparse, slow and floating; during a build the particles contract, the flow accelerates and the colours shimmer faster with a tremor near the top; on the drop a flash and shockwave ring burst outward and everything pours at full density through the peak. Defaults are big particles at full saturation in the blue studio palette. Preset: Static uses the controls as set; Density Rise slowly fills the volume from a sparse scatter of glossy beads to a dense pour over about 75 seconds (Density Rise time), the particles gliding in and fading up so nothing pops, then thins out gently and rises again, nudged denser by the music and builds.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-22 — original.",
   "CATEGORIES": ["Generator", "3D", "Particles", "Audio Reactive"],
   "INPUTS": [
+    { "NAME": "presetSel",   "LABEL": "Preset", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1], "LABELS": ["Static", "Density Rise"], "GROUP": "Preset" },
+    { "NAME": "densityRampTime", "LABEL": "Density Rise (s)", "TYPE": "float", "AUDIO": false, "MIN": 20.0, "MAX": 240.0, "DEFAULT": 75.0, "GROUP": "Preset" },
     { "NAME": "formSel",     "LABEL": "Form", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2], "LABELS": ["Auto Morph", "Particle Silk", "Liquid Ribbons"], "GROUP": "Form" },
     { "NAME": "colourSel",   "LABEL": "Colours", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Follow Form", "Sunset Paint", "Aurora Smoke", "Rainbow Liquid"], "GROUP": "Form" },
     { "NAME": "morphPeriod", "LABEL": "Morph Period (s)", "TYPE": "float", "AUDIO": false, "MIN": 4.0, "MAX": 60.0, "DEFAULT": 14.0, "GROUP": "Form" },
     { "NAME": "pDensity",    "LABEL": "Particle Density", "TYPE": "float", "AUDIO": false, "MIN": 0.4, "MAX": 1.6, "DEFAULT": 1.0, "GROUP": "Particles" },
-    { "NAME": "pSize",       "LABEL": "Particle Size",    "TYPE": "float", "MIN": 0.4, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Particles" },
+    { "NAME": "pSize",       "LABEL": "Particle Size",    "TYPE": "float", "MIN": 0.4, "MAX": 2.0, "DEFAULT": 2.0, "GROUP": "Particles" },
     { "NAME": "glitter",     "LABEL": "Glitter",          "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Particles" },
     { "NAME": "liquidAmt",   "LABEL": "Liquid Swirl",     "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Liquid" },
     { "NAME": "flowSpeed",   "LABEL": "Flow Speed",       "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Liquid" },
     { "NAME": "spin",        "LABEL": "Spin / Tilt",      "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Liquid" },
     { "NAME": "gloss",       "LABEL": "Gloss",            "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Look" },
-    { "NAME": "saturation",  "LABEL": "Saturation",       "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 1.0, "GROUP": "Look" },
+    { "NAME": "saturation",  "LABEL": "Saturation",       "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 1.5, "GROUP": "Look" },
     { "NAME": "hueShift",    "LABEL": "Hue Shift",        "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "GROUP": "Look" },
     { "NAME": "grain",       "LABEL": "Grain",            "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.15, "GROUP": "Finish" },
-    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 3, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
+    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 2, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
     { "NAME": "palAmount",   "LABEL": "Palette Amount",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Studio Palette" },
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
@@ -103,6 +105,7 @@ void showDynamics() {
 float gT;          // flow clock
 float gScheme;     // colour scheme 0 sunset, 1 aurora, 2 rainbow
 float gPx;         // one pixel in screen units (1 / height)
+float gDens;       // effective particle density (slider, or the Density Rise automation)
 
 // ── the liquid: layered sine domain warp (cheap, smooth, swirly) ─────────
 vec3 liquid(vec3 p) {
@@ -161,7 +164,11 @@ vec4 particleSilk(vec2 sp) {
     vec3 Ld = normalize(vec3(-0.45, 0.65, 0.62));
     vec3 acc = vec3(0.0);
     float cov = 0.0;
-    float cs = 1.0 / (44.0 * pDensity);
+    float cs = 1.0 / (44.0 * gDens);
+    // lattice scale for the drift: in Static this equals cs (unchanged look); under Density Rise
+    // it stays fixed so the lattice only contracts slowly about the view centre as density
+    // rises — particles glide in from the edges and fade in, nothing pops or sweeps
+    float csD = float(presetSel) > 0.5 ? 1.0 / 44.0 : cs;
     float spread = 1.0 - 0.3 * gBuild + 0.45 * gDrop;
     float bass = bassP() * audioReact;
     float focusT = ro.z * 0.98;
@@ -187,7 +194,7 @@ vec4 particleSilk(vec2 sp) {
         // particles: each slice drifts with its own current (continuous offsets)
         float da = fi * 2.399;
         vec2 drift = vec2(cos(da), sin(da)) * gT * (0.04 + 0.02 * h11(fi)) + vec2(gT * 0.03, 0.0);
-        vec2 g = (P.xy + drift) / cs;
+        vec2 g = P.xy / cs + drift / csD;
         vec2 cell0 = floor(g - 0.5);
         float pxp = tz * gPx / 1.6;                       // one screen pixel on this slice
         float coc = abs(tz - focusT) * 0.007;             // depth-of-field blur radius
@@ -343,6 +350,15 @@ void main() {
     vec2 sp = (fc - 0.5 * R) / R.y;
     gPx = 1.0 / R.y;
     float ar = audioReact;
+    // Density Rise preset: sparse (0.4) → dense (1.6) over the cycle, short hold, gentle ease back
+    gDens = pDensity;
+    if (float(presetSel) > 0.5) {
+        float u = fract(TIME / max(densityRampTime, 1.0));
+        float rise = smoothstep(0.0, 0.66, u);
+        float fall = smoothstep(0.72, 1.0, u);
+        float sh = rise * (1.0 - fall);
+        gDens = mix(0.4, 1.6, sh) + 0.15 * gBuild + 0.08 * clamp(audioEnergy, 0.0, 1.0) * ar;
+    }
     gT = TIME * 0.35 * flowSpeed + (audioMidTime * 0.35 + audioBassTime * 0.2) * ar * flowSpeed + 0.8 * gBuild;
     // build tremor near the top
     sp += (vec2(h11(floor(TIME * 30.0)), h11(floor(TIME * 30.0) + 7.0)) - 0.5) * 0.008 * smoothstep(0.65, 1.0, gBuild);
