@@ -1113,5 +1113,125 @@
   },
   "geometric_flowers": {
     "group": "studio"
+  },
+  "fractilian_kaleidoscope": {
+    "group": "fractals",
+    "surfaces": [
+      "outside"
+    ]
+  },
+  "fractilian_nebula": {
+    "group": "fractals",
+    "surfaces": [
+      "outside"
+    ]
+  },
+  "fractilian_gilded": {
+    "group": "fractals",
+    "surfaces": [
+      "outside"
+    ]
+  },
+  "fractilian_stained_glass": {
+    "group": "fractals",
+    "surfaces": [
+      "outside"
+    ]
+  },
+  "fractilian_twin_inversion": {
+    "group": "fractals",
+    "surfaces": [
+      "outside"
+    ]
+  },
+  "fractilian_vortex": {
+    "group": "fractals",
+    "surfaces": [
+      "outside"
+    ]
+  },
+  "fractilian_prism": {
+    "group": "fractals",
+    "surfaces": [
+      "outside"
+    ]
+  },
+  "fractilian_sumi_ink": {
+    "group": "fractals",
+    "surfaces": [
+      "outside"
+    ]
+  },
+  "fractilian_neon_contour": {
+    "group": "fractals",
+    "surfaces": [
+      "outside"
+    ]
+  },
+  "fractilian_coral": {
+    "group": "fractals",
+    "surfaces": [
+      "outside"
+    ]
+  },
+  "kleinian_limit_set": {
+    "group": "fractals",
+    "surfaces": [
+      "outside"
+    ]
+  },
+  "hyperbolic_tiling": {
+    "group": "fractals",
+    "surfaces": [
+      "outside"
+    ]
+  },
+  "kali_lace": {
+    "group": "fractals",
+    "surfaces": [
+      "outside"
+    ]
+  },
+  "newton_nova": {
+    "group": "fractals",
+    "surfaces": [
+      "outside"
+    ]
+  },
+  "lyapunov_zircon": {
+    "group": "fractals",
+    "surfaces": [
+      "outside"
+    ]
+  },
+  "burning_ship": {
+    "group": "fractals",
+    "surfaces": [
+      "outside"
+    ]
+  },
+  "mandelbulb_bloom": {
+    "group": "fractals",
+    "surfaces": [
+      "outside"
+    ]
+  },
+  "apollonian_spheres": {
+    "group": "fractals",
+    "surfaces": [
+      "outside"
+    ]
+  },
+  "pseudo_kleinian": {
+    "group": "fractals",
+    "surfaces": [
+      "outside"
+    ]
+  },
+  "fractal_tree": {
+    "group": "fractals",
+    "surfaces": [
+      "outside"
+    ]
   }
 }

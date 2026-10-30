@@ -4049,5 +4049,302 @@
     "id": 1422,
     "title": "Geometric Flowers",
     "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Fractal",
+      "Kaleidoscope",
+      "Audio Reactive"
+    ],
+    "description": "Fractilian Kaleidoscope — the circle-inversion fractal folded into an N-segment mandala, painted with a cycling cosine palette. Segments, spin, zoom, palette hue/rate/saturation; bass turns the wheel, level lifts the light.",
+    "file": "fractilian_kaleidoscope.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1500,
+    "title": "Fractilian Kaleidoscope",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Fractal",
+      "Space",
+      "Audio Reactive"
+    ],
+    "description": "Fractilian Nebula — the inversion orbit accumulated as glowing gas instead of hard bands: three-colour clouds with dark dust lanes over a twinkling starfield. Glow, falloff, dust, stars, three colours; mids swell the gas, highs make the stars sparkle.",
+    "file": "fractilian_nebula.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1501,
+    "title": "Fractilian Nebula",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Fractal",
+      "Ornament",
+      "Audio Reactive"
+    ],
+    "description": "Fractilian Gilded — the fractal traced as raised gold filigree on black lacquer, lit by a slowly circling light. Line width, relief, sheen, metal and lacquer colours; bass swings the light, highs glint.",
+    "file": "fractilian_gilded.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1502,
+    "title": "Fractilian Gilded",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Fractal",
+      "Glass",
+      "Audio Reactive"
+    ],
+    "description": "Fractilian Stained Glass — fractal cells filled with jewel glass (ruby, sapphire, emerald, amber, amethyst) between dark leading, backlit with a soft sun. Facets, lead width, glow, glass texture, sun position; bass brightens the sun.",
+    "file": "fractilian_stained_glass.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1503,
+    "title": "Fractilian Stained Glass",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Fractal",
+      "Iridescent",
+      "Audio Reactive"
+    ],
+    "description": "Fractilian Twin Inversion — a second, orbiting inversion circle folds every orbit that lands inside it, so the fractal grows nested bubbles and stranger structures; coloured like oil-slick thin film. Orbit, second radius, film frequency, shimmer; bass pushes the orbit.",
+    "file": "fractilian_twin_inversion.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1504,
+    "title": "Fractilian Twin Inversion",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Fractal",
+      "Tunnel",
+      "Audio Reactive"
+    ],
+    "description": "Fractilian Vortex — the fractal wrapped into a spiralling log-polar tunnel that keeps flowing toward the centre. Arms, twist, speed, depth fog, colour; bass surges the flow.",
+    "file": "fractilian_vortex.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1505,
+    "title": "Fractilian Vortex",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Fractal",
+      "Chromatic",
+      "Audio Reactive"
+    ],
+    "description": "Fractilian Prism — the original rendered once per colour channel with a slightly different scale, so every edge splits into rainbow fringes around white-hot cores. Dispersion, contrast, brightness; bass widens the split.",
+    "file": "fractilian_prism.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1506,
+    "title": "Fractilian Prism",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Fractal",
+      "Ink",
+      "Audio Reactive"
+    ],
+    "description": "Fractilian Sumi Ink — the fractal brushed in layered ink washes on warm paper, with pooled pigment at the wash edges, paper grain and a vermilion seal accent. Ink, wash, pooling, grain, accent, ink/paper/accent colours; bass deepens the ink.",
+    "file": "fractilian_sumi_ink.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1507,
+    "title": "Fractilian Sumi Ink",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Fractal",
+      "Neon",
+      "Lines",
+      "Audio Reactive"
+    ],
+    "description": "Fractilian Neon Contour — the fractal drawn as glowing contour lines on black, like a neon topographic map, with the lines flowing outward. Line density, thickness, halo, flow, palette; bass flows, highs flare the halos.",
+    "file": "fractilian_neon_contour.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1508,
+    "title": "Fractilian Neon Contour",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Fractal",
+      "Organic",
+      "Underwater",
+      "Audio Reactive"
+    ],
+    "description": "Fractilian Coral — the hard abs fold softened so the fractal grows like coral and anemones, in coral/teal/sand under drifting caustic light and marine snow. Softness, caustics, depth, snow and three colours; bass breathes the reef.",
+    "file": "fractilian_coral.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1509,
+    "title": "Fractilian Coral",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Fractal",
+      "Audio Reactive"
+    ],
+    "description": "Kleinian Limit Set — the lace left behind by a Kleinian group (a translation plus a circle inversion, Maskit slice), the 'Indra's Pearls' fractal. The trace slowly wanders so the necklaces breathe and re-link. Looks: Stained Glass, Pearl Ink, Neon. Bass bends the group, highs glint the lace.",
+    "file": "kleinian_limit_set.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1510,
+    "title": "Kleinian Limit Set",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Fractal",
+      "Geometry",
+      "Audio Reactive"
+    ],
+    "description": "Hyperbolic Tiling — an Escher 'Circle Limit' {p,q} tiling of the hyperbolic plane, built by reflecting each point into one triangle across two lines and a circle (circle inversion again). The tiles shrink endlessly toward the edge while the plane glides and turns. Models: Poincaré Disk, Band (fills a wide screen), Half-Plane. Looks: Stained Glass, Two-Tone, Neon. Bass glides the plane, highs light the lead.",
+    "file": "hyperbolic_tiling.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1511,
+    "title": "Hyperbolic Tiling",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Fractal",
+      "Audio Reactive"
+    ],
+    "description": "Kali Lace — the 2D Kaliset: fold to the positive quadrant, invert in the unit circle, shift, repeat. Fine glowing filaments knit into lace, spirals and filigree as the seed drifts. Looks: Lace (cosine palette on black), Gold Leaf, Ink. Bass shifts the seed, highs brighten the threads.",
+    "file": "kali_lace.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1512,
+    "title": "Kali Lace",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Fractal",
+      "Audio Reactive"
+    ],
+    "description": "Newton Nova — Newton's method for z^n = 1 run on every pixel: each point is coloured by the root it falls into, and the basin borders braid into endless fractal chains. A complex relaxation factor slowly orbits, and Nova mode adds a drifting constant that breaks the symmetry into spirals. Degree, relaxation, mode, palette, shading. Bass swings the relaxation, highs light the borders.",
+    "file": "newton_nova.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1513,
+    "title": "Newton Nova",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Fractal",
+      "Audio Reactive"
+    ],
+    "description": "Lyapunov Zircon — the Markus–Lyapunov fractal: the logistic map x <- r x (1 - x) is driven by alternating growth rates a and b, and every pixel shows whether that rhythm settles (gold, embossed like carved amber) or goes chaotic (deep blue). Slow drift through the 'Zircon Zity' region. Pattern lengths, light angle, relief, colours. Bass deepens the relief, highs flash the chaos edges.",
+    "file": "lyapunov_zircon.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1514,
+    "title": "Lyapunov Zircon",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Fractal",
+      "Audio Reactive"
+    ],
+    "description": "Burning Ship — the Mandelbrot formula with absolute values (z <- (|x| + i|y|)^2 + c), which turns the set into a burning ship with an armada of smaller ships and masts trailing off its bow. A slow dive from the whole ship into the armada and back. Looks: Fire, Ice, Gold. Bass stokes the flames, highs light the rigging.",
+    "file": "burning_ship.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1515,
+    "title": "Burning Ship",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Fractal",
+      "3D",
+      "Audio Reactive"
+    ],
+    "description": "Mandelbulb Bloom — the 3D Mandelbulb (z <- z^n + c in spherical coordinates), raymarched and lit, its power slowly breathing so the bulb blooms from smooth petals into deep fractal coral and back. Looks: Coral, Jewel, Neon Rim. Power, bloom, camera orbit. Bass pushes the power, highs light the rims.",
+    "file": "mandelbulb_bloom.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1516,
+    "title": "Mandelbulb Bloom",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Fractal",
+      "3D",
+      "Audio Reactive"
+    ],
+    "description": "Apollonian Spheres — a raymarched 3D Apollonian packing: repeat space, invert in a sphere, repeat again, until every gap is filled with ever smaller bubbles and tunnels. The camera wanders through it as the inversion radius breathes. Looks: Pearl, Stained Glass, Ember. Bass breathes the inversion, highs sparkle.",
+    "file": "apollonian_spheres.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1517,
+    "title": "Apollonian Spheres",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Fractal",
+      "3D",
+      "Audio Reactive"
+    ],
+    "description": "Pseudo-Kleinian — a slow drift through the caverns of a 3D pseudo-Kleinian fractal: box folds and sphere inversions (3D cousins of the Kleinian necklaces) carve endless arches, pillars and lace walls. Lit by a lantern that travels with the camera. Looks: Marble, Gold, Neon. Bass breathes the lantern, highs sparkle.",
+    "file": "pseudo_kleinian.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1518,
+    "title": "Pseudo-Kleinian",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Fractal",
+      "Nature",
+      "Audio Reactive"
+    ],
+    "description": "Fractal Tree — a single trunk that splits in two, and again, twelve generations deep (4,096 twigs) by folding space at each fork. Wind sways every generation on its own phase so the crown moves like a real tree; blossoms open at the tips. Looks: Blossom (dawn sky), Neon, Ink. Branch angle, length ratio, taper, wind, blossom size. Bass gusts the wind, highs make blossoms glow.",
+    "file": "fractal_tree.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1519,
+    "title": "Fractal Tree",
+    "type": "generator"
   }
 ]
