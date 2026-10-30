@@ -1,11 +1,13 @@
 /*{
-  "DESCRIPTION": "Flowing — a spinning 3D string made of dozens of fine strands of glowing dots, winding around each other like a twisted rope that swells, pinches, loops out and back in while the whole string sweeps across the frame in a slow, re-shaping S-curve. Strands in front are brighter and larger, strands behind fade into the dark for real depth. Through the lines run a few thin comets of light: sparse white-hot heads with long fading tails, each riding its own strand at its own speed, so the rope stays calm and minimal but alive. Every so often the rope is struck by lightning: a jagged, forked electric discharge with a white-violet core and a coloured bloom jumps along and across the strands, the whole scene flashes as if lit from inside a storm cloud, the strands blaze, then everything decays fast with a stuttering afterglow, and the biggest strikes shake the frame with a low rumble. Bass swells the rope and spins it harder, beats flash the dots and throw small sparks of lightning, mids speed the flow and the comets, highs make the dots twinkle. Show Dynamics: at Rest only a few fine strands drift along a slim thread with one or two lazy comets and rare, far-off silent flashes; during a Build the rope coils tighter, twists and spins up, the dots shimmer faster, more comets race along it and distant flickers come quicker and quicker; at the Drop a huge branching strike tears down the whole rope with a blinding flash and shake as the strands burst open, before settling into a full, fat, colourful, storm-lit peak.",
+  "DESCRIPTION": "Flowing — a spinning 3D string made of dozens of fine strands of glowing dots, winding around each other like a twisted rope that swells, pinches, loops out and back in while the whole string sweeps across the frame in a slow, re-shaping S-curve. By default the full 72 strands are drawn and the swell breathes on its own: Auto Swell slowly inflates and pinches the rope over a ~12 s, slightly irregular breath (Swell & Pinch sets how deep it goes), pushed fatter by bass and by a build. Strands in front are brighter and larger, strands behind fade into the dark for real depth. Through the lines run a few thin comets of light: sparse white-hot heads with long fading tails, each riding its own strand at its own speed, so the rope stays calm and minimal but alive. Every so often the rope is struck by lightning: a jagged, forked electric discharge with a white-violet core and a coloured bloom jumps along and across the strands, the whole scene flashes as if lit from inside a storm cloud, the strands blaze, then everything decays fast with a stuttering afterglow, and the biggest strikes shake the frame with a low rumble. Bass swells the rope and spins it harder, beats flash the dots and throw small sparks of lightning, mids speed the flow and the comets, highs make the dots twinkle. Show Dynamics: at Rest only a few fine strands drift along a slim thread with one or two lazy comets and rare, far-off silent flashes; during a Build the rope coils tighter, twists and spins up, the dots shimmer faster, more comets race along it and distant flickers come quicker and quicker; at the Drop a huge branching strike tears down the whole rope with a blinding flash and shake as the strands burst open, before settling into a full, fat, colourful, storm-lit peak.",
   "CREDIT": "Easel / ShaderClaw house shader, 2026-10-22 — original.",
   "CATEGORIES": ["Generator", "3D", "Particles", "Audio Reactive"],
   "INPUTS": [
-    { "NAME": "strands",     "LABEL": "Strands",          "TYPE": "float", "AUDIO": false, "MIN": 8.0, "MAX": 72.0, "DEFAULT": 36.0, "GROUP": "String" },
+    { "NAME": "strands",     "LABEL": "Strands",          "TYPE": "float", "AUDIO": false, "MIN": 8.0, "MAX": 72.0, "DEFAULT": 72.0, "GROUP": "String" },
     { "NAME": "ropeWidth",   "LABEL": "Thickness",        "TYPE": "float", "MIN": 0.03, "MAX": 0.35, "DEFAULT": 0.11, "GROUP": "String" },
-    { "NAME": "bulge",       "LABEL": "Swell & Pinch",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55, "GROUP": "String" },
+    { "NAME": "bulge",       "LABEL": "Swell & Pinch",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "String" },
+    { "NAME": "swellAuto",   "LABEL": "Auto Swell",       "TYPE": "bool",  "DEFAULT": true, "GROUP": "String" },
+    { "NAME": "swellPeriod", "LABEL": "Swell Breath (s)", "TYPE": "float", "AUDIO": false, "MIN": 3.0, "MAX": 40.0, "DEFAULT": 12.0, "GROUP": "String" },
     { "NAME": "twist",       "LABEL": "Twist",            "TYPE": "float", "MIN": 0.0, "MAX": 4.0, "DEFAULT": 1.4, "GROUP": "String" },
     { "NAME": "looseness",   "LABEL": "Loose Loops",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.45, "GROUP": "String" },
     { "NAME": "dotSpacing",  "LABEL": "Dot Spacing",      "TYPE": "float", "MIN": 0.004, "MAX": 0.04, "DEFAULT": 0.012, "GROUP": "Dots" },
@@ -28,7 +30,7 @@
     { "NAME": "flashAmt",    "LABEL": "Sky Flash",        "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Light & Thunder" },
     { "NAME": "boltColor",   "LABEL": "Bolt Colour",      "TYPE": "color", "DEFAULT": [0.55, 0.45, 1.0, 1.0], "GROUP": "Light & Thunder" },
     { "NAME": "grain",       "LABEL": "Grain",            "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.15, "GROUP": "Finish" },
-    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 3, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
+    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2, 3], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White"], "GROUP": "Studio Palette" },
     { "NAME": "palAmount",   "LABEL": "Palette Amount",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Studio Palette" },
     { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
     { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
@@ -239,8 +241,17 @@ void main() {
     vec2 rel = p - P;
     float along = dot(rel, T);
 
+    // auto swell: the swell & pinch depth breathes slowly between ~0.1 and 1.0 of Swell & Pinch,
+    // two incommensurate sines (eased) so the rhythm never quite repeats; bass and the build nudge it up
+    float swellK = bulge;
+    if (swellAuto) {
+        float sp = TAU / max(swellPeriod, 1.0);
+        float br = 0.5 + 0.5 * (0.68 * sin(TIME * sp - 1.5708) + 0.32 * sin(TIME * sp * 0.618 + 2.1));
+        br = smoothstep(0.0, 1.0, clamp(br, 0.0, 1.0));
+        swellK = bulge * clamp(mix(0.1, 1.0, br) + 0.25 * bassP() * ar + 0.3 * gBuild, 0.0, 1.0);
+    }
     // rope width along its length: swell & pinch, bass breathes it
-    float w = ropeWidth * (1.0 + bulge * 0.6 * sin(s * 7.0 - TIME * 0.4) + bulge * 0.35 * sin(s * 13.0 + TIME * 0.3))
+    float w = ropeWidth * (1.0 + swellK * 0.6 * sin(s * 7.0 - TIME * 0.4) + swellK * 0.35 * sin(s * 13.0 + TIME * 0.3))
             * (1.0 + 0.35 * bassP() * ar)
             * (mix(0.55, 1.2, gLift) * (1.0 - 0.45 * gBuild) + 1.3 * gDrop);       // slim at rest, coils tight on the build, bursts on the drop
     w = max(w, 0.01);
