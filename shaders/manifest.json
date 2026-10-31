@@ -4346,5 +4346,233 @@
     "id": 1519,
     "title": "Fractal Tree",
     "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Ethereal",
+      "3D",
+      "Audio Reactive"
+    ],
+    "description": "Ether Jellyfish — a jellyfish made of light: a pulsing translucent bell trailing slow, swaying tendrils as it drifts in the dark. Pulse, tendril count and length, sway, two colours. Bass pulses the bell, highs shimmer the tendrils.",
+    "file": "ether_jellyfish.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1520,
+    "title": "Ether Jellyfish",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Ethereal",
+      "3D",
+      "Audio Reactive"
+    ],
+    "description": "Ether Ribbon — one long silk ribbon of light twisting and folding through the void like an aurora caught in a breeze. Twist, waviness, width, two colours. Bass swells the folds, highs shimmer the edges.",
+    "file": "ether_ribbon.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1521,
+    "title": "Ether Ribbon",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Ethereal",
+      "3D",
+      "Audio Reactive"
+    ],
+    "description": "Ether Gyroscope — an armillary of light: concentric glowing rings tumbling on different axes around a radiant core, like a slow celestial instrument. Ring count, tumble, core size, two colours. Bass flares the core, highs brighten the rings.",
+    "file": "ether_gyroscope.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1522,
+    "title": "Ether Gyroscope",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Ethereal",
+      "3D",
+      "Audio Reactive"
+    ],
+    "description": "Ether Wings — a pair of great wings made of light, slowly beating, each traced with feather ridges that glow toward the tips. Beat rate, span, feathers, two colours. Bass deepens the wingbeat, highs light the feather tips.",
+    "file": "ether_wings.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1523,
+    "title": "Ether Wings",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Ethereal",
+      "3D",
+      "Audio Reactive"
+    ],
+    "description": "Ether Wisp — a spirit of light rising like smoke from a single glowing point, curling and branching as it climbs and fades. Rise speed, curl, height, two colours. Bass lifts the plume, mids add turbulence.",
+    "file": "ether_wisp.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1524,
+    "title": "Ether Wisp",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Ethereal",
+      "Fractal",
+      "3D",
+      "Audio Reactive"
+    ],
+    "description": "Ether Kali Orb — a sphere filled with a living 3D Kaliset: fractal filaments of light folding inside a glass-clear orb that floats in the dark. Fractal form, depth, rim, two colours. Fractal and ethereal at once. Bass shifts the fractal, highs flare its filaments.",
+    "file": "ether_kali_orb.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1525,
+    "title": "Ether Kali Orb",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Ethereal",
+      "Fractal",
+      "3D",
+      "Audio Reactive"
+    ],
+    "description": "Ether Ghost Bulb — the Mandelbulb rendered as pure light, a translucent ghost of the fractal hanging in the void, its petals glowing from within as its power slowly breathes. Power, bloom, two colours. Fractal and ethereal at once. Bass pushes the power.",
+    "file": "ether_ghost_bulb.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1526,
+    "title": "Ether Ghost Bulb",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Ethereal",
+      "3D",
+      "Audio Reactive"
+    ],
+    "description": "Ether Soul — a radiant heart of light with comets of glow orbiting it on tilted paths, leaving fading trails, like a small living star. Comet count, orbit speed, trail length, two colours. Bass swells the heart, highs brighten the comets.",
+    "file": "ether_soul.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1527,
+    "title": "Ether Soul",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Ethereal",
+      "Fractal",
+      "3D",
+      "Audio Reactive"
+    ],
+    "description": "Ether Pearl — an orb of light packed with an Apollonian fractal: bubbles within bubbles, glowing like a pearl lit from inside as the inversion slowly breathes. Inversion, depth, two colours. Fractal and ethereal at once. Bass breathes the packing.",
+    "file": "ether_pearl.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1528,
+    "title": "Ether Pearl",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Ethereal",
+      "3D",
+      "Audio Reactive"
+    ],
+    "description": "Ether Bloom — Ether opening like a flower: its tendrils folded into a ring of petals of light that slowly unfurl, turn and close again around a bright heart. Petals, opening, morph, two colours. Built as an input for the AI: one luminous centrepiece in dark space. Bass breathes the bloom.",
+    "file": "ether_bloom.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1529,
+    "title": "Ether Bloom",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Ethereal",
+      "3D",
+      "Audio Reactive"
+    ],
+    "description": "Ether Tide — a horizon-wide swell of light: Ether stretched into a long luminous wave that rolls and folds across the whole frame, a sea or a landscape waiting to be painted. Wave height, roll, morph, two colours. Wide-screen by design. Bass lifts the swell.",
+    "file": "ether_tide.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1530,
+    "title": "Ether Tide",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Ethereal",
+      "3D",
+      "Audio Reactive"
+    ],
+    "description": "Ether Chrysalis — a tall, upright form of light, like a figure or a cocoon, swaying gently as its tendrils shift inside it; something about to become someone. Height, sway, morph, two colours. Built as an input for the AI: a vertical presence the model can turn into a person, a tree or a tower. Bass breathes it.",
+    "file": "ether_chrysalis.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1531,
+    "title": "Ether Chrysalis",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Ethereal",
+      "3D",
+      "Audio Reactive"
+    ],
+    "description": "Ether Twins — two Ether forms circling each other, leaning in and drifting apart, their light mixing where they meet: two dancers, two lovers, two worlds. Distance, orbit speed, morph, two colours. Built as an input for the AI: two subjects in one frame. Bass draws them together.",
+    "file": "ether_twins.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1532,
+    "title": "Ether Twins",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Ethereal",
+      "3D",
+      "Audio Reactive"
+    ],
+    "description": "Ether Entity — living liquid light: three Ether masses that pool together, stretch, split off and merge again, never holding one shape for long. A shape-shifter for the AI to turn into whatever is being said. Restlessness, morph, two colours. Bass makes it surge.",
+    "file": "ether_entity.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1533,
+    "title": "Ether Entity",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Ethereal",
+      "3D",
+      "Audio Reactive"
+    ],
+    "description": "Ether Iris — a ring of Ether light around a dark centre: an eye, a portal, an eclipse, a halo, slowly turning and dilating. Ring size, dilation, morph, two colours. Built as an input for the AI: a strong frame with a centre to fill. Bass dilates the iris.",
+    "file": "ether_iris.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1534,
+    "title": "Ether Iris",
+    "type": "generator"
   }
 ]

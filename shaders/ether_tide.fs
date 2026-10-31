@@ -1,0 +1,185 @@
+/*{
+	"ISFVSN": "2",
+	"CREDIT": "Etherea, Ether-core family (light model after nimitz's Ether)",
+	"DESCRIPTION": "Ether Tide — a horizon-wide swell of light: Ether stretched into a long luminous wave that rolls and folds across the whole frame, a sea or a landscape waiting to be painted. Wave height, roll, morph, two colours. Wide-screen by design. Bass lifts the swell.",
+	"CATEGORIES": [
+		"Generator",
+		"Ethereal",
+		"3D",
+		"Audio Reactive"
+	],
+	"INPUTS": [
+		{
+			"NAME": "speed",
+			"TYPE": "float",
+			"DEFAULT": 0.5,
+			"MIN": 0,
+			"MAX": 2
+		},
+		{
+			"NAME": "size",
+			"TYPE": "float",
+			"DEFAULT": 1,
+			"MIN": 0.4,
+			"MAX": 2
+		},
+		{
+			"NAME": "morph",
+			"TYPE": "float",
+			"DEFAULT": 1,
+			"MIN": 0,
+			"MAX": 2,
+			"LABEL": "Morph"
+		},
+		{
+			"NAME": "twist",
+			"TYPE": "float",
+			"DEFAULT": 1,
+			"MIN": 0,
+			"MAX": 3
+		},
+		{
+			"NAME": "baseColor",
+			"TYPE": "color",
+			"DEFAULT": [
+				0.05,
+				0.18,
+				0.3,
+				1
+			],
+			"LABEL": "Body"
+		},
+		{
+			"NAME": "lightColor",
+			"TYPE": "color",
+			"DEFAULT": [
+				0.45,
+				0.85,
+				1,
+				1
+			],
+			"LABEL": "Light"
+		},
+		{
+			"NAME": "brightness",
+			"TYPE": "float",
+			"DEFAULT": 1,
+			"MIN": 0.2,
+			"MAX": 3
+		},
+		{
+			"NAME": "hueShift",
+			"TYPE": "float",
+			"DEFAULT": 0,
+			"MIN": 0,
+			"MAX": 1,
+			"LABEL": "Hue Shift"
+		},
+		{
+			"NAME": "centerX",
+			"TYPE": "float",
+			"DEFAULT": 0,
+			"MIN": -0.8,
+			"MAX": 0.8,
+			"LABEL": "Center X"
+		},
+		{
+			"NAME": "centerY",
+			"TYPE": "float",
+			"DEFAULT": -0.08,
+			"MIN": -0.5,
+			"MAX": 0.5,
+			"LABEL": "Center Y"
+		},
+		{
+			"NAME": "background",
+			"TYPE": "color",
+			"DEFAULT": [
+				0,
+				0,
+				0,
+				1
+			],
+			"LABEL": "Background"
+		},
+		{
+			"NAME": "audioReact",
+			"TYPE": "float",
+			"DEFAULT": 1,
+			"MIN": 0,
+			"MAX": 2,
+			"LABEL": "Audio React",
+			"GROUP": "Audio Reactivity"
+		},
+		{
+			"NAME": "waveHeight",
+			"TYPE": "float",
+			"DEFAULT": 0.6,
+			"MIN": 0,
+			"MAX": 1.5,
+			"LABEL": "Wave Height"
+		},
+		{
+			"NAME": "roll",
+			"TYPE": "float",
+			"DEFAULT": 0.5,
+			"MIN": 0,
+			"MAX": 2
+		}
+	]
+}*/
+
+////////////////////////////////////////////////////////////
+// Ether Tide
+// a horizon-wide swell of light: Ether stretched into a long luminous wave that rolls and folds across the whole frame, a sea or a landscape waiting to be painted.
+// Ether-core: the light model of nimitz's "Ether" (6-step march, colour
+// multiplied through the field) applied to a new form.
+////////////////////////////////////////////////////////////
+
+mat2 rot(float a) { float s = sin(a), co = cos(a); return mat2(co, -s, s, co); }
+vec3 hueRotate(vec3 col, float h) {
+	float a = h*6.28318;
+	vec3 k = vec3(0.57735);
+	return col*cos(a) + cross(k, col)*sin(a) + k*dot(k, col)*(1.0 - cos(a));
+}
+// Ether's skin: nested sines that make the tendrils.
+float skin(vec3 p, float t) {
+	vec3 q = p*2.0 + t;
+	return sin(q.x + sin(q.z + sin(q.y)))*0.5;
+}
+float gB, gM, gH;
+float form(vec3 p, float t) {
+	p.yz *= rot(0.35);
+	float w = waveHeight*(1.0 + 0.3*gB);
+	float surf = p.y + w*0.5*sin(p.x*0.9 + t*roll) + w*0.25*sin(p.x*1.7 - t*roll*1.3 + p.z);
+	float body = abs(surf)*1.6 + abs(p.z)*0.25;
+	return body + skin(vec3(p.x*0.6, p.y, p.z), t)*morph - 0.55;
+}
+
+void main()
+{
+	gB = pow(smoothstep(0.05, 0.85, audioBass), 1.4) * audioReact;
+	gM = smoothstep(0.05, 0.85, audioMid) * audioReact;
+	gH = pow(smoothstep(0.10, 0.90, audioHigh), 1.2) * audioReact;
+	float aL = smoothstep(0.05, 0.9, audioLevel) * audioReact;
+	// Constant clock plus a small bounded audio phase (no tempo jumps).
+	float t = TIME*speed + 0.3*gB;
+
+	vec2 p = (gl_FragCoord.xy - 0.5*RENDERSIZE.xy) / RENDERSIZE.y - vec2(centerX, centerY);
+	p /= size*(1.0 + 0.1*gB);
+	vec3 cl = vec3(0.0);
+	float d = 2.5;
+	for (int i = 0; i <= 5; i++) {
+		vec3 pos = vec3(0.0, 0.0, 5.0) + normalize(vec3(p, -1.0))*d;
+		float rz = form(pos, t);
+		float fl = clamp((rz - form(pos + 0.1, t))*0.5, -0.1, 1.0);
+		vec3 l = baseColor.rgb + lightColor.rgb*5.0*fl;
+		float core = smoothstep(2.2, 0.0, rz);
+		cl = cl*l + core*0.7*l;
+		d += min(rz, 1.0);
+	}
+	cl *= brightness*(1.0 + 0.3*aL);
+	cl = hueRotate(cl, hueShift);
+	vec3 col = 1.0 - exp(-max(cl, 0.0)*1.1);
+	gl_FragColor = vec4(background.rgb*(1.0 - max(col.r, max(col.g, col.b))) + col, 1.0);
+}
