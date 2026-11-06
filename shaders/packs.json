@@ -1323,5 +1323,8 @@
     "surfaces": [
       "outside"
     ]
+  },
+  "laser_sculptor": {
+    "group": "studio"
   }
 }

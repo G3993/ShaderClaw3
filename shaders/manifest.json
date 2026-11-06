@@ -169,9 +169,10 @@
     "categories": [
       "Generator",
       "Audio Reactive",
-      "Geometric"
+      "Geometric",
+      "3D"
     ],
-    "description": "Sand on a vibrating plate. Audio frequencies sculpt classic Chladni nodal lines into living constellations. 1787 plate physics rendered as light.",
+    "description": "Real sand on a resonating plate in a white studio. A persistent sand simulation pushes grains off the vibrating antinodes onto the nodal lines; the music's spectrum picks which of 12 plate eigenmodes rings, so the sand visibly migrates into each new figure. Bass hits make the sand bed jump. Raymarched 3D plate, piles, soft shadows. Black, brass and iron-filing looks.",
     "file": "chladni_figures.fs",
     "id": 469,
     "title": "Chladni Figures",
@@ -3699,11 +3700,10 @@
   {
     "categories": [
       "Generator",
-      "3D",
       "Nature",
       "Audio Reactive"
     ],
-    "description": "Body Garden — two looks, with presets. Presets: Live (Size Automation, default) — the Pixel Mosaic figure breathes in size from nothing to full (0 → 1.10) over a slow eased ~24 s cycle, nudged by bass and the build, with the contour rings flowing outward at full speed; Static — no automation, the figure held at full size and every input used as set; Mosaic Automation — tile count, contour spacing, tile flicker and contour density each drift slowly on their own eased clocks so the mosaic re-quantises and the aura tightens and loosens by itself; Two Figures — the side-by-side pair, both breathing with the size automation; Custom — every input exactly as set (Figure Size Automation, its min/max/cycle, and People = Auto, where a second figure grows out of the first and slides aside, then merges back). Pixel Mosaic (default): one flat 2D front-view human figure, or two standing side by side, with real anatomy built from a mosaic of coloured pixel tiles — red, yellow, green, blue, white and black squares, split cells, diagonal hatching and little outlined squares that keep flipping and re-arranging digitally — while contour lines made of broken pixel dashes ripple outward from the body across the whole frame like an aura or a fingerprint. At rest the rings drift slowly and the tiles barely change; during a build the rings speed up and tighten and the tiles flicker faster; on the drop a bright shock ring bursts out of the body and the tiles scatter. Glass Garden: a still glass human figure with real anatomy (a sculpted human body baked into a 3D distance field), seen three-quarter from head to mid-thigh, with a living garden inside. The glass shell glows at its rim and catches highlights while the interior is raymarched as a volume: lungs breathe and sparkle with thousands of multicoloured points of light, a glowing pink nerve tree branches from the throat into the chest and pulses on the beat, vines spiral up through the torso and neck, flowers open and close in the head, shoulder and chest, a dense bed of blooms and leaves fills the belly, a cluster of sparks lives in the brain, and abstract 3D elements (rings, cubes and orbs) drift through the body. The figure never moves; everything inside it does. Bass makes the lungs breathe deeper, beats send a pulse up the nerves and flash the sparks, mids speed the drifting elements, highs twinkle the lights. Show Dynamics: at Rest the garden sleeps (buds closed, vines low, a few slow sparks and drifting shapes, soft glass); during a Build the vines climb, flowers unfurl, the sparks thicken and shimmer faster while the abstract shapes converge on the heart and tremble; at the Drop a shockwave of light bursts out from the chest through the whole body, the nerves and glass flash, and every bloom snaps fully open.",
+    "description": "Flat 2D pixel-mosaic human figure (one, two, or auto one-to-two) with contour rings rippling outward; presets + size automation; tiles flip and scatter with the music.",
     "file": "body_garden.fs",
     "hasVertex": false,
     "hidden": false,
@@ -4573,6 +4573,51 @@
     "hidden": false,
     "id": 1534,
     "title": "Ether Iris",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Anime",
+      "Illustration",
+      "Audio Reactive"
+    ],
+    "description": "Anime — a sky full of hand-inked anime explosions that keep bursting, billowing, morphing and flowing. Every blast lives a whole cartoon life: a white flash frame and a spiky starburst, a shock ring racing out flat across the ground, then cauliflower smoke puffs swelling up in cel-shaded layers (crisp shadow crescents, light facets and a hot glowing core), splash blades and spikes shooting out, teardrop debris flying on real arcs, and finally the smoke breaking apart into holes and drifting blobs before the next one goes off. By default every blast bursts out of the centre of the frame and flies outward, growing as it goes, with the biggest one going off right in the middle (switch Origin to Scattered to spread them across the sky). Four kinds of blast mix together — Billow, Mushroom, Spike Burst and Splash Crown. The ink is drawn like a real animator's: bold outer outlines that get heavier on the shadow side, lighter broken lines where puffs overlap, and a gentle line boil so it always feels hand-drawn. Five looks: Cel Color (bold candy colours on warm grey paper), Manga Ink (black and white with screentone dots), Sketch (white and lavender with construction lines, like an effects animator's model sheet), Pop Poster (pink-and-blue airbrushed clouds, yellow and black starbursts, flowing ribbons) and Night Glow (glowing violet blasts on a dark sky). An endless bank of inked smoke clouds keeps billowing outward behind them, swelling and breaking apart. Manga focus lines rush in around the biggest blast as it goes off. At rest only a few small blasts drift by; during a build they come faster and the focus lines close in; on the drop everything flashes and bursts at once.",
+    "file": "anime.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1423,
+    "title": "Anime",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "3D",
+      "Sculpture",
+      "Lasers",
+      "Audio Reactive"
+    ],
+    "description": "Laser Sculptor — a raw block of marble sits on a plinth in a dark, hazy room, and a ring of audio-reactive lasers slowly carves a statue out of it over the course of the night. The lasers rough the block out from the top down in chipped, faceted passes, then go back in for the fine detail until a polished classical figure stands where the block was. Every hit point burns white-hot, throws sparks and lights up the stone around it in the laser colour, and the freshly cut band glows like molten rock before cooling back to clean white marble. The music drives the work: at rest one or two beams scan lazily and the carving creeps along; when it builds more lasers wake up and sweep faster; on the drop every beam flashes and the sparks fly. Once the statue is finished it holds in the light, then the room fades out and a fresh block is waiting for the next one (Auto Cycle goes Listener bust → Torso → Wave). Carve Time sets how long one statue takes, and Manual mode puts the carving on a slider (or a MIDI fader) so you can scrub it by hand. Four marbles (Carrara White, Black Marquina, Rosa Pink, Onyx Glow), five laser palettes (Miami Pink & Cyan, Ruby, Emerald, White Hot, Custom), three rooms.",
+    "file": "laser_sculptor.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1424,
+    "title": "Laser Sculptor",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Live Input",
+      "Audio Reactive"
+    ],
+    "description": "WebRTC Stream: the live WebRTC (WHEP) feed as a shader you can load on a SHOW deck. It has knobs for fit, zoom, pan, mirror and colour grade, and four looks (Clean, Mono, Film, Glitch) with beat pulse. Easel feeds it from the stream layer automatically.",
+    "file": "webrtc_stream.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1425,
+    "title": "WebRTC Stream",
     "type": "generator"
   }
 ]
