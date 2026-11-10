@@ -1,0 +1,471 @@
+/*{
+  "DESCRIPTION": "Tag — Shades of New York 001. A handstyle tag is spray-painted live onto a painted brick wall, stroke by stroke, the way a writer actually hits a wall. Up to three invisible writers lay down the tag in real time — a top row of tall pointed crowns and loops, a second row tucked underneath, and one long swooping bar slashed through the middle — with pen lifts between letters. The paint is a real persistent spray layer: a hard white core, a soft overspray halo, stray mist specks, paint pooling wherever the can slows down (the tips of the crowns, the starts of strokes), and drips that run down from those pools under gravity, stuttering brick by brick. Paint sits thinner in the mortar grooves, and the brick is lit as a 3D relief: running-bond courses with recessed mortar, per-brick tint, pores, a glossy painted finish and a slow sun glare drifting across the top of the wall, like the reference. Three lifecycles: Write · Hold · Buff (the tag is finished, held, then a city buff roller paints over it in a slightly mismatched patch and the next tag goes up on top), Layer Up (new tags land at new spots and sizes over the fading old ones until the wall is bombed), and Write Once & Hold. Interactive: with Hand Spray on, your mouse — or your hand in ShaderClaw, pinching to spray — becomes a spray can. Camera friendly: switch the wall to Image / Camera to tag over a live feed, or keep the brick relief lighting on top of the camera. Audio: bass opens the nozzle (fatter lines), mids drive the writing speed, highs throw more overspray, and every beat makes the fresh paint flash and bloom. Show dynamics: at Rest the writers move slowly under soft light; the Build speeds the writing up, the hand starts to shake, more drips run and the sun sweeps; on the Drop the whole tag flashes white-hot, the cans splatter outward and the wall shakes; the Peak keeps the fresh paint glowing. NYC Reference palette (default) keeps the photo's brown brick and blue-white paint; the four Studio palettes are one switch away.",
+  "CREDIT": "Easel / ShaderClaw house shader — Shades of New York series, 2026-11-10 — original.",
+  "CATEGORIES": ["Generator", "Shades of New York", "Street", "Interactive", "Audio Reactive"],
+  "INPUTS": [
+    { "NAME": "tagStyle",    "LABEL": "Handstyle", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Auto Mix", "Crowns", "Loops", "Swoops", "Wild"], "GROUP": "Tag" },
+    { "NAME": "lettersN",    "LABEL": "Letters",          "TYPE": "float", "AUDIO": false, "MIN": 3.0, "MAX": 10.0, "DEFAULT": 6.0, "GROUP": "Tag" },
+    { "NAME": "writersN",    "LABEL": "Writers (rows + bar)", "TYPE": "float", "AUDIO": false, "MIN": 1.0, "MAX": 3.0, "DEFAULT": 3.0, "GROUP": "Tag" },
+    { "NAME": "tagSize",     "LABEL": "Tag Size",         "TYPE": "float", "AUDIO": false, "MIN": 0.4, "MAX": 1.5, "DEFAULT": 1.0, "GROUP": "Tag" },
+    { "NAME": "slant",       "LABEL": "Slant",            "TYPE": "float", "MIN": -0.6, "MAX": 0.6, "DEFAULT": 0.12, "GROUP": "Tag" },
+    { "NAME": "liftChance",  "LABEL": "Pen Lifts",        "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 0.8, "DEFAULT": 0.3, "GROUP": "Tag" },
+    { "NAME": "seedSel",     "LABEL": "Tag Seed",         "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 100.0, "DEFAULT": 7.0, "GROUP": "Tag" },
+    { "NAME": "cycleMode",   "LABEL": "Lifecycle", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2], "LABELS": ["Write · Hold · Buff", "Layer Up", "Write Once & Hold"], "GROUP": "Motion" },
+    { "NAME": "writeSpeed",  "LABEL": "Writing Speed",    "TYPE": "float", "MIN": 0.1, "MAX": 3.0, "DEFAULT": 1.0, "GROUP": "Motion" },
+    { "NAME": "tagPeriod",   "LABEL": "Cycle Length (s)", "TYPE": "float", "AUDIO": false, "MIN": 6.0, "MAX": 60.0, "DEFAULT": 16.0, "GROUP": "Motion" },
+    { "NAME": "shake",       "LABEL": "Hand Shake",       "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.2, "GROUP": "Motion" },
+    { "NAME": "lineWidth",   "LABEL": "Line Width",       "TYPE": "float", "MIN": 0.3, "MAX": 3.0, "DEFAULT": 1.0, "GROUP": "Spray" },
+    { "NAME": "overspray",   "LABEL": "Overspray",        "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Spray" },
+    { "NAME": "dripAmt",     "LABEL": "Drips",            "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.45, "GROUP": "Spray" },
+    { "NAME": "gravity",     "LABEL": "Drip Gravity",     "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.5, "GROUP": "Spray" },
+    { "NAME": "paintColor",  "LABEL": "Paint",            "TYPE": "color", "DEFAULT": [0.87, 0.93, 0.97, 1.0], "GROUP": "Spray" },
+    { "NAME": "glowAmt",     "LABEL": "Fresh Paint Glow", "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.7, "GROUP": "Spray" },
+    { "NAME": "canMode",     "LABEL": "Hand Spray", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2], "LABELS": ["Off", "While Pressed / Pinching", "Always Follow"], "GROUP": "Hand Spray" },
+    { "NAME": "canSize",     "LABEL": "Can Nozzle",       "TYPE": "float", "AUDIO": false, "MIN": 0.3, "MAX": 3.0, "DEFAULT": 1.2, "GROUP": "Hand Spray" },
+    { "NAME": "resetPaint",  "LABEL": "Clean Wall",       "TYPE": "bool",  "DEFAULT": false, "GROUP": "Hand Spray" },
+    { "NAME": "wallSource",  "LABEL": "Wall", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Painted Brick", "Image / Camera", "Camera + Brick Relief", "Background Colour"], "GROUP": "Wall" },
+    { "NAME": "wallTex",     "LABEL": "Image / Camera",   "TYPE": "image", "GROUP": "Wall" },
+    { "NAME": "courses",     "LABEL": "Brick Courses",    "TYPE": "float", "AUDIO": false, "MIN": 10.0, "MAX": 70.0, "DEFAULT": 34.0, "GROUP": "Wall" },
+    { "NAME": "relief",      "LABEL": "3D Relief",        "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55, "GROUP": "Wall" },
+    { "NAME": "wallColor",   "LABEL": "Brick Paint",      "TYPE": "color", "DEFAULT": [0.45, 0.37, 0.35, 1.0], "GROUP": "Wall" },
+    { "NAME": "wallShadow",  "LABEL": "Brick Shadow",     "TYPE": "color", "DEFAULT": [0.29, 0.24, 0.235, 1.0], "GROUP": "Wall" },
+    { "NAME": "sunGlare",    "LABEL": "Sun Glare",        "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 1.0, "GROUP": "Wall" },
+    { "NAME": "lightDrift",  "LABEL": "Light Drift",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.35, "GROUP": "Wall" },
+    { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 4, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White", "NYC Reference"], "GROUP": "Studio Palette" },
+    { "NAME": "palAmount",   "LABEL": "Palette Amount",   "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 1.0, "GROUP": "Studio Palette" },
+    { "NAME": "palRed",      "LABEL": "Red Accent",       "TYPE": "color", "DEFAULT": [0.92, 0.04, 0.07, 1.0], "GROUP": "Studio Palette" },
+    { "NAME": "palBlue",     "LABEL": "Blue Accent",      "TYPE": "color", "DEFAULT": [0.07, 0.32, 1.0, 1.0],  "GROUP": "Studio Palette" },
+    { "NAME": "audioReact",  "LABEL": "Audio React",      "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.65, "GROUP": "Audio Reactivity" },
+    { "NAME": "showState",   "LABEL": "Show State", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Follow Music", "Rest", "Build", "Peak"], "GROUP": "Show Dynamics" },
+    { "NAME": "dynamics",    "LABEL": "Build & Drop Depth", "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.85, "GROUP": "Show Dynamics" },
+    { "NAME": "bgMode",      "LABEL": "Background", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2], "LABELS": ["Solid", "Vertical Gradient", "Radial Gradient"], "GROUP": "Background" },
+    { "NAME": "bgColor",     "LABEL": "BG Color / Top / Center", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0], "GROUP": "Background" },
+    { "NAME": "bgColor2",    "LABEL": "BG Bottom / Edge", "TYPE": "color", "DEFAULT": [0.05, 0.04, 0.04, 1.0], "GROUP": "Background" },
+    { "NAME": "transparentBg","LABEL": "Transparent BG (paint only)", "TYPE": "bool", "DEFAULT": false, "GROUP": "Background" }
+  ],
+  "PASSES": [
+    { "TARGET": "paintBuf", "PERSISTENT": true, "FLOAT": true },
+    {}
+  ]
+}*/
+
+// ─────────────────────────────────────────────────────────────────────────
+// Tag — Shades of New York 001
+//   pass 0  paintBuf (persistent): the wall's paint layer
+//           r = paint coverage   g = wet paint / drips
+//           b = buff patch       a = freshness (glows on beats)
+//           Each frame every writer's pen is advanced along its handstyle
+//           path in sub-steps and sprayed onto the buffer; drips flow down.
+//   pass 1  wall relief + paint lighting + glow + palette
+// ─────────────────────────────────────────────────────────────────────────
+
+#define PI  3.14159265359
+#define TAU 6.28318530718
+
+float h11(float p) { p = fract(p * 0.1031); p *= p + 33.33; p *= p + p; return fract(p); }
+float h12(vec2 p)  { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+vec2  h21(float p) { vec3 p3 = fract(vec3(p) * vec3(0.1031, 0.1030, 0.0973)); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.xx + p3.yz) * p3.zy); }
+float bassP() { return smoothstep(0.05, 0.85, audioBass); }
+float midP()  { return smoothstep(0.08, 0.85, audioMid); }
+float highP() { return smoothstep(0.08, 0.9, audioHigh); }
+float lum(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+
+vec3 studioPalette(vec3 c) {
+    float m = float(paletteMode);
+    if (palAmount <= 0.0 || m > 3.5) return c;                     // NYC Reference = the photo's own colours
+    float L = clamp(lum(c), 0.0, 1.0);
+    float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b));
+    float sat = mx > 1e-4 ? (mx - mn) / mx : 0.0;
+    vec3 o;
+    if (m < 0.5) {
+        vec3 hueC = pow((c - mn) / max(mx - mn, 1e-4), vec3(1.4));
+        float s2 = 1.0 - pow(1.0 - sat, 4.0);
+        float v = clamp(pow(mx, 0.85) * 1.12, 0.0, 1.0);
+        o = mix(vec3(1.0), hueC, s2) * v;
+        float hx = L * 1.7 + 0.04 * TIME;
+        vec3 neon = pow(clamp(abs(fract(hx + vec3(0.0, 0.6667, 0.3333)) * 6.0 - 3.0) - 1.0, 0.0, 1.0), vec3(1.4));
+        float wn = (1.0 - smoothstep(0.02, 0.1, sat)) * smoothstep(0.06, 0.25, L) * (1.0 - smoothstep(0.55, 0.85, L));
+        o = mix(o, neon * v, wn);
+        o = mix(o, vec3(1.0), smoothstep(0.85, 1.0, L) * 0.5);
+    } else if (m > 2.5) {
+        o = vec3(smoothstep(0.02, 0.95, pow(L, 0.9)));
+    } else {
+        vec3 acc = m < 1.5 ? palRed.rgb : palBlue.rgb;
+        float t = pow(L, 0.8);
+        vec3 ramp = t < 0.5 ? mix(vec3(0.0), acc, t * 2.0) : mix(acc, vec3(1.0), (t - 0.5) * 2.0);
+        vec3 mono = vec3(smoothstep(0.0, 1.0, L));
+        o = mix(mono, ramp, smoothstep(0.06, 0.4, sat));
+    }
+    return mix(c, o, palAmount);
+}
+vec3 backdrop(vec2 uv) {
+    float m = float(bgMode);
+    if (m < 0.5) return bgColor.rgb;
+    if (m < 1.5) return mix(bgColor2.rgb, bgColor.rgb, smoothstep(0.0, 1.0, uv.y));
+    vec2 dd = (uv - 0.5) * vec2(RENDERSIZE.x / RENDERSIZE.y, 1.0);
+    return mix(bgColor.rgb, bgColor2.rgb, smoothstep(0.0, 0.85, length(dd)));
+}
+
+// ── Show dynamics: rest → build → peak / drop ───────────────────────────
+float gRest, gBuild, gPeak, gDrop, gLift;
+void showDynamics() {
+    float m = float(showState);
+    float e = clamp(audioEnergy, 0.0, 1.0);
+    float b = clamp(audioBuildup, 0.0, 1.0);
+    float d = clamp(audioDrop, 0.0, 1.0);
+    if (m > 0.5) {
+        if (m < 1.5)      { e = 0.04; b = 0.0; d = 0.0; }
+        else if (m < 2.5) { float r = fract(TIME / 8.0); e = 0.3 + 0.35 * r; b = r * r; d = 0.0; }
+        else              { e = 1.0; b = 0.0; d = exp(-fract(TIME / 4.0) * 5.0); }
+    }
+    float k = dynamics;
+    gBuild = b * k;
+    gDrop  = d * k;
+    gPeak  = smoothstep(0.5, 0.9, e) * k;
+    gRest  = (1.0 - smoothstep(0.08, 0.4, e)) * (1.0 - b) * k;
+    gLift  = mix(0.5, clamp(0.15 + e * 0.7 + gBuild * 0.25 + d * 0.3, 0.0, 1.0), k);
+}
+
+// ── the writing clock (integrated: music speeds it up without jumps) ────
+float gAsp;
+// The clock is integrated in the paint buffer's corner texel (r = whole part mod 2048,
+// g = fraction — exact even in half-float targets), so tempo changes never jump the pen.
+float penRate() { return writeSpeed * (0.5 + 0.55 * midP() * audioReact) * (0.65 + 0.35 * gLift) * (1.0 + 1.6 * gBuild * gBuild); }
+float penClockStored() { vec4 s = texture2D(paintBuf, vec2(0.5) / RENDERSIZE.xy); return s.r + s.g; }
+// cycle bookkeeping: which tag, and where in its life we are
+float cycleId(float c)    { return float(cycleMode) > 1.5 ? 0.0 : floor(c / tagPeriod); }
+float cyclePhase(float c) { return float(cycleMode) > 1.5 ? min(c / tagPeriod, 0.8) : fract(c / tagPeriod); }
+
+// tag placement for a cycle: centre (screen-height units) and scale
+vec3 tagFrame(float cyc) {
+    if (float(cycleMode) > 0.5 && float(cycleMode) < 1.5) {           // Layer Up: every tag lands somewhere new
+        vec2 r = h21(cyc * 3.17 + seedSel * 1.3);
+        return vec3((r - 0.5) * vec2(0.42 * gAsp, 0.36), 0.62 + 0.42 * h11(cyc * 7.7 + 2.0));
+    }
+    return vec3(0.0, 0.0, 1.0);
+}
+
+// per-letter handstyle: (loop ratio k, vertical stretch v, flip s)
+//   k < 1 → wave / swoop,  k ≈ 1 → cusp (pointed crown),  k > 1 → loop
+vec3 letterParams(float i, float seed, float wk) {
+    float a = h11(i * 7.31 + seed * 113.0 + wk * 17.0);
+    float b = h11(i * 3.77 + seed * 71.0 + wk * 29.0 + 5.0);
+    float c = h11(i * 5.13 + seed * 37.0 + wk * 11.0 + 9.0);
+    float st = float(tagStyle);
+    float kind = st < 0.5 ? (a < 0.45 ? 0.0 : a < 0.8 ? 1.0 : 2.0) : st < 1.5 ? 0.0 : st < 2.5 ? 1.0 : st < 3.5 ? 2.0 : 3.0;
+    vec3 P;
+    if (kind < 0.5)      P = vec3(1.0 + 0.22 * b, 1.9 + 1.3 * c, 1.0);                       // crown: tall cusp / teardrop
+    else if (kind < 1.5) P = vec3(1.45 + 0.55 * b, 0.9 + 0.7 * c, c < 0.5 ? -1.0 : 1.0);      // loop
+    else if (kind < 2.5) P = vec3(0.45 + 0.3 * b, 1.3 + 1.4 * c, c < 0.5 ? -1.0 : 1.0);       // swoop
+    else                 P = vec3(0.4 + 1.6 * b, 0.8 + 2.4 * c, c < 0.4 ? -1.0 : 1.0);        // wild
+    if (wk > 1.5) P = vec3(0.32 + 0.15 * b, 0.55 + 0.3 * c, c < 0.5 ? -1.0 : 1.0);           // the long bar
+    return P;
+}
+
+// pen of writer wk at clock c → (x, y, down) in screen-height units.  Sets gW, gPool, gPr.
+float gW, gPool, gPr, gNl;
+vec3 pen(float wk, float c) {
+    float cyc = cycleId(c), ph = cyclePhase(c);
+    float seed = h11(cyc * 1.37 + seedSel * 0.731 + 0.17);
+    float st = wk < 0.5 ? 0.03 : wk < 1.5 ? 0.11 : 0.36;
+    float len = wk < 1.5 ? 0.5 : 0.24;
+    float pr = (ph - st) / len;
+    gPr = pr;
+    vec3 fr = tagFrame(cyc);
+    float sc = fr.z * tagSize;
+    float nMain = floor(lettersN + 0.5);
+    float totalW = min(gAsp * 0.84, 1.5) * sc;
+    float W = totalW / nMain;
+    float nl = wk < 0.5 ? nMain : wk < 1.5 ? max(nMain - 1.0, 2.0) : 2.4;
+    gNl = nl;
+    float u = clamp(pr, 0.0, 1.0) * nl;
+    float i = floor(u), f = u - i;
+    vec3 P = vec3(0.0);
+    float tm = smoothstep(0.3, 0.7, f);
+    for (int q = 0; q < 2; q++) P += letterParams(i + float(q), seed, wk) * (q == 0 ? 1.0 - tm : tm);
+    float th = TAU * u;
+    float lw = wk < 1.5 ? W : totalW * 1.05 / nl;                    // the bar's "letters" are long
+    float x = u - P.x / TAU * sin(th);
+    float y = P.z * P.x / TAU * cos(th) * P.y;
+    y += 0.22 * sin(u * 0.9 + seed * 6.0) + (wk > 1.5 ? 0.25 * sin(u * 1.7 + 1.0) : 0.0);
+    vec2 q = vec2(x, y) * lw;
+    q.x += slant * q.y;
+    float x0 = fr.x - 0.5 * totalW + (wk > 0.5 && wk < 1.5 ? 0.5 * W : 0.0) - (wk > 1.5 ? 0.04 * sc : 0.0);
+    float y0 = fr.y + (wk < 0.5 ? 0.115 : wk < 1.5 ? -0.13 : -0.02) * sc;
+    q += vec2(x0, y0);
+    // pen lifts between letters, and pools at landings / stroke starts
+    float lifted = step(h11(i * 2.9 + seed * 53.0 + wk * 7.0), liftChance) * step(i, nl - 1.5);
+    float prevLift = step(h11((i - 1.0) * 2.9 + seed * 53.0 + wk * 7.0), liftChance) * step(0.5, i);
+    float down = step(0.0, pr) * step(pr, 1.0) * (1.0 - lifted * step(0.86, f));
+    float sp = length(vec2(1.0 - P.x * cos(th), P.x * P.y * sin(th))) / (1.0 + 0.6 * P.x * P.y);
+    gPool = max(max(prevLift * (1.0 - smoothstep(0.0, 0.05, f)), 1.0 - smoothstep(0.0, 0.03, pr)),
+                1.0 - smoothstep(0.04, 0.22, sp));
+    gW = W;
+    return vec3(q, down);
+}
+
+float sdSeg(vec2 p, vec2 a, vec2 b) {
+    vec2 pa = p - a, ba = b - a;
+    float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-9), 0.0, 1.0);
+    return length(pa - ba * h);
+}
+
+// spray one nozzle segment onto the buffer state S
+void spray(inout vec4 S, vec2 p, vec2 a, vec2 b, float w, float pool, float dripOn, vec2 fc, float burst) {
+    float d = sdSeg(p, a, b);
+    if (d > w * 7.0) return;
+    float core = smoothstep(w, w * 0.5, d);
+    float halo = exp(-pow(d / (w * 3.0), 2.0)) * 0.3 * min(overspray, 1.5);
+    float pr = 0.05 * overspray * (1.0 + 1.5 * highP() * audioReact + 2.0 * burst) * exp(-pow(d / (w * 4.5), 2.0));
+    float spk = step(h12(fc * 0.913 + fract(TIME * 7.31) * 413.0), pr) * (0.6 + 0.4 * h12(fc + 3.7));
+    S.r = max(S.r, max(core, halo + spk * 0.7));
+    S.a = max(S.a, core * 0.9 + spk * 0.5);
+    // pooled paint seeds a drip (tight, so drips stay thin)
+    S.g = max(S.g, dripOn * pool * smoothstep(w * 0.75, w * 0.2, d));
+}
+
+vec4 paintPass() {
+    vec2 R = RENDERSIZE.xy, fc = gl_FragCoord.xy, uv = fc / R;
+    vec2 p = (fc - 0.5 * R) / R.y;
+    vec4 S = texture2D(paintBuf, uv);
+    bool fresh = FRAMEINDEX < 2 || resetPaint;
+    if (fresh) S = vec4(0.0);
+    float dt = clamp(TIMEDELTA, 0.0, 0.1);
+    float ar = audioReact;
+    float cPrev = fresh ? 0.0 : penClockStored();
+    float c = cPrev + dt * penRate();
+    if (fc.x < 1.0 && fc.y < 1.0) { float wh = floor(c); return vec4(mod(wh, 2048.0), c - wh, 0.0, 1.0); }
+    float mode = float(cycleMode);
+
+    // ── lifecycle on the wall ──
+    S.a *= exp(-dt * 1.6);                                            // fresh paint cools
+    if (mode < 0.5) {
+        float ph = cyclePhase(c);
+        S.b *= exp(-dt * 0.9 / tagPeriod);                            // old buff patches weather away
+        if (ph > 0.82 && ph < 0.95) {                                 // the city buff roller
+            float rp = (ph - 0.82) / 0.12;
+            float half_w = min(gAsp * 0.84, 1.5) * tagSize * 0.5 + 0.08;
+            float rx = mix(-half_w - 0.05, half_w + 0.05, rp) + 0.02 * sin(p.y * 40.0) + 0.012 * h12(vec2(floor(p.y * 90.0), 1.0));
+            float hh = 0.36 * tagSize + 0.015 * sin(p.x * 23.0);
+            if (p.x < rx && p.x > -half_w - 0.02 && abs(p.y) < hh) { S.r = 0.0; S.g = 0.0; S.a = 0.0; S.b = 1.0; }
+        }
+    } else if (mode < 1.5) {
+        S.r *= exp(-dt * 0.35 / tagPeriod);                           // old tags fade under new ones
+        S.g *= exp(-dt * 0.35 / tagPeriod);
+    }
+
+    // ── drips: wet paint runs down, a pixel at a time, stuttering per column ──
+    float above = texture2D(paintBuf, uv + vec2(0.0, 1.0 / R.y)).g;
+    if (FRAMEINDEX < 2 || resetPaint) above = 0.0;
+    float moveP = gravity * (0.35 + 0.5 * gBuild) * min(R.y / 900.0, 1.6);
+    if (above > 0.2 && h12(vec2(fc.x, floor(TIME * 60.0))) < moveP)
+        S.g = max(S.g, above - 0.003 / max(gravity, 0.05) * 540.0 / R.y);
+
+    // ── the writers ──
+    float burst = audioBeatPulse * ar;
+    float wBase = 0.0042 * lineWidth * (1.0 + 0.45 * bassP() * ar) * (0.85 + 0.25 * gLift);
+    float nw = floor(writersN + 0.5);
+    float cm = float(canMode);
+    float canOn = cm > 1.5 ? 1.0 : (cm > 0.5 ? step(0.5, mouseDown) : 0.0);
+    // One flat loop with ONE call site each for pen() and spray(): 3 writers x 7 sub-step
+    // samples, then one extra iteration for the hand can. (Several call sites get inlined
+    // separately by the GLSL translator and push compile time past a minute.)
+    vec3 a = vec3(0.0);
+    float cycA = -1.0;
+    for (int n = 0; n < 22; n++) {
+        float fn = float(n);
+        float wk = floor(fn / 7.0);
+        float j = fn - wk * 7.0;
+        bool isCan = n == 21;
+        if (!isCan && wk >= nw) continue;
+        if (isCan && canOn < 0.5) break;
+        vec2 A2, B2;
+        float w, pool, dripOn;
+        if (isCan) {
+            vec2 m1 = (mousePos * R - 0.5 * R) / R.y;
+            vec2 dl = mouseDelta * R / R.y;
+            if (length(dl) > 0.25) dl = vec2(0.0);
+            A2 = m1 - dl; B2 = m1;
+            w = wBase * canSize * 1.3;
+            pool = 1.0 - smoothstep(0.0, 0.004, length(dl));
+            dripOn = step(0.3, dripAmt);
+        } else {
+            float cj = mix(cPrev, c, j / 6.0);
+            vec3 b = pen(wk, cj);
+            float cycB = cycleId(cj);
+            // hand shake grows through the build
+            b.xy += (h21(floor(cj * 40.0) + wk * 13.0) - 0.5) * gW * 0.05 * (shake + 1.2 * gBuild);
+            bool draw = j > 0.5 && a.z > 0.5 && b.z > 0.5 && cycA == cycB;
+            A2 = a.xy; B2 = b.xy;
+            // slow pen (cusps, tight turns) pools paint
+            pool = gPool;
+            w = wBase * tagFrame(cycB).z * (1.0 + 0.55 * pool);
+            float letter = floor(clamp(gPr, 0.0, 1.0) * gNl);
+            dripOn = step(h11(letter * 3.1 + cycB * 17.0 + wk * 5.0 + seedSel), dripAmt);
+            // drop: the can splatters outward around the pen (at the newest sample)
+            if (j > 5.5 && gDrop > 0.05) {
+                float dd = length(p - b.xy);
+                float ring = exp(-pow((dd - 0.02 - 0.12 * (1.0 - gDrop)) / 0.035, 2.0));
+                float sp = gDrop * 0.015 * ring * step(0.0, gPr) * step(gPr, 1.4);
+                if (h12(fc * 1.37 + fract(TIME * 3.3) * 97.0) < sp) { S.r = max(S.r, 0.9); S.a = 1.0; }
+            }
+            a = b; cycA = cycB;
+            if (!draw) continue;
+        }
+        spray(S, p, A2, B2, w, pool, dripOn, fc, burst);
+    }
+    // drop: the whole tag flashes fresh
+    S.a = max(S.a, S.r * gDrop);
+    return clamp(S, 0.0, 1.0);
+}
+
+// ── painted brick wall ──────────────────────────────────────────────────
+// height of the brick relief at p (screen-height units): 1 = brick face, 0 = mortar groove
+vec3 gBrick;   // (brick id hash, mortar mask, -)
+float brickH(vec2 p) {
+    float cs = courses;
+    vec2 q = p * cs;
+    float row = floor(q.y);
+    float bx = q.x / 2.9 + 0.5 * mod(row, 2.0);
+    vec2 f = vec2(fract(bx) * 2.9, fract(q.y));
+    vec2 e = min(f, vec2(2.9, 1.0) - f);
+    float edge = min(e.x, e.y);
+    float mw = 0.07;
+    float h = smoothstep(mw * 0.5, mw + 0.12, edge);
+    gBrick = vec3(h12(vec2(floor(bx), row)), 1.0 - smoothstep(mw * 0.5, mw + 0.04, edge), 0.0);
+    return h;
+}
+
+vec3 wallColour(vec2 p, vec2 uv, vec2 sp, out float mortar) {
+    float px = 1.0 / RENDERSIZE.y;
+    float e = max(px * 1.2, 0.0008);
+    float h0 = 0.0, hx = 0.0, hy = 0.0;
+    vec3 br = vec3(0.0);
+    for (int q = 0; q < 3; q++) {
+        float hq = brickH(p + (q == 1 ? vec2(e, 0.0) : q == 2 ? vec2(0.0, e) : vec2(0.0)));
+        if (q == 0) { h0 = hq; br = gBrick; } else if (q == 1) hx = hq; else hy = hq;
+    }
+    mortar = br.y;
+    vec2 g = vec2(hx - h0, hy - h0) / e / courses;                   // slope in brick units
+    vec3 n = normalize(vec3(-g * 0.9 * relief, 1.0));
+    // the light drifts slowly; build sweeps it
+    float la = 0.9 + 0.35 * sin(TIME * 0.05 * lightDrift + 1.0) + 1.2 * gBuild * gBuild;
+    vec3 L = normalize(vec3(cos(la) * 0.6, sin(la) * 0.6 + 0.35, 0.7));
+    float dif = clamp(dot(n, L) * 0.45 + 0.6, 0.0, 1.2);
+    // painted brick: per-brick tint, top-lit gradient, pores
+    vec3 base = mix(wallShadow.rgb, wallColor.rgb, smoothstep(-0.55, 0.5, p.y));
+    base *= 0.95 + 0.1 * br.x;
+    float pore = step(0.988, h12(floor(p * courses * 13.0))) * (1.0 - mortar);
+    base *= 1.0 - 0.32 * pore;
+    base = mix(base, base * 0.9, mortar * 0.6);
+    vec3 col = base * mix(1.0, dif, relief);
+    // glossy paint catches the sun: big soft glare on the upper right, sharpened on brick faces
+    vec2 gp = vec2(0.3 * gAsp + 0.12 * sin(TIME * 0.04 * lightDrift), 0.34 + 0.06 * cos(TIME * 0.03 * lightDrift));
+    gp.x -= 0.5 * gBuild * gBuild * gAsp;
+    float glare = exp(-dot((p - gp) * vec2(0.5, 1.0), (p - gp) * vec2(0.5, 1.0)) * 1.6);
+    vec3 H = normalize(L + vec3(0.0, 0.0, 1.0));
+    float spec = pow(max(dot(n, H), 0.0), 18.0);
+    vec3 glareC = vec3(0.74, 0.78, 0.80);
+    col = mix(col, glareC * (0.8 + 0.25 * spec), clamp(glare * sunGlare * (0.75 - 0.35 * mortar) * (0.75 + 0.35 * gLift), 0.0, 0.9));
+    col += glareC * spec * 0.06 * relief * (0.4 + glare);
+    return col;
+}
+
+vec4 paintAt(vec2 q) { return texture2D(paintBuf, max(q, 3.0 / RENDERSIZE.xy)); }
+vec4 finalPass() {
+    vec2 R = RENDERSIZE.xy, fc = gl_FragCoord.xy, uv = fc / R;
+    float ar = audioReact;
+    // drop shake
+    vec2 shk = (h21(floor(TIME * 30.0)) - 0.5) * 0.012 * gDrop * gDrop;
+    vec2 p = (fc - 0.5 * R) / R.y + shk;
+    vec2 suv = uv + shk * vec2(R.y / R.x, 1.0);
+    float ws = float(wallSource);
+
+    // wall
+    float mortar = 0.0;
+    vec3 wall;
+    vec3 brick = wallColour(p, suv, p, mortar);
+    if (ws < 0.5) wall = brick;
+    else if (ws < 2.5) {
+        vec3 cam = texture2D(wallTex, suv).rgb;
+        if (ws < 1.5) { wall = cam; mortar = 0.0; }
+        else wall = cam * (brick / max(lum(wallColor.rgb), 0.05)) * 0.55;   // camera lit by the brick relief
+    } else { wall = backdrop(uv); mortar = 0.0; }
+
+    // paint layer
+    vec4 S = paintAt(suv);
+    if (gDrop > 0.02) {                                               // drop: chromatic burst in the paint
+        vec2 co = (suv - 0.5) * 0.02 * gDrop;
+        S.r = max(S.r, paintAt(suv + co).r * 0.6);
+    }
+    // the buff patch: a slightly mismatched coat with roller streaks
+    float patchMix = S.b * (ws < 0.5 ? 1.0 : 0.6);
+    vec3 patchC = wall * vec3(1.05, 0.99, 0.96) + vec3(0.012, 0.008, 0.006);
+    patchC *= 0.97 + 0.04 * h12(vec2(floor(p.x * 140.0), 3.0));
+    wall = mix(wall, patchC, patchMix);
+
+    float drip = smoothstep(0.06, 0.22, S.g);
+    float cov = max(S.r, drip);
+    float thin = mix(1.0, 0.72, mortar * (1.0 - smoothstep(0.6, 0.95, cov)));   // spray skips the grooves a little
+    float a = clamp(cov * thin, 0.0, 1.0);
+    // enamel sheen on thick paint
+    float e = 1.5 / R.y;
+    float cx = paintAt(suv + vec2(e * R.y / R.x, 0.0)).r, cy = paintAt(suv + vec2(0.0, e)).r;
+    vec3 pn = normalize(vec3(-(cx - S.r) * 2.5, -(cy - S.r) * 2.5, 1.0));
+    float pspec = pow(max(dot(pn, normalize(vec3(0.3, 0.5, 1.0))), 0.0), 30.0) * smoothstep(0.5, 0.9, cov);
+    vec3 pc = paintColor.rgb * (0.9 + 0.12 * smoothstep(0.6, 1.0, cov)) + vec3(0.12) * pspec * relief;
+    vec3 col = mix(wall, pc, a);
+
+    // fresh-paint glow: beats and the drop make the newest paint bloom
+    vec3 gsum = vec3(0.0);
+    for (int i = 0; i < 8; i++) {
+        float fi = float(i);
+        float ang = fi * 2.39996 + 0.7;
+        vec2 o = vec2(cos(ang), sin(ang)) * (5.0 + 3.0 * fi) / R;
+        vec4 t = paintAt(suv + o);
+        gsum += vec3(t.r * t.a);
+    }
+    float gk = glowAmt * (0.25 + 0.9 * audioBeatPulse * ar + 1.4 * gDrop + 0.35 * gPeak);
+    vec3 glow = gsum / 8.0 * gk * mix(paintColor.rgb, vec3(1.0), 0.4);
+    col += glow * 0.6 + paintColor.rgb * S.a * a * gk * 0.35;
+
+    // live spray mist at every pen that is down
+    float c = penClockStored();
+    float nw = floor(writersN + 0.5);
+    for (int k = 0; k < 3; k++) {
+        if (float(k) >= nw) break;
+        vec3 pp = pen(float(k), c);
+        if (pp.z > 0.5) {
+            float d = length(p - pp.xy);
+            float wq = 0.0042 * lineWidth * 4.0;
+            col += paintColor.rgb * exp(-d * d / (wq * wq)) * (0.12 + 0.25 * audioBeatPulse * ar);
+        }
+    }
+    // the hand can: a soft nozzle ring where it aims
+    float cm = float(canMode);
+    if (cm > 0.5) {
+        vec2 m1 = (mousePos * R - 0.5 * R) / R.y;
+        float d = length(p - m1);
+        float rr = 0.0042 * lineWidth * canSize * 1.3 * 3.0;
+        float on = cm > 1.5 ? 1.0 : step(0.5, mouseDown);
+        col += paintColor.rgb * exp(-d * d / (rr * rr)) * 0.15 * on;
+    }
+
+    // show lift, drop flash, vignette, grain
+    col *= 0.9 + 0.2 * gLift;
+    col += vec3(0.9, 0.95, 1.0) * gDrop * gDrop * 0.08;
+    vec2 dc = uv - 0.5;
+    col *= 1.0 - 0.16 * smoothstep(0.45, 1.0, length(dc * vec2(R.x / R.y, 1.0)));
+    col += (h12(fc + fract(TIME * 13.7) * 91.0) - 0.5) * 0.025;
+    col += (h12(fc * 1.03 + fract(TIME * 7.1) * 57.0) + h12(fc * 0.97 + 11.0) - 1.0) * (1.5 / 255.0);
+    col = studioPalette(clamp(col, 0.0, 1.0));
+    float alpha = transparentBg ? clamp(a + lum(glow), 0.0, 1.0) : 1.0;
+    return vec4(clamp(col, 0.0, 1.0), alpha);
+}
+
+void main() {
+    showDynamics();
+    gAsp = RENDERSIZE.x / RENDERSIZE.y;
+    if (PASSINDEX == 0) gl_FragColor = paintPass();
+    else                gl_FragColor = finalPass();
+}

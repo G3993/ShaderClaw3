@@ -4619,5 +4619,21 @@
     "id": 1425,
     "title": "WebRTC Stream",
     "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Shades of New York",
+      "Street",
+      "Interactive",
+      "Audio Reactive"
+    ],
+    "description": "Tag — Shades of New York 001. A handstyle tag is spray-painted live onto a painted brick wall, stroke by stroke, the way a writer actually hits a wall. Up to three invisible writers lay down the tag in real time — a top row of tall pointed crowns and loops, a second row tucked underneath, and one long swooping bar slashed through the middle — with pen lifts between letters. The paint is a real persistent spray layer: a hard white core, a soft overspray halo, stray mist specks, paint pooling wherever the can slows down (the tips of the crowns, the starts of strokes), and drips that run down from those pools under gravity, stuttering brick by brick. Paint sits thinner in the mortar grooves, and the brick is lit as a 3D relief: running-bond courses with recessed mortar, per-brick tint, pores, a glossy painted finish and a slow sun glare drifting across the top of the wall, like the reference. Three lifecycles: Write · Hold · Buff (the tag is finished, held, then a city buff roller paints over it in a slightly mismatched patch and the next tag goes up on top), Layer Up (new tags land at new spots and sizes over the fading old ones until the wall is bombed), and Write Once & Hold. Interactive: with Hand Spray on, your mouse — or your hand in ShaderClaw, pinching to spray — becomes a spray can. Camera friendly: switch the wall to Image / Camera to tag over a live feed, or keep the brick relief lighting on top of the camera. Audio: bass opens the nozzle (fatter lines), mids drive the writing speed, highs throw more overspray, and every beat makes the fresh paint flash and bloom. Show dynamics: at Rest the writers move slowly under soft light; the Build speeds the writing up, the hand starts to shake, more drips run and the sun sweeps; on the Drop the whole tag flashes white-hot, the cans splatter outward and the wall shakes; the Peak keeps the fresh paint glowing. NYC Reference palette (default) keeps the photo's brown brick and blue-white paint; the four Studio palettes are one switch away.",
+    "file": "ny_tag.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1600,
+    "title": "Tag",
+    "type": "generator"
   }
 ]

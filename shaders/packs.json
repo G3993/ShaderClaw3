@@ -1326,5 +1326,8 @@
   },
   "laser_sculptor": {
     "group": "studio"
+  },
+  "ny_tag": {
+    "group": "shades_of_new_york"
   }
 }
