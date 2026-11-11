@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Platform Edge — Shades of New York 002. The yellow tactile warning strip at the edge of every subway platform, the last thing under your feet before the train doors: square tiles of truncated domes in staggered rows, rendered as glossy moulded resin under the station's fluorescent tubes. Every dome is lit in 3D, with a flat worn top, a sloped shoulder, a specular crescent from the overhead lights, a reflection of the tube strips, a soft shadow and contact occlusion on the tile, and real platform wear: scuffed tops, chipped shoulders, grime, gum spots, scratches through the coating and dark grout between tiles. The yellow is pushed more saturated and contrasty than the real thing. The domes move: they breathe, pump with the bass and ripple in waves that change form (Ripples, Train Wave, Rain Pops, Checker Pulse, Spiral, or Auto). Each dome is its own little piston, so the strip reads like a tactile display. The colour story drifts too: the strip holds its yellow, then fades into subway line colours (orange, red, green, blue, lime, purple, brown) as sweeping bands, a per-tile mosaic or a whole-floor fade, before returning to yellow. Domes Only keeps the tile yellow while the domes change colour, and Dome Glow lights them from inside like LEDs. Every so often a train passes: a headlight sweeps across the floor and the station rumbles. Camera Domes turns the strip into a tactile pixel screen, with each dome taking the colour of the camera image beneath it and rising with its brightness. Your mouse, or your hand in ShaderClaw, is a flashlight; press or pinch to step on the domes and send a ripple out from your foot. Camera Tilt goes from straight down to a low view along the platform. Audio: bass pumps the domes, beats send a ripple ring through the floor, mids drive the waves and the colour drift, highs sparkle the gloss. Show dynamics: at Rest the floor barely breathes in pure yellow; the Build raises the domes row by row as a train approaches, its headlight growing while the station shakes; the Drop punches every dome up in a shockwave that flips the floor to a line colour with a glowing flash; the Peak keeps everything pumping.",
+  "DESCRIPTION": "Platform Edge — Shades of New York 002. The yellow tactile warning strip at the edge of every subway platform, the last thing under your feet before the train doors: square tiles of truncated domes in staggered rows, rendered as glossy moulded resin under the station's fluorescent tubes, with physically based lighting: GGX speculars from three rows of segmented fluorescent fixtures (each tube's reflection is a real stretched highlight with gaps between fixtures), a warm key with soft dome shadows, ceiling and floor-bounce ambient, resin translucency on the shoulders, roughness that rises on worn tops, scratches, grime and grout, and an ACES filmic tonemap with a light split-tone grade. With a camera and body tracking on, the domes rise wherever you stand like an imprint, take your colours from the camera (or glow in a line colour), your skeleton glows through the domes, and your hands and feet press the domes down. Every dome is lit in 3D, with a flat worn top, a sloped shoulder, a specular crescent from the overhead lights, a reflection of the tube strips, a soft shadow and contact occlusion on the tile, and real platform wear: scuffed tops, chipped shoulders, grime, gum spots, scratches through the coating and dark grout between tiles. The yellow is pushed more saturated and contrasty than the real thing. The domes move: they breathe, pump with the bass and ripple in waves that change form (Ripples, Train Wave, Rain Pops, Checker Pulse, Spiral, or Auto). Each dome is its own little piston, so the strip reads like a tactile display. The colour story drifts too: the strip holds its yellow, then fades into subway line colours (orange, red, green, blue, lime, purple, brown) as sweeping bands, a per-tile mosaic or a whole-floor fade, before returning to yellow. Domes Only keeps the tile yellow while the domes change colour, and Dome Glow lights them from inside like LEDs. Every so often a train passes: a headlight sweeps across the floor and the station rumbles. Camera Domes turns the strip into a tactile pixel screen, with each dome taking the colour of the camera image beneath it and rising with its brightness. Your mouse, or your hand in ShaderClaw, is a flashlight; press or pinch to step on the domes and send a ripple out from your foot. Camera Tilt goes from straight down to a low view along the platform. Audio: bass pumps the domes, beats send a ripple ring through the floor, mids drive the waves and the colour drift, highs sparkle the gloss. Show dynamics: at Rest the floor barely breathes in pure yellow; the Build raises the domes row by row as a train approaches, its headlight growing while the station shakes; the Drop punches every dome up in a shockwave that flips the floor to a line colour with a glowing flash; the Peak keeps everything pumping.",
   "CREDIT": "Easel / ShaderClaw house shader — Shades of New York series, 2026-11-11 — original.",
   "CATEGORIES": ["Generator", "Shades of New York", "Texture", "3D", "Interactive", "Audio Reactive"],
   "INPUTS": [
@@ -23,12 +23,17 @@
     { "NAME": "domeGlow",    "LABEL": "Dome Glow",        "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 0.6, "GROUP": "Colour" },
     { "NAME": "gloss",       "LABEL": "Gloss",            "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.8, "GROUP": "Light" },
     { "NAME": "fluoros",     "LABEL": "Fluorescent Tubes","TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.75, "GROUP": "Light" },
+    { "NAME": "exposure",    "LABEL": "Exposure",         "TYPE": "float", "MIN": 0.3, "MAX": 3.0, "DEFAULT": 1.0, "GROUP": "Light" },
     { "NAME": "trainEvery",  "LABEL": "Train Every (s, 0 = off)", "TYPE": "float", "AUDIO": false, "MIN": 0.0, "MAX": 90.0, "DEFAULT": 22.0, "GROUP": "Light" },
     { "NAME": "headlight",   "LABEL": "Headlight",        "TYPE": "color", "DEFAULT": [1.0, 0.93, 0.8, 1.0], "GROUP": "Light" },
     { "NAME": "wear",        "LABEL": "Wear & Grime",     "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.55, "GROUP": "Wear" },
     { "NAME": "gum",         "LABEL": "Gum Spots",        "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.35, "GROUP": "Wear" },
     { "NAME": "interact",    "LABEL": "Hand", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2], "LABELS": ["Off", "Step (press / pinch)", "Flashlight + Step"], "GROUP": "Hand" },
     { "NAME": "stepSize",    "LABEL": "Foot Size",        "TYPE": "float", "AUDIO": false, "MIN": 0.5, "MAX": 4.0, "DEFAULT": 1.6, "GROUP": "Hand" },
+    { "NAME": "bodyMode",    "LABEL": "Body Tracking", "TYPE": "long", "DEFAULT": 3, "VALUES": [0, 1, 2, 3], "LABELS": ["Off", "Silhouette (domes rise under you)", "Skeleton (glowing bones, hands + feet press)", "Both"], "GROUP": "Body" },
+    { "NAME": "bodyMirror",  "LABEL": "Mirror (selfie view)", "TYPE": "bool", "DEFAULT": true, "GROUP": "Body" },
+    { "NAME": "bodyLift",    "LABEL": "Body Lift",        "TYPE": "float", "MIN": 0.0, "MAX": 2.0, "DEFAULT": 1.0, "GROUP": "Body" },
+    { "NAME": "bodyColour",  "LABEL": "Body Colour", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2], "LABELS": ["Camera", "Line-colour glow", "Keep the floor colour"], "GROUP": "Body" },
     { "NAME": "camTex",      "LABEL": "Image / Camera",   "TYPE": "image", "GROUP": "Camera" },
     { "NAME": "camHeight",   "LABEL": "Brightness Lifts Domes", "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.8, "GROUP": "Camera" },
     { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 4, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White", "NYC Reference"], "GROUP": "Studio Palette" },
@@ -125,6 +130,89 @@ void showDynamics() {
     gLift  = mix(0.5, clamp(0.15 + e * 0.7 + gBuild * 0.25 + d * 0.3, 0.0, 1.0), k);
 }
 
+// ── Body layer (MediaPipe, ShaderClaw contract) ─────────────────────────
+//   mpPoseLandmarks: 33×1 RGBA8 per joint (x, 1 − y, z + 0.5, visibility), x as the camera sees it
+//   mpSegMask:       selfie-segmentation confidence (r), row 0 = top of the camera image
+//   Both come from the host (ShaderClaw web MediaPipe / Easel vision); unfed = zeros = no body.
+//   Joints and the mask are mirrored for a selfie view when Mirror is on, and every shader
+//   samples its camera image through bodyCamUV() so picture, mask and skeleton line up.
+vec2 bodyCamUV(vec2 uv) { return vec2(bodyMirror ? 1.0 - uv.x : uv.x, uv.y); }
+vec3 bodyJoint(float i) {                       // (uv.x, uv.y, visibility)
+    vec4 lm = texture2D(mpPoseLandmarks, vec2((i + 0.5) / 33.0, 0.5));
+    return vec3(bodyMirror ? 1.0 - lm.r : lm.r, lm.g, lm.a);
+}
+float bodySeg(vec2 uv) {
+    vec2 s = vec2(bodyMirror ? 1.0 - uv.x : uv.x, 1.0 - uv.y);
+    return smoothstep(0.35, 0.65, texture2D(mpSegMask, clamp(s, 0.0, 1.0)).r);
+}
+// how sure we are there is a body (shoulders + hips visible)
+float bodyPresence() {
+    float v = bodyJoint(11.0).z + bodyJoint(12.0).z + bodyJoint(23.0).z + bodyJoint(24.0).z;
+    return smoothstep(1.2, 2.6, v);
+}
+float bodyUseSkel() { float m = float(bodyMode); return (m > 1.5) ? 1.0 : 0.0; }          // Skeleton or Both
+float bodyUseSil()  { float m = float(bodyMode); return (m > 0.5 && m < 1.5) || m > 2.5 ? 1.0 : 0.0; }   // Silhouette or Both
+// distance (screen-height units, p-space) from p to the skeleton's bones; gBoneT = 0..1 along the nearest bone
+float gBoneT, gBoneId;
+float boneSeg(vec2 p, vec3 a, vec3 b, float asp, float id, float best) {
+    if (a.z < 0.4 || b.z < 0.4) return best;
+    vec2 A = (a.xy - 0.5) * vec2(asp, 1.0), B = (b.xy - 0.5) * vec2(asp, 1.0);
+    vec2 pa = p - A, ba = B - A;
+    float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-6), 0.0, 1.0);
+    float d = length(pa - ba * h);
+    if (d < best) { gBoneT = h; gBoneId = id; return d; }
+    return best;
+}
+float boneDist(vec2 p, float asp) {
+    vec3 j0 = bodyJoint(0.0), j11 = bodyJoint(11.0), j12 = bodyJoint(12.0), j13 = bodyJoint(13.0), j14 = bodyJoint(14.0);
+    vec3 j15 = bodyJoint(15.0), j16 = bodyJoint(16.0), j23 = bodyJoint(23.0), j24 = bodyJoint(24.0);
+    vec3 j25 = bodyJoint(25.0), j26 = bodyJoint(26.0), j27 = bodyJoint(27.0), j28 = bodyJoint(28.0);
+    vec3 neck = vec3(0.5 * (j11.xy + j12.xy), min(j11.z, j12.z));
+    vec3 pelv = vec3(0.5 * (j23.xy + j24.xy), min(j23.z, j24.z));
+    float d = 9.0;
+    gBoneT = 0.0; gBoneId = -1.0;
+    d = boneSeg(p, j0, neck, asp, 0.0, d);
+    d = boneSeg(p, neck, pelv, asp, 1.0, d);
+    d = boneSeg(p, j11, j12, asp, 2.0, d);
+    d = boneSeg(p, j23, j24, asp, 3.0, d);
+    d = boneSeg(p, j11, j13, asp, 4.0, d);
+    d = boneSeg(p, j13, j15, asp, 5.0, d);
+    d = boneSeg(p, j12, j14, asp, 6.0, d);
+    d = boneSeg(p, j14, j16, asp, 7.0, d);
+    d = boneSeg(p, j23, j25, asp, 8.0, d);
+    d = boneSeg(p, j25, j27, asp, 9.0, d);
+    d = boneSeg(p, j24, j26, asp, 10.0, d);
+    d = boneSeg(p, j26, j28, asp, 11.0, d);
+    return d;
+}
+// a point along one of three limb chains (0 wingspan, 1 head → spine → left leg, 2 right leg), t 0..1;
+// returns p-space position, sets gLimbN (unit normal) and gLimbLen (chain length)
+vec2 gLimbN;
+float gLimbLen;
+vec2 limbPt(float wk, float t, float asp) {
+    vec3 P0, P1, P2, P3, P4, P5;
+    vec3 j11 = bodyJoint(11.0), j12 = bodyJoint(12.0), j23 = bodyJoint(23.0), j24 = bodyJoint(24.0);
+    vec3 neck = vec3(0.5 * (j11.xy + j12.xy), 1.0), pelv = vec3(0.5 * (j23.xy + j24.xy), 1.0);
+    float n;
+    if (wk < 0.5)      { P0 = bodyJoint(15.0); P1 = bodyJoint(13.0); P2 = j11; P3 = j12; P4 = bodyJoint(14.0); P5 = bodyJoint(16.0); n = 5.0; }
+    else if (wk < 1.5) { P0 = bodyJoint(0.0); P1 = neck; P2 = pelv; P3 = j23; P4 = bodyJoint(25.0); P5 = bodyJoint(27.0); n = 5.0; }
+    else               { P0 = pelv; P1 = j24; P2 = bodyJoint(26.0); P3 = bodyJoint(28.0); P4 = P3; P5 = P3; n = 3.0; }
+    vec2 s = vec2(asp, 1.0);
+    vec2 a0 = (P0.xy - 0.5) * s, a1 = (P1.xy - 0.5) * s, a2 = (P2.xy - 0.5) * s, a3 = (P3.xy - 0.5) * s, a4 = (P4.xy - 0.5) * s, a5 = (P5.xy - 0.5) * s;
+    float l0 = length(a1 - a0), l1 = length(a2 - a1), l2 = length(a3 - a2), l3 = n > 3.5 ? length(a4 - a3) : 0.0, l4 = n > 4.5 ? length(a5 - a4) : 0.0;
+    float L = max(l0 + l1 + l2 + l3 + l4, 1e-4);
+    gLimbLen = L;
+    float d = clamp(t, 0.0, 1.0) * L;
+    vec2 A = a0, B = a1; float u = d / max(l0, 1e-5);
+    if (d > l0)                { A = a1; B = a2; u = (d - l0) / max(l1, 1e-5); }
+    if (d > l0 + l1)           { A = a2; B = a3; u = (d - l0 - l1) / max(l2, 1e-5); }
+    if (d > l0 + l1 + l2 && n > 3.5)      { A = a3; B = a4; u = (d - l0 - l1 - l2) / max(l3, 1e-5); }
+    if (d > l0 + l1 + l2 + l3 && n > 4.5) { A = a4; B = a5; u = (d - l0 - l1 - l2 - l3) / max(l4, 1e-5); }
+    vec2 tg = normalize(B - A + 1e-5);
+    gLimbN = vec2(-tg.y, tg.x);
+    return mix(A, B, clamp(u, 0.0, 1.0));
+}
+
 
 vec2 h22(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973)); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.xx + p3.yz) * p3.zy); }
 float vnoise(vec2 x) {
@@ -162,8 +250,10 @@ vec2 screenUV(vec3 w) {
 }
 
 // ── per-dome pump: the dome's height as a function of its lattice id ────
-float gGlowK;
+float gGlowK, gBodyOn, gAspE;
+vec3 gBoneCol; float gBoneGlow;
 vec3 gCamC;
+float gBodyM;
 float domePump(vec2 did, float hsh) {
     vec2 dc = did - gCenterQ;
     float d = length(dc);
@@ -196,10 +286,34 @@ float domePump(vec2 did, float hsh) {
     gGlowK = clamp(wave * 0.5 + rip * 1.2 + shock * 1.6 + 0.4 * rise + 0.3 * stepRing, 0.0, 2.0);
     // camera domes: colour from the camera image under the dome, brightness lifts it
     gCamC = vec3(0.0);
+    gBodyM = 0.0;
     if (gCamMode > 0.001) {
         vec2 su = screenUV(vec3(did / gDens, 0.0));
         gCamC = texture2D(camTex, clamp(su, 0.0, 1.0)).rgb;
         pump = mix(pump, 0.25 + camHeight * 1.6 * lum(gCamC) + 0.3 * (pump - 1.0), gCamMode);
+    }
+    // body: domes rise under the silhouette, hands and feet press them down
+    if (gBodyOn > 0.5) {
+        vec2 su = screenUV(vec3(did / gDens, 0.0));
+        float m = bodyUseSil() > 0.5 ? bodySeg(su) : 0.0;
+        pump += bodyLift * 1.5 * m;
+        if (bodyUseSkel() > 0.5) {
+            vec2 sp = (su - 0.5) * vec2(gAspE, 1.0);
+            float dent = 0.0;
+            for (int k = 0; k < 4; k++) {
+                float jid = k == 0 ? 15.0 : k == 1 ? 16.0 : k == 2 ? 27.0 : 28.0;
+                vec3 j = bodyJoint(jid);
+                vec2 jp = (j.xy - 0.5) * vec2(gAspE, 1.0);
+                dent = max(dent, step(0.4, j.z) * exp(-dot(sp - jp, sp - jp) / 0.0025));
+            }
+            pump -= 2.0 * dent * bodyLift;
+        }
+        gGlowK += m * 0.3 * float(bodyColour > 0.5 && bodyColour < 1.5 ? 1 : 0);
+        if (float(bodyColour) < 0.5 && m > 0.01) {
+            gCamC = texture2D(camTex, clamp(bodyCamUV(su), 0.0, 1.0)).rgb;
+            gCamMode = max(gCamMode, 0.0);
+        }
+        gBodyM = m;
     }
     return pump;
 }
@@ -271,7 +385,7 @@ float grime(vec2 q, out float gumM, out float scr) {
     vec2 rel = sp - h22(sc + 4.0);
     float along = dot(rel, dir);
     scr = step(h12(sc + 7.0), wear * 0.7) * smoothstep(0.012, 0.0, abs(dot(rel, vec2(-dir.y, dir.x)))) * smoothstep(0.45, 0.2, abs(along));
-    return wear * (0.28 * smoothstep(0.35, 0.95, g) + 0.45 * spk);
+    return wear * (0.13 * smoothstep(0.45, 0.95, g) + 0.45 * spk);
 }
 
 void main() {
@@ -280,6 +394,8 @@ void main() {
     vec2 p = (fc - 0.5 * R) / R.y;
     float ar = audioReact;
     gAr = ar;
+    gAspE = R.x / R.y;
+    gBodyOn = float(bodyMode) > 0.5 ? smoothstep(0.3, 0.7, bodyPresence()) : 0.0;
 
     // ── trains: a pass every N seconds; the build brings one in from far away ──
     float passT = trainEvery > 0.5 ? mod(TIME, trainEvery) / 5.0 : 9.0;
@@ -397,6 +513,21 @@ void main() {
         vec3 flipC = lineCol(floor(gStory * 7.0) + 2.0 + floor(TIME / 4.0));
         sc = mix(sc, flipC, clamp(burst * 1.2 + gDrop * gDrop * 0.6, 0.0, 1.0));
         vec3 domeC = gCamMode > 0.5 ? mix(sc, gCamC * 1.15, onDome) : sc;
+        // body: domes inside the silhouette take the camera colour (or a line colour)
+        float bM = gBodyM * gBodyOn;
+        if (bM > 0.0) {
+            float bc = float(bodyColour);
+            vec3 bcol = bc < 0.5 ? gCamC * 1.2 : bc < 1.5 ? lineCol(floor(gStory * 7.0) + 4.0) : domeC;
+            domeC = mix(domeC, bcol, bM * onDome);
+        }
+        gBoneGlow = 0.0; gBoneCol = vec3(0.0);
+        if (gBodyOn > 0.5 && bodyUseSkel() > 0.5) {
+            vec2 dsp = (screenUV(vec3(gDid / gDens, 0.0)) - 0.5) * vec2(gAspE, 1.0);
+            float bd = boneDist(dsp, gAspE);
+            float bw = 1.2 / domeRows;
+            gBoneGlow = exp(-bd * bd / (bw * bw)) * (0.7 + 0.5 * audioBeatPulse * ar);
+            gBoneCol = lineCol(gBoneId < 1.5 ? 2.0 : gBoneId < 3.5 ? 0.0 : gBoneId < 7.5 ? 4.0 : 3.0);
+        }
         vec3 base = mix(domeC, yel, domeOnly * (1.0 - onDome) * (1.0 - gCamMode));
         if (gCamMode > 0.5) base = mix(texture2D(camTex, uv).rgb * 0.35 + yel * 0.18, domeC, onDome);
 
@@ -419,58 +550,125 @@ void main() {
         // contrast around the colour's own mid
         base = clamp((base - 0.45) * contrast + 0.45 + (contrast - 1.0) * 0.08 * (lum(base) - 0.4), 0.0, 1.0);
 
-        // ── light ──
+        // ── light: physically based — GGX / Smith / Schlick in linear space, ACES tonemap ──
+        vec3 alb = pow(clamp(base, 0.0, 1.0), vec3(2.2));
+        // micro surface: orange-peel resin; worn tops, scratches, grime and grout are rougher
+        vec2 mn = (vec2(vnoise(q * 9.0 + gHsh * 9.0), vnoise(q * 9.0 + 17.0)) - 0.5) * 0.03 * relK;
+        N = normalize(N + vec3(mn, 0.0));
+        float rough = clamp(mix(0.24, 0.55, topM * wear) + 0.3 * scr + 0.4 * gr + 0.65 * grout + 0.4 * gumM + (1.0 - gloss) * 0.55 + 0.05 * scuff + 0.25 * chip, 0.07, 1.0);
         vec3 V = -rd;
-        vec3 L = normalize(vec3(-0.5, 0.42, 0.78));
-        float dif = clamp(dot(N, L) * 1.0 + 0.2, 0.05, 1.25);
-        // dome shadow on the tile (toward lower right) + contact occlusion ring
-        float hn = gHd / (BASEH * domeHeight + 1e-4);
-        vec2 shOff = L.xy / L.z * gHd * 2.2;
-        float shadow = smoothstep(RB * 1.05, RB * 0.55, length(l + shOff)) * (1.0 - onDome) * relK;
-        float ao = 1.0 - 0.32 * exp(-max(rr - RB, 0.0) / 0.06) * step(RB, rr) * clamp(hn, 0.0, 1.5) * relK;
-        ao *= 1.0 - 0.45 * grout - 0.2 * bevel;
-        // gloss: Blinn-Phong key, the fluorescent tube strips in reflection, fresnel
-        float gl = gloss * (1.0 - 0.65 * topM * wear) * (1.0 - grout);
-        vec3 Hh = normalize(L + V);
-        float spec = pow(max(dot(N, Hh), 0.0), mix(18.0, 140.0, gloss)) * gl * 1.2;
+        float NV = max(dot(N, V), 1e-3);
+        vec3 fw = vec3(q / gDens, h / gDens);
         vec3 Rf = reflect(-V, N);
-        float tubeU = Rf.x / max(Rf.z, 0.15) * 1.3 + gCamPos.x * 2.0;
-        float tubes = smoothstep(0.82, 0.98, 0.5 + 0.5 * cos(tubeU * PI)) * smoothstep(0.0, 0.3, Rf.z) * fluoros;
-        float fres = 0.04 + 0.96 * pow(1.0 - max(dot(N, V), 0.0), 5.0);
-        vec3 lit = base * (dif * ao * (1.0 - 0.5 * shadow) + 0.08);
-        lit += vec3(1.0, 0.98, 0.94) * (spec + tubes * gl * (0.12 + 0.9 * fres) * 0.8);
+        vec2 cW = gCenterQ / gDens;
+        vec3 Lo = vec3(0.0);
+        // three rows of fluorescent fixtures over the platform (segmented tubes running along x)
+        for (int k = 0; k < 3; k++) {
+            float fk = float(k) - 1.0;
+            float y0 = cW.y + fk * 0.6 + 0.2, z0 = 0.9;
+            // representative point: where the reflection ray reaches tube height, snapped onto the tube
+            float sR = (z0 - fw.z) / max(Rf.z, 0.05);
+            float xr = fw.x + Rf.x * sR;
+            float seg = smoothstep(0.86, 0.8, fract(xr / 1.4 + 0.3 * fk));          // gaps between fixtures
+            vec3 Ps = vec3(xr, y0, z0);
+            vec3 Ld = vec3(fw.x, y0, z0) - fw;                                          // nearest point for diffuse
+            float dD = length(Ld);
+            vec3 Lspec = Ps - fw;
+            float dS = length(Lspec);
+            vec3 Ls = Lspec / dS, Ldn = Ld / dD;
+            vec3 rad = vec3(1.0, 0.96, 0.9) * fluoros * 1.1;
+            // diffuse (line light ~ 1/d)
+            float NLd = max(dot(N, Ldn), 0.0);
+            // specular: GGX with roughness widened by the tube's size (energy-normalised)
+            float ar = rough * rough;
+            float arW = clamp(ar + 0.012 / dS, 0.0, 1.0);
+            float a2 = arW * arW;
+            vec3 Hh = normalize(Ls + V);
+            float NH = max(dot(N, Hh), 0.0), NL = max(dot(N, Ls), 0.0), VH = max(dot(V, Hh), 0.0);
+            float D = a2 / (PI * pow(NH * NH * (a2 - 1.0) + 1.0, 2.0));
+            float kG = (rough + 1.0) * (rough + 1.0) / 8.0;
+            float G = NL / (NL * (1.0 - kG) + kG) * NV / (NV * (1.0 - kG) + kG);
+            vec3 F = vec3(0.045) + (1.0 - 0.045) * pow(1.0 - VH, 5.0);
+            vec3 spec = D * G * F / max(4.0 * NL * NV, 1e-3) * (ar * ar / max(a2, 1e-5)) * seg;
+            Lo += alb / PI * (1.0 - F) * NLd * rad * 0.7 / (0.5 + dD) + spec * NL * rad * 0.45;
+        }
+        // a warm key from the station lights, with the dome's soft shadow
+        vec3 Lk = normalize(vec3(-0.35, 0.45, 0.82));
+        float hn = gHd / (BASEH * domeHeight + 1e-4);
+        vec2 shOff = Lk.xy / Lk.z * gHd * 2.2;
+        float shadow = smoothstep(RB * 1.1, RB * 0.5, length(l + shOff)) * (1.0 - onDome) * relK;
+        float ao = 1.0 - 0.38 * exp(-max(rr - RB, 0.0) / 0.06) * step(RB, rr) * clamp(hn, 0.0, 1.5) * relK;
+        ao *= 1.0 - 0.5 * grout - 0.2 * bevel;
+        float NLk = max(dot(N, Lk), 0.0);
+        vec3 keyC = vec3(1.0, 0.92, 0.8) * 3.2 * (1.0 - 0.8 * shadow);
+        Lo += alb / PI * NLk * keyC;
+        // the key's specular crescent on every dome
+        {
+            vec3 Hk = normalize(Lk + V);
+            float NHk = max(dot(N, Hk), 0.0), VHk = max(dot(V, Hk), 0.0);
+            float ak = max(rough * rough, 0.02), a2k = ak * ak;
+            float Dk = a2k / (PI * pow(NHk * NHk * (a2k - 1.0) + 1.0, 2.0));
+            float kGk = (rough + 1.0) * (rough + 1.0) / 8.0;
+            float Gk = NLk / (NLk * (1.0 - kGk) + kGk) * NV / (NV * (1.0 - kGk) + kGk);
+            float Fk = 0.045 + 0.955 * pow(1.0 - VHk, 5.0);
+            Lo += keyC * Dk * Gk * Fk / max(4.0 * NLk * NV, 1e-3) * NLk;
+        }
+        // image-based ambient: ceiling above, warm bounce from the yellow floor below
+        vec3 irr = mix(alb * 0.35 + vec3(0.03, 0.025, 0.01), vec3(0.42, 0.43, 0.46), 0.5 + 0.5 * N.z);
+        Lo += alb * irr * 0.3 * ao;
+        float fr = 0.045 + (max(1.0 - rough, 0.045) - 0.045) * pow(1.0 - NV, 5.0);
+        vec3 env = mix(vec3(0.05, 0.045, 0.035), vec3(0.38, 0.39, 0.42), smoothstep(-0.1, 0.9, Rf.z));
+        Lo += env * fr * ao * (1.0 - rough) * 1.2;
+        // resin translucency: thin dome shoulders glow a little when lit from behind
+        Lo += alb * alb * onDome * (1.0 - topM) * pow(1.0 - NV, 2.0) * 0.25;
         // highs sparkle the gloss
-        lit += vec3(1.0) * spec * 1.5 * highP() * ar * step(0.6, h11(gHsh * 13.0 + floor(TIME * 12.0)));
+        Lo += vec3(1.0) * highP() * ar * step(0.94, h11(gHsh * 13.0 + floor(TIME * 12.0))) * onDome * topM * (1.0 - rough) * 2.0;
 
         // train headlight sweeping across the floor (or approaching during the build)
-        vec2 cW = gCenterQ / gDens;
         float span = 0.9 * R.x / R.y / gFl * gH;
         float lx = passOn > 0.0 ? mix(-1.6, 1.6, passT) * span : -1.6 * span * (1.0 - gBuild);
         vec3 Lp = vec3(cW.x + lx, cW.y + 0.15, 0.28);
         float lightOn = max(passOn, gBuild * gBuild);
-        vec3 fw = vec3(q / gDens, h / gDens);
-        vec3 Ld = Lp - fw;
-        float att = 1.0 / (1.0 + dot(Ld, Ld) * 9.0);
-        vec3 Ln = normalize(Ld);
-        float hl = max(dot(N, Ln), 0.0) * att * lightOn * 2.2;
-        float hsp = pow(max(dot(N, normalize(Ln + V)), 0.0), 90.0) * att * lightOn * 6.0 * gloss;
-        lit += headlight.rgb * (base * hl + hsp);
+        vec3 Lpd = Lp - fw;
+        float att = 1.0 / (1.0 + dot(Lpd, Lpd) * 9.0);
+        vec3 Lpn = normalize(Lpd);
+        vec3 Hp = normalize(Lpn + V);
+        float NHp = max(dot(N, Hp), 0.0), a2p = pow(max(rough, 0.08), 4.0);
+        float Dp = a2p / (PI * pow(NHp * NHp * (a2p - 1.0) + 1.0, 2.0));
+        Lo += pow(headlight.rgb, vec3(2.2)) * lightOn * att * 6.0 * max(dot(N, Lpn), 0.0) * (alb / PI + Dp * 0.05);
 
         // flashlight in your hand
         if (im > 1.5 && gMouseOk > 0.5) {
             vec3 Lm = vec3(mW, 0.16) - fw;
-            float am = exp(-dot(Lm.xy, Lm.xy) * 90.0) * 0.45;
+            float am = exp(-dot(Lm.xy, Lm.xy) * 90.0) * 1.2;
             vec3 lm = normalize(Lm);
-            lit += vec3(1.0, 0.97, 0.9) * (base * max(dot(N, lm), 0.0) * am * 0.9 + pow(max(dot(N, normalize(lm + V)), 0.0), 80.0) * am * 1.4 * gloss);
+            vec3 Hm = normalize(lm + V);
+            float a2m = pow(max(rough, 0.08), 4.0), NHm = max(dot(N, Hm), 0.0);
+            float Dm = a2m / (PI * pow(NHm * NHm * (a2m - 1.0) + 1.0, 2.0));
+            Lo += vec3(1.0, 0.96, 0.88) * am * max(dot(N, lm), 0.0) * (alb / PI + Dm * 0.04);
         }
 
-        // domes glow from inside like LEDs
+        // domes glow from inside like LEDs (emissive, linear)
         float glowK = domeGlow * (gGlowK * 0.45 + 0.6 * gPeak * bassP() * ar + gDrop * 1.2) * onDome;
-        lit += domeC * glowK * (0.45 + 0.55 * topM);
-        lit += domeC * 0.12 * domeGlow * gDrop * (1.0 - onDome);       // the whole tile flashes on the drop
+        vec3 domeL = pow(clamp(domeC, 0.0, 1.0), vec3(2.2));
+        Lo += domeL * glowK * (0.6 + 0.8 * topM) * 1.6;
+        Lo += domeL * 0.15 * domeGlow * gDrop * (1.0 - onDome);
+        // body: the skeleton glows through the domes
+        Lo += pow(gBoneCol, vec3(2.2)) * gBoneGlow * onDome * 2.2;
 
-        // show lift + far fog toward the dark end of the platform
-        lit *= 0.82 + 0.3 * gLift;
+        // exposure + ACES filmic, back to display space, a light split-tone grade
+        vec3 xc = Lo * exposure * (0.85 + 0.3 * gLift);
+        // ACES on the brightest channel, applied as a scale: keeps the yellow's hue (no drift to lemon)
+        float mxc = max(max(xc.r, xc.g), xc.b);
+        float tm = clamp((mxc * (2.51 * mxc + 0.03)) / (mxc * (2.43 * mxc + 0.59) + 0.14), 0.0, 1.0);
+        xc = xc * (tm / max(mxc, 1e-4));
+        xc = mix(xc, vec3(tm), smoothstep(0.85, 1.0, tm) * 0.6);         // only true highlights burn to white
+        vec3 lit = pow(xc, vec3(1.0 / 2.2));
+        float lL = lum(lit);
+        lit = mix(lit, lit * vec3(0.94, 0.98, 1.06), (1.0 - smoothstep(0.0, 0.4, lL)) * 0.5);   // cool shadows
+        lit = mix(lit, lit * vec3(1.04, 1.0, 0.94), smoothstep(0.55, 1.0, lL) * 0.4);          // warm highlights
+
+        // far fog toward the dark end of the platform
         float fog = smoothstep(2.5, 9.0, t) * step(0.02, tilt);
         col = mix(lit, bg, fog);
         alpha = transparentBg ? clamp(onDome + lum(domeC) * glowK, 0.0, 1.0) * (1.0 - fog) : 1.0;
