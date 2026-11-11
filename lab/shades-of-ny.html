@@ -55,6 +55,20 @@ body.idle, body.idle #stage { cursor: none; }
 .camdot.ok { background: var(--ok); }
 .camdot.bad { background: var(--bad); }
 @keyframes blink { 50% { opacity: .35; } }
+.part { all: unset; box-sizing: border-box; height: 34px; padding: 0 11px 0 9px; border-radius: 999px; display: flex; align-items: center; gap: 6px; cursor: pointer; font: 600 12px/1 var(--display); white-space: nowrap; }
+.part:hover, .part.on { background: rgba(255, 255, 255, 0.12); }
+.part svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.part:focus-visible, .parts button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.parts {
+  position: fixed; left: 50%; bottom: calc(66px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 11;
+  display: flex; gap: 4px; padding: 6px; border-radius: 18px; max-width: calc(100vw - 24px); overflow-x: auto;
+  background: var(--glass-2); border: 1px solid var(--line); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); box-shadow: 0 16px 50px rgba(0,0,0,.5);
+}
+.parts button { all: unset; box-sizing: border-box; width: 64px; flex: 0 0 64px; padding: 8px 2px 6px; border-radius: 12px; display: grid; justify-items: center; gap: 4px; cursor: pointer; font: 500 10.5px/1.1 var(--mono); color: var(--muted); text-align: center; }
+.parts button:hover { background: rgba(255,255,255,.08); color: var(--fg); }
+.parts button[aria-pressed="true"] { background: var(--fg); color: #000; }
+.parts svg { width: 26px; height: 26px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.parts kbd { font: 9px var(--mono); opacity: .55; }
 .pal { width: 16px; height: 16px; border-radius: 50%; box-shadow: 0 0 0 1px rgba(255,255,255,.35) inset; }
 body.idle .dock:not(:hover):not(:focus-within), body.idle .pill:not(:hover) { opacity: 0; pointer-events: none; }
 .dock[hidden] { display: none !important; }
@@ -129,7 +143,7 @@ body.idle .dock:not(:hover):not(:focus-within), body.idle .pill:not(:hover) { op
 .gate button { background: rgba(255,255,255,.08); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer; }
 .gate button.pri { background: var(--fg); color: #000; border-color: var(--fg); }
 .err { position: fixed; inset: 0; padding: 18px; overflow: auto; background: rgba(0,0,0,.92); color: #ddd; white-space: pre-wrap; font-size: 12px; z-index: 20; }
-@media (max-width: 520px) { .name small, #palBtn { display: none; } .move { min-width: 0; } .pip { width: 30vw; } }
+@media (max-width: 520px) { .name small, #palBtn, #partLbl { display: none; } .part { padding: 0 9px; } .move { min-width: 0; } .pip { width: 30vw; } }
 @media (prefers-reduced-motion: reduce) { .dock, .toast, .pip, .pill, .move { transition: none; } .camdot.wait { animation: none; } }
 </style>
 </head>
@@ -148,6 +162,7 @@ body.idle .dock:not(:hover):not(:focus-within), body.idle .pill:not(:hover) { op
   <button class="ib" id="nextSh" type="button" aria-label="Next shader" title="Next (→)"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
   <span class="sep"></span>
   <span class="move" id="moveChip" title="What your body is doing">no body</span>
+  <button class="part" id="partBtn" type="button" aria-haspopup="true" aria-expanded="false" title="Which body part plays (B, or 1–7)"><svg id="partIco" viewBox="0 0 24 24"></svg><span id="partLbl">Full body</span></button>
   <button class="ib" id="palBtn" type="button" aria-label="Next colour palette" title="Colour (↑ ↓)"><span class="pal" id="palSw"></span></button>
   <button class="ib" id="ctlBtn" type="button" aria-label="Controls" aria-expanded="false" title="Controls (C)"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
   <button class="ib" id="fsBtn" type="button" aria-label="Fullscreen" title="Fullscreen (F)"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
@@ -155,6 +170,7 @@ body.idle .dock:not(:hover):not(:focus-within), body.idle .pill:not(:hover) { op
 </nav>
 <button class="pill" id="pill" type="button" aria-label="Show controls" hidden><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button>
 
+<div class="parts" id="parts" role="group" aria-label="Which body part plays" hidden></div>
 <section class="panel" id="panel" aria-label="Controls" hidden>
   <h3>Moves</h3>
   <div class="legend" id="legend"></div>
@@ -558,8 +574,9 @@ function adapt(dt, now) {
   $("stats").textContent = Math.round(perf.fps) + " fps · " + cv.width + "×" + cv.height + (qualityMode === "auto" ? " · auto " + autoScale.toFixed(2) : "") + (GL2 ? "" : " · WebGL1");
   if (qualityMode !== "auto" || XF.active || now - perf.lastChange < 2500) return;
   let s = autoScale;
-  if (perf.fps < 42) s *= perf.fps < 28 ? 0.75 : 0.87;
-  else if (perf.fps > 57 && now - perf.lastChange > 6000) s *= 1.08;
+  // step down when slow, and remember the level that was too slow so it never bounces back up to it
+  if (perf.fps < 42) { perf.ceil = Math.min(perf.ceil || 1, autoScale * 0.97); s *= perf.fps < 28 ? 0.75 : 0.87; perf.slow = 0; }
+  else if (perf.fps > 57 && now - perf.lastChange > 8000 && ++perf.slow > 3) s = Math.min(s * 1.08, (perf.ceil || 1));
   s = clamp(s, 0.3, 1);
   if (Math.abs(s - autoScale) > 0.01) { autoScale = s; perf.lastChange = now; resize(); }
 }
@@ -656,11 +673,11 @@ function updateCamera(dt) {
   }
   if (CAM.segRaw && CAM.segW) {
     const sh = Math.round(Math.min(CAM.segH * CAM.crop[3], 512)), sw = Math.max(2, Math.round(sh * cv.width / cv.height));
-    if (!CAM.segA || CAM.segA.w !== sw || CAM.segA.h !== sh) { freeTex(CAM.segA); freeTex(CAM.segB); CAM.segA = makeTex(sw, sh, RGBA8); CAM.segB = makeTex(sw, sh, RGBA8); }
+    if (!CAM.segA || CAM.segA.w !== sw || CAM.segA.h !== sh) { freeTex(CAM.segA); freeTex(CAM.segB); CAM.segA = makeTex(sw, sh, RGBA8); CAM.segB = makeTex(sw, sh, RGBA8); prepPass(CAM.segA, CAM.segRaw, null, 1, 1); }
     const k = 1 - Math.exp(-dt * 16);               // ~60 ms of temporal smoothing: no edge flicker
     prepPass(CAM.segB, CAM.segRaw, CAM.segA.tex, 1, k);
     const t = CAM.segA; CAM.segA = CAM.segB; CAM.segB = t;
-    MP.seg.tex = CAM.segA.tex; MP.seg.w = sw; MP.seg.h = sh;
+    MP.seg.tex = partUsesMask() ? CAM.segA.tex : blankSeg; MP.seg.w = sw; MP.seg.h = sh;
   }
   uploadPose();
 }
@@ -692,16 +709,31 @@ function onLandmarks(lm, t) {
     if (!any) { haveBody = false; OE.length = 0; }
   }
 }
+// What the shader and overlays see: positions eased every rendered frame (no 30 Hz stepping on a
+// 60/120 Hz screen) and visibility latched with hysteresis (limbs don't blink at the 0.4 threshold).
+const DL = Array.from({ length: 33 }, () => ({ x: 0.5, y: 0.5, z: 0, v: 0, on: false }));
+const blankSeg = tiny(true);
+function smoothDisplay(dt) {
+  const k = 1 - Math.exp(-dt * 26);
+  for (let i = 0; i < 33; i++) {
+    const L = LM[i], D = DL[i];
+    D.on = haveBody && (D.on ? L.v > 0.3 : L.v > 0.55);
+    if (D.v < 0.02) { D.x = L.x; D.y = L.y; D.z = L.z; }       // re-appearing joints start where they are, no slide-in
+    else { D.x += (L.x - D.x) * k; D.y += (L.y - D.y) * k; D.z += (L.z - D.z) * k; }
+    D.v += ((D.on ? 0.95 : 0) - D.v) * (1 - Math.exp(-dt * 10));
+  }
+}
 function uploadPose() {
-  const [x0, y0, fx, fy] = CAM.crop;
+  const [x0, y0, fx, fy] = CAM.crop, keep = partJoints();
+  const LM = DL.map((D, i) => keep[i] ? D : { x: D.x, y: D.y, z: D.z, v: 0 });
   if (GL2) {
     const d = poseData || (poseData = new Float32Array(33 * 4));
-    for (let i = 0; i < 33; i++) { const L = LM[i]; d[i * 4] = (L.x - x0) / fx; d[i * 4 + 1] = 1 - (L.y - y0) / fy; d[i * 4 + 2] = L.z + 0.5; d[i * 4 + 3] = haveBody ? L.v : 0; }
+    for (let i = 0; i < 33; i++) { const L = LM[i]; d[i * 4] = (L.x - x0) / fx; d[i * 4 + 1] = 1 - (L.y - y0) / fy; d[i * 4 + 2] = L.z + 0.5; d[i * 4 + 3] = L.v; }
     gl.bindTexture(gl.TEXTURE_2D, MP.pose.tex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 33, 1, 0, gl.RGBA, gl.FLOAT, d);
   } else {
     const d = new Uint8Array(33 * 4);
-    for (let i = 0; i < 33; i++) { const L = LM[i]; d[i * 4] = clamp((L.x - x0) / fx, 0, 1) * 255; d[i * 4 + 1] = clamp(1 - (L.y - y0) / fy, 0, 1) * 255; d[i * 4 + 2] = clamp(L.z + 0.5, 0, 1) * 255; d[i * 4 + 3] = (haveBody ? L.v : 0) * 255; }
+    for (let i = 0; i < 33; i++) { const L = LM[i]; d[i * 4] = clamp((L.x - x0) / fx, 0, 1) * 255; d[i * 4 + 1] = clamp(1 - (L.y - y0) / fy, 0, 1) * 255; d[i * 4 + 2] = clamp(L.z + 0.5, 0, 1) * 255; d[i * 4 + 3] = L.v * 255; }
     gl.bindTexture(gl.TEXTURE_2D, MP.pose.tex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 33, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, d);
   }
@@ -756,7 +788,7 @@ async function startCamera() {
 function stopCamera() {
   if (CAM.stream) CAM.stream.getTracks().forEach(t => t.stop());
   if (CAM.video) CAM.video.remove();
-  camLive = false; CAM.stream = null; haveBody = false; for (const L of LM) L.v = 0;
+  camLive = false; CAM.stream = null; haveBody = false; for (const L of LM) L.v = 0; for (const D of DL) { D.v = 0; D.on = false; }
   MP.cam.tex = tiny(true, [0, 0, 0, 255]); MP.cam.w = MP.cam.h = 0;
   MP.seg.tex = tiny(true); CAM.segRaw = null; CAM.segW = 0;
   uploadPose(); applyPip(); camStatus("", "camera off"); $("camBtn").textContent = "Turn on";
@@ -840,7 +872,7 @@ function analyseMoves(t) {
     const up = -((sh.y - MV.prev.sh.y) + (hipsOk && MV.prev.hipsOk ? hp.y - MV.prev.hp.y : sh.y - MV.prev.sh.y)) / 2 / dt / S;
     if (up > 1.7 && t - MV.ev.jump > 0.8) fire("jump", t);
   }
-  MV.stillT = R.energy < 0.07 ? MV.stillT + dt : 0;
+  MV.stillT = R.energy < 0.07 ? Math.min(MV.stillT + dt, 3) : Math.max(0, MV.stillT - dt * (R.energy > 0.18 ? 4 : 1));
   R.still = sstep(0.8, 2.0, MV.stillT);
   R.fast = sstep(0.4, 0.8, R.energy);
   // arms up: wrists above the head
@@ -920,10 +952,10 @@ const MOVES = {
   },
   ny_station_tiles: {
     rules: [
-      { p: "zoom", m: "still", to: 11.0 }, { p: "drift", m: "still", to: 0.0 },
+      { p: "zoom", m: "still", to: 9.0 }, { p: "drift", m: "still", to: 0.0 },
       { p: "liftAmt", m: "fast", to: 1.4 }, { p: "tiltAmt", m: "fast", to: 1.4 }, { p: "waviness", m: "fast", to: 1.4 },
       { p: "gridGlow", m: "armsUp", to: 2.0 },
-      { p: "zoom", m: "wide", to: 2.6 },
+      { p: "zoom", m: "wide", to: 3.2 },
       { p: "pillow", m: "low", to: 1.5 }, { p: "tubes", m: "low", to: 0.35 },
       { p: "tiltAmt", m: "lean", add: 0.5 },
     ],
@@ -946,9 +978,9 @@ const MOVES = {
 const MOD = {};
 function updateMoves(dt) {
   const R = MV.raw, s = MV.s, on = camLive;
-  for (const k of ["energy", "still", "fast", "armsUp", "wide", "low", "lean", "presence", "armsHold"]) s[k] = spring("mv_" + k, on ? R[k] * (k === "presence" ? 1 : R.presence) : 0, dt, k === "lean" ? 3 : 4.5);
+  for (const k of ["energy", "still", "fast", "armsUp", "wide", "low", "lean", "presence", "armsHold"]) s[k] = spring("mv_" + k, on ? R[k] * (k === "presence" ? 1 : R.presence) : 0, dt, k === "lean" ? 2.2 : 3);
   for (const k in MOD) delete MOD[k];
-  if (!cur || !$("optMoves").checked) return;
+  if (!cur || !$("optMoves").checked || PART === "off") return;
   for (const r of (MOVES[cur.id] || {}).rules || []) {
     const inp = (cur.meta.INPUTS || []).find(i => i.NAME === r.p); if (!inp) continue;
     const base = r.p in MOD ? MOD[r.p] : Number(cur.vals[r.p]);
@@ -956,6 +988,11 @@ function updateMoves(dt) {
     let v = r.add != null ? base + r.add * w : base + (r.to - base) * clamp(w, 0, 1);
     MOD[r.p] = clamp(v, inp.MIN != null ? inp.MIN : -1e9, inp.MAX != null ? inp.MAX : 1e9);
   }
+}
+function partMods() {
+  if (!cur || !camLive) return;
+  const inp = (cur.meta.INPUTS || []).find(i => i.NAME === "bodyMode");
+  if (inp) MOD.bodyMode = PART_DEF[PART].mode;
 }
 function bodyShow() {
   if (!camLive || !$("optShow").checked) return;
@@ -986,25 +1023,105 @@ function buildLegend() {
 // ── overlays: camera preview (true aspect) and optional skeleton on the stage ──
 const BONES = [[11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24], [23, 24], [23, 25], [25, 27], [24, 26], [26, 28], [0, 11], [0, 12]];
 function fitCanvas(c) { const r = c.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2); const w = Math.round(r.width * d), h = Math.round(r.height * d); if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } return d; }
-function drawBones(c, P, lw, dotR, col) {
+function drawBones(c, P, lw, dotR, col, bones) {
   const x = c.getContext("2d"); x.clearRect(0, 0, c.width, c.height);
-  if (!haveBody) return;
-  x.strokeStyle = "rgba(255,255,255,0.85)"; x.lineWidth = lw; x.lineCap = "round";
-  for (const [a, b] of BONES) { if (LM[a].v < 0.4 || LM[b].v < 0.4) continue; const A = P(LM[a]), B = P(LM[b]); x.beginPath(); x.moveTo(A[0], A[1]); x.lineTo(B[0], B[1]); x.stroke(); }
-  x.fillStyle = col;
-  for (const q of LM) { if (q.v < 0.4) continue; const A = P(q); x.beginPath(); x.arc(A[0], A[1], dotR, 0, 6.283); x.fill(); }
+  const keep = partJoints();
+  if (bones) {
+    for (const [a, b] of BONES) {
+      const al = Math.min(DL[a].v, DL[b].v); if (al < 0.05) continue;
+      const lit = keep[a] && keep[b];
+      x.strokeStyle = lit ? "rgba(255,255,255," + (0.9 * al) + ")" : "rgba(255,255,255," + (0.25 * al) + ")"; x.lineWidth = lw; x.lineCap = "round";
+      const A = P(DL[a]), B = P(DL[b]); x.beginPath(); x.moveTo(A[0], A[1]); x.lineTo(B[0], B[1]); x.stroke();
+    }
+    for (let i = 0; i < 33; i++) { const q = DL[i]; if (q.v < 0.05 || !keep[i]) continue; x.globalAlpha = q.v; x.fillStyle = col; const A = P(q); x.beginPath(); x.arc(A[0], A[1], dotR, 0, 6.283); x.fill(); }
+    x.globalAlpha = 1;
+  }
+  const bp = bodyPointer();
+  if (bp) {                                   // the point that plays the shader
+    const A = P({ x: bp.rx, y: bp.ry }), r = dotR * (bp.down ? 4.5 : 3.2);
+    x.strokeStyle = bp.down ? "#ffd60a" : "rgba(255,255,255,.75)"; x.lineWidth = lw * 1.2;
+    x.beginPath(); x.arc(A[0], A[1], r, 0, 6.283); x.stroke();
+  }
 }
 function applyPip() { $("pip").hidden = !(camLive && $("optPip").checked); store.set("pip", $("optPip").checked); }
 function drawOverlays() {
   const pc = $("pipSkel");
-  if (!$("pip").hidden) { const d = fitCanvas(pc); drawBones(pc, (q) => [(1 - q.x) * pc.width, q.y * pc.height], 1.5 * d, 2 * d, "#ffd60a"); }
-  const sk = $("skel"), on = $("optSkel").checked && camLive;
+  if (!$("pip").hidden) { const d = fitCanvas(pc); drawBones(pc, (q) => [(1 - q.x) * pc.width, q.y * pc.height], 1.5 * d, 2 * d, "#ffd60a", true); }
+  const sk = $("skel"), skelOn = $("optSkel").checked && camLive, on = camLive && (skelOn || !!PART_DEF[PART].ptr);
   sk.hidden = !on;
-  if (on) { const d = fitCanvas(sk), [x0, y0, fx, fy] = CAM.crop; drawBones(sk, (q) => [(1 - (q.x - x0) / fx) * sk.width, (q.y - y0) / fy * sk.height], 2.5 * d, 4 * d, "#fff"); }
+  if (on) { const d = fitCanvas(sk), [x0, y0, fx, fy] = CAM.crop; drawBones(sk, (q) => [(1 - (q.x - x0) / fx) * sk.width, (q.y - y0) / fy * sk.height], 2.5 * d, 4 * d, "#fff", skelOn); }
 }
 $("optPip").checked = store.get("pip", true);
 $("optPip").addEventListener("change", applyPip);
 $("optSkel").addEventListener("change", drawOverlays);
+
+// ── which body part plays: full body, hands, head, feet, silhouette only, skeleton only, off ──
+// It decides which joints the shader sees, whether the silhouette mask is on, the shader's Body mode,
+// and which point drives the shader's hand interaction (spray can, step, magnet, light) — shown as a ring.
+const ICO = {
+  full: '<circle cx="12" cy="4.5" r="2"/><path d="M12 7v7M6 9.5l6-1 6 1M9 21l3-7 3 7"/>',
+  hands: '<path d="M8 13V6.5a1.3 1.3 0 0 1 2.6 0V12M10.6 11V4.8a1.3 1.3 0 0 1 2.6 0V11M13.2 11.2V5.8a1.3 1.3 0 0 1 2.6 0v6.4M15.8 12V8.6a1.3 1.3 0 0 1 2.6 0V15a6 6 0 0 1-6 6h-.6a6 6 0 0 1-4.7-2.3L4.4 15.3a1.4 1.4 0 0 1 2.1-1.8L8 15"/>',
+  head: '<circle cx="12" cy="10" r="6"/><path d="M9.5 9.5h.01M14.5 9.5h.01M9.8 12.6c1.3 1 3.1 1 4.4 0M8 19.5c1.2.9 2.5 1.3 4 1.3s2.8-.4 4-1.3"/>',
+  feet: '<path d="M7 3c1.8 0 3 1.8 3 4.2 0 2-.6 3.6-.6 5.3 0 1.6.8 2.6.8 4.4C10.2 19 9 21 7 21s-3-1.6-3-3.5c0-2.4 1-4.4 1-6.9C5 7.6 4.9 3 7 3zM17 3c-1.8 0-3 1.8-3 4.2 0 2 .6 3.6.6 5.3 0 1.6-.8 2.6-.8 4.4 0 2.1 1.2 4.1 3.2 4.1s3-1.6 3-3.5c0-2.4-1-4.4-1-6.9 0-3 .1-7.6-2-7.6z"/>',
+  shape: '<path d="M12 2.5a3 3 0 0 1 3 3c0 1.4-.9 2.5-2 2.9 2.8.4 4.6 2 5 4.6l.6 4h-2.6l.2 4.5H7.8l.2-4.5H5.4l.6-4c.4-2.6 2.2-4.2 5-4.6-1.1-.4-2-1.5-2-2.9a3 3 0 0 1 3-3z"/>',
+  bones: '<circle cx="12" cy="4" r="1.6"/><path d="M12 6v7M7 8h10M7 8l-1.5 5M17 8l1.5 5M9 21l3-8 3 8"/><circle cx="7" cy="8" r=".9"/><circle cx="17" cy="8" r=".9"/><circle cx="12" cy="13" r=".9"/>',
+  off: '<circle cx="12" cy="12" r="8"/><path d="M6.5 6.5l11 11"/>',
+};
+const RANGE = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
+const PART_DEF = {
+  full:  { label: "Full body", mode: 3, mask: true,  joints: RANGE(0, 32), ptr: "hand" },
+  hands: { label: "Hands",     mode: 2, mask: false, joints: RANGE(13, 22), ptr: "hand" },
+  head:  { label: "Head",      mode: 2, mask: false, joints: RANGE(0, 10).concat([11, 12]), ptr: "head" },
+  feet:  { label: "Feet",      mode: 2, mask: false, joints: RANGE(23, 32), ptr: "foot" },
+  shape: { label: "Silhouette", mode: 1, mask: true, joints: [], ptr: null },
+  bones: { label: "Skeleton",  mode: 2, mask: false, joints: RANGE(0, 32), ptr: null },
+  off:   { label: "Off",       mode: 0, mask: false, joints: [], ptr: null },
+};
+const PART_KEYS = Object.keys(PART_DEF);
+let PART = PART_DEF[store.get("part", "full")] ? store.get("part", "full") : "full";
+const partSets = {}; for (const k of PART_KEYS) { const m = new Array(33).fill(false); for (const j of PART_DEF[k].joints) m[j] = true; partSets[k] = m; }
+const partJoints = () => partSets[PART];
+const partUsesMask = () => PART_DEF[PART].mask;
+// pointer: the raised hand (switches only when the other is clearly higher), the nose, or the foot that's moving
+const PTR = { hand: 15, foot: 27, fv: [0, 0], fp: {} };
+function bodyPointer() {
+  const def = PART_DEF[PART]; if (!camLive || !def.ptr || !haveBody) return null;
+  let j, down;
+  if (def.ptr === "hand") {
+    const L = DL[15], Rr = DL[16];
+    if (L.v > 0.5 && Rr.v > 0.5) { if (PTR.hand === 15 && Rr.y < L.y - 0.06) PTR.hand = 16; else if (PTR.hand === 16 && L.y < Rr.y - 0.06) PTR.hand = 15; }
+    else if (Rr.v > 0.5) PTR.hand = 16; else if (L.v > 0.5) PTR.hand = 15;
+    j = PTR.hand; const el = DL[j - 2];
+    down = el.v > 0.4 && DL[j].y < el.y - 0.02;                  // hand above its elbow = spray / press
+  } else if (def.ptr === "head") { j = 0; down = true; }
+  else {
+    for (const f of [27, 28]) { const q = DL[f], o = PTR.fp[f]; if (o) PTR.fv[f - 27] = PTR.fv[f - 27] * 0.85 + Math.hypot(q.x - o.x, q.y - o.y); PTR.fp[f] = { x: q.x, y: q.y }; }
+    if (PTR.fv[0] > PTR.fv[1] * 1.5) PTR.foot = 27; else if (PTR.fv[1] > PTR.fv[0] * 1.5) PTR.foot = 28;
+    j = PTR.foot; down = true;
+  }
+  const q = DL[j]; if (q.v < 0.4) return null;
+  const [x0, y0, fx, fy] = CAM.crop;
+  return { x: 1 - (q.x - x0) / fx, y: 1 - (q.y - y0) / fy, down, rx: q.x, ry: q.y };
+}
+function setPart(k, quiet) {
+  if (!PART_DEF[k]) return;
+  PART = k; store.set("part", k);
+  $("partLbl").textContent = PART_DEF[k].label; $("partIco").innerHTML = ICO[k];
+  document.querySelectorAll("#parts button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.k === k)));
+  const ptr = PART_DEF[k].ptr;
+  if (!quiet) toast(PART_DEF[k].label + (ptr === "hand" ? " plays · raise a hand to press" : ptr ? " plays" : ""));
+}
+function setParts(open) { $("parts").hidden = !open; $("partBtn").classList.toggle("on", open); $("partBtn").setAttribute("aria-expanded", String(open)); if (open) setPanel(false); wake(); }
+PART_KEYS.forEach((k, i) => {
+  const b = document.createElement("button"); b.type = "button"; b.dataset.k = k;
+  b.innerHTML = '<svg viewBox="0 0 24 24">' + ICO[k] + "</svg>";
+  const t = document.createElement("span"); t.textContent = PART_DEF[k].label; const kb = document.createElement("kbd"); kb.textContent = i + 1;
+  b.append(t, kb);
+  b.addEventListener("click", () => { setPart(k); setParts(false); });
+  $("parts").appendChild(b);
+});
+$("partBtn").addEventListener("click", () => setParts($("parts").hidden));
+setPart(PART, true);
 
 // ── render loop ──────────────────────────────────────────────────────────
 function tick(now) {
@@ -1016,7 +1133,9 @@ function tick(now) {
   for (const id of ORDER) { const P = PROGS[id]; if (P && !P.loc && !P.err && progDone(P)) { finishProgram(P); break; } }
   pollFrames(now);
   updateCamera(dt);
+  smoothDisplay(dt);
   updateMoves(dt);
+  partMods();
   updateMoveChip();
   drawOverlays();
   if (!playing) return;
@@ -1034,10 +1153,12 @@ function tick(now) {
   const demoBeats = audioClock * 122 / 60, tempoOn = audioMode === "demo";
   u1("audioBPM", tempoOn ? 122 : 0); u1("audioBPMConfidence", tempoOn ? 1 : 0);
   u1("audioBeatPhase", tempoOn ? demoBeats % 1 : 0); u1("audioBarPhase", tempoOn ? (demoBeats / 4) % 1 : 0); u1("audioPhase16", tempoOn ? (demoBeats / 16) % 1 : 0);
-  if (loc.mousePos) gl.uniform2f(loc.mousePos, M.x, M.y);
-  if (loc.mouseDelta) gl.uniform2f(loc.mouseDelta, M.x - M.px, M.y - M.py);
-  u1("mouseDown", M.down ? 1 : 0);
-  M.px = M.x; M.py = M.y;
+  const bp = !M.down ? bodyPointer() : null;
+  const mx = bp ? bp.x : M.x, my = bp ? bp.y : M.y;
+  if (loc.mousePos) gl.uniform2f(loc.mousePos, mx, my);
+  if (loc.mouseDelta) gl.uniform2f(loc.mouseDelta, mx - M.px, my - M.py);
+  u1("mouseDown", M.down || (bp && bp.down) ? 1 : 0);
+  M.px = mx; M.py = my;
   for (const inp of meta.INPUTS || []) {
     const l = loc[inp.NAME]; if (!l || inp.TYPE === "image") continue;
     const v = inp.NAME in MOD ? MOD[inp.NAME] : vals[inp.NAME];
@@ -1073,6 +1194,7 @@ function tick(now) {
 let toastT = 0;
 function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 1800); }
 function setPanel(open) {
+  if (open) { $("parts").hidden = true; $("partBtn").classList.remove("on"); }
   $("panel").hidden = !open; $("ctlBtn").classList.toggle("on", open); $("ctlBtn").setAttribute("aria-expanded", String(open));
   if (open) buildControls();
   wake();
@@ -1084,7 +1206,7 @@ function setCollapsed(c) {
 let idleT = 0;
 function wake() {
   document.body.classList.remove("idle"); clearTimeout(idleT);
-  idleT = setTimeout(() => { if ($("panel").hidden && $("gate").hidden) document.body.classList.add("idle"); }, 3200);
+  idleT = setTimeout(() => { if ($("panel").hidden && $("parts").hidden && $("gate").hidden) document.body.classList.add("idle"); }, 3200);
 }
 ["pointermove", "pointerdown", "keydown"].forEach(e => window.addEventListener(e, wake, { passive: true }));
 $("prevSh").addEventListener("click", () => step(-1));
@@ -1117,7 +1239,9 @@ window.addEventListener("keydown", e => {
   else if (k === "h" || k === "H") setCollapsed(!$("dock").hidden);
   else if (k === "c" || k === "C") { if ($("dock").hidden) setCollapsed(false); setPanel($("panel").hidden); }
   else if (k === " ") { playing = !playing; toast(playing ? "Playing" : "Paused"); }
-  else if (k === "Escape") setPanel(false);
+  else if (k === "b" || k === "B") setParts($("parts").hidden);
+  else if (k >= "1" && k <= String(PART_KEYS.length)) setPart(PART_KEYS[Number(k) - 1]);
+  else if (k === "Escape") { setPanel(false); setParts(false); }
   else return;
   e.preventDefault();
 });
@@ -1127,7 +1251,7 @@ let sw = null;
 function setMouse(e) { M.x = clamp(e.clientX / innerWidth, 0, 1); M.y = clamp(1 - e.clientY / innerHeight, 0, 1); }
 stageEl.addEventListener("pointermove", setMouse);
 stageEl.addEventListener("pointerdown", e => {
-  if (!$("panel").hidden) { setPanel(false); return; }
+  if (!$("panel").hidden || !$("parts").hidden) { setPanel(false); setParts(false); return; }
   if (e.button !== 0 && e.pointerType === "mouse") return;
   setMouse(e); M.px = M.x; M.py = M.y;
   if (paintMode) { M.down = true; try { stageEl.setPointerCapture(e.pointerId); } catch (_) {} }
@@ -1149,7 +1273,7 @@ for (const id of ORDER) startProgram(id);     // compile the rest in the backgro
 if (store.get("collapsed", false)) setCollapsed(true);
 wake();
 requestAnimationFrame(tick);
-toast("← → shader · ↑ ↓ colour · C controls · H hide · F fullscreen");
+toast("← → shader · ↑ ↓ colour · B body part · C controls · H hide · F fullscreen");
 startCamera();
 </script>
 </body>
