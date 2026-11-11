@@ -140,6 +140,17 @@
         <div id="editor-toolbar" class="sc3-editor-toolbar">
           <button id="compile-btn">Compile</button>
           <label id="auto-compile-label"><input type="checkbox" id="auto-compile" checked> Auto</label>
+          <select id="transition-sel" title="Transition when the shader changes (lands on the next beat)">
+            <option value="auto">Transition: auto</option>
+            <option value="crossfade">Transition: crossfade</option>
+            <option value="cut">Transition: cut</option>
+          </select>
+          <select id="transition-beats" title="Transition length in beats">
+            <option value="2">2 beats</option>
+            <option value="4" selected>4 beats</option>
+            <option value="8">8 beats</option>
+            <option value="16">16 beats</option>
+          </select>
           <div class="spacer"></div>
           <button id="new-btn">New</button>
           <button id="download-btn">Save .fs</button>

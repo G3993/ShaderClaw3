@@ -370,6 +370,127 @@
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
 
+  // === Shader transitions: gl-transitions library (transitions/*.glsl), started on the beat ===
+  // When a layer's shader changes we keep the outgoing frame (layer._transitionTex, "from"),
+  // wait for the next beat (audio bus BPM + beat phase; 120 BPM fallback), then run the chosen
+  // transition for N beats over the live new shader ("to"). Same files and contract as Easel.
+  const _xf = { index: null, src: {}, progs: {}, switchCount: 0 };
+  window._sc3Transitions = _xf;   // inspectable from the console / MCP bridge
+  const XF_AUTO_ORDER = ['NY_TileFlip', 'NY_SplitFlap', 'NY_FlowMorph', 'NY_Mosaic', 'NY_SubwayDoors', 'NY_BeatSlices', 'NY_Iris',
+                         'NY_TrainPass', 'NY_InkBleed', 'NY_Shatter', 'NY_LumaMorph', 'NY_SprayOver', 'NY_ZoomPunch', 'NY_ScanRoll'];
+  (async function _loadTransitions() {
+    try {
+      const idx = await (await fetch('transitions/index.json')).json();
+      _xf.index = idx;
+      const sel = document.getElementById('transition-sel');
+      const beatsSel = document.getElementById('transition-beats');
+      for (const n of idx.all) {
+        const o = document.createElement('option');
+        o.value = n; o.textContent = 'Transition: ' + n.replace(/^NY_/, 'NY ').replace(/([a-z])([A-Z])/g, '$1 $2');
+        sel && sel.appendChild(o);
+      }
+      try {
+        const saved = localStorage.getItem('sc3.transition'); if (saved && sel) sel.value = saved;
+        const savedB = localStorage.getItem('sc3.transitionBeats'); if (savedB && beatsSel) beatsSel.value = savedB;
+      } catch (e) {}
+      if (sel) sel.addEventListener('change', () => { try { localStorage.setItem('sc3.transition', sel.value); } catch (e) {} });
+      if (beatsSel) beatsSel.addEventListener('change', () => { try { localStorage.setItem('sc3.transitionBeats', beatsSel.value); } catch (e) {} });
+    } catch (e) { console.warn('[transitions] library not loaded:', e); }
+  })();
+  async function _xfSource(name) {
+    if (_xf.src[name]) return _xf.src[name];
+    const txt = await (await fetch('transitions/' + name + '.glsl')).text();
+    _xf.src[name] = txt;
+    return txt;
+  }
+  function _xfProgram(gl, name) {
+    if (_xf.progs[name]) return _xf.progs[name];
+    const body0 = _xf.src[name];
+    if (!body0) return null;
+    // gl-transitions convention: `uniform T name; // = value` becomes a baked-in constant
+    let body = body0.replace(/#version[^\n]*/g, '').replace(/precision\s+\w+\s+float\s*;/g, '')
+      .replace(/uniform\s+(\w+)\s+(\w+)\s*;\s*\/\/\s*=\s*([^\n]+)/g, (m, ty, nm, val) => 'const ' + ty + ' ' + nm + ' = ' + val.trim().replace(/;$/, '') + ';');
+    const fsSrc = 'precision highp float;\nvarying vec2 vUv;\nuniform sampler2D from; uniform sampler2D to; uniform float progress; uniform float ratio;\n' +
+      'uniform float audioRMS; uniform float audioBass; uniform float audioMid; uniform float audioHigh; uniform float audioBeat;\n' +
+      'vec4 getFromColor(vec2 uv) { return texture2D(from, uv); }\nvec4 getToColor(vec2 uv) { return texture2D(to, uv); }\n' + body +
+      '\nvoid main() { gl_FragColor = transition(vUv); }\n';
+    const vs = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vs, 'attribute vec2 position;varying vec2 vUv;void main(){vUv=position*0.5+0.5;gl_Position=vec4(position,0.,1.);}');
+    gl.compileShader(vs);
+    const fs = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fs, fsSrc); gl.compileShader(fs);
+    if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) { console.warn('[transitions] ' + name + ':', gl.getShaderInfoLog(fs)); _xf.progs[name] = false; return false; }
+    const p = gl.createProgram();
+    gl.attachShader(p, vs); gl.attachShader(p, fs); gl.bindAttribLocation(p, 0, 'position'); gl.linkProgram(p);
+    gl.deleteShader(vs); gl.deleteShader(fs);
+    const loc = {};
+    for (const n of ['from', 'to', 'progress', 'ratio', 'audioRMS', 'audioBass', 'audioMid', 'audioHigh', 'audioBeat']) loc[n] = gl.getUniformLocation(p, n);
+    _xf.progs[name] = { p, loc };
+    return _xf.progs[name];
+  }
+  // decide how this layer's change should play; returns false for the old alpha crossfade
+  function _xfBegin(layer) {
+    const sel = document.getElementById('transition-sel');
+    const mode = sel ? sel.value : 'auto';
+    const beatsSel = document.getElementById('transition-beats');
+    const beats = beatsSel ? Number(beatsSel.value) : 4;
+    layer._xfName = null;
+    if (mode === 'cut') { layer._transitionStart = null; return true; }
+    if (mode === 'crossfade' || !_xf.index) return false;
+    const name = mode === 'auto' ? XF_AUTO_ORDER[_xf.switchCount++ % XF_AUTO_ORDER.length] : mode;
+    const bus = window._audioBus || {};
+    const conf = (bus.audioBPMConfidence || 0) > 0.35 && (bus.audioBPM || 0) > 40;
+    const msPerBeat = 60000 / (conf ? bus.audioBPM : 120);
+    const wait = conf ? (1 - (bus.audioBeatPhase || 0)) * msPerBeat : 0;     // land on the next beat
+    layer._xfName = name;
+    _xf.last = { name, layer: layer.id, waitMs: Math.round(wait), durMs: Math.round(beats * msPerBeat) };
+    layer._xfStart = performance.now() + wait;
+    layer._xfDur = beats * msPerBeat;
+    _xfSource(name).catch(() => { layer._xfName = null; });
+    return true;
+  }
+  function _xfRender(gl, layer) {
+    const prog = layer._xfName ? _xfProgram(gl, layer._xfName) : null;
+    if (prog === false) { layer._xfName = null; return false; }
+    const now = performance.now();
+    const t = Math.max(0, Math.min(1, (now - layer._xfStart) / Math.max(layer._xfDur, 1)));
+    if (t >= 1) { layer._xfName = null; layer._transitionStart = null; return false; }
+    const w = layer.fbo.width, h = layer.fbo.height;
+    // copy the new shader's frame ("to") out of the layer FBO
+    if (!layer._xfToTex || layer._xfToSize[0] !== w || layer._xfToSize[1] !== h) {
+      if (!layer._xfToTex) layer._xfToTex = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, layer._xfToTex);
+      for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      layer._xfToSize = [w, h];
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, layer.fbo.fbo);
+    gl.bindTexture(gl.TEXTURE_2D, layer._xfToTex);
+    gl.copyTexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 0, 0, w, h);
+    if (!prog) { gl.bindFramebuffer(gl.FRAMEBUFFER, null); return true; }   // source still loading: hold the new frame
+    gl.viewport(0, 0, w, h);
+    gl.useProgram(prog.p);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, layer._transitionTex);
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, layer._xfToTex);
+    const L = prog.loc, bus = window._audioBus || {};
+    if (L.from) gl.uniform1i(L.from, 0);
+    if (L.to) gl.uniform1i(L.to, 1);
+    if (L.progress) gl.uniform1f(L.progress, t);
+    if (L.ratio) gl.uniform1f(L.ratio, w / h);
+    if (L.audioRMS) gl.uniform1f(L.audioRMS, bus.audioLevel || 0);
+    if (L.audioBass) gl.uniform1f(L.audioBass, bus.audioBass || 0);
+    if (L.audioMid) gl.uniform1f(L.audioMid, bus.audioMid || 0);
+    if (L.audioHigh) gl.uniform1f(L.audioHigh, bus.audioHigh || 0);
+    if (L.audioBeat) gl.uniform1f(L.audioBeat, bus.audioBeatPulse || 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, isfRenderer.posBuf);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return true;
+  }
+
   function _blendTransitionSnapshot(gl, layer, alpha) {
     if (!layer._transitionTex || !layer.fbo || alpha <= 0) return;
     const prog = _getBlitProg(gl);
@@ -7200,8 +7321,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         _snapshotLayerFBO(gl, layer);
         // Swap program immediately (GPU-only, fast) to keep rendering smooth
         isfRenderer.compileForLayer(layer, null, null, result.program);
-        // Start crossfade
+        // Start the transition (library transition on the beat, or the classic crossfade)
         layer._transitionStart = performance.now();
+        _xfBegin(layer);
         errorBar.textContent = '';
         errorBar.classList.remove('show');
         lastErrors = null;
@@ -7285,7 +7407,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
           isfRenderer.renderLayerToFBO(layer, mediaPipeMgr);
         }
         // Crossfade: blend old snapshot over new render with fading alpha
-        if (layer._transitionStart) {
+        if (layer._transitionStart && layer._xfName && _xfRender(gl, layer)) {
+          // library transition handled it this frame
+        } else if (layer._transitionStart) {
           const elapsed = performance.now() - layer._transitionStart;
           const t = Math.min(1, elapsed / TRANSITION_MS);
           if (t < 1) {
