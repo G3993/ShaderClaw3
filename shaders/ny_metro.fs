@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Metro — Shades of New York 004. A living map of the New York subway, seen by a camera that orbits and tours over the city. The five boroughs sit in their rivers: the long island of Manhattan with its street grid and the park in its middle, the Bronx above, Queens and Brooklyn across the East River, the Rockaways around Jamaica Bay, Staten Island across the harbour and the New Jersey shore. An original schematic of the trunk lines runs over them in the line colours: the west-side red, the east-side green, the 8th Avenue blue, the 6th Avenue orange, the Broadway yellow, the purple Flushing line, the lime crosstown, the grey 14th Street line, the brown Jamaica line and the Staten Island railway. Every line has two tracks and the trains never stop: lit cars with headlights in front and tail lights behind leave streaks of light along the tracks, and stations flash as a train pulls through. Streets carry tiny moving traffic lights and the water shimmers. Colours change here and there: Colour Drift lets lines trade colours now and then, and the themes go from Night Map and Day Map to Neon, Blueprint and Ink on Paper. Camera: Orbit spins slowly around the city while the tour glides between Manhattan, Brooklyn and Queens; Tilt lowers the camera from straight down to a skyline-height view, and Zoom pulls from the whole city into the streets. Camera friendly: put an image or the live camera under the map. Your mouse, or your hand in ShaderClaw, lights the district under it; press or pinch to send a pulse racing out through the tracks. Audio: bass makes the trains glow and the lines breathe, beats send a ring of light out from Times Square through the network, mids drive train speed, highs make the stations twinkle. Show dynamics: at Rest the city is dim, the trains slow and the camera high and still; the Build speeds every train up, brightens the network, spins the camera faster and lowers it toward the streets; the Drop flashes the whole network in a shockwave out of Midtown with a camera punch; the Peak runs the system at full rush hour.",
+  "DESCRIPTION": "Metro — Shades of New York 004. A living map of the New York subway, seen by a camera that orbits and tours over the city. The five boroughs sit in their rivers: the long island of Manhattan with its street grid and the park in its middle, the Bronx above, Queens and Brooklyn across the East River, the Rockaways around Jamaica Bay, Staten Island across the harbour and the New Jersey shore. An original schematic of the trunk lines runs over them in the line colours: the west-side red, the east-side green, the 8th Avenue blue, the 6th Avenue orange, the Broadway yellow, the purple Flushing line, the lime crosstown, the grey 14th Street line, the brown Jamaica line and the Staten Island railway. Every line has two tracks and the trains never stop: lit cars with headlights in front and tail lights behind leave streaks of light along the tracks, and stations flash as a train pulls through. Streets carry tiny moving traffic lights and the water shimmers. Colours change here and there: Colour Drift lets lines trade colours now and then, and the themes go from Night Map and Day Map to Neon, Blueprint and Ink on Paper. Camera: Orbit spins slowly around the city while the tour glides between Manhattan, Brooklyn and Queens; Tilt lowers the camera from straight down to a skyline-height view, and Zoom pulls from the whole city into the streets. Camera friendly: put an image or the live camera under the map. Body tracking (MediaPipe pose + segmentation) turns you into a subway line: your skeleton is drawn over the city as a glowing line in trunk-line colours (red spine, yellow shoulders and hips, green arms, blue legs) with trains running along your limbs and a station at every joint, while the map lights up and shows the camera inside your silhouette. Your mouse, or your hand in ShaderClaw, lights the district under it; press or pinch to send a pulse racing out through the tracks. Audio: bass makes the trains glow and the lines breathe, beats send a ring of light out from Times Square through the network, mids drive train speed, highs make the stations twinkle. Show dynamics: at Rest the city is dim, the trains slow and the camera high and still; the Build speeds every train up, brightens the network, spins the camera faster and lowers it toward the streets; the Drop flashes the whole network in a shockwave out of Midtown with a camera punch; the Peak runs the system at full rush hour.",
   "CREDIT": "Easel / ShaderClaw house shader — Shades of New York series, 2026-11-11 — original schematic, not the official map.",
   "CATEGORIES": ["Generator", "Shades of New York", "Map", "3D", "Interactive", "Audio Reactive"],
   "INPUTS": [
@@ -20,6 +20,10 @@
     { "NAME": "zoomAmt",     "LABEL": "Zoom",             "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.45, "GROUP": "Camera" },
     { "NAME": "tour",        "LABEL": "City Tour",        "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.6, "GROUP": "Camera" },
     { "NAME": "interact",    "LABEL": "Hand", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1], "LABELS": ["Off", "Light + Pulse (press / pinch)"], "GROUP": "Hand" },
+    { "NAME": "bodyMode",    "LABEL": "Body Tracking", "TYPE": "long", "DEFAULT": 3, "VALUES": [0, 1, 2, 3], "LABELS": ["Off", "Silhouette (the city lights up inside you)", "Skeleton (your body is a subway line)", "Both"], "GROUP": "Body" },
+    { "NAME": "bodyMirror",  "LABEL": "Mirror (selfie view)", "TYPE": "bool", "DEFAULT": true, "GROUP": "Body" },
+    { "NAME": "bodyLineW",   "LABEL": "Body Line Width",  "TYPE": "float", "MIN": 0.3, "MAX": 3.0, "DEFAULT": 1.0, "GROUP": "Body" },
+    { "NAME": "bodyCamMix",  "LABEL": "Camera Inside You", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.35, "GROUP": "Body" },
     { "NAME": "camTex",      "LABEL": "Image / Camera",   "TYPE": "image", "GROUP": "Camera Input" },
     { "NAME": "camMix",      "LABEL": "Image Under Map",  "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "GROUP": "Camera Input" },
     { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 4, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White", "NYC Reference"], "GROUP": "Studio Palette" },
@@ -129,6 +133,89 @@ vec3 hueRot(vec3 c, float h) {
     if (h <= 0.0) return c;
     float a = h * TAU; vec3 k = vec3(0.57735); float ca = cos(a);
     return c * ca + cross(k, c) * sin(a) + k * dot(k, c) * (1.0 - ca);
+}
+
+// ── Body layer (MediaPipe, ShaderClaw contract) ─────────────────────────
+//   mpPoseLandmarks: 33×1 RGBA8 per joint (x, 1 − y, z + 0.5, visibility), x as the camera sees it
+//   mpSegMask:       selfie-segmentation confidence (r), row 0 = top of the camera image
+//   Both come from the host (ShaderClaw web MediaPipe / Easel vision); unfed = zeros = no body.
+//   Joints and the mask are mirrored for a selfie view when Mirror is on, and every shader
+//   samples its camera image through bodyCamUV() so picture, mask and skeleton line up.
+vec2 bodyCamUV(vec2 uv) { return vec2(bodyMirror ? 1.0 - uv.x : uv.x, uv.y); }
+vec3 bodyJoint(float i) {                       // (uv.x, uv.y, visibility)
+    vec4 lm = texture2D(mpPoseLandmarks, vec2((i + 0.5) / 33.0, 0.5));
+    return vec3(bodyMirror ? 1.0 - lm.r : lm.r, lm.g, lm.a);
+}
+float bodySeg(vec2 uv) {
+    vec2 s = vec2(bodyMirror ? 1.0 - uv.x : uv.x, 1.0 - uv.y);
+    return smoothstep(0.35, 0.65, texture2D(mpSegMask, clamp(s, 0.0, 1.0)).r);
+}
+// how sure we are there is a body (shoulders + hips visible)
+float bodyPresence() {
+    float v = bodyJoint(11.0).z + bodyJoint(12.0).z + bodyJoint(23.0).z + bodyJoint(24.0).z;
+    return smoothstep(1.2, 2.6, v);
+}
+float bodyUseSkel() { float m = float(bodyMode); return (m > 1.5) ? 1.0 : 0.0; }          // Skeleton or Both
+float bodyUseSil()  { float m = float(bodyMode); return (m > 0.5 && m < 1.5) || m > 2.5 ? 1.0 : 0.0; }   // Silhouette or Both
+// distance (screen-height units, p-space) from p to the skeleton's bones; gBoneT = 0..1 along the nearest bone
+float gBoneT, gBoneId;
+float boneSeg(vec2 p, vec3 a, vec3 b, float asp, float id, float best) {
+    if (a.z < 0.4 || b.z < 0.4) return best;
+    vec2 A = (a.xy - 0.5) * vec2(asp, 1.0), B = (b.xy - 0.5) * vec2(asp, 1.0);
+    vec2 pa = p - A, ba = B - A;
+    float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-6), 0.0, 1.0);
+    float d = length(pa - ba * h);
+    if (d < best) { gBoneT = h; gBoneId = id; return d; }
+    return best;
+}
+float boneDist(vec2 p, float asp) {
+    vec3 j0 = bodyJoint(0.0), j11 = bodyJoint(11.0), j12 = bodyJoint(12.0), j13 = bodyJoint(13.0), j14 = bodyJoint(14.0);
+    vec3 j15 = bodyJoint(15.0), j16 = bodyJoint(16.0), j23 = bodyJoint(23.0), j24 = bodyJoint(24.0);
+    vec3 j25 = bodyJoint(25.0), j26 = bodyJoint(26.0), j27 = bodyJoint(27.0), j28 = bodyJoint(28.0);
+    vec3 neck = vec3(0.5 * (j11.xy + j12.xy), min(j11.z, j12.z));
+    vec3 pelv = vec3(0.5 * (j23.xy + j24.xy), min(j23.z, j24.z));
+    float d = 9.0;
+    gBoneT = 0.0; gBoneId = -1.0;
+    d = boneSeg(p, j0, neck, asp, 0.0, d);
+    d = boneSeg(p, neck, pelv, asp, 1.0, d);
+    d = boneSeg(p, j11, j12, asp, 2.0, d);
+    d = boneSeg(p, j23, j24, asp, 3.0, d);
+    d = boneSeg(p, j11, j13, asp, 4.0, d);
+    d = boneSeg(p, j13, j15, asp, 5.0, d);
+    d = boneSeg(p, j12, j14, asp, 6.0, d);
+    d = boneSeg(p, j14, j16, asp, 7.0, d);
+    d = boneSeg(p, j23, j25, asp, 8.0, d);
+    d = boneSeg(p, j25, j27, asp, 9.0, d);
+    d = boneSeg(p, j24, j26, asp, 10.0, d);
+    d = boneSeg(p, j26, j28, asp, 11.0, d);
+    return d;
+}
+// a point along one of three limb chains (0 wingspan, 1 head → spine → left leg, 2 right leg), t 0..1;
+// returns p-space position, sets gLimbN (unit normal) and gLimbLen (chain length)
+vec2 gLimbN;
+float gLimbLen;
+vec2 limbPt(float wk, float t, float asp) {
+    vec3 P0, P1, P2, P3, P4, P5;
+    vec3 j11 = bodyJoint(11.0), j12 = bodyJoint(12.0), j23 = bodyJoint(23.0), j24 = bodyJoint(24.0);
+    vec3 neck = vec3(0.5 * (j11.xy + j12.xy), 1.0), pelv = vec3(0.5 * (j23.xy + j24.xy), 1.0);
+    float n;
+    if (wk < 0.5)      { P0 = bodyJoint(15.0); P1 = bodyJoint(13.0); P2 = j11; P3 = j12; P4 = bodyJoint(14.0); P5 = bodyJoint(16.0); n = 5.0; }
+    else if (wk < 1.5) { P0 = bodyJoint(0.0); P1 = neck; P2 = pelv; P3 = j23; P4 = bodyJoint(25.0); P5 = bodyJoint(27.0); n = 5.0; }
+    else               { P0 = pelv; P1 = j24; P2 = bodyJoint(26.0); P3 = bodyJoint(28.0); P4 = P3; P5 = P3; n = 3.0; }
+    vec2 s = vec2(asp, 1.0);
+    vec2 a0 = (P0.xy - 0.5) * s, a1 = (P1.xy - 0.5) * s, a2 = (P2.xy - 0.5) * s, a3 = (P3.xy - 0.5) * s, a4 = (P4.xy - 0.5) * s, a5 = (P5.xy - 0.5) * s;
+    float l0 = length(a1 - a0), l1 = length(a2 - a1), l2 = length(a3 - a2), l3 = n > 3.5 ? length(a4 - a3) : 0.0, l4 = n > 4.5 ? length(a5 - a4) : 0.0;
+    float L = max(l0 + l1 + l2 + l3 + l4, 1e-4);
+    gLimbLen = L;
+    float d = clamp(t, 0.0, 1.0) * L;
+    vec2 A = a0, B = a1; float u = d / max(l0, 1e-5);
+    if (d > l0)                { A = a1; B = a2; u = (d - l0) / max(l1, 1e-5); }
+    if (d > l0 + l1)           { A = a2; B = a3; u = (d - l0 - l1) / max(l2, 1e-5); }
+    if (d > l0 + l1 + l2 && n > 3.5)      { A = a3; B = a4; u = (d - l0 - l1 - l2) / max(l3, 1e-5); }
+    if (d > l0 + l1 + l2 + l3 && n > 4.5) { A = a4; B = a5; u = (d - l0 - l1 - l2 - l3) / max(l4, 1e-5); }
+    vec2 tg = normalize(B - A + 1e-5);
+    gLimbN = vec2(-tg.y, tg.x);
+    return mix(A, B, clamp(u, 0.0, 1.0));
 }
 
 // generated by metro_data.py: control point i of line L (x > 90 = end of line)
@@ -686,6 +773,51 @@ void main() {
         alpha = transparentBg ? clamp(max(lineM, glow) + body, 0.0, 1.0) * (1.0 - fog) : 1.0;
     }
 
+    // ── body layer: your silhouette lights the city, your skeleton is a subway line ──
+    float bodyOn = (float(bodyMode) > 0.5 && PASSINDEX == 1) ? smoothstep(0.3, 0.7, bodyPresence()) : 0.0;
+    if (bodyOn > 0.01) {
+        float asp = R.x / R.y;
+        if (bodyUseSil() > 0.5) {
+            float m = bodySeg(uv);
+            vec3 camC = texture2D(camTex, clamp(bodyCamUV(uv), 0.0, 1.0)).rgb;
+            col = mix(col, col * 1.35 + vec3(0.04, 0.035, 0.05), m * bodyOn * 0.6);
+            col = mix(col, camC * 0.8 + col * 0.4, m * bodyOn * bodyCamMix);
+            float e = 2.0 / R.y;
+            float edge = abs(bodySeg(uv + vec2(e, 0.0)) - bodySeg(uv - vec2(e, 0.0))) + abs(bodySeg(uv + vec2(0.0, e)) - bodySeg(uv - vec2(0.0, e)));
+            col += vec3(0.6, 0.7, 1.0) * clamp(edge, 0.0, 1.0) * 0.35 * bodyOn;
+        }
+        if (bodyUseSkel() > 0.5) {
+            float bd = boneDist(p, asp);
+            float bw = 0.011 * bodyLineW;
+            float pxs = 1.0 / R.y;
+            vec3 bc = lineColBase(gBoneId < 1.5 ? 2.0 : gBoneId < 3.5 ? 0.0 : gBoneId < 7.5 ? 3.0 : 4.0);
+            bc = hueRot(bc, hueShift);
+            float line = smoothstep(bw + pxs, bw - pxs, bd);
+            float casing = smoothstep(bw * 1.5 + pxs, bw * 1.5 - pxs, bd);
+            col += bc * exp(-bd / (bw * 3.0)) * 0.5 * glowAmt * bodyOn;
+            col = mix(col, vec3(0.0), casing * 0.8 * bodyOn);
+            col = mix(col, bc * (0.85 + 0.3 * bassP() * ar), line * bodyOn);
+            // trains run along every limb
+            float along = gBoneId * 1.7 + gBoneT;
+            float tf = fract(along * 1.5 - TIME * trainSpeed * 0.7);
+            float trainB = step(tf, 0.22) * smoothstep(bw * 0.9, bw * 0.4, bd);
+            col = mix(col, mix(vec3(1.0), bc, 0.3) * 1.4, trainB * bodyOn);
+            col += vec3(1.0, 0.95, 0.8) * smoothstep(0.18, 0.22, tf) * step(tf, 0.22) * line * bodyOn;
+            // a station at every joint, flashing on the beat
+            float jd = 9.0;
+            for (int k = 0; k < 13; k++) {
+                float jid = k == 0 ? 0.0 : k < 7 ? 10.0 + float(k) : k < 9 ? 22.0 + float(k - 6) : 24.0 + float(k - 8);
+                vec3 j = bodyJoint(jid);
+                if (j.z < 0.4) continue;
+                jd = min(jd, length(p - (j.xy - 0.5) * vec2(asp, 1.0)));
+            }
+            float sr = bw * 1.6;
+            float st = smoothstep(sr + pxs, sr - pxs, jd);
+            float stIn = smoothstep(sr * 0.6 + pxs, sr * 0.6 - pxs, jd);
+            col = mix(col, vec3(0.02), st * bodyOn);
+            col = mix(col, vec3(1.0) * (1.0 + audioBeatPulse * ar * stationFlash), stIn * bodyOn);
+        }
+    }
     col += vec3(0.9, 0.95, 1.0) * gDrop * gDrop * 0.08;
     vec2 dc = uv - 0.5;
     col *= 1.0 - 0.3 * smoothstep(0.35, 1.0, length(dc * vec2(R.x / R.y, 1.0)));
