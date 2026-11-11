@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Station Tiles — Shades of New York 003. The tiled walls of the subway, built tile by tile in glossy, handmade HD ceramic. Four walls flow into each other: White Subway Squares (pillowed glossy squares with crisp tube-light highlights on every top edge and thin dark grout), Black Glass Mosaic (small hand-glazed black tiles, wavy and liquid, with cream grout and silvery reflections), Greek Key Band (the classic station frieze of brick-coursed tesserae: cream, yellow and tan rows, a maroon stripe, a green meander with white-framed maroon boxes), and Ornament Panels (a maroon field of upright tesserae around a white frame and a central motif whose white contour band follows the shape tile by tile, filled with blue, yellow and tan). The motif keeps morphing: diamond, circle, star, octagon, flower and cross, with tesserae changing colour one by one as the outline sweeps through them. The walls don't fade into each other, they are rebuilt in time with the music. The shader keeps its own beat and phrase count (locked to the track's tempo when there is one), changes wall on the downbeat of a phrase (every 2, 4, 8 or 16 bars), and every tile lands on the beat grid. Each wall arrives with its own choreography: the white squares split into four and turn to black glass ring by ring from the centre; the frieze is laid row by row out from its centre line; the ornament panel is traced (frame and motif outline drawn around like a pen stroke), then filled from the middle, then the maroon field turns over; the white wall comes back as a split-flap board sweeping top to bottom. Tiles show their glazed edge as they turn, cast shadows as they lift, flash as they face the lights, and the grout lights up along the moving front. A drop slams the next wall in as a shockwave ring. The grid between the tiles is alive: light runs along the grout lines and the whole grid flashes on the beat, tiles lift off the wall in waves and cast shadows into the grout, and tiles tilt so glints race across the glaze. Every tile has its own colour variance, glaze waviness, pillowed edge, chips and craquelure, lit by a reflection of the station's fluorescent tubes plus a passing train light. Camera Mosaic turns any wall into a mosaic portrait from the camera image. Your mouse, or your hand in ShaderClaw, lifts and tilts the tiles under it like a magnet; press or pinch to spin them over. Audio: bass lifts the tiles, beats flash the grout grid, mids speed up the tile flips and the motif morph, highs make the glaze glint. Show dynamics: at Rest the wall is still with soft glints; the Build makes the grout light run faster and the tiles rattle on their beds; the Drop spins every tile in a shockwave ring from the centre with a flash; the Peak lifts and glints tiles with the music.",
+  "DESCRIPTION": "Station Tiles — Shades of New York 003. The tiled walls of the subway, built tile by tile in glossy, handmade HD ceramic. Four walls flow into each other: White Subway Squares (pillowed glossy squares with crisp tube-light highlights on every top edge and thin dark grout), Black Glass Mosaic (small hand-glazed black tiles, wavy and liquid, with cream grout and silvery reflections), Greek Key Band (the classic station frieze of brick-coursed tesserae: cream, yellow and tan rows, a maroon stripe, a green meander with white-framed maroon boxes), and Ornament Panels (a maroon field of upright tesserae around a white frame and a central motif whose white contour band follows the shape tile by tile, filled with blue, yellow and tan). The motif keeps morphing: diamond, circle, star, octagon, flower and cross, with tesserae changing colour one by one as the outline sweeps through them. The walls don't fade into each other, they are rebuilt in time with the music. The shader keeps its own beat and phrase count (locked to the track's tempo when there is one), changes wall on the downbeat of a phrase (every 2, 4, 8 or 16 bars), and every tile lands on the beat grid. Each wall arrives with its own choreography: the white squares split into four and turn to black glass ring by ring from the centre; the frieze is laid row by row out from its centre line; the ornament panel is traced (frame and motif outline drawn around like a pen stroke), then filled from the middle, then the maroon field turns over; the white wall comes back as a split-flap board sweeping top to bottom. Tiles show their glazed edge as they turn, cast shadows as they lift, flash as they face the lights, and the grout lights up along the moving front. A drop slams the next wall in as a shockwave ring. The grid between the tiles is alive: light runs along the grout lines and the whole grid flashes on the beat, tiles lift off the wall in waves and cast shadows into the grout, and tiles tilt so glints race across the glaze. Every tile has its own colour variance, glaze waviness, pillowed edge, chips and craquelure, lit by a reflection of the station's fluorescent tubes plus a passing train light. Camera Mosaic turns any wall into a mosaic portrait from the camera image. Body tracking (MediaPipe pose + segmentation) makes you set the tile size: the station wall stays outside you, your silhouette turns to small black glass tiles, and your skeleton is laid in fine tesserae along every bone, in camera colours or the station mosaic palette (green arms, maroon spine, blue legs, gold shoulders and hips), each tile growing in as you step into it. Your mouse, or your hand in ShaderClaw, lifts and tilts the tiles under it like a magnet; press or pinch to spin them over. Audio: bass lifts the tiles, beats flash the grout grid, mids speed up the tile flips and the motif morph, highs make the glaze glint. Show dynamics: at Rest the wall is still with soft glints; the Build makes the grout light run faster and the tiles rattle on their beds; the Drop spins every tile in a shockwave ring from the centre with a flash; the Peak lifts and glints tiles with the music.",
   "CREDIT": "Easel / ShaderClaw house shader — Shades of New York series, 2026-11-11 — original.",
   "CATEGORIES": ["Generator", "Shades of New York", "Texture", "Mosaic", "Interactive", "Audio Reactive"],
   "INPUTS": [
@@ -29,6 +29,10 @@
     { "NAME": "trainColor",  "LABEL": "Train Light",      "TYPE": "color", "DEFAULT": [0.75, 0.85, 1.0, 1.0], "GROUP": "Light" },
     { "NAME": "interact",    "LABEL": "Hand", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1], "LABELS": ["Off", "Magnet (press / pinch spins)"], "GROUP": "Hand" },
     { "NAME": "handSize",    "LABEL": "Hand Size",        "TYPE": "float", "AUDIO": false, "MIN": 0.3, "MAX": 3.0, "DEFAULT": 1.0, "GROUP": "Hand" },
+    { "NAME": "bodyMode",    "LABEL": "Body Tracking", "TYPE": "long", "DEFAULT": 3, "VALUES": [0, 1, 2, 3], "LABELS": ["Off", "Silhouette (glass inside you)", "Skeleton (mosaic bones)", "Both"], "GROUP": "Body" },
+    { "NAME": "bodyMirror",  "LABEL": "Mirror (selfie view)", "TYPE": "bool", "DEFAULT": true, "GROUP": "Body" },
+    { "NAME": "boneWidth",   "LABEL": "Bone Width",       "TYPE": "float", "MIN": 0.2, "MAX": 3.0, "DEFAULT": 1.0, "GROUP": "Body" },
+    { "NAME": "boneColours", "LABEL": "Bone Tiles", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1], "LABELS": ["Camera colours", "Station mosaic colours"], "GROUP": "Body" },
     { "NAME": "camTex",      "LABEL": "Image / Camera",   "TYPE": "image", "GROUP": "Camera" },
     { "NAME": "camMix",      "LABEL": "Camera Mosaic",    "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.0, "GROUP": "Camera" },
     { "NAME": "paletteMode", "LABEL": "Studio Palette", "TYPE": "long", "DEFAULT": 4, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Colorful", "Red · Black · White", "Blue · Black · White", "Black & White", "NYC Reference"], "GROUP": "Studio Palette" },
@@ -124,6 +128,89 @@ void showDynamics() {
     gPeak  = smoothstep(0.5, 0.9, e) * k;
     gRest  = (1.0 - smoothstep(0.08, 0.4, e)) * (1.0 - b) * k;
     gLift  = mix(0.5, clamp(0.15 + e * 0.7 + gBuild * 0.25 + d * 0.3, 0.0, 1.0), k);
+}
+
+// ── Body layer (MediaPipe, ShaderClaw contract) ─────────────────────────
+//   mpPoseLandmarks: 33×1 RGBA8 per joint (x, 1 − y, z + 0.5, visibility), x as the camera sees it
+//   mpSegMask:       selfie-segmentation confidence (r), row 0 = top of the camera image
+//   Both come from the host (ShaderClaw web MediaPipe / Easel vision); unfed = zeros = no body.
+//   Joints and the mask are mirrored for a selfie view when Mirror is on, and every shader
+//   samples its camera image through bodyCamUV() so picture, mask and skeleton line up.
+vec2 bodyCamUV(vec2 uv) { return vec2(bodyMirror ? 1.0 - uv.x : uv.x, uv.y); }
+vec3 bodyJoint(float i) {                       // (uv.x, uv.y, visibility)
+    vec4 lm = texture2D(mpPoseLandmarks, vec2((i + 0.5) / 33.0, 0.5));
+    return vec3(bodyMirror ? 1.0 - lm.r : lm.r, lm.g, lm.a);
+}
+float bodySeg(vec2 uv) {
+    vec2 s = vec2(bodyMirror ? 1.0 - uv.x : uv.x, 1.0 - uv.y);
+    return smoothstep(0.35, 0.65, texture2D(mpSegMask, clamp(s, 0.0, 1.0)).r);
+}
+// how sure we are there is a body (shoulders + hips visible)
+float bodyPresence() {
+    float v = bodyJoint(11.0).z + bodyJoint(12.0).z + bodyJoint(23.0).z + bodyJoint(24.0).z;
+    return smoothstep(1.2, 2.6, v);
+}
+float bodyUseSkel() { float m = float(bodyMode); return (m > 1.5) ? 1.0 : 0.0; }          // Skeleton or Both
+float bodyUseSil()  { float m = float(bodyMode); return (m > 0.5 && m < 1.5) || m > 2.5 ? 1.0 : 0.0; }   // Silhouette or Both
+// distance (screen-height units, p-space) from p to the skeleton's bones; gBoneT = 0..1 along the nearest bone
+float gBoneT, gBoneId;
+float boneSeg(vec2 p, vec3 a, vec3 b, float asp, float id, float best) {
+    if (a.z < 0.4 || b.z < 0.4) return best;
+    vec2 A = (a.xy - 0.5) * vec2(asp, 1.0), B = (b.xy - 0.5) * vec2(asp, 1.0);
+    vec2 pa = p - A, ba = B - A;
+    float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-6), 0.0, 1.0);
+    float d = length(pa - ba * h);
+    if (d < best) { gBoneT = h; gBoneId = id; return d; }
+    return best;
+}
+float boneDist(vec2 p, float asp) {
+    vec3 j0 = bodyJoint(0.0), j11 = bodyJoint(11.0), j12 = bodyJoint(12.0), j13 = bodyJoint(13.0), j14 = bodyJoint(14.0);
+    vec3 j15 = bodyJoint(15.0), j16 = bodyJoint(16.0), j23 = bodyJoint(23.0), j24 = bodyJoint(24.0);
+    vec3 j25 = bodyJoint(25.0), j26 = bodyJoint(26.0), j27 = bodyJoint(27.0), j28 = bodyJoint(28.0);
+    vec3 neck = vec3(0.5 * (j11.xy + j12.xy), min(j11.z, j12.z));
+    vec3 pelv = vec3(0.5 * (j23.xy + j24.xy), min(j23.z, j24.z));
+    float d = 9.0;
+    gBoneT = 0.0; gBoneId = -1.0;
+    d = boneSeg(p, j0, neck, asp, 0.0, d);
+    d = boneSeg(p, neck, pelv, asp, 1.0, d);
+    d = boneSeg(p, j11, j12, asp, 2.0, d);
+    d = boneSeg(p, j23, j24, asp, 3.0, d);
+    d = boneSeg(p, j11, j13, asp, 4.0, d);
+    d = boneSeg(p, j13, j15, asp, 5.0, d);
+    d = boneSeg(p, j12, j14, asp, 6.0, d);
+    d = boneSeg(p, j14, j16, asp, 7.0, d);
+    d = boneSeg(p, j23, j25, asp, 8.0, d);
+    d = boneSeg(p, j25, j27, asp, 9.0, d);
+    d = boneSeg(p, j24, j26, asp, 10.0, d);
+    d = boneSeg(p, j26, j28, asp, 11.0, d);
+    return d;
+}
+// a point along one of three limb chains (0 wingspan, 1 head → spine → left leg, 2 right leg), t 0..1;
+// returns p-space position, sets gLimbN (unit normal) and gLimbLen (chain length)
+vec2 gLimbN;
+float gLimbLen;
+vec2 limbPt(float wk, float t, float asp) {
+    vec3 P0, P1, P2, P3, P4, P5;
+    vec3 j11 = bodyJoint(11.0), j12 = bodyJoint(12.0), j23 = bodyJoint(23.0), j24 = bodyJoint(24.0);
+    vec3 neck = vec3(0.5 * (j11.xy + j12.xy), 1.0), pelv = vec3(0.5 * (j23.xy + j24.xy), 1.0);
+    float n;
+    if (wk < 0.5)      { P0 = bodyJoint(15.0); P1 = bodyJoint(13.0); P2 = j11; P3 = j12; P4 = bodyJoint(14.0); P5 = bodyJoint(16.0); n = 5.0; }
+    else if (wk < 1.5) { P0 = bodyJoint(0.0); P1 = neck; P2 = pelv; P3 = j23; P4 = bodyJoint(25.0); P5 = bodyJoint(27.0); n = 5.0; }
+    else               { P0 = pelv; P1 = j24; P2 = bodyJoint(26.0); P3 = bodyJoint(28.0); P4 = P3; P5 = P3; n = 3.0; }
+    vec2 s = vec2(asp, 1.0);
+    vec2 a0 = (P0.xy - 0.5) * s, a1 = (P1.xy - 0.5) * s, a2 = (P2.xy - 0.5) * s, a3 = (P3.xy - 0.5) * s, a4 = (P4.xy - 0.5) * s, a5 = (P5.xy - 0.5) * s;
+    float l0 = length(a1 - a0), l1 = length(a2 - a1), l2 = length(a3 - a2), l3 = n > 3.5 ? length(a4 - a3) : 0.0, l4 = n > 4.5 ? length(a5 - a4) : 0.0;
+    float L = max(l0 + l1 + l2 + l3 + l4, 1e-4);
+    gLimbLen = L;
+    float d = clamp(t, 0.0, 1.0) * L;
+    vec2 A = a0, B = a1; float u = d / max(l0, 1e-5);
+    if (d > l0)                { A = a1; B = a2; u = (d - l0) / max(l1, 1e-5); }
+    if (d > l0 + l1)           { A = a2; B = a3; u = (d - l0 - l1) / max(l2, 1e-5); }
+    if (d > l0 + l1 + l2 && n > 3.5)      { A = a3; B = a4; u = (d - l0 - l1 - l2) / max(l3, 1e-5); }
+    if (d > l0 + l1 + l2 + l3 && n > 4.5) { A = a4; B = a5; u = (d - l0 - l1 - l2 - l3) / max(l4, 1e-5); }
+    vec2 tg = normalize(B - A + 1e-5);
+    gLimbN = vec2(-tg.y, tg.x);
+    return mix(A, B, clamp(u, 0.0, 1.0));
 }
 
 
@@ -222,9 +309,59 @@ float keyCell(float ix, float iy) {
 
 vec3 mixYT(float h) { return h < 0.5 ? mix(C_YELLOW, C_CREAM, 0.25 * h) : mix(C_TAN, C_YELLOW, 0.4 * (h - 0.5)); }
 
+// ── body: the tile size follows the person ──────────────────────────────
+vec2 gCam; float gSc, gBody, gAspT;
+vec2 wallToUV(vec2 w) { return ((w - gCam) / gSc) * vec2(1.0 / gAspT, 1.0) + 0.5; }
+vec2 wallToP(vec2 w) { return (w - gCam) / gSc; }
+// returns true if the body claimed this point (tile outputs set)
+bool bodyTiles(vec2 p) {
+    if (gBody < 0.5) return false;
+    // level 1: inside the silhouette → 0.5 glass squares
+    vec2 c1 = (floor(p / 0.5) + 0.5) * 0.5;
+    float m1 = bodyUseSil() > 0.5 ? bodySeg(wallToUV(c1)) : 0.0;
+    float bw = 0.035 * boneWidth;
+    float b1 = bodyUseSkel() > 0.5 ? boneDist(wallToP(c1), gAspT) : 9.0;
+    if (m1 < 0.5 && b1 > bw + 0.09 / gSc * 1.0) {
+        // even outside the coarse cell centre, bones still claim their fine tiles
+        if (bodyUseSkel() < 0.5) return false;
+    }
+    // level 2: along the bones → 0.25 tesserae
+    vec2 c2 = (floor(p / 0.25) + 0.5) * 0.25;
+    float b2 = bodyUseSkel() > 0.5 ? boneDist(wallToP(c2), gAspT) : 9.0;
+    float boneId = gBoneId;
+    if (b2 < bw) {
+        squareCell(p, 0.25, 0.08, 71.0);
+        float grow = smoothstep(bw, bw * 0.4, b2);
+        tB *= 0.55 + 0.45 * grow;
+        vec3 cc;
+        if (float(boneColours) < 0.5) cc = texture2D(camTex, clamp(bodyCamUV(wallToUV(tC)), 0.0, 1.0)).rgb * 1.15;
+        else {
+            cc = boneId < 1.5 ? C_MAROON : boneId < 3.5 ? C_YELLOW : boneId < 7.5 ? C_GREEN * 1.6 : fillColor.rgb * 1.2;
+            cc *= 0.85 + 0.3 * tId;
+        }
+        tCol = cc;
+        tMat = 2.0; tR = 0.012; tGw = 0.009 * groutW;
+        tGrout = vec3(0.4, 0.37, 0.33);
+        tReg = 0.0; tRow = 0.0;
+        return true;
+    }
+    if (m1 > 0.5) {
+        squareCell(p, 0.5, 0.06, 3.0);
+        float m2 = bodySeg(wallToUV(tC));
+        tB *= 0.6 + 0.4 * smoothstep(0.3, 0.8, m2);                     // tiles grow in as you step into them
+        tCol = C_BLACK * (0.8 + 0.5 * tId) + vec3(0.0, 0.004, 0.012) * step(0.8, tId);
+        if (camMix > 0.001) tCol = mix(tCol, texture2D(camTex, clamp(bodyCamUV(wallToUV(tC)), 0.0, 1.0)).rgb * 0.5, camMix);
+        tMat = 1.0; tR = 0.03; tGw = 0.018 * groutW;
+        tGrout = vec3(0.86, 0.8, 0.68);
+        return true;
+    }
+    return false;
+}
+
 // ── layouts ─────────────────────────────────────────────────────────────
 void evalLayout(float L, vec2 p) {
     tEdge = 9.0; tReg = 0.0; tAng = 0.0; tRad = 0.0; tRow = 0.0;
+    if (bodyTiles(p)) return;
     tMat = 2.0; tR = 0.02; tGw = 0.011 * groutW;
     tGrout = vec3(0.47, 0.43, 0.39);
     if (L < 0.5) {                                                    // White Subway Squares
@@ -401,6 +538,8 @@ void main() {
     p0 += (h21(floor(TIME * 30.0)) - 0.5) * 0.004 * smoothstep(0.55, 1.0, gBuild);   // build: the wall rattles
     vec2 p = p0 * sc + cam;
     float pxW = sc / R.y;
+    gCam = cam; gSc = sc; gAspT = R.x / R.y;
+    gBody = float(bodyMode) > 0.5 ? smoothstep(0.3, 0.7, bodyPresence()) : 0.0;
 
     // ── read the show state ──
     vec4 S0 = stateAt(0.0), S1 = stateAt(1.0);
@@ -537,7 +676,7 @@ void main() {
     vec3 base = tCol;
     if (camMix > 0.001) {
         vec2 cu = ((tC - cam) / sc) * vec2(R.y / R.x, 1.0) + 0.5;
-        vec3 cc = texture2D(camTex, clamp(cu, 0.0, 1.0)).rgb;
+        vec3 cc = texture2D(camTex, clamp(bodyCamUV(cu), 0.0, 1.0)).rgb;
         base = mix(base, cc * (0.92 + 0.12 * id), camMix);
     }
     float chip = chipMask(lc, b, id) * (tMat > 1.5 ? 1.0 : tMat > 0.5 ? 0.4 : 0.0);
