@@ -4635,5 +4635,39 @@
     "id": 1600,
     "title": "Tag",
     "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Shades of New York",
+      "Texture",
+      "3D",
+      "Interactive",
+      "Audio Reactive"
+    ],
+    "description": "Platform Edge — Shades of New York 002. The yellow tactile warning strip at the edge of every subway platform, the last thing under your feet before the train doors: square tiles of truncated domes in staggered rows, rendered as glossy moulded resin under the station's fluorescent tubes. Every dome is lit in 3D, with a flat worn top, a sloped shoulder, a specular crescent from the overhead lights, a reflection of the tube strips, a soft shadow and contact occlusion on the tile, and real platform wear: scuffed tops, chipped shoulders, grime, gum spots, scratches through the coating and dark grout between tiles. The yellow is pushed more saturated and contrasty than the real thing. The domes move: they breathe, pump with the bass and ripple in waves that change form (Ripples, Train Wave, Rain Pops, Checker Pulse, Spiral, or Auto). Each dome is its own little piston, so the strip reads like a tactile display. The colour story drifts too: the strip holds its yellow, then fades into subway line colours (orange, red, green, blue, lime, purple, brown) as sweeping bands, a per-tile mosaic or a whole-floor fade, before returning to yellow. Domes Only keeps the tile yellow while the domes change colour, and Dome Glow lights them from inside like LEDs. Every so often a train passes: a headlight sweeps across the floor and the station rumbles. Camera Domes turns the strip into a tactile pixel screen, with each dome taking the colour of the camera image beneath it and rising with its brightness. Your mouse, or your hand in ShaderClaw, is a flashlight; press or pinch to step on the domes and send a ripple out from your foot. Camera Tilt goes from straight down to a low view along the platform. Audio: bass pumps the domes, beats send a ripple ring through the floor, mids drive the waves and the colour drift, highs sparkle the gloss. Show dynamics: at Rest the floor barely breathes in pure yellow; the Build raises the domes row by row as a train approaches, its headlight growing while the station shakes; the Drop punches every dome up in a shockwave that flips the floor to a line colour with a glowing flash; the Peak keeps everything pumping.",
+    "file": "ny_platform_edge.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1601,
+    "title": "Platform Edge",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Shades of New York",
+      "Texture",
+      "Mosaic",
+      "Interactive",
+      "Audio Reactive"
+    ],
+    "description": "Station Tiles — Shades of New York 003. The tiled walls of the subway, built tile by tile in glossy, handmade HD ceramic. Four walls flow into each other: White Subway Squares (pillowed glossy squares with crisp tube-light highlights on every top edge and thin dark grout), Black Glass Mosaic (small hand-glazed black tiles, wavy and liquid, with cream grout and silvery reflections), Greek Key Band (the classic station frieze of brick-coursed tesserae: cream, yellow and tan rows, a maroon stripe, a green meander with white-framed maroon boxes), and Ornament Panels (a maroon field of upright tesserae around a white frame and a central motif whose white contour band follows the shape tile by tile, filled with blue, yellow and tan). The motif keeps morphing: diamond, circle, star, octagon, flower and cross, with tesserae changing colour one by one as the outline sweeps through them. The walls don't fade into each other, they rebuild: every tile of the next wall flips over on its own like a split-flap, so big subway squares break into small glass tiles, which then turn into the mosaic and the ornaments, as a diagonal wipe, a ripple from the centre, a random sparkle or a row cascade. The grid between the tiles is alive: light runs along the grout lines and the whole grid flashes on the beat, tiles lift off the wall in waves and cast shadows into the grout, and tiles tilt so glints race across the glaze. Every tile has its own colour variance, glaze waviness, pillowed edge, chips and craquelure, lit by a reflection of the station's fluorescent tubes plus a passing train light. Camera Mosaic turns any wall into a mosaic portrait from the camera image. Your mouse, or your hand in ShaderClaw, lifts and tilts the tiles under it like a magnet; press or pinch to spin them over. Audio: bass lifts the tiles, beats flash the grout grid, mids speed up the tile flips and the motif morph, highs make the glaze glint. Show dynamics: at Rest the wall is still with soft glints; the Build makes the grout light run faster and the tiles rattle on their beds; the Drop spins every tile in a shockwave ring from the centre with a flash; the Peak lifts and glints tiles with the music.",
+    "file": "ny_station_tiles.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1602,
+    "title": "Station Tiles",
+    "type": "generator"
   }
 ]

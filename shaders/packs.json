@@ -1329,5 +1329,11 @@
   },
   "ny_tag": {
     "group": "shades_of_new_york"
+  },
+  "ny_platform_edge": {
+    "group": "shades_of_new_york"
+  },
+  "ny_station_tiles": {
+    "group": "shades_of_new_york"
   }
 }
