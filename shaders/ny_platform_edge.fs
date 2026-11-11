@@ -308,7 +308,7 @@ float domePump(vec2 did, float hsh) {
             }
             pump -= 2.0 * dent * bodyLift;
         }
-        gGlowK += m * 0.3 * float(bodyColour > 0.5 && bodyColour < 1.5 ? 1 : 0);
+        gGlowK += m * 0.3 * ((float(bodyColour) > 0.5 && float(bodyColour) < 1.5) ? 1.0 : 0.0);
         if (float(bodyColour) < 0.5 && m > 0.01) {
             gCamC = texture2D(camTex, clamp(bodyCamUV(su), 0.0, 1.0)).rgb;
             gCamMode = max(gCamMode, 0.0);
