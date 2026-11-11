@@ -1,11 +1,15 @@
 /*{
-  "DESCRIPTION": "Station Tiles — Shades of New York 003. The tiled walls of the subway, built tile by tile in glossy, handmade HD ceramic. Four walls flow into each other: White Subway Squares (pillowed glossy squares with crisp tube-light highlights on every top edge and thin dark grout), Black Glass Mosaic (small hand-glazed black tiles, wavy and liquid, with cream grout and silvery reflections), Greek Key Band (the classic station frieze of brick-coursed tesserae: cream, yellow and tan rows, a maroon stripe, a green meander with white-framed maroon boxes), and Ornament Panels (a maroon field of upright tesserae around a white frame and a central motif whose white contour band follows the shape tile by tile, filled with blue, yellow and tan). The motif keeps morphing: diamond, circle, star, octagon, flower and cross, with tesserae changing colour one by one as the outline sweeps through them. The walls don't fade into each other, they rebuild: every tile of the next wall flips over on its own like a split-flap, so big subway squares break into small glass tiles, which then turn into the mosaic and the ornaments, as a diagonal wipe, a ripple from the centre, a random sparkle or a row cascade. The grid between the tiles is alive: light runs along the grout lines and the whole grid flashes on the beat, tiles lift off the wall in waves and cast shadows into the grout, and tiles tilt so glints race across the glaze. Every tile has its own colour variance, glaze waviness, pillowed edge, chips and craquelure, lit by a reflection of the station's fluorescent tubes plus a passing train light. Camera Mosaic turns any wall into a mosaic portrait from the camera image. Your mouse, or your hand in ShaderClaw, lifts and tilts the tiles under it like a magnet; press or pinch to spin them over. Audio: bass lifts the tiles, beats flash the grout grid, mids speed up the tile flips and the motif morph, highs make the glaze glint. Show dynamics: at Rest the wall is still with soft glints; the Build makes the grout light run faster and the tiles rattle on their beds; the Drop spins every tile in a shockwave ring from the centre with a flash; the Peak lifts and glints tiles with the music.",
+  "DESCRIPTION": "Station Tiles — Shades of New York 003. The tiled walls of the subway, built tile by tile in glossy, handmade HD ceramic. Four walls flow into each other: White Subway Squares (pillowed glossy squares with crisp tube-light highlights on every top edge and thin dark grout), Black Glass Mosaic (small hand-glazed black tiles, wavy and liquid, with cream grout and silvery reflections), Greek Key Band (the classic station frieze of brick-coursed tesserae: cream, yellow and tan rows, a maroon stripe, a green meander with white-framed maroon boxes), and Ornament Panels (a maroon field of upright tesserae around a white frame and a central motif whose white contour band follows the shape tile by tile, filled with blue, yellow and tan). The motif keeps morphing: diamond, circle, star, octagon, flower and cross, with tesserae changing colour one by one as the outline sweeps through them. The walls don't fade into each other, they are rebuilt in time with the music. The shader keeps its own beat and phrase count (locked to the track's tempo when there is one), changes wall on the downbeat of a phrase (every 2, 4, 8 or 16 bars), and every tile lands on the beat grid. Each wall arrives with its own choreography: the white squares split into four and turn to black glass ring by ring from the centre; the frieze is laid row by row out from its centre line; the ornament panel is traced (frame and motif outline drawn around like a pen stroke), then filled from the middle, then the maroon field turns over; the white wall comes back as a split-flap board sweeping top to bottom. Tiles show their glazed edge as they turn, cast shadows as they lift, flash as they face the lights, and the grout lights up along the moving front. A drop slams the next wall in as a shockwave ring. The grid between the tiles is alive: light runs along the grout lines and the whole grid flashes on the beat, tiles lift off the wall in waves and cast shadows into the grout, and tiles tilt so glints race across the glaze. Every tile has its own colour variance, glaze waviness, pillowed edge, chips and craquelure, lit by a reflection of the station's fluorescent tubes plus a passing train light. Camera Mosaic turns any wall into a mosaic portrait from the camera image. Your mouse, or your hand in ShaderClaw, lifts and tilts the tiles under it like a magnet; press or pinch to spin them over. Audio: bass lifts the tiles, beats flash the grout grid, mids speed up the tile flips and the motif morph, highs make the glaze glint. Show dynamics: at Rest the wall is still with soft glints; the Build makes the grout light run faster and the tiles rattle on their beds; the Drop spins every tile in a shockwave ring from the centre with a flash; the Peak lifts and glints tiles with the music.",
   "CREDIT": "Easel / ShaderClaw house shader — Shades of New York series, 2026-11-11 — original.",
   "CATEGORIES": ["Generator", "Shades of New York", "Texture", "Mosaic", "Interactive", "Audio Reactive"],
   "INPUTS": [
     { "NAME": "sequence",    "LABEL": "Wall", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Auto Story (all four)", "White Subway Squares", "Black Glass Mosaic", "Greek Key Band", "Ornament Panels"], "GROUP": "Wall" },
-    { "NAME": "chapterLen",  "LABEL": "Wall Length (s)",  "TYPE": "float", "AUDIO": false, "MIN": 4.0, "MAX": 60.0, "DEFAULT": 12.0, "GROUP": "Wall" },
-    { "NAME": "flipStyle",   "LABEL": "Tile Flip", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4], "LABELS": ["Auto", "Diagonal Wipe", "Ripple From Centre", "Random Sparkle", "Row Cascade"], "GROUP": "Wall" },
+    { "NAME": "changeBars",  "LABEL": "Change Wall Every", "TYPE": "long", "DEFAULT": 2, "VALUES": [0, 1, 2, 3], "LABELS": ["2 bars", "4 bars", "8 bars", "16 bars"], "GROUP": "Transitions" },
+    { "NAME": "transBeats",  "LABEL": "Transition Length (beats)", "TYPE": "float", "AUDIO": false, "MIN": 2.0, "MAX": 32.0, "DEFAULT": 8.0, "GROUP": "Transitions" },
+    { "NAME": "beatGrid",    "LABEL": "Tiles Land On", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2], "LABELS": ["Every beat", "Every 1/8", "Every 1/16"], "GROUP": "Transitions" },
+    { "NAME": "choreo",      "LABEL": "Choreography", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4, 5], "LABELS": ["Auto (each wall its own move)", "Subdivide (rings)", "Lay Rows (from centre)", "Trace & Fill", "Split-Flap Sweep", "Shock Ring"], "GROUP": "Transitions" },
+    { "NAME": "dropSlam",    "LABEL": "Drop Forces Change", "TYPE": "bool", "DEFAULT": true, "GROUP": "Transitions" },
+    { "NAME": "tempo",       "LABEL": "Tempo Without Music (BPM)", "TYPE": "float", "AUDIO": false, "MIN": 60.0, "MAX": 180.0, "DEFAULT": 120.0, "GROUP": "Transitions" },
     { "NAME": "zoom",        "LABEL": "Tiles On Screen",  "TYPE": "float", "AUDIO": false, "MIN": 2.0, "MAX": 14.0, "DEFAULT": 5.5, "GROUP": "Wall" },
     { "NAME": "drift",       "LABEL": "Drift",            "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.2, "GROUP": "Wall" },
     { "NAME": "shapeMode",   "LABEL": "Ornament", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3, 4, 5, 6], "LABELS": ["Morph All", "Diamond", "Circle", "Star", "Octagon", "Flower", "Cross"], "GROUP": "Ornament" },
@@ -38,6 +42,10 @@
     { "NAME": "bgColor",     "LABEL": "BG Color / Top / Center", "TYPE": "color", "DEFAULT": [0.05, 0.045, 0.04, 1.0], "GROUP": "Background" },
     { "NAME": "bgColor2",    "LABEL": "BG Bottom / Edge", "TYPE": "color", "DEFAULT": [0.0, 0.0, 0.0, 1.0], "GROUP": "Background" },
     { "NAME": "transparentBg","LABEL": "Transparent BG (tiles only)", "TYPE": "bool", "DEFAULT": false, "GROUP": "Background" }
+  ],
+  "PASSES": [
+    { "TARGET": "stateBuf", "PERSISTENT": true, "FLOAT": true },
+    {}
   ]
 }*/
 
@@ -145,6 +153,10 @@ float tR;        // corner radius
 float tGw;       // grout half width
 float tId;       // per-tile hash
 float tEdge;     // extra grout: distance to a design boundary that cuts tiles (large = none)
+float tReg;      // choreography info: region (0 main, 1 white surround / frame, 2 contour, 3 fill, 4 corners, 5 field)
+float tAng;      // 0..1 position around a traced outline (clockwise from the top)
+float tRad;      // 0..1 distance from a motif / panel centre
+float tRow;      // row index for laid rows
 vec3  tGrout;    // grout colour
 
 void squareCell(vec2 p, float s, float jit, float seed) {
@@ -212,7 +224,7 @@ vec3 mixYT(float h) { return h < 0.5 ? mix(C_YELLOW, C_CREAM, 0.25 * h) : mix(C_
 
 // ── layouts ─────────────────────────────────────────────────────────────
 void evalLayout(float L, vec2 p) {
-    tEdge = 9.0;
+    tEdge = 9.0; tReg = 0.0; tAng = 0.0; tRad = 0.0; tRow = 0.0;
     tMat = 2.0; tR = 0.02; tGw = 0.011 * groutW;
     tGrout = vec3(0.47, 0.43, 0.39);
     if (L < 0.5) {                                                    // White Subway Squares
@@ -237,8 +249,10 @@ void evalLayout(float L, vec2 p) {
             tMat = 0.0; tR = 0.07; tGw = 0.012 * groutW;
             tGrout = vec3(0.32, 0.31, 0.29);
             tEdge = abs(p.y - (rowF < 0.0 ? -band : band) * th);
+            tReg = 1.0; tRow = 10.0 + floor((abs(tC.y) - band * th) / 1.0) * 2.0;
         } else {
             float r = rowF + band;                                    // 0 .. 19 (bottom → top)
+            tRow = abs(r - 9.5) - 0.5;                                // 0 at the centre line → 9 at the edges
             bool key = r > 5.5 && r < 13.5;
             brickCell(p, th, key ? 0.2 : 0.21, 0.0, 11.0 + (key ? 0.0 : r), key ? 1.0 : 0.0);
             float h = tId;
@@ -265,6 +279,7 @@ void evalLayout(float L, vec2 p) {
             brickCell(p, 0.115, 0.27, 1.0, 21.0, 0.0);
             tCol = C_MAROON * (0.82 + 0.3 * tId) + vec3(0.04, 0.0, 0.0) * step(0.7, tId);
             tEdge = abs(outer);
+            tReg = 5.0; tRad = clamp(outer / 0.7, 0.0, 1.0);
         } else if (outer > -fw) {                                     // white frame: square tesserae along it
             vec2 Q = P;
             bool vert = A.x - fx > A.y - fy;
@@ -274,6 +289,7 @@ void evalLayout(float L, vec2 p) {
             tC = vert ? vec2(sgn * (fx - fw * 0.5), tC.x - 0.5 * fw) + pid * Pw : vec2(tC.x - 0.5 * fw, sgn * (fy - fw * 0.5)) + pid * Pw;
             tCol = C_WHITE * (0.95 + 0.05 * tId);
             tEdge = min(abs(outer), abs(outer + fw));
+            tReg = 1.0; tAng = fract(atan(P.x, P.y) / TAU + 1.0);
         } else {
             vec2 M = P / 1.3;                                         // motif space
             float s = motifSD(M) * 1.3;
@@ -294,15 +310,18 @@ void evalLayout(float L, vec2 p) {
                 tId = h12(cid + pid * 7.0 + 41.0);
                 tCol = C_WHITE * (0.94 + 0.06 * tId);
                 tEdge = 9.0;
+                tReg = 2.0; tAng = fract(atan(dirc.x, dirc.y) / TAU + 1.0);
             } else if (s < 0.0) {                                     // the motif fill, brick coursed
                 brickCell(p, 0.13, 0.19, 0.0, 51.0, 0.0);
                 vec3 fc = fillColor.rgb;
                 tCol = fc * (0.8 + 0.35 * tId) + vec3(0.0, 0.03, 0.03) * step(0.6, h12(vec2(tId, 3.0)));
                 tEdge = abs(s + bw * 0.5);
+                tReg = 3.0; tRad = clamp(length(tC - pid * Pw) / 1.0, 0.0, 1.0);
             } else {                                                  // yellow / tan corners
                 brickCell(p, 0.13, 0.2, 0.0, 61.0, 0.0);
                 tCol = mixYT(tId);
                 tEdge = min(abs(s - bw * 0.5), abs(outer + fw));
+                tReg = 4.0; tRad = clamp(length(P) / 1.6, 0.0, 1.0);
             }
         }
     }
@@ -317,79 +336,165 @@ float chipMask(vec2 lc, vec2 b, float id) {
     return hit * smoothstep(rr, rr * 0.4, length(lc - cp) * (0.7 + 0.6 * n));
 }
 
+// ── the show clock + wall state (pass 0, three texels) ──────────────────
+//   texel 0 = (beat count whole mod 1024, beat fraction, current wall, next wall)
+//   texel 1 = (transition start whole (-1 idle), start fraction, length in beats, choreography)
+//   texel 2 = (previous drop level, -, -, valid)
+vec4 stateAt(float i) { return texture2D(stateBuf, vec2(i + 0.5, 0.5) / RENDERSIZE.xy); }
+float beatsBetween(float aW, float aF, float bW, float bF) { return mod(bW - aW + 512.0, 1024.0) - 512.0 + (bF - aF); }
+float barsVal() { float c = float(changeBars); return c < 0.5 ? 2.0 : c < 1.5 ? 4.0 : c < 2.5 ? 8.0 : 16.0; }
+// each destination wall has its own move (unless one is forced)
+float choreoFor(float target) {
+    float c = float(choreo);
+    if (c > 0.5) return c;
+    return target < 0.5 ? 4.0 : target < 1.5 ? 1.0 : target < 2.5 ? 2.0 : 3.0;
+}
+vec4 statePass(vec2 fc) {
+    if (fc.y > 1.0 || fc.x > 3.0) return vec4(0.0);
+    vec4 S0 = stateAt(0.0), S1 = stateAt(1.0), S2 = stateAt(2.0);
+    float seqW = float(sequence);
+    float pick = seqW > 0.5 ? seqW - 1.0 : 0.0;
+    if (FRAMEINDEX < 2 || S2.w < 0.5) { S0 = vec4(0.0, 0.0, pick, pick); S1 = vec4(-1.0, 0.0, 8.0, 1.0); S2 = vec4(0.0, 0.0, 0.0, 1.0); }
+    float dt = clamp(TIMEDELTA, 0.0, 0.1);
+    bool conf = audioBPMConfidence > 0.35 && audioBPM > 40.0;
+    float bpm = conf ? audioBPM : tempo;
+    float Bw = S0.x, Bf = S0.y + dt * bpm / 60.0;
+    if (conf) { float err = audioBeatPhase - fract(Bf); err -= floor(err + 0.5); Bf += err * 0.2; }   // phase-lock to the track
+    float carry = floor(Bf);
+    Bf -= carry;
+    Bw = mod(Bw + carry, 1024.0);
+    bool crossed = carry > 0.5;
+    float cur = S0.z, nxt = S0.w;
+    float sW = S1.x, sF = S1.y, len = S1.z, sty = S1.w;
+    if (sW >= 0.0 && beatsBetween(sW, sF, Bw, Bf) >= len) { cur = nxt; sW = -1.0; }
+    bool dropEdge = dropSlam && gDrop > 0.55 && S2.x <= 0.55;
+    if (sW < 0.0) {
+        float target = -1.0;
+        bool slam = false;
+        if (seqW < 0.5) {
+            if (crossed && mod(Bw, 4.0 * barsVal()) < 0.5) target = mod(cur + 1.0, 4.0);   // phrase downbeat
+            if (dropEdge) { target = mod(cur + 1.0, 4.0); slam = true; }
+        } else if (abs(pick - cur) > 0.5 && crossed) target = pick;                         // a manual pick lands on the next beat
+        if (target >= 0.0) {
+            nxt = target;
+            sW = Bw; sF = slam ? Bf : 0.0;
+            len = slam ? max(2.0, transBeats * 0.35) : transBeats;
+            sty = slam ? 5.0 : choreoFor(target);
+        }
+    }
+    float i = floor(fc.x);
+    if (i < 0.5) return vec4(Bw, Bf, cur, nxt);
+    if (i < 1.5) return vec4(sW, sF, len, sty);
+    return vec4(gDrop, 0.0, 0.0, 1.0);
+}
+
+float easeOutBack(float x) { float c1 = 1.9, c3 = c1 + 1.0; float y = x - 1.0; return 1.0 + c3 * y * y * y + c1 * y * y; }
+
 void main() {
     showDynamics();
     vec2 R = RENDERSIZE.xy, fc = gl_FragCoord.xy, uv = fc / R;
+    if (PASSINDEX == 0) { gl_FragColor = statePass(fc); return; }
     vec2 p0 = (fc - 0.5 * R) / R.y;
     float ar = audioReact;
     float sc = zoom;
     vec2 cam = vec2(TIME * 0.035 * drift + 0.02 * sin(TIME * 0.17), 0.025 * sin(TIME * 0.11) * drift);
-    // build: the wall rattles
-    p0 += (h21(floor(TIME * 30.0)) - 0.5) * 0.004 * smoothstep(0.55, 1.0, gBuild);
+    p0 += (h21(floor(TIME * 30.0)) - 0.5) * 0.004 * smoothstep(0.55, 1.0, gBuild);   // build: the wall rattles
     vec2 p = p0 * sc + cam;
-    float pxW = sc / R.y;                                             // wall units per pixel
+    float pxW = sc / R.y;
 
-    // ── the story: which wall, which next, how far into the flip ──
-    float sq = float(sequence);
-    float seq = TIME / chapterLen + audioMidTime * 0.02 * ar + 0.3 * gBuild * gBuild;
-    float chap = floor(seq);
-    float u = fract(seq);
-    float LA, LB;
-    if (sq < 0.5) { LA = mod(chap, 4.0); LB = mod(chap + 1.0, 4.0); }
-    else { LA = sq - 1.0; LB = LA; }
-    float tp = LA == LB ? 0.0 : clamp((u - 0.6) / 0.36, 0.0, 1.0);
-    float fstyle = float(flipStyle);
-    if (fstyle < 0.5) fstyle = 1.0 + mod(chap, 4.0);
+    // ── read the show state ──
+    vec4 S0 = stateAt(0.0), S1 = stateAt(1.0);
+    float LA = S0.z, LB = S0.w;
+    bool inTrans = S1.x >= 0.0 && FRAMEINDEX > 2;
+    float since = inTrans ? beatsBetween(S1.x, S1.y, S0.x, S0.y) : 0.0;
+    float len = max(S1.z, 1.0), sty = S1.w;
+    float beatF = S0.y;                                               // where we are inside the beat
+    float grid = float(beatGrid) < 0.5 ? 1.0 : float(beatGrid) < 1.5 ? 0.5 : 0.25;
 
-    // ornament morph clock
+    // ornament morph steps on the bar
     float sm = float(shapeMode);
-    float mclk = TIME * 0.12 * morphSpeed + audioMidTime * 0.05 * ar * morphSpeed;
-    if (sm < 0.5) { gShapeA = mod(floor(mclk), 6.0); gShapeB = mod(floor(mclk) + 1.0, 6.0); gShapeF = smoothstep(0.55, 1.0, fract(mclk)); }
+    float mclk = (S0.x + S0.y) / 16.0 * morphSpeed;                   // one shape every 4 bars at speed 1
+    if (sm < 0.5) { gShapeA = mod(floor(mclk), 6.0); gShapeB = mod(floor(mclk) + 1.0, 6.0); float fm = fract(mclk); gShapeF = smoothstep(0.75, 1.0, fm); gShapeF = easeOutBack(gShapeF) ; }
     else { gShapeA = sm - 1.0; gShapeB = gShapeA; gShapeF = 0.0; }
 
-    // hand in wall space
     vec2 mW = ((mousePos - 0.5) * vec2(R.x / R.y, 1.0)) * sc + cam;
     float handOn = step(0.5, float(interact));
 
-    // ── find the tile, flip it, look through it (ONE evalLayout call site) ──
-    float Lsel = tp > 0.0 ? LB : LA;
+    // ── find the tile, choreograph its flip, look through it (ONE evalLayout call site) ──
+    float Lsel = inTrans ? LB : LA;
     vec2 pe = p;
-    float sx = 1.0, back = 0.0, flipShade = 1.0;
-    vec2 cB = vec2(0.0), bB = vec2(0.5);
+    float back = 0.0, edgeHit = 0.0, flipShade = 1.0, faceGlint = 0.0, front = 0.0;
+    float sbT = 0.0, flipB = 1.0;
     for (int k = 0; k < 2; k++) {
         evalLayout(Lsel, pe);
         if (k == 1) break;
-        cB = tC; bB = tB;
-        float idh = tId;
-        // flip progress of this tile toward the next wall
-        vec2 cr = (cB - cam) / sc;
-        float thr;
-        if (fstyle < 1.5)      thr = clamp(0.5 + dot(cr, normalize(vec2(1.0, -0.6))) * 0.55, 0.0, 1.0) * 0.8 + idh * 0.2;
-        else if (fstyle < 2.5) thr = clamp(length(cr) * 0.95, 0.0, 1.0) * 0.85 + idh * 0.15;
-        else if (fstyle < 3.5) thr = idh;
-        else                   thr = clamp(0.5 - cr.y * 0.95, 0.0, 1.0) * 0.85 + fract(cr.x * 3.1) * 0.03 + idh * 0.12;
-        float f = clamp((tp * 1.3 - thr) / 0.3, 0.0, 1.0);
-        f = f * f * (3.0 - 2.0 * f);
-        float ang = f * PI;
-        // drop: a shockwave ring spins every tile once around
-        float dR = length(cr);
-        float ring = clamp(1.0 - abs(dR - (1.0 - gDrop) * 1.6) / 0.35, 0.0, 1.0) * step(0.02, gDrop);
-        ang += ring * ring * TAU;
+        vec2 cB = tC, bB = tB;
+        vec2 cr = (cB - cam) / sc;                                   // tile centre in screen-height units
+        float ang = 0.0, axis = 0.0, f = 0.0;
+        if (inTrans) {
+            // when does this tile turn? (normalised 0..1 across the transition, then put on the beat grid)
+            float sn;
+            float halfW = 0.5 * R.x / R.y + 0.1;
+            if (sty < 1.5) {                                          // Subdivide: rings of the big squares, children clockwise
+                vec2 par = floor(cB + 0.5) - floor(cam + 0.5);
+                float ring = max(abs(par.x), abs(par.y));
+                vec2 ch = step(fract(cB + 0.5), vec2(0.5));
+                float order = ch.x < 0.5 ? (ch.y < 0.5 ? 0.0 : 3.0) : (ch.y < 0.5 ? 1.0 : 2.0);
+                sn = ring / (0.5 * sc * R.x / R.y + 1.0) + order * 0.012;
+                flipB = clamp(len * 0.12, 0.5, 2.0);
+            } else if (sty < 2.5) {                                   // Lay Rows: frieze from its centre line, then the white wall
+                sn = tReg > 0.5 ? 0.62 + 0.38 * clamp((tRow - 10.0) / 6.0, 0.0, 1.0) : 0.6 * tRow / 9.0;
+                axis = 1.0;
+                flipB = clamp(len * 0.08, 0.35, 1.0);
+            } else if (sty < 3.5) {                                   // Trace & Fill: outline drawn, then filled, then the field
+                if (tReg > 1.5 && tReg < 2.5)      sn = 0.02 + 0.3 * tAng;
+                else if (tReg > 0.5 && tReg < 1.5) sn = 0.0 + 0.3 * tAng;
+                else if (tReg > 2.5 && tReg < 3.5) sn = 0.36 + 0.24 * tRad;
+                else if (tReg > 3.5 && tReg < 4.5) sn = 0.58 + 0.12 * tRad;
+                else                               sn = 0.72 + 0.28 * tRad;
+                flipB = tReg > 0.5 && tReg < 2.5 ? clamp(len * 0.05, 0.25, 0.6) : clamp(len * 0.09, 0.35, 1.2);
+            } else if (sty < 4.5) {                                   // Split-Flap: rows top → bottom, flipping over the top edge
+                sn = clamp(0.5 - cr.y, 0.0, 1.0);
+                axis = 1.0;
+                flipB = clamp(len * 0.1, 0.4, 1.0);
+            } else {                                                  // Shock Ring (drop)
+                sn = clamp(length(cr) / (halfW * 1.1), 0.0, 1.0);
+                flipB = clamp(len * 0.25, 0.4, 1.0);
+            }
+            sbT = sn * max(len - flipB, 0.0);
+            sbT = floor(sbT / grid + 0.5) * grid;                     // tiles start on the beat grid
+            f = clamp((since - sbT) / flipB, 0.0, 1.0);
+            ang = easeOutBack(f) * PI;                                // snaps over, overshoots, settles
+            front = exp(-pow((since - sbT - flipB * 0.5) / (flipB * 0.9), 2.0));
+        }
         // hand: press / pinch spins the tiles under it
         float dh = length(cB - mW) / (sc * 0.12 * handSize);
-        ang += handOn * step(0.5, mouseDown) * TAU * exp(-dh * dh) * fract(TIME * 0.9);
-        sx = cos(ang);
-        float showB = step(0.5, f);
-        flipShade = 0.55 + 0.45 * abs(sx);
-        // first pass already shows the right wall, unturned: done
-        bool needSecond = abs(sx) < 0.999 || (tp > 0.0 && showB < 0.5);
-        if (!needSecond) break;
-        // look through the turning tile
+        float spinH = handOn * step(0.5, mouseDown) * exp(-dh * dh);
+        ang += spinH * TAU * fract(TIME * 0.9);
+        float s = cos(ang);
+        bool showB = inTrans && f >= 0.5;
+        flipShade = 0.5 + 0.5 * abs(s);
+        faceGlint = exp(-pow((abs(s) - 0.55) / 0.12, 2.0)) * step(abs(s), 0.98);
+        if (abs(s) > 0.999 && (!inTrans || showB || f <= 0.0)) {
+            if (inTrans && f <= 0.0) { Lsel = LA; continue; }            // not its turn yet: the old wall
+            break;
+        }
+        // project through the turning tile; its glazed edge shows on the leading side
         vec2 lcl = p - cB;
-        float lx = lcl.x / max(abs(sx), 1e-3);
-        if (abs(lx) > bB.x) { back = 1.0; break; }
-        pe = cB + vec2(sign(sx) * lx, lcl.y);
-        Lsel = (tp > 0.0 && showB > 0.5) ? LB : LA;
+        float lx = axis < 0.5 ? lcl.x : lcl.y;
+        float bx = axis < 0.5 ? bB.x : bB.y;
+        float as = max(abs(s), 1e-3);
+        float proj = lx / as;
+        float thick = bx * 0.16 * abs(sin(ang));
+        float side = sin(ang) >= 0.0 ? 1.0 : -1.0;
+        if (abs(proj) > bx) {
+            float outer = (abs(lx) - bx * as) * side * sign(lx);
+            if (outer > 0.0 && outer < thick) { edgeHit = 1.0; }
+            back = 1.0;
+            break;
+        }
+        pe = axis < 0.5 ? cB + vec2(proj, lcl.y) : cB + vec2(lcl.x, proj);
+        Lsel = showB ? LB : LA;
     }
 
     // ── shade the tile ──
@@ -470,6 +575,7 @@ void main() {
     float hl = mag * 0.25;
     lit += vec3(1.0, 0.96, 0.9) * hl * (base * 0.6 + pow(max(dot(N, normalize(vec3(mW - tC, 0.4))), 0.0), 40.0) * glossK);
     lit *= flipShade;
+    lit += vec3(1.0, 0.97, 0.92) * faceGlint * gloss * 0.9;             // the face catches the tubes as it turns
 
     // ── grout: the grid between the tiles, with light running through it ──
     float gd = max(d, -edgeCut);                                     // >0 in the grout
@@ -479,12 +585,13 @@ void main() {
     groutC *= mix(0.55, 1.0, sh) * (1.0 - 0.35 * lift);
     float runPos = abs(lc.x) > abs(lc.y) * (b.x / max(b.y, 1e-3)) ? p.y : p.x;
     float runner = pow(0.5 + 0.5 * sin(runPos * 2.2 - TIME * (1.5 + 5.0 * gBuild) * (0.6 + 0.4 * gLift) + id * 2.0), 12.0);
-    float gGlow = gridGlow * (0.35 * runner + 0.9 * audioBeatPulse * ar + 1.2 * gDrop + 0.5 * gBuild * runner);
+    float gGlow = gridGlow * (0.35 * runner + 0.9 * audioBeatPulse * ar + 1.2 * gDrop + 0.5 * gBuild * runner + 2.2 * front);
     vec3 groutLit = groutC * (0.75 + 0.3 * topLight) + glowColor.rgb * gGlow;
 
     vec3 col = mix(groutLit, lit, inside);
     vec3 bg = backdrop(uv);
-    if (back > 0.5) col = bg + glowColor.rgb * gridGlow * 0.15 * gBuild;   // behind a turning tile
+    if (back > 0.5) col = bg * 0.7 + glowColor.rgb * gridGlow * 0.35 * front;   // the empty bed behind a turning tile
+    if (edgeHit > 0.5) col = vec3(0.86, 0.8, 0.7) * (0.6 + 0.4 * flipShade) + vec3(0.2) * faceGlint;   // glazed edge
     float alpha = transparentBg ? (back > 0.5 ? 0.0 : inside) : 1.0;
 
     // show lift, drop flash, vignette, grain
