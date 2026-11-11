@@ -1335,5 +1335,8 @@
   },
   "ny_station_tiles": {
     "group": "shades_of_new_york"
+  },
+  "ny_metro": {
+    "group": "shades_of_new_york"
   }
 }
