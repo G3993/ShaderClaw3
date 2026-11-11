@@ -1,5 +1,5 @@
 /*{
-  "DESCRIPTION": "Tag — Shades of New York 001. A handstyle tag is spray-painted live onto a painted brick wall, stroke by stroke, the way a writer actually hits a wall. Soft spray clouds go up first, puffy scalloped cumulus with flat bottoms, sprayed with a fat cap held off the wall and filled in a spiral. Then up to three invisible writers lay down the tag in real time — a top row of tall pointed crowns and loops, a second row tucked underneath, and one long swooping bar slashed through the middle — with pen lifts between letters. Auto Variety makes every tag different: letter count, size, position, slant, row layout, number of writers and handstyle mix change each cycle, each writer picks a skinny, standard or fat cap, and every stroke swells and thins with hand pressure along its length. The paint is a real persistent spray layer: a hard white core, a soft overspray halo, stray mist specks, paint pooling wherever the can slows down (the tips of the crowns, the starts of strokes), and drips that run down from those pools under gravity, stuttering brick by brick. Paint sits thinner in the mortar grooves, and the brick is lit as a 3D relief: running-bond courses with recessed mortar, per-brick tint, pores, a glossy painted finish and a slow sun glare drifting across the top of the wall, like the reference. Three lifecycles: Write · Hold · Buff (the tag is finished, held, then a city buff roller paints over it in a slightly mismatched patch and the next tag goes up on top), Layer Up (new tags land at new spots and sizes over the fading old ones until the wall is bombed), and Write Once & Hold. Interactive: with Hand Spray on, your mouse — or your hand in ShaderClaw, pinching to spray — becomes a spray can. Camera friendly: switch the wall to Image / Camera to tag over a live feed, or keep the brick relief lighting on top of the camera. Audio: bass opens the nozzle (fatter lines), mids drive the writing speed, highs throw more overspray, and every beat makes the fresh paint flash and bloom. Show dynamics: at Rest the writers move slowly under soft light; the Build speeds the writing up, the hand starts to shake, more drips run and the sun sweeps; on the Drop the whole tag flashes white-hot, the cans splatter outward and the wall shakes; the Peak keeps the fresh paint glowing. NYC Reference palette (default) keeps the photo's brown brick and blue-white paint; the four Studio palettes are one switch away.",
+  "DESCRIPTION": "Tag — Shades of New York 001. A handstyle tag is spray-painted live onto a painted brick wall, stroke by stroke, the way a writer actually hits a wall. Soft spray clouds go up first, puffy scalloped cumulus with flat bottoms, sprayed with a fat cap held off the wall and filled in a spiral. With a camera and body tracking on (MediaPipe pose + segmentation), the tag moves onto you: each writer takes one of your limbs as its baseline (arms across the shoulders, head down the spine into the left leg, the right leg) and writes the handstyle along it, swirl writers scribble loops that fill your silhouette and nothing outside it, and the outline of your body is airbrushed around you; the paint fades so the figure keeps up as you move. With no body in frame, up to three invisible writers lay down the tag in real time — a top row of tall pointed crowns and loops, a second row tucked underneath, and one long swooping bar slashed through the middle — with pen lifts between letters. Auto Variety makes every tag different: letter count, size, position, slant, row layout, number of writers and handstyle mix change each cycle, each writer picks a skinny, standard or fat cap, and every stroke swells and thins with hand pressure along its length. The paint is a real persistent spray layer: a hard white core, a soft overspray halo, stray mist specks, paint pooling wherever the can slows down (the tips of the crowns, the starts of strokes), and drips that run down from those pools under gravity, stuttering brick by brick. Paint sits thinner in the mortar grooves, and the brick is lit as a 3D relief: running-bond courses with recessed mortar, per-brick tint, pores, a glossy painted finish and a slow sun glare drifting across the top of the wall, like the reference. Three lifecycles: Write · Hold · Buff (the tag is finished, held, then a city buff roller paints over it in a slightly mismatched patch and the next tag goes up on top), Layer Up (new tags land at new spots and sizes over the fading old ones until the wall is bombed), and Write Once & Hold. Interactive: with Hand Spray on, your mouse — or your hand in ShaderClaw, pinching to spray — becomes a spray can. Camera friendly: switch the wall to Image / Camera to tag over a live feed, or keep the brick relief lighting on top of the camera. Audio: bass opens the nozzle (fatter lines), mids drive the writing speed, highs throw more overspray, and every beat makes the fresh paint flash and bloom. Show dynamics: at Rest the writers move slowly under soft light; the Build speeds the writing up, the hand starts to shake, more drips run and the sun sweeps; on the Drop the whole tag flashes white-hot, the cans splatter outward and the wall shakes; the Peak keeps the fresh paint glowing. NYC Reference palette (default) keeps the photo's brown brick and blue-white paint; the four Studio palettes are one switch away.",
   "CREDIT": "Easel / ShaderClaw house shader — Shades of New York series, 2026-11-10 — original.",
   "CATEGORIES": ["Generator", "Shades of New York", "Street", "Interactive", "Audio Reactive"],
   "INPUTS": [
@@ -32,6 +32,11 @@
     { "NAME": "canMode",     "LABEL": "Hand Spray", "TYPE": "long", "DEFAULT": 1, "VALUES": [0, 1, 2], "LABELS": ["Off", "While Pressed / Pinching", "Always Follow"], "GROUP": "Hand Spray" },
     { "NAME": "canSize",     "LABEL": "Can Nozzle",       "TYPE": "float", "AUDIO": false, "MIN": 0.3, "MAX": 3.0, "DEFAULT": 1.2, "GROUP": "Hand Spray" },
     { "NAME": "resetPaint",  "LABEL": "Clean Wall",       "TYPE": "bool",  "DEFAULT": false, "GROUP": "Hand Spray" },
+    { "NAME": "bodyMode",    "LABEL": "Body Tracking", "TYPE": "long", "DEFAULT": 3, "VALUES": [0, 1, 2, 3], "LABELS": ["Off", "Silhouette (swirl fill + outline)", "Skeleton (tags along limbs)", "Both"], "GROUP": "Body" },
+    { "NAME": "bodyMirror",  "LABEL": "Mirror (selfie view)", "TYPE": "bool", "DEFAULT": true, "GROUP": "Body" },
+    { "NAME": "swirlAmt",    "LABEL": "Swirl Fill",       "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.8, "GROUP": "Body" },
+    { "NAME": "outlineAmt",  "LABEL": "Outline Spray",    "TYPE": "float", "MIN": 0.0, "MAX": 1.5, "DEFAULT": 0.7, "GROUP": "Body" },
+    { "NAME": "bodyFade",    "LABEL": "Paint Fade (follows you)", "TYPE": "float", "MIN": 0.0, "MAX": 1.0, "DEFAULT": 0.25, "GROUP": "Body" },
     { "NAME": "wallSource",  "LABEL": "Wall", "TYPE": "long", "DEFAULT": 0, "VALUES": [0, 1, 2, 3], "LABELS": ["Painted Brick", "Image / Camera", "Camera + Brick Relief", "Background Colour"], "GROUP": "Wall" },
     { "NAME": "wallTex",     "LABEL": "Image / Camera",   "TYPE": "image", "GROUP": "Wall" },
     { "NAME": "courses",     "LABEL": "Brick Courses",    "TYPE": "float", "AUDIO": false, "MIN": 10.0, "MAX": 70.0, "DEFAULT": 34.0, "GROUP": "Wall" },
@@ -114,6 +119,91 @@ vec3 backdrop(vec2 uv) {
     vec2 dd = (uv - 0.5) * vec2(RENDERSIZE.x / RENDERSIZE.y, 1.0);
     return mix(bgColor.rgb, bgColor2.rgb, smoothstep(0.0, 0.85, length(dd)));
 }
+
+// ── Body layer (MediaPipe, ShaderClaw contract) ─────────────────────────
+//   mpPoseLandmarks: 33×1 RGBA8 per joint (x, 1 − y, z + 0.5, visibility), x as the camera sees it
+//   mpSegMask:       selfie-segmentation confidence (r), row 0 = top of the camera image
+//   Both come from the host (ShaderClaw web MediaPipe / Easel vision); unfed = zeros = no body.
+//   Joints and the mask are mirrored for a selfie view when Mirror is on, and every shader
+//   samples its camera image through bodyCamUV() so picture, mask and skeleton line up.
+vec2 bodyCamUV(vec2 uv) { return vec2(bodyMirror ? 1.0 - uv.x : uv.x, uv.y); }
+vec3 bodyJoint(float i) {                       // (uv.x, uv.y, visibility)
+    vec4 lm = texture2D(mpPoseLandmarks, vec2((i + 0.5) / 33.0, 0.5));
+    return vec3(bodyMirror ? 1.0 - lm.r : lm.r, lm.g, lm.a);
+}
+float bodySeg(vec2 uv) {
+    vec2 s = vec2(bodyMirror ? 1.0 - uv.x : uv.x, 1.0 - uv.y);
+    return smoothstep(0.35, 0.65, texture2D(mpSegMask, clamp(s, 0.0, 1.0)).r);
+}
+// how sure we are there is a body (shoulders + hips visible)
+float bodyPresence() {
+    float v = bodyJoint(11.0).z + bodyJoint(12.0).z + bodyJoint(23.0).z + bodyJoint(24.0).z;
+    return smoothstep(1.2, 2.6, v);
+}
+float bodyUseSkel() { float m = float(bodyMode); return (m > 1.5) ? 1.0 : 0.0; }          // Skeleton or Both
+float bodyUseSil()  { float m = float(bodyMode); return (m > 0.5 && m < 1.5) || m > 2.5 ? 1.0 : 0.0; }   // Silhouette or Both
+// distance (screen-height units, p-space) from p to the skeleton's bones; gBoneT = 0..1 along the nearest bone
+float gBoneT, gBoneId;
+float boneSeg(vec2 p, vec3 a, vec3 b, float asp, float id, float best) {
+    if (a.z < 0.4 || b.z < 0.4) return best;
+    vec2 A = (a.xy - 0.5) * vec2(asp, 1.0), B = (b.xy - 0.5) * vec2(asp, 1.0);
+    vec2 pa = p - A, ba = B - A;
+    float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-6), 0.0, 1.0);
+    float d = length(pa - ba * h);
+    if (d < best) { gBoneT = h; gBoneId = id; return d; }
+    return best;
+}
+float boneDist(vec2 p, float asp) {
+    vec3 j0 = bodyJoint(0.0), j11 = bodyJoint(11.0), j12 = bodyJoint(12.0), j13 = bodyJoint(13.0), j14 = bodyJoint(14.0);
+    vec3 j15 = bodyJoint(15.0), j16 = bodyJoint(16.0), j23 = bodyJoint(23.0), j24 = bodyJoint(24.0);
+    vec3 j25 = bodyJoint(25.0), j26 = bodyJoint(26.0), j27 = bodyJoint(27.0), j28 = bodyJoint(28.0);
+    vec3 neck = vec3(0.5 * (j11.xy + j12.xy), min(j11.z, j12.z));
+    vec3 pelv = vec3(0.5 * (j23.xy + j24.xy), min(j23.z, j24.z));
+    float d = 9.0;
+    gBoneT = 0.0; gBoneId = -1.0;
+    d = boneSeg(p, j0, neck, asp, 0.0, d);
+    d = boneSeg(p, neck, pelv, asp, 1.0, d);
+    d = boneSeg(p, j11, j12, asp, 2.0, d);
+    d = boneSeg(p, j23, j24, asp, 3.0, d);
+    d = boneSeg(p, j11, j13, asp, 4.0, d);
+    d = boneSeg(p, j13, j15, asp, 5.0, d);
+    d = boneSeg(p, j12, j14, asp, 6.0, d);
+    d = boneSeg(p, j14, j16, asp, 7.0, d);
+    d = boneSeg(p, j23, j25, asp, 8.0, d);
+    d = boneSeg(p, j25, j27, asp, 9.0, d);
+    d = boneSeg(p, j24, j26, asp, 10.0, d);
+    d = boneSeg(p, j26, j28, asp, 11.0, d);
+    return d;
+}
+// a point along one of three limb chains (0 wingspan, 1 head → spine → left leg, 2 right leg), t 0..1;
+// returns p-space position, sets gLimbN (unit normal) and gLimbLen (chain length)
+vec2 gLimbN;
+float gLimbLen;
+vec2 limbPt(float wk, float t, float asp) {
+    vec3 P0, P1, P2, P3, P4, P5;
+    vec3 j11 = bodyJoint(11.0), j12 = bodyJoint(12.0), j23 = bodyJoint(23.0), j24 = bodyJoint(24.0);
+    vec3 neck = vec3(0.5 * (j11.xy + j12.xy), 1.0), pelv = vec3(0.5 * (j23.xy + j24.xy), 1.0);
+    float n;
+    if (wk < 0.5)      { P0 = bodyJoint(15.0); P1 = bodyJoint(13.0); P2 = j11; P3 = j12; P4 = bodyJoint(14.0); P5 = bodyJoint(16.0); n = 5.0; }
+    else if (wk < 1.5) { P0 = bodyJoint(0.0); P1 = neck; P2 = pelv; P3 = j23; P4 = bodyJoint(25.0); P5 = bodyJoint(27.0); n = 5.0; }
+    else               { P0 = pelv; P1 = j24; P2 = bodyJoint(26.0); P3 = bodyJoint(28.0); P4 = P3; P5 = P3; n = 3.0; }
+    vec2 s = vec2(asp, 1.0);
+    vec2 a0 = (P0.xy - 0.5) * s, a1 = (P1.xy - 0.5) * s, a2 = (P2.xy - 0.5) * s, a3 = (P3.xy - 0.5) * s, a4 = (P4.xy - 0.5) * s, a5 = (P5.xy - 0.5) * s;
+    float l0 = length(a1 - a0), l1 = length(a2 - a1), l2 = length(a3 - a2), l3 = n > 3.5 ? length(a4 - a3) : 0.0, l4 = n > 4.5 ? length(a5 - a4) : 0.0;
+    float L = max(l0 + l1 + l2 + l3 + l4, 1e-4);
+    gLimbLen = L;
+    float d = clamp(t, 0.0, 1.0) * L;
+    vec2 A = a0, B = a1; float u = d / max(l0, 1e-5);
+    if (d > l0)                { A = a1; B = a2; u = (d - l0) / max(l1, 1e-5); }
+    if (d > l0 + l1)           { A = a2; B = a3; u = (d - l0 - l1) / max(l2, 1e-5); }
+    if (d > l0 + l1 + l2 && n > 3.5)      { A = a3; B = a4; u = (d - l0 - l1 - l2) / max(l3, 1e-5); }
+    if (d > l0 + l1 + l2 + l3 && n > 4.5) { A = a4; B = a5; u = (d - l0 - l1 - l2 - l3) / max(l4, 1e-5); }
+    vec2 tg = normalize(B - A + 1e-5);
+    gLimbN = vec2(-tg.y, tg.x);
+    return mix(A, B, clamp(u, 0.0, 1.0));
+}
+
+float gBody;     // 0..1 a tracked body is driving the writers
 
 // ── Show dynamics: rest → build → peak / drop ───────────────────────────
 float gRest, gBuild, gPeak, gDrop, gLift;
@@ -221,6 +311,12 @@ vec3 pen(float wk, float c) {
     float x0 = fr.x - 0.5 * totalW + (wk > 0.5 && wk < 1.5 ? 0.5 * W : 0.0) - (wk > 1.5 ? 0.04 * sc : 0.0);
     float y0 = fr.y + ((wk < 0.5 ? 0.115 : wk < 1.5 ? -0.13 : -0.02) + variety * 0.05 * (h11(seed * 7.0 + wk * 3.0) - 0.5)) * sc;
     q += vec2(x0, y0);
+    if (gBody > 0.5 && bodyUseSkel() > 0.5) {                          // the tag rides a limb
+        vec2 base = limbPt(wk, clamp(x / max(nl, 1.0), 0.0, 1.0), gAsp);
+        float lh = clamp(gLimbLen / max(nl, 1.0) * 0.85, 0.018, 0.09);
+        q = base + gLimbN * y * lh;
+        W = gLimbLen / max(nl, 1.0);
+    }
     // pen lifts between letters, and pools at landings / stroke starts
     float lifted = step(h11(i * 2.9 + seed * 53.0 + wk * 7.0), liftChance) * step(i, nl - 1.5);
     float prevLift = step(h11((i - 1.0) * 2.9 + seed * 53.0 + wk * 7.0), liftChance) * step(0.5, i);
@@ -237,6 +333,19 @@ vec3 pen(float wk, float c) {
 
 // ── spray clouds: scalloped puffy cumulus, outlined then filled in an inward spiral ──
 float gCloudW, gCloudRs;
+vec3 swirlPen(float ci, float c) {                                    // loops that fill the silhouette
+    vec3 j11 = bodyJoint(11.0), j12 = bodyJoint(12.0), j23 = bodyJoint(23.0), j24 = bodyJoint(24.0);
+    vec2 s = vec2(gAsp, 1.0);
+    vec2 neck = (0.5 * (j11.xy + j12.xy) - 0.5) * s, pelv = (0.5 * (j23.xy + j24.xy) - 0.5) * s;
+    float torso = max(length(neck - pelv), 0.05);
+    vec2 cen = ci < 0.5 ? mix(neck, pelv, 0.3) : ci < 1.5 ? mix(neck, pelv, 0.85)
+             : ci < 2.5 ? (bodyJoint(25.0).xy - 0.5) * s : (bodyJoint(26.0).xy - 0.5) * s;
+    float r = torso * (ci < 1.5 ? 0.42 : 0.3) * (0.8 + 0.4 * h11(ci * 3.1));
+    float a = c * (3.2 + ci * 0.7) * swirlAmt + ci * 2.1;
+    vec2 q = cen + r * vec2(cos(a), sin(a)) + 0.55 * r * vec2(cos(2.3 * a + ci), sin(1.7 * a + 2.0 * ci));
+    gPr = 0.5;
+    return vec3(q, step(0.05, swirlAmt));
+}
 vec3 cloudPen(float ci, float c) {
     float cyc = cycleId(c), ph = cyclePhase(c);
     float seed = h11(cyc * 1.37 + seedSel * 0.731 + 0.17);
@@ -278,7 +387,8 @@ float sdSeg(vec2 p, vec2 a, vec2 b) {
 // so the tag always lands on top of the clouds (max) and both colour separately.
 void spray(inout vec4 S, vec2 p, vec2 a, vec2 b, float w, float pool, float dripOn, vec2 fc, float burst, float soft) {
     float d = sdSeg(p, a, b);
-    if (soft > 0.5) {                                                // fat cap held off the wall: airbrushed cloud
+    float clip = soft > 1.5 ? bodySeg(fc / RENDERSIZE.xy) : 1.0;       // body swirls only paint inside you
+    if (soft > 0.5 && soft < 1.5) {                                  // fat cap held off the wall: airbrushed cloud
         if (d > w * 3.5) return;
         float g = exp(-d * d / (w * w) * 1.4);
         float mottle = 0.78 + 0.22 * h12(floor(fc / 2.0) + floor(TIME * 9.0) * 0.37);
@@ -289,10 +399,10 @@ void spray(inout vec4 S, vec2 p, vec2 a, vec2 b, float w, float pool, float drip
         return;
     }
     if (d > w * 7.0) return;
-    float core = smoothstep(w, w * 0.5, d);
-    float halo = exp(-pow(d / (w * 3.0), 2.0)) * 0.16 * min(overspray, 1.5);
+    float core = smoothstep(w, w * 0.5, d) * clip;
+    float halo = exp(-pow(d / (w * 3.0), 2.0)) * 0.16 * min(overspray, 1.5) * clip;
     float pr = 0.05 * overspray * (1.0 + 1.5 * highP() * audioReact + 2.0 * burst) * exp(-pow(d / (w * 4.5), 2.0));
-    float spk = step(h12(fc * 0.913 + fract(TIME * 7.31) * 413.0), pr) * (0.6 + 0.4 * h12(fc + 3.7));
+    float spk = step(h12(fc * 0.913 + fract(TIME * 7.31) * 413.0), pr) * (0.6 + 0.4 * h12(fc + 3.7)) * clip;
     S.r = max(S.r, max(core, halo + spk * 0.7));
     S.a = max(S.a, core * 0.9 + spk * 0.5);
     // pooled paint seeds a drip (tight, so drips stay thin)
@@ -338,9 +448,15 @@ vec4 paintPass() {
         float cycB = cycleId(cj);
         vec3 pb;
         float w, pool, dripOn;
-        if (isCloud) {
+        float flag = isCloud ? 1.0 : 0.0;
+        bool swirl = isCloud && gBody > 0.5 && bodyUseSil() > 0.5;
+        if (swirl) {
+            pb = swirlPen(gi, cj);
+            w = wBase * (0.8 + 0.5 * h11(gi * 5.1)) * (1.0 + 0.4 * bassP() * ar);
+            pool = 0.0; dripOn = 0.0; flag = 2.0;
+        } else if (isCloud) {
             pb = cloudPen(gi, cj);
-            pb.z *= step(gi + 0.5, cycClouds(cycB));
+            pb.z *= step(gi + 0.5, cycClouds(cycB)) * (1.0 - gBody);
             w = gCloudW * (1.0 + 0.25 * bassP() * ar);
             pool = gCloudRs; dripOn = 0.0;                         // clouds: pool slot carries spiral radius
         } else {
@@ -353,14 +469,28 @@ vec4 paintPass() {
             float letter = floor(clamp(gPr, 0.0, 1.0) * gNl);
             dripOn = step(h11(letter * 3.1 + cycB * 17.0 + gi * 5.0 + seedSel), dripAmt);
         }
-        if (rowB) return vec4(pool, dripOn, isCloud ? 1.0 : 0.0, mod(cycB, 2048.0));
+        if (rowB) return vec4(pool, dripOn, flag, mod(cycB, 2048.0));
         return vec4(pb.xy, pb.z, w);
     }
     float mode = float(cycleMode);
 
     // ── lifecycle on the wall ──
     S.a *= exp(-dt * 1.6);                                            // fresh paint cools
-    if (mode < 0.5) {
+    if (gBody > 0.01) {                                               // following a body: paint fades so the figure keeps up
+        float k = exp(-dt * mix(0.04, 1.4, bodyFade) * gBody);
+        S.r *= k; S.g *= k; S.b *= k;
+        // the silhouette is airbrushed around you
+        if (bodyUseSil() > 0.5 && outlineAmt > 0.0) {
+            vec2 e = 3.0 / R;
+            float gx = bodySeg(uv + vec2(e.x, 0.0)) - bodySeg(uv - vec2(e.x, 0.0));
+            float gy = bodySeg(uv + vec2(0.0, e.y)) - bodySeg(uv - vec2(0.0, e.y));
+            float edge = clamp(length(vec2(gx, gy)) * 1.4, 0.0, 1.0);
+            float mottle = 0.7 + 0.3 * h12(floor(fc / 2.0) + floor(TIME * 7.0));
+            float spk = step(h12(fc * 1.7 + fract(TIME * 3.1) * 50.0), 0.06 * edge);
+            S.r = max(S.r, min(0.48, edge * outlineAmt * 0.45 * mottle + 0.4 * spk) * gBody);
+            S.a = max(S.a, edge * 0.3 * audioBeatPulse * ar);
+        }
+    } else if (mode < 0.5) {
         float ph = cyclePhase(c);
         S.b *= exp(-dt * 0.9 / tagPeriod);                            // old buff patches weather away
         if (ph > 0.82 && ph < 0.95) {                                 // the city buff roller
@@ -479,7 +609,7 @@ vec4 finalPass() {
     vec3 brick = wallColour(p, suv, p, mortar);
     if (ws < 0.5) wall = brick;
     else if (ws < 2.5) {
-        vec3 cam = texture2D(wallTex, suv).rgb;
+        vec3 cam = texture2D(wallTex, bodyCamUV(suv)).rgb;
         if (ws < 1.5) { wall = cam; mortar = 0.0; }
         else wall = cam * (brick / max(lum(wallColor.rgb), 0.05)) * 0.55;   // camera lit by the brick relief
     } else { wall = backdrop(uv); mortar = 0.0; }
@@ -561,6 +691,7 @@ vec4 finalPass() {
 void main() {
     showDynamics();
     gAsp = RENDERSIZE.x / RENDERSIZE.y;
+    gBody = float(bodyMode) > 0.5 ? smoothstep(0.3, 0.7, bodyPresence()) : 0.0;
     if (PASSINDEX == 0) gl_FragColor = paintPass();
     else                gl_FragColor = finalPass();
 }
