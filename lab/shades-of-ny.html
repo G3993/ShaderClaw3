@@ -73,7 +73,15 @@ body.idle, body.idle #stage { cursor: none; }
 .parts svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .parts .sw { width: 22px; height: 22px; border-radius: 50%; }
 .padwrap { position: fixed; left: 50%; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 11; display: grid; justify-items: center; gap: 10px; }
-.padgrid { display: grid; grid-template-columns: 20px 168px 20px; grid-template-rows: 168px 20px; gap: 6px; align-items: center; justify-items: center; }
+.padgrid { display: grid; grid-template-columns: 22px 168px 22px; grid-template-rows: 16px 168px 16px; gap: 6px; align-items: center; justify-items: center; }
+.plab { font: 600 9px/1 var(--mono); letter-spacing: .18em; text-transform: uppercase; color: rgba(255,255,255,.7); white-space: nowrap; transition: color .2s; }
+.plab.side { writing-mode: vertical-rl; }
+#padXLo.side { transform: rotate(180deg); }
+.plab.hot { color: var(--accent); }
+.moment { display: grid; justify-items: center; gap: 4px; padding: 8px 16px; border-radius: 14px; background: rgba(10,10,12,.55); border: 1px solid rgba(255,255,255,.08); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.moment b { font: 700 16px/1 var(--display); letter-spacing: .01em; color: var(--fg); }
+.moment span { font: 500 9px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.moment em { font-style: normal; } .moment i { font-style: normal; color: var(--fg); font-variant-numeric: tabular-nums; }
 .xlab, .ylab { display: flex; align-items: center; gap: 8px; font: 600 9px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
 .ylab { writing-mode: vertical-rl; transform: rotate(180deg); }
 .xlab em, .ylab em { font-style: normal; color: rgba(255,255,255,.55); }
@@ -246,11 +254,13 @@ body.idle .dock:not(:hover):not(:focus-within), body.idle .pill:not(:hover) { op
 
 <div class="parts" id="parts" role="group" aria-label="Choose" hidden></div>
 <div class="padwrap" id="padWrap" hidden>
-  <div class="padgrid" aria-live="polite">
-    <span class="ylab"><em id="padYName">Y</em><b id="padYVal">00</b></span>
-    <canvas id="pad" tabindex="0" aria-label="Two-axis pad: drag to sweep the shader. Arrow keys nudge, 0 resets, double-tap resets."></canvas>
-    <span></span><span></span>
-    <span class="xlab"><em id="padXName">X</em><b id="padXVal">00</b></span>
+  <div class="moment" aria-live="polite"><b id="padMood">—</b><span><em id="padXName">X</em> <i id="padXVal">00</i> · <em id="padYName">Y</em> <i id="padYVal">00</i></span></div>
+  <div class="padgrid">
+    <span></span><span class="plab" id="padYHi">+</span><span></span>
+    <span class="plab side" id="padXLo">−</span>
+    <canvas id="pad" tabindex="0" aria-label="Concept pad: drag to move between ideas. Arrow keys nudge, 0 resets, double-tap resets."></canvas>
+    <span class="plab side" id="padXHi">+</span>
+    <span></span><span class="plab" id="padYLo">−</span><span></span>
   </div>
   <button type="button" id="padReset" hidden></button>
 </div>
@@ -1313,7 +1323,8 @@ const CHOOSERS = {
   cut:  { items: () => CUT_NAMES.map((l, v) => ({ v, label: "Cutout: " + l, icon: CUT_ICO[v] })), get: () => cutMode, set: (v) => setCut(v) },
   edge: { items: () => [10, 1, 2, 3, 4, 11, 12, 5, 6, 7, 8, 9, 0].map(v => ({ v, label: "Edge: " + EDGE_NAMES[v], icon: EDGE_ICO[v] })), get: () => edgeStyle, set: (v) => setEdge(v) },
   look: { items: () => LOOK_NAMES.map((l, v) => ({ v, label: "Look: " + l, icon: LOOK_ICO[v] })), get: () => lookMode, set: (v) => setLook(v) },
-  pad:  { items: () => [{ v: "reset", label: "Reset the pad", icon: '<path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4.5v4h4"/>' }], get: () => null, set: () => { setPadVal(0, 0); toast("Pad reset"); } },
+  pad:  { items: () => LENS_ORDER.map(L => ({ v: L, label: LENS_NAME[L] + " lens", icon: LENS_ICO[L] })).concat([{ v: "reset", label: "Reset this lens", icon: '<path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4.5v4h4"/>' }]),
+          get: () => lens, set: (v) => { if (v === "reset") { setPadVal(0, 0); toast("Lens reset"); } else setLens(v); } },
   pal:  { items: () => PAL_ORDER.map(v => ({ v, label: ({ 4: "NYC", 3: "B&W", 1: "Red", 2: "Blue", 0: "Color" })[v], sw: PAL_SW[v] })), get: () => cur ? Number(cur.vals.paletteMode) : 4, set: (v) => setPal(v) },
   more: { items: () => [
       { v: "controls", label: "Controls", icon: '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>', on: !$("panel").hidden },
@@ -1558,7 +1569,7 @@ function cutoutPass() {
   tx(3, BL2 ? BL2.tex : blankSeg, "blr"); tx(4, MP.cam.tex, "cam"); tx(5, EC1 ? EC1.tex : blankSeg, "ech");
   gl.uniform1f(L.amt, cutAmt); gl.uniform1f(L.bgMode, cutMode);
   gl.uniform1f(L.lookMode, lookMode); gl.uniform1f(L.lookAmt, lookAmt); gl.uniform1f(L.thresh, thresh);
-  gl.uniform1f(L.edgeAmt, edgeAmt); gl.uniform1f(L.gain, edgeGain);
+  gl.uniform1f(L.edgeAmt, edgeAmt); gl.uniform1f(L.gain, edgeGain * padEdge);
   gl.uniform3f(L.W0, EW[0], EW[1], EW[2]); gl.uniform3f(L.W1, EW[3], EW[4], EW[5]); gl.uniform3f(L.W2, EW[6], EW[7], EW[8]); gl.uniform2f(L.W3, EW[9], EW[10]);
   gl.uniform1f(L.T, simTime); gl.uniform1f(L.bass, A.bass); gl.uniform1f(L.beat, A.beat); gl.uniform1f(L.asp, cv.width / cv.height);
   gl.uniform2f(L.px, CAM.segA ? 1.5 / CAM.segA.w : 0, CAM.segA ? 1.5 / CAM.segA.h : 0);
@@ -1619,32 +1630,88 @@ const PADS = {
   ny_museum: { x: { name: "Turn", map: [["rotateSpeed", -0.8, 0.8], ["spill", 0.0, 1.0]] }, y: { name: "Gilt", map: [["goldAge", 0.0, 1.0], ["spotlights", 0.2, 1.0], ["paintMotion", 0.0, 2.0]] } },
   ny_times: { x: { name: "Press", map: [["pressSpeed", 0.0, 3.0], ["registration", 0.0, 1.0], ["zoomPunch", 0.0, 1.0]] }, y: { name: "Ink", map: [["halftoneSize", 2.2, 0.5], ["inkSpread", 0.0, 1.0], ["paperAge", 0.0, 1.0]] } },
 };
-const PADV = store.get("pad", {}), PS = { x: 0, y: 0, id: "" };
-function padOf() { return cur && PADS[cur.id]; }
-function padVal() { return (cur && PADV[cur.id]) || { x: 0, y: 0 }; }
+// Concept lenses: each axis is an idea, mapped onto whichever controls the current shader has.
+// [param, value at the − end, value at the + end]; "@edge" is the Lab's edge strength.
+const LENSES = {
+  mood: { x: { lo: "Calm", hi: "Chaos", map: [["writeSpeed", 0.3, 2.8], ["shake", 0.0, 0.9], ["swirlSpeed", 1.0, 6.0], ["pumpAmt", 0.1, 2.0], ["waveSpeed", 0.3, 2.6], ["liftAmt", 0.0, 1.5], ["tiltAmt", 0.0, 1.4], ["waviness", 0.2, 1.5],
+        ["trainSpeed", 0.2, 3.0], ["trainDensity", 0.4, 3.0], ["spinSpeed", 0.1, 2.0], ["rainAmt", 0.2, 1.0], ["flySpeed", 0.3, 2.2], ["scatter", 0.0, 1.0], ["volatility", 0.1, 2.0], ["tickerSpeed", 0.2, 3.0],
+        ["wind", 0.0, 2.0], ["dolly", 0.0, 2.0], ["glitch", 0.0, 1.0], ["sway", 0.0, 1.0], ["neonFlicker", 0.0, 0.9], ["turbulence", 0.3, 2.0], ["riseSpeed", 0.3, 2.5], ["tornado", 0.0, 1.0],
+        ["rotateSpeed", 0.0, 0.8], ["paintMotion", 0.0, 2.0], ["pressSpeed", 0.0, 3.0], ["registration", 0.0, 1.0], ["dynamics", 0.3, 1.0]] },
+          y: { lo: "Day", hi: "Night", map: [["timeOfDay", 0.0, 1.0], ["nightGlow", 0.0, 1.0], ["nightEdition", 0.0, 1.0], ["starsAmt", 0.0, 1.0], ["bloom", 0.3, 2.0], ["glow", 0.3, 2.0], ["litAmount", 0.25, 0.9],
+        ["headlights", 0.0, 1.0], ["lightBeams", 0.2, 1.0], ["spotlights", 1.0, 0.45], ["domeGlow", 0.2, 1.5], ["gridGlow", 0.2, 1.6], ["glowAmt", 0.25, 1.6], ["skylineAmt", 0.4, 1.0]] },
+          corners: ["Sunday Morning", "Rush Hour", "3 AM", "After Hours"] },
+  dream: { x: { lo: "Real", hi: "Dream", map: [["rainbowGlaze", 0.0, 1.0], ["rainbowLines", 0.0, 1.0], ["colorSteam", 0.0, 1.0], ["colorful", 0.15, 1.0], ["discoFloor", 0.0, 1.0], ["hueShift", 0.0, 0.6],
+        ["colourDrift", 0.0, 1.0], ["iridescence", 0.2, 1.0], ["neonFrames", 0.0, 1.0], ["confetti", 0.0, 1.0], ["blossomBurst", 0.0, 1.0], ["mist", 0.0, 1.0], ["featherFall", 0.0, 1.0], ["goldRain", 0.0, 1.0], ["formYou", 0.0, 0.9]] },
+           y: { lo: "Intimate", hi: "Epic", map: [["appleSize", 0.6, 1.7], ["birdScale", 0.7, 2.0], ["flockSize", 10, 48], ["zoom", 10.0, 3.0], ["zoomAmt", 0.9, 0.0], ["tilt", 0.9, 0.2], ["perspective", 0.0, 0.9],
+        ["floors", 60, 18], ["candleCount", 90, 24], ["bagCount", 3, 14], ["bagSize", 0.7, 2.0], ["frameCount", 4, 10], ["maximal", 0.5, 1.0], ["lanterns", 0.3, 1.0], ["dragon", 0.3, 1.0], ["steamAmt", 0.4, 2.0],
+        ["domeRows", 70, 16], ["tagSize", 0.6, 1.5], ["cloudSize", 0.5, 1.9], ["bigPrice", 0.0, 1.0]] },
+           corners: ["Snapshot", "Daydream", "Skyline", "Fever Dream"] },
+  era:   { x: { lo: "Vintage", hi: "Future", map: [["paperAge", 1.0, 0.0], ["goldAge", 1.0, 0.0], ["wear", 1.0, 0.0], ["nightEdition", 0.0, 1.0], ["neonFrames", 0.0, 1.0], ["discoFloor", 0.0, 1.0], ["screenPixels", 0.9, 0.0],
+        ["glitch", 0.0, 0.8], ["colorSteam", 0.0, 1.0], ["rainbowLines", 0.0, 1.0], ["gloss", 0.4, 1.0], ["inkSpread", 0.9, 0.1]] },
+           y: { lo: "Quiet", hi: "Loud", map: [["audioReact", 0.15, 1.0], ["dynamics", 0.3, 1.0], ["glowAmt", 0.2, 1.8], ["bloom", 0.3, 2.0], ["firecrackers", 0.0, 1.0], ["scatter", 0.0, 1.0], ["zoomPunch", 0.0, 1.0], ["@edge", 0.4, 2.6]] },
+           corners: ["Old Photograph", "Jazz Age", "Glass Tower", "Neon Future"] },
+};
+const LENS_ORDER = ["mood", "dream", "era", "params"];
+const LENS_ICO = {
+  mood: '<circle cx="9" cy="9" r="4"/><path d="M9 1.5v1.5M9 15v1.5M1.5 9H3M15 9h1.5"/><path d="M20 15.5A6 6 0 0 1 13.5 22a6.5 6.5 0 0 0 6.5-6.5z" fill="currentColor"/>',
+  dream: '<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="3"/><path d="M12 2v2M5 4l1.2 1.6M19 4l-1.2 1.6"/>',
+  era: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/>',
+  params: '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>',
+};
+const LENS_NAME = { mood: "Mood", dream: "Dream", era: "Era", params: "Shader" };
+let lens = LENSES[store.get("lens", "mood")] || store.get("lens", "mood") === "params" ? store.get("lens", "mood") : "mood";
+const PADV = store.get("pad2", {}), PS = { x: 0, y: 0, id: "" };
+let padEdge = 1;
+function lensDef(L) {
+  if (!cur) return null;
+  if (L === "params") { const P = PADS[cur.id]; return P ? { x: { lo: "−", hi: P.x.name, map: P.x.map }, y: { lo: "−", hi: P.y.name, map: P.y.map }, corners: null } : null; }
+  return LENSES[L];
+}
+function padOf() { return lensDef(lens); }
+function padKey(L) { return L + ":" + (cur ? cur.id : ""); }
+function padVal(L) { return PADV[padKey(L || lens)] || { x: 0, y: 0 }; }
 function applyPad(dt) {
-  const P = padOf(); if (!P) return;
-  const v = padVal();
-  if (PS.id !== cur.id) { PS.id = cur.id; SP.padx = { x: v.x, v: 0 }; SP.pady = { x: v.y, v: 0 }; }
-  PS.x = spring("padx", v.x, dt, 9); PS.y = spring("pady", v.y, dt, 9);
-  for (const [ax, val] of [["x", PS.x], ["y", PS.y]]) for (const [pn, lo, hi] of P[ax].map) {
-    const inp = (cur.meta.INPUTS || []).find(i => i.NAME === pn); if (!inp) continue;
-    const base = pn in MOD ? MOD[pn] : Number(cur.vals[pn]);
-    const t = val >= 0 ? base + (hi - base) * val : base + (lo - base) * -val;
-    MOD[pn] = clamp(t, inp.MIN != null ? inp.MIN : -1e9, inp.MAX != null ? inp.MAX : 1e9);
+  if (!cur) return;
+  padEdge = 1;
+  for (const L of LENS_ORDER) {
+    const P = lensDef(L), v = padVal(L);
+    const kx = "pad_" + L + "_x", ky = "pad_" + L + "_y";
+    if (PS.id !== cur.id) { SP[kx] = { x: v.x, v: 0 }; SP[ky] = { x: v.y, v: 0 }; }
+    const sx = spring(kx, v.x, dt, 9), sy = spring(ky, v.y, dt, 9);
+    if (L === lens) { PS.x = sx; PS.y = sy; }
+    if (!P || (Math.abs(sx) < 0.002 && Math.abs(sy) < 0.002)) continue;
+    for (const [ax, val] of [["x", sx], ["y", sy]]) for (const [pn, lo, hi] of P[ax].map) {
+      if (pn === "@edge") { padEdge *= (val >= 0 ? 1 + (hi - 1) * val : 1 + (lo - 1) * -val); continue; }
+      const inp = (cur.meta.INPUTS || []).find(i => i.NAME === pn); if (!inp) continue;
+      const base = pn in MOD ? MOD[pn] : Number(cur.vals[pn]);
+      const t = val >= 0 ? base + (hi - base) * val : base + (lo - base) * -val;
+      MOD[pn] = clamp(t, inp.MIN != null ? inp.MIN : -1e9, inp.MAX != null ? inp.MAX : 1e9);
+    }
   }
+  PS.id = cur.id;
 }
 const fmtPad = (x) => { const n = Math.round(x * 100); return (n > 0 ? "+" : n < 0 ? "−" : "") + String(Math.abs(n)).padStart(2, "0"); };
 function setPadVal(x, y, quiet) {
   if (!cur) return;
-  PADV[cur.id] = { x: clamp(x, -1, 1), y: clamp(y, -1, 1) }; store.set("pad", PADV);
+  PADV[padKey(lens)] = { x: clamp(x, -1, 1), y: clamp(y, -1, 1) }; store.set("pad2", PADV);
   padReadout();
 }
+function setLens(L) { lens = L; store.set("lens", L); padReadout(); if (chooserKind === "pad") refreshChooser(); toast(LENS_NAME[L] + " lens"); }
 function padReadout() {
   const P = padOf(), v = padVal();
-  $("padXName").textContent = P ? P.x.name : "—"; $("padYName").textContent = P ? P.y.name : "—";
-  $("padXVal").textContent = fmtPad(v.x); $("padYVal").textContent = fmtPad(v.y);
-  $("padLbl").textContent = fmtPad(v.x) + " · " + fmtPad(v.y);
+  if (!P) return;
+  $("padXLo").textContent = P.x.lo; $("padXHi").textContent = P.x.hi; $("padYLo").textContent = P.y.lo; $("padYHi").textContent = P.y.hi;
+  $("padXName").textContent = v.x < 0 ? P.x.lo : P.x.hi; $("padYName").textContent = v.y < 0 ? P.y.lo : P.y.hi;
+  $("padXVal").textContent = fmtPad(Math.abs(v.x)).replace("+", ""); $("padYVal").textContent = fmtPad(Math.abs(v.y)).replace("+", "");
+  $("padXLo").classList.toggle("hot", v.x < -0.2); $("padXHi").classList.toggle("hot", v.x > 0.2);
+  $("padYLo").classList.toggle("hot", v.y < -0.2); $("padYHi").classList.toggle("hot", v.y > 0.2);
+  // name the moment: the corner you're closest to, once you've moved off the centre
+  let mood = "Centre";
+  if (P.corners && Math.hypot(v.x, v.y) > 0.25) mood = P.corners[(v.y > 0 ? 2 : 0) + (v.x > 0 ? 1 : 0)];
+  else if (!P.corners) mood = LENS_NAME.params + " controls";
+  if (P.corners && Math.hypot(v.x, v.y) > 0.25 && Math.min(Math.abs(v.x), Math.abs(v.y)) < 0.15) mood = Math.abs(v.x) > Math.abs(v.y) ? (v.x > 0 ? P.x.hi : P.x.lo) : (v.y > 0 ? P.y.hi : P.y.lo);
+  $("padMood").textContent = mood;
+  $("padLbl").textContent = mood;
 }
 function drawPad() {
   const c = $("pad"); if ($("padWrap").hidden) return;
@@ -1664,7 +1731,7 @@ function drawPad() {
   x.globalAlpha = 0.28; x.strokeStyle = "#fff"; x.lineWidth = 1 * d;
   x.beginPath(); x.moveTo(m * 0.55, H / 2); x.lineTo(W - m * 0.55, H / 2); x.moveTo(W / 2, m * 0.55); x.lineTo(W / 2, H - m * 0.55); x.stroke();
   x.globalAlpha = 0.55; x.fillStyle = "#fff"; x.font = (600 * 0 + 9 * d) + "px ui-monospace, monospace"; x.textAlign = "center"; x.textBaseline = "middle";
-  x.fillText("−", m * 0.45, H / 2 - 7 * d); x.fillText("+", W - m * 0.45, H / 2 - 7 * d); x.fillText("+", W / 2 + 8 * d, m * 0.45); x.fillText("−", W / 2 + 8 * d, H - m * 0.45);
+
   x.globalAlpha = 1; x.shadowColor = "rgba(0,0,0,.45)"; x.shadowBlur = 8 * d;
   x.fillStyle = "#fff"; x.beginPath(); x.arc(px, py, 9.5 * d, 0, 6.283); x.fill(); x.shadowBlur = 0;
 }
