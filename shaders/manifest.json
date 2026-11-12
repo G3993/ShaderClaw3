@@ -4686,5 +4686,183 @@
     "id": 1603,
     "title": "Metro",
     "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Shades of New York",
+      "Interactive",
+      "Audio Reactive",
+      "Body Tracking"
+    ],
+    "description": "Big Apple — Shades of New York 005. The city's nickname as a hero object: one glossy red apple, raymarched in 3D with a stem cavity, five gentle lobes at the base, a stem and a leaf, red-to-gold streaks and lenticel freckles, wrap-around subsurface glow and a sharp specular that reflects a night skyline. It turns slowly over a skyline of lit towers while smaller apples rain down in depth layers. Audio: bass swells the apple and its glow, beats push the rain, the build speeds it up; on the peak and the drop, light rays fan out behind it and the drop spins it hard with a white flash. Body: Silhouette glazes your camera image like a candy apple (the rain passes behind you); Skeleton draws you as an apple-red neon line, and with your hand raised the apple rides your hand. Studio Palette, background and transparency as in the rest of the series.",
+    "file": "ny_big_apple.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1604,
+    "title": "Big Apple",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Shades of New York",
+      "Interactive",
+      "Audio Reactive",
+      "Body Tracking"
+    ],
+    "description": "Pigeons — Shades of New York 006. A flock of city pigeons wheeling over the rooftops: cornices and the wooden water towers on stilts against the sky. Every bird is drawn with a body, head, beak, tail and two wings that beat (the near wing in front, the far wing darker), dove-grey with dark wing bars, an orange eye and the green-to-purple iridescent neck; the odd brown bird mixes in. One leader path with every bird trailing it at its own lag and drift keeps them moving as a flock, banking and turning; the depth of each bird sets its size and haze. Sky moods: overcast, golden hour or night. Audio: beats and drops scatter the flock outward. Interactive: press (or pinch with your hand in ShaderClaw) to scare the birds away from that spot. Body: with Perch up, a few birds take turns landing on your head, shoulders, elbows and wrists, folding their wings and standing there until the drop scares them off; Silhouette shows you on the rooftop; Skeleton draws a dove-grey line along your bones that sheds feathers on the beat.",
+    "file": "ny_pigeons.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1605,
+    "title": "Pigeons",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Shades of New York",
+      "Interactive",
+      "Audio Reactive",
+      "Body Tracking"
+    ],
+    "description": "Night Building — Shades of New York 007. A tower at night, every window its own light. City Life is the real thing (warm lamps, cool offices, the blue flicker of a TV, blinds and the odd silhouette), and the windows turn into a light show: Equalizer (each column of windows is a frequency band), Wave, Scan (a line climbs the tower leaving a trail), Checker (flips every beat), Rain (light runs down each column) and Message (the windows are the pixels of a scrolling dot-matrix NEW YORK). Auto Show moves through all of them on the bar grid with a crossfade. The facade has dark granite piers, glass that catches the light, light spilling onto the piers, a set-back crown and a red aircraft beacon, a slight looking-up perspective, darker neighbours and a far skyline. Audio drives the equalizer and every beat brightens the lit windows; the drop flares them. Body: your silhouette lights up as pixels on the tower (your colours from the camera, in the palette's red and blue), and your skeleton is drawn in white windows.",
+    "file": "ny_night_building.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1606,
+    "title": "Night Building",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Shades of New York",
+      "Interactive",
+      "Audio Reactive",
+      "Body Tracking"
+    ],
+    "description": "Stock Exchange — Shades of New York 008. The trading floor as light: an LED ticker tape scrolls quotes across the top (four-letter symbols, prices, green ▲ and red ▼), a chart of candlesticks with a glowing moving-average line scrolls through the middle, and a board of quotes fills the bottom with digits that flip as rows trade, in front of a hall of columns. The market has a mood: Auto drifts between bull and bear, or hold it Bull or Bear, or Crash & Rally where the drop crashes the newest candles. LED dots or solid pixels. Audio: the peak speeds trading up, beats flash the last price, the drop crashes the chart and flashes red. Body: Silhouette fills you with live quotes (green where the camera sees light, red in shadow); with Skeleton your bones glow amber and your raised hand moves the newest candles: lift it and the market rallies, lower it and it sells off.",
+    "file": "ny_stock_exchange.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1607,
+    "title": "Stock Exchange",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Shades of New York",
+      "Interactive",
+      "Audio Reactive",
+      "Body Tracking"
+    ],
+    "description": "Central Park — Shades of New York 009. Across the Lake to the tree line and the slender towers of Central Park South, with Bow Bridge's shallow cast-iron arch and balustrade spanning the water and its lamps coming on at dusk. The seasons turn (or hold one): spring's fresh green and cherry blossom, deep summer green and fireflies at dusk, autumn's orange and gold, winter's bare boughs and snow, and the falling particles follow: petals, fireflies, leaves, snow, in three depth layers on the wind. Time of Day runs from afternoon to night with the city windows lighting. The Lake mirrors it all, broken by wind ripples and the bass; touch the water (press, or pinch in ShaderClaw) to send rings across it. Body: Silhouette turns you into foliage of the season, shaded by your camera image, with leaves shed from you; Skeleton grows branches along your bones, budding with the season's blossom, leaf or snow. Audio: bass gusts the wind and the water, beats brighten the scene, the build pushes toward dusk.",
+    "file": "ny_central_park.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1608,
+    "title": "Central Park",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Shades of New York",
+      "Interactive",
+      "Audio Reactive",
+      "Body Tracking"
+    ],
+    "description": "Times Square — Shades of New York 010. Hyper-real and maximalist: the camera dollies up a canyon of screens, every facade stacked with billboards of different sizes (some merging into giant boards), each running its own invented ad: brand wordmarks over sweeping gradients, a spinning can in fizz, amber news zippers crawling headlines, a fashion figure in colour blocks with NEW, liquid colour, flashing prices, starbursts and pixel waves. Ads change on the beat grid with a wipe, the LED subpixels show up close, the empty boards go dark, and the wet street reflects it all with yellow cabs streaking by. A jumbotron fills the end of the square. Audio: beats pump every screen, the drop blows them out white. Body: You're on the big screen: the jumbotron (and every board that rolls the live slot) shows your camera with your silhouette lit; Skeleton draws an LED outline of you across the whole square.",
+    "file": "ny_times_square.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1609,
+    "title": "Times Square",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Shades of New York",
+      "Interactive",
+      "Audio Reactive",
+      "Body Tracking",
+      "Type"
+    ],
+    "description": "Chinatown — Shades of New York 011. A narrow street at night between brick tenements with fire escapes zigzagging down the fronts and warm windows: strings of red paper lanterns hang across it at three depths, ribbed and glowing from inside, with gold caps, tassels and gold 福 on some, swaying in the wind and on the bass; vertical neon signs of characters (中 大 人 口 日 田 王 山 木 天 上 下 十 三 福 四, drawn as glass tubes with white-hot cores and coloured halos) and lucky $888 price signs flicker and spill their colour on the walls. Firecracker bursts go off on the drop and peak. Body: Silhouette fills you with red and gold characters (deeper red in your shadows); Skeleton turns you into a neon sign. Audio: beats pulse the neon, bass swings the lanterns, the drop sets off the firecrackers.",
+    "file": "ny_chinatown.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1610,
+    "title": "Chinatown",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Shades of New York",
+      "Interactive",
+      "Audio Reactive",
+      "Body Tracking"
+    ],
+    "description": "Steam — Shades of New York 012. The city breathing: an orange-and-white striped stack on a night street pours a plume of steam that rises, widens and drifts, while more steam crawls out of a manhole and along the wet asphalt. The steam is layered and domain-warped so it curls, back-lit by a sodium street lamp and side-lit when headlights sweep past; the wet street reflects the lamp and the lights. Audio: the bass pumps the vent and the drop bursts it. Body: Silhouette parts the steam around you (it hugs your outline); Skeleton pours steam off your head and shoulders; your hand (press, or pinch in ShaderClaw) puffs steam where it is.",
+    "file": "ny_steam.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1611,
+    "title": "Steam",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Shades of New York",
+      "Interactive",
+      "Audio Reactive",
+      "Body Tracking"
+    ],
+    "description": "Bags — Shades of New York 013. The city's carry-out bags drifting on the wind: white T-shirt bags printed with stacked red THANK YOU lines, a smiley and HAVE A NICE DAY, the yellow-and-blue variant, shiny black deli bags and brown kraft paper bags, each with the classic handle cut-out, rippling and crumpling as they float (wrinkle normals catch the light, the plastic is translucent at the edges) over soft street bokeh, at different depths. Body: Silhouette dresses you in the THANK YOU bag; Skeleton hangs a bag from each wrist so you carry them. Audio: bass lifts them, beats brighten, the drop flashes. Mix picks all bags or one kind.",
+    "file": "ny_bags.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1612,
+    "title": "Bags",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Shades of New York",
+      "Interactive",
+      "Audio Reactive",
+      "Body Tracking"
+    ],
+    "description": "Museum — Shades of New York 014. A gallery in the round: ten gilded frames float in 3D around you and turn slowly, each frame an ornate profile with beads and coves, gold leaf worn back to red bole on the high points and dark patina in the hollows, lit by spotlights. Each canvas holds a living generative painting in the manner of a movement (none copies a work): drip and splatter, soft colour fields, primaries on a black grid, pointillist river bank, lilies on a pond, a swirling night sky, a pop grid in four colourways, cubist facets, an oil portrait, a red sun over banded waves. The pop grid and the portrait are made of you when the camera is on. Canvases rotate styles over time, with weave and varnish. Body: Silhouette carves you as a marble statue in the room; Skeleton draws you in gilded wire. Audio: bass breathes the frames, beats lift the lights, the drop swings the room.",
+    "file": "ny_museum.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1613,
+    "title": "Museum",
+    "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Shades of New York",
+      "Interactive",
+      "Audio Reactive",
+      "Body Tracking",
+      "Type"
+    ],
+    "description": "Times — Shades of New York 015. The morning paper coming off the press: newsprint pages scroll up the screen, each with a masthead and rules, a dateline, a banner headline, six columns of justified copy with sub-heads and column rules, and a four-column photograph in halftone (your camera, or a skyline), with the fold across the middle, fibres, and paper that yellows at the edges. On the beat and the drop the cyan and magenta plates slip out of register so the ink splits into colour; the drop runs the press flat out. Body: Silhouette wraps the text around you and prints you into the page as halftone; Skeleton inks you in heavy brush strokes. Original layout and type (no newspaper's masthead).",
+    "file": "ny_times.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1614,
+    "title": "Times",
+    "type": "generator"
   }
 ]
