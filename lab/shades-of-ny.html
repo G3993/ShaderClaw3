@@ -102,23 +102,27 @@ body.idle, body.idle #stage { cursor: none; }
 .fade { -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%); }
 .opts { display: flex; gap: 0; overflow-x: auto; scroll-snap-type: x proximity; padding: 0 40px; scrollbar-width: none; justify-content: safe center; }
 .opts::-webkit-scrollbar, .modes::-webkit-scrollbar { display: none; }
-.opts button { all: unset; box-sizing: border-box; flex: 0 0 auto; height: 32px; padding: 0 12px; display: flex; align-items: center; gap: 6px; cursor: pointer; scroll-snap-align: center;
+.opts button { all: unset; box-sizing: border-box; flex: 0 0 40px; height: 32px; display: grid; place-items: center; position: relative; cursor: pointer; scroll-snap-align: center;
   font: 500 9.5px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.42); white-space: nowrap; transition: color .15s; }
 .opts button:hover { color: var(--fg); }
 .opts button[aria-pressed="true"] { color: var(--fg); }
-.opts button[aria-pressed="true"]::after { content: ""; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); margin-left: 2px; }
-.opts button svg, .opts .glyph { display: none; }
+.opts button[aria-pressed="true"] { color: var(--accent); }
+.opts button[aria-pressed="true"]::after { content: ""; position: absolute; bottom: 0; width: 3px; height: 3px; border-radius: 50%; background: var(--accent); }
+.opts svg { width: 17px; height: 17px; }
+.opts .sw { width: 14px !important; height: 14px !important; }
 .opts button:focus-visible, .mode:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.opts svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.opts svg { stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .opts .sw { width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 0 1px rgba(255,255,255,.25) inset; }
 .opts .glyph { font: 700 15px/1 var(--display); letter-spacing: 0; text-transform: none; }
-.modes { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 calc(50% - 36px); scrollbar-width: none; overscroll-behavior-x: contain; }
-.mode { all: unset; box-sizing: border-box; flex: 0 0 72px; height: 32px; display: grid; place-items: center; cursor: pointer; scroll-snap-align: center;
+.modes { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 calc(50% - 24px); scrollbar-width: none; overscroll-behavior-x: contain; }
+.mode { all: unset; box-sizing: border-box; flex: 0 0 48px; height: 32px; display: grid; place-items: center; cursor: pointer; scroll-snap-align: center;
   font: 600 9.5px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: rgba(255,255,255,.45); transition: color .2s; }
 .mode i { display: none !important; font: 500 8px/1 var(--mono); letter-spacing: .06em; font-style: normal; color: rgba(255,255,255,.3); display: flex; align-items: center; gap: 4px; white-space: nowrap; max-width: 76px; overflow: hidden; text-overflow: ellipsis; }
 .mode[aria-selected="true"] { color: var(--accent); }
 .mode[aria-selected="true"] i { color: var(--fg); }
-.mode .pal { width: 8px; height: 8px; }
+.mode .pal { width: 14px; height: 14px; }
+.mode svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.mode > i:first-of-type + i { display: none; }
 .padwrap { bottom: calc(var(--menu-h) + 20px + env(safe-area-inset-bottom, 0px)) !important; }
 body.idle .padwrap:not(:hover) { opacity: 0; pointer-events: none; }
 .padwrap { transition: opacity .4s; }
@@ -217,14 +221,14 @@ body.idle .dock:not(:hover):not(:focus-within), body.idle .pill:not(:hover) { op
   </div>
   <div class="opts fade" id="parts" aria-label="Options"></div>
   <div class="modes fade" id="modes" role="tablist" aria-label="Modes — slide left and right">
-    <button class="mode" role="tab" data-mode="shader" id="shaderBtn" type="button">Shader<i id="shaderLbl">—</i></button>
-    <button class="mode" role="tab" data-mode="part" id="partBtn" type="button">Body<i id="partLbl">Full</i><span id="partIco" hidden></span></button>
-    <button class="mode" role="tab" data-mode="cut" id="cutBtn" type="button">Cutout<i id="cutLbl">Off</i></button>
-    <button class="mode" role="tab" data-mode="edge" id="edgeBtn" type="button">Edge<i id="edgeLbl">Auto</i></button>
-    <button class="mode" role="tab" data-mode="look" id="lookBtn" type="button">Look<i id="lookLbl">Effect</i></button>
-    <button class="mode" role="tab" data-mode="pad" id="padBtn" type="button">Pad<i id="padLbl">00 · 00</i></button>
-    <button class="mode" role="tab" data-mode="pal" id="palBtn" type="button">Colour<i><span class="pal" id="palSw"></span><span id="palLbl">NYC</span></i></button>
-    <button class="mode" role="tab" data-mode="more" id="moreBtn" type="button">More<i>···</i></button>
+    <button class="mode" role="tab" data-mode="shader" id="shaderBtn" type="button" aria-label="Shader" title="Shader"><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg><i id="shaderLbl">—</i></button>
+    <button class="mode" role="tab" data-mode="part" id="partBtn" type="button" aria-label="Body" title="Body"><svg viewBox="0 0 24 24"><circle cx="12" cy="4.5" r="2"/><path d="M12 7v7M6 9.5l6-1 6 1M9 21l3-7 3 7"/></svg><i id="partLbl">Full</i><span id="partIco" hidden></span></button>
+    <button class="mode" role="tab" data-mode="cut" id="cutBtn" type="button" aria-label="Cutout" title="Cutout"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.1 15.9M14.5 14.5L20 20M8.1 8.1L12 12"/></svg><i id="cutLbl">Off</i></button>
+    <button class="mode" role="tab" data-mode="edge" id="edgeBtn" type="button" aria-label="Edge" title="Edge"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.7 1.8 1.8.7-1.8.7L19 20l-.7-1.8-1.8-.7 1.8-.7z"/></svg><i id="edgeLbl">Auto</i></button>
+    <button class="mode" role="tab" data-mode="look" id="lookBtn" type="button" aria-label="Look" title="Look"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor"/></svg><i id="lookLbl">Effect</i></button>
+    <button class="mode" role="tab" data-mode="pad" id="padBtn" type="button" aria-label="Pad" title="Pad"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="5"/><path d="M12 7v10M7 12h10"/><circle cx="15" cy="9" r="1.6" fill="currentColor"/></svg><i id="padLbl">00</i></button>
+    <button class="mode" role="tab" data-mode="pal" id="palBtn" type="button" aria-label="Colour" title="Colour"><span class="pal" id="palSw"></span><i id="palLbl">NYC</i></button>
+    <button class="mode" role="tab" data-mode="more" id="moreBtn" type="button" aria-label="More" title="More"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="19" cy="12" r="1.4" fill="currentColor"/></svg></button>
   </div>
   <div hidden><button id="ctlBtn" type="button"></button><button id="fsBtn" type="button"></button></div>
 </nav>
@@ -1215,7 +1219,8 @@ function setPart(k, quiet) {
   refreshChooser();
 }
 // one pop-up picker above the dock, filled by whichever key opened it
-let chooserKind = "";
+let chooserKind = "", modeToast = false;
+setTimeout(() => { modeToast = true; }, 1500);
 const MORE_ACT = {
   controls: () => setPanel($("panel").hidden),
   full: () => toggleFS(),
@@ -1224,13 +1229,46 @@ const MORE_ACT = {
   pip: () => { $("optPip").checked = !$("optPip").checked; applyPip(); refreshChooser(); },
   hide: () => setCollapsed(true),
 };
+const SH_ICO = {
+  ny_tag: '<rect x="7" y="9" width="10" height="12" rx="2"/><path d="M10 9V6h4v3M16 4.5h1.5M19 3v1.5M19.5 6.5H21"/>',
+  ny_platform_edge: '<circle cx="6" cy="6" r="1.6"/><circle cx="12" cy="6" r="1.6"/><circle cx="18" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="6" cy="18" r="1.6"/><circle cx="12" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/>',
+  ny_station_tiles: '<rect x="3" y="3" width="18" height="18" rx="1.5"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>',
+  ny_metro: '<circle cx="5" cy="18" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="12" r="1.6"/><path d="M7 18l10-12"/>',
+};
+const CUT_ICO = ['<circle cx="12" cy="12" r="8"/><path d="M6.5 6.5l11 11"/>',
+  '<rect x="3.5" y="3.5" width="17" height="17" rx="3" fill="currentColor"/><circle cx="12" cy="9" r="2.4" stroke="#000"/><path d="M7.5 20c.6-3.5 2.3-5.5 4.5-5.5s3.9 2 4.5 5.5" stroke="#000"/>',
+  '<path d="M3 8h3l2-3h8l2 3h3v11H3z"/><circle cx="12" cy="13" r="3.5"/>',
+  '<rect x="3.5" y="3.5" width="17" height="17" rx="3" stroke-dasharray="2.5 2.5"/><circle cx="12" cy="9" r="2.4"/><path d="M7.5 20c.6-3.5 2.3-5.5 4.5-5.5s3.9 2 4.5 5.5"/>'];
+const EDGE_ICO = {
+  0: '<circle cx="12" cy="12" r="8"/><path d="M6.5 6.5l11 11"/>',
+  1: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/>',
+  2: '<circle cx="12" cy="5" r="2"/><path d="M8.5 21v-6L6 11l3-3h6l3 3-2.5 4v6"/>',
+  3: '<path d="M4 20c4-2 4-6 8-8s4-6 8-8"/><path d="M8 15.5c-2-1-3-3-2-5.5M14 10c1-2 3-2.5 5-1.5"/>',
+  4: '<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.7 1.8 1.8.7-1.8.7L19 20l-.7-1.8-1.8-.7 1.8-.7z"/>',
+  5: '<path d="M7 20c-2-3 2-4 0-7s2-5 2-8M12 20c-2-3 2-4 0-7s2-5 2-8M17 20c-2-3 2-4 0-7s2-5 2-8"/>',
+  6: '<circle cx="9" cy="12" r="5"/><circle cx="13" cy="12" r="5" opacity=".55"/><circle cx="17" cy="12" r="5" opacity=".25"/>',
+  7: '<path d="M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11z"/>',
+  8: '<circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="5.5"/><circle cx="12" cy="12" r="9"/>',
+  9: '<rect x="4" y="4" width="5" height="5"/><rect x="15" y="4" width="5" height="5"/><rect x="9.5" y="9.5" width="5" height="5"/><rect x="4" y="15" width="5" height="5"/><rect x="15" y="15" width="5" height="5"/>',
+  10: '<path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3"/><path d="M18 3v4h-4M6 21v-4h4"/>',
+};
+const LOOK_ICO = [
+  '<circle cx="12" cy="12" r="8"/>',
+  '<circle cx="12" cy="12" r="8"/><path d="M4 12a8 8 0 0 1 16 0z" fill="currentColor"/>',
+  '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3" fill="currentColor"/>',
+  '<circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/>',
+  '<circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/><path d="M12 7.2a6 6 0 0 1 0 9.6 6 6 0 0 1 0-9.6z" fill="currentColor"/>',
+  '<rect x="4" y="4" width="11" height="11"/><rect x="9" y="9" width="11" height="11"/>',
+  '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 20V4h16z" fill="currentColor" opacity=".55"/>',
+  '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor"/>',
+];
 const CHOOSERS = {
-  shader: { items: () => ORDER.map(id => ({ v: id, label: SHADERS[id].name, glyph: SHADERS[id].sn, wide: true })), get: () => cur && cur.id, set: (v) => load(v) },
+  shader: { items: () => ORDER.map(id => ({ v: id, label: SHADERS[id].sn + " " + SHADERS[id].name, icon: SH_ICO[id] || '<path d="M12 3l9 5-9 5-9-5z"/>' })), get: () => cur && cur.id, set: (v) => { load(v); toast(SHADERS[v].sn + " · " + SHADERS[v].name); } },
   part: { items: () => PART_KEYS.map(k => ({ v: k, label: PART_CAP[k], icon: ICO[k] })), get: () => PART, set: (v) => setPart(v) },
-  cut:  { items: () => CUT_NAMES.map((l, v) => ({ v, label: l })), get: () => cutMode, set: (v) => setCut(v) },
-  edge: { items: () => [10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map(v => ({ v, label: EDGE_NAMES[v] })), get: () => edgeStyle, set: (v) => setEdge(v) },
-  look: { items: () => LOOK_NAMES.map((l, v) => ({ v, label: l })), get: () => lookMode, set: (v) => setLook(v) },
-  pad:  { items: () => [{ v: "reset", label: "Reset", glyph: "↺" }], get: () => null, set: () => setPadVal(0, 0) },
+  cut:  { items: () => CUT_NAMES.map((l, v) => ({ v, label: "Cutout: " + l, icon: CUT_ICO[v] })), get: () => cutMode, set: (v) => setCut(v) },
+  edge: { items: () => [10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map(v => ({ v, label: "Edge: " + EDGE_NAMES[v], icon: EDGE_ICO[v] })), get: () => edgeStyle, set: (v) => setEdge(v) },
+  look: { items: () => LOOK_NAMES.map((l, v) => ({ v, label: "Look: " + l, icon: LOOK_ICO[v] })), get: () => lookMode, set: (v) => setLook(v) },
+  pad:  { items: () => [{ v: "reset", label: "Reset the pad", icon: '<path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4.5v4h4"/>' }], get: () => null, set: () => { setPadVal(0, 0); toast("Pad reset"); } },
   pal:  { items: () => PAL_ORDER.map(v => ({ v, label: ({ 4: "NYC", 3: "B&W", 1: "Red", 2: "Blue", 0: "Color" })[v], sw: PAL_SW[v] })), get: () => cur ? Number(cur.vals.paletteMode) : 4, set: (v) => setPal(v) },
   more: { items: () => [
       { v: "controls", label: "Controls", icon: '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>', on: !$("panel").hidden },
@@ -1251,8 +1289,7 @@ function refreshChooser() {
     if (it.wide) b.classList.add("wide");
     if (it.icon) b.insertAdjacentHTML("beforeend", '<svg viewBox="0 0 24 24">' + it.icon + "</svg>");
     if (it.sw) { const d = document.createElement("span"); d.className = "sw"; d.style.background = it.sw; b.appendChild(d); }
-    if (it.glyph) { const g = document.createElement("span"); g.className = "glyph"; g.textContent = it.glyph; b.appendChild(g); }
-    const t = document.createElement("span"); t.textContent = it.label; b.appendChild(t);
+    b.setAttribute("aria-label", it.label); b.title = it.label;
     b.addEventListener("click", () => { C.set(it.v); wake(); });
     box.appendChild(b);
   }
@@ -1266,6 +1303,7 @@ function selectMode(kind, scroll) {
   if (scroll) centerIn($("modes"), document.querySelector('#modes .mode[data-mode="' + kind + '"]'), true);
   $("padWrap").hidden = kind !== "pad" || !$("panel").hidden;
   if (kind === "pad") padReadout();
+  if (changed && modeToast) toast(({ shader: "Shader", part: "Body", cut: "Cutout", edge: "Edge", look: "Look", pad: "Pad", pal: "Colour", more: "More" })[kind]);
   if (changed) { $("parts").scrollLeft = 0; refreshChooser(); centerIn($("parts"), $("parts").querySelector('[aria-pressed="true"]'), false); }
   wake();
 }
