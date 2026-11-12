@@ -189,6 +189,7 @@ body.idle .dock:not(:hover):not(:focus-within), body.idle .pill:not(:hover) { op
   <div class="row"><span>Camera preview</span><input type="checkbox" id="optPip" checked aria-label="Camera preview"></div>
   <div class="row"><span>Cutout (effect only inside you)</span><input type="checkbox" id="optCut" aria-label="Cutout"></div>
   <div class="row"><span>Outside you</span><div class="seg" id="cutBg"><button type="button" data-v="0" aria-pressed="true">Black</button><button type="button" data-v="1">Camera</button><button type="button" data-v="2">Faint</button></div></div>
+  <div class="row"><span>Edge</span><div class="seg" id="edgeSel"><button type="button" data-v="0">Off</button><button type="button" data-v="1">Glow</button><button type="button" data-v="2">Neon</button><button type="button" data-v="3">Vines</button><button type="button" data-v="4">Aura</button></div></div>
   <div class="row"><span>Skeleton on stage</span><input type="checkbox" id="optSkel" aria-label="Skeleton on stage"></div>
   <div class="row"><span>Quality</span><div class="seg" id="qual"><button type="button" data-v="auto" aria-pressed="true">Auto</button><button type="button" data-v="0.5">Draft</button><button type="button" data-v="0.75">Medium</button><button type="button" data-v="1">Full</button></div></div>
   <h3 id="pname">Shader</h3>
@@ -625,7 +626,7 @@ function xfBegin(nextId) {
   $("xfNow").textContent = name.replace("NY_", "").replace(/([a-z])([A-Z])/g, "$1 $2");
 }
 function present() {
-  const cutting = cutAmt > 0.002;
+  const cutting = cutAmt > 0.002 || edgeAmt > 0.002;
   gl.bindFramebuffer(gl.FRAMEBUFFER, cutting ? CUT.fbo : null); gl.viewport(0, 0, cv.width, cv.height);
   let P, p = 1;
   if (XF.active) { p = clamp((beatsNow() - XF.start) / XF.len, 0, 1); if (p >= 1) XF.active = false; }
@@ -1150,29 +1151,96 @@ setPart(PART, true);
 
 // ── cutout: background removal — the effect lives only inside your silhouette ──
 // Uses the same smoothed selfie mask the shaders get. With nobody in frame it eases back to the full effect.
-let cutP = null, cutAmt = 0, cutBg = Number(store.get("cutBg", 0));
+let cutP = null, blurP = null, cutAmt = 0, edgeAmt = 0, BL1 = null, BL2 = null;
+let cutBg = Number(store.get("cutBg", 0)), edgeStyle = Number(store.get("edge", 4));
+// a wide soft copy of the mask: the halo the edge effects live in (glow falloff, how far vines can reach)
+function updateBlur() {
+  if (!CAM.segA) return;
+  const w = Math.max(8, Math.round(CAM.segA.w / 3)), h = Math.max(8, Math.round(CAM.segA.h / 3));
+  if (!BL1 || BL1.w !== w || BL1.h !== h) { freeTex(BL1); freeTex(BL2); BL1 = makeTex(w, h, RGBA8); BL2 = makeTex(w, h, RGBA8); }
+  if (!blurP) blurP = simpleProgram("precision highp float; varying vec2 isf_FragNormCoord; uniform sampler2D src; uniform vec2 dir;\n" +
+    "void main(){ float s = 0.0, ws = 0.0; for (int i = -6; i <= 6; i++) { float fi = float(i); float w = exp(-fi * fi / 18.0); s += w * texture2D(src, isf_FragNormCoord + dir * fi).r; ws += w; } s /= ws; gl_FragColor = vec4(s, s, s, 1.0); }", ["src", "dir"]);
+  gl.useProgram(blurP.prog); bindQuad();
+  gl.activeTexture(gl.TEXTURE0); gl.uniform1i(blurP.loc.src, 0);
+  gl.bindTexture(gl.TEXTURE_2D, CAM.segA.tex); gl.uniform2f(blurP.loc.dir, 2.2 / w, 0);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, BL1.fbo); gl.viewport(0, 0, w, h); gl.drawArrays(gl.TRIANGLES, 0, 6);
+  gl.bindTexture(gl.TEXTURE_2D, BL1.tex); gl.uniform2f(blurP.loc.dir, 0, 2.2 / h);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, BL2.fbo); gl.drawArrays(gl.TRIANGLES, 0, 6);
+}
+const CUT_FS = `precision highp float; varying vec2 isf_FragNormCoord;
+uniform sampler2D fx; uniform sampler2D mask; uniform sampler2D blr; uniform sampler2D cam;
+uniform float amt; uniform float bgMode; uniform float edgeAmt; uniform float edgeMode; uniform float T; uniform float bass; uniform float beat; uniform float asp;
+uniform vec2 px; uniform vec2 bpx;
+float M(vec2 uv) { return texture2D(mask, vec2(1.0 - uv.x, 1.0 - uv.y)).r; }
+float B(vec2 uv) { return texture2D(blr, vec2(1.0 - uv.x, 1.0 - uv.y)).r; }
+float h21(vec2 p) { vec3 q = fract(vec3(p.xyx) * 0.1031); q += dot(q, q.yzx + 33.33); return fract((q.x + q.y) * q.z); }
+float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), f.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + 1.0), f.x), f.y); }
+float fbm(vec2 p) { float s = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { s += a * vn(p); p = p * 2.03 + vec2(1.7, 9.2); a *= 0.5; } return s; }
+vec3 hue(float h) { return clamp(abs(fract(h + vec3(0.0, 0.667, 0.333)) * 6.0 - 3.0) - 1.0, 0.0, 1.0); }
+float edgeOf(float m) { m = smoothstep(0.32, 0.68, m); return 4.0 * m * (1.0 - m); }
+void main() {
+  vec2 uv = isf_FragNormCoord;
+  float mr = 0.4 * M(uv) + 0.15 * (M(uv + vec2(px.x, 0.0)) + M(uv - vec2(px.x, 0.0)) + M(uv + vec2(0.0, px.y)) + M(uv - vec2(0.0, px.y)));
+  float m = smoothstep(0.32, 0.68, mr);
+  vec3 e = texture2D(fx, uv).rgb;
+  vec3 bg = bgMode < 0.5 ? vec3(0.0) : bgMode < 1.5 ? texture2D(cam, vec2(1.0 - uv.x, uv.y)).rgb * 0.8 : e * 0.1;
+  vec3 o = mix(e, mix(bg, e, m), amt);
+  if (edgeAmt > 0.001) {
+    float b = B(uv);
+    vec2 g = vec2(B(uv + vec2(bpx.x, 0.0)) - B(uv - vec2(bpx.x, 0.0)), B(uv + vec2(0.0, bpx.y)) - B(uv - vec2(0.0, bpx.y)));
+    vec2 n = g / (length(g) + 1e-4);                                     // points into the body
+    vec3 ec = texture2D(fx, clamp(uv + n * 0.035, 0.001, 0.999)).rgb;    // the shader's own colour just inside you
+    ec = ec / max(max(ec.r, max(ec.g, ec.b)), 0.3);
+    vec3 hc = mix(ec, hue(fract(T * 0.04 + b * 0.8)), 0.4);              // drifts through hues outward
+    float outside = 1.0 - m;
+    float halo = outside * clamp(b * 2.0, 0.0, 1.0);                     // 1 at the outline, 0 far away
+    float rimIn = m * (1.0 - smoothstep(0.55, 0.97, b));
+    // neon outline with an RGB fringe split along the edge normal
+    vec3 fringe = vec3(edgeOf(M(uv + n * px * 2.5)), edgeOf(mr), edgeOf(M(uv - n * px * 2.5)));
+    // vines: filaments that grow out of the outline, longer on the bass, swaying in time
+    vec2 p = vec2(uv.x * asp, uv.y);
+    float grow = clamp(0.45 + 0.2 * sin(T * 0.5) + 0.45 * bass, 0.0, 1.0);
+    float reach = smoothstep(1.0 - grow, 1.0 - grow + 0.25, halo);
+    float f1 = fbm(p * 6.0 + n * T * 0.18 + vec2(0.0, T * 0.04));
+    float f2 = fbm(p * 14.0 - n * T * 0.3 + 3.1);
+    float vines = (pow(1.0 - abs(f1 * 2.0 - 1.0), 14.0) + 0.6 * pow(1.0 - abs(f2 * 2.0 - 1.0), 22.0)) * outside * reach;
+    // sparks shed off the outline
+    vec2 cp = p * 46.0 + n * T * 1.5; vec2 cell = floor(cp); float rnd = h21(cell);
+    float spark = step(0.965, rnd) * smoothstep(0.32, 0.0, length(fract(cp) - 0.5)) * halo * (0.5 + 0.5 * sin(T * 4.0 + rnd * 60.0));
+    float glow = pow(halo, 1.8);
+    vec3 add;
+    if (edgeMode < 1.5)      add = ec * (glow * 1.4 + rimIn * 0.45);
+    else if (edgeMode < 2.5) add = fringe * mix(vec3(1.0), hc, 0.55) * 1.7 + ec * glow * 0.5;
+    else if (edgeMode < 3.5) add = hc * vines * 2.2 + ec * glow * 0.35;
+    else                     add = ec * glow * 0.9 + hc * vines * 1.8 + fringe * mix(vec3(1.0), hc, 0.6) * 0.9 + hc * spark * 2.5 + ec * rimIn * 0.25;
+    add *= (1.0 + 0.9 * beat) * edgeAmt;
+    o = 1.0 - (1.0 - o) * exp(-add * 1.3);                                // screen-like light blend: glows, never clips flat
+  }
+  gl_FragColor = vec4(o, 1.0);
+}`;
 function cutoutPass() {
-  if (!cutP) cutP = simpleProgram("precision highp float; varying vec2 isf_FragNormCoord; uniform sampler2D fx; uniform sampler2D mask; uniform sampler2D cam; uniform float amt; uniform float bgMode; uniform vec2 px;\n" +
-    "void main(){ vec2 uv = isf_FragNormCoord; vec2 mu = vec2(1.0 - uv.x, 1.0 - uv.y);\n" +
-    " float m = 0.4 * texture2D(mask, mu).r + 0.15 * (texture2D(mask, mu + vec2(px.x, 0.0)).r + texture2D(mask, mu - vec2(px.x, 0.0)).r + texture2D(mask, mu + vec2(0.0, px.y)).r + texture2D(mask, mu - vec2(0.0, px.y)).r);\n" +
-    " m = smoothstep(0.32, 0.68, m);\n" +
-    " vec3 e = texture2D(fx, uv).rgb;\n" +
-    " vec3 bg = bgMode < 0.5 ? vec3(0.0) : bgMode < 1.5 ? texture2D(cam, vec2(1.0 - uv.x, uv.y)).rgb * 0.8 : e * 0.1;\n" +
-    " float rim = m * (1.0 - m) * 4.0;\n" +
-    " vec3 o = mix(bg, e, m) + e * rim * 0.35;\n" +
-    " gl_FragColor = vec4(mix(e, o, amt), 1.0); }", ["fx", "mask", "cam", "amt", "bgMode", "px"]);
+  if (!cutP) cutP = simpleProgram(CUT_FS, ["fx", "mask", "blr", "cam", "amt", "bgMode", "edgeAmt", "edgeMode", "T", "bass", "beat", "asp", "px", "bpx"]);
+  if (edgeAmt > 0.002) updateBlur();
   gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, cv.width, cv.height);
   gl.useProgram(cutP.prog); bindQuad();
-  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, CUT.tex); gl.uniform1i(cutP.loc.fx, 0);
-  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, CAM.segA ? CAM.segA.tex : blankSeg); gl.uniform1i(cutP.loc.mask, 1);
-  gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, MP.cam.tex); gl.uniform1i(cutP.loc.cam, 2);
-  gl.uniform1f(cutP.loc.amt, cutAmt); gl.uniform1f(cutP.loc.bgMode, cutBg);
-  gl.uniform2f(cutP.loc.px, CAM.segA ? 1.5 / CAM.segA.w : 0, CAM.segA ? 1.5 / CAM.segA.h : 0);
+  const L = cutP.loc;
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, CUT.tex); gl.uniform1i(L.fx, 0);
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, CAM.segA ? CAM.segA.tex : blankSeg); gl.uniform1i(L.mask, 1);
+  gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, BL2 ? BL2.tex : blankSeg); gl.uniform1i(L.blr, 2);
+  gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, MP.cam.tex); gl.uniform1i(L.cam, 3);
+  gl.uniform1f(L.amt, cutAmt); gl.uniform1f(L.bgMode, cutBg);
+  gl.uniform1f(L.edgeAmt, edgeAmt); gl.uniform1f(L.edgeMode, edgeStyle);
+  gl.uniform1f(L.T, simTime); gl.uniform1f(L.bass, A.bass); gl.uniform1f(L.beat, A.beat); gl.uniform1f(L.asp, cv.width / cv.height);
+  gl.uniform2f(L.px, CAM.segA ? 1.5 / CAM.segA.w : 0, CAM.segA ? 1.5 / CAM.segA.h : 0);
+  gl.uniform2f(L.bpx, BL2 ? 2.0 / BL2.w : 0.01, BL2 ? 2.0 / BL2.h : 0.01);
   gl.drawArrays(gl.TRIANGLES, 0, 6);
 }
 function updateCut(dt) {
   const want = $("optCut").checked && camLive && !!CAM.segA && haveBody && MV.s.presence > 0.3;
   cutAmt += ((want ? 1 : 0) - cutAmt) * (1 - Math.exp(-dt * 5));
+  const ew = edgeStyle > 0 && camLive && !!CAM.segA && haveBody && MV.s.presence > 0.3;
+  edgeAmt += ((ew ? 1 : 0) - edgeAmt) * (1 - Math.exp(-dt * 4));
+  if (edgeAmt < 0.002 && !ew) edgeAmt = 0;
   if (cutAmt < 0.002 && !want) cutAmt = 0;
 }
 function setCut(on, quiet) {
@@ -1186,6 +1254,14 @@ document.querySelectorAll("#cutBg button").forEach(b => {
   b.addEventListener("click", () => { cutBg = Number(b.dataset.v); store.set("cutBg", cutBg); document.querySelectorAll("#cutBg button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); });
 });
 setCut(!!store.get("cut", false), true);
+const EDGE_NAME = ["Edge off", "Edge: glow", "Edge: neon", "Edge: vines", "Edge: aura"];
+function setEdge(v, quiet) {
+  edgeStyle = v; store.set("edge", v);
+  document.querySelectorAll("#edgeSel button").forEach(x => x.setAttribute("aria-pressed", String(Number(x.dataset.v) === v)));
+  if (!quiet) toast(EDGE_NAME[v]);
+}
+document.querySelectorAll("#edgeSel button").forEach(b => b.addEventListener("click", () => setEdge(Number(b.dataset.v))));
+setEdge(edgeStyle, true);
 
 // ── render loop ──────────────────────────────────────────────────────────
 function tick(now) {
@@ -1305,6 +1381,7 @@ window.addEventListener("keydown", e => {
   else if (k === "c" || k === "C") { if ($("dock").hidden) setCollapsed(false); setPanel($("panel").hidden); }
   else if (k === " ") { playing = !playing; toast(playing ? "Playing" : "Paused"); }
   else if (k === "x" || k === "X") setCut(!$("optCut").checked);
+  else if (k === "e" || k === "E") setEdge((edgeStyle + 1) % 5);
   else if (k === "b" || k === "B") setParts($("parts").hidden);
   else if (k >= "1" && k <= String(PART_KEYS.length)) setPart(PART_KEYS[Number(k) - 1]);
   else if (k === "Escape") { setPanel(false); setParts(false); }
@@ -1339,7 +1416,7 @@ for (const id of ORDER) startProgram(id);     // compile the rest in the backgro
 if (store.get("collapsed", false)) setCollapsed(true);
 wake();
 requestAnimationFrame(tick);
-toast("← → shader · ↑ ↓ colour · B body part · X cutout · C controls · H hide · F fullscreen");
+toast("← → shader · ↑ ↓ colour · B body part · X cutout · E edge · C controls · H hide · F fullscreen");
 startCamera();
 </script>
 </body>
