@@ -95,7 +95,15 @@ body.idle, body.idle #stage { cursor: none; }
 .dtop { display: flex; align-items: center; justify-content: space-between; padding: 0 8px 0 16px; min-width: 0; }
 .stat { all: unset; display: flex; align-items: center; gap: 8px; cursor: pointer; min-width: 0; }
 .stat .cap { height: auto; max-width: 96px; }
+.topbar { position: fixed; left: 50%; top: calc(14px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 10; transition: opacity .4s;
+  padding: 4px 6px; border-radius: 999px; background: rgba(8,8,10,.38); border: 1px solid rgba(255,255,255,.06); backdrop-filter: blur(16px) saturate(130%); -webkit-backdrop-filter: blur(16px) saturate(130%); max-width: calc(100vw - 24px); }
+body.idle .topbar:not(:hover) { opacity: 0; pointer-events: none; }
+.topbar .nb { width: 32px; height: 32px; }
+.topbar .nb svg { width: 15px; height: 15px; }
 .now { display: flex; align-items: center; gap: 0; min-width: 0; }
+.topbar .name { font: 700 15px/1 var(--display); max-width: 52vw; padding: 0 4px; }
+.topbar .cap { margin: 0 4px 0 2px; font-size: 8px; }
+@media (max-width: 560px) { .pip { top: calc(64px + env(safe-area-inset-top, 0px)); } }
 .now .name { font: 700 13px/1 var(--display); max-width: 160px; }
 .now .cap { margin-left: 8px; height: auto; max-width: none; }
 .nb.hide { width: 24px; height: 24px; }
@@ -213,10 +221,12 @@ body.idle .dock:not(:hover):not(:focus-within), body.idle .pill:not(:hover) { op
 
 <div class="pip" id="pip" hidden><video id="pipVid" muted playsinline></video><canvas id="pipSkel"></canvas></div>
 
+<header class="topbar" id="topbar" aria-label="Shader">
+  <span class="now"><button class="nb" id="prevSh" type="button" aria-label="Previous shader" title="Previous (←)"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><span class="name" id="nowName" aria-live="polite">—</span><i class="cap" id="nowNum"></i><button class="nb" id="nextSh" type="button" aria-label="Next shader" title="Next (→)"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button></span>
+</header>
 <nav class="dock" id="dock" aria-label="Menu">
   <div class="dtop">
     <button class="stat" id="camDotBtn" type="button" title="Camera · what your body is doing"><span class="camdot" id="camDot"></span><i class="cap move" id="moveChip">no body</i></button>
-    <span class="now"><button class="nb" id="prevSh" type="button" aria-label="Previous shader" title="Previous (←)"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><span class="name" id="nowName" aria-live="polite">—</span><i class="cap" id="nowNum"></i><button class="nb" id="nextSh" type="button" aria-label="Next shader" title="Next (→)"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button></span>
     <button class="nb hide" id="hideBtn" type="button" aria-label="Hide menu" title="Hide (H)"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
   </div>
   <div class="opts fade" id="parts" aria-label="Options"></div>
