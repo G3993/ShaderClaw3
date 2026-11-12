@@ -244,6 +244,7 @@ body.idle .dock:not(:hover):not(:focus-within), body.idle .pill:not(:hover) { op
     <button class="mode" role="tab" data-mode="cut" id="cutBtn" type="button" aria-label="Cutout" title="Cutout"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.1 15.9M14.5 14.5L20 20M8.1 8.1L12 12"/></svg><i id="cutLbl">Off</i></button>
     <button class="mode" role="tab" data-mode="edge" id="edgeBtn" type="button" aria-label="Edge" title="Edge"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.7 1.8 1.8.7-1.8.7L19 20l-.7-1.8-1.8-.7 1.8-.7z"/></svg><i id="edgeLbl">Auto</i></button>
     <button class="mode" role="tab" data-mode="look" id="lookBtn" type="button" aria-label="Look" title="Look"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor"/></svg><i id="lookLbl">Effect</i></button>
+    <button class="mode" role="tab" data-mode="depth" id="depthBtn" type="button" aria-label="3D" title="3D"><svg viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg><i id="depthLbl">Off</i></button>
     <button class="mode" role="tab" data-mode="pad" id="padBtn" type="button" aria-label="Pad" title="Pad"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="5"/><path d="M12 7v10M7 12h10"/><circle cx="15" cy="9" r="1.6" fill="currentColor"/></svg><i id="padLbl">00</i></button>
     <button class="mode" role="tab" data-mode="pal" id="palBtn" type="button" aria-label="Colour" title="Colour"><span class="pal" id="palSw"></span><i id="palLbl">NYC</i></button>
     <button class="mode" role="tab" data-mode="more" id="moreBtn" type="button" aria-label="More" title="More"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="19" cy="12" r="1.4" fill="currentColor"/></svg></button>
@@ -361,7 +362,7 @@ function isfHeader(meta, body) {
   }
   for (const p of meta.PASSES || []) if (p.TARGET) h += "uniform sampler2D " + p.TARGET + ";\n";
   for (const k in (meta.IMPORTED || {})) h += "uniform sampler2D " + k + ";\n";
-  for (const k of ["mpPoseLandmarks", "mpSegMask"]) if (new RegExp("\\b" + k + "\\b").test(body)) h += "uniform sampler2D " + k + ";\n";
+  for (const k of ["mpPoseLandmarks", "mpSegMask", "mpDepth"]) if (new RegExp("\\b" + k + "\\b").test(body)) h += "uniform sampler2D " + k + ";\n";
   return h;
 }
 
@@ -414,6 +415,7 @@ const MP = {
   pose: { tex: tiny(false), ready: true, w: 33, h: 1 },
   seg: { tex: tiny(true), ready: true, w: 0, h: 0 },
   cam: { tex: tiny(true, [0, 0, 0, 255]), ready: true, w: 0, h: 0, name: "camera" },
+  depth: { tex: tiny(true), ready: true, w: 0, h: 0 },
 };
 const userImages = {};
 
@@ -481,6 +483,7 @@ function load(id) {
   for (const inp of P.meta.INPUTS || []) if (inp.TYPE === "image") cur.imports[inp.NAME] = userImages[inp.NAME] || MP.cam;
   if (/\bmpPoseLandmarks\b/.test(P.body)) cur.imports.mpPoseLandmarks = MP.pose;
   if (/\bmpSegMask\b/.test(P.body)) cur.imports.mpSegMask = MP.seg;
+  if (/\bmpDepth\b/.test(P.body)) cur.imports.mpDepth = MP.depth;
   syncTargets(false); frame = 0; simTime = 0;
   paintMode = /\bmouseDown\b/.test(P.body);
   const S = SHADERS[id];
@@ -692,7 +695,7 @@ document.querySelectorAll("#qual button").forEach(b => {
 // ── transitions between shaders: snapshot the outgoing look, land on the next beat ──
 const XF_AUTO = { ny_tag: "NY_SprayOver", ny_platform_edge: "NY_SubwayDoors", ny_station_tiles: "NY_TileFlip", ny_metro: "NY_TrainPass", ny_big_apple: "NY_ZoomPunch", ny_pigeons: "NY_Iris", ny_night_building: "NY_ScanRoll", ny_stock_exchange: "NY_BeatSlices", ny_central_park: "NY_InkBleed", ny_times_square: "NY_Mosaic", ny_chinatown: "NY_Shatter", ny_steam: "NY_FlowMorph", ny_bags: "NY_LumaMorph", ny_museum: "NY_TileFlip", ny_times: "NY_SplitFlap" };
 const XF = { active: false, start: 0, len: Number(store.get("xfLen", 4)), name: "", snap: null, prog: {} };
-let OUT = null, CUT = null, blitProg = null;
+let OUT = null, CUT = null, DFX = null, blitProg = null;
 function beatsNow() { return audioClock * (audioMode === "demo" ? 122 : 120) / 60; }
 function xfCompile(name) {
   if (XF.prog[name]) return XF.prog[name];
@@ -704,7 +707,7 @@ function xfCompile(name) {
   return (XF.prog[name] = simpleProgram(fs, ["from", "to", "progress", "ratio", "audioRMS", "audioBass", "audioMid", "audioHigh", "audioBeat"]));
 }
 function getBlit() { return blitProg || (blitProg = simpleProgram("precision highp float;\nvarying vec2 isf_FragNormCoord;\nuniform sampler2D to;\nvoid main(){ gl_FragColor = vec4(texture2D(to, isf_FragNormCoord).rgb, 1.0); }", ["to"])); }
-function allocOut() { freeTex(OUT); freeTex(XF.snap); freeTex(CUT); OUT = makeTex(cv.width, cv.height); XF.snap = makeTex(cv.width, cv.height); CUT = makeTex(cv.width, cv.height, RGBA8); XF.active = false; }
+function allocOut() { freeTex(OUT); freeTex(XF.snap); freeTex(CUT); OUT = makeTex(cv.width, cv.height); XF.snap = makeTex(cv.width, cv.height); CUT = makeTex(cv.width, cv.height, RGBA8); freeTex(DFX); DFX = makeTex(cv.width, cv.height, RGBA8); XF.active = false; }
 // Auto: a different transition every switch — a shuffled deck of the whole library, never the same one twice in a row
 let xfBag = [], xfLast = "";
 function nextXf() {
@@ -726,7 +729,8 @@ function xfBegin(nextId) {
 }
 function present() {
   const cutting = cutAmt > 0.002 || edgeAmt > 0.002 || lookAmt > 0.002;
-  gl.bindFramebuffer(gl.FRAMEBUFFER, cutting ? CUT.fbo : null); gl.viewport(0, 0, cv.width, cv.height);
+  const depthing = depthAmt > 0.002 && !!CAM.depA && !!DFX;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, cutting ? CUT.fbo : depthing ? DFX.fbo : null); gl.viewport(0, 0, cv.width, cv.height);
   let P, p = 1;
   if (XF.active) { p = clamp((beatsNow() - XF.start) / XF.len, 0, 1); if (p >= 1) XF.active = false; }
   if (XF.active) { try { P = xfCompile(XF.name); } catch (e) { XF.active = false; P = getBlit(); } } else P = getBlit();
@@ -744,7 +748,8 @@ function present() {
   if (L.audioHigh) gl.uniform1f(L.audioHigh, A.high);
   if (L.audioBeat) gl.uniform1f(L.audioBeat, A.beat);
   gl.drawArrays(gl.TRIANGLES, 0, 6);
-  if (cutting) cutoutPass();
+  if (cutting) cutoutPass(depthing);
+  if (depthing) depthPass();
 }
 for (const n of Object.keys(TRANS).sort()) { const o = document.createElement("option"); o.value = n; o.textContent = n.replace("NY_", "").replace(/([a-z])([A-Z])/g, "$1 $2"); $("xfSel").appendChild(o); }
 document.querySelectorAll("#xfLen button").forEach(b => {
@@ -753,7 +758,7 @@ document.querySelectorAll("#xfLen button").forEach(b => {
 });
 
 // ── camera: one GPU pass crops the picture to the stage aspect; the mask gets the same crop and is smoothed over time ──
-const CAM = { stream: null, video: null, raw: null, out: null, segRaw: null, segA: null, segB: null, segW: 0, segH: 0, segFresh: false, crop: [0, 0, 1, 1], dirty: true, newFrame: false };
+const CAM = { stream: null, video: null, raw: null, out: null, segRaw: null, segA: null, segB: null, segW: 0, segH: 0, segFresh: false, depRaw: null, depA: null, depB: null, depW: 0, depH: 0, crop: [0, 0, 1, 1], dirty: true, newFrame: false };
 let camLive = false, prepP = null;
 function computeCrop() {
   const v = CAM.video, va = v.videoWidth / v.videoHeight, sa = cv.width / cv.height;
@@ -795,6 +800,14 @@ function updateCamera(dt) {
     prepPass(CAM.segB, CAM.segRaw, CAM.segA.tex, 1, k);
     const t = CAM.segA; CAM.segA = CAM.segB; CAM.segB = t;
     MP.seg.tex = partUsesMask() ? CAM.segA.tex : blankSeg; MP.seg.w = sw; MP.seg.h = sh;
+  }
+  if (CAM.depRaw && CAM.depW) {
+    const dh = Math.round(Math.min(CAM.depH * CAM.crop[3], 512)), dw = Math.max(2, Math.round(dh * cv.width / cv.height));
+    if (!CAM.depA || CAM.depA.w !== dw || CAM.depA.h !== dh) { freeTex(CAM.depA); freeTex(CAM.depB); CAM.depA = makeTex(dw, dh, RGBA8); CAM.depB = makeTex(dw, dh, RGBA8); prepPass(CAM.depA, CAM.depRaw, null, 1, 1); }
+    const k = 1 - Math.exp(-dt * 11);               // depth arrives slower than the mask: a little more smoothing
+    prepPass(CAM.depB, CAM.depRaw, CAM.depA.tex, 1, k);
+    const t = CAM.depA; CAM.depA = CAM.depB; CAM.depB = t;
+    MP.depth.tex = CAM.depA.tex; MP.depth.w = dw; MP.depth.h = dh;
   }
   uploadPose();
 }
@@ -908,6 +921,7 @@ function stopCamera() {
   camLive = false; CAM.stream = null; haveBody = false; for (const L of LM) L.v = 0; for (const D of DL) { D.v = 0; D.on = false; }
   MP.cam.tex = tiny(true, [0, 0, 0, 255]); MP.cam.w = MP.cam.h = 0;
   MP.seg.tex = tiny(true); CAM.segRaw = null; CAM.segW = 0;
+  MP.depth.tex = tiny(true); CAM.depRaw = null; CAM.depW = 0;
   uploadPose(); applyPip(); camStatus("", "camera off"); $("camBtn").textContent = "Turn on";
 }
 // only process each new camera frame once (no duplicate work, no stutter); driven from the render loop
@@ -957,7 +971,100 @@ function track() {
       });
     }
     trackErr = 0;
+    depthRequest();
   } catch (e) { if (++trackErr > 30) { camStatus("bad", "tracking stopped: " + (e && e.message || e)); poser = null; } }
+}
+
+
+// ── depth: Depth Anything V2 (small) running in a worker, on the GPU through WebGPU when there is one.
+// Each camera frame goes in shrunk to a multiple of 14 px; a depth map comes back normalised 0..1 (1 = nearest),
+// gets the same crop as the mask and is smoothed over time on the GPU. Shaders read it as mpDepth (r).
+const DEPTH_MODEL = "onnx-community/depth-anything-v2-small";
+const DEPTH_LIB = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.1/+esm";
+const DEP = { worker: null, state: "off", busy: false, device: "", ms: 0, size: 2, sent: 0, got: 0, pct: 0 };
+const DEP_SIZES = [[252, 140], [308, 168], [392, 224], [518, 294]];   // width × height, all multiples of 14 (16:9-ish)
+const DEPTH_WORKER = `
+let lib = null, model = null, busy = false;
+const MEAN = [0.485, 0.456, 0.406], STD = [0.229, 0.224, 0.225];
+async function load(url, id) {
+  try { lib = await import(url); } catch (e) { postMessage({ type: "error", message: "library: " + (e && e.message || e) }); return; }
+  lib.env.allowLocalModels = false;
+  let gpu = false;
+  try { gpu = !!(navigator.gpu && await navigator.gpu.requestAdapter()); } catch (e) {}
+  const tries = gpu ? [["webgpu", "fp16"], ["webgpu", "fp32"], ["wasm", "q8"]] : [["wasm", "q8"], ["wasm", "fp32"]];
+  let last = null;
+  for (const [device, dtype] of tries) {
+    try {
+      model = await lib.AutoModel.from_pretrained(id, { device, dtype, progress_callback: (p) => { if (p.status === "progress" && p.total) postMessage({ type: "progress", pct: Math.round(p.loaded / p.total * 100) }); } });
+      postMessage({ type: "ready", device: device + " · " + dtype }); return;
+    } catch (e) { last = e; }
+  }
+  postMessage({ type: "error", message: String(last && last.message || last) });
+}
+const cvs = { c: null, x: null };
+async function run(bitmap, w, h) {
+  if (!cvs.c || cvs.c.width !== w || cvs.c.height !== h) { cvs.c = new OffscreenCanvas(w, h); cvs.x = cvs.c.getContext("2d", { willReadFrequently: true }); }
+  cvs.x.drawImage(bitmap, 0, 0, w, h); bitmap.close();
+  const px = cvs.x.getImageData(0, 0, w, h).data, n = w * h, x = new Float32Array(3 * n);
+  for (let i = 0; i < n; i++) { for (let c = 0; c < 3; c++) x[c * n + i] = (px[i * 4 + c] / 255 - MEAN[c]) / STD[c]; }
+  const t0 = performance.now();
+  const out = await model({ pixel_values: new lib.Tensor("float32", x, [1, 3, h, w]) });
+  const pd = out.predicted_depth || Object.values(out)[0];
+  const dims = pd.dims, dh = dims[dims.length - 2], dw = dims[dims.length - 1];
+  const src = pd.data instanceof Float32Array ? pd.data : Float32Array.from(pd.data);
+  // normalise with robust percentiles so one stray pixel can't flatten the range
+  const smp = []; for (let i = 0; i < src.length; i += 13) smp.push(src[i]); smp.sort((a, b) => a - b);
+  const lo = smp[Math.floor(smp.length * 0.02)], hi = smp[Math.floor(smp.length * 0.995)], k = 1 / Math.max(1e-6, hi - lo);
+  const d = new Float32Array(src.length); for (let i = 0; i < src.length; i++) d[i] = Math.min(1, Math.max(0, (src[i] - lo) * k));
+  postMessage({ type: "depth", data: d, w: dw, h: dh, ms: performance.now() - t0 }, [d.buffer]);
+}
+onmessage = async (e) => {
+  const m = e.data;
+  if (m.type === "load") return load(m.url, m.id);
+  if (m.type === "frame") {
+    if (!model || busy) { m.bitmap.close(); postMessage({ type: "skip" }); return; }
+    busy = true;
+    try { await run(m.bitmap, m.w, m.h); } catch (err) { postMessage({ type: "fail", message: String(err && err.message || err) }); }
+    busy = false;
+  }
+};`;
+function depthWanted() { return camLive && (depthFx > 0 || !!(cur && cur.imports && cur.imports.mpDepth)); }
+function startDepth() {
+  if (DEP.worker || DEP.state === "error") return;
+  try { DEP.worker = new Worker(URL.createObjectURL(new Blob([DEPTH_WORKER], { type: "text/javascript" })), { type: "module" }); }
+  catch (e) { DEP.state = "error"; toast("3D depth isn't supported in this browser"); return; }
+  DEP.state = "loading"; DEP.pct = 0; toast("3D: loading the depth model…");
+  DEP.worker.onmessage = (e) => {
+    const m = e.data;
+    if (m.type === "progress") { DEP.pct = m.pct; if (depthFx > 0) $("depthLbl").textContent = m.pct + "%"; }
+    else if (m.type === "ready") { DEP.state = "ready"; DEP.device = m.device; $("depthLbl").textContent = DEPTH_NAMES[depthFx]; toast("3D depth on · " + m.device); }
+    else if (m.type === "error") { DEP.state = "error"; DEP.busy = false; $("depthLbl").textContent = "—"; toast("3D depth didn't load: " + m.message); }
+    else if (m.type === "skip" || m.type === "fail") DEP.busy = false;
+    else if (m.type === "depth") {
+      DEP.busy = false; DEP.got++;
+      DEP.ms = DEP.ms ? DEP.ms * 0.8 + m.ms * 0.2 : m.ms;
+      // keep it near real time: shrink the input when inference is slow, grow it when there is headroom
+      if (DEP.got % 20 === 0) { if (DEP.ms > 75 && DEP.size > 0) DEP.size--; else if (DEP.ms < 28 && DEP.size < DEP_SIZES.length - 1) DEP.size++; }
+      if (!CAM.depRaw) CAM.depRaw = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, CAM.depRaw);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      if (GL2) { gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4); gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, m.w, m.h, 0, gl.RED, gl.FLOAT, m.data); texParams(FLOAT_LINEAR); }
+      else { const d = new Uint8Array(m.w * m.h); for (let i = 0; i < d.length; i++) d[i] = m.data[i] * 255; gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1); gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, m.w, m.h, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, d); gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4); texParams(true); }
+      CAM.depW = m.w; CAM.depH = m.h;
+    }
+  };
+  DEP.worker.postMessage({ type: "load", url: DEPTH_LIB, id: DEPTH_MODEL });
+}
+function depthRequest() {
+  if (!depthWanted()) return;
+  if (!DEP.worker) { startDepth(); return; }
+  if (DEP.state !== "ready" || DEP.busy || !CAM.video || CAM.video.readyState < 2) return;
+  const [w0, h0] = DEP_SIZES[DEP.size], va = CAM.video.videoWidth / CAM.video.videoHeight;
+  const h = h0, w = Math.max(14, Math.round(h * va / 14) * 14);     // keep the camera's aspect, in 14 px steps
+  DEP.busy = true; DEP.sent++;
+  createImageBitmap(CAM.video, { resizeWidth: w, resizeHeight: h, resizeQuality: "low" })
+    .then(b => DEP.worker.postMessage({ type: "frame", bitmap: b, w, h }, [b]))
+    .catch(() => { DEP.busy = false; });
 }
 
 // ── moves: read the body, name what it's doing, and steer each shader with it ──
@@ -1322,6 +1429,7 @@ const CHOOSERS = {
   part: { items: () => PART_KEYS.map(k => ({ v: k, label: PART_CAP[k], icon: ICO[k] })), get: () => PART, set: (v) => setPart(v) },
   cut:  { items: () => CUT_NAMES.map((l, v) => ({ v, label: "Cutout: " + l, icon: CUT_ICO[v] })), get: () => cutMode, set: (v) => setCut(v) },
   edge: { items: () => [10, 1, 2, 3, 4, 11, 12, 5, 6, 7, 8, 9, 0].map(v => ({ v, label: "Edge: " + EDGE_NAMES[v], icon: EDGE_ICO[v] })), get: () => edgeStyle, set: (v) => setEdge(v) },
+  depth: { items: () => DEPTH_NAMES.map((l, v) => ({ v, label: "3D: " + l, icon: DEPTH_ICO[v] })), get: () => depthFx, set: (v) => setDepthFx(v) },
   look: { items: () => LOOK_NAMES.map((l, v) => ({ v, label: "Look: " + l, icon: LOOK_ICO[v] })), get: () => lookMode, set: (v) => setLook(v) },
   pad:  { items: () => LENS_ORDER.map(L => ({ v: L, label: LENS_NAME[L] + " lens", icon: LENS_ICO[L] })).concat([{ v: "reset", label: "Reset this lens", icon: '<path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4.5v4h4"/>' }]),
           get: () => lens, set: (v) => { if (v === "reset") { setPadVal(0, 0); toast("Lens reset"); } else setLens(v); } },
@@ -1335,7 +1443,7 @@ const CHOOSERS = {
       { v: "hide", label: "Hide", icon: '<path d="M6 9l6 6 6-6"/>' },
     ], get: () => null, set: (v) => MORE_ACT[v]() },
 };
-const MODE_ORDER = ["shader", "part", "cut", "edge", "look", "pad", "pal", "more"];
+const MODE_ORDER = ["shader", "part", "cut", "edge", "look", "depth", "pad", "pal", "more"];
 function refreshChooser() {
   if (!chooserKind) return;
   const C = CHOOSERS[chooserKind], box = $("parts"), keep = box.scrollLeft; box.textContent = "";
@@ -1359,7 +1467,7 @@ function selectMode(kind, scroll) {
   if (scroll) centerIn($("modes"), document.querySelector('#modes .mode[data-mode="' + kind + '"]'), true);
   $("padWrap").hidden = kind !== "pad" || !$("panel").hidden;
   if (kind === "pad") padReadout();
-  if (changed && modeToast) toast(({ shader: "Shader", part: "Body", cut: "Cutout", edge: "Edge", look: "Look", pad: "Pad", pal: "Colour", more: "More" })[kind]);
+  if (changed && modeToast) toast(({ shader: "Shader", part: "Body", cut: "Cutout", edge: "Edge", look: "Look", depth: "3D", pad: "Pad", pal: "Colour", more: "More" })[kind]);
   if (changed) { $("parts").scrollLeft = 0; refreshChooser(); centerIn($("parts"), $("parts").querySelector('[aria-pressed="true"]'), false); }
   wake();
 }
@@ -1559,10 +1667,200 @@ void main() {
   }
   gl_FragColor = vec4(o, 1.0);
 }`;
-function cutoutPass() {
+
+// ── 3D: effects built on the depth of your body (after the shader, the cutout and the edge effects) ──
+let depthFx = Number(store.get("depthFx", 0)), depthAmt = 0, depP = null;
+const DEPTH_NAMES = ["Off", "Worms", "Relief", "Contours", "Slices", "Wiggle", "Depth"];
+const DEPTH_ICO = [
+  '<circle cx="12" cy="12" r="8"/><path d="M6.5 6.5l11 11"/>',
+  '<path d="M4 8c3-3 5 3 8 0s5 3 8 0M4 13c3-3 5 3 8 0s5 3 8 0M4 18c3-3 5 3 8 0s5 3 8 0"/>',
+  '<path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z"/><path d="M8 8a5 5 0 0 1 6-1" />',
+  '<path d="M12 4c5 0 8 3.5 8 8s-3 8-8 8-8-3.5-8-8 3-8 8-8z"/><path d="M12 8c2.5 0 4 1.8 4 4s-1.5 4-4 4-4-1.8-4-4 1.5-4 4-4z"/>',
+  '<path d="M4 7l8-3 8 3-8 3z"/><path d="M4 12l8 3 8-3" opacity=".6"/><path d="M4 17l8 3 8-3" opacity=".35"/>',
+  '<rect x="3" y="6" width="8" height="12" rx="1"/><rect x="13" y="6" width="8" height="12" rx="1"/><path d="M7 10v4M17 10v4"/>',
+  '<circle cx="12" cy="8" r="3.2" fill="currentColor" opacity=".6"/><path d="M5 21c.8-5 3.6-7.5 7-7.5s6.2 2.5 7 7.5" fill="currentColor" opacity=".35"/>',
+];
+const DEPTH_FS = `precision highp float; varying vec2 isf_FragNormCoord;
+uniform sampler2D fx; uniform sampler2D cam; uniform sampler2D mask; uniform sampler2D dep;
+uniform float mode; uniform float amt; uniform float T; uniform float bass; uniform float beat; uniform float energy; uniform float asp;
+uniform vec2 px; uniform vec2 ctr;
+vec2 mu(vec2 uv) { return vec2(1.0 - uv.x, 1.0 - uv.y); }
+float M(vec2 uv) { return smoothstep(0.3, 0.7, texture2D(mask, mu(uv)).r); }
+float Dr(vec2 uv) { return texture2D(dep, mu(uv)).r; }
+float D(vec2 uv) { return Dr(uv) * M(uv); }
+vec3 C(vec2 uv) { return texture2D(cam, vec2(1.0 - uv.x, uv.y)).rgb; }
+vec3 F(vec2 uv) { return texture2D(fx, clamp(uv, 0.001, 0.999)).rgb; }
+float h11(float x) { return fract(sin(x * 127.1 + 3.7) * 43758.5453); }
+float h21(vec2 p) { vec3 q = fract(vec3(p.xyx) * 0.1031); q += dot(q, q.yzx + 33.33); return fract((q.x + q.y) * q.z); }
+float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), f.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + 1.0), f.x), f.y); }
+float fbm(vec2 p) { float s = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { s += a * vn(p); p = p * 2.03 + vec2(1.7, 9.2); a *= 0.5; } return s; }
+float lum(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+vec3 hue(float h) { return clamp(abs(fract(h + vec3(0.0, 0.667, 0.333)) * 6.0 - 3.0) - 1.0, 0.0, 1.0); }
+// surface normal of your body from the depth map (the mask's edge rounds it off)
+vec3 nrm(vec2 uv, float k) {
+  float dx = D(uv + vec2(px.x, 0.0)) - D(uv - vec2(px.x, 0.0));
+  float dy = D(uv + vec2(0.0, px.y)) - D(uv - vec2(0.0, px.y));
+  return normalize(vec3(-dx * k, -dy * k, 1.0));
+}
+// glossy wet tube shading: crimson, translucent at the edges
+vec3 tubeShade(vec3 n, float r, float d, float tint) {
+  vec3 L = normalize(vec3(-0.45, 0.65, 0.62));
+  float df = max(dot(n, L), 0.0);
+  float sp = pow(max(dot(reflect(-L, n), vec3(0.0, 0.0, 1.0)), 0.0), 70.0);
+  float sp2 = pow(max(dot(reflect(-normalize(vec3(0.6, -0.2, 0.7)), n), vec3(0.0, 0.0, 1.0)), 0.0), 30.0);
+  vec3 base = mix(vec3(0.32, 0.015, 0.05), vec3(0.55, 0.05, 0.12), tint);
+  vec3 c = base * (0.18 + 0.95 * df);
+  c += vec3(0.85, 0.12, 0.2) * pow(r, 3.0) * 0.45;                 // light passing through the thin edge
+  c += vec3(1.0, 0.92, 0.95) * sp * 1.4 + vec3(0.9, 0.5, 0.6) * sp2 * 0.25;
+  return c * (0.45 + 0.55 * d);                                    // far parts sink into shadow
+}
+void main() {
+  vec2 uv = isf_FragNormCoord;
+  vec2 p = (uv - 0.5) * vec2(asp, 1.0);
+  vec3 e = F(uv);
+  float m = M(uv);
+  float d = D(uv);
+  vec3 o = e;
+  if (mode < 1.5) {
+    // ── WORMS: glossy tubes wrapped over your body, crawling, and growing out of your outline ──
+    vec3 bn = nrm(uv, 9.0);
+    vec3 col = vec3(0.0); float cov = 0.0, ao = 0.0;
+    // inside: three layers of tubes, top first; each tube is a band of a warped field
+    for (int k = 0; k < 3; k++) {
+      if (cov > 0.5) break;
+      float fk = float(k);
+      float ang = 0.5 + fk * 2.1 + 0.3 * sin(T * 0.05 + fk);
+      vec2 dir = vec2(cos(ang), sin(ang));
+      vec2 q = p * (15.0 + fk * 4.0) + bn.xy * 1.5;
+      // long, slow warps make the tubes curl and tangle instead of running straight
+      float w1 = fbm(q * 0.11 + vec2(fk * 7.0, T * 0.03));
+      float w2 = fbm(q * 0.23 + vec2(3.0 + fk, -T * 0.05));
+      float phi = dot(q, dir) + 9.0 * w1 + 3.0 * w2;
+      float psi = dot(q, vec2(-dir.y, dir.x)) + 4.0 * fbm(q * 0.15 + 11.0 + fk);
+      float id = floor(phi);
+      float f = fract(phi);
+      float width = 0.66 + 0.16 * beat;
+      float r = abs(f - 0.5) * 2.0 / width;
+      float run = psi * 0.09 + T * (0.04 + 0.08 * h11(id * 3.1 + fk)) * (h11(id + 9.0) > 0.5 ? 1.0 : -1.0) + h11(id * 7.7 + fk) * 9.0;
+      float seg = fract(run), segL = 0.78 + 0.18 * h11(floor(run) + id);
+      float tipR = min(seg, segL - seg) / 0.035;
+      float onW = step(seg, segL) * step(r, 1.0) * step(0.35, tipR);
+      float layerM = smoothstep(0.15 + fk * 0.12, 0.55 + fk * 0.12, m);
+      onW *= step(0.4, layerM);
+      if (onW > 0.5) {
+        float rr = r / clamp(tipR, 0.35, 1.0);
+        float nz = sqrt(max(1.0 - rr * rr, 0.0));
+        vec2 lat = dir * (f - 0.5) * 2.0;
+        vec3 n = normalize(vec3(lat * 1.1 + bn.xy * 0.9, nz + 0.05));
+        col = tubeShade(n, clamp(rr, 0.0, 1.0), clamp(d * 1.3 + 0.2, 0.0, 1.0), h11(id + fk * 5.0)) * (1.0 - 0.35 * fk) * (1.0 - ao);
+        cov = 1.0;
+      } else {
+        ao = max(ao, (1.0 - smoothstep(1.0, 1.5, r)) * 0.6 * step(0.4, layerM));
+      }
+    }
+    if (cov < 0.5 && m > 0.5) { col = vec3(0.05, 0.005, 0.01) * (1.0 - ao); cov = m; }  // gaps between tubes: deep shadow
+    // outside: tubes reaching out of your outline, radiating from your chest, each its own length
+    if (m < 0.5) {
+      vec2 c = (ctr - 0.5) * vec2(asp, 1.0);
+      vec2 v = p - c; float rad = length(v); vec2 rd = v / max(rad, 1e-4);
+      float reach = 0.05 + 0.16 * energy + 0.08 * bass + 0.05 * sin(T * 0.7);
+      // walk in toward the body to find how far out of your outline we are
+      float db = 1.0;
+      for (int i = 1; i <= 10; i++) { float s = float(i) / 10.0 * 0.3; vec2 qq = p - rd * s; vec2 quv = qq / vec2(asp, 1.0) + 0.5; if (db > 0.99 && M(quv) > 0.5) db = s; }
+      float N = 64.0;
+      float a = atan(rd.y, rd.x) / 6.2832 + 0.5;
+      float wob = 1.6 * sin(db * 18.0 + T * 1.3 + floor(a * N) * 2.3) * db * 4.0 + 0.8 * sin(db * 41.0 - T * 2.0);
+      float ai = a * N + wob;
+      float tid = floor(ai), tf = fract(ai);
+      float len = reach * (0.3 + 1.1 * pow(h11(tid * 1.37), 2.5)) * step(0.55, h11(tid * 4.1));
+      float tw = 0.42 * pow(max(1.0 - db / max(len, 1e-3), 0.0), 0.35);
+      float r = abs(tf - 0.5) * 2.0 / max(tw, 1e-3);
+      if (db < len && r < 1.0) {
+        float nz = sqrt(max(1.0 - r * r, 0.0));
+        vec2 lat = vec2(-rd.y, rd.x) * (tf - 0.5) * 2.0;
+        vec3 n = normalize(vec3(lat, nz));
+        col = tubeShade(n, r, 0.85, h11(tid)); cov = 1.0;
+      }
+      // contact shadow around the body
+      float sh = (1.0 - smoothstep(0.0, 0.12, db)) * 0.55;
+      if (cov < 0.5) { col = e * (1.0 - sh); cov = 1.0; }
+    }
+    o = mix(e, col, cov);
+  } else if (mode < 2.5) {
+    // ── RELIEF: your body as polished chrome, reflecting the shader around you ──
+    vec3 n = nrm(uv, 22.0);
+    vec2 ruv = uv + n.xy * 0.22;
+    vec3 env = F(ruv);
+    float fres = pow(1.0 - n.z, 2.0);
+    vec3 L = normalize(vec3(-0.4, 0.6, 0.7));
+    float sp = pow(max(dot(reflect(-L, n), vec3(0.0, 0.0, 1.0)), 0.0), 50.0);
+    vec3 chrome = env * (0.35 + 0.9 * fres) + vec3(0.06) + vec3(1.0) * sp * 1.2;
+    chrome *= 0.55 + 0.6 * d;
+    o = mix(e * (1.0 - 0.35 * smoothstep(0.0, 0.5, M(uv + vec2(0.012, -0.012)))), chrome, m);
+  } else if (mode < 3.5) {
+    // ── CONTOURS: topographic lines of your depth, flowing from front to back ──
+    float dx = D(uv + vec2(px.x, 0.0)) - D(uv - vec2(px.x, 0.0)), dy = D(uv + vec2(0.0, px.y)) - D(uv - vec2(0.0, px.y));
+    float g = length(vec2(dx, dy)) * 0.5 + 1e-4;
+    float N = 22.0;
+    float t = d * N - T * 0.6;
+    float w = clamp(g * N * 1.6, 0.04, 0.5);
+    float line = 1.0 - smoothstep(w * 0.4, w, abs(fract(t) - 0.5) * 2.0 * 0.5);
+    float major = step(0.75, fract(floor(t) / 4.0));
+    vec3 lc = mix(hue(fract(floor(t) * 0.07 + T * 0.03)), vec3(1.0), 0.35) * (1.0 + major);
+    vec3 inside = mix(e * 0.18, C(uv) * 0.12, 0.5);
+    o = mix(e, inside + lc * line * (0.6 + 0.6 * beat), m);
+  } else if (mode < 4.5) {
+    // ── SLICES: a bright plane sweeps through you, front to back, on the beat ──
+    float s = fract(T * 0.22);
+    float s2 = fract(T * 0.22 + 0.5);
+    float band = exp(-abs(d - mix(0.95, 0.05, s)) * 70.0) + 0.6 * exp(-abs(d - mix(0.95, 0.05, s2)) * 70.0);
+    vec3 ghost = C(uv) * 0.18 + e * 0.1;
+    vec3 lit = mix(F(uv) * 1.4, C(uv), 0.4) + vec3(0.6, 0.9, 1.0) * 0.5;
+    o = mix(e, mix(ghost, lit, clamp(band * (1.0 + beat), 0.0, 1.0)), m);
+    o += vec3(0.5, 0.85, 1.0) * band * m * 0.4;
+  } else if (mode < 5.5) {
+    // ── WIGGLE: a wigglegram — two views a few centimetres apart, flipped on the beat ──
+    float side = sin(T * 7.0) > 0.0 ? 1.0 : -1.0;
+    float sw = side * (0.015 + 0.02 * beat);
+    vec2 o2 = vec2(sw * (Dr(uv) - 0.45) * 2.0, 0.0);
+    float mm = M(uv - o2);
+    vec3 bgp = F(uv + vec2(sw * 0.35, 0.0));
+    vec3 me = mix(C(uv - o2), F(uv - o2), 0.35);
+    o = mix(bgp, me, mm);
+  } else {
+    // ── DEPTH: the raw depth of your body, grey on black ──
+    float dd = 0.25 * (D(uv) * 2.0 + D(uv + vec2(px.x, 0.0)) + D(uv - vec2(px.x, 0.0)));
+    o = vec3(pow(clamp(dd, 0.0, 1.0), 0.85)) * 0.92;
+  }
+  gl_FragColor = vec4(mix(e, o, amt), 1.0);
+}
+`;
+function setDepthFx(v, quiet) {
+  depthFx = v; store.set("depthFx", v);
+  $("depthLbl").textContent = DEPTH_NAMES[v]; $("depthBtn").classList.toggle("lit", v > 0);
+  if (v > 0 && camLive) startDepth();
+  if (!quiet) toast("3D: " + DEPTH_NAMES[v].toLowerCase() + (v > 0 && DEP.state === "loading" ? " — loading the depth model" : ""));
+  refreshChooser();
+}
+function depthPass() {
+  if (!depP) depP = simpleProgram(DEPTH_FS, ["fx", "cam", "mask", "dep", "mode", "amt", "T", "bass", "beat", "energy", "asp", "px", "ctr"]);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, cv.width, cv.height);
+  gl.useProgram(depP.prog); bindQuad();
+  const L = depP.loc, tx = (u, t, name) => { gl.activeTexture(gl.TEXTURE0 + u); gl.bindTexture(gl.TEXTURE_2D, t); gl.uniform1i(L[name], u); };
+  tx(0, DFX.tex, "fx"); tx(1, MP.cam.tex, "cam"); tx(2, CAM.segA ? CAM.segA.tex : blankSeg, "mask"); tx(3, CAM.depA ? CAM.depA.tex : blankSeg, "dep");
+  gl.uniform1f(L.mode, depthFx); gl.uniform1f(L.amt, depthAmt); gl.uniform1f(L.T, simTime);
+  gl.uniform1f(L.bass, A.bass); gl.uniform1f(L.beat, A.beat); gl.uniform1f(L.energy, MV.s.energy || 0); gl.uniform1f(L.asp, cv.width / cv.height);
+  gl.uniform2f(L.px, CAM.depA ? 1.5 / CAM.depA.w : 0.004, CAM.depA ? 1.5 / CAM.depA.h : 0.004);
+  // the chest: between the shoulders, in screen space (mirrored like the picture)
+  const [x0, y0, fx, fy] = CAM.crop, a = DL[11], b = DL[12];
+  const cx = a.v > 0.3 && b.v > 0.3 ? 1 - (((a.x + b.x) / 2 - x0) / fx) : 0.5, cy = a.v > 0.3 && b.v > 0.3 ? 1 - (((a.y + b.y) / 2 - y0) / fy) : 0.55;
+  gl.uniform2f(L.ctr, cx, cy - 0.04);
+  gl.drawArrays(gl.TRIANGLES, 0, 6);
+}
+function cutoutPass(toDepth) {
   if (!cutP) cutP = simpleProgram(CUT_FS, ["fx", "mask", "srcm", "blr", "cam", "ech", "amt", "bgMode", "lookMode", "lookAmt", "thresh", "edgeAmt", "gain", "W0", "W1", "W2", "W3", "T", "bass", "beat", "asp", "px", "bpx"]);
   if (edgeAmt > 0.002) updateFxBuffers();
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, cv.width, cv.height);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, toDepth ? DFX.fbo : null); gl.viewport(0, 0, cv.width, cv.height);
   gl.useProgram(cutP.prog); bindQuad();
   const L = cutP.loc, tx = (u, t, name) => { gl.activeTexture(gl.TEXTURE0 + u); gl.bindTexture(gl.TEXTURE_2D, t); gl.uniform1i(L[name], u); };
   tx(0, CUT.tex, "fx"); tx(1, CAM.segA ? CAM.segA.tex : blankSeg, "mask"); tx(2, SRC ? SRC.tex : blankSeg, "srcm");
@@ -1582,6 +1880,7 @@ function updateCut(dt) {
   cutAmt = ease(cutAmt, cutMode > 0 && body, 5);
   edgeAmt = ease(edgeAmt, edgeStyle > 0 && body, 4);
   lookAmt = ease(lookAmt, lookMode > 0 && body, 4);
+  depthAmt = ease(depthAmt, depthFx > 0 && body && !!CAM.depA, 4);
   const tg = edgeTargets(), k = 1 - Math.exp(-dt * 3.5);
   for (let i = 0; i < 11; i++) EW[i] += ((tg[i] || 0) - EW[i]) * k;
 }
@@ -1597,7 +1896,7 @@ function seg(id, get, set) {
 seg("growSel", () => growFrom, v => { growFrom = v; store.set("grow", v); });
 $("thrRange").value = thresh; $("thrRange").addEventListener("input", e => { thresh = Number(e.target.value); store.set("thresh", thresh); });
 $("gainRange").value = edgeGain; $("gainRange").addEventListener("input", e => { edgeGain = Number(e.target.value); store.set("gain2", edgeGain); });
-setCut(cutMode, true); setEdge(edgeStyle, true); setLook(lookMode, true);
+setCut(cutMode, true); setEdge(edgeStyle, true); setLook(lookMode, true); setDepthFx(depthFx, true);
 
 // ── the pad: like the Photos tone/colour pad — one puck, two axes, each axis sweeps a set of parameters ──
 // Centre = the shader as you left it in Controls. Each entry is [param, value at −1, value at +1].
@@ -1883,6 +2182,7 @@ window.addEventListener("keydown", e => {
   else if (k === "x" || k === "X") setCut((cutMode + 1) % 4);
   else if (k === "e" || k === "E") setEdge((edgeStyle + 1) % 13);
   else if (k === "v" || k === "V") setLook((lookMode + 1) % 8);
+  else if (k === "d" || k === "D") setDepthFx((depthFx + 1) % DEPTH_NAMES.length);
   else if (k === "b" || k === "B") setParts($("parts").hidden);
   else if (k >= "1" && k <= String(PART_KEYS.length)) setPart(PART_KEYS[Number(k) - 1]);
   else if (k === "p" || k === "P") selectMode("pad", true);
