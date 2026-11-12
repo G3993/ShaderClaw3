@@ -32,48 +32,51 @@ body.idle, body.idle #stage { cursor: none; }
 
 /* floating dock */
 .dock {
-  position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
-  display: flex; align-items: center; gap: 2px; padding: 5px; border-radius: 999px;
-  background: var(--glass); border: 1px solid var(--line);
-  backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45); max-width: calc(100vw - 24px);
-  transition: opacity .4s, transform .4s; z-index: 10;
+  position: fixed; left: 50%; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  display: flex; align-items: flex-start; gap: 0; padding: 6px 8px 4px; border-radius: 22px;
+  background: rgba(10, 10, 12, 0.5); border: 1px solid rgba(255,255,255,.09);
+  backdrop-filter: blur(16px) saturate(130%); -webkit-backdrop-filter: blur(16px) saturate(130%);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); max-width: calc(100vw - 16px); transition: opacity .4s, transform .4s; z-index: 10;
 }
-.ib { all: unset; box-sizing: border-box; width: 34px; height: 34px; flex: 0 0 34px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; color: var(--fg); }
-.ib:hover { background: rgba(255, 255, 255, 0.1); }
-.ib.on { background: rgba(255, 255, 255, 0.16); }
-.ib:focus-visible, .pill:focus-visible, .row button:focus-visible, .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.ib svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.name { font: 700 14px/1 var(--display); padding: 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; text-align: center; }
-.name small { font: 400 10px var(--mono); color: var(--muted); margin-left: 5px; }
-.sep { width: 1px; height: 18px; background: var(--line); margin: 0 4px; flex: none; }
-.move { font: 500 11px/1 var(--mono); padding: 7px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); color: var(--muted); min-width: 70px; text-align: center; white-space: nowrap; transition: background .25s, color .25s; }
+/* every control is a key: a small round button with a tiny caption under it */
+.k { all: unset; box-sizing: border-box; width: 40px; flex: 0 0 40px; display: grid; justify-items: center; gap: 2px; cursor: pointer; color: var(--fg); }
+.k > b { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; transition: background .15s, color .15s; }
+.k:hover > b { background: rgba(255,255,255,.1); }
+.k.on > b { background: var(--fg); color: #000; }
+.k.lit > b { box-shadow: 0 0 0 1.5px var(--accent) inset; }
+.k svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.cap { font: 600 7.5px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; max-width: 46px; overflow: hidden; text-overflow: ellipsis; font-style: normal; height: 8px; }
+.k:focus-visible > b, .pill:focus-visible, .row button:focus-visible, .seg button:focus-visible, .parts button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.navk { display: grid; justify-items: center; gap: 2px; padding: 0 2px; min-width: 0; }
+.navrow { display: flex; align-items: center; height: 30px; }
+.nb { all: unset; width: 22px; height: 30px; display: grid; place-items: center; cursor: pointer; color: var(--muted); }
+.nb:hover { color: var(--fg); }
+.nb svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; }
+.name { font: 700 12.5px/1 var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; text-align: center; }
+.sep { width: 1px; height: 22px; background: rgba(255,255,255,.1); margin: 4px 5px 0; flex: none; }
 .move.live { color: var(--fg); }
-.move.hit { background: var(--accent); color: #000; }
-.camdot { width: 9px; height: 9px; border-radius: 50%; background: #555; }
+.move.hit { color: var(--accent); }
+.camdot { width: 8px; height: 8px; border-radius: 50%; background: #555; }
 .camdot.wait { background: var(--warn); animation: blink 1s ease-in-out infinite; }
 .camdot.ok { background: var(--ok); }
 .camdot.bad { background: var(--bad); }
 @keyframes blink { 50% { opacity: .35; } }
-.part { all: unset; box-sizing: border-box; height: 34px; padding: 0 11px 0 9px; border-radius: 999px; display: flex; align-items: center; gap: 6px; cursor: pointer; font: 600 12px/1 var(--display); white-space: nowrap; }
-.part:hover, .part.on { background: rgba(255, 255, 255, 0.12); }
-.part svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.part:focus-visible, .parts button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* pop-up picker above the dock */
 .parts {
-  position: fixed; left: 50%; bottom: calc(66px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 11;
-  display: flex; gap: 4px; padding: 6px; border-radius: 18px; max-width: calc(100vw - 24px); overflow-x: auto;
-  background: var(--glass-2); border: 1px solid var(--line); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); box-shadow: 0 16px 50px rgba(0,0,0,.5);
+  position: fixed; left: 50%; bottom: calc(68px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 11;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; padding: 6px; border-radius: 16px; width: max-content; max-width: min(560px, calc(100vw - 16px));
+  background: rgba(14,14,18,.78); border: 1px solid rgba(255,255,255,.09); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); box-shadow: 0 14px 44px rgba(0,0,0,.45);
 }
-.parts button { all: unset; box-sizing: border-box; width: 64px; flex: 0 0 64px; padding: 8px 2px 6px; border-radius: 12px; display: grid; justify-items: center; gap: 4px; cursor: pointer; font: 500 10.5px/1.1 var(--mono); color: var(--muted); text-align: center; }
+.parts button { all: unset; box-sizing: border-box; min-width: 54px; padding: 7px 9px 6px; border-radius: 11px; display: grid; justify-items: center; gap: 4px; cursor: pointer; font: 600 9px/1.1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); text-align: center; }
 .parts button:hover { background: rgba(255,255,255,.08); color: var(--fg); }
 .parts button[aria-pressed="true"] { background: var(--fg); color: #000; }
-.parts svg { width: 26px; height: 26px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-.parts kbd { font: 9px var(--mono); opacity: .55; }
-.pal { width: 16px; height: 16px; border-radius: 50%; box-shadow: 0 0 0 1px rgba(255,255,255,.35) inset; }
+.parts svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.parts .sw { width: 22px; height: 22px; border-radius: 50%; }
+.pal { width: 14px; height: 14px; border-radius: 50%; box-shadow: 0 0 0 1px rgba(255,255,255,.35) inset; }
 body.idle .dock:not(:hover):not(:focus-within), body.idle .pill:not(:hover) { opacity: 0; pointer-events: none; }
 .dock[hidden] { display: none !important; }
 .pill {
-  all: unset; position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  all: unset; position: fixed; left: 50%; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
   width: 46px; height: 22px; border-radius: 999px; display: grid; place-items: center; cursor: pointer; z-index: 10;
   background: var(--glass); border: 1px solid var(--line); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); transition: opacity .4s;
 }
@@ -81,7 +84,7 @@ body.idle .dock:not(:hover):not(:focus-within), body.idle .pill:not(:hover) { op
 
 /* controls panel, opens above the dock */
 .panel {
-  position: fixed; left: 50%; bottom: calc(66px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  position: fixed; left: 50%; bottom: calc(68px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
   width: min(430px, calc(100vw - 24px)); max-height: min(66vh, 680px); overflow: auto; overscroll-behavior: contain;
   background: var(--glass-2); border: 1px solid var(--line); border-radius: 16px; z-index: 11;
   backdrop-filter: blur(24px) saturate(140%); -webkit-backdrop-filter: blur(24px) saturate(140%);
@@ -143,7 +146,8 @@ body.idle .dock:not(:hover):not(:focus-within), body.idle .pill:not(:hover) { op
 .gate button { background: rgba(255,255,255,.08); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer; }
 .gate button.pri { background: var(--fg); color: #000; border-color: var(--fg); }
 .err { position: fixed; inset: 0; padding: 18px; overflow: auto; background: rgba(0,0,0,.92); color: #ddd; white-space: pre-wrap; font-size: 12px; z-index: 20; }
-@media (max-width: 520px) { .name small, #palBtn, #partLbl { display: none; } .part { padding: 0 9px; } .move { min-width: 0; } .pip { width: 30vw; } }
+@media (max-width: 560px) { #fsBtn, #palBtn { display: none; } .name { max-width: 64px; } .k { width: 36px; flex-basis: 36px; } .pip { width: 30vw; } }
+.panel input[type=range] { width: 52%; accent-color: var(--accent); }
 @media (prefers-reduced-motion: reduce) { .dock, .toast, .pip, .pill, .move { transition: none; } .camdot.wait { animation: none; } }
 </style>
 </head>
@@ -155,23 +159,23 @@ body.idle .dock:not(:hover):not(:focus-within), body.idle .pill:not(:hover) { op
 
 <div class="pip" id="pip" hidden><video id="pipVid" muted playsinline></video><canvas id="pipSkel"></canvas></div>
 
-<nav class="dock" id="dock" aria-label="Player">
-  <button class="ib" id="camDotBtn" type="button" title="Camera"><span class="camdot" id="camDot"></span></button>
-  <button class="ib" id="prevSh" type="button" aria-label="Previous shader" title="Previous (←)"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
-  <span class="name" id="nowName" aria-live="polite">—</span>
-  <button class="ib" id="nextSh" type="button" aria-label="Next shader" title="Next (→)"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+<nav class="dock" id="dock" aria-label="Controller">
+  <button class="k" id="camDotBtn" type="button" title="Camera · what your body is doing"><b><span class="camdot" id="camDot"></span></b><i class="cap move" id="moveChip">no body</i></button>
+  <div class="navk"><div class="navrow"><button class="nb" id="prevSh" type="button" aria-label="Previous shader" title="Previous (←)"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><span class="name" id="nowName" aria-live="polite">—</span><button class="nb" id="nextSh" type="button" aria-label="Next shader" title="Next (→)"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button></div><i class="cap" id="nowNum"></i></div>
   <span class="sep"></span>
-  <span class="move" id="moveChip" title="What your body is doing">no body</span>
-  <button class="part" id="partBtn" type="button" aria-haspopup="true" aria-expanded="false" title="Which body part plays (B, or 1–7)"><svg id="partIco" viewBox="0 0 24 24"></svg><span id="partLbl">Full body</span></button>
-  <button class="ib" id="cutBtn" type="button" aria-pressed="false" aria-label="Cutout: effect only inside your body" title="Cutout — effect only inside you (X)"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.1 15.9M14.5 14.5L20 20M8.1 8.1L12 12"/></svg></button>
-  <button class="ib" id="palBtn" type="button" aria-label="Next colour palette" title="Colour (↑ ↓)"><span class="pal" id="palSw"></span></button>
-  <button class="ib" id="ctlBtn" type="button" aria-label="Controls" aria-expanded="false" title="Controls (C)"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
-  <button class="ib" id="fsBtn" type="button" aria-label="Fullscreen" title="Fullscreen (F)"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
-  <button class="ib" id="hideBtn" type="button" aria-label="Collapse controls" title="Collapse (H)"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+  <button class="k" id="partBtn" type="button" aria-haspopup="true" aria-expanded="false" title="Which body part plays (B, 1–7)"><b><svg id="partIco" viewBox="0 0 24 24"></svg></b><i class="cap" id="partLbl">Full</i></button>
+  <button class="k" id="cutBtn" type="button" aria-haspopup="true" title="Cutout — background removal (X)"><b><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.1 15.9M14.5 14.5L20 20M8.1 8.1L12 12"/></svg></b><i class="cap" id="cutLbl">Off</i></button>
+  <button class="k" id="edgeBtn" type="button" aria-haspopup="true" title="Edge effects (E)"><b><svg viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg></b><i class="cap" id="edgeLbl">Auto</i></button>
+  <button class="k" id="lookBtn" type="button" aria-haspopup="true" title="Look — threshold and blend with you (V)"><b><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor"/></svg></b><i class="cap" id="lookLbl">Effect</i></button>
+  <button class="k" id="palBtn" type="button" aria-label="Colour palette" title="Colour (↑ ↓)"><b><span class="pal" id="palSw"></span></b><i class="cap" id="palLbl">Colour</i></button>
+  <span class="sep"></span>
+  <button class="k" id="ctlBtn" type="button" aria-label="Controls" aria-expanded="false" title="Controls (C)"><b><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></b><i class="cap">More</i></button>
+  <button class="k" id="fsBtn" type="button" aria-label="Fullscreen" title="Fullscreen (F)"><b><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></b><i class="cap">Full</i></button>
+  <button class="k" id="hideBtn" type="button" aria-label="Collapse controls" title="Collapse (H)"><b><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></b><i class="cap">Hide</i></button>
 </nav>
 <button class="pill" id="pill" type="button" aria-label="Show controls" hidden><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button>
 
-<div class="parts" id="parts" role="group" aria-label="Which body part plays" hidden></div>
+<div class="parts" id="parts" role="group" aria-label="Choose" hidden></div>
 <section class="panel" id="panel" aria-label="Controls" hidden>
   <h3>Moves</h3>
   <div class="legend" id="legend"></div>
@@ -187,10 +191,10 @@ body.idle .dock:not(:hover):not(:focus-within), body.idle .pill:not(:hover) { op
   <h3>Camera</h3>
   <div class="row"><span id="camText">Camera off</span><button type="button" id="camBtn">Turn on</button></div>
   <div class="row"><span>Camera preview</span><input type="checkbox" id="optPip" checked aria-label="Camera preview"></div>
-  <div class="row"><span>Cutout (effect only inside you)</span><input type="checkbox" id="optCut" aria-label="Cutout"></div>
-  <div class="row"><span>Outside you</span><div class="seg" id="cutBg"><button type="button" data-v="0" aria-pressed="true">Black</button><button type="button" data-v="1">Camera</button><button type="button" data-v="2">Faint</button></div></div>
-  <div class="row"><span>Edge</span><div class="seg" id="edgeSel"><button type="button" data-v="0">Off</button><button type="button" data-v="1">Glow</button><button type="button" data-v="2">Neon</button><button type="button" data-v="3">Vines</button><button type="button" data-v="4">Aura</button><button type="button" data-v="5">Smoke</button><button type="button" data-v="6">Echo</button><button type="button" data-v="7">Drips</button><button type="button" data-v="8">Rings</button><button type="button" data-v="9">Pixels</button></div></div>
-  <div class="row"><span>Blend with you</span><div class="seg" id="blendSel"><button type="button" data-v="0">Effect</button><button type="button" data-v="1">Screen</button><button type="button" data-v="2">Multiply</button><button type="button" data-v="3">Difference</button><button type="button" data-v="4">Overlay</button><button type="button" data-v="5">Duotone</button></div></div>
+  <h3>Body FX</h3>
+  <div class="row"><span>Effects grow from</span><div class="seg" id="growSel"><button type="button" data-v="0">Outline</button><button type="button" data-v="1">Highlights</button><button type="button" data-v="2">Both</button><button type="button" data-v="3">Lines</button></div></div>
+  <div class="row"><span>Threshold</span><input type="range" id="thrRange" min="0.15" max="0.9" step="0.01" aria-label="Threshold"></div>
+  <div class="row"><span>Edge strength</span><input type="range" id="gainRange" min="0.3" max="3" step="0.05" aria-label="Edge strength"></div>
   <div class="row"><span>Skeleton on stage</span><input type="checkbox" id="optSkel" aria-label="Skeleton on stage"></div>
   <div class="row"><span>Quality</span><div class="seg" id="qual"><button type="button" data-v="auto" aria-pressed="true">Auto</button><button type="button" data-v="0.5">Draft</button><button type="button" data-v="0.75">Medium</button><button type="button" data-v="1">Full</button></div></div>
   <h3 id="pname">Shader</h3>
@@ -392,7 +396,7 @@ function load(id) {
   syncTargets(false); frame = 0; simTime = 0;
   paintMode = /\bmouseDown\b/.test(P.body);
   const S = SHADERS[id];
-  $("nowName").innerHTML = ""; $("nowName").append(S.name); const sm = document.createElement("small"); sm.textContent = S.sn; $("nowName").append(sm);
+  $("nowName").textContent = S.name; $("nowNum").textContent = S.sn + " / 100";
   $("pname").textContent = S.sn + " · " + S.name;
   $("blurb").textContent = P.meta.DESCRIPTION || "";
   syncPal(); buildLegend();
@@ -406,6 +410,12 @@ function step(k) { const i = ORDER.indexOf(cur ? cur.id : ORDER[0]); load(ORDER[
 function syncPal() {
   if (!cur || !("paletteMode" in cur.vals)) return;
   $("palSw").style.background = PAL_SW[Number(cur.vals.paletteMode)] || "#888";
+  $("palLbl").textContent = ({ 4: "NYC", 3: "B&W", 1: "Red", 2: "Blue", 0: "Color" })[Number(cur.vals.paletteMode)] || "Colour";
+}
+function setPal(v) {
+  for (const id in savedVals) if ("paletteMode" in savedVals[id]) savedVals[id].paletteMode = v;
+  syncPal(); toast(PAL_NAME[v]); refreshChooser();
+  if (!$("panel").hidden) buildControls();
 }
 function cyclePal(dir) {
   if (!cur || !("paletteMode" in cur.vals)) return;
@@ -627,7 +637,7 @@ function xfBegin(nextId) {
   $("xfNow").textContent = name.replace("NY_", "").replace(/([a-z])([A-Z])/g, "$1 $2");
 }
 function present() {
-  const cutting = cutAmt > 0.002 || edgeAmt > 0.002 || blendAmt > 0.002;
+  const cutting = cutAmt > 0.002 || edgeAmt > 0.002 || lookAmt > 0.002;
   gl.bindFramebuffer(gl.FRAMEBUFFER, cutting ? CUT.fbo : null); gl.viewport(0, 0, cv.width, cv.height);
   let P, p = 1;
   if (XF.active) { p = clamp((beatsNow() - XF.start) / XF.len, 0, 1); if (p >= 1) XF.active = false; }
@@ -1022,16 +1032,16 @@ function bodyShow() {
 let moveHitT = 0;
 const MOVE_WORD = { still: "still", fast: "fast", armsUp: "arms up", wide: "wings", low: "low" };
 function flashMove(kind) {
-  const c = $("moveChip"); c.textContent = kind + "!"; c.className = "move live hit"; moveHitT = performance.now();
+  const c = $("moveChip"); c.textContent = kind + "!"; c.className = "cap move live hit"; moveHitT = performance.now();
   litLegend(kind);
 }
 function updateMoveChip() {
   if (performance.now() - moveHitT < 700) return;
   const c = $("moveChip"), s = MV.s;
-  let word = !camLive ? "no camera" : !haveBody || s.presence < 0.4 ? "no body" : "flow", best = 0.5, key = "";
+  let word = !camLive ? "no cam" : !haveBody || s.presence < 0.4 ? "no body" : "flow", best = 0.5, key = "";
   for (const k in MOVE_WORD) if (s[k] > best) { best = s[k]; word = MOVE_WORD[k]; key = word; }
   if (c.textContent !== word) { c.textContent = word; litLegend(key); }
-  c.className = "move" + (camLive && haveBody ? " live" : "");
+  c.className = "cap move" + (camLive && haveBody ? " live" : "");
 }
 function litLegend(word) { document.querySelectorAll("#legend b").forEach(b => b.classList.toggle("lit", b.textContent === word)); }
 function buildLegend() {
@@ -1130,46 +1140,106 @@ function bodyPointer() {
   const [x0, y0, fx, fy] = CAM.crop;
   return { x: 1 - (q.x - x0) / fx, y: 1 - (q.y - y0) / fy, down, rx: q.x, ry: q.y };
 }
+const PART_CAP = { full: "Full", hands: "Hands", head: "Head", feet: "Feet", shape: "Shape", bones: "Bones", off: "Off" };
 function setPart(k, quiet) {
   if (!PART_DEF[k]) return;
   PART = k; store.set("part", k);
-  $("partLbl").textContent = PART_DEF[k].label; $("partIco").innerHTML = ICO[k];
-  document.querySelectorAll("#parts button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.k === k)));
+  $("partLbl").textContent = PART_CAP[k]; $("partIco").innerHTML = ICO[k];
   const ptr = PART_DEF[k].ptr;
   if (!quiet) toast(PART_DEF[k].label + (ptr === "hand" ? " plays · raise a hand to press" : ptr ? " plays" : ""));
+  refreshChooser();
 }
-function setParts(open) { $("parts").hidden = !open; $("partBtn").classList.toggle("on", open); $("partBtn").setAttribute("aria-expanded", String(open)); if (open) setPanel(false); wake(); }
-PART_KEYS.forEach((k, i) => {
-  const b = document.createElement("button"); b.type = "button"; b.dataset.k = k;
-  b.innerHTML = '<svg viewBox="0 0 24 24">' + ICO[k] + "</svg>";
-  const t = document.createElement("span"); t.textContent = PART_DEF[k].label; const kb = document.createElement("kbd"); kb.textContent = i + 1;
-  b.append(t, kb);
-  b.addEventListener("click", () => { setPart(k); setParts(false); });
-  $("parts").appendChild(b);
-});
-$("partBtn").addEventListener("click", () => setParts($("parts").hidden));
+// one pop-up picker above the dock, filled by whichever key opened it
+let chooserKind = "";
+const CHOOSERS = {
+  part: { btn: "partBtn", items: () => PART_KEYS.map(k => ({ v: k, label: PART_CAP[k], icon: ICO[k] })), get: () => PART, set: (v) => setPart(v) },
+  cut:  { btn: "cutBtn",  items: () => CUT_NAMES.map((l, v) => ({ v, label: l })), get: () => cutMode, set: (v) => setCut(v) },
+  edge: { btn: "edgeBtn", items: () => [10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map(v => ({ v, label: EDGE_NAMES[v] })), get: () => edgeStyle, set: (v) => setEdge(v) },
+  look: { btn: "lookBtn", items: () => LOOK_NAMES.map((l, v) => ({ v, label: l })), get: () => lookMode, set: (v) => setLook(v) },
+  pal:  { btn: "palBtn",  items: () => PAL_ORDER.map(v => ({ v, label: ({ 4: "NYC", 3: "B&W", 1: "Red", 2: "Blue", 0: "Color" })[v], sw: PAL_SW[v] })), get: () => cur ? Number(cur.vals.paletteMode) : 4, set: (v) => setPal(v) },
+};
+function refreshChooser() {
+  if (!chooserKind) return;
+  const C = CHOOSERS[chooserKind], box = $("parts"); box.textContent = "";
+  for (const it of C.items()) {
+    const b = document.createElement("button"); b.type = "button";
+    b.setAttribute("aria-pressed", String(it.v === C.get()));
+    if (it.icon) b.innerHTML = '<svg viewBox="0 0 24 24">' + it.icon + "</svg>";
+    if (it.sw) { const d = document.createElement("span"); d.className = "sw"; d.style.background = it.sw; b.appendChild(d); }
+    const t = document.createElement("span"); t.textContent = it.label; b.appendChild(t);
+    b.addEventListener("click", () => { C.set(it.v); });
+    box.appendChild(b);
+  }
+}
+function openChooser(kind) {
+  const same = chooserKind === kind && !$("parts").hidden;
+  for (const k in CHOOSERS) $(CHOOSERS[k].btn).classList.remove("on");
+  chooserKind = same ? "" : kind;
+  $("parts").hidden = !chooserKind;
+  if (chooserKind) { $(CHOOSERS[kind].btn).classList.add("on"); setPanel(false, true); refreshChooser(); }
+  wake();
+}
+function setParts(open) { if (!open) { chooserKind = ""; $("parts").hidden = true; for (const k in CHOOSERS) $(CHOOSERS[k].btn).classList.remove("on"); } else openChooser("part"); }
+for (const k in CHOOSERS) $(CHOOSERS[k].btn).addEventListener("click", () => openChooser(k));
 setPart(PART, true);
 
-// ── cutout: background removal — the effect lives only inside your silhouette ──
-// Uses the same smoothed selfie mask the shaders get. With nobody in frame it eases back to the full effect.
-let cutP = null, blurP = null, echoP = null, cutAmt = 0, edgeAmt = 0, blendAmt = 0, BL1 = null, BL2 = null, EC1 = null, EC2 = null;
-let blendMode = Number(store.get("blend", 0));
-let cutBg = Number(store.get("cutBg", 0)), edgeStyle = Number(store.get("edge", 4));
-// a wide soft copy of the mask: the halo the edge effects live in (glow falloff, how far vines can reach)
-function updateBlur() {
+// ── body FX: cutout, edge effects, look ─────────────────────────────────
+// A "source" map says where effects spawn: your outline, the highlights of your camera image inside the
+// cutout (a threshold), or lines traced from the camera. A wide soft copy of it is the halo the effects
+// grow into. Edge styles are weights on nine effect layers, so styles (and Auto, driven by your moves) blend.
+let cutP = null, blurP = null, echoP = null, srcP = null, cutAmt = 0, edgeAmt = 0, lookAmt = 0;
+let SRC = null, BL1 = null, BL2 = null, EC1 = null, EC2 = null;
+let cutMode = Number(store.get("cutMode", 0));          // 0 off · 1 black · 2 camera · 3 faint
+let edgeStyle = Number(store.get("edge2", 10));          // 0 off … 9 pixels · 10 auto
+let lookMode = Number(store.get("look", 0));             // 0 effect · 1 ink · 2 light · 3 screen · 4 multiply · 5 difference · 6 overlay · 7 duotone
+let growFrom = Number(store.get("grow", 2)), thresh = Number(store.get("thresh", 0.55)), edgeGain = Number(store.get("gain", 1.3));
+const CUT_NAMES = ["Off", "Black", "Camera", "Faint"];
+const EDGE_NAMES = ["Off", "Glow", "Neon", "Vines", "Aura", "Smoke", "Echo", "Drips", "Rings", "Pixels", "Auto"];
+const LOOK_NAMES = ["Effect", "Ink", "Light", "Screen", "Multiply", "Difference", "Overlay", "Duotone"];
+//              glow neon vines spark smoke echo drips rings pixels
+const PRESETS = [
+  [0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [1.2, 0, 0, 0, 0, 0, 0, 0, 0], [0.3, 1, 0, 0, 0, 0, 0, 0, 0], [0.35, 0, 1, 0, 0, 0, 0, 0, 0],
+  [0.9, 0.55, 0.8, 1, 0, 0, 0, 0, 0], [0.3, 0, 0, 0, 1, 0, 0, 0, 0], [0.3, 0, 0, 0, 0, 1, 0, 0, 0],
+  [0.35, 0, 0, 0, 0, 0, 1, 0, 0], [0.4, 0, 0, 0, 0, 0, 0, 1, 0], [0.2, 0, 0, 0, 0, 0, 0, 0, 1],
+];
+const EW = new Float32Array(9);
+function edgeTargets() {
+  if (edgeStyle !== 10) return PRESETS[edgeStyle] || PRESETS[0];
+  // Auto: your body picks the effects
+  const s = MV.s, t = performance.now() / 1000, jp = Math.exp(-(t - MV.ev.jump) / 0.9), cp = Math.exp(-(t - MV.ev.clap) / 0.5), sp = Math.exp(-(t - MV.ev.spin) / 1.2);
+  return [0.55 + 0.5 * s.armsUp, 0.25 + 0.7 * s.wide + 1.2 * cp, 0.9 * s.fast + 0.5 * s.wide + 0.6 * sp, 0.35 + 0.9 * s.fast, s.still, s.fast, s.low, s.armsUp + sp, 1.3 * jp];
+}
+function updateFxBuffers() {
   if (!CAM.segA) return;
-  const w = Math.max(8, Math.round(CAM.segA.w / 3)), h = Math.max(8, Math.round(CAM.segA.h / 3));
-  if (!BL1 || BL1.w !== w || BL1.h !== h) { freeTex(BL1); freeTex(BL2); BL1 = makeTex(w, h, RGBA8); BL2 = makeTex(w, h, RGBA8); }
+  const w = Math.max(8, Math.round(CAM.segA.w / 2)), h = Math.max(8, Math.round(CAM.segA.h / 2));
+  if (!SRC || SRC.w !== w || SRC.h !== h) { for (const t of [SRC, BL1, BL2, EC1, EC2]) freeTex(t); SRC = makeTex(w, h, RGBA8); BL1 = makeTex(w, h, RGBA8); BL2 = makeTex(w, h, RGBA8); EC1 = makeTex(w, h, RGBA8); EC2 = makeTex(w, h, RGBA8); }
+  // 1 · source map: r = where effects spawn, g = thresholded highlights (in mask space: row 0 = top, not mirrored)
+  if (!srcP) srcP = simpleProgram("precision highp float; varying vec2 isf_FragNormCoord; uniform sampler2D mask; uniform sampler2D cam; uniform float th; uniform float mode; uniform vec2 px;\n" +
+    "float Mm(vec2 q) { return texture2D(mask, q).r; }\nfloat Lc(vec2 q) { return dot(texture2D(cam, vec2(q.x, 1.0 - q.y)).rgb, vec3(0.2126, 0.7152, 0.0722)); }\n" +
+    "void main(){ vec2 q = isf_FragNormCoord; float m = smoothstep(0.35, 0.65, Mm(q));\n" +
+    " vec2 g = vec2(Mm(q + vec2(px.x, 0.0)) - Mm(q - vec2(px.x, 0.0)), Mm(q + vec2(0.0, px.y)) - Mm(q - vec2(0.0, px.y)));\n" +
+    " float edge = clamp(length(g) * 2.2, 0.0, 1.0);\n" +
+    " float l = Lc(q); float hi = smoothstep(th - 0.05, th + 0.05, l) * m;\n" +
+    " vec2 lg = vec2(Lc(q + vec2(px.x, 0.0)) - Lc(q - vec2(px.x, 0.0)), Lc(q + vec2(0.0, px.y)) - Lc(q - vec2(0.0, px.y)));\n" +
+    " float lines = smoothstep(0.06, 0.2, length(lg)) * m;\n" +
+    " float s = mode < 0.5 ? edge : mode < 1.5 ? hi : mode < 2.5 ? max(edge, hi) : max(edge, lines);\n" +
+    " gl_FragColor = vec4(s, hi, edge, 1.0); }", ["mask", "cam", "th", "mode", "px"]);
+  gl.useProgram(srcP.prog); bindQuad();
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, CAM.segA.tex); gl.uniform1i(srcP.loc.mask, 0);
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, MP.cam.tex); gl.uniform1i(srcP.loc.cam, 1);
+  gl.uniform1f(srcP.loc.th, thresh); gl.uniform1f(srcP.loc.mode, growFrom); gl.uniform2f(srcP.loc.px, 1.2 / w, 1.2 / h);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, SRC.fbo); gl.viewport(0, 0, w, h); gl.drawArrays(gl.TRIANGLES, 0, 6);
+  // 2 · halo: a wide gaussian of the source
   if (!blurP) blurP = simpleProgram("precision highp float; varying vec2 isf_FragNormCoord; uniform sampler2D src; uniform vec2 dir;\n" +
-    "void main(){ float s = 0.0, ws = 0.0; for (int i = -6; i <= 6; i++) { float fi = float(i); float w = exp(-fi * fi / 18.0); s += w * texture2D(src, isf_FragNormCoord + dir * fi).r; ws += w; } s /= ws; gl_FragColor = vec4(s, s, s, 1.0); }", ["src", "dir"]);
-  gl.useProgram(blurP.prog); bindQuad();
+    "void main(){ float s = 0.0, ws = 0.0; for (int i = -7; i <= 7; i++) { float fi = float(i); float w = exp(-fi * fi / 24.0); s += w * texture2D(src, isf_FragNormCoord + dir * fi).r; ws += w; } s /= ws; gl_FragColor = vec4(s, s, s, 1.0); }", ["src", "dir"]);
+  gl.useProgram(blurP.prog);
   gl.activeTexture(gl.TEXTURE0); gl.uniform1i(blurP.loc.src, 0);
-  gl.bindTexture(gl.TEXTURE_2D, CAM.segA.tex); gl.uniform2f(blurP.loc.dir, 2.2 / w, 0);
-  gl.bindFramebuffer(gl.FRAMEBUFFER, BL1.fbo); gl.viewport(0, 0, w, h); gl.drawArrays(gl.TRIANGLES, 0, 6);
-  gl.bindTexture(gl.TEXTURE_2D, BL1.tex); gl.uniform2f(blurP.loc.dir, 0, 2.2 / h);
+  gl.bindTexture(gl.TEXTURE_2D, SRC.tex); gl.uniform2f(blurP.loc.dir, 3.4 / w, 0);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, BL1.fbo); gl.drawArrays(gl.TRIANGLES, 0, 6);
+  gl.bindTexture(gl.TEXTURE_2D, BL1.tex); gl.uniform2f(blurP.loc.dir, 0, 3.4 / h);
   gl.bindFramebuffer(gl.FRAMEBUFFER, BL2.fbo); gl.drawArrays(gl.TRIANGLES, 0, 6);
-  // echo: where you've been — the mask held and slowly let go, so past outlines linger as ghosts
-  if (!EC1 || EC1.w !== w || EC1.h !== h) { freeTex(EC1); freeTex(EC2); EC1 = makeTex(w, h, RGBA8); EC2 = makeTex(w, h, RGBA8); }
+  // 3 · echo: where you've been — the mask held and slowly let go
   if (!echoP) echoP = simpleProgram("precision highp float; varying vec2 isf_FragNormCoord; uniform sampler2D cur; uniform sampler2D prev; uniform float k;\n" +
     "void main(){ float m = smoothstep(0.35, 0.65, texture2D(cur, isf_FragNormCoord).r); float p = texture2D(prev, isf_FragNormCoord).r - k; float o = max(m, p); gl_FragColor = vec4(o, o, o, 1.0); }", ["cur", "prev", "k"]);
   gl.useProgram(echoP.prog);
@@ -1180,152 +1250,141 @@ function updateBlur() {
   const t = EC1; EC1 = EC2; EC2 = t;
 }
 const CUT_FS = `precision highp float; varying vec2 isf_FragNormCoord;
-uniform sampler2D fx; uniform sampler2D mask; uniform sampler2D blr; uniform sampler2D cam; uniform sampler2D ech; uniform float blendMode; uniform float blendAmt;
-uniform float amt; uniform float bgMode; uniform float edgeAmt; uniform float edgeMode; uniform float T; uniform float bass; uniform float beat; uniform float asp;
-uniform vec2 px; uniform vec2 bpx;
-float M(vec2 uv) { return texture2D(mask, vec2(1.0 - uv.x, 1.0 - uv.y)).r; }
-float B(vec2 uv) { return texture2D(blr, vec2(1.0 - uv.x, 1.0 - uv.y)).r; }
-float EC(vec2 uv) { return texture2D(ech, vec2(1.0 - uv.x, 1.0 - uv.y)).r; }
+uniform sampler2D fx; uniform sampler2D mask; uniform sampler2D srcm; uniform sampler2D blr; uniform sampler2D cam; uniform sampler2D ech;
+uniform float amt; uniform float bgMode; uniform float lookMode; uniform float lookAmt; uniform float thresh;
+uniform float edgeAmt; uniform float gain; uniform vec3 W0; uniform vec3 W1; uniform vec3 W2;
+uniform float T; uniform float bass; uniform float beat; uniform float asp; uniform vec2 px; uniform vec2 bpx;
+vec2 mu(vec2 uv) { return vec2(1.0 - uv.x, 1.0 - uv.y); }
+float M(vec2 uv) { return texture2D(mask, mu(uv)).r; }
+float S(vec2 uv) { return texture2D(srcm, mu(uv)).r; }
+float B(vec2 uv) { return texture2D(blr, mu(uv)).r; }
+float EC(vec2 uv) { return texture2D(ech, mu(uv)).r; }
 float lum(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 float h21(vec2 p) { vec3 q = fract(vec3(p.xyx) * 0.1031); q += dot(q, q.yzx + 33.33); return fract((q.x + q.y) * q.z); }
 float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), f.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + 1.0), f.x), f.y); }
 float fbm(vec2 p) { float s = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { s += a * vn(p); p = p * 2.03 + vec2(1.7, 9.2); a *= 0.5; } return s; }
 vec3 hue(float h) { return clamp(abs(fract(h + vec3(0.0, 0.667, 0.333)) * 6.0 - 3.0) - 1.0, 0.0, 1.0); }
 float edgeOf(float m) { m = smoothstep(0.32, 0.68, m); return 4.0 * m * (1.0 - m); }
+vec3 bright(vec3 c) { return c / max(max(c.r, max(c.g, c.b)), 0.3); }
 void main() {
   vec2 uv = isf_FragNormCoord;
   float mr = 0.4 * M(uv) + 0.15 * (M(uv + vec2(px.x, 0.0)) + M(uv - vec2(px.x, 0.0)) + M(uv + vec2(0.0, px.y)) + M(uv - vec2(0.0, px.y)));
   float m = smoothstep(0.32, 0.68, mr);
   vec3 e = texture2D(fx, uv).rgb;
-  vec3 bg = bgMode < 0.5 ? vec3(0.0) : bgMode < 1.5 ? texture2D(cam, vec2(1.0 - uv.x, uv.y)).rgb * 0.8 : e * 0.1;
-  // inside you: blend the effect with your own camera picture
   vec3 cm = texture2D(cam, vec2(1.0 - uv.x, uv.y)).rgb;
-  vec3 bl = e;
-  if (blendMode > 0.5) {
-    if (blendMode < 1.5)      bl = 1.0 - (1.0 - cm) * (1.0 - e);                                   // screen
-    else if (blendMode < 2.5) bl = cm * e * 1.6;                                                   // multiply
-    else if (blendMode < 3.5) bl = abs(cm - e);                                                    // difference
-    else if (blendMode < 4.5) bl = mix(2.0 * cm * e, 1.0 - 2.0 * (1.0 - cm) * (1.0 - e), step(0.5, cm));   // overlay
-    else { float l = smoothstep(0.08, 0.85, lum(cm)); bl = mix(e * 0.12, e * 1.25 + 0.05, l); }    // duotone: you in the effect's colours
+  // look: what happens inside you — a threshold of your camera image, or the effect blended with it
+  if (lookMode > 0.5) {
+    float l = lum(cm), hi = smoothstep(thresh - 0.05, thresh + 0.05, l);
+    vec3 bl = e;
+    if (lookMode < 1.5)      bl = mix(vec3(0.012), bright(e) * 0.9 + 0.05, hi);                       // ink: your highlights printed in the effect, the rest black
+    else if (lookMode < 2.5) bl = 1.0 - (1.0 - e) * (1.0 - bright(e) * hi * 0.85);                     // light: your highlights glow
+    else if (lookMode < 3.5) bl = 1.0 - (1.0 - cm) * (1.0 - e);
+    else if (lookMode < 4.5) bl = cm * e * 1.6;
+    else if (lookMode < 5.5) bl = abs(cm - e);
+    else if (lookMode < 6.5) bl = mix(2.0 * cm * e, 1.0 - 2.0 * (1.0 - cm) * (1.0 - e), step(0.5, cm));
+    else { float k = smoothstep(0.08, 0.85, l); bl = mix(e * 0.12, e * 1.25 + 0.05, k); }
+    e = mix(e, bl, m * lookAmt);
   }
-  e = mix(e, mix(e, bl, m), blendAmt);
+  vec3 bg = bgMode < 1.5 ? vec3(0.0) : bgMode < 2.5 ? cm * 0.8 : e * 0.1;
   vec3 o = mix(e, mix(bg, e, m), amt);
   if (edgeAmt > 0.001) {
-    float b = B(uv);
+    float sh = S(uv), b = B(uv);
     vec2 g = vec2(B(uv + vec2(bpx.x, 0.0)) - B(uv - vec2(bpx.x, 0.0)), B(uv + vec2(0.0, bpx.y)) - B(uv - vec2(0.0, bpx.y)));
-    vec2 n = g / (length(g) + 1e-4);                                     // points into the body
-    vec3 ec = texture2D(fx, clamp(uv + n * 0.035, 0.001, 0.999)).rgb;    // the shader's own colour just inside you
-    ec = ec / max(max(ec.r, max(ec.g, ec.b)), 0.3);
-    vec3 hc = mix(ec, hue(fract(T * 0.04 + b * 0.8)), 0.4);              // drifts through hues outward
-    float outside = 1.0 - m;
-    float halo = outside * clamp(b * 2.0, 0.0, 1.0);                     // 1 at the outline, 0 far away
-    float rimIn = m * (1.0 - smoothstep(0.55, 0.97, b));
-    // neon outline with an RGB fringe split along the edge normal
-    vec3 fringe = vec3(edgeOf(M(uv + n * px * 2.5)), edgeOf(mr), edgeOf(M(uv - n * px * 2.5)));
-    // vines: filaments that grow out of the outline, longer on the bass, swaying in time
+    vec2 n = g / (length(g) + 1e-4);                                       // points toward the source
+    vec3 ec = bright(texture2D(fx, clamp(uv + n * 0.03, 0.001, 0.999)).rgb);
+    float halo = clamp(b * 2.8, 0.0, 1.0);                                 // 1 at the source, 0 far away
+    float away = 1.0 - smoothstep(0.3, 0.7, sh);
+    vec3 hc = mix(ec, hue(fract(T * 0.04 + halo * 0.8)), 0.4);
     vec2 p = vec2(uv.x * asp, uv.y);
-    float grow = clamp(0.45 + 0.2 * sin(T * 0.5) + 0.45 * bass, 0.0, 1.0);
-    float reach = smoothstep(1.0 - grow, 1.0 - grow + 0.25, halo);
-    float f1 = fbm(p * 6.0 + n * T * 0.18 + vec2(0.0, T * 0.04));
-    float f2 = fbm(p * 14.0 - n * T * 0.3 + 3.1);
-    float vines = (pow(1.0 - abs(f1 * 2.0 - 1.0), 14.0) + 0.6 * pow(1.0 - abs(f2 * 2.0 - 1.0), 22.0)) * outside * reach;
-    // sparks shed off the outline
-    vec2 cp = p * 46.0 + n * T * 1.5; vec2 cell = floor(cp); float rnd = h21(cell);
-    float spark = step(0.965, rnd) * smoothstep(0.32, 0.0, length(fract(cp) - 0.5)) * halo * (0.5 + 0.5 * sin(T * 4.0 + rnd * 60.0));
-    float glow = pow(halo, 1.8);
-    vec3 add;
-    if (edgeMode < 1.5)      add = ec * (glow * 1.4 + rimIn * 0.45);
-    else if (edgeMode < 2.5) add = fringe * mix(vec3(1.0), hc, 0.55) * 1.7 + ec * glow * 0.5;
-    else if (edgeMode < 3.5) add = hc * vines * 2.2 + ec * glow * 0.35;
-    else if (edgeMode > 4.5) {
-      vec2 sp = p;
-      if (edgeMode < 5.5) {          // smoke: wisps rise off you and curl away
-        vec2 q = sp * 3.5 + vec2(0.0, -T * 0.35);
-        float w = fbm(q + 1.5 * vec2(fbm(q + T * 0.1), fbm(q + 4.7 - T * 0.08)));
-        float rise = B(uv - vec2(0.0, 0.05 + 0.06 * w));                 // the halo pushed upward
-        float sm = smoothstep(0.3, 0.75, w) * clamp(rise * 2.6, 0.0, 1.0) * outside;
-        add = mix(ec, vec3(lum(ec)), 0.3) * sm * 2.1 + ec * glow * 0.3;
-      } else if (edgeMode < 6.5) {   // echo: ghost outlines of where you just were
-        float t = EC(uv) * outside;
-        float bands = smoothstep(0.75, 1.0, 1.0 - abs(fract(t * 7.0 + T * 0.4) * 2.0 - 1.0)) * step(0.02, t);
-        add = hue(fract(t * 0.6 + T * 0.05)) * mix(vec3(1.0), ec, 0.4) * (bands * t * 1.6 + t * 0.25) + ec * glow * 0.3;
-      } else if (edgeMode < 7.5) {   // drips: paint runs down off your outline
-        float col = floor(sp.x * 140.0), hcol = h21(vec2(col, 7.0));
-        float len = (0.03 + 0.22 * hcol * hcol) * (0.6 + 0.5 * bass + 0.2 * sin(T * 0.7 + hcol * 20.0));
-        float wcol = smoothstep(0.5, 0.15, abs(fract(sp.x * 140.0) - 0.5)) * step(0.45, hcol);
-        float above = 0.0;
-        for (int k = 1; k <= 6; k++) { float d = len * float(k) / 6.0; above = max(above, smoothstep(0.4, 0.7, M(uv + vec2(0.0, d))) * (1.0 - float(k) / 7.0)); }
-        add = ec * (wcol * above * outside * 2.0 + glow * 0.35);
-      } else if (edgeMode < 8.5) {   // rings: contour lines ripple outward from you on the beat
-        float rings = smoothstep(0.82, 1.0, 1.0 - abs(fract(b * 9.0 - T * 0.6 - beat * 0.5) * 2.0 - 1.0));
-        add = hc * rings * outside * smoothstep(0.0, 0.25, b) * 1.6 + ec * glow * 0.4;
-      } else {                       // pixels: your outline dissolves into blocks
-        float bs = 0.022; vec2 bc = (floor(uv / vec2(bs / asp, bs)) + 0.5) * vec2(bs / asp, bs);
-        float hb = h21(floor(uv / vec2(bs / asp, bs)) );
-        float on = step(hb * 0.9 + 0.05, B(bc) * 1.8 * (0.7 + 0.5 * bass)) * (1.0 - smoothstep(0.4, 0.7, M(bc)));
-        vec3 bcol = texture2D(fx, clamp(bc + n * 0.04, 0.001, 0.999)).rgb; bcol /= max(max(bcol.r, max(bcol.g, bcol.b)), 0.3);
-        add = mix(bcol, hc, 0.3) * on * (0.6 + 0.4 * sin(T * 3.0 + hb * 30.0)) * 1.4;
-      }
+    vec3 add = vec3(0.0);
+    if (W0.x > 0.01) add += W0.x * ec * (pow(halo, 1.5) * 1.5 + sh * 0.6);
+    if (W0.y > 0.01) {
+      vec3 fringe = vec3(edgeOf(M(uv + n * px * 3.0)), edgeOf(mr), edgeOf(M(uv - n * px * 3.0)));
+      add += W0.y * fringe * mix(vec3(1.0), hc, 0.55) * 2.0;
     }
-    else                     add = ec * glow * 0.9 + hc * vines * 1.8 + fringe * mix(vec3(1.0), hc, 0.6) * 0.9 + hc * spark * 2.5 + ec * rimIn * 0.25;
-    add *= (1.0 + 0.9 * beat) * edgeAmt;
-    o = 1.0 - (1.0 - o) * exp(-add * 1.3);                                // screen-like light blend: glows, never clips flat
+    if (W0.z > 0.01) {
+      float grow = clamp(0.5 + 0.2 * sin(T * 0.5) + 0.45 * bass, 0.0, 1.0);
+      float reach = smoothstep(1.0 - grow, 1.0 - grow + 0.25, halo);
+      float f1 = fbm(p * 6.0 + n * T * 0.18 + vec2(0.0, T * 0.04)), f2 = fbm(p * 14.0 - n * T * 0.3 + 3.1);
+      add += W0.z * hc * (pow(1.0 - abs(f1 * 2.0 - 1.0), 12.0) + 0.6 * pow(1.0 - abs(f2 * 2.0 - 1.0), 20.0)) * away * reach * 2.6;
+    }
+    if (W1.x > 0.01) {
+      vec2 cp = p * 46.0 + n * T * 1.5; float rnd = h21(floor(cp));
+      add += W1.x * hc * step(0.96, rnd) * smoothstep(0.34, 0.0, length(fract(cp) - 0.5)) * halo * (0.5 + 0.5 * sin(T * 4.0 + rnd * 60.0)) * 3.0;
+    }
+    if (W1.y > 0.01) {
+      vec2 q = p * 3.5 + vec2(0.0, -T * 0.35);
+      float w = fbm(q + 1.5 * vec2(fbm(q + T * 0.1), fbm(q + 4.7 - T * 0.08)));
+      float rise = clamp(B(uv - vec2(0.0, 0.05 + 0.07 * w)) * 3.0, 0.0, 1.0);
+      add += W1.y * mix(ec, vec3(lum(ec)), 0.3) * smoothstep(0.3, 0.75, w) * rise * away * 2.4;
+    }
+    if (W1.z > 0.01) {
+      float t = EC(uv) * (1.0 - m);
+      float bands = smoothstep(0.75, 1.0, 1.0 - abs(fract(t * 7.0 + T * 0.4) * 2.0 - 1.0)) * step(0.02, t);
+      add += W1.z * hue(fract(t * 0.6 + T * 0.05)) * mix(vec3(1.0), ec, 0.4) * (bands * t * 2.0 + t * 0.3);
+    }
+    if (W2.x > 0.01) {
+      float col = floor(p.x * 140.0), hcol = h21(vec2(col, 7.0));
+      float len = (0.03 + 0.24 * hcol * hcol) * (0.6 + 0.5 * bass + 0.2 * sin(T * 0.7 + hcol * 20.0));
+      float wcol = smoothstep(0.5, 0.15, abs(fract(p.x * 140.0) - 0.5)) * step(0.45, hcol);
+      float above = 0.0;
+      for (int k = 1; k <= 6; k++) { float d = len * float(k) / 6.0; above = max(above, smoothstep(0.35, 0.65, S(uv + vec2(0.0, d))) * (1.0 - float(k) / 7.0)); }
+      add += W2.x * ec * wcol * above * away * 2.4;
+    }
+    if (W2.y > 0.01) {
+      float rings = smoothstep(0.8, 1.0, 1.0 - abs(fract(halo * 6.0 - T * 0.6 - beat * 0.5) * 2.0 - 1.0));
+      add += W2.y * hc * rings * away * smoothstep(0.0, 0.2, halo) * 1.9;
+    }
+    if (W2.z > 0.01) {
+      float bs = 0.022; vec2 cell = floor(uv / vec2(bs / asp, bs)); vec2 bc = (cell + 0.5) * vec2(bs / asp, bs);
+      float hb = h21(cell);
+      float on = step(hb * 0.9 + 0.05, clamp(B(bc) * 2.8, 0.0, 1.0) * (0.7 + 0.5 * bass)) * (1.0 - smoothstep(0.3, 0.7, S(bc)));
+      add += W2.z * mix(bright(texture2D(fx, clamp(bc + n * 0.04, 0.001, 0.999)).rgb), hc, 0.3) * on * (0.6 + 0.4 * sin(T * 3.0 + hb * 30.0)) * 1.6;
+    }
+    add *= (1.0 + 0.9 * beat) * edgeAmt * gain;
+    o = 1.0 - (1.0 - o) * exp(-add * 1.3);                                  // light blend: glows, never clips flat
   }
   gl_FragColor = vec4(o, 1.0);
 }`;
 function cutoutPass() {
-  if (!cutP) cutP = simpleProgram(CUT_FS, ["ech", "blendMode", "blendAmt", "fx", "mask", "blr", "cam", "amt", "bgMode", "edgeAmt", "edgeMode", "T", "bass", "beat", "asp", "px", "bpx"]);
-  if (edgeAmt > 0.002 || edgeStyle === 6) updateBlur();
+  if (!cutP) cutP = simpleProgram(CUT_FS, ["fx", "mask", "srcm", "blr", "cam", "ech", "amt", "bgMode", "lookMode", "lookAmt", "thresh", "edgeAmt", "gain", "W0", "W1", "W2", "T", "bass", "beat", "asp", "px", "bpx"]);
+  if (edgeAmt > 0.002) updateFxBuffers();
   gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, cv.width, cv.height);
   gl.useProgram(cutP.prog); bindQuad();
-  const L = cutP.loc;
-  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, CUT.tex); gl.uniform1i(L.fx, 0);
-  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, CAM.segA ? CAM.segA.tex : blankSeg); gl.uniform1i(L.mask, 1);
-  gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, BL2 ? BL2.tex : blankSeg); gl.uniform1i(L.blr, 2);
-  gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, MP.cam.tex); gl.uniform1i(L.cam, 3);
-  gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, EC1 ? EC1.tex : blankSeg); gl.uniform1i(L.ech, 4);
-  gl.uniform1f(L.blendMode, blendMode); gl.uniform1f(L.blendAmt, blendAmt);
-  gl.uniform1f(L.amt, cutAmt); gl.uniform1f(L.bgMode, cutBg);
-  gl.uniform1f(L.edgeAmt, edgeAmt); gl.uniform1f(L.edgeMode, edgeStyle);
+  const L = cutP.loc, tx = (u, t, name) => { gl.activeTexture(gl.TEXTURE0 + u); gl.bindTexture(gl.TEXTURE_2D, t); gl.uniform1i(L[name], u); };
+  tx(0, CUT.tex, "fx"); tx(1, CAM.segA ? CAM.segA.tex : blankSeg, "mask"); tx(2, SRC ? SRC.tex : blankSeg, "srcm");
+  tx(3, BL2 ? BL2.tex : blankSeg, "blr"); tx(4, MP.cam.tex, "cam"); tx(5, EC1 ? EC1.tex : blankSeg, "ech");
+  gl.uniform1f(L.amt, cutAmt); gl.uniform1f(L.bgMode, cutMode);
+  gl.uniform1f(L.lookMode, lookMode); gl.uniform1f(L.lookAmt, lookAmt); gl.uniform1f(L.thresh, thresh);
+  gl.uniform1f(L.edgeAmt, edgeAmt); gl.uniform1f(L.gain, edgeGain);
+  gl.uniform3f(L.W0, EW[0], EW[1], EW[2]); gl.uniform3f(L.W1, EW[3], EW[4], EW[5]); gl.uniform3f(L.W2, EW[6], EW[7], EW[8]);
   gl.uniform1f(L.T, simTime); gl.uniform1f(L.bass, A.bass); gl.uniform1f(L.beat, A.beat); gl.uniform1f(L.asp, cv.width / cv.height);
   gl.uniform2f(L.px, CAM.segA ? 1.5 / CAM.segA.w : 0, CAM.segA ? 1.5 / CAM.segA.h : 0);
   gl.uniform2f(L.bpx, BL2 ? 2.0 / BL2.w : 0.01, BL2 ? 2.0 / BL2.h : 0.01);
   gl.drawArrays(gl.TRIANGLES, 0, 6);
 }
 function updateCut(dt) {
-  const want = $("optCut").checked && camLive && !!CAM.segA && haveBody && MV.s.presence > 0.3;
-  cutAmt += ((want ? 1 : 0) - cutAmt) * (1 - Math.exp(-dt * 5));
-  const ew = edgeStyle > 0 && camLive && !!CAM.segA && haveBody && MV.s.presence > 0.3;
-  edgeAmt += ((ew ? 1 : 0) - edgeAmt) * (1 - Math.exp(-dt * 4));
-  if (edgeAmt < 0.002 && !ew) edgeAmt = 0;
-  const bw = blendMode > 0 && camLive && !!CAM.segA && haveBody && MV.s.presence > 0.3;
-  blendAmt += ((bw ? 1 : 0) - blendAmt) * (1 - Math.exp(-dt * 4));
-  if (blendAmt < 0.002 && !bw) blendAmt = 0;
-  if (cutAmt < 0.002 && !want) cutAmt = 0;
+  const body = camLive && !!CAM.segA && haveBody && MV.s.presence > 0.3;
+  const ease = (x, want, r) => { x += ((want ? 1 : 0) - x) * (1 - Math.exp(-dt * r)); return (!want && x < 0.002) ? 0 : x; };
+  cutAmt = ease(cutAmt, cutMode > 0 && body, 5);
+  edgeAmt = ease(edgeAmt, edgeStyle > 0 && body, 4);
+  lookAmt = ease(lookAmt, lookMode > 0 && body, 4);
+  const tg = edgeTargets(), k = 1 - Math.exp(-dt * 3.5);
+  for (let i = 0; i < 9; i++) EW[i] += (tg[i] - EW[i]) * k;
 }
-function setCut(on, quiet) {
-  $("optCut").checked = on; $("cutBtn").classList.toggle("on", on); $("cutBtn").setAttribute("aria-pressed", String(on)); store.set("cut", on);
-  if (!quiet) toast(on ? (CAM.segA ? "Cutout on — the effect lives inside you" : "Cutout on — waits for body tracking") : "Cutout off");
+// setters (one per dock key) + a generic pop-up picker
+function setCut(v, quiet) { cutMode = v; store.set("cutMode", v); $("cutLbl").textContent = CUT_NAMES[v]; $("cutBtn").classList.toggle("lit", v > 0); if (!quiet) toast("Cutout: " + CUT_NAMES[v].toLowerCase()); refreshChooser(); }
+function setEdge(v, quiet) { edgeStyle = v; store.set("edge2", v); $("edgeLbl").textContent = EDGE_NAMES[v]; $("edgeBtn").classList.toggle("lit", v > 0); if (!quiet) toast("Edge: " + EDGE_NAMES[v].toLowerCase() + (v === 10 ? " — your moves pick the effects" : "")); refreshChooser(); }
+function setLook(v, quiet) { lookMode = v; store.set("look", v); $("lookLbl").textContent = LOOK_NAMES[v]; $("lookBtn").classList.toggle("lit", v > 0); if (!quiet) toast("Look: " + LOOK_NAMES[v].toLowerCase()); refreshChooser(); }
+function seg(id, get, set) {
+  const all = () => document.querySelectorAll("#" + id + " button");
+  all().forEach(b => b.addEventListener("click", () => { set(Number(b.dataset.v)); all().forEach(x => x.setAttribute("aria-pressed", String(Number(x.dataset.v) === get()))); }));
+  all().forEach(x => x.setAttribute("aria-pressed", String(Number(x.dataset.v) === get())));
 }
-$("cutBtn").addEventListener("click", () => setCut(!$("optCut").checked));
-$("optCut").addEventListener("change", () => setCut($("optCut").checked, true));
-document.querySelectorAll("#cutBg button").forEach(b => {
-  b.setAttribute("aria-pressed", String(Number(b.dataset.v) === cutBg));
-  b.addEventListener("click", () => { cutBg = Number(b.dataset.v); store.set("cutBg", cutBg); document.querySelectorAll("#cutBg button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); });
-});
-setCut(!!store.get("cut", false), true);
-const EDGE_NAME = ["Edge off", "Edge: glow", "Edge: neon", "Edge: vines", "Edge: aura", "Edge: smoke", "Edge: echo", "Edge: drips", "Edge: rings", "Edge: pixels"];
-const BLEND_NAME = ["Blend: effect", "Blend: screen", "Blend: multiply", "Blend: difference", "Blend: overlay", "Blend: duotone"];
-function setBlend(v, quiet) { blendMode = v; store.set("blend", v); document.querySelectorAll("#blendSel button").forEach(x => x.setAttribute("aria-pressed", String(Number(x.dataset.v) === v))); if (!quiet) toast(BLEND_NAME[v]); }
-document.querySelectorAll("#blendSel button").forEach(b => b.addEventListener("click", () => setBlend(Number(b.dataset.v))));
-setBlend(blendMode, true);
-function setEdge(v, quiet) {
-  edgeStyle = v; store.set("edge", v);
-  document.querySelectorAll("#edgeSel button").forEach(x => x.setAttribute("aria-pressed", String(Number(x.dataset.v) === v)));
-  if (!quiet) toast(EDGE_NAME[v]);
-}
-document.querySelectorAll("#edgeSel button").forEach(b => b.addEventListener("click", () => setEdge(Number(b.dataset.v))));
-setEdge(edgeStyle, true);
+seg("growSel", () => growFrom, v => { growFrom = v; store.set("grow", v); });
+$("thrRange").value = thresh; $("thrRange").addEventListener("input", e => { thresh = Number(e.target.value); store.set("thresh", thresh); });
+$("gainRange").value = edgeGain; $("gainRange").addEventListener("input", e => { edgeGain = Number(e.target.value); store.set("gain", edgeGain); });
+setCut(cutMode, true); setEdge(edgeStyle, true); setLook(lookMode, true);
 
 // ── render loop ──────────────────────────────────────────────────────────
 function tick(now) {
@@ -1398,8 +1457,8 @@ function tick(now) {
 // ── UI: dock, panel, collapse, idle hide, fullscreen, keys, touch ────────
 let toastT = 0;
 function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 1800); }
-function setPanel(open) {
-  if (open) { $("parts").hidden = true; $("partBtn").classList.remove("on"); }
+function setPanel(open, keepChooser) {
+  if (open && !keepChooser) setParts(false);
   $("panel").hidden = !open; $("ctlBtn").classList.toggle("on", open); $("ctlBtn").setAttribute("aria-expanded", String(open));
   if (open) buildControls();
   wake();
@@ -1416,7 +1475,6 @@ function wake() {
 ["pointermove", "pointerdown", "keydown"].forEach(e => window.addEventListener(e, wake, { passive: true }));
 $("prevSh").addEventListener("click", () => step(-1));
 $("nextSh").addEventListener("click", () => step(1));
-$("palBtn").addEventListener("click", () => cyclePal(1));
 $("ctlBtn").addEventListener("click", () => setPanel($("panel").hidden));
 $("hideBtn").addEventListener("click", () => setCollapsed(true));
 $("pill").addEventListener("click", () => setCollapsed(false));
@@ -1444,9 +1502,9 @@ window.addEventListener("keydown", e => {
   else if (k === "h" || k === "H") setCollapsed(!$("dock").hidden);
   else if (k === "c" || k === "C") { if ($("dock").hidden) setCollapsed(false); setPanel($("panel").hidden); }
   else if (k === " ") { playing = !playing; toast(playing ? "Playing" : "Paused"); }
-  else if (k === "x" || k === "X") setCut(!$("optCut").checked);
-  else if (k === "e" || k === "E") setEdge((edgeStyle + 1) % 10);
-  else if (k === "v" || k === "V") setBlend((blendMode + 1) % 6);
+  else if (k === "x" || k === "X") setCut((cutMode + 1) % 4);
+  else if (k === "e" || k === "E") setEdge((edgeStyle + 1) % 11);
+  else if (k === "v" || k === "V") setLook((lookMode + 1) % 8);
   else if (k === "b" || k === "B") setParts($("parts").hidden);
   else if (k >= "1" && k <= String(PART_KEYS.length)) setPart(PART_KEYS[Number(k) - 1]);
   else if (k === "Escape") { setPanel(false); setParts(false); }
@@ -1481,7 +1539,7 @@ for (const id of ORDER) startProgram(id);     // compile the rest in the backgro
 if (store.get("collapsed", false)) setCollapsed(true);
 wake();
 requestAnimationFrame(tick);
-toast("← → shader · ↑ ↓ colour · B body part · X cutout · E edge · V blend · C controls · H hide · F fullscreen");
+toast("← → shader · B body · X cutout · E edge · V look · C more · H hide");
 startCamera();
 </script>
 </body>
