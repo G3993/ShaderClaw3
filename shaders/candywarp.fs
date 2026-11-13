@@ -96,8 +96,10 @@
 
 void main(void)
 {
-	float s = RENDERSIZE.y / scale;
-	float radius = RENDERSIZE.x / cycle;
+	// short side sets the stripe scale, long side the ring radius — identical in landscape,
+	// and keeps the rings from collapsing to black on a portrait phone
+	float s = min(RENDERSIZE.x, RENDERSIZE.y) / scale;
+	float radius = max(RENDERSIZE.x, RENDERSIZE.y) / cycle;
 	float gap = s * (1.0 - thickness);
 	vec2 pos = gl_FragCoord.xy - RENDERSIZE.xy * 0.5;
 	float d = length(pos);

@@ -8,7 +8,7 @@
     {
       "NAME": "msg",
       "TYPE": "text",
-      "DEFAULT": "ETHEREA",
+      "DEFAULT": "AVA",
       "MAX_LENGTH": 12,
       "LABEL": "Message",
       "GROUP": "Text"

@@ -1326,5 +1326,50 @@
   },
   "laser_sculptor": {
     "group": "studio"
+  },
+  "ny_tag": {
+    "group": "shades_of_new_york"
+  },
+  "ny_platform_edge": {
+    "group": "shades_of_new_york"
+  },
+  "ny_station_tiles": {
+    "group": "shades_of_new_york"
+  },
+  "ny_metro": {
+    "group": "shades_of_new_york"
+  },
+  "ny_big_apple": {
+    "group": "shades_of_new_york"
+  },
+  "ny_pigeons": {
+    "group": "shades_of_new_york"
+  },
+  "ny_night_building": {
+    "group": "shades_of_new_york"
+  },
+  "ny_stock_exchange": {
+    "group": "shades_of_new_york"
+  },
+  "ny_central_park": {
+    "group": "shades_of_new_york"
+  },
+  "ny_times_square": {
+    "group": "shades_of_new_york"
+  },
+  "ny_chinatown": {
+    "group": "shades_of_new_york"
+  },
+  "ny_steam": {
+    "group": "shades_of_new_york"
+  },
+  "ny_bags": {
+    "group": "shades_of_new_york"
+  },
+  "ny_museum": {
+    "group": "shades_of_new_york"
+  },
+  "ny_times": {
+    "group": "shades_of_new_york"
   }
 }

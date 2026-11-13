@@ -91,7 +91,7 @@
     {
       "NAME": "msg",
       "TYPE": "text",
-      "DEFAULT": "ETHEREA",
+      "DEFAULT": "AVA",
       "MAX_LENGTH": 32,
       "GROUP": "Text"
     },

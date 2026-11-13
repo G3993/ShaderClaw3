@@ -66,7 +66,7 @@
       "NAME": "msg",
       "LABEL": "Message",
       "TYPE": "text",
-      "DEFAULT": "ETHEREA",
+      "DEFAULT": "AVA",
       "MAX_LENGTH": 12,
       "GROUP": "Text"
     },

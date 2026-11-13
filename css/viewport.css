@@ -35,23 +35,7 @@
   z-index: 5;
 }
 
-/* ===== CANVAS CONTROLS — one floating glass capsule ===== */
-.canvas-controls {
-  position: absolute;
-  bottom: calc(var(--sc-space-4) + env(safe-area-inset-bottom, 0px));
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex; gap: 2px;
-  align-items: center;
-  padding: 4px;
-  background: rgba(12, 12, 14, 0.55);
-  backdrop-filter: blur(20px) saturate(1.5);
-  -webkit-backdrop-filter: blur(20px) saturate(1.5);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: var(--sc-radius-pill);
-  box-shadow: 0 8px 28px rgba(0,0,0,0.4);
-  z-index: 35;
-}
+/* ===== CANVAS BUTTONS (live in the top bar — see topbar.css) ===== */
 .canvas-btn {
   background: transparent;
   border: none;
@@ -204,65 +188,3 @@
   cursor: default;
 }
 
-/* ===== MOBILE: centered stage + touch targets ===== */
-@media (max-width: 900px) {
-  /* Stage — the shader is a framed canvas in the center, CapCut-style */
-  #preview, .sc3-preview {
-    inset: auto;
-    position: absolute;
-    top: calc(8px + env(safe-area-inset-top, 0px));
-    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
-    left: 10px;
-    right: 10px;
-    border-radius: 14px;
-    overflow: hidden;
-    transition: top 0.3s cubic-bezier(0.16, 1, 0.3, 1), bottom 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-                left 0.3s cubic-bezier(0.16, 1, 0.3, 1), right 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-                border-radius 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    display: flex; align-items: center; justify-content: center;
-  }
-  #gl-canvas, #three-canvas {
-    position: relative;
-    top: auto; left: auto;
-    margin: auto;
-  }
-
-  /* Sheet open at half — stage stays visible above it */
-  body.sheet-half #preview { bottom: calc(44dvh + 84px + env(safe-area-inset-bottom, 0px) + 10px); }
-
-  /* Pseudo-fullscreen — stage fills the phone */
-  body.sc3-fs #preview {
-    top: 0; bottom: 0; left: 0; right: 0;
-    border-radius: 0;
-  }
-  body.sc3-fs #fs-exit {
-    display: flex;
-    position: absolute;
-    top: calc(12px + env(safe-area-inset-top, 0px));
-    right: 12px;
-    width: 40px; height: 40px;
-    align-items: center; justify-content: center;
-    background: rgba(10, 10, 12, 0.5);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 50%;
-    color: rgba(255,255,255,0.85);
-    z-index: 40;
-  }
-
-  .canvas-btn {
-    width: 44px; height: 44px;
-    border-radius: 50%;
-    font-size: 18px;
-  }
-  .canvas-controls {
-    gap: 2px;
-    bottom: auto;
-    top: 10px;
-  }
-  #interact-hint {
-    bottom: auto;
-    top: 64px;
-  }
-}

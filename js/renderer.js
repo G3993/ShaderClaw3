@@ -723,6 +723,7 @@ class Renderer {
     }
     if (layer.program && layer.program !== prog) gl.deleteProgram(layer.program);
     layer.program = prog;
+    layer._frameBase = this.frameIndex;   // FRAMEINDEX restarts at 0 for each new shader, so sims re-seed
     layer.uniformLocs = {};
     return { ok: true, errors: null };
   }
@@ -817,7 +818,7 @@ class Renderer {
     const piLoc = this._getLayerLoc(layer, 'PASSINDEX');
     if (piLoc) gl.uniform1i(piLoc, 0);
     const fiLoc = this._getLayerLoc(layer, 'FRAMEINDEX');
-    if (fiLoc) gl.uniform1i(fiLoc, this.frameIndex);
+    if (fiLoc) gl.uniform1i(fiLoc, this.frameIndex - (layer._frameBase || 0));
 
     // Transparent background flag
     const tbLoc = this._getLayerLoc(layer, '_transparentBg');
@@ -1111,7 +1112,7 @@ class Renderer {
     const tdLoc2 = this._getLayerLoc(layer, 'TIMEDELTA');
     if (tdLoc2) gl.uniform1f(tdLoc2, Math.min(rawDt, 0.1));
     const fiLoc = this._getLayerLoc(layer, 'FRAMEINDEX');
-    if (fiLoc) gl.uniform1i(fiLoc, this.frameIndex);
+    if (fiLoc) gl.uniform1i(fiLoc, this.frameIndex - (layer._frameBase || 0));
     const tbLoc = this._getLayerLoc(layer, '_transparentBg');
     if (tbLoc) gl.uniform1f(tbLoc, layer.transparentBg ? 1.0 : 0.0);
     const vgLoc2 = this._getLayerLoc(layer, '_voiceGlitch');
@@ -1299,7 +1300,10 @@ class Renderer {
 
       gl.drawArrays(gl.TRIANGLES, 0, 3);
 
-      if (pass.persistent && pass.ppFBO) {
+      // Swap after EVERY buffer pass, not just persistent ones: later passes read the
+      // "current" side, so a one-frame scene buffer that never swapped was read empty
+      // (every shader with a non-persistent TARGET rendered black).
+      if (pass.ppFBO) {
         pass.ppFBO.current ^= 1;
       }
     }
