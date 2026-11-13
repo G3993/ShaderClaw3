@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Shades of New York — Swipe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root {
+  --bg: #0a0a0b; --card: #141416; --line: rgba(255,255,255,.12); --fg: #f4f4f2; --muted: #9b9b98;
+  --go: #3ddc84; --no: #ff5a4f; --note: #ffd60a;
+  --display: "Bricolage Grotesque", "Arial Narrow", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 13px/1.45 var(--mono); overflow: hidden; -webkit-font-smoothing: antialiased; }
+button, textarea { font: inherit; color: inherit; }
+.app { height: 100%; display: grid; grid-template-rows: auto auto 1fr auto; gap: 10px; padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); max-width: 760px; margin: 0 auto; }
+header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+h1 { margin: 0; font: 700 22px/1 var(--display); letter-spacing: -.01em; text-transform: uppercase; }
+.count { color: var(--muted); font-size: 12px; }
+.bar { height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; margin-top: 8px; width: 100%; }
+.bar i { display: block; height: 100%; background: var(--go); width: 0; transition: width .3s; }
+.tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.tabs button { flex: none; padding: 7px 12px; border: 1px solid var(--line); border-radius: 999px; background: transparent; cursor: pointer; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.tabs button[aria-pressed="true"] { color: var(--fg); border-color: var(--fg); }
+.tabs b { font-weight: 600; color: var(--fg); margin-left: 4px; }
+.stack { position: relative; min-height: 0; }
+.card { position: absolute; inset: 0; border-radius: 22px; overflow: hidden; background: var(--card); border: 1px solid var(--line); touch-action: none; user-select: none; -webkit-user-select: none; will-change: transform; display: flex; flex-direction: column; }
+.card.back { transform: scale(.96) translateY(10px); opacity: .55; pointer-events: none; }
+.card .img { position: relative; flex: 1; min-height: 0; background: #000; }
+.card img { width: 100%; height: 100%; object-fit: contain; display: block; pointer-events: none; }
+.card .wait { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--muted); font-size: 12px; }
+.card .wait b { display: block; margin-bottom: 8px; font: 700 20px/1.1 var(--display); color: var(--fg); text-transform: uppercase; }
+.meta { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); }
+.meta .top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.meta .num { color: var(--muted); font-size: 12px; }
+.meta .ttl { font: 700 22px/1 var(--display); text-transform: uppercase; letter-spacing: -.01em; }
+.chip { padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); font-size: 11px; letter-spacing: .06em; }
+.chip.A { border-color: #8ab4ff; color: #8ab4ff; } .chip.B { border-color: #ff8ae2; color: #ff8ae2; } .chip.C { border-color: var(--note); color: var(--note); }
+.chip.st-go { background: var(--go); border-color: var(--go); color: #000; } .chip.st-no { background: var(--no); border-color: var(--no); color: #000; }
+.meta .sub { color: var(--muted); font-size: 12px; }
+.meta .note { color: var(--note); font-size: 12px; }
+.meta details summary { cursor: pointer; color: var(--muted); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.meta details p { margin: 6px 0 0; font-size: 12px; color: #d8d8d4; }
+.stamp { position: absolute; top: 22px; padding: 8px 14px; border: 3px solid; border-radius: 10px; font: 700 26px/1 var(--display); letter-spacing: .04em; text-transform: uppercase; opacity: 0; pointer-events: none; }
+.stamp.go { left: 18px; color: var(--go); border-color: var(--go); transform: rotate(-12deg); }
+.stamp.no { right: 18px; color: var(--no); border-color: var(--no); transform: rotate(12deg); }
+.empty { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--muted); padding: 24px; }
+.empty b { display: block; font: 700 26px/1.1 var(--display); color: var(--fg); text-transform: uppercase; margin-bottom: 10px; }
+.ctrls { display: flex; justify-content: center; align-items: center; gap: 16px; }
+.cb { width: 58px; height: 58px; border-radius: 50%; border: 1px solid var(--line); background: var(--card); display: grid; place-items: center; cursor: pointer; transition: transform .1s; }
+.cb:active { transform: scale(.94); }
+.cb svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.cb.no { color: var(--no); border-color: rgba(255,90,79,.5); width: 66px; height: 66px; }
+.cb.go { color: var(--go); border-color: rgba(61,220,132,.5); width: 66px; height: 66px; }
+.cb.note { color: var(--note); } .cb.sm { width: 46px; height: 46px; color: var(--muted); }
+.cb.sm svg { width: 18px; height: 18px; }
+.sheet { position: fixed; inset: 0; z-index: 10; display: grid; place-items: end center; background: rgba(0,0,0,.55); padding: 16px; }
+.sheet > div { width: min(560px, 100%); background: #161618; border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.sheet h2 { margin: 0; font: 700 18px/1.1 var(--display); text-transform: uppercase; }
+.sheet textarea { width: 100%; min-height: 110px; resize: vertical; background: #0d0d0e; border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
+.sheet pre { margin: 0; max-height: 46vh; overflow: auto; background: #0d0d0e; border: 1px solid var(--line); border-radius: 12px; padding: 10px; font-size: 11px; white-space: pre-wrap; }
+.row { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.btn { padding: 10px 14px; border-radius: 999px; border: 1px solid var(--line); background: transparent; cursor: pointer; font-size: 12px; }
+.btn.pri { background: var(--fg); color: #000; border-color: var(--fg); font-weight: 600; }
+.btn.go { border-color: var(--go); color: var(--go); } .btn.no { border-color: var(--no); color: var(--no); }
+.toast { position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); background: #222; border: 1px solid var(--line); padding: 8px 14px; border-radius: 999px; font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.show { opacity: 1; }
+.keys { text-align: center; color: var(--muted); font-size: 11px; }
+@media (max-width: 520px) { .keys { display: none; } }
+@media (prefers-reduced-motion: reduce) { .bar i, .cb { transition: none; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div style="flex:1;min-width:200px"><h1>Shades of New York · Swipe</h1><div class="bar"><i id="prog"></i></div></div>
+    <span class="count" id="count">—</span>
+  </header>
+  <nav class="tabs" id="tabs" aria-label="Filter">
+    <button type="button" data-f="todo" aria-pressed="true">To review<b id="nTodo">0</b></button>
+    <button type="button" data-f="go">Green light<b id="nGo">0</b></button>
+    <button type="button" data-f="no">Redo<b id="nNo">0</b></button>
+    <button type="button" data-f="notes">Notes<b id="nNotes">0</b></button>
+    <button type="button" data-f="wait">Waiting<b id="nWait">0</b></button>
+    <button type="button" data-f="all">All<b id="nAll">0</b></button>
+  </nav>
+  <main class="stack" id="stack" aria-live="polite"></main>
+  <div>
+    <div class="ctrls">
+      <button class="cb sm" id="undoBtn" type="button" aria-label="Undo" title="Undo (Z)"><svg viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4.5v4h4"/></svg></button>
+      <button class="cb no" id="noBtn" type="button" aria-label="Redo / delete" title="Redo (←)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <button class="cb note" id="noteBtn" type="button" aria-label="Comment" title="Comment (C)"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg></button>
+      <button class="cb go" id="goBtn" type="button" aria-label="Green light" title="Green light (→)"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
+      <button class="cb sm" id="expBtn" type="button" aria-label="Export results" title="Export results"><svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19h14"/></svg></button>
+    </div>
+    <p class="keys">← redo · → green light · C comment · Z undo · drag the card</p>
+  </div>
+</div>
+<div class="sheet" id="noteSheet" hidden><div role="dialog" aria-label="Comment">
+  <h2 id="noteTitle">Comment</h2>
+  <textarea id="noteText" placeholder="What should change? e.g. more chrome, less red, show the whole body…"></textarea>
+  <div class="row"><button class="btn" id="noteCancel" type="button">Cancel</button><button class="btn no" id="noteNo" type="button">Save + redo</button><button class="btn go" id="noteGo" type="button">Save + green light</button><button class="btn pri" id="noteSave" type="button">Save note</button></div>
+</div></div>
+<div class="sheet" id="expSheet" hidden><div role="dialog" aria-label="Export">
+  <h2>Your picks</h2>
+  <pre id="expText"></pre>
+  <div class="row"><button class="btn" id="expClose" type="button">Close</button><button class="btn" id="expDl" type="button">Download JSON</button><button class="btn pri" id="expCopy" type="button">Copy for Claude</button></div>
+</div></div>
+<div class="toast" id="toast"></div>
+<script>
+const $ = (id) => document.getElementById(id);
+const KEY = "sony.swipe.v1";
+let CARDS = [], S = {}, filter = "todo", queue = [], hist = [];
+try { S = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { S = {}; }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+function toast(m) { const t = $("toast"); t.textContent = m; t.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 1400); }
+const st = (c) => (S[c.id] || {}).v || "";
+const note = (c) => (S[c.id] || {}).n || "";
+function inFilter(c) {
+  if (filter === "todo") return !!c.url && !st(c);
+  if (filter === "go") return st(c) === "go";
+  if (filter === "no") return st(c) === "no";
+  if (filter === "notes") return !!note(c);
+  if (filter === "wait") return !c.url;
+  return true;
+}
+function counts() {
+  const n = (f) => CARDS.filter(c => { const o = filter; filter = f; const r = inFilter(c); filter = o; return r; }).length;
+  $("nTodo").textContent = n("todo"); $("nGo").textContent = n("go"); $("nNo").textContent = n("no"); $("nNotes").textContent = n("notes"); $("nWait").textContent = n("wait"); $("nAll").textContent = CARDS.length;
+  const done = CARDS.filter(c => st(c)).length;
+  $("count").textContent = done + " / " + CARDS.length + " decided · " + CARDS.filter(c => c.url).length + " images";
+  $("prog").style.width = (100 * done / Math.max(1, CARDS.length)) + "%";
+}
+function rebuild() { queue = CARDS.filter(inFilter); render(); }
+function cardEl(c, back) {
+  const el = document.createElement("article"); el.className = "card" + (back ? " back" : "");
+  const s = st(c), stTxt = s === "go" ? "Green light" : s === "no" ? "Redo" : "";
+  el.innerHTML = '<div class="img">' + (c.url ? '<img alt="" draggable="false">' : '<div class="wait"><div><b>Waiting for image</b>This one hasn\'t been generated yet.</div></div>') +
+    '<span class="stamp go">Green light</span><span class="stamp no">Redo</span></div>' +
+    '<div class="meta"><div class="top"><span class="num"></span><span class="ttl"></span><span class="chip ' + c.opt + '"></span>' + (stTxt ? '<span class="chip st-' + s + '">' + stTxt + "</span>" : "") + '</div>' +
+    '<div class="sub"></div>' + (note(c) ? '<div class="note"></div>' : "") + '<details><summary>Prompt</summary><p></p></details></div>';
+  if (c.url) { const im = el.querySelector("img"); im.src = c.url; im.alt = c.title + " — option " + c.opt + " (" + c.optName + ")"; }
+  el.querySelector(".num").textContent = c.shot; el.querySelector(".ttl").textContent = c.title;
+  el.querySelector(".chip." + c.opt).textContent = c.opt + " · " + c.optName;
+  el.querySelector(".sub").textContent = c.chapter + " · " + c.subject;
+  if (note(c)) el.querySelector(".note").textContent = "Note: " + note(c);
+  el.querySelector("details p").textContent = c.prompt;
+  return el;
+}
+function render() {
+  const box = $("stack"); box.textContent = ""; counts();
+  if (!queue.length) {
+    const e = document.createElement("div"); e.className = "empty";
+    e.innerHTML = filter === "todo" ? "<div><b>All caught up</b>Every image that exists has a decision. Tap ⤓ to export your picks.</div>" : "<div><b>Nothing here</b>Try another tab.</div>";
+    box.appendChild(e); return;
+  }
+  if (queue[1]) box.appendChild(cardEl(queue[1], true));
+  const top = cardEl(queue[0], false); box.appendChild(top); drag(top);
+  for (const c of queue.slice(2, 5)) if (c.url) { const i = new Image(); i.src = c.url; }   // preload the next few
+}
+function decide(v, n) {
+  const c = queue[0]; if (!c) return;
+  hist.push({ id: c.id, prev: S[c.id] ? Object.assign({}, S[c.id]) : null });
+  S[c.id] = Object.assign({}, S[c.id] || {}, v ? { v } : {}, n != null ? { n } : {});
+  if (n === "") delete S[c.id].n;
+  save();
+  if (v) { const el = $("stack").querySelector(".card:not(.back)"); fly(el, v === "go" ? 1 : -1, () => advance(c)); toast(v === "go" ? "Green light · " + c.id : "Redo · " + c.id); }
+  else { render(); toast("Note saved"); }
+}
+function advance(c) { if (filter === "all" || filter === "notes") queue.push(queue.shift()); else queue.shift(); render(); }
+function fly(el, dir, done) {
+  if (!el || matchMedia("(prefers-reduced-motion: reduce)").matches) return done();
+  el.style.transition = "transform .28s ease-in, opacity .28s"; el.style.transform = "translateX(" + dir * 130 + "%) rotate(" + dir * 22 + "deg)"; el.style.opacity = "0";
+  setTimeout(done, 260);
+}
+function drag(el) {
+  let x0 = 0, y0 = 0, dx = 0, on = false;
+  const go = el.querySelector(".stamp.go"), no = el.querySelector(".stamp.no");
+  el.addEventListener("pointerdown", e => { if (e.target.closest("details")) return; on = true; x0 = e.clientX; y0 = e.clientY; dx = 0; el.setPointerCapture(e.pointerId); el.style.transition = "none"; });
+  el.addEventListener("pointermove", e => {
+    if (!on) return; dx = e.clientX - x0; const dy = e.clientY - y0;
+    el.style.transform = "translate(" + dx + "px," + dy * 0.2 + "px) rotate(" + dx / 18 + "deg)";
+    go.style.opacity = Math.max(0, Math.min(1, dx / 110)); no.style.opacity = Math.max(0, Math.min(1, -dx / 110));
+  });
+  const end = () => {
+    if (!on) return; on = false;
+    if (Math.abs(dx) > 110 && queue[0] && queue[0].url) decide(dx > 0 ? "go" : "no");
+    else { el.style.transition = "transform .2s"; el.style.transform = ""; go.style.opacity = no.style.opacity = 0; }
+  };
+  el.addEventListener("pointerup", end); el.addEventListener("pointercancel", end);
+}
+function undo() {
+  const h = hist.pop(); if (!h) { toast("Nothing to undo"); return; }
+  if (h.prev) S[h.id] = h.prev; else delete S[h.id];
+  save(); const c = CARDS.find(x => x.id === h.id);
+  queue = queue.filter(x => x.id !== h.id); if (c) queue.unshift(c); render(); toast("Undone · " + h.id);
+}
+function openNote() {
+  const c = queue[0]; if (!c) return;
+  $("noteTitle").textContent = "Comment · " + c.id + " " + c.title; $("noteText").value = note(c); $("noteSheet").hidden = false;
+  setTimeout(() => $("noteText").focus(), 30);
+}
+function closeNote() { $("noteSheet").hidden = true; }
+function exportText() {
+  const go = CARDS.filter(c => st(c) === "go").map(c => c.id), no = CARDS.filter(c => st(c) === "no").map(c => c.id);
+  const notes = CARDS.filter(c => note(c)).map(c => c.id + " (" + (st(c) || "undecided") + "): " + note(c));
+  return "SHADES OF NEW YORK — SWIPE RESULTS\nGreen light (" + go.length + "): " + (go.join(", ") || "—") + "\nRedo (" + no.length + "): " + (no.join(", ") || "—") + "\nNotes (" + notes.length + "):\n" + (notes.join("\n") || "—");
+}
+$("tabs").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; filter = b.dataset.f; document.querySelectorAll("#tabs button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); rebuild(); });
+$("goBtn").addEventListener("click", () => queue[0] && queue[0].url && decide("go"));
+$("noBtn").addEventListener("click", () => queue[0] && queue[0].url && decide("no"));
+$("noteBtn").addEventListener("click", openNote);
+$("undoBtn").addEventListener("click", undo);
+$("noteCancel").addEventListener("click", closeNote);
+$("noteSave").addEventListener("click", () => { closeNote(); decide(null, $("noteText").value.trim()); });
+$("noteGo").addEventListener("click", () => { closeNote(); decide("go", $("noteText").value.trim()); });
+$("noteNo").addEventListener("click", () => { closeNote(); decide("no", $("noteText").value.trim()); });
+$("expBtn").addEventListener("click", () => { $("expText").textContent = exportText(); $("expSheet").hidden = false; });
+$("expClose").addEventListener("click", () => { $("expSheet").hidden = true; });
+$("expCopy").addEventListener("click", () => {
+  const t = exportText();
+  navigator.clipboard.writeText(t).then(() => toast("Copied — paste it to Claude")).catch(() => { const r = document.createRange(); r.selectNodeContents($("expText")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("Selected — copy it"); });
+});
+$("expDl").addEventListener("click", () => {
+  const data = CARDS.filter(c => S[c.id]).map(c => ({ id: c.id, title: c.title, option: c.optName, decision: st(c) || null, note: note(c) || null, prompt: c.prompt, url: c.url }));
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })); a.download = "shades-swipe-results.json"; a.click();
+});
+window.addEventListener("keydown", e => {
+  if (!$("noteSheet").hidden) { if (e.key === "Escape") closeNote(); return; }
+  if (!$("expSheet").hidden) { if (e.key === "Escape") $("expSheet").hidden = true; return; }
+  if (e.key === "ArrowRight") { if (queue[0] && queue[0].url) decide("go"); }
+  else if (e.key === "ArrowLeft") { if (queue[0] && queue[0].url) decide("no"); }
+  else if (e.key === "c" || e.key === "C") { e.preventDefault(); openNote(); }
+  else if (e.key === "z" || e.key === "Z") undo();
+});
+fetch("swipe-manifest.json", { cache: "no-store" }).then(r => r.json()).then(m => { CARDS = m.cards || []; rebuild(); })
+  .catch(() => { $("stack").innerHTML = '<div class="empty"><div><b>Couldn\'t load the images</b>Reload the page.</div></div>'; });
+</script>
+</body>
+</html>
