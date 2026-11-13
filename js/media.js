@@ -69,7 +69,7 @@ function updateVarFontTexture(gl, inputValues) {
     else if (code >= 0 && code <= 25) msg += String.fromCharCode(65 + code);
     else msg += ' ';
   }
-  msg = msg.trim() || 'ETHEREA';
+  msg = msg.trim() || 'AVA';
 
   // Sync weight from ISF param if available
   const iw = inputValues['fontWeight'];
@@ -132,7 +132,7 @@ function updateBreathingTexture(gl, inputValues) {
     else if (code >= 0 && code <= 25) msg += String.fromCharCode(65 + code);
     else msg += ' ';
   }
-  msg = msg.trim() || 'ETHEREA';
+  msg = msg.trim() || 'AVA';
 
   const fontStack = _getFontStack(inputValues);
   const spd = inputValues['speed'] != null ? inputValues['speed'] : 0.5;

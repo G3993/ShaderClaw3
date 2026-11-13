@@ -4,34 +4,6 @@
    ============================================================ */
 
 /* ===== TOP BAR (floating gradient) ===== */
-.sc3-header {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: var(--sc-topbar-h);
-  display: flex;
-  align-items: center;
-  padding: 0 var(--sc-space-4);
-  background: linear-gradient(180deg, rgba(0,0,0,0.5) 0%, transparent 100%);
-  z-index: 100;
-  pointer-events: none;
-  gap: var(--sc-space-3);
-}
-.sc3-header > * { pointer-events: auto; }
-
-.sc3-logo {
-  font-family: var(--sc-font);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: var(--sc-tracking-tight);
-  color: rgba(255,255,255,0.85);
-  user-select: none;
-  display: flex; align-items: center; gap: 9px;
-}
-.sc3-logo-img {
-  width: 26px; height: 26px;
-  object-fit: contain;
-  overflow: visible;
-}
 .sc3-version {
   color: var(--sc-accent);
   font-size: 11px;

@@ -4864,5 +4864,21 @@
     "id": 1614,
     "title": "Times",
     "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Filter",
+      "Live Input",
+      "Camera",
+      "Audio Reactive"
+    ],
+    "description": "Heatmap: an infrared thermal camera. Plug a live camera into TEXTURE and the image is read as heat: skin and faces glow hot, the room cools to blue and black, and anything that moves leaves a warm trail that spreads out and fades, the way a hand-print lingers on a wall in a real thermal image. The camera auto-ranges like a FLIR (the hottest thing in frame sets the top of the scale) and a HUD shows the centre spot temperature, a box on the hottest point and a min/max colour scale. Seven palettes: Ironbow, Rainbow, White Hot, Black Hot, Arctic, Lava and Night Vision. Sensor Pixels drops the resolution to a chunky low-res sensor grid. With no camera bound, three warm figures walk through a cool room so the shader still runs. Bass pushes heat into the trails and beats flash the hotspot.",
+    "file": "heatmap.fs",
+    "hasVertex": false,
+    "hidden": false,
+    "id": 1535,
+    "title": "Heatmap",
+    "type": "generator"
   }
 ]

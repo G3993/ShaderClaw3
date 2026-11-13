@@ -403,6 +403,8 @@
     _xf.src[name] = txt;
     return txt;
   }
+  const XF_VIEWER = 'AVA_Dissolve';
+  _xfSource(XF_VIEWER).catch(() => {});   // warm, so the first switch already dissolves
   function _xfProgram(gl, name) {
     if (_xf.progs[name]) return _xf.progs[name];
     const body0 = _xf.src[name];
@@ -435,6 +437,15 @@
     const beatsSel = document.getElementById('transition-beats');
     const beats = beatsSel ? Number(beatsSel.value) : 4;
     layer._xfName = null;
+    // Viewer: one quiet, unhurried dissolve every time — no beat sync, no effect roulette
+    if (document.body.classList.contains('viewing')) {
+      layer._xfName = XF_VIEWER;
+      layer._xfStart = performance.now();
+      layer._xfDur = 1400;
+      _xf.last = { name: XF_VIEWER, layer: layer.id, waitMs: 0, durMs: 1400 };
+      _xfSource(XF_VIEWER).catch(() => { layer._xfName = null; });
+      return true;
+    }
     if (mode === 'cut') { layer._transitionStart = null; return true; }
     if (mode === 'crossfade' || !_xf.index) return false;
     const name = mode === 'auto' ? XF_AUTO_ORDER[_xf.switchCount++ % XF_AUTO_ORDER.length] : mode;
@@ -489,6 +500,104 @@
     gl.activeTexture(gl.TEXTURE0);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     return true;
+  }
+
+  // === Universal touch response ===
+  // Every shader answers the pointer. Shaders that read mousePos / mouseDelta / mouseDown
+  // themselves are left alone; all the others get this pass: each touch drops a ripple that
+  // travels outward and bends the picture like a stone in water, drags leave a wake.
+  const TR_MAX = 10, TR_LIFE = 2.6;
+  const _tr = { pts: [], prog: null, loc: null, last: [0.5, 0.5], wasDown: 0, buf: new Float32Array(TR_MAX * 4) };
+  window._sc3Touch = _tr;
+  function _trEmit(x, y, amp) {
+    _tr.pts.push({ x, y, t: performance.now(), amp });
+    if (_tr.pts.length > TR_MAX) _tr.pts.shift();
+  }
+  function _trTrack() {
+    const mx = isfRenderer.mousePos[0], my = isfRenderer.mousePos[1], down = isfRenderer.mouseDown ? 1 : 0;
+    const asp = glCanvas.width / Math.max(glCanvas.height, 1);
+    const dx = (mx - _tr.last[0]) * asp, dy = my - _tr.last[1];
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (down && !_tr.wasDown) { _trEmit(mx, my, 1.0); _tr.last = [mx, my]; }
+    else if (dist > 0.045) { _trEmit(mx, my, down ? 0.6 : 0.32); _tr.last = [mx, my]; }
+    _tr.wasDown = down;
+    const now = performance.now();
+    while (_tr.pts.length && (now - _tr.pts[0].t) / 1000 > TR_LIFE) _tr.pts.shift();
+  }
+  function _trNative(layer) {
+    if (layer._trProg !== layer.program) {
+      layer._trProg = layer.program;
+      // The host wrapper touches mousePos in every shader, so ask the shader's own source
+      layer._trIsNative = /\b(mousePos|mouseDelta|mouseDown|pinchHold|iMouse)\b/.test(layer._isfSource || '');
+    }
+    return layer._trIsNative;
+  }
+  function _trProgram(gl) {
+    if (_tr.prog !== null) return _tr.prog;
+    const mk = (type, src) => { const sh = gl.createShader(type); gl.shaderSource(sh, src); gl.compileShader(sh); return sh; };
+    const vs = mk(gl.VERTEX_SHADER, 'attribute vec2 position;varying vec2 vUv;void main(){vUv=position*0.5+0.5;gl_Position=vec4(position,0.,1.);}');
+    const fs = mk(gl.FRAGMENT_SHADER, [
+      'precision highp float;',
+      'varying vec2 vUv; uniform sampler2D uTex; uniform float ratio; uniform vec4 uPts[' + TR_MAX + '];',
+      'void main(){',
+      '  vec2 off = vec2(0.0); float crest = 0.0;',
+      '  for (int i = 0; i < ' + TR_MAX + '; i++) {',
+      '    vec4 p = uPts[i];',
+      '    if (p.w <= 0.0) continue;',
+      '    vec2 d = (vUv - p.xy) * vec2(ratio, 1.0);',
+      '    float r = length(d), age = p.z;',
+      '    float x = r - age * 0.42;',                                   // ring front travels outward
+      '    float env = exp(-x * x * 55.0) * exp(-age * 1.5) * smoothstep(0.0, 0.08, age) * p.w;',
+      '    float w = sin(x * 34.0) * env;',
+      '    float dimple = exp(-r * r * 60.0) * exp(-age * 5.0) * p.w;',   // the press itself
+      '    off += (d / max(r, 1e-4)) * (w * 0.038 - dimple * 0.050);',
+      '    crest += w;',
+      '  }',
+      '  vec2 o = off / vec2(ratio, 1.0);',
+      '  vec3 c = vec3(texture2D(uTex, vUv - o * 1.18).r, texture2D(uTex, vUv - o).g, texture2D(uTex, vUv - o * 0.82).b);',
+      '  c += max(crest, 0.0) * 0.10;',
+      '  gl_FragColor = vec4(c, texture2D(uTex, vUv - o).a);',
+      '}'].join('\n'));
+    const pr = gl.createProgram();
+    gl.attachShader(pr, vs); gl.attachShader(pr, fs);
+    gl.bindAttribLocation(pr, 0, 'position');
+    gl.linkProgram(pr);
+    gl.deleteShader(vs); gl.deleteShader(fs);
+    if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) { console.warn('[touch] ripple pass failed:', gl.getProgramInfoLog(pr)); _tr.prog = false; return false; }
+    _tr.prog = pr;
+    _tr.loc = { tex: gl.getUniformLocation(pr, 'uTex'), ratio: gl.getUniformLocation(pr, 'ratio'), pts: gl.getUniformLocation(pr, 'uPts[0]') };
+    return pr;
+  }
+  function _trRender(gl, layer) {
+    if (!_tr.pts.length || !layer.fbo || _trNative(layer)) return;
+    const prog = _trProgram(gl);
+    if (!prog) return;
+    const w = layer.fbo.width, h = layer.fbo.height;
+    if (!layer._trTex || layer._trSize[0] !== w || layer._trSize[1] !== h) {
+      if (!layer._trTex) layer._trTex = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, layer._trTex);
+      for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      layer._trSize = [w, h];
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, layer.fbo.fbo);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, layer._trTex);
+    gl.copyTexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 0, 0, w, h);
+    const now = performance.now();
+    _tr.buf.fill(0);
+    _tr.pts.forEach((p, i) => { _tr.buf.set([p.x, p.y, (now - p.t) / 1000, p.amp], i * 4); });
+    gl.viewport(0, 0, w, h);
+    gl.disable(gl.BLEND);
+    gl.useProgram(prog);
+    gl.uniform1i(_tr.loc.tex, 0);
+    gl.uniform1f(_tr.loc.ratio, w / h);
+    gl.uniform4fv(_tr.loc.pts, _tr.buf);
+    gl.bindBuffer(gl.ARRAY_BUFFER, isfRenderer.posBuf);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
 
   function _blendTransitionSnapshot(gl, layer, alpha) {
@@ -886,7 +995,10 @@
         errorBar.textContent = '';
         errorBar.classList.remove('show');
         lastErrors = null;
+        const xl = getLayer(layerId);
+        if (xl && xl._xfFromFluid) { xl._transitionStart = performance.now(); _xfBegin(xl); }
       }
+      { const xl = getLayer(layerId); if (xl) xl._xfFromFluid = false; }
       return result;
     } catch (e) {
       errorBar.textContent = 'Failed to load: ' + file;
@@ -1347,12 +1459,16 @@
 
       // Fluid simulation special case
       if (file === '__fluid__') {
+        const hadPicture = layer && layer.program && layer.fbo;
+        if (hadPicture) _snapshotLayerFBO(gl, layer);
         // Deactivate any ISF shader on this layer
         if (layer) layer.program = null;
         activateFluidOnLayer(layerId);
+        if (hadPicture) { layer._transitionStart = performance.now(); _xfBegin(layer); }
         return;
       }
-      // Switching away from fluid/shadertoy — deactivate if was active
+      // Switching away from fluid/shadertoy — keep its last frame to dissolve from
+      if (layer && layer._fluidActive && layer.fbo) { _snapshotLayerFBO(gl, layer); layer._xfFromFluid = true; }
       if (layer && layer._fluidActive) deactivateFluid(layerId);
       if (layer && layer._shadertoyActive) deactivateShadertoy(layerId);
 
@@ -6653,6 +6769,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   // Build layer index map (must happen before compositionLoop is called)
   for (let li = 0; li < layers.length; li++) _layerMap[layers[li].id] = layers[li];
 
+  const START_WITH_FLUID = true;
   (async function loadDefaults() {
     dbg('loadDefaults: fetching...');
 
@@ -6672,15 +6789,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     const [textSrc, sceneSrc, shaderSrc] = await Promise.all([
       fetch('shaders/text_typewriter.fs').then(r => r.text()),
       fetch('scenes/spinning_cube.scene.js').then(r => r.text()),
-      fetch(_randomFile).then(r => r.text()).catch(() => null),
+      START_WITH_FLUID ? Promise.resolve(null) : fetch(_randomFile).then(r => r.text()).catch(() => null),
     ]);
 
     // Yield frames between each heavy GPU operation to prevent context loss
     await yieldFrame();
 
     // 1. Shader layer FIRST — auto-open the featured shader, fluid as fallback
+    // The site opens on Fluid Simulation — the most touchable thing in the pack.
     let _shaderLoaded = false;
-    try {
+    if (!START_WITH_FLUID) try {
       const src = shaderSrc || DEFAULT_SHADER;
       const shaderResult = compileToLayer('shader', src);
       if (shaderResult && shaderResult.ok) {
@@ -7321,6 +7439,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         _snapshotLayerFBO(gl, layer);
         // Swap program immediately (GPU-only, fast) to keep rendering smooth
         isfRenderer.compileForLayer(layer, null, null, result.program);
+        layer._isfSource = pending.source;
         // Start the transition (library transition on the beat, or the classic crossfade)
         layer._transitionStart = performance.now();
         _xfBegin(layer);
@@ -7405,6 +7524,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
           shadertoyRenderer.renderToFBO(layer.fbo);
         } else if (layer.program) {
           isfRenderer.renderLayerToFBO(layer, mediaPipeMgr);
+          if (layer.id === 'shader') _trRender(gl, layer);
         }
         // Crossfade: blend old snapshot over new render with fading alpha
         if (layer._transitionStart && layer._xfName && _xfRender(gl, layer)) {
@@ -7425,6 +7545,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
       }
     }
 
+    _trTrack();
     // Update mouse delta for this frame (NOTE: moved after render in old code,
     // but must run BEFORE render so fluid/paint shaders see current-frame delta)
     isfRenderer._lastMousePos[0] = isfRenderer.mousePos[0];

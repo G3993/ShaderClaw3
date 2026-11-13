@@ -1,0 +1,342 @@
+/* ============================================================
+   ShaderClaw 3 — Top Bar
+   Every control sits in one row at the top, bunched into small
+   glass groups: Layers · Inputs · Library ········ Output.
+   An item opens one dropdown under its group with just that
+   group's controls. Nothing else floats over the shader.
+   ============================================================ */
+
+:root {
+  --tb-h: 36px;                 /* group capsule height */
+  --tb-top: 12px;               /* distance from the top edge */
+  --tb-gap: 8px;                /* gap between groups */
+  --tb-drop: calc(var(--tb-top) + var(--tb-h) + 8px);  /* where dropdowns start */
+}
+
+/* ===== BAR ===== */
+.sc3-topbar {
+  position: absolute;
+  top: calc(var(--tb-top) + env(safe-area-inset-top, 0px));
+  left: 12px; right: 12px;
+  height: var(--tb-h);
+  display: flex;
+  align-items: center;
+  gap: var(--tb-gap);
+  z-index: 100;
+  pointer-events: none;         /* only the groups catch input */
+  font-family: var(--sc-font);
+}
+.sc3-topbar > * { pointer-events: auto; flex-shrink: 0; }
+.sc3-topbar > .tb-spacer { flex: 1 1 auto; pointer-events: none; min-width: 0; }
+
+/* Nav groups sit directly in the bar on desktop; on phones they scroll */
+.tb-nav { display: contents; }
+
+.tb-brand {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 6px 0 2px;
+  font-size: 13px; font-weight: 600;
+  letter-spacing: var(--sc-tracking-tight);
+  color: rgba(255,255,255,0.9);
+  text-shadow: 0 1px 8px rgba(0,0,0,0.5);
+  user-select: none;
+}
+.tb-brand .sc3-logo-img { width: 22px; height: 22px; }
+
+/* ===== GROUP — one glass capsule per bunch of controls ===== */
+.tb-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: var(--tb-h);
+  padding: 3px;
+  background: rgba(14, 14, 16, 0.58);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--sc-radius-pill);
+  box-shadow: 0 6px 22px rgba(0,0,0,0.32);
+}
+
+.tb-item {
+  height: 100%;
+  padding: 0 12px;
+  background: transparent;
+  border: none;
+  border-radius: var(--sc-radius-pill);
+  color: rgba(255,255,255,0.68);
+  font-family: var(--sc-font);
+  font-size: var(--sc-font-size-base);
+  font-weight: 500;
+  letter-spacing: var(--sc-tracking);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--sc-duration) var(--sc-ease), color var(--sc-duration) var(--sc-ease);
+}
+.tb-item:hover { color: #fff; background: rgba(255,255,255,0.08); }
+.tb-item:active { background: rgba(255,255,255,0.12); }
+.tb-item.active { color: #fff; font-weight: 600; background: rgba(255,255,255,0.16); }
+.tb-item:focus-visible, .sc3-topbar .canvas-btn:focus-visible {
+  outline: 2px solid rgba(255,255,255,0.7); outline-offset: 1px;
+}
+
+/* The shader item names what is playing */
+#tb-shader-name {
+  display: inline-block;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
+.tb-aspect { font-variant-numeric: tabular-nums; padding: 0 10px; }
+
+/* Output group — icon buttons share the capsule */
+.sc3-topbar .canvas-btn { width: 28px; height: 28px; }
+.sc3-topbar .ndi-indicator,
+.sc3-topbar .audio-level-indicator { height: 28px; }
+.sc3-topbar .ndi-indicator { padding: 0 8px 0 10px; }
+.sc3-topbar .audio-level-track { width: 48px; }
+
+/* ===== DROPDOWN PANEL — the old side panel, now anchored under the bar ===== */
+.sc3-properties {
+  top: calc(var(--tb-drop) + env(safe-area-inset-top, 0px));
+  right: auto;
+  bottom: auto;
+  left: 12px;                    /* JS aligns it to the owning group */
+  width: var(--sc-detail-w);
+  max-height: calc(100dvh - var(--tb-drop) - 12px - env(safe-area-inset-top, 0px));
+  padding-top: 4px;
+  transform-origin: top center;
+  transition: opacity 0.16s var(--sc-ease), transform 0.22s var(--sc-ease-out), visibility 0s;
+}
+.sc3-properties.visible { animation: none; }
+.sc3-properties.panel-closed {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.985);
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.12s var(--sc-ease), transform 0.12s var(--sc-ease), visibility 0s 0.12s;
+}
+.sc3-properties[data-panel="tab:gallery"] { width: min(440px, calc(100vw - 24px)); }
+.sc3-properties[data-panel="canvas-size"] { width: 280px; }
+
+/* The bar is the navigation: no tabs, no resize edge, no drag pill */
+.sc3-properties .sc3-tab-bar,
+.sc3-properties .sc3-properties-resize,
+.sc3-properties .sc3-panel-pill { display: none !important; }
+
+/* The bar already names these panels */
+.sc3-properties #gallery-tab-content > .sc3-section-header { display: none; }
+.sc3-properties #gallery-tab-content > .sc3-section-body { padding-top: 6px !important; }
+
+/* Content sizes to itself, scrolls only when taller than the screen */
+.sc3-properties .sc3-tab-content { flex: 0 1 auto; padding-bottom: 8px; }
+
+/* Solo — the panel shows only the section its bar item owns */
+.sc3-tab-content[data-tab-content="canvas"].solo > * { display: none; }
+.sc3-tab-content[data-tab-content="canvas"].solo > .solo-target { display: block; }
+.sc3-tab-content[data-tab-content="canvas"].solo > .sc3-canvas-size-row.solo-target { display: flex; margin: 8px 12px 4px; }
+.sc3-tab-content[data-tab-content="canvas"].solo .sc3-section {
+  margin: 0;
+  background: transparent;
+  border-radius: 0;
+}
+/* A lone section can't be collapsed away */
+.sc3-tab-content[data-tab-content="canvas"].solo .sc3-section-chevron { display: none; }
+.sc3-tab-content[data-tab-content="canvas"].solo .sc3-section.collapsed .sc3-section-body { display: block; }
+.sc3-tab-content[data-tab-content="canvas"].solo .sc3-section-header { cursor: default; padding: 8px 14px; }
+.sc3-tab-content[data-tab-content="canvas"].solo .sc3-section-header:hover { background: none; }
+/* Sections with no eye / add button need no header at all — the bar names them */
+.sc3-tab-content[data-tab-content="canvas"].solo .sc3-section-header:not(.sc3-layer-header) { display: none; }
+.sc3-tab-content[data-tab-content="canvas"].solo .sc3-section-header:not(.sc3-layer-header) + .sc3-section-body { padding-top: 6px; }
+
+/* ===== EXPORT HUB — drops from the output group ===== */
+#export-hub {
+  top: calc(var(--tb-drop) + env(safe-area-inset-top, 0px));
+  bottom: auto;
+  left: auto;
+  right: 12px;
+  transform: none;
+}
+
+/* ===== HINT — out of the way at the bottom ===== */
+#interact-hint { bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+
+/* ===== FULLSCREEN EXIT CHIP — only in pseudo-fullscreen ===== */
+#fs-exit { display: none; }
+body.sc3-fs .sc3-topbar,
+body.sc3-fs .sc3-properties,
+body.sc3-fs #export-hub,
+body.sc3-fs #interact-hint { display: none !important; }
+body.sc3-fs #fs-exit {
+  display: flex;
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  right: 12px;
+  width: 40px; height: 40px;
+  align-items: center; justify-content: center;
+  background: rgba(10, 10, 12, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 50%;
+  color: rgba(255,255,255,0.85);
+  z-index: 40;
+}
+
+/* ===== MOBILE — same bar, scrolls sideways; stage sits under it ===== */
+@media (max-width: 900px) {
+  :root {
+    --tb-h: 44px;
+    --tb-top: 8px;
+    --tb-gap: 6px;
+  }
+  .sc3-topbar { left: 8px; right: 8px; }
+  .tb-brand, .tb-desktop-only, .sc3-topbar > .tb-spacer { display: none; }
+
+  /* Nav groups scroll sideways; the output group stays pinned on the right */
+  .tb-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--tb-gap);
+    flex: 1 1 0;
+    min-width: 0;
+    height: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    border-radius: var(--sc-radius-pill);
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 22px), transparent);
+            mask-image: linear-gradient(90deg, #000 calc(100% - 22px), transparent);
+    padding-right: 14px;
+  }
+  .tb-nav::-webkit-scrollbar { display: none; }
+  .tb-nav > .tb-group { flex-shrink: 0; }
+  .tb-item { padding: 0 13px; font-size: 13px; }
+  #tb-shader-name { max-width: 104px; }
+  .tb-aspect { padding: 0 9px; }
+  .sc3-topbar .canvas-btn { width: 36px; height: 36px; font-size: 16px; }
+  .sc3-topbar .ndi-indicator,
+  .sc3-topbar #pip-btn { display: none; }
+
+  /* Stage — framed canvas under the bar */
+  #preview, .sc3-preview {
+    inset: auto;
+    position: absolute;
+    top: calc(var(--tb-drop) + env(safe-area-inset-top, 0px));
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    left: 10px;
+    right: 10px;
+    border-radius: 14px;
+    overflow: hidden;
+    transition: top 0.3s var(--sc-ease-out), bottom 0.3s var(--sc-ease-out),
+                left 0.3s var(--sc-ease-out), right 0.3s var(--sc-ease-out),
+                border-radius 0.3s var(--sc-ease-out);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #gl-canvas, #three-canvas {
+    position: relative;
+    top: auto; left: auto;
+    margin: auto;
+  }
+
+  /* Dropdown spans the phone; the stage slides down so the shader stays in view */
+  .sc3-properties,
+  .sc3-properties[data-panel] {
+    left: 8px !important;
+    right: 8px;
+    width: auto;
+    max-height: 44dvh;
+    background: rgba(14, 14, 16, 0.9);
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  }
+  .sc3-properties[data-panel="tab:gallery"],
+  .sc3-properties[data-panel="tab:assets"] { height: 44dvh; }
+  body.panel-open #preview { top: calc(var(--tb-drop) + 44dvh + 8px + env(safe-area-inset-top, 0px)); }
+
+  body.sc3-fs #preview { top: 0; bottom: 0; left: 0; right: 0; border-radius: 0; }
+
+  #export-hub { right: 8px; width: calc(100vw - 16px); max-width: 320px; }
+  .export-tile { padding: var(--sc-space-3); font-size: var(--sc-font-size-sm); min-height: 56px; }
+
+  /* 3D layer stays desktop-only */
+  .layer-toggle-section[data-type="scene"],
+  [data-section="scene-layer"] { display: none !important; }
+
+  .input-circle-btn { min-width: 44px; min-height: 44px; }
+  .layer-params { max-height: none !important; overflow-y: visible !important; }
+  #shader-browser { width: calc(100vw - 20px) !important; left: 10px !important; right: 10px !important; }
+  #shader-browser .browser-body { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
+/* One scroll per dropdown — the panel scrolls, not the param list inside it */
+.sc3-properties .layer-params { max-height: none; overflow-y: visible; }
+
+/* ============================================================
+   VIEWER — what a visitor sees: the shader, its name, two buttons.
+   The full bar above is the editor, one tap away (Edit).
+   ============================================================ */
+.tb-viewer { display: none; }
+#tb-view-name {
+  display: inline-block;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+  color: #fff;
+  font-weight: 600;
+}
+#tb-view-count {
+  margin-left: 8px;
+  color: rgba(255,255,255,0.42);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+#tb-view-count:empty { display: none; }
+#view-toggle.active { color: #fff; background: rgba(255,255,255,0.16); }
+#view-toggle.active svg { stroke: #fff; }
+
+body.viewing .tb-nav,
+body.viewing .canvas-controls > :not(#view-toggle):not(#fs-btn):not(#view-cam) { display: none !important; }
+body.viewing .tb-viewer {
+  display: flex;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Chrome steps aside when nothing moves */
+.sc3-topbar { transition: opacity 0.5s var(--sc-ease); }
+body.viewing.idle .sc3-topbar { opacity: 0; }
+body.viewing.idle .sc3-topbar > * { pointer-events: none; }
+body.viewing.idle #preview { cursor: none; }
+
+/* First frame fades in instead of popping */
+#gl-canvas, #three-canvas { transition: opacity 0.9s var(--sc-ease); }
+body.booting #gl-canvas, body.booting #three-canvas { opacity: 0; }
+
+@media (max-width: 900px) {
+  /* Viewer: shader edge to edge, bar floats over it */
+  body.viewing #preview, body.viewing .sc3-preview {
+    top: 0; bottom: 0; left: 0; right: 0;
+    border-radius: 0;
+  }
+  body.viewing.panel-open #preview { top: 0; }
+  body.viewing .tb-viewer { position: static; transform: none; flex: 0 1 auto; min-width: 0; }
+  body.viewing .sc3-topbar > .tb-spacer { display: block; }
+  body.viewing .tb-view-title { min-width: 0; padding: 0 8px; }
+  #tb-view-name { max-width: 150px; }
+  #tb-view-count { display: none; }
+}
+
+/* A visitor never sees compiler output; failed shaders are skipped instead */
+body.viewing #error-bar { display: none !important; }
+
+/* Camera in the viewer: one tap turns on the webcam + hand tracking */
+#view-cam { display: none; }
+body.viewing #view-cam { display: flex; }
+#view-cam.active { color: #fff; background: var(--sc-accent); }
+#view-cam.active svg { stroke: #fff; }
+#view-cam.busy { opacity: 0.5; pointer-events: none; }
