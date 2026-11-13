@@ -200,7 +200,8 @@ vec4 hash42(vec2 p) {
 
 // Aspect-correct UV for texture sampling
 vec2 fitUV(vec2 pos) {
-    return (pos - 0.5 * RENDERSIZE) * min(IMG_SIZE_inputImage.y / RENDERSIZE.y, IMG_SIZE_inputImage.x / RENDERSIZE.x) / IMG_SIZE_inputImage + 0.5;
+    vec2 isz = max(IMG_SIZE_inputImage, vec2(1.0));   // 0x0 when no image is connected
+    return (pos - 0.5 * RENDERSIZE) * min(isz.y / RENDERSIZE.y, isz.x / RENDERSIZE.x) / isz + 0.5;
 }
 
 vec2 frameUV(int frame, vec2 uv) {

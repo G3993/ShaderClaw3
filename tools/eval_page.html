@@ -416,6 +416,14 @@ window.evalShader = async function(file, opts) {
       uniforms[name] = { type: info.type, loc: gl.getUniformLocation(prog, info.name), size: info.size };
     }
     out.activeUniforms = Object.keys(uniforms);
+    // Mobile budget: vec4 slots (iOS WebGL1 = 224 fragment uniform vectors, 16 samplers)
+    { let vec = 0, samp = 0;
+      for (const u of Object.values(uniforms)) {
+        const rows = (u.type === gl.FLOAT_MAT4) ? 4 : (u.type === gl.FLOAT_MAT3) ? 3 : (u.type === gl.FLOAT_MAT2) ? 2 : 1;
+        vec += rows * (u.size || 1);
+        if (u.type === gl.SAMPLER_2D || u.type === gl.SAMPLER_CUBE) samp += (u.size || 1);
+      }
+      out.uniformVectors = vec; out.samplers = samp; }
 
     // Pass setup: single-file multipass via PASSES + PASSINDEX
     const passes = (parsed.meta && Array.isArray(parsed.meta.PASSES) && parsed.meta.PASSES.length)
@@ -690,6 +698,11 @@ window.evalShader = async function(file, opts) {
     for (let i = 1; i < frames.length; i++) mv += frameDiff(frames[i - 1], frames[i]);
     out.movement = mv / (frames.length - 1);
 
+    if (opts.quick) {
+      out.ok = out.compileOk && out.linkOk && out.blackFrac < 0.9999;
+      if (out.blackFrac >= 0.9999) out.errors.push('RENDERS BLACK (blackFrac=' + out.blackFrac.toFixed(4) + ')');
+      return out;
+    }
     // Audio response: continue sim with audio driven high, diff vs quiet frame
     const quiet = frames[frames.length - 1];
     for (let i = 0; i < 12; i++) { t += dt; drawFrame(t, dt, 0.85 + 0.15 * Math.sin(i * 2.1)); }

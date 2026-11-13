@@ -192,20 +192,24 @@ vec3 ramp5(float t, vec3 a, vec3 b, vec3 c, vec3 d, vec3 e) {
     return mix(d, e, t - 3.0);
 }
 
+// GLSL ES 1.0 has no bitwise operators
+bool bitOn(int b, int k) { return mod(floor(float(b) / float(k)), 2.0) > 0.5; }
+
 vec3 paletteColor(float t) {
     t = clamp(t, 0.0, 1.0);
-    if (palette == 0) // Ironbow
+    int pal = int(palette + 0.5);   // 'long' inputs arrive as float in WebGL1
+    if (pal == 0) // Ironbow
         return ramp5(t, vec3(0.0, 0.0, 0.04), vec3(0.3, 0.0, 0.55), vec3(0.86, 0.1, 0.38),
                         vec3(1.0, 0.6, 0.0), vec3(1.0, 1.0, 0.88));
-    if (palette == 1) // Rainbow HC
+    if (pal == 1) // Rainbow HC
         return ramp5(t, vec3(0.0, 0.0, 0.3), vec3(0.0, 0.5, 1.0), vec3(0.0, 1.0, 0.3),
                         vec3(1.0, 0.9, 0.0), vec3(1.0, 0.05, 0.0));
-    if (palette == 2) return vec3(pow(t, 0.9));            // White Hot
-    if (palette == 3) return vec3(pow(1.0 - t, 0.9));      // Black Hot
-    if (palette == 4) // Arctic
+    if (pal == 2) return vec3(pow(t, 0.9));            // White Hot
+    if (pal == 3) return vec3(pow(1.0 - t, 0.9));      // Black Hot
+    if (pal == 4) // Arctic
         return ramp5(t, vec3(0.0, 0.02, 0.1), vec3(0.0, 0.2, 0.55), vec3(0.15, 0.65, 0.95),
                         vec3(0.95, 0.75, 0.2), vec3(1.0, 0.98, 0.9));
-    if (palette == 5) // Lava
+    if (pal == 5) // Lava
         return ramp5(t, vec3(0.02, 0.0, 0.0), vec3(0.35, 0.02, 0.0), vec3(0.85, 0.15, 0.0),
                         vec3(1.0, 0.55, 0.05), vec3(1.0, 0.95, 0.6));
     // Night Vision
@@ -230,13 +234,13 @@ float digit(vec2 p, int d) {
     if (p.x < -0.15 || p.x > 0.65 || p.y < -0.15 || p.y > 1.15) return 0.0;
     int b = segBits(d);
     float w = 0.085, m = 0.0;
-    if ((b & 1)  != 0) m = max(m, segLine(p, vec2(0.0, 1.0), vec2(0.5, 1.0), w));
-    if ((b & 2)  != 0) m = max(m, segLine(p, vec2(0.5, 1.0), vec2(0.5, 0.5), w));
-    if ((b & 4)  != 0) m = max(m, segLine(p, vec2(0.5, 0.5), vec2(0.5, 0.0), w));
-    if ((b & 8)  != 0) m = max(m, segLine(p, vec2(0.0, 0.0), vec2(0.5, 0.0), w));
-    if ((b & 16) != 0) m = max(m, segLine(p, vec2(0.0, 0.0), vec2(0.0, 0.5), w));
-    if ((b & 32) != 0) m = max(m, segLine(p, vec2(0.0, 0.5), vec2(0.0, 1.0), w));
-    if ((b & 64) != 0) m = max(m, segLine(p, vec2(0.0, 0.5), vec2(0.5, 0.5), w));
+    if (bitOn(b, 1)) m = max(m, segLine(p, vec2(0.0, 1.0), vec2(0.5, 1.0), w));
+    if (bitOn(b, 2)) m = max(m, segLine(p, vec2(0.5, 1.0), vec2(0.5, 0.5), w));
+    if (bitOn(b, 4)) m = max(m, segLine(p, vec2(0.5, 0.5), vec2(0.5, 0.0), w));
+    if (bitOn(b, 8)) m = max(m, segLine(p, vec2(0.0, 0.0), vec2(0.5, 0.0), w));
+    if (bitOn(b, 16)) m = max(m, segLine(p, vec2(0.0, 0.0), vec2(0.0, 0.5), w));
+    if (bitOn(b, 32)) m = max(m, segLine(p, vec2(0.0, 0.5), vec2(0.0, 1.0), w));
+    if (bitOn(b, 64)) m = max(m, segLine(p, vec2(0.0, 0.5), vec2(0.5, 0.5), w));
     return m;
 }
 // prints "34.5°C" with its lower-left corner at org, digit height h (pixels)

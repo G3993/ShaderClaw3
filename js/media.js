@@ -213,15 +213,22 @@ function updateFontAtlas(gl, inputValues) {
   // Always generate atlas (even for fontFamily=0) to avoid 26-branch charData() in shader
   const fontStack = _fontFamilies[fontFamilyIdx] || _fontFamilies[0];
   const weight = Math.round(inputValues['fontWeight'] || 400);
-  const key = fontStack + '|' + weight + '|512';
+  const key = fontStack + '|' + weight + '|fit';
   if (key === _fontAtlasLastKey && _fontAtlasGLTexture) return;
   _fontAtlasLastKey = key;
 
-  const cellW = 384, cellH = 360;
   const ATLAS_CHARS = 37; // A-Z (0-25), space (26), 0-9 (27-36)
-  const totalW = ATLAS_CHARS * cellW; // 37 * 384 = 14,208 (under 16,384 max)
+  // Fit the one-row atlas inside this GPU's MAX_TEXTURE_SIZE. The fixed 384px
+  // cells made a 14,208px-wide texture: phones/tablets that cap textures at
+  // 4096 or 8192 rejected the upload and every text shader rendered black.
+  // Shaders address cells in normalized coords, so smaller cells only cost
+  // glyph sharpness.
+  const maxTex = Math.max(1024, gl.getParameter(gl.MAX_TEXTURE_SIZE) || 4096);
+  const cellW = Math.min(384, Math.floor(maxTex / ATLAS_CHARS));
+  const cellH = Math.round(cellW * 360 / 384);
+  const totalW = ATLAS_CHARS * cellW;
 
-  if (!_fontAtlasCanvas || _fontAtlasCanvas.width !== totalW) {
+  if (!_fontAtlasCanvas || _fontAtlasCanvas.width !== totalW || _fontAtlasCanvas.height !== cellH) {
     _fontAtlasCanvas = document.createElement('canvas');
     _fontAtlasCanvas.width = totalW;
     _fontAtlasCanvas.height = cellH;

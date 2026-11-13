@@ -126,9 +126,8 @@ void setupSchool() {
 float g_mat;        // 1 bell, 2 arm, 3 tentacle
 float g_matHue;
 vec2  g_drag;       // the jelly's motion in its local xz: tentacles trail against it
-float jellySDF(vec3 p, int i, float sz) {
-    float pu = g_pulse[i];
-    float seed = g_seed[i];
+// pulse/seed passed in (GLSL ES 1.0 can't index arrays with a function parameter)
+float jellySDF(vec3 p, float pu, float seed, float sz) {
     vec3 s = vec3(1.0 - 0.18 * pu, 0.72 + 0.26 * pu, 1.0 - 0.18 * pu) * sz;
     vec3 q = p / s;
     float ang = atan(q.z, q.x);
@@ -212,10 +211,15 @@ float jellySDF(vec3 p, int i, float sz) {
 // bell distance for the halo.
 float g_halo;
 int   g_hitJ;
+// hit jelly's data, copied out inside the loop (GLSL ES 1.0 can't index arrays by a variable)
+float g_hitSeed;
+vec3  g_hitPos, g_hitVel;
 float map(vec3 p) {
     float best = 1e9;
     float bestMat = 1.0, bestHue = 0.0;
     int   bestJ = 0;
+    float bestSeed = 0.0;
+    vec3  bestPos = vec3(0.0), bestVel = vec3(0.0);
     g_halo = 1e9;
     for (int i = 0; i < MAXJ; i++) {
         if (i >= g_n) break;
@@ -229,11 +233,13 @@ float map(vec3 p) {
         l.xz = rot(-0.35 * v.x) * l.xz;
         l.yz = rot( 0.35 * v.z) * l.yz;
         g_drag = vec2(v.x, v.z) * 0.55 * drag;
-        float d = jellySDF(l, i, sz);
+        float d = jellySDF(l, g_pulse[i], g_seed[i], sz);
         g_halo = min(g_halo, length(l * vec3(1.0, 1.4, 1.0)) - sz);   // bell-ish halo distance
-        if (d < best) { best = d; bestMat = g_mat; bestHue = g_hue[i]; bestJ = i; }
+        if (d < best) { best = d; bestMat = g_mat; bestHue = g_hue[i]; bestJ = i;
+                       bestSeed = g_seed[i]; bestPos = g_pos[i]; bestVel = g_vel[i]; }
     }
     g_mat = bestMat; g_matHue = bestHue; g_hitJ = bestJ;
+    g_hitSeed = bestSeed; g_hitPos = bestPos; g_hitVel = bestVel;
     return best;
 }
 vec3 calcNormal(vec3 p, float e) {
@@ -319,9 +325,9 @@ vec4 renderScene(vec3 ro, vec3 rd, vec2 uv) {
     if (mat < 1.5) {
         // bell: flesh that reads translucent — dark core, bright rim, inner glow at the apex
         int j = g_hitJ;
-        float sz = size * (0.75 + 0.5 * g_seed[j]);
-        vec3 l = p - g_pos[j];
-        vec3 v = g_vel[j];
+        float sz = size * (0.75 + 0.5 * g_hitSeed);
+        vec3 l = p - g_hitPos;
+        vec3 v = g_hitVel;
         l.xz = rot(-0.35 * v.x) * l.xz;
         l.yz = rot( 0.35 * v.z) * l.yz;
         vec3 q = l / sz;
@@ -333,13 +339,13 @@ vec4 renderScene(vec3 ro, vec3 rd, vec2 uv) {
         //    rim, drifting bioluminescent spots, and rings sweeping down ──
         if (pattern > 0.001) {
             float ang = atan(q.z, q.x);
-            float ps = g_t * patternSpeed + g_seed[j] * 9.0;
+            float ps = g_t * patternSpeed + g_hitSeed * 9.0;
             float st = sin(ang * 14.0 + sin(q.y * 5.0 - ps * 1.5) * 1.2 - ps * 0.7);
             st = smoothstep(0.6, 0.97, st);
             vec2 g = vec2(ang / TAU * 12.0, q.y * 6.0 + ps * 0.6);
             vec2 cell = floor(g), f = fract(g);
-            vec2 c = vec2(hash12(cell + g_seed[j]), hash12(cell + 3.1 + g_seed[j]));
-            float spot = exp(-dot(f - c, f - c) * 45.0) * step(0.45, hash12(cell + 7.0 + g_seed[j]));
+            vec2 c = vec2(hash12(cell + g_hitSeed), hash12(cell + 3.1 + g_hitSeed));
+            float spot = exp(-dot(f - c, f - c) * 45.0) * step(0.45, hash12(cell + 7.0 + g_hitSeed));
             float ring = smoothstep(0.75, 1.0, sin(q.y * 9.0 - ps * 2.0));
             float pat = (st * 0.6 + spot * 1.3 + ring * 0.45) * pattern * smoothstep(-0.45, 0.15, q.y);
             pat *= 1.0 + g_ar * 0.6 * beatP();

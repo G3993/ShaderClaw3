@@ -13,7 +13,7 @@ const path = require('path');
 const puppeteer = require('puppeteer-core');
 
 const ROOT = path.join(__dirname, '..');
-const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const CHROME = process.env.CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 // Port 0 = OS-assigned free port, so parallel harness runs never collide
 const PORT = process.env.EVAL_PORT ? Number(process.env.EVAL_PORT) : 0;
 

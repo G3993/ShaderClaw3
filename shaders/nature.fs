@@ -269,7 +269,10 @@ float godRays(vec2 uv) {
 vec3 lensFlare(vec2 uv, vec3 dir) {
     vec3 col = vec3(0.0);
     vec3 sunPos = sunLight * 20000.0;
-    mat3 inv = transpose(camMat);
+    // GLSL ES 1.0 has no transpose(); camMat is orthonormal so build it by hand
+    mat3 inv = mat3(camMat[0].x, camMat[1].x, camMat[2].x,
+                    camMat[0].y, camMat[1].y, camMat[2].y,
+                    camMat[0].z, camMat[1].z, camMat[2].z);
     vec3 cp = inv * -sunPos;
     if (cp.z < 0.0) {
         vec2 sun2d = zProj * cp.xy / cp.z;

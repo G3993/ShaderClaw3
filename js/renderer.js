@@ -282,6 +282,14 @@ class Renderer {
     });
   }
 
+  _imgSize(tex) {
+    if (!tex || tex._placeholder || tex.glTexture === this._defaultTex) return [0, 0];
+    const el = tex.element;
+    if (el) return [el.videoWidth || el.naturalWidth || el.width || 1, el.videoHeight || el.naturalHeight || el.height || 1];
+    if (tex.width && tex.height) return [tex.width, tex.height];
+    return [1, 1];
+  }
+
   _getLoc(name) {
     if (!(name in this.uniformLocs)) {
       this.uniformLocs[name] = this.gl.getUniformLocation(this.program, name);
@@ -449,8 +457,11 @@ class Renderer {
       const sizeLoc = this._getLoc('IMG_SIZE_' + name);
       if (sizeLoc) {
         const el = tex.element;
-        const w = el ? (el.videoWidth || el.naturalWidth || el.width || 1) : 1;
-        const h = el ? (el.videoHeight || el.naturalHeight || el.height || 1) : 1;
+        // Unconnected input (1x1 black placeholder) reports 0x0 so shaders that
+        // test IMG_SIZE_x > 0 fall back to their generative look instead of
+        // sampling black.
+        const sz = this._imgSize(tex);
+        const w = sz[0], h = sz[1];
         gl.uniform2f(sizeLoc, w, h);
       }
       texUnit++;
@@ -908,8 +919,11 @@ class Renderer {
       const imgSzLoc2 = this._getLayerLoc(layer, 'IMG_SIZE_' + name);
       if (imgSzLoc2) {
         const el = tex.element;
-        const w = el ? (el.videoWidth || el.naturalWidth || el.width || 1) : 1;
-        const h = el ? (el.videoHeight || el.naturalHeight || el.height || 1) : 1;
+        // Unconnected input (1x1 black placeholder) reports 0x0 so shaders that
+        // test IMG_SIZE_x > 0 fall back to their generative look instead of
+        // sampling black.
+        const sz = this._imgSize(tex);
+        const w = sz[0], h = sz[1];
         gl.uniform2f(imgSzLoc2, w, h);
       }
       texUnit++;
@@ -1213,8 +1227,11 @@ class Renderer {
       const imgSzLoc = this._getLayerLoc(layer, 'IMG_SIZE_' + name);
       if (imgSzLoc) {
         const el = tex.element;
-        const w = el ? (el.videoWidth || el.naturalWidth || el.width || 1) : 1;
-        const h = el ? (el.videoHeight || el.naturalHeight || el.height || 1) : 1;
+        // Unconnected input (1x1 black placeholder) reports 0x0 so shaders that
+        // test IMG_SIZE_x > 0 fall back to their generative look instead of
+        // sampling black.
+        const sz = this._imgSize(tex);
+        const w = sz[0], h = sz[1];
         gl.uniform2f(imgSzLoc, w, h);
       }
       texUnit++;

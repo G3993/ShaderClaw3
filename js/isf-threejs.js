@@ -217,8 +217,9 @@ class ISFThreeRuntime {
 
       this.renderer.render(this.scene, this.camera);
 
-      // Swap ping-pong for persistent buffers
-      if (!pass.isFinal && pass.persistent) {
+      // Swap after every intermediate pass so readers see what was just written
+      // (non-persistent passes previously left readers on the stale buffer)
+      if (!pass.isFinal) {
         pass.current ^= 1;
       }
     }
@@ -303,7 +304,7 @@ class ISFThreeRuntime {
     // ISF compatibility macros
     lines.push('#define isf_FragNormCoord vUv');
     lines.push('#define IMG_NORM_PIXEL(img, coord) texture2D(img, coord)');
-    lines.push('#define IMG_PIXEL(img, coord) texture2D(img, coord / RENDERSIZE)');
+    lines.push('#define IMG_PIXEL(img, coord) texture2D(img, (coord) / RENDERSIZE)');
     lines.push('#define IMG_THIS_PIXEL(img) texture2D(img, vUv)');
     lines.push('#define IMG_THIS_NORM_PIXEL(img) texture2D(img, vUv)');
     lines.push('#define IMG_NORM_THIS_PIXEL(img) texture2D(img, vUv)');

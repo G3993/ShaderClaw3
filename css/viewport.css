@@ -25,6 +25,8 @@
   touch-action: none;
 }
 #preview { touch-action: none; }
+/* No double-tap zoom on controls (iOS ignores user-scalable=no) */
+html, body { touch-action: manipulation; }
 #three-canvas { display: none; }
 
 #overlay-gizmo {

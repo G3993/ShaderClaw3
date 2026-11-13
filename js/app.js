@@ -625,89 +625,74 @@
   // Shader complexity precheck — estimate GPU cost before compilation
   // Returns { ok, warning } where warning is a string if shader is risky
   function checkShaderComplexity(source) {
-    // Strip comments to avoid false matches
-    const stripped = source.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
-
-    // Extract all for-loop iteration bounds
-    // Matches: for (int i = 0; i < 8; i++) or for (int i = -6; i <= 6; i++)
-    const loopBounds = [];
-    const loopRegex = /\bfor\s*\(\s*\w+\s+\w+\s*=\s*(-?\d+)\s*;\s*\w+\s*[<>=!]+\s*(-?\d+)\s*;/g;
-    let m;
-    while ((m = loopRegex.exec(stripped)) !== null) {
-      const lo = parseInt(m[1]);
-      const hi = parseInt(m[2]);
-      loopBounds.push(Math.abs(hi - lo) + 1);
-    }
-
-    // Track nesting: use brace depth to find which loops are nested inside others,
-    // and count texture reads per nested group (not globally — unrelated reads in
-    // other passes shouldn't multiply a loop's op count).
-    const lines = stripped.split('\n');
-    let braceDepth = 0;
-    let loopStack = []; // depths where loops start
-    let maxNest = 0;
-    let loopIdx = 0;
-    const nestedGroups = []; // { bounds: [iters], texReads: n }
-    let currentGroup = null;
-
-    for (const line of lines) {
-      if (/\bfor\s*\(/.test(line)) {
-        if (loopStack.length === 0) currentGroup = { bounds: [], texReads: 0 };
-        loopStack.push(braceDepth);
-        currentGroup.bounds.push(loopBounds[loopIdx] || 10);
-        loopIdx++;
-        maxNest = Math.max(maxNest, loopStack.length);
+    // Estimate per-pixel cost from loop structure. Parses real statement
+    // structure (brace-less `for (...) stmt;` bodies included) so loops that
+    // merely follow each other are not mistaken for nested ones.
+    const s = source.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/.*$/gm, ' ');
+    const consts = {};
+    s.replace(/#define\s+(\w+)\s+\(?\s*(-?\d+)\s*\)?\s*$/gm, (_, k, v) => { consts[k] = parseInt(v, 10); });
+    s.replace(/const\s+int\s+(\w+)\s*=\s*(-?\d+)\s*;/g, (_, k, v) => { consts[k] = parseInt(v, 10); });
+    const num = (t) => { t = (t || '').trim().replace(/^\(|\)$/g, ''); if (/^-?\d+(\.\d*)?$/.test(t)) return parseFloat(t); return t in consts ? consts[t] : null; };
+    const TEX = /\b(texture2D|texture2DLod|texture|IMG_PIXEL|IMG_NORM_PIXEL|IMG_THIS_PIXEL|IMG_THIS_NORM_PIXEL)\s*\(/g;
+    const texIn = (a, b) => (s.slice(a, b).match(TEX) || []).length;
+    const match = (i, open, close) => { let d = 0; for (; i < s.length; i++) { if (s[i] === open) d++; else if (s[i] === close && --d === 0) return i; } return s.length - 1; };
+    const skipWs = (i) => { while (i < s.length && /\s/.test(s[i])) i++; return i; };
+    // End index (exclusive) of the statement starting at i
+    function stmtEnd(i) {
+      i = skipWs(i);
+      if (s[i] === '{') return match(i, '{', '}') + 1;
+      const kw = /^(for|while|if)\s*\(/.exec(s.slice(i, i + 8));
+      if (kw) {
+        const p = match(s.indexOf('(', i), '(', ')');
+        let e = stmtEnd(p + 1);
+        if (kw[1] === 'if') { const j = skipWs(e); if (/^else\b/.test(s.slice(j, j + 5))) e = stmtEnd(j + 4); }
+        return e;
       }
-      // Count texture reads that are inside an active loop scope
-      if (loopStack.length > 0 && currentGroup) {
-        const texOnLine = (line.match(/\btexture2D\s*\(/g) || []).length;
-        currentGroup.texReads += texOnLine;
+      const semi = s.indexOf(';', i);
+      return semi < 0 ? s.length : semi + 1;
+    }
+    let maxDepth = 0;
+    // Returns { tex, iters } for range [a,b)
+    function cost(a, b, depth) {
+      let tex = 0, iters = 1, i = a, last = a;
+      const re = /\bfor\s*\(/g;
+      re.lastIndex = a;
+      let m;
+      while ((m = re.exec(s)) && m.index < b) {
+        tex += texIn(last, m.index);
+        const po = s.indexOf('(', m.index), pc = match(po, '(', ')');
+        const head = s.slice(po + 1, pc).split(';');
+        let bound = 10;
+        const init = /=\s*([^,]+)$/.exec(head[0] || '');
+        const cond = /[<>]=?\s*(.+)$/.exec(head[1] || '');
+        const lo = init ? num(init[1]) : null, hi = cond ? num(cond[1]) : null;
+        if (lo !== null && hi !== null) bound = Math.abs(hi - lo) + (/[<>]=/.test(head[1]) ? 1 : 0);
+        bound = Math.max(1, Math.min(bound, 4096));
+        const be = stmtEnd(pc + 1);
+        maxDepth = Math.max(maxDepth, depth + 1);
+        const inner = cost(pc + 1, be, depth + 1);
+        tex += bound * inner.tex;
+        iters += bound * inner.iters;
+        last = be; re.lastIndex = be;
       }
-      for (const ch of line) {
-        if (ch === '{') braceDepth++;
-        if (ch === '}') {
-          braceDepth--;
-          // Check if a loop scope ended
-          if (loopStack.length > 0 && braceDepth <= loopStack[loopStack.length - 1]) {
-            loopStack.pop();
-            if (loopStack.length === 0 && currentGroup && currentGroup.bounds.length > 0) {
-              nestedGroups.push(currentGroup);
-              currentGroup = null;
-            }
-          }
-        }
-      }
+      tex += texIn(last, b);
+      return { tex, iters };
     }
-    if (currentGroup && currentGroup.bounds.length > 0) nestedGroups.push(currentGroup);
-
-    // Worst-case ops: for each nested group, multiply the bounds together, then
-    // multiply by the texture reads *inside that group only*.
-    let worstGroupOps = 0;
-    for (const group of nestedGroups) {
-      let ops = 1;
-      for (const bound of group.bounds) ops *= bound;
-      ops *= Math.max(group.texReads, 1);
-      worstGroupOps = Math.max(worstGroupOps, ops);
+    const c = cost(0, s.length, 0);
+    // Texture fetches per pixel are what has actually hung GPUs (oil-paint
+    // style kernels); pure ALU loops (raymarchers, fbm) are only warned about.
+    if (c.tex > 1000) {
+      return { ok: false, warning: 'BLOCKED: Shader estimated at ~' + Math.round(c.tex).toLocaleString() + ' texture reads/pixel. This will likely crash the GPU. Reduce loop counts or nesting.' };
     }
-
-    // Also check total iterations across all loops (for shaders with many separate loops)
-    const totalIter = loopBounds.reduce((a, b) => a + b, 0);
-
-    // Thresholds calibrated from real crashes:
-    // Old oil paint killer: 8 * 9 * ~4 texReads = 288 ops/pixel → GPU timeout at 1080p
-    // Triple nested: 8 * 9 * 20 * 1 = 1440 → guaranteed crash
-    // Safe Kuwahara: 13 * 13 * 1 = 169 → fine
-    // Safe Voronoi: 9 * 1 = 9 → fine
-    if (worstGroupOps > 800) {
-      return { ok: false, warning: 'BLOCKED: Shader estimated at ~' + worstGroupOps.toLocaleString() + ' ops/pixel (nested loops x texture reads). This will crash the GPU. Reduce loop counts or nesting.' };
-    }
-    if (worstGroupOps > 300) {
-      return { ok: true, warning: 'WARNING: Heavy shader (~' + worstGroupOps.toLocaleString() + ' ops/pixel). May cause stuttering on some GPUs.' };
-    }
-    if (maxNest >= 3) {
-      return { ok: false, warning: 'BLOCKED: Triple-nested loops detected (depth ' + maxNest + '). This will likely crash the GPU.' };
+    if (c.tex > 300 || c.iters > 20000) {
+      return { ok: true, warning: 'WARNING: Heavy shader (~' + Math.round(c.tex).toLocaleString() + ' texture reads, ~' + Math.round(c.iters).toLocaleString() + ' loop iterations per pixel). May stutter on some GPUs.' };
     }
     return { ok: true, warning: null };
+  }
+
+  function _stripCharData(frag, source) {
+    if (!/\b(fontAtlasTex|useFontAtlas)\b/.test(source)) return frag;
+    return frag.replace(/vec2 charData\(int ch\)\s*\{[\s\S]*?\n\}/, 'vec2 charData(int ch) { return vec2(0.0); }');
   }
 
   function compileToLayer(layerId, source, _precompiledProg) {
@@ -745,11 +730,9 @@
 
     const { frag, parsed, headerLineCount } = buildFragmentShader(source);
     isfRenderer._headerLines = headerLineCount;
-    // Optimize: strip charData() if-chain since we always use font atlas texture
-    const optimizedFrag = frag.replace(
-      /vec2 charData\(int ch\)\s*\{[\s\S]*?\n\}/,
-      'vec2 charData(int ch) { return vec2(0.0); }'
-    );
+    // Optimize: strip charData() if-chain — but only for shaders that draw from
+    // the font atlas. Shaders with their own bitmap font (no atlas) need it.
+    const optimizedFrag = _stripCharData(frag, source);
     const result = _precompiledProg
       ? isfRenderer.compileForLayer(layer, null, null, _precompiledProg)
       : isfRenderer.compileForLayer(layer, VERT_SHADER, optimizedFrag);
@@ -875,6 +858,7 @@
         layer.passes.forEach(p => { if (p.ppFBO) isfRenderer.destroyPingPongFBO(p.ppFBO); });
         layer.passes = null;
       }
+      layer._frameBase = isfRenderer.frameIndex; // fresh buffers → FRAMEINDEX restarts so the shader seeds them
       const passes = parsed.meta && Array.isArray(parsed.meta.PASSES) ? parsed.meta.PASSES : null;
       if (passes && passes.length > 0) {
         layer.passes = passes.map(p => {
@@ -969,10 +953,7 @@
 
         // Parse ISF and build fragment shader (CPU-only, fast)
         const { frag, parsed, headerLineCount } = buildFragmentShader(src);
-        const optimizedFrag = frag.replace(
-          /vec2 charData\(int ch\)\s*\{[\s\S]*?\n\}/,
-          'vec2 charData(int ch) { return vec2(0.0); }'
-        );
+        const optimizedFrag = _stripCharData(frag, src);
 
         // Start async GPU compilation
         const handle = isfRenderer.startAsyncCompile(VERT_SHADER, optimizedFrag);
@@ -5891,7 +5872,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
           } else {
             const src = layers.find(l => l.id === srcId);
             if (src && src.fbo) {
-              layer.textures[inp.NAME] = { glTexture: src.fbo.texture, isVideo: false, element: null, flipH: false, flipV: false };
+              layer.textures[inp.NAME] = { glTexture: src.fbo.texture, isVideo: false, element: null, flipH: false, flipV: false, width: src.fbo.width, height: src.fbo.height };
             }
           }
           return;
@@ -5917,7 +5898,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
           // Bind default 1x1 black texture to prevent unbound sampler errors
           layer.textures[inp.NAME] = {
             glTexture: isfRenderer._defaultTex,
-            isVideo: false, element: null, flipH: false, flipV: false,
+            isVideo: false, element: null, flipH: false, flipV: false, _placeholder: true,
           };
         }
       });
@@ -7644,15 +7625,28 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   let _touchPinchDist = 0;
   let _touchCount = 0;
 
+  // Touch → normalized GL coords. Re-measure the canvas on every touch start:
+  // the cached rect goes stale on phones when the address bar collapses, the
+  // control sheet opens, or the page scrolls, which made touches land in the
+  // wrong place (or outside 0..1 so shaders ignored them).
+  const _touchNorm = (cx, cy) => {
+    const r = _glCanvasRect;
+    const w = r.width || 1, h = r.height || 1;
+    return [Math.min(1, Math.max(0, (cx - r.left) / w)), Math.min(1, Math.max(0, 1.0 - (cy - r.top) / h))];
+  };
   glCanvas.addEventListener('touchstart', (e) => {
     e.preventDefault(); // prevent scroll/zoom on canvas
+    _glCanvasRect = glCanvas.getBoundingClientRect();
     _touchCount = e.touches.length;
     isfRenderer.mouseDown = 1;
-    // Single finger — update mousePos immediately on tap
+    // Single finger — jump mousePos to the finger. Also sync the "last" position
+    // so the jump isn't read as a huge one-frame drag by fluid/paint shaders.
     if (e.touches.length === 1) {
-      const touch = e.touches[0];
-      isfRenderer.mousePos[0] = (touch.clientX - _glCanvasRect.left) / _glCanvasRect.width;
-      isfRenderer.mousePos[1] = 1.0 - (touch.clientY - _glCanvasRect.top) / _glCanvasRect.height;
+      const p = _touchNorm(e.touches[0].clientX, e.touches[0].clientY);
+      isfRenderer.mousePos[0] = p[0];
+      isfRenderer.mousePos[1] = p[1];
+      isfRenderer._lastMousePos[0] = p[0];
+      isfRenderer._lastMousePos[1] = p[1];
     }
     // Two fingers — start pinch tracking
     if (e.touches.length >= 2) {
@@ -7669,11 +7663,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     if (e.touches.length === 1) {
       // Single finger drag — update mousePos directly (no smoothing)
       // so mouseDelta is accurate for fluid/paint shaders
-      const touch = e.touches[0];
-      const nx = (touch.clientX - _glCanvasRect.left) / _glCanvasRect.width;
-      const ny = 1.0 - (touch.clientY - _glCanvasRect.top) / _glCanvasRect.height;
-      isfRenderer.mousePos[0] = nx;
-      isfRenderer.mousePos[1] = ny;
+      const p = _touchNorm(e.touches[0].clientX, e.touches[0].clientY);
+      isfRenderer.mousePos[0] = p[0];
+      isfRenderer.mousePos[1] = p[1];
     } else if (e.touches.length >= 2) {
       // Two finger pinch — drive pinchHold and update mousePos to midpoint
       const t0 = e.touches[0], t1 = e.touches[1];
@@ -7691,11 +7683,23 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   }, { passive: false });
 
   glCanvas.addEventListener('touchend', (e) => {
+    e.preventDefault(); // no synthetic mouse/click after a canvas touch
     _touchCount = e.touches.length;
     if (e.touches.length === 0) {
       isfRenderer.mouseDown = 0;
+    } else if (e.touches.length === 1) {
+      // Pinch → one finger: continue from that finger without a jump
+      const p = _touchNorm(e.touches[0].clientX, e.touches[0].clientY);
+      isfRenderer.mousePos[0] = isfRenderer._lastMousePos[0] = p[0];
+      isfRenderer.mousePos[1] = isfRenderer._lastMousePos[1] = p[1];
     }
-  });
+  }, { passive: false });
+
+  // iOS Safari ignores user-scalable=no: a two-finger pinch or double-tap
+  // zoomed the whole page, after which every touch landed off-target.
+  // Block page zoom (Safari's proprietary gesture events) app-wide.
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(t =>
+    document.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
 
   glCanvas.addEventListener('touchcancel', () => {
     _touchCount = 0;

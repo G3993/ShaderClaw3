@@ -412,8 +412,8 @@ function buildFragmentShader(source) {
     cond('uniform int PASSINDEX;', 'PASSINDEX'),
     cond('uniform int FRAMEINDEX;', 'FRAMEINDEX'),
     'varying vec2 isf_FragNormCoord;',
-    '#define IMG_NORM_PIXEL(img, coord) texture2D(img, coord)',
-    '#define IMG_PIXEL(img, coord) texture2D(img, coord / RENDERSIZE)',
+    '#define IMG_NORM_PIXEL(img, coord) texture2D(img, (coord))',
+    '#define IMG_PIXEL(img, coord) texture2D(img, (coord) / RENDERSIZE)',
     '#define IMG_THIS_PIXEL(img) texture2D(img, isf_FragNormCoord)',
     '#define IMG_THIS_NORM_PIXEL(img) texture2D(img, isf_FragNormCoord)',
     // Mouse — always available (cheap uniforms, prevents undeclared errors)
@@ -496,6 +496,11 @@ function buildFragmentShader(source) {
       wrapper += '    }\n';
     }
     if (!shaderHandlesTransparency) {
+      // Multipass: only touch the FINAL image. Intermediate TARGET passes hold
+      // data (fields, velocities, sim state); brightening them by the spotlight
+      // corrupted that data and compounded every frame in persistent buffers.
+      const _finalOnly = hasMultiPass && /\bPASSINDEX\b/.test(parsed.glsl);
+      if (_finalOnly) wrapper += '    if (PASSINDEX == ' + (parsed.meta.PASSES.length - 1) + ') {\n';
       wrapper += '    // Global mouse spotlight\n';
       wrapper += '    vec2 _muv = gl_FragCoord.xy / RENDERSIZE.xy;\n';
       wrapper += '    vec2 _md = _muv - mousePos;\n';
@@ -507,6 +512,7 @@ function buildFragmentShader(source) {
       wrapper += '        float _lum = dot(gl_FragColor.rgb, vec3(0.299, 0.587, 0.114));\n';
       wrapper += '        gl_FragColor.a = smoothstep(0.02, 0.15, _lum);\n';
       wrapper += '    }\n';
+      if (_finalOnly) wrapper += '    }\n';
     }
     wrapper += '}\n';
     body += wrapper;

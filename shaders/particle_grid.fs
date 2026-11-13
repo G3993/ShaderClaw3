@@ -135,13 +135,15 @@ void main() {
     // bins still breathe rather than going dead. The `decay` knob here
     // governs how much of the wobble is mixed in — high decay → smooth.
     float wobble = 0.5 + 0.5 * sin(TIME * 1.5 + hash(cId) * 6.2832);
-    amp = mix(amp, max(amp, wobble * 0.15), 1.0 - decay);
+    // Idle floor so the grid is visible with no audio playing (was ~black at silence)
+    float idle = (0.12 + 0.18 * wobble) * mix(1.0, 0.6, decay);
+    amp = max(amp, idle);
 
     // Per-cell phase jitter so dots don't all pulse on the same frame.
     vec2 jit = (vec2(hash(cId), hash(cId + 1.7)) - 0.5) * jitter * (amp + 0.2);
 
     // Cell radius modulated by bin amplitude — the dot grows with sound.
-    float r = cellRadius * (0.3 + amp * 1.5 + audioLevel * 0.2);
+    float r = cellRadius * (0.55 + amp * 1.5 + audioLevel * 0.2);   // idle dots stay visible
     float dotMask = smoothstep(r, r * 0.85, length(cUV - jit));
 
     // Colour: spectrum gradient unless a texture mosaic is requested.
@@ -157,7 +159,7 @@ void main() {
     float rotPhase = hash(cId + 7.7) * 6.2832;
     float twinkle = 0.85 + 0.15 * sin(TIME * 2.0 + rotPhase);
 
-    vec3 col = base * dotMask * (amp + 0.1 + audioLevel * 0.05) * twinkle;
+    vec3 col = base * dotMask * (0.35 + amp * 1.2 + audioLevel * 0.05) * twinkle;
 
     // Base bloom — bass column 0 gets an audioBass boost, treble end gets audioHigh.
     if (cId.x < 1.0) col += lowColor.rgb * audioBass * 0.4 * dotMask;
