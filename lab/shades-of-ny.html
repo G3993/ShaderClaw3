@@ -164,6 +164,8 @@ body.idle .dock:not(:hover):not(:focus-within), body.idle .pill:not(:hover) { op
 .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 14px; }
 .row > span { color: var(--fg); }
 .row select { background: rgba(255,255,255,.06); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; max-width: 62%; }
+.row input[type=text] { background: rgba(255,255,255,.06); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; color: inherit; font: inherit; width: 9.5em; min-width: 0; flex: 1 1 auto; margin: 0 6px; }
+.blurb a { color: inherit; }
 .row button { background: rgba(255,255,255,.06); border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; cursor: pointer; }
 .row button:hover { border-color: rgba(255,255,255,.3); }
 .seg { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
@@ -360,6 +362,10 @@ body.g-play .pip, body.g-pause .pip { top: auto !important; bottom: max(18px, en
   <h3>Camera</h3>
   <div class="row"><span id="camText">Camera off</span><button type="button" id="camBtn">Turn on</button></div>
   <div class="row"><span>Camera preview</span><input type="checkbox" id="optPip" checked aria-label="Camera preview"></div>
+  <h3>LiDAR</h3>
+  <div class="row"><span>Record3D address</span><input type="text" id="lidAddr" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="192.168.1.20" aria-label="Record3D address"><button type="button" id="lidBtn">Connect</button></div>
+  <div class="row"><span>Depth range</span><input type="range" id="lidFar" min="1" max="3" step="0.05" aria-label="LiDAR depth range (metres)"><span id="lidFarV" style="color:var(--muted);min-width:3.2em;text-align:right"></span></div>
+  <p class="blurb" id="lidHelp">Real depth from an iPhone or iPad Pro. Open Record3D on it, tap the Wi-Fi streaming button, type the address it shows, then Connect. The phone becomes the camera: colour drives body tracking, LiDAR drives every 3D effect.</p>
   <h3>Body FX</h3>
   <div class="row"><span>Effects grow from</span><div class="seg" id="growSel"><button type="button" data-v="0">Outline</button><button type="button" data-v="1">Highlights</button><button type="button" data-v="2">Both</button><button type="button" data-v="3">Lines</button></div></div>
   <div class="row"><span>Threshold</span><input type="range" id="thrRange" min="0.15" max="0.9" step="0.01" aria-label="Threshold"></div>
@@ -1034,6 +1040,7 @@ async function startCamera() {
   loadTracking();
 }
 function stopCamera() {
+  closeLidar();
   if (CAM.stream) CAM.stream.getTracks().forEach(t => t.stop());
   if (CAM.video) CAM.video.remove();
   camLive = false; CAM.stream = null; haveBody = false; for (const L of LM) L.v = 0; for (const D of DL) { D.v = 0; D.on = false; }
@@ -1046,12 +1053,14 @@ function stopCamera() {
 // so it keeps running even when the hidden source video isn't composited
 let lastVT = -1, lastDet = 0;
 function pollFrames(now) {
+  if (lidarOn()) pumpLidar();
   const v = CAM.video; if (!camLive || !v || v.readyState < 2) return;
   if (v.currentTime === lastVT || now - lastDet < 28) return;
   lastVT = v.currentTime; lastDet = now; CAM.newFrame = true; track();
 }
 let vision = null, poser = null, segger = null, lastTs = 0, segFlip = 0, trackErr = 0;
 async function loadTracking() {
+  if (poser) { camStatus("wait", "on · step into frame"); return; }   // already loaded (e.g. switching camera ↔ LiDAR)
   try {
     vision = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.32");
     const files = await vision.FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.32/wasm");
@@ -1148,6 +1157,7 @@ onmessage = async (e) => {
 };`;
 function depthWanted() { return camLive && (depthFx > 0 || !!(cur && cur.imports && cur.imports.mpDepth)); }
 function startDepth() {
+  if (lidarOn()) return;                            // LiDAR gives real depth; no need for the AI model
   if (DEP.worker || DEP.state === "error") return;
   try { DEP.worker = new Worker(URL.createObjectURL(new Blob([DEPTH_WORKER], { type: "text/javascript" })), { type: "module" }); }
   catch (e) { DEP.state = "error"; toast("3D depth isn't supported in this browser"); return; }
@@ -1174,7 +1184,7 @@ function startDepth() {
   DEP.worker.postMessage({ type: "load", url: DEPTH_LIB, id: DEPTH_MODEL });
 }
 function depthRequest() {
-  if (!depthWanted()) return;
+  if (!depthWanted() || lidarOn()) return;
   if (!DEP.worker) { startDepth(); return; }
   if (DEP.state !== "ready" || DEP.busy || !CAM.video || CAM.video.readyState < 2) return;
   const [w0, h0] = DEP_SIZES[DEP.size], va = CAM.video.videoWidth / CAM.video.videoHeight;
@@ -1183,6 +1193,125 @@ function depthRequest() {
   createImageBitmap(CAM.video, { resizeWidth: w, resizeHeight: h, resizeQuality: "low" })
     .then(b => DEP.worker.postMessage({ type: "frame", bitmap: b, w, h }, [b]))
     .catch(() => { DEP.busy = false; });
+}
+
+// ── LiDAR: Record3D streams RGBD from an iPhone/iPad Pro over Wi-Fi (WebRTC). Each frame is two halves:
+// left = depth as HSV hue (hue × 3 m; red = no reading / past 3 m), right = colour. The colour half is drawn
+// to a canvas that stands in for the camera (picture + body tracking); the depth half is decoded on the GPU
+// into the same depth texture the AI model fills (1 = nearest), so every 3D effect and mpDepth use it.
+// Safari on iOS can't read LiDAR itself (no web API exposes it), so the phone streams and this page receives.
+const LID = { pc: null, rv: null, cvs: null, ctx: null, rgbd: null, dep: null, last: -1, frames: 0, prog: null, base: "",
+  near: 0.25, far: Number(store.get("lidFar", 2.6)) };
+function lidarOn() { return !!LID.rv; }
+function lidarBase(a) {
+  a = String(a || "").trim().replace(/\/+$/, "");
+  if (!a) return "";
+  if (!/^https?:\/\//i.test(a)) a = "http://" + a;
+  return a;
+}
+function lidarDecode(w, h) {
+  if (!LID.prog) LID.prog = simpleProgram("precision highp float; varying vec2 isf_FragNormCoord; uniform sampler2D src; uniform vec2 nf;\n" +
+    "vec3 hsv(vec3 c){ vec4 K = vec4(0.0, -1.0/3.0, 2.0/3.0, -1.0); vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));\n" +
+    " vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r)); float d = q.x - min(q.w, q.y); return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + 1e-10)), d / (q.x + 1e-10), q.x); }\n" +
+    "void main(){ vec3 c = texture2D(src, vec2(isf_FragNormCoord.x * 0.5, isf_FragNormCoord.y)).rgb; vec3 h = hsv(c);\n" +
+    " float m = 3.0 * h.x;\n" +
+    " float ok = step(0.01, h.x) * step(h.x, 0.975) * step(0.2, h.y) * step(0.15, h.z);   // red / dark / grey = no reading\n" +
+    " float near = clamp((nf.y - m) / max(0.05, nf.y - nf.x), 0.0, 1.0) * ok;\n" +
+    " gl_FragColor = vec4(near, near, near, 1.0); }", ["src", "nf"]);
+  if (!LID.dep || LID.dep.w !== w || LID.dep.h !== h) { freeTex(LID.dep); LID.dep = makeTex(w, h, TT); }
+  gl.useProgram(LID.prog.prog); bindQuad();
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, LID.rgbd); gl.uniform1i(LID.prog.loc.src, 0);
+  gl.uniform2f(LID.prog.loc.nf, LID.near, LID.far);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, LID.dep.fbo); gl.viewport(0, 0, w, h); gl.drawArrays(gl.TRIANGLES, 0, 6);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  CAM.depRaw = LID.dep.tex; CAM.depW = w; CAM.depH = h;
+}
+function pumpLidar() {
+  const rv = LID.rv; if (!rv || rv.readyState < 2 || !rv.videoWidth) return;
+  if (rv.currentTime === LID.last) return;
+  LID.last = rv.currentTime;
+  const W = rv.videoWidth, H = rv.videoHeight, half = Math.floor(W / 2);
+  // colour half → the stand-in camera canvas (top half of the work: tracking + picture)
+  const ch = Math.min(H, 720), cw = Math.max(2, Math.round(half * ch / H));
+  if (LID.cvs.width !== cw || LID.cvs.height !== ch) { LID.cvs.width = cw; LID.cvs.height = ch; CAM.dirty = true; }
+  LID.ctx.drawImage(rv, half, 0, W - half, H, 0, 0, cw, ch);
+  LID.frames++;
+  // whole RGBD frame → GPU (no filtering: blending hues across an edge would invent depths), decode the depth half
+  if (!LID.rgbd) { LID.rgbd = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, LID.rgbd); texParams(false); }
+  gl.bindTexture(gl.TEXTURE_2D, LID.rgbd);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);   // same orientation as the AI depth map (row 0 = top)
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, rv);
+  const dh = Math.min(H, 480), dw = Math.max(2, Math.round(half * dh / H));
+  lidarDecode(dw, dh);
+}
+function closeLidar() {
+  if (LID.pc) { try { LID.pc.close(); } catch (e) {} }
+  if (LID.rv) { try { LID.rv.srcObject = null; LID.rv.remove(); } catch (e) {} }
+  LID.pc = null; LID.rv = null; LID.last = -1;
+  if (LID.dep) { freeTex(LID.dep); LID.dep = null; }
+  $("lidBtn").textContent = "Connect";
+}
+async function startLidar() {
+  const base = lidarBase($("lidAddr").value);
+  if (!base) { $("lidAddr").focus(); toast("Type the address Record3D shows"); return; }
+  store.set("lidAddr", $("lidAddr").value.trim());
+  if (location.protocol === "https:") {
+    gate("LiDAR needs the offline copy",
+      "Record3D streams over plain http, and browsers don't let an https page reach it. Download this page (LiDAR → Download link), open the file on a laptop on the same Wi-Fi as the phone, and connect from there.");
+    return;
+  }
+  if (camLive) stopCamera();
+  camStatus("wait", "LiDAR · connecting to " + base.replace(/^https?:\/\//, "") + "…"); $("lidBtn").textContent = "…";
+  const fail = (msg) => { closeLidar(); camStatus("bad", "LiDAR · " + msg); gate("LiDAR didn't connect", msg); };
+  let offer;
+  try {
+    const r = await fetch(base + "/getOffer", { cache: "no-store" });
+    if (r.status === 403) return fail("Another device is already receiving this stream. Close it there, then try again.");
+    if (!r.ok) return fail("Record3D answered " + r.status + ". Is Wi-Fi streaming started (the red button)?");
+    offer = await r.json();
+  } catch (e) {
+    return fail("Can't reach " + base + ". Check the phone and this computer are on the same Wi-Fi, Record3D is open with Wi-Fi streaming started, and the address matches the one in the app.");
+  }
+  const pc = new RTCPeerConnection(); LID.pc = pc;
+  const rv = document.createElement("video");
+  rv.muted = true; rv.playsInline = true; rv.autoplay = true;
+  rv.style.cssText = "position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none";
+  document.body.appendChild(rv);
+  let gotTrack = false;
+  pc.ontrack = (e) => { gotTrack = true; rv.srcObject = e.streams[0] || new MediaStream([e.track]); rv.play().catch(() => {}); };
+  pc.onconnectionstatechange = () => { if (LID.pc === pc && (pc.connectionState === "failed" || pc.connectionState === "disconnected")) { stopCamera(); camStatus("bad", "LiDAR stream ended"); } };
+  try {
+    await pc.setRemoteDescription(offer);
+    await pc.setLocalDescription(await pc.createAnswer());
+    // Record3D wants the answer with every ICE candidate in it: wait for gathering to finish
+    await new Promise((res) => { if (pc.iceGatheringState === "complete") return res(); const t = setTimeout(res, 3000); pc.addEventListener("icegatheringstatechange", () => { if (pc.iceGatheringState === "complete") { clearTimeout(t); res(); } }); });
+    const a = await fetch(base + "/answer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "answer", data: pc.localDescription.sdp }) });
+    if (a && !a.ok) return fail("Record3D refused the connection (" + a.status + ").");
+  } catch (e) { return fail("WebRTC setup failed: " + (e && e.message || e)); }
+  // wait for the first frame
+  const t0 = performance.now();
+  while (!(gotTrack && rv.videoWidth) && performance.now() - t0 < 8000) await new Promise(r => setTimeout(r, 100));
+  if (!rv.videoWidth) return fail("Connected, but no video arrived. Restart Wi-Fi streaming in Record3D and try again.");
+  LID.rv = rv; LID.base = base;
+  // a canvas that behaves like the camera <video> for the rest of the lab
+  const c = document.createElement("canvas"); c.width = 2; c.height = 2;
+  LID.cvs = c; LID.ctx = c.getContext("2d");
+  Object.defineProperty(c, "videoWidth", { get: () => c.width });
+  Object.defineProperty(c, "videoHeight", { get: () => c.height });
+  Object.defineProperty(c, "readyState", { get: () => (LID.frames > 0 ? 4 : 0) });
+  Object.defineProperty(c, "currentTime", { get: () => LID.frames });
+  c.play = () => Promise.resolve(); c.remove = () => {};
+  pumpLidar();
+  CAM.stream = rv.srcObject; CAM.video = c; CAM.dirty = true;
+  CAM.raw = tiny(true, [0, 0, 0, 255]);
+  try { $("pipVid").srcObject = c.captureStream(30); $("pipVid").play().catch(() => {}); } catch (e) {}
+  camLive = true; applyPip();
+  if (cur) { camDefaults(cur.id, cur.vals); if (!$("panel").hidden) buildControls(); }
+  $("camBtn").textContent = "Turn off"; $("lidBtn").textContent = "Disconnect";
+  if (depthFx === 0) setDepthFx(1, true);           // LiDAR is for 3D: start on Worms
+  camStatus("wait", "LiDAR on · loading body tracking…");
+  toast("LiDAR connected · real depth");
+  loadTracking();
 }
 
 // ── moves: read the body, name what it's doing, and steer each shader with it ──
@@ -2279,6 +2408,14 @@ $("reset").addEventListener("click", () => { if (!cur) return; const pal = cur.v
 $("camBtn").addEventListener("click", () => { camLive ? stopCamera() : startCamera(); });
 $("camDotBtn").addEventListener("click", () => { if (!camLive) startCamera(); else { $("optPip").checked = !$("optPip").checked; applyPip(); } });
 $("gateRetry").addEventListener("click", startCamera);
+$("lidAddr").value = store.get("lidAddr", "");
+$("lidAddr").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); $("lidBtn").click(); } });
+$("lidBtn").addEventListener("click", () => { lidarOn() ? (stopCamera(), camStatus("", "LiDAR off")) : startLidar(); });
+const syncLidFar = () => { $("lidFar").value = LID.far; $("lidFarV").textContent = LID.far.toFixed(1) + " m"; };
+$("lidFar").addEventListener("input", () => { LID.far = Number($("lidFar").value); store.set("lidFar", LID.far); syncLidFar(); });
+syncLidFar();
+if (location.protocol === "https:") $("lidHelp").insertAdjacentHTML("beforeend", ' On this https page the stream is blocked, so <a id="lidDl" download="shades-of-ny-body-lab.html">download the LiDAR copy</a> and open it on a laptop on the phone\'s Wi-Fi.');
+if ($("lidDl")) $("lidDl").href = location.href.split("#")[0];
 $("gateSkip").addEventListener("click", () => { $("gate").hidden = true; wake(); if (GAME.phase === "check") GAME.play(); });
 const fsOK = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
 if (!fsOK) $("fsBtn").hidden = true;
