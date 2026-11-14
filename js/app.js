@@ -929,8 +929,19 @@
   // --- Load ISF shader file into a specific layer ---
   async function loadShaderToLayer(layerId, folder, file) {
     try {
-      const r = await fetch((folder || 'shaders') + '/' + file);
-      const src = await r.text();
+      // A dropped request must not cost a shader: retry twice before giving up
+      let src = null, lastErr = null;
+      for (let attempt = 0; attempt < 3 && src === null; attempt++) {
+        try {
+          const r = await fetch((folder || 'shaders') + '/' + file);
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          src = await r.text();
+        } catch (fe) {
+          lastErr = fe;
+          await new Promise(res => setTimeout(res, 350 * (attempt + 1)));
+        }
+      }
+      if (src === null) throw lastErr || new Error('fetch failed');
 
       const layer = getLayer(layerId);
 

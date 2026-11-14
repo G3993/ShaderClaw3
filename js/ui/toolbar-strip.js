@@ -232,8 +232,11 @@
       if (token !== stepToken || ++checks > 25) return clearInterval(watch);
       if (!(bar && bar.classList.contains('show') && bar.textContent.trim())) return;
       clearInterval(watch);
+      // a network failure is not the shader's fault: step past it now, but try it again next time
+      const transient = /^Failed to load/.test(bar.textContent.trim());
       skip.add(next.value);
-      try { sessionStorage.setItem('sc3-skip', JSON.stringify(Array.from(skip))); } catch (e) {}
+      if (transient) setTimeout(() => skip.delete(next.value), 15000);
+      else try { sessionStorage.setItem('sc3-skip', JSON.stringify(Array.from(skip))); } catch (e) {}
       bar.classList.remove('show');
       if ((hops || 0) < 12) stepShader(dir, (hops || 0) + 1);
     }, 100);
