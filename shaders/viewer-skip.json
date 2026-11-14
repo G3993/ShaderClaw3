@@ -1,3 +1,7 @@
 [
- "prism.fs"
+ "dibujito.fs",
+ "electricity_schumann.fs",
+ "particle_grid.fs",
+ "prism.fs",
+ "ripple.fs"
 ]
