@@ -7645,9 +7645,18 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     const w = r.width || 1, h = r.height || 1;
     return [Math.min(1, Math.max(0, (cx - r.left) / w)), Math.min(1, Math.max(0, 1.0 - (cy - r.top) / h))];
   };
+  // Fluid: each finger stirs on its own (the mouse path only knows one point)
+  const _fluidFingers = (e, fn) => {
+    if (!fluidRenderer || !fluidRenderer.active) return;
+    for (const t of e.changedTouches) {
+      const p = _touchNorm(t.clientX, t.clientY);
+      fluidRenderer[fn](t.identifier, p[0], p[1]);
+    }
+  };
   glCanvas.addEventListener('touchstart', (e) => {
     e.preventDefault(); // prevent scroll/zoom on canvas
     _glCanvasRect = glCanvas.getBoundingClientRect();
+    _fluidFingers(e, 'fingerDown');
     _touchCount = e.touches.length;
     isfRenderer.mouseDown = 1;
     // Single finger — jump mousePos to the finger. Also sync the "last" position
@@ -7671,6 +7680,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   glCanvas.addEventListener('touchmove', (e) => {
     e.preventDefault();
     _touchCount = e.touches.length;
+    _fluidFingers(e, 'fingerMove');
     if (e.touches.length === 1) {
       // Single finger drag — update mousePos directly (no smoothing)
       // so mouseDelta is accurate for fluid/paint shaders
@@ -7696,6 +7706,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   glCanvas.addEventListener('touchend', (e) => {
     e.preventDefault(); // no synthetic mouse/click after a canvas touch
     _touchCount = e.touches.length;
+    _fluidFingers(e, 'fingerUp');
     if (e.touches.length === 0) {
       isfRenderer.mouseDown = 0;
     } else if (e.touches.length === 1) {
@@ -7714,6 +7725,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
   glCanvas.addEventListener('touchcancel', () => {
     _touchCount = 0;
+    if (fluidRenderer) fluidRenderer.fingersClear();
     isfRenderer.mouseDown = 0;
   });
 

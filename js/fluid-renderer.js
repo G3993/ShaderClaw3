@@ -14,6 +14,16 @@ class FluidRenderer {
     const _isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
     const _defaultDyeRes = _isMobile ? 512 : 2048;
 
+    // Phones and tablets: the finger is what moves the fluid. The automatic
+    // movement only plays as an idle show, and steps aside the moment you touch.
+    this.touchFirst = _isMobile || (typeof matchMedia === 'function' &&
+      matchMedia('(hover: none) and (pointer: coarse)').matches);
+    this._lastTouchT = 0;       // last time a pointer drove the fluid
+    this._wasDown = 0;
+    this._fingers = {};         // touch id -> { x, y, color }
+    this._fingerCount = 0;
+    this.IDLE_RESUME_MS = 6000; // automatic movement returns after this long untouched
+
     // Simulation config (exposed as UI controls)
     this.config = {
       SIM_RESOLUTION: _isMobile ? 128 : 256,
@@ -719,14 +729,21 @@ class FluidRenderer {
       }
     }
 
-    // Mouse splats
-    if (mouseDown || (Math.abs(mouseDelta[0]) > 0.001 || Math.abs(mouseDelta[1]) > 0.001)) {
+    // Mouse splats (fingers on a touch screen go through fingerDown/fingerMove instead)
+    const _moved = Math.abs(mouseDelta[0]) > 0.001 || Math.abs(mouseDelta[1]) > 0.001;
+    if (this._fingerCount > 0) {
+      this._lastTouchT = now;
+    } else if (mouseDown || _moved) {
+      this._lastTouchT = now;
       const dx = mouseDelta[0] * this.config.SPLAT_FORCE;
       const dy = mouseDelta[1] * this.config.SPLAT_FORCE;
       if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
         this.addSplat(mousePos[0], mousePos[1], dx, dy, this._pointerColor);
+      } else if (mouseDown && !this._wasDown) {
+        this._tapSplat(mousePos[0], mousePos[1], this._pointerColor);
       }
     }
+    this._wasDown = mouseDown ? 1 : 0;
 
     // Audio-reactive splats — throttled to avoid flooding from mic noise
     if (audioData) {
@@ -852,7 +869,10 @@ class FluidRenderer {
     // Skip when pose tracking is active: body becomes the sole source of fluid.
     const _poseActive = mediaPipe && mediaPipe.active && mediaPipe.modes && mediaPipe.modes.pose
         && mediaPipe._lastPoseLandmarks && mediaPipe._lastPoseLandmarks.length > 28;
-    if (this.config.MOVEMENT && !_poseActive) {
+    // On touch screens it also waits while a finger is (or was just) driving.
+    const _touchOwns = this.touchFirst && this._lastTouchT > 0 &&
+      (now - this._lastTouchT) < this.IDLE_RESUME_MS;
+    if (this.config.MOVEMENT && !_poseActive && !_touchOwns) {
       const t = performance.now() * 0.001 * this.config.MOVE_SPEED;
       const spread = this.config.MOVE_SPREAD * 0.42;
       const forceScale = this.config.MOVE_INTENSITY * this.config.SPLAT_FORCE * 0.8;
@@ -931,6 +951,43 @@ class FluidRenderer {
     // Run simulation
     this.step(dt);
   }
+
+  // ── Touch: every finger stirs the fluid on its own ─────────
+
+  // A press that doesn't travel still leaves a mark: a small burst outward.
+  _tapSplat(x, y, color) {
+    const f = this.config.SPLAT_FORCE * 0.02;
+    const a0 = Math.random() * Math.PI * 2;
+    for (let i = 0; i < 3; i++) {
+      const a = a0 + i * 2.094;
+      this.addSplat(x, y, Math.cos(a) * f, Math.sin(a) * f, color);
+    }
+  }
+
+  fingerDown(id, x, y) {
+    if (!this.active) return;
+    if (!this._fingers[id]) this._fingerCount++;
+    const color = this.config.COLORFUL ? this._randomColor() : this._pointerColor;
+    this._fingers[id] = { x, y, color };
+    this._lastTouchT = performance.now();
+    this._tapSplat(x, y, color);
+  }
+
+  fingerMove(id, x, y) {
+    const f = this._fingers[id];
+    if (!this.active || !f) return;
+    const dx = (x - f.x) * this.config.SPLAT_FORCE;
+    const dy = (y - f.y) * this.config.SPLAT_FORCE;
+    f.x = x; f.y = y;
+    this._lastTouchT = performance.now();
+    if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) this.addSplat(x, y, dx, dy, f.color);
+  }
+
+  fingerUp(id) {
+    if (this._fingers[id]) { delete this._fingers[id]; this._fingerCount--; }
+  }
+
+  fingersClear() { this._fingers = {}; this._fingerCount = 0; }
 
   // ── Uniform helpers ─────────────────────────────────────────
 
