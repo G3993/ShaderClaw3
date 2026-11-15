@@ -7110,7 +7110,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   });
 
   // Start loading deferred scripts (model loaders) in background after init
-  requestIdleCallback ? requestIdleCallback(() => loadDeferredScripts()) : setTimeout(() => loadDeferredScripts(), 2000);
+  // Safari has no requestIdleCallback: a bare reference threw here and stopped everything
+  // below from running, touch handlers included.
+  window.requestIdleCallback ? window.requestIdleCallback(() => loadDeferredScripts()) : setTimeout(() => loadDeferredScripts(), 2000);
 
   // ===== SC3 UI PATCHES =====
 
@@ -7908,6 +7910,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   ['gesturestart', 'gesturechange', 'gestureend'].forEach(t =>
     document.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
 
+  window._sc3TouchReady = true;   // the touch handlers above are installed
   glCanvas.addEventListener('touchcancel', () => {
     _touchCount = 0;
     if (fluidRenderer) fluidRenderer.fingersClear();

@@ -983,6 +983,7 @@
       glLost: ctx ? ctx.isContextLost() : 'no ctx',
       debugText: (document.getElementById('debug-overlay') || {}).textContent || '',
       errorBar: (document.getElementById('error-bar') || {}).textContent || '',
+      touchReady: !!window._sc3TouchReady,
       title: document.title,
       ua: navigator.userAgent,
       screen: window.innerWidth + 'x' + window.innerHeight
