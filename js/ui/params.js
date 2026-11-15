@@ -126,7 +126,10 @@ function markReactiveParams(container, shaderSource, inputs, layerId) {
   const hasNativeMouse = /\b(mousePos|mouseDelta)\b/.test(body);
   const isTextShader = /\bfontAtlasTex\b/.test(body) || layerId === 'text';
 
-  if (!hasNativeMouse && !isTextShader) {
+  // The main shader layer no longer gets this default: it pinned the first control at its
+  // minimum, so shaders didn't open the way they were designed. Touch and mouse are
+  // auto-mapped to each shader's controls instead (see "Touch auto-map" in app.js).
+  if (!hasNativeMouse && !isTextShader && layerId !== 'shader') {
     const candidates = inputs.filter(i => i.TYPE === 'float' && !skipNames.has(i.NAME));
     // Prefer params the shader already uses reactively
     const reactiveFirst = candidates.sort((a, b) => {

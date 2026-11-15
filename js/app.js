@@ -502,27 +502,87 @@
     return true;
   }
 
-  // === Universal touch response ===
-  // Every shader answers the pointer. Shaders that read mousePos / mouseDelta / mouseDown
-  // themselves are left alone; all the others get this pass: each touch drops a ripple that
-  // travels outward and bends the picture like a stone in water, drags leave a wake.
-  const TR_MAX = 10, TR_LIFE = 2.6;
-  const _tr = { pts: [], prog: null, loc: null, last: [0.5, 0.5], wasDown: 0, buf: new Float32Array(TR_MAX * 4) };
-  window._sc3Touch = _tr;
-  function _trEmit(x, y, amp) {
-    _tr.pts.push({ x, y, t: performance.now(), amp });
-    if (_tr.pts.length > TR_MAX) _tr.pts.shift();
+  // === Touch auto-map ===
+  // Like plugging in a MIDI controller: every shader's own controls are mapped to gestures
+  // the moment it loads, a different set for each shader.
+  //   drag sideways / up-down  -> two knobs (they stay where you leave them)
+  //   pinch                    -> a third knob (zoom or size when the shader has one)
+  //   how fast you move        -> an intensity control, and it stands in for sound
+  //   double tap               -> next look (palette / mode / style)
+  //   triple tap               -> everything back to how it started
+  let _touchSeen = false;
+  const _lq = { fingers: {}, count: 0, lastInput: -1e9, mouse: [0.5, 0.5], energy: 0, hold: 0, lastT: 0,
+                pinchD: 0, taps: 0, tapTimer: null, chip: null, chipTimer: null };
+  window._sc3Touch = _lq;
+  function _lqChip(text) {
+    if (!text) return;
+    if (!_lq.chip) {
+      const c = document.createElement('div');
+      c.id = 'touch-map-chip';
+      c.style.cssText = 'position:absolute;left:50%;bottom:calc(28px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);' +
+        'padding:8px 16px;background:rgba(12,12,14,.55);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);' +
+        'border:1px solid rgba(255,255,255,.08);border-radius:999px;color:rgba(255,255,255,.88);font:500 13px/1.2 var(--sc-font,-apple-system,sans-serif);' +
+        'white-space:nowrap;max-width:calc(100vw - 32px);overflow:hidden;text-overflow:ellipsis;pointer-events:none;z-index:34;opacity:0;transition:opacity .25s';
+      (document.getElementById('preview') || document.body).appendChild(c);
+      _lq.chip = c;
+    }
+    const hint = document.getElementById('interact-hint'); if (hint) hint.classList.add('dismissed');
+    _lq.chip.textContent = text;
+    _lq.chip.style.opacity = '1';
+    clearTimeout(_lq.chipTimer);
+    _lq.chipTimer = setTimeout(() => { _lq.chip.style.opacity = '0'; }, 1600);
   }
-  function _trTrack() {
-    const mx = isfRenderer.mousePos[0], my = isfRenderer.mousePos[1], down = isfRenderer.mouseDown ? 1 : 0;
-    const asp = glCanvas.width / Math.max(glCanvas.height, 1);
-    const dx = (mx - _tr.last[0]) * asp, dy = my - _tr.last[1];
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    if (down && !_tr.wasDown) { _trEmit(mx, my, 1.0); _tr.last = [mx, my]; }
-    else if (dist > 0.045) { _trEmit(mx, my, down ? 0.6 : 0.32); _tr.last = [mx, my]; }
-    _tr.wasDown = down;
+  function _lqFinger(kind, id, x, y) {
     const now = performance.now();
-    while (_tr.pts.length && (now - _tr.pts[0].t) / 1000 > TR_LIFE) _tr.pts.shift();
+    if (kind === 'down') {
+      if (!_lq.fingers[id]) _lq.count++;
+      _lq.fingers[id] = { x, y, px: x, py: y, kx: x, ky: y, sx: x, sy: y, t0: now, turning: false };
+      _lq.energy = Math.max(_lq.energy, 0.55);                // a tap is a hit
+      _lq.pinchD = 0;
+      if (_lq.count === 1) for (const k in _pmDir) delete _pmDir[k];
+    } else if (kind === 'move') {
+      const f = _lq.fingers[id]; if (f) { f.x = x; f.y = y; _pmGesture(); }
+    } else if (kind === 'up') {
+      const f = _lq.fingers[id];
+      if (f) {
+        delete _lq.fingers[id]; _lq.count--;
+        _lq.pinchD = 0;
+        for (const k in _lq.fingers) { const g = _lq.fingers[k]; g.kx = g.x; g.ky = g.y; }   // no jump after a pinch
+        const quick = now - f.t0 < 300 && Math.hypot(f.x - f.sx, f.y - f.sy) < 0.035;
+        if (quick && _lq.count === 0) {
+          _lq.taps++;
+          clearTimeout(_lq.tapTimer);
+          _lq.tapTimer = setTimeout(() => { const n = _lq.taps; _lq.taps = 0; if (n >= 2) _pmTaps(n); }, 330);
+        } else if (!quick) { _lq.taps = 0; }
+      }
+    } else { _lq.fingers = {}; _lq.count = 0; _lq.pinchD = 0; }
+    _lq.lastInput = now;
+  }
+  // Once a frame: how far the pointer travelled -> energy (quick up, slow down)
+  function _trTrack() {
+    const now = performance.now();
+    const dt = Math.min((now - (_lq.lastT || now)) / 1000, 0.1); _lq.lastT = now;
+    let travel = 0;
+    if (_lq.count > 0) {
+      for (const id in _lq.fingers) {
+        const f = _lq.fingers[id];
+        travel += Math.hypot(f.x - f.px, f.y - f.py);
+        f.px = f.x; f.py = f.y;
+        _lq.mouse[0] = f.x; _lq.mouse[1] = f.y;
+      }
+    } else {
+      const mx = isfRenderer.mousePos[0], my = isfRenderer.mousePos[1];
+      travel = Math.hypot(mx - _lq.mouse[0], my - _lq.mouse[1]);
+      _lq.mouse[0] = mx; _lq.mouse[1] = my;
+      if (travel > 0.0006) _lq.lastInput = now;
+    }
+    const speed = dt > 0 ? travel / dt : 0;                   // screens per second
+    const want = Math.min(1, speed * 0.9);
+    if (want > _lq.energy) _lq.energy += (want - _lq.energy) * 0.35;
+    else _lq.energy *= Math.exp(-dt * 2.2);
+    const holdWant = _lq.count > 0 ? 1 : 0;
+    _lq.hold += (holdWant - _lq.hold) * (holdWant ? 0.2 : 0.06);
+    if (_lq.energy < 0.001) _lq.energy = 0;
   }
   function _trNative(layer) {
     if (layer._trProg !== layer.program) {
@@ -532,72 +592,175 @@
     }
     return layer._trIsNative;
   }
-  function _trProgram(gl) {
-    if (_tr.prog !== null) return _tr.prog;
-    const mk = (type, src) => { const sh = gl.createShader(type); gl.shaderSource(sh, src); gl.compileShader(sh); return sh; };
-    const vs = mk(gl.VERTEX_SHADER, 'attribute vec2 position;varying vec2 vUv;void main(){vUv=position*0.5+0.5;gl_Position=vec4(position,0.,1.);}');
-    const fs = mk(gl.FRAGMENT_SHADER, [
-      'precision highp float;',
-      'varying vec2 vUv; uniform sampler2D uTex; uniform float ratio; uniform vec4 uPts[' + TR_MAX + '];',
-      'void main(){',
-      '  vec2 off = vec2(0.0); float crest = 0.0;',
-      '  for (int i = 0; i < ' + TR_MAX + '; i++) {',
-      '    vec4 p = uPts[i];',
-      '    if (p.w <= 0.0) continue;',
-      '    vec2 d = (vUv - p.xy) * vec2(ratio, 1.0);',
-      '    float r = length(d), age = p.z;',
-      '    float x = r - age * 0.42;',                                   // ring front travels outward
-      '    float env = exp(-x * x * 55.0) * exp(-age * 1.5) * smoothstep(0.0, 0.08, age) * p.w;',
-      '    float w = sin(x * 34.0) * env;',
-      '    float dimple = exp(-r * r * 60.0) * exp(-age * 5.0) * p.w;',   // the press itself
-      '    off += (d / max(r, 1e-4)) * (w * 0.038 - dimple * 0.050);',
-      '    crest += w;',
-      '  }',
-      '  vec2 o = off / vec2(ratio, 1.0);',
-      '  vec3 c = vec3(texture2D(uTex, vUv - o * 1.18).r, texture2D(uTex, vUv - o).g, texture2D(uTex, vUv - o * 0.82).b);',
-      '  c += max(crest, 0.0) * 0.10;',
-      '  gl_FragColor = vec4(c, texture2D(uTex, vUv - o).a);',
-      '}'].join('\n'));
-    const pr = gl.createProgram();
-    gl.attachShader(pr, vs); gl.attachShader(pr, fs);
-    gl.bindAttribLocation(pr, 0, 'position');
-    gl.linkProgram(pr);
-    gl.deleteShader(vs); gl.deleteShader(fs);
-    if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) { console.warn('[touch] ripple pass failed:', gl.getProgramInfoLog(pr)); _tr.prog = false; return false; }
-    _tr.prog = pr;
-    _tr.loc = { tex: gl.getUniformLocation(pr, 'uTex'), ratio: gl.getUniformLocation(pr, 'ratio'), pts: gl.getUniformLocation(pr, 'uPts[0]') };
-    return pr;
-  }
-  function _trRender(gl, layer) {
-    if (!_tr.pts.length || !layer.fbo || _trNative(layer)) return;
-    const prog = _trProgram(gl);
-    if (!prog) return;
-    const w = layer.fbo.width, h = layer.fbo.height;
-    if (!layer._trTex || layer._trSize[0] !== w || layer._trSize[1] !== h) {
-      if (!layer._trTex) layer._trTex = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, layer._trTex);
-      for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-      layer._trSize = [w, h];
+
+  // Controls that must not be played with: clocks (they jump), cost, and sound trims
+  const PM_SKIP = /speed|rate|tempo|spin|scroll|tumble|wander|cycle|period|audio|react|response|quality|res$|iters|loops|layers|count|steps|march|sim|seed|dynamics|time|loop|cols|rows|opacity|alpha|fade|mix$|^(drift|breath|sway|grain|grainamt|vignette|invert|brightness|exposure|contrast|trail|trailamt|decay|damping|backamt|fog|haze)$/i;
+  const PM_X = [/^cam(az|orbit$|yaw|angle|rot|x$)/i, /azim|yaw|^orbit$|orbitangle/i, /^(light|sun|key)(az|angle|x$)/i,
+    /^(angle|rotation|rotate|rot|pan|heading)$/i];
+  const PM_Y = [/^cam(pitch|height|el|tilt|y$)/i, /pitch|elev|^(sun|light|key)(el|height)/i, /^tilt$/i];
+  const PM_PINCH = [/^(zoom|camdist|camdistance|fov|perspective|lens)$/i, /zoom|scale$/i, /size|radius|spread|depth|thickness|density|width/i];
+  const PM_E = /glow|bloom|warp|turbul|distort|wobble|wiggle|pulse|chaos|shimmer|sparkle|colorboost|aberration|dispersion|iridescence|intensity|amplitude|amp$|strength|energy|kick|caustic|glint|sheen/i;
+  const PM_LOOK = /palette|mode|style|look|scheme|theme|shape|pattern|preset|type|variant|color|material|scene/i;
+  const PM_LOOK_SKIP = /quality|res|iters|sim|count|layers|steps|audio|band|blend|march|aspect/i;
+  const _pmHash = (str) => { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+  const _pmLabel = (i) => i ? (i.LABEL || i.NAME.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase())) : '';
+  function _pmPick(layer) {
+    const nb = (layer.mpBindings || []).length;
+    if (layer._pmProg === layer.program && layer._pmNb === nb) return layer._pmPick;
+    layer._pmProg = layer.program; layer._pmNb = nb;
+    layer._pmPick = null;
+    const native = _trNative(layer);                         // reads the pointer itself: leave drag to it
+    const ins = (layer.inputs || []).filter(i => i && i.NAME);
+    const pick = { x: null, y: null, pinch: null, e: null, pt: null, look: null, home: {} };
+    // A control that already has a signal bound to it belongs to that binding
+    const bound = new Set((layer.mpBindings || []).map(b => b.param));
+    const floats = ins.filter(i => i.TYPE === 'float' && typeof i.MIN === 'number' && typeof i.MAX === 'number' && i.MAX > i.MIN && !bound.has(i.NAME));
+    let fl = floats.filter(i => !PM_SKIP.test(i.NAME));
+    // spare controls for shaders with very few: anything but sound trims and render cost
+    let spare = floats.filter(i => PM_SKIP.test(i.NAME) && !/audio|react|response|quality|res$|iters|steps|march|sim|seed|opacity|alpha|time|period/i.test(i.NAME));
+    const seed = _pmHash((layer.manifestEntry && layer.manifestEntry.file) || ins.map(i => i.NAME).join());
+    const take = (f) => { fl = fl.filter(i => i !== f); spare = spare.filter(i => i !== f); return f; };
+    const byList = (lists) => { for (const re of lists) { const f = fl.find(i => re.test(i.NAME)); if (f) return take(f); } return null; };
+    const anyOf = (arr, salt) => arr.length ? take(arr[(seed + salt * 7919) % arr.length]) : null;
+    const calm = () => fl.filter(i => !PM_E.test(i.NAME));
+    if (!native) {
+      const pt = ins.find(i => i.TYPE === 'point2D');
+      const cx = fl.find(i => /^cent(er|re)x$/i.test(i.NAME)), cy = fl.find(i => /^cent(er|re)y$/i.test(i.NAME));
+      if (pt) pick.pt = pt;
+      else if (cx && cy) { pick.x = take(cx); pick.y = take(cy); }
     }
-    gl.bindFramebuffer(gl.FRAMEBUFFER, layer.fbo.fbo);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, layer._trTex);
-    gl.copyTexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 0, 0, w, h);
-    const now = performance.now();
-    _tr.buf.fill(0);
-    _tr.pts.forEach((p, i) => { _tr.buf.set([p.x, p.y, (now - p.t) / 1000, p.amp], i * 4); });
-    gl.viewport(0, 0, w, h);
-    gl.disable(gl.BLEND);
-    gl.useProgram(prog);
-    gl.uniform1i(_tr.loc.tex, 0);
-    gl.uniform1f(_tr.loc.ratio, w / h);
-    gl.uniform4fv(_tr.loc.pts, _tr.buf);
-    gl.bindBuffer(gl.ARRAY_BUFFER, isfRenderer.posBuf);
-    gl.enableVertexAttribArray(0);
-    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    pick.pinch = byList(PM_PINCH);
+    pick.e = anyOf(fl.filter(i => PM_E.test(i.NAME)), 1);
+    if (!native && !pick.pt && !pick.x) {
+      // the camera if there is one, otherwise two of the shader's own controls
+      pick.x = byList(PM_X) || anyOf(calm(), 2) || anyOf(fl, 2) || anyOf(spare, 2);
+      pick.y = byList(PM_Y) || anyOf(calm(), 3) || anyOf(fl, 3) || anyOf(spare, 3);
+    }
+    if (!pick.pinch) pick.pinch = anyOf(calm(), 5) || anyOf(fl, 5) || anyOf(spare, 5) || pick.y || pick.x;
+    if (!pick.e) pick.e = anyOf(fl, 4);
+    // double tap: a choice to step through, else a switch, else a colour wheel
+    const longs = ins.filter(i => i.TYPE === 'long' && Array.isArray(i.VALUES) && i.VALUES.length > 1 && !PM_LOOK_SKIP.test(i.NAME));
+    const bools = ins.filter(i => i.TYPE === 'bool' && !/audio|react|invert|transparent|bg|background|tex|^use|show|debug|mirror|flip|pause|freeze|reset/i.test(i.NAME));
+    const hue = ins.find(i => i.TYPE === 'float' && !bound.has(i.NAME) && /^(hueshift|hue|paletteshift|huebase|palamount)$/i.test(i.NAME) && i !== pick.x && i !== pick.y && i !== pick.pinch && i !== pick.e);
+    pick.look = longs.find(i => PM_LOOK.test(i.NAME)) || hue || longs[0] || bools[0] || null;
+    const vals = layer.inputValues || {};
+    for (const i of [pick.x, pick.y, pick.pinch, pick.pt, pick.look]) if (i && i.NAME in vals) pick.home[i.NAME] = Array.isArray(vals[i.NAME]) ? vals[i.NAME].slice() : vals[i.NAME];
+    layer._pmPick = pick;
+    return pick;
+  }
+  window._sc3Finger = (kind, id, x, y) => { _touchSeen = true; _lqFinger(kind, id, x, y); };
+  window._sc3Vals = () => { const l = getLayer('shader'); return JSON.parse(JSON.stringify(l.inputValues || {})); };
+  window._sc3Pick = () => { const p = _pmPick(getLayer('shader')); const n = (i) => i ? i.NAME : null; return p && { x: n(p.x), y: n(p.y), pinch: n(p.pinch), e: n(p.e), pt: n(p.pt), look: n(p.look), native: _trNative(getLayer('shader')), energy: _lq.energy }; };
+  // Move a control and keep the Edit panel's slider in step
+  function _pmSet(layer, inp, v) {
+    const vals = layer.inputValues; if (!vals) return;
+    vals[inp.NAME] = v;
+    if (document.body.classList.contains('viewing')) return;
+    const row = document.querySelector('.layer-params[data-layer="' + layer.id + '"] .control-row[data-name="' + inp.NAME + '"]');
+    if (!row) return;
+    if (typeof v === 'number') row.querySelectorAll('input[type=range], input[type=number], select').forEach(el => { el.value = v; });
+    else if (typeof v === 'boolean') row.querySelectorAll('input[type=checkbox]').forEach(el => { el.checked = v; });
+    else if (Array.isArray(v)) row.querySelectorAll('input[type=range]').forEach((el, i) => { if (i < v.length) el.value = v[i]; });
+  }
+  // Turn a knob. At the end of its travel it comes back the other way (and keeps going that
+  // way until the next touch), so a drag always does something.
+  const _pmDir = {};
+  const _pmTurn = (inp, cur, amount) => {
+    const r = inp.MAX - inp.MIN;
+    let v = cur + amount * (_pmDir[inp.NAME] || 1) * r;
+    for (let i = 0; i < 4 && (v > inp.MAX || v < inp.MIN); i++) {
+      v = v > inp.MAX ? 2 * inp.MAX - v : 2 * inp.MIN - v;
+      _pmDir[inp.NAME] = -(_pmDir[inp.NAME] || 1);
+    }
+    return Math.max(inp.MIN, Math.min(inp.MAX, v));
+  };
+  function _pmTaps(n) {
+    const layer = getLayer('shader');
+    if (!layer || !layer.program || !layer.inputValues || layer._fluidActive || layer._shadertoyActive) return;
+    const pick = _pmPick(layer), vals = layer.inputValues;
+    if (!pick) return;
+    if (n >= 3) {
+      for (const name in pick.home) { const inp = (layer.inputs || []).find(i => i.NAME === name); if (inp) _pmSet(layer, inp, Array.isArray(pick.home[name]) ? pick.home[name].slice() : pick.home[name]); }
+      _lqChip('Reset');
+      return;
+    }
+    const L = pick.look;
+    if (!L) { _lq.energy = 1; return; }
+    if (L.TYPE === 'long') {
+      const i = L.VALUES.indexOf(vals[L.NAME]);
+      const j = (i + 1) % L.VALUES.length;
+      _pmSet(layer, L, L.VALUES[j]);
+      _lqChip(_pmLabel(L) + ': ' + ((L.LABELS && L.LABELS[j]) || L.VALUES[j]));
+    } else if (L.TYPE === 'bool') {
+      _pmSet(layer, L, !vals[L.NAME]);
+      _lqChip(_pmLabel(L) + ': ' + (vals[L.NAME] ? 'on' : 'off'));
+    } else {
+      const r = L.MAX - L.MIN; let v = vals[L.NAME] + r * 0.23; if (v > L.MAX) v -= r;
+      _pmSet(layer, L, v);
+      _lqChip(_pmLabel(L));
+    }
+    _lq.energy = Math.max(_lq.energy, 0.8);
+  }
+  // Turn the knobs as the fingers move. Runs on the touch events themselves, not once a
+  // frame, so a heavy shader that draws slowly still follows the hand.
+  function _pmGesture() {
+    const layer = getLayer('shader');
+    if (!layer || !layer.program || layer._fluidActive || layer._shadertoyActive) return;
+    const pick = _pmPick(layer), vals = layer.inputValues;
+    if (pick && vals && _lq.count > 0) {
+      const ids = Object.keys(_lq.fingers);
+      if (ids.length >= 2) {
+        const f = _lq.fingers[ids[0]], g = _lq.fingers[ids[1]];
+        const d = Math.hypot(f.x - g.x, f.y - g.y);
+        if (_lq.pinchD > 0.01 && d > 0.01 && pick.pinch && typeof vals[pick.pinch.NAME] === 'number') {
+          const amt = Math.log2(d / _lq.pinchD) * 0.55;
+          if (Math.abs(amt) > 0.0005) { _pmSet(layer, pick.pinch, _pmTurn(pick.pinch, vals[pick.pinch.NAME], amt)); _lqChip('Pinch: ' + _pmLabel(pick.pinch)); }
+        }
+        _lq.pinchD = d;
+        f.kx = f.x; f.ky = f.y; g.kx = g.x; g.ky = g.y;
+      } else {
+        const f = _lq.fingers[ids[0]];
+        if (!f.turning && Math.hypot(f.x - f.sx, f.y - f.sy) > 0.025) {
+          f.turning = true; f.kx = f.x; f.ky = f.y;
+          const lx = pick.pt ? _pmLabel(pick.pt) : _pmLabel(pick.x), ly = pick.pt ? '' : _pmLabel(pick.y);
+          _lqChip([lx && ('↔ ' + lx), ly && ('↕ ' + ly)].filter(Boolean).join('    '));
+        }
+        if (f.turning) {
+          const dx = f.x - f.kx, dy = f.y - f.ky; f.kx = f.x; f.ky = f.y;
+          if (pick.pt && Array.isArray(vals[pick.pt.NAME])) {
+            const b = vals[pick.pt.NAME], mn = pick.pt.MIN || [-1, -1], mx = pick.pt.MAX || [1, 1];
+            _pmSet(layer, pick.pt, [Math.max(mn[0], Math.min(mx[0], b[0] + dx * (mx[0] - mn[0]))), Math.max(mn[1], Math.min(mx[1], b[1] + dy * (mx[1] - mn[1])))]);
+          }
+          if (pick.x && dx && typeof vals[pick.x.NAME] === 'number') _pmSet(layer, pick.x, _pmTurn(pick.x, vals[pick.x.NAME], dx * 0.85));
+          if (pick.y && dy && typeof vals[pick.y.NAME] === 'number') _pmSet(layer, pick.y, _pmTurn(pick.y, vals[pick.y.NAME], dy * 0.85));
+        }
+      }
+    }
+  }
+  // Lend the shader the movement energy for this one render.
+  // Returns what to put back afterwards.
+  function _pmApply(layer) {
+    const pick = _pmPick(layer), vals = layer.inputValues;
+    const E = _lq.energy, H = _lq.hold;
+    if (E < 0.002 && H < 0.01) return null;
+    const undo = { vals, saved: [], audio: [audioLevel, audioBass, audioMid, audioHigh] };
+    // movement in place of sound: speed is the beat, where you are colours it
+    const px = _lq.mouse[0], py = _lq.mouse[1];
+    audioBass = Math.max(audioBass, E);
+    audioLevel = Math.max(audioLevel, Math.min(1, E * 0.8 + H * 0.25));
+    audioMid = Math.max(audioMid, E * (0.35 + 0.65 * px) + H * 0.12);
+    audioHigh = Math.max(audioHigh, E * (0.3 + 0.7 * py) + H * 0.1);
+    const pe = pick && pick.e;
+    if (pe && vals && typeof vals[pe.NAME] === 'number' && E > 0.002) {
+      const base = vals[pe.NAME], up = pe.MAX - base, dn = base - pe.MIN, span = 0.34 * (pe.MAX - pe.MIN);
+      undo.saved.push([pe.NAME, base]);
+      vals[pe.NAME] = up >= dn * 0.5 ? Math.min(pe.MAX, base + E * span) : Math.max(pe.MIN, base - E * span);
+    }
+    return undo;
+  }
+  function _pmRestore(u) {
+    for (const [k, v] of u.saved) u.vals[k] = v;
+    audioLevel = u.audio[0]; audioBass = u.audio[1]; audioMid = u.audio[2]; audioHigh = u.audio[3];
   }
 
   function _blendTransitionSnapshot(gl, layer, alpha) {
@@ -7288,7 +7451,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
       return;
     }
     // 30fps cap on mobile to reduce GPU/battery load
-    if (_isMobileComp && timestamp - _lastCompTime < 33) {
+    // ...except while a finger is on the picture: then every frame counts.
+    if (_isMobileComp && timestamp - _lastCompTime < 33 && performance.now() - _lq.lastInput > 1200) {
       requestAnimationFrame(compositionLoop);
       return;
     }
@@ -7515,8 +7679,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
           shadertoyRenderer.update(isfRenderer.mousePos, isfRenderer.mouseDelta, isfRenderer.mouseDown);
           shadertoyRenderer.renderToFBO(layer.fbo);
         } else if (layer.program) {
+          const _pmUndo = layer.id === 'shader' ? _pmApply(layer) : null;
           isfRenderer.renderLayerToFBO(layer, mediaPipeMgr);
-          if (layer.id === 'shader') _trRender(gl, layer);
+          if (_pmUndo) _pmRestore(_pmUndo);
         }
         // Crossfade: blend old snapshot over new render with fading alpha
         if (layer._transitionStart && layer._xfName && _xfRender(gl, layer)) {
@@ -7631,6 +7796,23 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   });
   glCanvas.addEventListener('mousedown', () => { isfRenderer.mouseDown = 1; });
   glCanvas.addEventListener('mouseup', () => { isfRenderer.mouseDown = 0; });
+  // Mouse plays the same auto-map: click-drag turns the knobs, the wheel is the pinch,
+  // double / triple click are the taps.
+  const _mouseNorm = (e) => [Math.min(1, Math.max(0, (e.clientX - _glCanvasRect.left) / (_glCanvasRect.width || 1))),
+    Math.min(1, Math.max(0, 1.0 - (e.clientY - _glCanvasRect.top) / (_glCanvasRect.height || 1)))];
+  glCanvas.addEventListener('mousedown', (e) => { if (_touchSeen || e.button !== 0) return; const p = _mouseNorm(e); _lqFinger('down', 'mouse', p[0], p[1]); });
+  window.addEventListener('mousemove', (e) => { if (_lq.fingers.mouse) { const p = _mouseNorm(e); _lqFinger('move', 'mouse', p[0], p[1]); } });
+  window.addEventListener('mouseup', () => { if (_lq.fingers.mouse) _lqFinger('up', 'mouse'); });
+  glCanvas.addEventListener('wheel', (e) => {
+    const layer = getLayer('shader');
+    if (!layer || !layer.program || !layer.inputValues || layer._fluidActive || layer._shadertoyActive) return;
+    const pick = _pmPick(layer);
+    if (!pick || !pick.pinch || typeof layer.inputValues[pick.pinch.NAME] !== 'number') return;
+    e.preventDefault();
+    _pmSet(layer, pick.pinch, _pmTurn(pick.pinch, layer.inputValues[pick.pinch.NAME], -e.deltaY * 0.0012));
+    _lqChip('Scroll: ' + _pmLabel(pick.pinch));
+    _lq.lastInput = performance.now();
+  }, { passive: false });
 
   // Touch support for shader interaction (mobile)
   let _touchPinchDist = 0;
@@ -7647,10 +7829,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   };
   // Fluid: each finger stirs on its own (the mouse path only knows one point)
   const _fluidFingers = (e, fn) => {
-    if (!fluidRenderer || !fluidRenderer.active) return;
+    _touchSeen = true;
+    const kind = fn === 'fingerDown' ? 'down' : fn === 'fingerMove' ? 'move' : 'up';
+    const fl = fluidRenderer && fluidRenderer.active;
     for (const t of e.changedTouches) {
       const p = _touchNorm(t.clientX, t.clientY);
-      fluidRenderer[fn](t.identifier, p[0], p[1]);
+      _lqFinger(kind, t.identifier, p[0], p[1]);
+      if (fl) fluidRenderer[fn](t.identifier, p[0], p[1]);
     }
   };
   glCanvas.addEventListener('touchstart', (e) => {
@@ -7726,6 +7911,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   glCanvas.addEventListener('touchcancel', () => {
     _touchCount = 0;
     if (fluidRenderer) fluidRenderer.fingersClear();
+    _lqFinger('clear');
     isfRenderer.mouseDown = 0;
   });
 
