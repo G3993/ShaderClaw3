@@ -97,10 +97,14 @@
   function soloSection(sectionKey) {
     if (!canvasTab) return;
     canvasTab.classList.toggle('solo', !!sectionKey);
+    // "Controls" gathers every way of driving the shader into one panel
+    const multi = sectionKey === 'controls' ? ['touch-map', 'input-triggers', 'movement'] : null;
+    canvasTab.classList.toggle('solo-multi', !!multi);
     Array.from(canvasTab.children).forEach(el => {
       const match = !!sectionKey && (
         sectionKey === 'canvas-size'
           ? el.classList.contains('sc3-canvas-size-row')
+          : multi ? multi.some(k => !!el.querySelector('[data-section="' + k + '"]'))
           : !!el.querySelector('[data-section="' + sectionKey + '"]'));
       el.classList.toggle('solo-target', match);
       if (match) el.classList.remove('collapsed');

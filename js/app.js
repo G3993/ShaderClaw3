@@ -643,11 +643,77 @@
     const bools = ins.filter(i => i.TYPE === 'bool' && !/audio|react|invert|transparent|bg|background|tex|^use|show|debug|mirror|flip|pause|freeze|reset/i.test(i.NAME));
     const hue = ins.find(i => i.TYPE === 'float' && !bound.has(i.NAME) && /^(hueshift|hue|paletteshift|huebase|palamount)$/i.test(i.NAME) && i !== pick.x && i !== pick.y && i !== pick.pinch && i !== pick.e);
     pick.look = longs.find(i => PM_LOOK.test(i.NAME)) || hue || longs[0] || bools[0] || null;
+    // What the person chose in Controls wins over the automatic pick
+    pick.auto = { x: pick.x, y: pick.y, pinch: pick.pinch, e: pick.e, look: pick.look, pt: pick.pt };
+    const ov = _pmSaved()[_pmKey(layer)];
+    if (ov) for (const slot of ['x', 'y', 'pinch', 'e', 'look']) {
+      if (!(slot in ov)) continue;
+      const inp = ov[slot] ? ins.find(i => i.NAME === ov[slot]) : null;
+      if (ov[slot] && !inp) continue;                         // control no longer exists
+      if ((slot === 'x' || slot === 'y') && inp && inp.TYPE === 'point2D') { pick.pt = inp; pick.x = pick.y = null; continue; }
+      if (slot === 'x' || slot === 'y') pick.pt = null;
+      pick[slot] = inp;
+    }
     const vals = layer.inputValues || {};
     for (const i of [pick.x, pick.y, pick.pinch, pick.pt, pick.look]) if (i && i.NAME in vals) pick.home[i.NAME] = Array.isArray(vals[i.NAME]) ? vals[i.NAME].slice() : vals[i.NAME];
     layer._pmPick = pick;
+    if (layer.id === 'shader') _pmPanel(layer, pick);
     return pick;
   }
+  // --- Controls panel: choose what each gesture drives, per shader (remembered) ---
+  const _pmKey = (layer) => (layer.manifestEntry && layer.manifestEntry.file) || 'custom';
+  function _pmSaved() { try { return JSON.parse(localStorage.getItem('sc3-touchmap') || '{}'); } catch (e) { return {}; } }
+  function _pmSave(layer, slot, name) {
+    const all = _pmSaved(), k = _pmKey(layer);
+    if (slot === null) delete all[k]; else { all[k] = all[k] || {}; all[k][slot] = name; }
+    try { localStorage.setItem('sc3-touchmap', JSON.stringify(all)); } catch (e) {}
+    layer._pmProg = null;                                    // pick again with the new choice
+    _pmPick(layer);
+  }
+  function _pmPanel(layer, pick) {
+    const host = document.getElementById('touch-map-panel');
+    if (!host) return;
+    host.innerHTML = '';
+    const note = (t) => { const d = document.createElement('div'); d.className = 'tm-note'; d.textContent = t; host.appendChild(d); };
+    if (!layer || layer._fluidActive) { note('Fluid: every finger stirs its own stream. Tap for a burst.'); return; }
+    if (!pick) { note('Load a shader to map its controls to touch.'); return; }
+    const ins = (layer.inputs || []).filter(i => i && i.NAME);
+    const knobs = ins.filter(i => i.TYPE === 'float' && typeof i.MIN === 'number' && typeof i.MAX === 'number' && i.MAX > i.MIN);
+    const pts = ins.filter(i => i.TYPE === 'point2D');
+    const looks = ins.filter(i => (i.TYPE === 'long' && Array.isArray(i.VALUES) && i.VALUES.length > 1) || i.TYPE === 'bool').concat(knobs);
+    const rows = [
+      ['x', 'Drag \u2194', pick.pt || pick.x, knobs.concat(pts)],
+      ['y', 'Drag \u2195', pick.pt ? null : pick.y, knobs],
+      ['pinch', 'Pinch / scroll', pick.pinch, knobs],
+      ['e', 'Move speed', pick.e, knobs],
+      ['look', 'Double tap', pick.look, looks],
+    ];
+    note(_trNative(layer) ? 'This shader also follows the pointer on its own. Choose what each gesture drives:' : 'Choose which of this shader\u2019s controls each gesture drives:');
+    for (const [slot, label, cur, opts] of rows) {
+      const row = document.createElement('div'); row.className = 'control-row';
+      const lab = document.createElement('label'); lab.textContent = label;
+      const sel = document.createElement('select'); sel.dataset.slot = slot;
+      const none = document.createElement('option'); none.value = ''; none.textContent = slot === 'y' && pick.pt ? '(follows the point above)' : 'None';
+      sel.appendChild(none);
+      for (const i of opts) { const o = document.createElement('option'); o.value = i.NAME; o.textContent = _pmLabel(i); sel.appendChild(o); }
+      sel.value = cur ? cur.NAME : '';
+      sel.addEventListener('change', () => _pmSave(layer, slot, sel.value));
+      row.appendChild(lab); row.appendChild(sel); host.appendChild(row);
+    }
+    note('Triple tap puts everything back to how the shader opened.');
+    const act = document.createElement('div'); act.className = 'tm-actions';
+    const auto = document.createElement('button'); auto.type = 'button'; auto.textContent = 'Auto-map';
+    auto.title = 'Let ShaderClaw pick the controls for this shader';
+    auto.addEventListener('click', () => _pmSave(layer, null));
+    act.appendChild(auto); host.appendChild(act);
+  }
+  // The fluid has no controls to pick: say so when it is the one showing
+  setInterval(() => {
+    const l = getLayer('shader'), host = document.getElementById('touch-map-panel');
+    if (!l || !host) return;
+    const fluid = !!l._fluidActive;
+    if (fluid !== host._fluid) { host._fluid = fluid; if (fluid) _pmPanel(l, null); else { l._pmProg = null; } }
+  }, 600);
   window._sc3Finger = (kind, id, x, y) => { _touchSeen = true; _lqFinger(kind, id, x, y); };
   window._sc3Vals = () => { const l = getLayer('shader'); return JSON.parse(JSON.stringify(l.inputValues || {})); };
   window._sc3Pick = () => { const p = _pmPick(getLayer('shader')); const n = (i) => i ? i.NAME : null; return p && { x: n(p.x), y: n(p.y), pinch: n(p.pinch), e: n(p.e), pt: n(p.pt), look: n(p.look), native: _trNative(getLayer('shader')), energy: _lq.energy }; };

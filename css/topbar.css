@@ -299,7 +299,16 @@ body.sc3-fs #fs-exit {
 #view-toggle.active svg { stroke: #fff; }
 
 body.viewing .tb-nav,
-body.viewing .canvas-controls > :not(#view-toggle):not(#fs-btn):not(#view-cam) { display: none !important; }
+body.viewing .canvas-controls > :not(#view-toggle):not(#fs-btn):not(#view-cam):not(#view-controls) { display: none !important; }
+#view-controls { display: none; }
+body.viewing #view-controls { display: inline-flex; }
+/* Controls panel: several sections at once, so their titles stay */
+.sc3-tab-content[data-tab-content="canvas"].solo.solo-multi .sc3-section-header:not(.sc3-layer-header) { display: block; }
+#touch-map-panel { padding: 2px 0 8px; }
+#touch-map-panel .tm-note { margin: 4px 14px 8px; color: var(--sc-text-dim); font-size: var(--sc-font-size-base); line-height: 1.4; }
+#touch-map-panel .control-row label { width: 104px; }
+#touch-map-panel .tm-actions { display: flex; gap: 8px; margin: 10px 12px 2px; }
+#touch-map-panel .tm-actions button { flex: 1; min-height: 34px; border: 0; border-radius: var(--sc-radius-sm); background: var(--sc-fill-2); color: var(--sc-text); font: inherit; cursor: pointer; }
 body.viewing .tb-viewer {
   display: flex;
   position: absolute;
