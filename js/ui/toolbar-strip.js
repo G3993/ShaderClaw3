@@ -90,7 +90,7 @@
   // Canvas presses never close the panel: you tweak while you play.
   // ============================================================
   const canvasTab = document.querySelector('.sc3-tab-content[data-tab-content="canvas"]');
-  const items = document.querySelectorAll('.tb-item[data-open]');
+  const items = document.querySelectorAll('.tb-item[data-open], .canvas-btn[data-open]');
   let openKey = null;
   let lastKey = 'shader-layer';
 
@@ -132,7 +132,7 @@
 
   // Two bar items can own the same panel (viewer title + Gallery) — use the visible one
   function itemFor(key) {
-    const all = document.querySelectorAll('.tb-item[data-open="' + key + '"]');
+    const all = document.querySelectorAll('.tb-item[data-open="' + key + '"], .canvas-btn[data-open="' + key + '"]');
     return Array.from(all).find(b => b.offsetParent !== null) || all[0] || null;
   }
 

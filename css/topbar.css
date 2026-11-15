@@ -301,7 +301,9 @@ body.sc3-fs #fs-exit {
 body.viewing .tb-nav,
 body.viewing .canvas-controls > :not(#view-toggle):not(#fs-btn):not(#view-cam):not(#view-controls) { display: none !important; }
 #view-controls { display: none; }
-body.viewing #view-controls { display: inline-flex; }
+body.viewing #view-controls { display: flex; }
+#view-controls.active { color: #fff; background: rgba(255,255,255,0.16); }
+#view-controls.active svg { stroke: #fff; }
 /* Controls panel: several sections at once, so their titles stay */
 .sc3-tab-content[data-tab-content="canvas"].solo.solo-multi .sc3-section-header:not(.sc3-layer-header) { display: block; }
 #touch-map-panel { padding: 2px 0 8px; }
@@ -335,8 +337,8 @@ body.booting #gl-canvas, body.booting #three-canvas { opacity: 0; }
   body.viewing.panel-open #preview { top: 0; }
   body.viewing .tb-viewer { position: static; transform: none; flex: 0 1 auto; min-width: 0; }
   body.viewing .sc3-topbar > .tb-spacer { display: block; }
-  body.viewing .tb-view-title { min-width: 0; padding: 0 8px; }
-  #tb-view-name { max-width: 150px; }
+  body.viewing .tb-view-title { min-width: 0; flex: 0 1 auto; padding: 0 8px; overflow: hidden; }
+  #tb-view-name { display: block; max-width: min(150px, 100%); white-space: nowrap; }
   #tb-view-count { display: none; }
 }
 
