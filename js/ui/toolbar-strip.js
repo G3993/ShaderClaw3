@@ -273,6 +273,13 @@
   }
   setInterval(syncShaderName, 500);
 
+  // Random: jump to any other shader in the walk
+  function randomShader() {
+    const n = playlist().length;
+    if (n > 1) stepShader(1 + Math.floor(Math.random() * (n - 1)));
+  }
+  const randomBtn = document.getElementById('view-random');
+  if (randomBtn) randomBtn.addEventListener('click', randomShader);
   const prevBtn = document.getElementById('view-prev');
   const nextBtn = document.getElementById('view-next');
   if (prevBtn) prevBtn.addEventListener('click', () => stepShader(-1));
@@ -413,6 +420,7 @@
     if (e.key === 'p' && !document.body.classList.contains('viewing')) togglePanel('shader-layer');
     if (e.key === 'ArrowRight') stepShader(1);
     if (e.key === 'ArrowLeft') stepShader(-1);
+    if (e.key === 'r') randomShader();
     if (e.key === 'Escape') {
       if (document.body.classList.contains('sc3-fs')) document.body.classList.remove('sc3-fs');
       else if (openKey) closePanel();

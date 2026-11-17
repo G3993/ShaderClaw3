@@ -344,8 +344,10 @@ body.booting #gl-canvas, body.booting #three-canvas { opacity: 0; }
   body.viewing.panel-open #preview { top: 0; }
   body.viewing .tb-viewer { position: static; transform: none; flex: 0 1 auto; min-width: 0; }
   body.viewing .sc3-topbar > .tb-spacer { display: block; }
-  body.viewing .tb-view-title { min-width: 0; flex: 0 1 auto; padding: 0 8px; overflow: hidden; }
-  #tb-view-name { display: block; max-width: min(150px, 100%); white-space: nowrap; }
+  body.viewing .tb-viewer .canvas-btn, body.viewing .canvas-controls .canvas-btn { flex: none; }
+  body.viewing .tb-view-title { min-width: 0; flex: 0 1 auto; padding: 0 6px; overflow: hidden; }
+  #tb-view-name { display: block; max-width: 150px; white-space: nowrap; }
+  body.viewing .tb-viewer .canvas-btn { width: 32px; }
   #tb-view-count { display: none; }
 }
 
@@ -358,3 +360,11 @@ body.viewing #view-cam { display: flex; }
 #view-cam.active { color: #fff; background: var(--sc-accent); }
 #view-cam.active svg { stroke: #fff; }
 #view-cam.busy { opacity: 0.5; pointer-events: none; }
+
+/* Narrow phones: tighter icons so the shader name keeps its room beside the random button */
+@media (max-width: 480px) {
+  body.viewing .sc3-topbar .canvas-btn { width: 31px; }
+  body.viewing .tb-view-title { padding: 0 4px; }
+  .brand-ava .tb-brand { padding: 0; }
+  .brand-ava .tb-brand .ava-mark { width: 34px; height: 34px; }
+}
