@@ -42,6 +42,13 @@
   user-select: none;
 }
 .tb-brand .sc3-logo-img { width: 22px; height: 22px; }
+.brand-ava .tb-brand .sc3-logo-img { width: 30px; height: 27px; }
+.brand-ava .tb-brand { padding: 0 8px 0 0; }
+.tb-brand .ava-mark { display: block; width: 42px; height: 42px; }
+@media (max-width: 900px) {
+  .brand-ava .tb-brand { display: flex; flex: none; padding: 0 2px 0 0; }
+  .brand-ava .tb-brand .ava-mark { width: 38px; height: 38px; }
+}
 
 /* ===== GROUP — one glass capsule per bunch of controls ===== */
 .tb-group {

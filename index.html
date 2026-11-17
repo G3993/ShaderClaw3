@@ -78,6 +78,29 @@
   <!-- ===== TOP BAR — every control lives here, bunched into groups ===== -->
   <header class="sc3-header sc3-topbar" id="topbar">
     <div class="tb-brand"><img src="logo.svg" alt="ShaderClaw" class="sc3-logo-img"><span>ShaderClaw</span></div>
+    <script>
+    // Shown inside avartifacts.com (the Visual Lab) or opened with ?brand=ava: carry the AVA
+    // floating-people mark in white and drop the ShaderClaw name.
+    (function () {
+      var ava = false;
+      try {
+        ava = new URLSearchParams(location.search).get('brand') === 'ava' || sessionStorage.getItem('sc3-brand') === 'ava';
+        if (!ava && window.self !== window.top && document.referrer)
+          ava = /(^|\.)avartifacts\.com$/.test(new URL(document.referrer).hostname);
+        if (ava) sessionStorage.setItem('sc3-brand', 'ava');
+      } catch (e) {}
+      if (!ava) return;
+      document.documentElement.classList.add('brand-ava');
+      var img = document.querySelector('.tb-brand img');
+      if (img) { img.src = 'ava-logo-white.svg'; img.alt = 'AVA'; }
+      var name = document.querySelector('.tb-brand span'); if (name) name.remove();
+      // the still mark is replaced by the scope-drawn animation once its data has loaded
+      var sc = document.createElement('script'); sc.src = 'js/ava-mark.js'; document.head.appendChild(sc);
+      window.addEventListener('DOMContentLoaded', function () {
+        var t = document.getElementById('tb-view-name'); if (t && t.textContent === 'ShaderClaw') t.textContent = 'Visual Lab';
+      });
+    })();
+    </script>
 
     <nav class="tb-nav">
     <div class="tb-group" aria-label="Layers">
