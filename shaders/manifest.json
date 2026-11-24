@@ -4880,5 +4880,19 @@
     "id": 1535,
     "title": "Heatmap",
     "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "3D",
+      "Audio Reactive",
+      "New York"
+    ],
+    "description": "Liberty — the Statue of Liberty written as code in Sand3D, baked to a distance field and raymarched live. Looks: Patina, Contours, Hologram. Drag to spin; bass feeds the torch.",
+    "file": "ny_liberty.fs",
+    "hidden": false,
+    "id": 1615,
+    "title": "Liberty",
+    "type": "generator"
   }
 ]
