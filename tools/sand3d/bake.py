@@ -2,8 +2,8 @@ import trimesh, numpy as np, sys
 from scipy import ndimage
 from PIL import Image
 m = trimesh.load(sys.argv[1], force='mesh')
-NX = NZ = 80; NY = 192
-X0, X1, Y0, Y1 = -0.22, 0.22, 0.0, 1.08
+NX = NZ = 96; NY = 256
+X0, X1, Y0, Y1 = -0.13, 0.13, 0.0, 0.72
 xs = X0 + (np.arange(NX) + 0.5) * (X1 - X0) / NX
 ys = Y0 + (np.arange(NY) + 0.5) * (Y1 - Y0) / NY
 zs = X0 + (np.arange(NZ) + 0.5) * (X1 - X0) / NZ
@@ -28,7 +28,7 @@ h = np.array([(X1 - X0) / NX, (Y1 - Y0) / NY, (X1 - X0) / NZ])
 d = ndimage.distance_transform_edt(~inside, sampling=h) - ndimage.distance_transform_edt(inside, sampling=h)
 d = d + np.where(inside, 0.5, -0.5) * h.mean()          # voxel-centre bias: put the zero between cells
 d = ndimage.gaussian_filter(d, 0.6)                     # soften the voxel stair-steps
-R = 0.06                                                # ±6 cm stored; the shader steps by the box outside that
+R = 0.04                                                # ±4 cm stored; the shader steps by the box outside that
 v = np.clip(0.5 + d / (2 * R), 0, 1)
 TX = 16; TY = (NY + TX - 1) // TX
 atlas = np.zeros((TY * NZ, TX * NX), np.uint8)
