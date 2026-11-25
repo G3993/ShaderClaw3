@@ -4894,5 +4894,20 @@
     "id": 1615,
     "title": "Liberty",
     "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Shades of New York",
+      "Interactive",
+      "Audio Reactive",
+      "Body Tracking"
+    ],
+    "description": "City Skin — a body tiled out of New York signs: emoji, subway bullets, street words and signs packed into a pixel mosaic, warm light on one side and subway blue on the other. Camera drives your silhouette; touch bursts big signs.",
+    "file": "ny_city_skin.fs",
+    "hidden": false,
+    "id": 1616,
+    "title": "City Skin",
+    "type": "generator"
   }
 ]
