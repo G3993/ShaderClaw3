@@ -4909,5 +4909,20 @@
     "id": 1616,
     "title": "City Skin",
     "type": "generator"
+  },
+  {
+    "categories": [
+      "Generator",
+      "Shades of New York",
+      "Interactive",
+      "Audio Reactive",
+      "Body Tracking"
+    ],
+    "description": "Stitch City — New York embroidered on black felt: drifting patches of cross-stitch, knots, felt paths and threaded NY signs (cabs, pizza, bagels, subway bullets, BK, SOHO, BODEGA, ONE WAY). Composes as Manhattan with Central Park, your body or a stitched camera portrait. Touch for big motifs.",
+    "file": "ny_stitch_city.fs",
+    "hidden": false,
+    "id": 1617,
+    "title": "Stitch City",
+    "type": "generator"
   }
 ]
